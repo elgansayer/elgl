@@ -22,6 +22,7 @@ import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
 import { retryInterceptor } from './interceptors/retry.interceptor';
+import { initialiseOfflineDiscoveryCache } from './services/offline-discovery-cache.service';
 
 export function initConfig(
   configService: ConfigurationService,
@@ -78,6 +79,11 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: initialiseDeepLinks,
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initialiseOfflineDiscoveryCache,
       multi: true,
     },
   ],

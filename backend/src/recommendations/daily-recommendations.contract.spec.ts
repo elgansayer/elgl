@@ -9,6 +9,7 @@ type QueryResult = {
 type QueryChain = {
   select: Mock;
   match: Mock;
+  is: Mock;
   not: Mock;
   overlaps: Mock;
   order: Mock;
@@ -25,6 +26,7 @@ const makeQueryChain = (
   for (const method of [
     'select',
     'match',
+    'is',
     'not',
     'overlaps',
     'order',
@@ -75,6 +77,7 @@ describe('daily recommendations contract', () => {
         getClient: vi.fn().mockReturnValue({ from }),
         getRedisClient: vi.fn().mockReturnValue(redis),
       } as never,
+      { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as never,
       {} as never,
       { isAvailable: vi.fn().mockReturnValue(true) } as never,
       { reportCrash: vi.fn().mockResolvedValue({}) } as never,
@@ -101,6 +104,16 @@ describe('daily recommendations contract', () => {
     from.mockReturnValueOnce(users).mockReturnValueOnce(matches);
 
     await service.calculateDailyRecommendations();
+
+    const privacyFilters = {
+      is_deleted: false,
+      privacy_hide_from_search: false,
+      is_deletion_pending: false,
+    };
+    expect(users.match).toHaveBeenCalledWith(privacyFilters);
+    expect(users.is).toHaveBeenCalledWith('scheduled_for_deletion_at', null);
+    expect(matches.match).toHaveBeenCalledWith(privacyFilters);
+    expect(matches.is).toHaveBeenCalledWith('scheduled_for_deletion_at', null);
 
     expect(users.limit).toHaveBeenCalledWith(5000);
     expect(matches.limit).toHaveBeenCalledWith(10);

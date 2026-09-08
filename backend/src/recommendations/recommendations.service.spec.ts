@@ -8,6 +8,7 @@ import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { SafetyService } from '../safety/safety.service';
 
 vi.mock('../common/retry', async () => {
   const actual =
@@ -29,6 +30,7 @@ type QueryChainMock = {
   single: Mock;
   maybeSingle: Mock;
   match: Mock;
+  is: Mock;
   _setResolve: (data: unknown, error?: { message: string } | null) => void;
   then: (resolve: (value: unknown) => void) => undefined;
 };
@@ -59,6 +61,7 @@ const makeQueryChain = (): QueryChainMock => {
     'single',
     'maybeSingle',
     'match',
+    'is',
   ];
   methodNames.forEach((m) => {
     (chain as Record<string, unknown>)[m] = vi.fn().mockReturnValue(chain);
@@ -72,6 +75,27 @@ const makeQueryChain = (): QueryChainMock => {
   };
 
   return chain as QueryChainMock;
+};
+
+const recommendation = (id: string): RecommendedUserDto => ({
+  id,
+  displayName: `User ${id}`,
+  avatarUrl: null,
+  nativeLanguage: 'es',
+  targetLanguages: ['en'],
+  sharedInterests: 0,
+  isSeriousLearner: false,
+  studyStreakDays: 0,
+  correctionRatio: 0,
+});
+
+type RecommendationTiers = {
+  recommendationsByInterests(userId: string): Promise<RecommendedUserDto[]>;
+  recommendationsByLanguageExchange(
+    userId: string,
+  ): Promise<RecommendedUserDto[]>;
+  recommendationsByActiveUsers(userId: string): Promise<RecommendedUserDto[]>;
+  recommendationsFromMock(userId: string): RecommendedUserDto[];
 };
 
 describe('RecommendationsService', () => {
@@ -100,6 +124,7 @@ describe('RecommendationsService', () => {
     setMatchmakingTierSuccessRate: Mock;
   };
   let mockCrashReportService: { reportCrash: Mock };
+  let mockSafetyService: { getBlockedAndBlockerIds: Mock };
 
   beforeEach(async () => {
     mockPipeline = {
@@ -129,6 +154,9 @@ describe('RecommendationsService', () => {
     mockCrashReportService = {
       reportCrash: vi.fn().mockResolvedValue({}),
     };
+    mockSafetyService = {
+      getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
+    };
 
     mockLogger = {
       info: vi.fn(),
@@ -156,6 +184,10 @@ describe('RecommendationsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: SafetyService,
+          useValue: mockSafetyService,
         },
         {
           provide: CircuitBreakerService,
@@ -237,6 +269,22 @@ describe('RecommendationsService', () => {
 
       await service.calculateDailyRecommendations();
 
+      const privacyFilters = {
+        is_deleted: false,
+        privacy_hide_from_search: false,
+        is_deletion_pending: false,
+      };
+      expect(usersChain.match).toHaveBeenCalledWith(privacyFilters);
+      expect(usersChain.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+      expect(matchesChain.match).toHaveBeenCalledWith(privacyFilters);
+      expect(matchesChain.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+
       expect(mockPipeline.set).toHaveBeenCalledTimes(1);
       expect(mockPipeline.set.mock.calls[0][0]).toBe(
         'recommendations:daily:user-a',
@@ -302,10 +350,201 @@ describe('RecommendationsService', () => {
         },
       ];
       mockRedis.get.mockResolvedValue(JSON.stringify(dtos));
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'p-1' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
 
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('p-1');
+      expect(eligibilityChain.match).toHaveBeenCalledWith({
+        is_deleted: false,
+        privacy_hide_from_search: false,
+        is_deletion_pending: false,
+      });
+      expect(eligibilityChain.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+    });
+
+    it('removes newly hidden or deleting users from cached recommendations', async () => {
+      const dtos = [
+        {
+          id: 'eligible',
+          displayName: 'Eligible',
+          avatarUrl: null,
+          nativeLanguage: 'es',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: true,
+          studyStreakDays: 12,
+          correctionRatio: 0.9,
+        },
+        {
+          id: 'deleting',
+          displayName: 'Deleting',
+          avatarUrl: null,
+          nativeLanguage: 'fr',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: false,
+          studyStreakDays: 2,
+          correctionRatio: 0.5,
+        },
+      ] satisfies RecommendedUserDto[];
+      mockRedis.get.mockResolvedValue(JSON.stringify(dtos));
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'eligible' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result.map((candidate) => candidate.id)).toEqual(['eligible']);
+    });
+
+    it('strictly validates and projects cached recommendation DTOs', async () => {
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify([
+          { id: 'malformed' },
+          {
+            id: 'eligible',
+            displayName: 'Eligible',
+            avatarUrl: null,
+            nativeLanguage: 'es',
+            targetLanguages: ['en'],
+            sharedInterests: 2,
+            isSeriousLearner: true,
+            studyStreakDays: 12,
+            correctionRatio: 0.9,
+            providerInternalField: 'must-not-leak',
+          },
+        ]),
+      );
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'eligible' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result).toEqual([
+        {
+          id: 'eligible',
+          displayName: 'Eligible',
+          avatarUrl: null,
+          nativeLanguage: 'es',
+          targetLanguages: ['en'],
+          sharedInterests: 2,
+          isSeriousLearner: true,
+          studyStreakDays: 12,
+          correctionRatio: 0.9,
+        },
+      ]);
+      expect(result[0]).not.toHaveProperty('providerInternalField');
+    });
+
+    it('removes blocked users from cached recommendations', async () => {
+      const dtos = [
+        {
+          id: 'eligible',
+          displayName: 'Eligible',
+          avatarUrl: null,
+          nativeLanguage: 'es',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: true,
+          studyStreakDays: 12,
+          correctionRatio: 0.9,
+        },
+        {
+          id: 'blocked',
+          displayName: 'Blocked',
+          avatarUrl: null,
+          nativeLanguage: 'fr',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: false,
+          studyStreakDays: 2,
+          correctionRatio: 0.5,
+        },
+      ] satisfies RecommendedUserDto[];
+      mockRedis.get.mockResolvedValue(JSON.stringify(dtos));
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'eligible' }, { id: 'blocked' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result.map((candidate) => candidate.id)).toEqual(['eligible']);
+      expect(mockSafetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
+        'user-123',
+      );
+    });
+
+    it('fails closed before reading recommendations when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('Failed to load complete block graph'),
+      );
+
+      await expect(service.getDailyRecommendations('user-123')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+      expect(mockFrom).not.toHaveBeenCalled();
+      expect(mockRedis.get).not.toHaveBeenCalled();
+    });
+
+    it('never returns cached users when privacy revalidation fails', async () => {
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify([
+          {
+            id: 'cached-user',
+            displayName: 'Cached',
+            avatarUrl: null,
+            nativeLanguage: 'es',
+            targetLanguages: ['en'],
+            sharedInterests: 0,
+            isSeriousLearner: true,
+            studyStreakDays: 3,
+            correctionRatio: 0.8,
+          },
+        ] satisfies RecommendedUserDto[]),
+      );
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve(null, {
+        code: 'PGRST500',
+        message: 'revalidation offline with provider details',
+      });
+      const liveUserChain = makeQueryChain();
+      liveUserChain._setResolve(null, { message: 'fallback offline' });
+      mockFrom
+        .mockReturnValueOnce(eligibilityChain)
+        .mockReturnValueOnce(liveUserChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result).toEqual([]);
+      expect(result.map((candidate) => candidate.id)).not.toContain(
+        'cached-user',
+      );
+      await vi.waitFor(() =>
+        expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+          expect.objectContaining({
+            operation: 'getDailyRecommendations:cache-revalidation',
+            error_message:
+              'Failed to revalidate cached recommendations (PGRST500)',
+          }),
+        ),
+      );
+      const revalidationReport = mockCrashReportService.reportCrash.mock.calls
+        .map(
+          ([report]) => report as { operation?: string; stack_trace?: string },
+        )
+        .find(
+          (report) =>
+            report.operation === 'getDailyRecommendations:cache-revalidation',
+        );
+      expect(revalidationReport?.stack_trace).not.toContain('provider details');
     });
 
     it('should return empty array when nothing cached', async () => {
@@ -370,6 +609,33 @@ describe('RecommendationsService', () => {
       expect(result).toEqual([]);
     });
 
+    it('removes blocked users from the live daily fallback', async () => {
+      mockRedis.get.mockRejectedValue(new Error('Connection refused'));
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue([
+        'blocked-partner',
+      ]);
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_languages: ['en'],
+        target_languages: ['es'],
+      });
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'blocked-partner',
+          display_name: 'Blocked Partner',
+          native_languages: ['es'],
+          target_languages: ['en'],
+        },
+      ]);
+      mockFrom.mockReturnValueOnce(userChain).mockReturnValueOnce(matchesChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result).toEqual([]);
+    });
+
     it('should return empty array when Redis fails and live fallback throws', async () => {
       mockRedis.get.mockRejectedValue(new Error('Connection refused'));
       mockFrom.mockImplementation(() => {
@@ -382,6 +648,43 @@ describe('RecommendationsService', () => {
   });
 
   describe('getRecommendations (graceful degradation)', () => {
+    it('filters blocked users from every tier before returning results', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      const tiers = service as unknown as RecommendationTiers;
+      vi.spyOn(tiers, 'recommendationsByInterests').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByLanguageExchange').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByActiveUsers').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsFromMock').mockReturnValue([
+        recommendation('blocked'),
+        recommendation('visible'),
+      ]);
+
+      await expect(service.getRecommendations('user-123')).resolves.toEqual([
+        recommendation('visible'),
+      ]);
+    });
+
+    it('fails closed before evaluating tiers when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('block graph unavailable'),
+      );
+      const tiers = service as unknown as RecommendationTiers;
+      const interests = vi
+        .spyOn(tiers, 'recommendationsByInterests')
+        .mockResolvedValue([recommendation('visible')]);
+
+      await expect(service.getRecommendations('user-123')).rejects.toThrow(
+        'block graph unavailable',
+      );
+      expect(interests).not.toHaveBeenCalled();
+    });
+
     it('should return interest-based results when available', async () => {
       const tagsChain = makeQueryChain();
       tagsChain._setResolve([{ tag: 'sports' }, { tag: 'music' }]);
@@ -669,6 +972,43 @@ describe('RecommendationsService', () => {
   });
 
   describe('getRecommendationsWithFallback', () => {
+    it('filters blocked users from every fallback tier', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      const tiers = service as unknown as RecommendationTiers;
+      vi.spyOn(tiers, 'recommendationsByInterests').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByLanguageExchange').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByActiveUsers').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsFromMock').mockReturnValue([
+        recommendation('blocked'),
+        recommendation('visible'),
+      ]);
+
+      await expect(
+        service.getRecommendationsWithFallback('user-123'),
+      ).resolves.toEqual([recommendation('visible')]);
+    });
+
+    it('fails closed before fallback when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('block graph unavailable'),
+      );
+      const tiers = service as unknown as RecommendationTiers;
+      const interests = vi
+        .spyOn(tiers, 'recommendationsByInterests')
+        .mockResolvedValue([recommendation('visible')]);
+
+      await expect(
+        service.getRecommendationsWithFallback('user-123'),
+      ).rejects.toThrow('block graph unavailable');
+      expect(interests).not.toHaveBeenCalled();
+    });
+
     it('should return interest-based results tagged with matchTier', async () => {
       const tagsChain = makeQueryChain();
       tagsChain._setResolve([{ tag: 'sports' }]);
@@ -1398,7 +1738,7 @@ describe('RecommendationsService', () => {
 
       expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
         expect.objectContaining({
-          operation: 'getDailyRecommendations:redis',
+          operation: 'getDailyRecommendations:cache-revalidation',
           degraded_tier: 'language_exchange_live',
         }),
       );

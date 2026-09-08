@@ -63,6 +63,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
     limit: Mock;
     range: Mock;
     single: Mock;
+    then: Mock;
   };
 
   beforeAll(async () => {
@@ -108,6 +109,8 @@ describe('HelloTalk API E2E Integration Suite', () => {
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       neq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
       gt: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       lt: vi.fn().mockReturnThis(),
@@ -118,6 +121,9 @@ describe('HelloTalk API E2E Integration Suite', () => {
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       range: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve: (value: unknown) => unknown) =>
+        resolve({ data: [], error: null }),
+      ),
       single: vi
         .fn()
         .mockResolvedValue({ data: { id: 'mock-id' }, error: null }),
@@ -389,6 +395,58 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .expect((res) => {
           expect(Array.isArray(res.body)).toBe(true);
           expect(res.body[0].display_name).toBe('Spanish Partner');
+        });
+    });
+
+    it('/discovery/audio-intros (GET) - should return visible audio introductions', () => {
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'speaker-1',
+            display_name: 'Audio Partner',
+            native_languages: ['es'],
+            target_languages: ['en'],
+            audio_intro_url: 'https://media.example.test/audio-intro.mp3',
+          },
+        ],
+        error: null,
+      });
+
+      return request(app.getHttpServer())
+        .get('/discovery/audio-intros')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).toEqual([
+            expect.objectContaining({
+              id: 'speaker-1',
+              display_name: 'Audio Partner',
+              audio_intro_url: 'https://media.example.test/audio-intro.mp3',
+            }),
+          ]);
+          expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+            'scheduled_for_deletion_at',
+            null,
+          );
+        });
+    });
+
+    it('/discovery/audio-intros (GET) - should report a query outage as 503', () => {
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST503', message: 'sensitive database detail' },
+      });
+
+      return request(app.getHttpServer())
+        .get('/discovery/audio-intros')
+        .expect(503)
+        .expect((res) => {
+          expect(res.body).toMatchObject({
+            statusCode: 503,
+            message: 'Audio introductions are temporarily unavailable',
+          });
+          expect(JSON.stringify(res.body)).not.toContain(
+            'sensitive database detail',
+          );
         });
     });
 

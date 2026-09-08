@@ -463,16 +463,34 @@ export class SafetyService {
   }
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
-    if (!this.authService.getAccessToken()) return [];
     try {
-      const ids: string[] = await firstValueFrom(
-        this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
-      );
-      return ids;
+      return await this.getBlockedAndBlockerIdsStrict(userId);
     } catch (e) {
       console.error('Failed to get blocked and blocker IDs:', e);
       return [];
     }
+  }
+
+  /**
+   * Loads the bidirectional block graph without converting an outage into an
+   * empty graph. Privacy-sensitive discovery callers must use this method so
+   * they can fail closed when the graph cannot be verified.
+   */
+  async getBlockedAndBlockerIdsStrict(userId: string): Promise<string[]> {
+    if (!this.authService.getAccessToken()) {
+      throw new Error('Authenticated block graph unavailable');
+    }
+
+    const ids: unknown = await firstValueFrom(
+      this.http.get<unknown>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
+    );
+    if (
+      !Array.isArray(ids) ||
+      !ids.every((id) => typeof id === 'string' && id.length > 0 && id === id.trim())
+    ) {
+      throw new Error('Invalid block graph response');
+    }
+    return Array.from(new Set(ids));
   }
 
   async isBlocked(userId: string): Promise<{ blocked: boolean }> {
