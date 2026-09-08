@@ -128,16 +128,6 @@ describe('ImageCompressionService', () => {
     await expect(service.compressImage(createMockFile())).rejects.toThrow('Failed to compress image');
   });
 
-  it('fails closed when the browser encoder throws synchronously', async () => {
-    installMockImage(2000, 1200);
-    installCanvas();
-    HTMLCanvasElement.prototype.toBlob = function (): void {
-      throw new DOMException('encoder unavailable');
-    };
-
-    await expect(service.compressImage(createMockFile())).rejects.toThrow('Failed to compress image');
-  });
-
   it('fails closed when the JPEG encoder throws synchronously', async () => {
     installMockImage(2000, 1200);
     installCanvas();
