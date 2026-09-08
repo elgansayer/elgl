@@ -5,6 +5,23 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+    # Canonical CI already runs the shared fail-open impact classifier. This
+    # standalone lint workflow is not a required merge status, so allocating a
+    # second Ubuntu runner just to rediscover that a Factory/docs-only PR cannot
+    # affect backend/frontend lint is pure control-plane churn. Mixed or unknown
+    # diffs still run because paths-ignore only suppresses PRs whose every path is
+    # in this proven non-application set.
+    paths-ignore:
+      - 'automation/**'
+      - 'factory-dashboard/**'
+      - 'config/factory/**'
+      - 'config/systemd/**'
+      - 'docs/**'
+      - '.github/dependabot.yml'
+      - '.github/workflows/factory-merge.yml'
+      - '.github/workflows/factory-format-evidence.yml'
+      - '.github/workflows/on-failure.yml'
+      - '.github/workflows/branch-pr-hygiene.yml'
   merge_group:
     types: [checks_requested]
 
@@ -33,23 +50,13 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          run_application=true
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
-            run_application=false
-            while IFS= read -r path; do
-              [ -z "$path" ] && continue
-              case "$path" in
-                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
-                  ;;
-                *)
-                  run_application=true
-                  ;;
-              esac
-            done <<< "$changed"
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" \
+              | bash scripts/classify-ci-impact.sh "$GITHUB_OUTPUT"
+          else
+            echo "run_application=true" >> "$GITHUB_OUTPUT"
+            echo "Clean project lint required: true"
           fi
-          echo "run_application=$run_application" >> "$GITHUB_OUTPUT"
-          echo "Clean project lint required: $run_application"
 
   lint-contract:
     name: lint contract guard

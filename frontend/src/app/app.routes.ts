@@ -30,4 +30,5 @@ export const routes: Routes = [
   ...settingsRoutes,
   ...chatRoutes,
   ...adminRoutes,
+  { path: '**', redirectTo: 'ai-conversation' },
 ];

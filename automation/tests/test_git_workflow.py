@@ -367,3 +367,33 @@ def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     assert archived == recovery
     assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
     assert (recovery / "RECOVERY.txt").is_file()
+
+
+def test_archive_worktree_excludes_regenerable_build_artifacts(tmp_path: Path) -> None:
+    # None of these are ever hand-edited - all regenerable via npm/uv install
+    # or a build - and copying them in full turned a ~63 MB archive into a
+    # 2+ GB one, exhausting the disk-space reserve that gates scheduling.
+    repository = tmp_path / "state" / "repository"
+    repository.mkdir(parents=True)
+    worktree = tmp_path / "state" / "worktrees" / "issue-12"
+    (worktree / "frontend" / "node_modules" / "some-pkg").mkdir(parents=True)
+    (worktree / "frontend" / "node_modules" / "some-pkg" / "index.js").write_text(
+        "module.exports = {}", encoding="utf-8"
+    )
+    (worktree / "frontend" / "dist").mkdir(parents=True)
+    (worktree / "frontend" / "dist" / "bundle.js").write_text("built output", encoding="utf-8")
+    (worktree / "frontend" / "src").mkdir(parents=True)
+    (worktree / "frontend" / "src" / "app.ts").write_text("uncommitted source", encoding="utf-8")
+    (worktree / "automation" / "__pycache__").mkdir(parents=True)
+    (worktree / "automation" / "__pycache__" / "mod.pyc").write_text("bytecode", encoding="utf-8")
+    recovery = tmp_path / "state" / "recovery" / "issue-12-archive"
+    workflow = GitWorkflow(repository, "main", Runner([]))
+
+    workflow.archive_worktree(worktree, recovery)
+
+    assert not (recovery / "frontend" / "node_modules").exists()
+    assert not (recovery / "frontend" / "dist").exists()
+    assert not (recovery / "automation" / "__pycache__").exists()
+    assert (recovery / "frontend" / "src" / "app.ts").read_text(
+        encoding="utf-8"
+    ) == "uncommitted source"

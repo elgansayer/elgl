@@ -16,6 +16,13 @@ buttons, duplicate primitives, or decentralised mock data. Tests and documentati
 change. Read the applicable instructions under .agents/skills before payment, LiveKit, Centrifugo, migration,
 i18n or component work.
 
-Inspect existing code, tests, Git history, issues and pull requests before editing. Preserve listed dirty files.
-Run focused tests after each logical change and the supplied full verification gate before completion.
+Inspect existing code and corresponding tests before editing. Consult Git history only when it materially
+resolves ambiguity or regression context; the Factory already owns issue and pull-request deduplication.
+Preserve listed dirty files.
 
+Use only this provider session. Never spawn subagents, agent teams, delegated model sessions, nested LLM calls,
+or model-launching skills. Nested model work bypasses Factory provider-start and allowance accounting.
+
+Run focused checks needed to validate your edits. Do not run the supplied full verification gate inside the
+provider session unless reproducing a specific failing gate is necessary to diagnose it. The Factory runs the
+authoritative full verification after the provider returns.

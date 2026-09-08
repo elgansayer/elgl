@@ -19,11 +19,11 @@ import { AppCardComponent } from '../primitives/card/card.component';
         <!-- Header -->
         <h1 class="text-2xl font-bold mb-6">{{ 'events.calendar.title' | t }}</h1>
 
-        @if (eventsResource.isLoading() && events().length === 0) {
+        @if (eventsResource.isLoading()) {
           <p class="mb-6 text-sm text-text-muted" role="status">
             {{ 'common.loading' | t }}
           </p>
-        } @else if (eventsResource.error() && events().length === 0) {
+        } @else if (eventsResource.error()) {
           <div class="mb-6 flex flex-col items-start gap-3" role="alert">
             <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
             <button
@@ -224,7 +224,9 @@ export class EventsCalendarComponent {
     },
   });
 
-  events = computed(() => this.eventsResource.value() ?? []);
+  events = computed(() =>
+    this.eventsResource.hasValue() ? this.eventsResource.value() : [],
+  );
 
   eventsByDate = computed(() => {
     const map = new Map<number, Event[]>();

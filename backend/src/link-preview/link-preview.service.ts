@@ -23,6 +23,10 @@ import Redis from 'ioredis';
  */
 const MAX_RESPONSE_BYTES = 5_000_000;
 const MAX_URL_LENGTH = 2_048;
+const MAX_TITLE_LENGTH = 300;
+const MAX_DESCRIPTION_LENGTH = 1_000;
+const MAX_SITE_NAME_LENGTH = 200;
+const MAX_CACHE_ENTRY_BYTES = 16_384;
 const CACHE_TTL_SECONDS = 3_600;
 const CACHE_PREFIX = 'link_preview:v2';
 
@@ -44,9 +48,11 @@ const safeLookup = (
       return;
     }
 
-    const candidate =
-      typeof address === 'string' ? address : address[0]?.address;
-    if (candidate && isPrivateIp(candidate)) {
+    const candidates =
+      typeof address === 'string'
+        ? [address]
+        : address.map((candidate) => candidate.address);
+    if (candidates.some((candidate) => isPrivateIp(candidate))) {
       callback(
         new Error('SSRF blocked: resolved address is not publicly routable'),
         address,
@@ -90,11 +96,11 @@ export class LinkPreviewService {
     try {
       const cached = await this.redis.get(cacheKey);
       if (cached) {
-        try {
-          return JSON.parse(cached) as LinkPreview;
-        } catch {
-          this.logger.warn(`Invalid link-preview cache entry (${descriptor})`);
+        const cachedPreview = this.parseCachedPreview(cached, normalizedUrl);
+        if (cachedPreview) {
+          return cachedPreview;
         }
+        this.logger.warn(`Invalid link-preview cache entry (${descriptor})`);
       }
     } catch {
       // A cache outage must not turn a best-effort preview into a chat failure.
@@ -204,14 +210,18 @@ export class LinkPreviewService {
       this.getMetaTag($, 'description') ||
       '';
 
-    const title = this.sanitizeMetaContent(rawTitle);
-    const description = this.sanitizeMetaContent(rawDescription);
+    const title = this.sanitizeMetaContent(rawTitle, MAX_TITLE_LENGTH);
+    const description = this.sanitizeMetaContent(
+      rawDescription,
+      MAX_DESCRIPTION_LENGTH,
+    );
     const image = this.sanitizeImageUrl(
       this.getMetaTag($, 'og:image') || '',
       url,
     );
     const siteName = this.sanitizeMetaContent(
       this.getMetaTag($, 'og:site_name') || new URL(url).hostname,
+      MAX_SITE_NAME_LENGTH,
     );
 
     if (!title && !description && !image) {
@@ -235,13 +245,13 @@ export class LinkPreviewService {
     ).trim();
   }
 
-  private sanitizeMetaContent(raw: string): string {
+  private sanitizeMetaContent(raw: string, maxLength: number): string {
     const sanitized = this.dompurify.sanitize(raw, {
       ALLOWED_TAGS: [],
       ALLOWED_ATTR: [],
     });
     const $inner = cheerio.load(`<div>${sanitized}</div>`);
-    return $inner('div').text().trim();
+    return $inner('div').text().trim().slice(0, maxLength);
   }
 
   private sanitizeImageUrl(raw: string, pageUrl: string): string {
@@ -259,6 +269,64 @@ export class LinkPreviewService {
     } catch {
       return '';
     }
+  }
+
+  private parseCachedPreview(
+    cached: string,
+    requestedUrl: string,
+  ): LinkPreview | null {
+    if (Buffer.byteLength(cached, 'utf8') > MAX_CACHE_ENTRY_BYTES) {
+      return null;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(cached) as unknown;
+    } catch {
+      return null;
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const candidate = parsed as Record<string, unknown>;
+    if (candidate['url'] !== requestedUrl) {
+      return null;
+    }
+
+    const title = this.sanitizeMetaContent(
+      typeof candidate['title'] === 'string' ? candidate['title'] : '',
+      MAX_TITLE_LENGTH,
+    );
+    const description = this.sanitizeMetaContent(
+      typeof candidate['description'] === 'string'
+        ? candidate['description']
+        : '',
+      MAX_DESCRIPTION_LENGTH,
+    );
+    const image = this.sanitizeImageUrl(
+      typeof candidate['image'] === 'string' ? candidate['image'] : '',
+      requestedUrl,
+    );
+    const siteName = this.sanitizeMetaContent(
+      typeof candidate['siteName'] === 'string' && candidate['siteName']
+        ? candidate['siteName']
+        : new URL(requestedUrl).hostname,
+      MAX_SITE_NAME_LENGTH,
+    );
+
+    if (!title && !description && !image) {
+      return null;
+    }
+
+    return {
+      url: requestedUrl,
+      title,
+      description,
+      image,
+      siteName,
+    };
   }
 
   private isUnsafeLiteralHost(hostname: string): boolean {

@@ -253,6 +253,11 @@ cleanup() {
         echo 'Failed to restore hellotalk-factory-health.timer after deployment failure.' >&2
       fi
     fi
+    if [ "$FACTORY_UPDATE_TIMER_WAS_ACTIVE" = true ]; then
+      if ! systemctl start hellotalk-factory-update.timer; then
+        echo 'Failed to restore hellotalk-factory-update.timer after deployment failure.' >&2
+      fi
+    fi
   fi
   exit "$exit_status"
 }
@@ -270,12 +275,16 @@ fi
 if systemctl is-active --quiet hellotalk-factory-health.timer; then
   FACTORY_HEALTH_TIMER_WAS_ACTIVE=true
 fi
+if systemctl is-active --quiet hellotalk-factory-update.timer; then
+  FACTORY_UPDATE_TIMER_WAS_ACTIVE=true
+fi
 FACTORY_MAINTENANCE_STARTED=true
 # A first-time deploy, or a host recovering from a partial prior deploy, may
 # have no installed unit files yet: `systemctl stop` on a unit that was never
 # loaded is fatal under `set -e` even though there is nothing to stop. Accept
 # that outcome here; the check below still fails loud if anything real is
 # left running.
+systemctl stop hellotalk-factory-update.timer || true
 systemctl stop hellotalk-factory-health.timer || true
 # A watchdog invocation already in progress can restart the daemon after the
 # timer is stopped. Drain it before stopping the daemon so dependency refreshes
@@ -331,6 +340,15 @@ fi
 install -o root -g root -m 0755 \
   "$WORKTREE/config/systemd/hellotalk-factory-watchdog.sh" \
   /opt/hellotalk-factory/hellotalk-factory-watchdog.sh
+install -o root -g root -m 0755 \
+  "$WORKTREE/config/systemd/hellotalk-factory-update.sh" \
+  /opt/hellotalk-factory/hellotalk-factory-update.sh
+install -o root -g root -m 0644 \
+  "$WORKTREE/config/systemd/hellotalk-factory-update.service" \
+  /etc/systemd/system/hellotalk-factory-update.service
+install -o root -g root -m 0644 \
+  "$WORKTREE/config/systemd/hellotalk-factory-update.timer" \
+  /etc/systemd/system/hellotalk-factory-update.timer
 systemctl disable --now hellotalk-meta-agent.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/hellotalk-meta-agent.service
 systemctl daemon-reload
@@ -437,6 +455,7 @@ fi
 
 systemctl is-active hellotalk-factory.service
 systemctl is-active hellotalk-factory-health.timer
+systemctl is-active hellotalk-factory-update.timer
 systemctl --no-pager --full status hellotalk-factory.service
 DEPLOYMENT_SUCCEEDED=true
 echo 'Factory deployment and startup completed.'
