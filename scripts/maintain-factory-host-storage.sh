@@ -26,11 +26,12 @@ Without --apply, reports root, journal, Docker, rootless Podman, Factory-state,
 and provider-home usage without changing the host.
 
 With --apply, installs the bounded journal policy only when it changed, vacuums
-archived journal entries, and prunes unused uv cache records. Add
---prune-containers to remove dangling Docker/Podman images older than seven days
-and bounded Docker/Podman build cache. If either container store falls below the
-Factory reserve plus headroom, the age grace is dropped for dangling images and
-build cache only.
+archived journal entries, prunes unused uv cache records, and performs the
+bounded one-time migration of a legacy verified updater into the neutral Repo
+Factory runtime when that runtime is present. Add --prune-containers to remove
+dangling Docker/Podman images older than seven days and bounded Docker/Podman
+build cache. If either container store falls below the Factory reserve plus
+headroom, the age grace is dropped for dangling images and build cache only.
 
 The historical --prune-docker name is retained as an alias. This command never
 removes volumes, named images, running/stopped containers, provider credentials,
@@ -194,6 +195,44 @@ prune_uv_cache() {
   fi
 }
 
+bootstrap_repo_factory_updater() {
+  local legacy=/opt/hellotalk-factory/hellotalk-factory-update.sh
+  local neutral_root=/opt/repo-factory
+  local neutral="$neutral_root/repo-factory-update.sh"
+  local marker=FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1
+
+  [ -e "$neutral_root" ] || return 0
+  if [ ! -d "$neutral_root" ] || [ -L "$neutral_root" ] || \
+    [ "$(readlink -f -- "$neutral_root")" != "$neutral_root" ] || \
+    [ "$(stat -Lc '%u:%g:%a' -- "$neutral_root")" != '0:0:755' ]; then
+    log "WARNING: neutral Repo Factory runtime root is not a safe root-owned directory"
+    return 1
+  fi
+  if [ ! -f "$legacy" ] || [ -L "$legacy" ] || \
+    [ "$(stat -Lc '%u:%g:%a' -- "$legacy")" != '0:0:755' ]; then
+    log 'WARNING: verified legacy updater is unavailable for neutral-runtime bootstrap'
+    return 1
+  fi
+  if [ -L "$neutral" ]; then
+    log 'WARNING: refusing to replace symlinked neutral Repo Factory updater'
+    return 1
+  fi
+  if [ -f "$neutral" ] && grep -q "$marker" "$neutral"; then
+    return 0
+  fi
+  if ! grep -q "$marker" "$legacy"; then
+    # The old updater installs the new verified legacy runtime after its first
+    # pull. A later bounded maintenance pass sees the marker and completes the
+    # one-time neutral-runtime migration without copying stale code.
+    return 0
+  fi
+  if ! install -o root -g root -m 0755 "$legacy" "$neutral"; then
+    log 'WARNING: failed to bootstrap the neutral Repo Factory updater'
+    return 1
+  fi
+  log 'Bootstrapped neutral Repo Factory updater from verified legacy runtime'
+}
+
 prune_docker_storage() {
   local docker docker_root
   docker=$(command -v docker 2>/dev/null) || {
@@ -289,6 +328,9 @@ if ! flock -n 9; then
   exit 0
 fi
 
+if ! bootstrap_repo_factory_updater; then
+  log 'WARNING: neutral Repo Factory updater bootstrap failed'
+fi
 if ! install_journal_policy; then
   log 'WARNING: journal policy/vacuum maintenance failed'
 fi
