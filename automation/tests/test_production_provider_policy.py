@@ -1,10 +1,37 @@
 import json
+from datetime import UTC, datetime
 from pathlib import Path
+
+from openhands_factory.agents.base import AgentPhase, ProviderHealth, ProviderStatus
+from openhands_factory.agents.conservative import ConservativeAgentRouter
+from openhands_factory.agents.policy import ConfigRoutingPolicy
+from openhands_factory.config import AgentsConfig
+from openhands_factory.models import Job, Task
+
+
+class _Provider:
+    def __init__(
+        self,
+        name: str,
+        status: ProviderStatus = ProviderStatus.HEALTHY,
+    ) -> None:
+        self.name = name
+        self.status = status
+
+    def health(self) -> ProviderHealth:
+        return ProviderHealth(self.name, self.status, datetime.now(UTC))
+
+    def supports(self, phase: AgentPhase) -> bool:
+        return True
+
+
+def _production_config() -> dict[str, object]:
+    path = Path(__file__).parents[2] / "config" / "factory" / "agents.production.json"
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def test_production_provider_policy_is_locked() -> None:
-    path = Path(__file__).parents[2] / "config" / "factory" / "agents.production.json"
-    config = json.loads(path.read_text(encoding="utf-8"))
+    config = _production_config()
     providers = config["providers"]
     routing = config["routing"]
     breaker = config["circuit_breaker"]
@@ -49,10 +76,8 @@ def test_production_provider_policy_is_locked() -> None:
     assert all(routing[phase] == route for phase, route in expected_routes.items())
     assert "openhands" not in routing["planning"]
 
-    # CI repair is bounded by concrete failed-check evidence and cannot merge its own
-    # output: local verification, independent review, reviewed-SHA protection and
-    # required GitHub checks remain authoritative. Reserve flagship Codex for fallback.
-    assert routing["ci_repair"][:2] == ["opencode", "google"]
+    # Keep every low-cost provider ahead of Codex in the static preference. Runtime
+    # history promotes Codex after two providers have actually started.
     assert routing["ci_repair"][-1] == "codex"
     assert providers["google"]["phase_models"]["ci_repair"].endswith("flash-low")
     assert providers["claude"]["phase_models"]["ci_repair"] == "haiku"
@@ -62,3 +87,70 @@ def test_production_provider_policy_is_locked() -> None:
     # rediscovering a known provider-wide outage is material allowance waste.
     assert breaker["failure_threshold"] == 1
     assert breaker["rate_limit_cooldown_seconds"] >= 900
+
+
+def test_ci_repair_rotation_reaches_codex_in_second_candidate_window() -> None:
+    raw_config = _production_config()
+    config = AgentsConfig.model_validate(raw_config)
+    providers = [_Provider(name) for name, provider in config.providers.items() if provider.enabled]
+    router = ConservativeAgentRouter(
+        providers,
+        policy=ConfigRoutingPolicy(config),
+        enabled=True,
+    )
+    task = Task("ci-42", "Repair CI", "Body", "github-pull-request", 0)
+    job = Job(task)
+
+    first_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
+    assert first_window == ["opencode", "google"]
+
+    job.provider_history.extend(
+        {
+            "provider": provider,
+            "phase": AgentPhase.CI_REPAIR.value,
+            "success": False,
+        }
+        for provider in first_window
+    )
+    second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
+
+    assert second_window == ["codex", "claude"]
+
+
+def test_ci_repair_stays_cheap_when_preferred_provider_is_unhealthy() -> None:
+    raw_config = _production_config()
+    config = AgentsConfig.model_validate(raw_config)
+    for unavailable, expected_first in (
+        ("opencode", ["google", "claude"]),
+        ("google", ["opencode", "claude"]),
+    ):
+        providers = [
+            _Provider(
+                name,
+                ProviderStatus.UNAVAILABLE if name == unavailable else ProviderStatus.HEALTHY,
+            )
+            for name, provider in config.providers.items()
+            if provider.enabled
+        ]
+        router = ConservativeAgentRouter(
+            providers,
+            policy=ConfigRoutingPolicy(config),
+            enabled=True,
+        )
+        task = Task(f"ci-{unavailable}", "Repair CI", "Body", "github-pull-request", 0)
+        job = Job(task)
+
+        first_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
+        assert first_window == expected_first
+
+        job.provider_history.extend(
+            {
+                "provider": provider,
+                "phase": AgentPhase.CI_REPAIR.value,
+                "success": False,
+            }
+            for provider in first_window
+        )
+        second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
+
+        assert second_window == ["codex", "pi"]
