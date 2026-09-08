@@ -86,7 +86,7 @@ export class TwoFactorService {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('users')
-      .select('*')
+      .select('totp_secret, two_factor_secret')
       .eq('id', userId)
       .single();
 
