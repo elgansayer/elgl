@@ -3,6 +3,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
@@ -11,6 +12,7 @@ import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 
 interface AiChatMessage {
   id: string;
@@ -21,7 +23,7 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective, VisualDiffComponent],
+  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective, VisualDiffComponent, AppEmptyStateComponent],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -504,9 +506,12 @@ interface AiChatMessage {
 
           <!-- No room selected -->
           @if (!selectedRoom()) {
-            <div class="flex-1 flex items-center justify-center text-text-muted">
-              {{ 'chat.emptyState' | t }}
-            </div>
+            <app-empty-state
+              icon="💬"
+              [title]="'chat.emptyState' | t"
+              [actionLabel]="'discovery.startChat' | t"
+              (actionClicked)="navigateToDiscovery()"
+            />
           }
         }
       </main>
@@ -528,6 +533,7 @@ export class ChatPageComponent implements OnInit {
   private centrifugoService = inject(CentrifugoService);
   private i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);
+  private router = inject(Router);
 
   rooms = signal<ChatRoom[]>([]);
   selectedRoom = signal<ChatRoom | null>(null);
@@ -830,6 +836,10 @@ export class ChatPageComponent implements OnInit {
     this.aiSelectedScenario.set(scenario);
     this.aiMessages.set([]);
     this.aiError.set('');
+  }
+
+  navigateToDiscovery(): void {
+    this.router.navigate(['/discovery']);
   }
 
   async sendAiMessage(): Promise<void> {
