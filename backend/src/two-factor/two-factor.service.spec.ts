@@ -155,6 +155,9 @@ describe('TwoFactorService', () => {
       const result = await service.isEnabled(userId);
 
       expect(result).toBe(true);
+      expect(supabaseService.getClient().select).toHaveBeenCalledWith(
+        'totp_secret, two_factor_secret',
+      );
     });
 
     it('should return false if two-factor authentication is not enabled', async () => {
