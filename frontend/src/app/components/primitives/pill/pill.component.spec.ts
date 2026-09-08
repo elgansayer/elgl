@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
-import { AppPillComponent } from './pill.component';
+import { AppPillComponent, PillColour } from './pill.component';
 
 @Component({
   template: `
@@ -12,7 +12,7 @@ import { AppPillComponent } from './pill.component';
 })
 class TestHostComponent {
   label = signal('');
-  colour = signal<'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral'>('success');
+  colour = signal<PillColour>('success');
   size = signal<'sm' | 'md'>('md');
   customClass = signal('');
 }
@@ -58,8 +58,10 @@ describe('AppPillComponent', () => {
     expect(pillElement.textContent?.includes('Projected Pill')).toBe(false);
   });
 
-  it('should apply host inline-block class', () => {
+  it('should keep the host bounded to its available inline width', () => {
     expect(pillHostElement.classList.contains('inline-block')).toBe(true);
+    expect(pillHostElement.classList.contains('max-w-full')).toBe(true);
+    expect(pillHostElement.classList.contains('min-w-0')).toBe(true);
   });
 
   it('should apply base pill classes', () => {
@@ -68,6 +70,14 @@ describe('AppPillComponent', () => {
     expect(pillElement.classList.contains('justify-center')).toBe(true);
     expect(pillElement.classList.contains('font-extrabold')).toBe(true);
     expect(pillElement.classList.contains('rounded-pill')).toBe(true);
+  });
+
+  it('should allow long translated labels to wrap without overflowing narrow hosts', () => {
+    expect(pillElement.classList.contains('max-w-full')).toBe(true);
+    expect(pillElement.classList.contains('min-w-0')).toBe(true);
+    expect(pillElement.classList.contains('whitespace-normal')).toBe(true);
+    expect(pillElement.classList.contains('break-words')).toBe(true);
+    expect(pillElement.classList.contains('text-center')).toBe(true);
   });
 
   it('should apply success colour (token-driven, not i18n-smuggled) and md logical size classes', () => {
@@ -117,6 +127,14 @@ describe('AppPillComponent', () => {
     fixture.detectChanges();
     expect(pillElement.classList.contains('bg-secondary')).toBe(true);
     expect(pillElement.classList.contains('text-on-fill')).toBe(true);
+  });
+
+  it('should apply the semantic VIP gold token with on-fill text', () => {
+    host.colour.set('vip');
+    fixture.detectChanges();
+    expect(pillElement.classList.contains('bg-vip')).toBe(true);
+    expect(pillElement.classList.contains('text-on-fill')).toBe(true);
+    expect(pillElement.classList.contains('hover:bg-vip/90')).toBe(true);
   });
 
   it('should use default neutral colour and md size classes when no inputs are provided', () => {
