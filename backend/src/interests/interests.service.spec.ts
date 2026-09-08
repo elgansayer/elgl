@@ -134,14 +134,18 @@ describe('InterestsService', () => {
   });
 
   it('resolves the primary target language from the persisted profile', async () => {
-    await expect(service.getPrimaryTargetLanguage('user-1')).resolves.toBe('es');
+    await expect(service.getPrimaryTargetLanguage('user-1')).resolves.toBe(
+      'es',
+    );
 
     expect(from).toHaveBeenCalledWith('users');
     expect(select).toHaveBeenCalledWith('target_languages');
     expect(eq).toHaveBeenCalledWith('id', 'user-1');
 
     userLanguageResult = { data: { target_languages: [] }, error: null };
-    await expect(service.getPrimaryTargetLanguage('user-1')).resolves.toBe('en');
+    await expect(service.getPrimaryTargetLanguage('user-1')).resolves.toBe(
+      'en',
+    );
   });
 
   it('translates legacy interest UUIDs before storing canonical tags', async () => {

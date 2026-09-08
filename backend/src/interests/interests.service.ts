@@ -32,10 +32,6 @@ interface UserInterestRow {
   tag: string;
 }
 
-interface UserLanguageRow {
-  target_languages: string[] | null;
-}
-
 interface VocabRow {
   word: string;
   translation: string;
@@ -175,7 +171,7 @@ export class InterestsService {
       throw new Error(error.message);
     }
 
-    const data = untypedData as UserLanguageRow | null;
+    const data = untypedData;
     const targetLanguage = data?.target_languages?.find(
       (language) => typeof language === 'string' && language.trim().length > 0,
     );
