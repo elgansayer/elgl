@@ -91,29 +91,41 @@ export class ImageCompressionService {
         }
 
         try {
+          // JPEG has no alpha channel. Use a stable light background instead of
+          // allowing transparent PNG/WebP pixels to become browser-dependent black.
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
         } catch {
           reject(new Error('Failed to prepare image for compression'));
           return;
         }
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob || blob.size <= 0) {
-              reject(new Error('Failed to compress image'));
-              return;
-            }
+        try {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob || blob.size <= 0) {
+                reject(new Error('Failed to compress image'));
+                return;
+              }
 
-            resolve(
-              new File([blob], jpegFilename(file.name), {
-                type: 'image/jpeg',
-                lastModified: file.lastModified,
-              }),
-            );
-          },
-          'image/jpeg',
-          quality,
-        );
+              try {
+                resolve(
+                  new File([blob], jpegFilename(file.name), {
+                    type: 'image/jpeg',
+                    lastModified: file.lastModified,
+                  }),
+                );
+              } catch {
+                reject(new Error('Failed to compress image'));
+              }
+            },
+            'image/jpeg',
+            quality,
+          );
+        } catch {
+          reject(new Error('Failed to compress image'));
+        }
       };
 
       img.onerror = () => {

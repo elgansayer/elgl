@@ -55,13 +55,14 @@ describe('ImageCompressionService', () => {
 
   function installCanvas(blob: Blob | null = new Blob(['jpeg'], { type: 'image/jpeg' })) {
     const drawImage = vi.fn();
-    HTMLCanvasElement.prototype.getContext = function (): CanvasRenderingContext2D {
-      return { drawImage } as unknown as CanvasRenderingContext2D;
-    } as typeof HTMLCanvasElement.prototype.getContext;
+    const fillRect = vi.fn();
+    HTMLCanvasElement.prototype.getContext = (function (): CanvasRenderingContext2D {
+      return { drawImage, fillRect } as unknown as CanvasRenderingContext2D;
+    }) as unknown as typeof HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback): void {
       callback(blob);
     };
-    return { drawImage };
+    return { drawImage, fillRect };
   }
 
   it('returns non-image files unchanged', async () => {
@@ -78,10 +79,12 @@ describe('ImageCompressionService', () => {
 
   it('enforces a 1920x1080 landscape ceiling even when callers request larger output', async () => {
     installMockImage(4000, 3000);
-    const { drawImage } = installCanvas();
+    const { drawImage, fillRect } = installCanvas();
 
     const result = await service.compressImage(createMockFile('image/png', 'holiday.png'), 2560, 2560, 0.9);
 
+    expect(fillRect).toHaveBeenCalledWith(0, 0, 1440, 1080);
+    expect(fillRect.mock.invocationCallOrder[0]).toBeLessThan(drawImage.mock.invocationCallOrder[0]);
     expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 1440, 1080);
     expect(result.type).toBe('image/jpeg');
     expect(result.name).toBe('holiday.jpg');
@@ -109,9 +112,9 @@ describe('ImageCompressionService', () => {
 
   it('fails closed when canvas compression is unavailable instead of uploading the original image', async () => {
     installMockImage(2000, 1200);
-    HTMLCanvasElement.prototype.getContext = function (): null {
+    HTMLCanvasElement.prototype.getContext = (function (): null {
       return null;
-    } as typeof HTMLCanvasElement.prototype.getContext;
+    }) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
     await expect(service.compressImage(createMockFile())).rejects.toThrow(
       'Image compression is unavailable in this browser',
@@ -121,6 +124,26 @@ describe('ImageCompressionService', () => {
   it('fails closed when JPEG encoding produces no bytes', async () => {
     installMockImage(2000, 1200);
     installCanvas(null);
+
+    await expect(service.compressImage(createMockFile())).rejects.toThrow('Failed to compress image');
+  });
+
+  it('fails closed when the browser encoder throws synchronously', async () => {
+    installMockImage(2000, 1200);
+    installCanvas();
+    HTMLCanvasElement.prototype.toBlob = function (): void {
+      throw new DOMException('encoder unavailable');
+    };
+
+    await expect(service.compressImage(createMockFile())).rejects.toThrow('Failed to compress image');
+  });
+
+  it('fails closed when the JPEG encoder throws synchronously', async () => {
+    installMockImage(2000, 1200);
+    installCanvas();
+    HTMLCanvasElement.prototype.toBlob = function (): void {
+      throw new DOMException('Canvas cannot be encoded', 'SecurityError');
+    };
 
     await expect(service.compressImage(createMockFile())).rejects.toThrow('Failed to compress image');
   });

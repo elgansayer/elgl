@@ -72,6 +72,44 @@ describe('ChatMediaService', () => {
     });
   });
 
+  it('uses the HD image profile and requests an HD image ticket', async () => {
+    const original = new File(['original'], 'photo.png', { type: 'image/png' });
+    const prepared = new File(['prepared'], 'photo.jpg', { type: 'image/jpeg' });
+    compressImage.mockResolvedValue(prepared);
+
+    const uploadPromise = service.upload(original, 'hd');
+    await Promise.resolve();
+
+    expect(compressImage).toHaveBeenCalledWith(original, 2560, 2560, 0.9);
+    const presign = httpMock.expectOne(`${environment.apiUrl}/media/chat/presigned-url`);
+    expect(presign.request.body).toEqual({
+      filename: 'photo.jpg',
+      contentType: 'image/jpeg',
+      quality: 'hd',
+      sizeBytes: prepared.size,
+    });
+    presign.flush({
+      uploadUrl: 'https://upload.example/hd-object',
+      mediaUrl: 'https://cdn.example/hd-object.jpg',
+      objectKey: 'chat-media/user/image/hd/hd-object.jpg',
+      mediaKind: 'image',
+      quality: 'hd',
+      maxBytes: 15 * 1024 * 1024,
+    });
+
+    await Promise.resolve();
+    const put = httpMock.expectOne('https://upload.example/hd-object');
+    expect(put.request.body).toBe(prepared);
+    put.flush('ok');
+
+    await expect(uploadPromise).resolves.toEqual({
+      url: 'https://cdn.example/hd-object.jpg',
+      objectKey: 'chat-media/user/image/hd/hd-object.jpg',
+      kind: 'image',
+      quality: 'hd',
+    });
+  });
+
   it('does not request an R2 upload ticket when image compression fails', async () => {
     const original = new File(['original'], 'photo.png', { type: 'image/png' });
     compressImage.mockRejectedValue(new Error('Image compression is unavailable in this browser'));
@@ -110,6 +148,28 @@ describe('ChatMediaService', () => {
       kind: 'video',
       quality: 'hd',
     });
+  });
+
+  it('rejects an upload ticket whose quality differs from the selected quality', async () => {
+    const original = new File(['original'], 'photo.png', { type: 'image/png' });
+    const prepared = new File(['prepared'], 'photo.jpg', { type: 'image/jpeg' });
+    compressImage.mockResolvedValue(prepared);
+
+    const uploadPromise = service.upload(original, 'hd');
+    await Promise.resolve();
+
+    const presign = httpMock.expectOne(`${environment.apiUrl}/media/chat/presigned-url`);
+    presign.flush({
+      uploadUrl: 'https://upload.example/object',
+      mediaUrl: 'https://cdn.example/object.jpg',
+      objectKey: 'chat-media/user/image/standard/object.jpg',
+      mediaKind: 'image',
+      quality: 'standard',
+      maxBytes: 15 * 1024 * 1024,
+    });
+
+    await expect(uploadPromise).rejects.toThrow('Upload ticket did not match the selected media');
+    httpMock.expectNone('https://upload.example/object');
   });
 
   it('rejects unsupported file types before any network request', async () => {

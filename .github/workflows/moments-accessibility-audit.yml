@@ -1,0 +1,42 @@
+name: Moments Accessibility Audit
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/src/app/components/moments-feed/**'
+      - 'scripts/moments-accessibility-audit.test.mjs'
+      - 'docs/moments-accessibility-audit.md'
+      - '.github/workflows/moments-accessibility-audit.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/src/app/components/moments-feed/**'
+      - 'scripts/moments-accessibility-audit.test.mjs'
+      - 'docs/moments-accessibility-audit.md'
+      - '.github/workflows/moments-accessibility-audit.yml'
+  merge_group:
+
+concurrency:
+  group: moments-accessibility-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  moments-accessibility-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Verify Moments accessibility audit
+        run: node --test scripts/moments-accessibility-audit.test.mjs

@@ -74,6 +74,26 @@ test('collectProductionLicences excludes dev-only packages and packages licence 
   assert.equal(licences[0].licenceText, 'Production package licence text');
 });
 
+test('collectProductionLicences fails closed when a production dependency has no licence metadata', async (t) => {
+  const rootDirectory = await temporaryFrontend(t);
+  const packageDirectory = path.join(rootDirectory, 'node_modules', 'unlicensed-package');
+  await mkdir(packageDirectory, { recursive: true });
+  await writeFile(
+    path.join(packageDirectory, 'package.json'),
+    JSON.stringify({ name: 'unlicensed-package', version: '1.0.0' }),
+  );
+
+  await assert.rejects(
+    collectProductionLicences(rootDirectory, {
+      packages: {
+        '': { version: '2.0.0' },
+        'node_modules/unlicensed-package': { version: '1.0.0' },
+      },
+    }),
+    /PRODUCTION_DEPENDENCY_LICENCE_REQUIRED:unlicensed-package@1\.0\.0/,
+  );
+});
+
 test('generateHelpAboutData writes generated metadata and an auditable manifest', async (t) => {
   const rootDirectory = await temporaryFrontend(t);
   const packageDirectory = path.join(rootDirectory, 'node_modules', 'sample-package');

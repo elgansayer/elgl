@@ -53,7 +53,6 @@ export class AudioIntroRecorderComponent {
     this.duration.set(0);
     this.clearRecordingTimer();
     this.stopPreviewAudio();
-    this.clearLocalRecording();
 
     try {
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
@@ -70,6 +69,11 @@ export class AudioIntroRecorderComponent {
       };
       this.mediaRecorder.onstop = () => this.finalizeRecording(stream);
       this.mediaRecorder.start();
+      // Keep an existing unsaved recording until microphone access and the
+      // replacement MediaRecorder have both started successfully. A denied
+      // permission or unsupported recorder must remain retryable without
+      // destroying the user's previous take.
+      this.clearLocalRecording();
       this.isRecording.set(true);
       this.startRecordingTimer();
     } catch {

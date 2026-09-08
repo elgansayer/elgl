@@ -13,7 +13,7 @@ All browser image uploads that use `ImageCompressionService` are re-encoded as J
 
 The current avatar upload path and chat photo upload path both use this shared service before sending image bytes. Chat can continue to express Standard/HD JPEG quality and requested derivative size, but the shared privacy/performance boundary is authoritative and caps both modes at 1080p.
 
-JPEG, PNG and WebP are accepted raster inputs. Other `image/*` formats, including SVG, are rejected rather than decoded into the upload pipeline. Non-image inputs are returned unchanged so callers that share the utility with other media types do not have their payload rewritten.
+JPEG, PNG and WebP are accepted raster inputs. Other `image/*` formats, including SVG, are rejected rather than decoded into the upload pipeline. Non-image inputs are returned unchanged so callers that share the utility with other media types do not have their payload rewritten. Transparent input pixels are composited onto white before JPEG encoding so they do not become browser-dependent black pixels.
 
 ## Failure and abuse handling
 
@@ -37,7 +37,8 @@ Focused Vitest coverage in `frontend/src/app/services/image-compression.service.
 - landscape and portrait 1080p ceilings even when a caller asks for 2560px output;
 - no upscaling;
 - stable JPEG naming/type and last-modified preservation;
-- fail-closed canvas and encoder behavior;
+- deterministic transparent-pixel compositing;
+- fail-closed canvas and encoder behavior, including synchronous encoder exceptions;
 - invalid option rejection before decoding;
 - pathological decoded-dimension rejection before canvas allocation; and
 - temporary object URL cleanup on success and decode failure.

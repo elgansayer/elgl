@@ -115,11 +115,11 @@ describe('DoodlePadComponent', () => {
     return event;
   }
 
-  it('initialises the drawing surface at the canonical raster size', () => {
+  it('initialises the drawing surface at the canonical raster size on neutral paper', () => {
     expect(component).toBeTruthy();
     expect(canvasEl.width).toBe(600);
     expect(canvasEl.height).toBe(400);
-    expect(mockCtx.fillStyle).toBe('#1e1e1e');
+    expect(mockCtx.fillStyle).toBe('#ffffff');
     expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 600, 400);
     expect(mockCtx.lineCap).toBe('round');
     expect(mockCtx.lineJoin).toBe('round');
@@ -149,6 +149,25 @@ describe('DoodlePadComponent', () => {
     expect(brushGroup).toBeTruthy();
     expect(colorGroup.querySelectorAll('hlm-radio').length).toBe(6);
     expect(brushGroup.querySelectorAll('hlm-radio').length).toBe(4);
+  });
+
+  it('uses Relay semantic surfaces and mobile-first wrapping for product chrome', () => {
+    const canvasFrame = canvasEl.parentElement as HTMLElement;
+    expect(canvasFrame.classList.contains('bg-surface-300')).toBe(true);
+    expect(canvasFrame.classList.contains('border-surface-100')).toBe(true);
+    expect(canvasEl.classList.contains('bg-surface-50')).toBe(true);
+
+    const toolbar = fixture.nativeElement.querySelector(
+      'hlm-radio-group[name="doodle-color"]',
+    ).parentElement.parentElement as HTMLElement;
+    expect(toolbar.classList.contains('grid')).toBe(true);
+    expect(toolbar.classList.contains('sm:grid-cols-2')).toBe(true);
+
+    const footer = Array.from(fixture.nativeElement.querySelectorAll('div')).find((element) =>
+      (element as HTMLElement).classList.contains('sm:flex-row'),
+    ) as HTMLElement | undefined;
+    expect(footer).toBeTruthy();
+    expect(footer?.classList.contains('flex-col')).toBe(true);
   });
 
   it('accepts only configured colour and brush values', () => {
@@ -232,7 +251,7 @@ describe('DoodlePadComponent', () => {
     component.clearCanvas();
 
     expect(mockCtx.closePath).toHaveBeenCalled();
-    expect(mockCtx.fillStyle).toBe('#1e1e1e');
+    expect(mockCtx.fillStyle).toBe('#ffffff');
     expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 600, 400);
   });
 

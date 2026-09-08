@@ -1,0 +1,22 @@
+[Unit]
+Description=Repository Factory health watchdog for %i
+After=repo-factory@%i.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/repo-factory/common.env
+EnvironmentFile=/etc/repo-factory/instances/%i.env
+EnvironmentFile=/etc/hellotalk-factory/runtime.env
+Environment=HOME=/home/dev
+ExecStart=/bin/bash /opt/repo-factory/repo-factory-watchdog.sh %i
+UMask=0077
+PrivateTmp=true
+ProtectHome=false
+BindPaths=/run/user
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/repo-factory /var/log/repo-factory /var/lib/hellotalk-factory /var/log/hellotalk-factory /run/systemd

@@ -50,6 +50,13 @@ describe('UnreadCounterService', () => {
     expect(service.totalUnread()).toBe(10);
   });
 
+  it('should saturate aggregate unread counts at the largest safe integer', () => {
+    service.set('chat', Number.MAX_SAFE_INTEGER);
+    service.set('moments', Number.MAX_SAFE_INTEGER);
+
+    expect(service.totalUnread()).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
   it('should expose per-tab counts via tabCount', () => {
     service.set('chat', 5);
     service.set('moments', 8);
@@ -64,6 +71,14 @@ describe('UnreadCounterService', () => {
     expect(service.badgeText('chat')).toBe('99+');
     expect(service.badgeText('moments')).toBe('12');
     expect(service.tabCount('chat')).toBe(100);
+  });
+
+  it('should use the same compact format for the aggregate application badge', () => {
+    service.set('chat', 70);
+    service.set('moments', 40);
+
+    expect(service.totalUnread()).toBe(110);
+    expect(service.totalBadgeText()).toBe('99+');
   });
 
   it('should handle the full set/increment/decrement lifecycle', () => {

@@ -42,7 +42,7 @@ describe('CommentMentionNotificationListener', () => {
     expect(listener).toBeDefined();
   });
 
-  it('should create a notification when comment mentions a user via mentionedUserIds', async () => {
+  it('creates a notification for a mentioned user', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
@@ -67,26 +67,43 @@ describe('CommentMentionNotificationListener', () => {
     );
   });
 
-  it('should create notifications for multiple mentioned users', async () => {
-    const payload = new MomentCommentEvent(
-      'moment-1',
+  it('deduplicates recipients, skips self mentions, and caps fan-out', async () => {
+    const recipients = [
       'commenter-1',
-      'moment-author-1',
-      'Hey @alice and @bob check this out',
-      undefined,
-      undefined,
-      ['mentioned-user-1', 'mentioned-user-2'],
-    );
+      'mentioned-user-1',
+      'mentioned-user-1',
+      ...Array.from(
+        { length: 25 },
+        (_, index) => `mentioned-user-${index + 2}`,
+      ),
+    ];
 
-    await listener.handleCommentMention(payload);
+    await listener.handleCommentMention(
+      new MomentCommentEvent(
+        'moment-1',
+        'commenter-1',
+        'moment-author-1',
+        'hello',
+        undefined,
+        undefined,
+        recipients,
+      ),
+    );
 
     expect(
       notificationPreferencesService.shouldSendNotification,
-    ).toHaveBeenCalledTimes(2);
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    ).toHaveBeenCalledTimes(20);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(20);
+    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
+      'commenter-1',
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
-  it('should fall back to momentAuthorId for backward compatibility', async () => {
+  it('falls back to momentAuthorId for backward compatibility', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
@@ -102,7 +119,7 @@ describe('CommentMentionNotificationListener', () => {
     expect(notificationsService.createNotification).toHaveBeenCalled();
   });
 
-  it('should skip notification when preferences disable push', async () => {
+  it('skips notification when preferences disable push', async () => {
     vi.spyOn(
       notificationPreferencesService,
       'shouldSendNotification',
@@ -123,11 +140,14 @@ describe('CommentMentionNotificationListener', () => {
     expect(notificationsService.createNotification).not.toHaveBeenCalled();
   });
 
-  it('should still send notification if preference check fails', async () => {
+  it('fails closed when notification preferences cannot be loaded', async () => {
     vi.spyOn(
       notificationPreferencesService,
       'shouldSendNotification',
     ).mockRejectedValue(new Error('DB error'));
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
 
     const payload = new MomentCommentEvent(
       'moment-1',
@@ -141,10 +161,48 @@ describe('CommentMentionNotificationListener', () => {
 
     await listener.handleCommentMention(payload);
 
-    expect(notificationsService.createNotification).toHaveBeenCalled();
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Moment mention preference lookup failed; notification suppressed.',
+    );
+    warnSpy.mockRestore();
   });
 
-  it('should skip self-mention (commenter mentioning themselves)', async () => {
+  it('isolates delivery failures so later recipients are still processed', async () => {
+    vi.spyOn(notificationsService, 'createNotification')
+      .mockRejectedValueOnce(new Error('transient failure'))
+      .mockResolvedValueOnce(undefined);
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+
+    await listener.handleCommentMention(
+      new MomentCommentEvent(
+        'moment-1',
+        'commenter-1',
+        'moment-author-1',
+        'hello',
+        undefined,
+        undefined,
+        ['mentioned-user-1', 'mentioned-user-2'],
+      ),
+    );
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenLastCalledWith(
+      'mentioned-user-2',
+      'commenter-1',
+      'mention_comment',
+      'moment-1',
+      'hello',
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Moment mention notification delivery failed.',
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('skips self mention', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
