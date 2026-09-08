@@ -384,7 +384,9 @@ describe('PrivacyService', () => {
         'gdpr_archive_cleanup_items_failed count=1',
       );
       expect(
-        errorSpy.mock.calls.flat().some((arg) => String(arg).includes('private')),
+        errorSpy.mock.calls
+          .flat()
+          .some((arg) => String(arg).includes('private')),
       ).toBe(false);
     });
   });

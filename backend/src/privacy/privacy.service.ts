@@ -258,9 +258,7 @@ export class PrivacyService {
       purged += results.filter(
         (result) => result.status === 'fulfilled',
       ).length;
-      failed += results.filter(
-        (result) => result.status === 'rejected',
-      ).length;
+      failed += results.filter((result) => result.status === 'rejected').length;
     }
 
     if (failed > 0) {
