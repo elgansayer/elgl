@@ -1080,7 +1080,7 @@ export class MomentsService {
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
     const commentIds = commentRows.map((c) => c.id);
 
-    // Run independent lookups concurrently to avoid serial database latency.
+    // ⚡ Bolt Optimization: Replace sequential database requests with concurrent Promise.all execution to reduce latency.
     const [profilesResponse, { data: votesData }] = await Promise.all([
       supabase
         .from('users')
