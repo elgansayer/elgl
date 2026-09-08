@@ -2,12 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, linkedSignal, resource, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { HlmEmptyImports } from '@spartan-ng/helm/empty';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { LessonsService } from '../../services/lessons.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import {
   lessonCefr,
   lessonContent,
@@ -20,9 +20,12 @@ import {
 @Component({
   selector: 'app-lessons',
   standalone: true,
-  imports: [CommonModule, RouterLink, HlmButton, TranslatePipe, AppEmptyStateComponent],
+  imports: [CommonModule, RouterLink, HlmButton, ...HlmEmptyImports, TranslatePipe],
   template: `
-    <main class="min-h-screen bg-surface-300 px-4 py-6 text-primary sm:px-6 lg:px-8" aria-labelledby="lessons-title">
+    <main
+      class="min-h-screen bg-surface-300 px-4 py-6 text-primary sm:px-6 lg:px-8"
+      aria-labelledby="lessons-title"
+    >
       <div class="mx-auto max-w-6xl">
         @if (selectedLessonId()) {
           <a
@@ -38,7 +41,13 @@ import {
             <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
               <h1 id="lessons-title" class="text-xl font-bold">Lesson unavailable</h1>
               <p class="mt-2 text-secondary">{{ 'common.error_generic' | t }}</p>
-              <button hlmBtn size="touch" type="button" class="mt-4" (click)="retrySelectedLesson()">
+              <button
+                hlmBtn
+                size="touch"
+                type="button"
+                class="mt-4"
+                (click)="retrySelectedLesson()"
+              >
                 Retry
               </button>
             </section>
@@ -53,13 +62,17 @@ import {
                     <span class="ms-2">{{ duration }} min</span>
                   }
                 </p>
-                <h1 id="lessons-title" class="mt-1 break-words text-3xl font-bold">{{ lesson.title }}</h1>
+                <h1 id="lessons-title" class="mt-1 break-words text-3xl font-bold">
+                  {{ lesson.title }}
+                </h1>
                 @if (lesson.description) {
                   <p class="mt-2 max-w-3xl break-words text-secondary">{{ lesson.description }}</p>
                 }
               </header>
 
-              <section class="overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card">
+              <section
+                class="overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card"
+              >
                 <div
                   class="mb-5 flex gap-1"
                   role="progressbar"
@@ -84,7 +97,9 @@ import {
                     @if (segment.title) {
                       <h2 class="break-words text-xl font-bold">{{ segment.title }}</h2>
                     }
-                    <p class="mt-3 whitespace-pre-wrap break-words text-base leading-7">{{ segment.text }}</p>
+                    <p class="mt-3 whitespace-pre-wrap break-words text-base leading-7">
+                      {{ segment.text }}
+                    </p>
 
                     @if (safeUrl(segment.stream_url); as streamUrl) {
                       <a
@@ -98,13 +113,20 @@ import {
                     }
                   </section>
                 } @else {
-                  <app-empty-state
-                    icon="📄"
-                    [title]="'lessons.emptyContentTitle' | t"
-                    [description]="'lessons.emptyContentDesc' | t"
-                    [actionLabel]="'lessons.emptyContentAction' | t"
-                    (actionClicked)="router.navigate(['/lessons'])"
-                  />
+                  <section hlmEmpty aria-labelledby="lesson-empty-content-title">
+                    <div hlmEmptyHeader>
+                      <span hlmEmptyMedia class="text-4xl" aria-hidden="true">📄</span>
+                      <h2 hlmEmptyTitle id="lesson-empty-content-title">
+                        {{ 'lessons.emptyContentTitle' | t }}
+                      </h2>
+                      <p hlmEmptyDescription>{{ 'lessons.emptyContentDesc' | t }}</p>
+                    </div>
+                    <div hlmEmptyContent>
+                      <a hlmBtn size="touch" routerLink="/lessons">
+                        {{ 'lessons.emptyContentAction' | t }}
+                      </a>
+                    </div>
+                  </section>
                 }
 
                 @if (safeUrl(lesson.audio_url); as audioUrl) {
@@ -128,7 +150,9 @@ import {
                     size="touch"
                     variant="outline"
                     type="button"
-                    [disabled]="segmentIndex() === 0 || segments().length === 0 || isSavingProgress()"
+                    [disabled]="
+                      segmentIndex() === 0 || segments().length === 0 || isSavingProgress()
+                    "
                     (click)="previousSegment()"
                   >
                     Previous
@@ -137,7 +161,11 @@ import {
                     hlmBtn
                     size="touch"
                     type="button"
-                    [disabled]="segmentIndex() >= segments().length - 1 || segments().length === 0 || isSavingProgress()"
+                    [disabled]="
+                      segmentIndex() >= segments().length - 1 ||
+                      segments().length === 0 ||
+                      isSavingProgress()
+                    "
                     (click)="nextSegment()"
                   >
                     Next
@@ -149,7 +177,9 @@ import {
         } @else {
           <header class="mb-8">
             <h1 id="lessons-title" class="text-3xl font-bold">Lessons</h1>
-            <p class="mt-2 max-w-2xl text-secondary">Curated lessons for focused language practice.</p>
+            <p class="mt-2 max-w-2xl text-secondary">
+              Curated lessons for focused language practice.
+            </p>
           </header>
 
           @if (lessonsResource.isLoading()) {
@@ -158,16 +188,21 @@ import {
             <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
               <h2 class="text-xl font-bold">Unable to load lessons</h2>
               <p class="mt-2 text-secondary">{{ 'common.error_generic' | t }}</p>
-              <button hlmBtn size="touch" type="button" class="mt-4" (click)="retryLessons()">Retry</button>
+              <button hlmBtn size="touch" type="button" class="mt-4" (click)="retryLessons()">
+                Retry
+              </button>
             </section>
           } @else if (lessons().length === 0) {
-            <app-empty-state
-              icon="📚"
-              [title]="'lessons.emptyTitle' | t"
-              [description]="'lessons.emptyDesc' | t"
-              [actionLabel]="'lessons.emptyAction' | t"
-              (actionClicked)="router.navigate(['/discovery'])"
-            />
+            <section hlmEmpty aria-labelledby="lessons-empty-title">
+              <div hlmEmptyHeader>
+                <span hlmEmptyMedia class="text-4xl" aria-hidden="true">📚</span>
+                <h2 hlmEmptyTitle id="lessons-empty-title">{{ 'lessons.emptyTitle' | t }}</h2>
+                <p hlmEmptyDescription>{{ 'lessons.emptyDesc' | t }}</p>
+              </div>
+              <div hlmEmptyContent>
+                <a hlmBtn size="touch" routerLink="/groups">{{ 'lessons.emptyAction' | t }}</a>
+              </div>
+            </section>
           } @else {
             <section aria-labelledby="featured-lessons-title">
               <h2 id="featured-lessons-title" class="mb-4 text-xl font-bold">Featured</h2>
@@ -200,7 +235,9 @@ import {
         [queryParams]="{ lesson: lesson.id }"
         [attr.aria-label]="'Open lesson: ' + lesson.title"
       >
-        <div class="h-full overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card transition-shadow hover:shadow-lift">
+        <div
+          class="h-full overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card transition-shadow hover:shadow-lift"
+        >
           @if (safeUrl(lesson.cover_image_url); as coverUrl) {
             <img
               class="mb-4 aspect-video w-full rounded-app object-cover"
@@ -219,7 +256,9 @@ import {
           </div>
           <h3 class="mt-3 break-words text-lg font-bold">{{ lesson.title }}</h3>
           @if (lesson.description) {
-            <p class="mt-2 line-clamp-3 break-words text-sm text-secondary">{{ lesson.description }}</p>
+            <p class="mt-2 line-clamp-3 break-words text-sm text-secondary">
+              {{ lesson.description }}
+            </p>
           }
         </div>
       </a>
@@ -228,7 +267,6 @@ import {
 })
 export class LessonsComponent {
   private readonly lessonsService = inject(LessonsService);
-  router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
 
@@ -299,7 +337,9 @@ export class LessonsComponent {
   });
   readonly progressPercent = computed(() => {
     const count = this.segments().length;
-    return count === 0 ? 0 : Math.round(((Math.min(this.segmentIndex(), count - 1) + 1) / count) * 100);
+    return count === 0
+      ? 0
+      : Math.round(((Math.min(this.segmentIndex(), count - 1) + 1) / count) * 100);
   });
   readonly progressLabel = computed(() => {
     const count = this.segments().length;
@@ -307,7 +347,9 @@ export class LessonsComponent {
     return `Segment ${Math.min(this.segmentIndex(), count - 1) + 1} of ${count}`;
   });
   readonly progressLoadFailed = computed(
-    () => Boolean(this.selectedProgressResource.error()) || Boolean(this.singleSegmentCompletionResource.error()),
+    () =>
+      Boolean(this.selectedProgressResource.error()) ||
+      Boolean(this.singleSegmentCompletionResource.error()),
   );
 
   readonly featuredLessons = computed(() => {

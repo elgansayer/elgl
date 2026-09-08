@@ -2135,6 +2135,21 @@ export class I18nService {
     'call_logs.outgoing': 'Outgoing',
     'call_logs.missed': 'Missed',
     'call_logs.empty': 'No call logs yet.',
+    'call_logs.emptyTitle': 'No call logs',
+    'call_logs.emptyDesc':
+      "You haven't made any calls yet. Find a language partner to start practising.",
+    'call_logs.emptyAction': 'Find a partner',
+    'call_logs.loadErrorTitle': 'Unable to load call logs',
+    'call_logs.loadErrorDescription':
+      'Your call history could not be loaded. Check your connection and try again.',
+    'call_logs.retry': 'Try again',
+    'lessons.emptyTitle': 'No lessons available',
+    'lessons.emptyDesc':
+      'New lessons will appear here when they are published. In the meantime, explore language groups.',
+    'lessons.emptyAction': 'Explore groups',
+    'lessons.emptyContentTitle': 'No content yet',
+    'lessons.emptyContentDesc': 'This lesson does not have readable content yet.',
+    'lessons.emptyContentAction': 'Back to lessons',
     'common.error': 'Error',
     'moderation.title': 'Community Moderation',
     'moderation.profile': 'Profile reports',
