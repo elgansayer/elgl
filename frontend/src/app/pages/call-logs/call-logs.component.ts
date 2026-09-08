@@ -1,9 +1,9 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
-import { Router } from '@angular/router';
 import { CallLogRecord, CallLogsService } from '../../services/call-logs.service';
 
 @Component({
