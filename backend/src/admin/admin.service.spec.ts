@@ -302,9 +302,7 @@ describe('AdminService', () => {
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:users:list:first',
       );
-      expect(mockRedisClient.del).toHaveBeenCalledWith(
-        'admin:users:list:last',
-      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith('admin:users:list:last');
       expect(mockRedisClient.del).not.toHaveBeenCalledWith();
     });
 
