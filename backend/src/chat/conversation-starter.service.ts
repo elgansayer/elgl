@@ -33,8 +33,8 @@ interface PartnerProfile {
   is_deletion_pending?: boolean | null;
 }
 
-interface InterestRelationRow {
-  interests: { name?: string | null } | { name?: string | null }[] | null;
+interface UserInterestTagRow {
+  tag: string;
 }
 
 @Injectable()
@@ -272,21 +272,14 @@ export class ConversationStarterService {
       const supabase = this.supabaseService.getClient();
       const { data, error } = await supabase
         .from('user_interests')
-        .select('interests(name)')
+        .select('tag')
         .eq('user_id', partnerId)
         .limit(MAX_INTERESTS)
-        .returns<InterestRelationRow[]>();
+        .returns<UserInterestTagRow[]>();
       if (error) return [];
 
       return (data ?? [])
-        .flatMap((row) =>
-          Array.isArray(row.interests)
-            ? row.interests
-            : row.interests
-              ? [row.interests]
-              : [],
-        )
-        .map((interest) => this.cleanProfileText(interest.name, 60))
+        .map((row) => this.cleanProfileText(row.tag.replace(/-/gu, ' '), 60))
         .filter((interest) => interest.length > 0)
         .slice(0, MAX_INTERESTS);
     } catch {
