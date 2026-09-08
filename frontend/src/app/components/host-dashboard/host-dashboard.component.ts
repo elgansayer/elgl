@@ -1,8 +1,8 @@
-import { Component, input, computed, inject, signal, effect } from '@angular/core';
+import { Component, input, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { interval, from, switchMap, startWith } from 'rxjs';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, from, interval, startWith, switchMap } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { HostDashboardService } from '../../services/host-dashboard.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -54,31 +54,28 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class HostDashboardComponent {
-  // Allow parent to override stats, otherwise component auto-fetches.
-  readonly roomId = input.required<string>();
-  readonly viewerCount = signal<number>(0);
-  readonly earnedCoins = signal<number>(0);
-  readonly startTime = signal<Date>(new Date());
+  // Router component-input binding supplies the room ID after construction.
+  // Keep the pre-binding value inert so no empty-room request is issued.
+  readonly roomId = input<string>('');
 
   private readonly service = inject(HostDashboardService);
 
   private readonly poll = toSignal(
-    interval(10_000).pipe(
-      startWith(0),
-      switchMap(() => from(this.service.getDashboardStats(this.roomId()))),
+    toObservable(this.roomId).pipe(
+      filter((roomId) => roomId.length > 0),
+      switchMap((roomId) =>
+        interval(10_000).pipe(
+          startWith(0),
+          switchMap(() => from(this.service.getDashboardStats(roomId))),
+        ),
+      ),
     ),
     { initialValue: { viewerCount: 0, earnedCoins: 0, startTime: new Date() } },
   );
 
-  constructor() {
-    effect(() => {
-      const stats = this.poll();
-      if (!stats) return;
-      this.viewerCount.set(stats.viewerCount);
-      this.earnedCoins.set(stats.earnedCoins);
-      this.startTime.set(stats.startTime);
-    });
-  }
+  readonly viewerCount = computed(() => this.poll().viewerCount);
+  readonly earnedCoins = computed(() => this.poll().earnedCoins);
+  readonly startTime = computed(() => this.poll().startTime);
 
   private readonly tick = toSignal(interval(1000), { initialValue: 0 });
 
