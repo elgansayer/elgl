@@ -13,7 +13,6 @@ on:
     # in this proven non-application set.
     paths-ignore:
       - 'automation/**'
-      - 'factory-dashboard/**'
       - 'config/factory/**'
       - 'config/systemd/**'
       - 'docs/**'
