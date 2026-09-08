@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CoverPhotoUploaderComponent } from './cover-photo-uploader.component';
 
@@ -12,6 +12,10 @@ describe('CoverPhotoUploaderComponent', () => {
   let httpMock: HttpTestingController;
   let createObjectUrl: ReturnType<typeof vi.fn>;
   let revokeObjectUrl: ReturnType<typeof vi.fn>;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   beforeEach(async () => {
     createObjectUrl = vi.fn(() => 'blob:cover-preview');
@@ -97,6 +101,49 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.croppedBlob()).toBeNull();
     expect(cropButton).toBeTruthy();
     await vi.waitFor(() => expect(document.activeElement).toBe(cropButton));
+  });
+
+  it('ignores a stale file read after a newer file is selected', () => {
+    type DeferredReader = {
+      onload: ((event: ProgressEvent<FileReader>) => void) | null;
+      onerror: ((event: ProgressEvent<FileReader>) => void) | null;
+      readAsDataURL: ReturnType<typeof vi.fn>;
+    };
+    const readers: DeferredReader[] = [];
+    class DeferredFileReader {
+      onload: DeferredReader['onload'] = null;
+      onerror: DeferredReader['onerror'] = null;
+      readAsDataURL = vi.fn();
+
+      constructor() {
+        readers.push(this);
+      }
+    }
+    vi.stubGlobal('FileReader', DeferredFileReader);
+
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    const first = new File(['first'], 'first.jpg', { type: 'image/jpeg' });
+    const second = new File(['second'], 'second.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [first] as unknown as FileList,
+    });
+    component.onFileSelected({ target: input } as unknown as Event);
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [second] as unknown as FileList,
+    });
+    component.onFileSelected({ target: input } as unknown as Event);
+
+    readers[1].onload?.({
+      target: { result: 'data:image/jpeg;base64,SECOND' },
+    } as unknown as ProgressEvent<FileReader>);
+    readers[0].onload?.({
+      target: { result: 'data:image/jpeg;base64,FIRST' },
+    } as unknown as ProgressEvent<FileReader>);
+
+    expect(component.selectedFile()).toBe(second);
+    expect(component.imageSource()).toBe('data:image/jpeg;base64,SECOND');
   });
 
   it('rejects unsupported file types with an accessible error and recoverable picker state', async () => {

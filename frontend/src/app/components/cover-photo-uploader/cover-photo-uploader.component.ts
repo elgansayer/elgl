@@ -174,9 +174,13 @@ export class CoverPhotoUploaderComponent {
   readonly uploadError = signal(false);
 
   private previewObjectUrl: string | null = null;
+  private fileSelectionVersion = 0;
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.clearCroppedPreview());
+    this.destroyRef.onDestroy(() => {
+      this.fileSelectionVersion += 1;
+      this.clearCroppedPreview();
+    });
   }
 
   onFileSelected(event: Event): void {
@@ -184,7 +188,12 @@ export class CoverPhotoUploaderComponent {
     if (!(input instanceof HTMLInputElement) || !input.files?.length) return;
 
     const file = input.files[0];
+    const selectionVersion = ++this.fileSelectionVersion;
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      this.selectedFile.set(null);
+      this.imageSource.set(null);
+      this.isCropping.set(false);
+      this.clearCroppedPreview();
       this.uploadError.set(true);
       this.clearFileInput();
       this.focusAfterRender(this.fileTrigger);
@@ -198,6 +207,7 @@ export class CoverPhotoUploaderComponent {
 
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
+      if (selectionVersion !== this.fileSelectionVersion) return;
       const result = loadEvent.target?.result;
       if (typeof result === 'string') {
         this.imageSource.set(result);
@@ -205,6 +215,7 @@ export class CoverPhotoUploaderComponent {
       }
     };
     reader.onerror = () => {
+      if (selectionVersion !== this.fileSelectionVersion) return;
       this.selectedFile.set(null);
       this.imageSource.set(null);
       this.uploadError.set(true);
@@ -299,6 +310,7 @@ export class CoverPhotoUploaderComponent {
   }
 
   reset(): void {
+    this.fileSelectionVersion += 1;
     this.imageSource.set(null);
     this.selectedFile.set(null);
     this.isCropping.set(false);
