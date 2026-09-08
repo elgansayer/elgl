@@ -193,6 +193,10 @@ class ProviderUsage:
     prompt_measured_calls: int = 0
     total_request_prompt_chars: int = 0
     max_request_prompt_chars: int = 0
+    output_measured_calls: int = 0
+    total_captured_output_chars: int = 0
+    max_captured_output_chars: int = 0
+    output_truncated_calls: int = 0
     failure_counts: dict[str, int] = field(default_factory=dict)
 
 
