@@ -10,6 +10,7 @@ describe('InterestsController', () => {
 
   function createController() {
     const service = {
+      getPrimaryTargetLanguage: vi.fn().mockResolvedValue('es'),
       resolveLegacyInterestIds: vi.fn().mockResolvedValue(['travel']),
       interestTagsExist: vi.fn().mockResolvedValue(true),
       setUserInterests: vi.fn().mockResolvedValue(undefined),
@@ -29,9 +30,10 @@ describe('InterestsController', () => {
     const { controller, service } = createController();
 
     await controller.selectInterests(body, {
-      user: { id: userId, target_languages: ['es'] },
+      user: { id: userId },
     } as never);
 
+    expect(service.getPrimaryTargetLanguage).toHaveBeenCalledWith(userId);
     expect(service.resolveLegacyInterestIds).not.toHaveBeenCalled();
     expect(service.interestTagsExist).toHaveBeenCalledWith(['travel'], 'es');
     expect(service.setUserInterests).toHaveBeenCalledWith(userId, ['travel']);
@@ -46,7 +48,7 @@ describe('InterestsController', () => {
     const { controller, service } = createController();
 
     await controller.selectInterests(body, {
-      user: { id: userId, target_languages: ['es'] },
+      user: { id: userId },
     } as never);
 
     expect(service.resolveLegacyInterestIds).toHaveBeenCalledWith([
@@ -65,7 +67,7 @@ describe('InterestsController', () => {
 
     await expect(
       controller.selectInterests(body, {
-        user: { id: userId, target_languages: ['es'] },
+        user: { id: userId },
       } as never),
     ).rejects.toThrow('Unknown interest tag');
 
@@ -83,7 +85,7 @@ describe('InterestsController', () => {
 
     await expect(
       controller.selectInterests(body, {
-        user: { id: userId, target_languages: ['es'] },
+        user: { id: userId },
       } as never),
     ).rejects.toThrow('Unknown interest ID');
 
@@ -100,6 +102,8 @@ describe('InterestsController', () => {
     { interestIds: ['not-a-uuid'] },
     {},
     { interestTags: null },
+    { interestTags: ['travel'], interestIds: null },
+    { interestTags: null, interestIds: [legacyInterestId] },
     { interestTags: [], interestIds: [] },
   ])('rejects an unsafe selection before mutation: %j', async (input) => {
     const body = plainToInstance(SelectInterestsDto, input);

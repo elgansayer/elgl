@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Language } from 'node-nlp';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -32,6 +32,10 @@ interface UserInterestRow {
   tag: string;
 }
 
+interface UserLanguageRow {
+  target_languages: string[] | null;
+}
+
 interface VocabRow {
   word: string;
   translation: string;
@@ -56,6 +60,7 @@ const MAX_CONTEXT_LENGTH = 500;
 
 @Injectable()
 export class InterestsService {
+  private readonly logger = new Logger(InterestsService.name);
   private readonly languageDetector = new Language();
 
   constructor(
@@ -159,6 +164,24 @@ export class InterestsService {
     });
   }
 
+  async getPrimaryTargetLanguage(userId: string): Promise<string> {
+    const { data: untypedData, error } = await this.supabase
+      .from('users')
+      .select('target_languages')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const data = untypedData as UserLanguageRow | null;
+    const targetLanguage = data?.target_languages?.find(
+      (language) => typeof language === 'string' && language.trim().length > 0,
+    );
+    return targetLanguage?.trim() || 'en';
+  }
+
   async setUserInterests(userId: string, tags: string[]): Promise<void> {
     // remove previous interests
     const { error: deleteError } = await this.supabase
@@ -176,16 +199,35 @@ export class InterestsService {
       tag,
     }));
 
-    if (rows.length === 0) {
-      return;
+    if (rows.length > 0) {
+      const { error: insertError } = await this.supabase
+        .from('user_interests')
+        .insert(rows);
+
+      if (insertError) {
+        await this.invalidateInterestMatchmakingCaches(userId);
+        throw new Error(insertError.message);
+      }
     }
 
-    const { error: insertError } = await this.supabase
-      .from('user_interests')
-      .insert(rows);
+    await this.invalidateInterestMatchmakingCaches(userId);
+  }
 
-    if (insertError) {
-      throw new Error(insertError.message);
+  private async invalidateInterestMatchmakingCaches(
+    userId: string,
+  ): Promise<void> {
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      await redis.del(
+        `daily_recommendations:${userId}`,
+        `recommendations:daily:${userId}`,
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Failed to invalidate matchmaking caches after interests update for ${userId}: ${
+          (error as Error)?.message ?? 'unknown'
+        }`,
+      );
     }
   }
 

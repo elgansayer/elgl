@@ -46,6 +46,17 @@ describe('InterestsSelectComponent', () => {
     vi.unstubAllGlobals();
   });
 
+  it('exposes each interest toggle state to assistive technology', () => {
+    const button: HTMLButtonElement =
+      fixture.nativeElement.querySelector('div button');
+
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+
+    component.toggleInterest('travel');
+    fixture.detectChanges();
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('toggles canonical tags and posts the exact tag contract', async () => {
     component.toggleInterest('travel');
     expect(component.selectedTags()).toEqual(new Set(['travel']));

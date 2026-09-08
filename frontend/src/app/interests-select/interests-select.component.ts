@@ -24,6 +24,7 @@ export interface InterestVocabulary {
           [class.text-on-fill]="selectedTags().has(interest.tag)"
           [class.border-primary]="selectedTags().has(interest.tag)"
           [class.border-surface-100]="!selectedTags().has(interest.tag)"
+          [attr.aria-pressed]="selectedTags().has(interest.tag)"
           (click)="toggleInterest(interest.tag)"
         >
           {{ interest.name }}

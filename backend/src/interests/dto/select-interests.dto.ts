@@ -20,9 +20,8 @@ class ExactlyOneInterestSelectionConstraint implements ValidatorConstraintInterf
   validate(_value: unknown, args: ValidationArguments): boolean {
     const body = args.object as SelectInterestsDto;
     return (
-      Number(Array.isArray(body.interestTags)) +
-        Number(Array.isArray(body.interestIds)) ===
-      1
+      (Array.isArray(body.interestTags) && body.interestIds === undefined) ||
+      (Array.isArray(body.interestIds) && body.interestTags === undefined)
     );
   }
 

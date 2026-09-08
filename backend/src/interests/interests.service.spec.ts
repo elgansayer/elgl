@@ -17,12 +17,18 @@ describe('InterestsService', () => {
   let insert: ReturnType<typeof vi.fn>;
   let update: ReturnType<typeof vi.fn>;
   let upsert: ReturnType<typeof vi.fn>;
+  let maybeSingle: ReturnType<typeof vi.fn>;
+  let redisDel: ReturnType<typeof vi.fn>;
   let proxyMessage: ReturnType<
     typeof vi.fn<
       (prompt: string, signal?: AbortSignal) => Promise<{ response: string }>
     >
   >;
   let results: Record<string, QueryResult>;
+  let userLanguageResult: {
+    data: { target_languages: string[] | null } | null;
+    error: { message: string } | null;
+  };
 
   beforeEach(() => {
     results = {
@@ -32,6 +38,13 @@ describe('InterestsService', () => {
       flashcards: { data: [], error: null },
     };
     upsert = vi.fn().mockResolvedValue({ error: null });
+    maybeSingle = vi.fn();
+    redisDel = vi.fn().mockResolvedValue(undefined);
+    userLanguageResult = {
+      data: { target_languages: ['es'] },
+      error: null,
+    };
+    maybeSingle.mockImplementation(() => Promise.resolve(userLanguageResult));
     const query: Record<string, unknown> & { error: null } = { error: null };
     eq = vi.fn(() => query);
     inQuery = vi.fn(() => query);
@@ -47,6 +60,7 @@ describe('InterestsService', () => {
       in: inQuery,
       limit: vi.fn(() => query),
       single: vi.fn(() => query),
+      maybeSingle,
       delete: remove,
       insert,
       returns: vi.fn(),
@@ -61,7 +75,10 @@ describe('InterestsService', () => {
     });
     proxyMessage = vi.fn();
     service = new InterestsService(
-      { getClient: () => ({ from }) } as never,
+      {
+        getClient: () => ({ from }),
+        getRedisClient: () => ({ del: redisDel }),
+      } as never,
       { proxyMessage } as never,
     );
   });
@@ -98,6 +115,10 @@ describe('InterestsService', () => {
       'interest_tag, vocab_word, translation',
     );
     expect(insert).toHaveBeenCalledWith([{ user_id: 'user-1', tag: 'travel' }]);
+    expect(redisDel).toHaveBeenCalledWith(
+      'daily_recommendations:user-1',
+      'recommendations:daily:user-1',
+    );
   });
 
   it('clears interests without sending an empty insert', async () => {
@@ -106,6 +127,21 @@ describe('InterestsService', () => {
     expect(remove).toHaveBeenCalledTimes(1);
     expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(insert).not.toHaveBeenCalled();
+    expect(redisDel).toHaveBeenCalledWith(
+      'daily_recommendations:user-1',
+      'recommendations:daily:user-1',
+    );
+  });
+
+  it('resolves the primary target language from the persisted profile', async () => {
+    await expect(service.getPrimaryTargetLanguage('user-1')).resolves.toBe('es');
+
+    expect(from).toHaveBeenCalledWith('users');
+    expect(select).toHaveBeenCalledWith('target_languages');
+    expect(eq).toHaveBeenCalledWith('id', 'user-1');
+
+    userLanguageResult = { data: { target_languages: [] }, error: null };
+    await expect(service.getPrimaryTargetLanguage('user-1')).resolves.toBe('en');
   });
 
   it('translates legacy interest UUIDs before storing canonical tags', async () => {
