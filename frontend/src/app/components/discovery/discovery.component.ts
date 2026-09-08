@@ -134,6 +134,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
+  readonly seriousModeSaving = signal<boolean>(false);
+  readonly seriousModeError = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
@@ -255,7 +257,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
   onFilterSelect(id: string): void {
     this.selectedFilter.set(id);
-    this.seriousLearnerOnly.set(id === 'serious');
+    this.seriousLearnerOnly.set(id === 'serious' || this.seriousLearnerMode());
     if (id === 'nearby') {
       this.selectedDistanceKm.set(NEARBY_RADIUS_KM);
       this.selectedSort.set('nearest');
@@ -497,17 +499,32 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   async toggleSeriousLearnerMode(): Promise<void> {
+    if (this.seriousModeSaving()) return;
+
     const newMode = !this.seriousLearnerMode();
+    this.seriousModeSaving.set(true);
+    this.seriousModeError.set(false);
+
     try {
       await this.userService.updateMyProfile({ is_serious_learner: newMode });
       this.seriousLearnerMode.set(newMode);
+
       if (newMode) {
         this.seriousLearnerOnly.set(true);
         this.selectedFilter.set('serious');
+      } else {
+        if (this.selectedFilter() === 'serious') {
+          this.selectedFilter.set('all');
+        }
+        this.seriousLearnerOnly.set(this.selectedFilter() === 'serious');
       }
+
       await this.searchPartners();
     } catch (e) {
       console.error('Failed to update serious learner mode', e);
+      this.seriousModeError.set(true);
+    } finally {
+      this.seriousModeSaving.set(false);
     }
   }
 
@@ -631,8 +648,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedTargetLanguage.set('');
     this.selectedProficiencyLevel.set('');
     this.selectedGender.set('');
-    this.seriousLearnerOnly.set(false);
-    this.seriousLearnerMode.set(false);
+    this.seriousLearnerOnly.set(this.seriousLearnerMode());
+    this.selectedFilter.set(this.seriousLearnerMode() ? 'serious' : 'all');
+    this.seriousModeError.set(false);
     this.ageRangeMin.set(18);
     this.ageRangeMax.set(100);
     this.availableTimeStart.set('');
