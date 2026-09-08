@@ -7,7 +7,6 @@ on:
     branches: [main]
     paths-ignore:
       - 'automation/**'
-      - 'factory-dashboard/**'
       - 'docs/**'
       - 'config/factory/**'
       - 'config/systemd/**'
@@ -47,7 +46,7 @@ jobs:
             while IFS= read -r path; do
               [ -z "$path" ] && continue
               case "$path" in
-                automation/*|factory-dashboard/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
                   ;;
                 *)
                   run_compose=true

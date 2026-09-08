@@ -373,7 +373,12 @@ export class ChatRoomComponent implements OnDestroy {
 
     const currentUserId = this.authService.currentUser()?.id;
     const currentMessages = this.messages();
-    const result = applyChatRoomRealtimeEvent(currentMessages, data, eventRoomId, currentUserId);
+    const result = applyChatRoomRealtimeEvent(
+      currentMessages,
+      data,
+      eventRoomId,
+      currentUserId,
+    );
 
     if (result.messages !== currentMessages) {
       this.messages.set(result.messages);
@@ -469,7 +474,10 @@ export class ChatRoomComponent implements OnDestroy {
 
     this.isCheckingGrammar.set(true);
     try {
-      const grammar = await this.vocabStore.checkGrammar(text, this.partnerLanguage() ?? undefined);
+      const grammar = await this.vocabStore.checkGrammar(
+        text,
+        this.partnerLanguage() ?? undefined,
+      );
       const corrected = grammar.corrected.trim();
       if (grammar.errors_found > 0 && corrected && corrected !== text) {
         this.textInput = corrected;
@@ -499,16 +507,14 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async sendCorrection(): Promise<void> {
-    const original = this.originalText.trim();
-    const corrected = this.correctedText.trim();
-    if (!original || !corrected || corrected === original) return;
+    if (!this.originalText.trim() || !this.correctedText.trim()) return;
     try {
       const sent = await this.chatService.sendMessage({
         room_id: this.roomId,
         message_type: 'correction',
         correction_payload: {
-          original,
-          corrected,
+          original: this.originalText.trim(),
+          corrected: this.correctedText.trim(),
           explanation: this.explanationText.trim() || undefined,
         },
       });
