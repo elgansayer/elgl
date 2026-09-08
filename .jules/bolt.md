@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-08 - [Batch Message Forwarding in Chat Service]
+**Learning:** In the chat service `forwardMessage` function, iterating through multiple valid rooms and executing independent sequential blocks (safety check, db insert, push notification, and Centrifugo publication) inside a `for...of` loop creates linear N+1 latency proportional to the number of forwarded rooms.
+**Action:** Replace sequential database inserts and Centrifugo network publishes inside a `for...of` loop with a single concurrent `Promise.all` batch using `.map()`. This allows resolving multiple safety checks, inserts, and publishes simultaneously for all target rooms in parallel, making bulk-forwarding messages O(1) in terms of latency.
