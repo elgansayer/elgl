@@ -312,7 +312,7 @@ The user's role: Someone practising casual English.
     let flashcardContext = '';
     if (flashcards && flashcards.length > 0) {
       const words = flashcards.map((f) => f.word_token).join(', ');
-      flashcardContext = `\n- The user has recently been studying these words/phrases: ${words}. Try to naturally incorporate some of these into the conversation to help them practice.`;
+      flashcardContext = `\n- The user has recently been studying these words/phrases: ${words}. Try to naturally incorporate some of these into the conversation and ask the user to use them in a sentence to reinforce active production and learning.`;
     }
 
     let knowledgeContext = '';
