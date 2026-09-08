@@ -39,6 +39,8 @@ describe('MessageFilterService', () => {
     expect(request.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
 
     request.flush({
+      enabled: true,
+      allow_everyone: false,
       age_min: 21,
       age_max: 40,
       allowed_native_languages: ['ja'],
@@ -46,6 +48,8 @@ describe('MessageFilterService', () => {
     });
 
     await expect(promise).resolves.toEqual({
+      enabled: true,
+      allow_everyone: false,
       age_min: 21,
       age_max: 40,
       allowed_native_languages: ['ja'],

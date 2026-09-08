@@ -30,24 +30,52 @@ export class CoordinatesDto {
 
 export class MessageFiltersDto {
   @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allow_everyone?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(120)
   age_min?: number;
 
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(120)
   age_max?: number;
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(10)
   @IsString({ each: true })
   allowed_genders?: string[];
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(20)
   @IsString({ each: true })
   allowed_native_languages?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  same_native_language?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  same_target_language?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  same_gender?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  same_age?: boolean;
 }
 
 export class BusinessCatalogItemDto {

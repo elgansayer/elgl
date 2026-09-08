@@ -9,7 +9,8 @@ Message filter settings let an authenticated user restrict who may send the firs
 - minimum age;
 - maximum age;
 - allowed native languages;
-- allowed genders.
+- allowed genders;
+- matching the recipient's native language, target language, gender, or age.
 
 The settings page is available through the existing settings route and persists through the authenticated `/users/me/message-filters` API.
 
@@ -24,7 +25,7 @@ PUT /users/me/message-filters
 
 The service requires an existing access token and deliberately propagates HTTP failures. It must not replace unavailable server state with `{}` or convert a failed update into a successful no-op.
 
-The NestJS chat service remains authoritative for enforcing the persisted filters when a sender attempts the initial message. Existing conversations are not retroactively blocked by this preference.
+The API uses the repository's canonical snake-case contract. A database trigger is the final enforcement boundary when a sender attempts the first message in a direct room. It serialises concurrent first-message admission and verifies sender membership. Existing conversations are not retroactively blocked by this preference.
 
 ## Failure behaviour
 
@@ -67,6 +68,6 @@ The normal frontend verification and repository CI remain authoritative for comp
 
 ## Rollout and rollback
 
-This is a frontend-only API-boundary hardening change. There is no database migration, route change, or backend response-shape change.
+Deploy the append-only Supabase migration before the API and UI. It upgrades the existing nullable column in place, preserves legacy values, and recognises both the canonical snake-case keys and older camel-case values during rollout.
 
 Rollback is a normal code revert. Do not restore the previous `catchError(() => of({}))` / `catchError(() => of(undefined))` semantics for this settings workflow, because they make server outages indistinguishable from successful empty reads and successful writes.
