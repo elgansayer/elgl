@@ -2,7 +2,7 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -34,6 +34,8 @@ type ArchiveState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-chat-list',
+  // ⚡ Bolt Optimization: Added OnPush change detection to prevent unnecessary re-renders of the chat list, reducing main thread blocking during updates.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmInput,
     HlmButton,

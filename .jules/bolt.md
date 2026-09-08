@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-08 - OnPush Change Detection for Chat Components
+**Learning:** Found that Angular chat components lacking `OnPush` change detection default to the default strategy, causing O(n) re-renders for every change detection cycle, especially detrimental in list views. Since these components use modern Angular Signals (`input()`, `computed()`), they are perfectly suited for `OnPush` without side effects.
+**Action:** Always verify change detection strategy for list and list item components in Angular; apply `OnPush` proactively when using Signals to prevent unnecessary DOM checks.
