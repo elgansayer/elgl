@@ -260,6 +260,54 @@ describe('AdminService', () => {
       );
     });
 
+    it('continues scanning through empty intermediate batches and deletes each returned batch', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', is_vip: true, vip_tier: 'consumer' },
+        error: null,
+      });
+      mockRedisClient.scan
+        .mockResolvedValueOnce(['17', ['admin:users:list:first']])
+        .mockResolvedValueOnce(['9', []])
+        .mockResolvedValueOnce(['0', ['admin:users:list:last']]);
+
+      await service.setVipStatus('user-1', {
+        is_vip: true,
+        vip_tier: 'consumer',
+      });
+
+      expect(mockRedisClient.scan).toHaveBeenNthCalledWith(
+        1,
+        '0',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
+      expect(mockRedisClient.scan).toHaveBeenNthCalledWith(
+        2,
+        '17',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
+      expect(mockRedisClient.scan).toHaveBeenNthCalledWith(
+        3,
+        '9',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:users:list:first',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:users:list:last',
+      );
+      expect(mockRedisClient.del).not.toHaveBeenCalledWith();
+    });
+
     it('defaults vip_tier to free when revoking VIP without a tier', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { id: 'user-1', is_vip: false, vip_tier: 'free' },
