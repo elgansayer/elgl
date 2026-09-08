@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
-  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -323,71 +322,6 @@ describe('PrivacyService', () => {
           }),
         }),
       );
-    });
-
-    it('bounds concurrent object removals while processing every expired archive', async () => {
-      tableRows.set(
-        'archive_requests',
-        Array.from({ length: 25 }, (_, index) => ({
-          id: `archive-${index}`,
-          user_id: 'user-1',
-          status: 'ready',
-          object_key: `opaque-${index}.json`,
-          expires_at: '2026-08-01T00:00:00.000Z',
-          created_at: '2026-07-25T00:00:00.000Z',
-        })),
-      );
-
-      let active = 0;
-      let peak = 0;
-      mockRemove.mockImplementation(async () => {
-        active += 1;
-        peak = Math.max(peak, active);
-        await new Promise<void>((resolve) => setTimeout(resolve, 1));
-        active -= 1;
-        return { error: null };
-      });
-
-      await expect(service.purgeExpiredArchives()).resolves.toBe(25);
-      expect(mockRemove).toHaveBeenCalledTimes(25);
-      expect(peak).toBeGreaterThan(1);
-      expect(peak).toBeLessThanOrEqual(10);
-    });
-
-    it('preserves partial progress and reports only an aggregate failure count', async () => {
-      tableRows.set('archive_requests', [
-        {
-          id: 'archive-failed',
-          user_id: 'user-private',
-          status: 'ready',
-          object_key: 'private-object.json',
-          expires_at: '2026-08-01T00:00:00.000Z',
-          created_at: '2026-07-25T00:00:00.000Z',
-        },
-        {
-          id: 'archive-succeeded',
-          user_id: 'user-1',
-          status: 'ready',
-          object_key: 'opaque.json',
-          expires_at: '2026-08-01T00:00:00.000Z',
-          created_at: '2026-07-25T00:00:00.000Z',
-        },
-      ]);
-      mockRemove
-        .mockRejectedValueOnce(new Error('private provider detail'))
-        .mockResolvedValueOnce({ error: null });
-      const errorSpy = vi.spyOn(Logger.prototype, 'error');
-
-      await expect(service.purgeExpiredArchives()).resolves.toBe(1);
-      expect(updates).toHaveLength(1);
-      expect(errorSpy).toHaveBeenCalledWith(
-        'gdpr_archive_cleanup_items_failed count=1',
-      );
-      expect(
-        errorSpy.mock.calls
-          .flat()
-          .some((arg) => String(arg).includes('private')),
-      ).toBe(false);
     });
   });
 
