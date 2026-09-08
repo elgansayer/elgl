@@ -69,7 +69,7 @@ interface DiffSegment {
     }
     @if (showActions()) {
       <div class="mt-2 flex gap-2">
-        <button hlmBtn variant="outline" size="sm" class="text-xs" (click)="createFlashcard()">
+        <button hlmBtn variant="default" size="sm" class="text-xs" (click)="createFlashcard()">
           ➕ {{ 'correction.createFlashcard' | t }}
         </button>
       </div>
