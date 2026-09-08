@@ -126,14 +126,16 @@ describe('Audio room archived session summary contract', () => {
     );
     expect(harness.chatCompletion).toHaveBeenCalledOnce();
     expect(harness.transcriptUpsert).toHaveBeenCalledWith(
-      {
+      expect.objectContaining({
         room_id: 'room-1',
         recording_url: 'https://media.example.test/rooms/room-1.webm',
         transcript_text:
           'We practised greetings, travel plans, and ordering food.',
         session_summary: '- Greetings\n- Ordering food',
         vocabulary_list: ['hola', 'gracias', 'menú'],
-      },
+        summary_status: 'ready',
+        summary_error_code: null,
+      }),
       { onConflict: 'room_id' },
     );
     expect(harness.roomQuery.update).toHaveBeenCalledWith({
