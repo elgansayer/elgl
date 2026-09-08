@@ -332,6 +332,10 @@ class AgentRouter:
             "duration_seconds": round(duration, 3),
             "fallback_reason": result.fallback_reason,
         }
+        if result.captured_output_chars is not None:
+            entry["captured_output_chars"] = max(result.captured_output_chars, 0)
+        if result.output_truncated is not None:
+            entry["output_truncated"] = result.output_truncated
         if result.exit_code is not None:
             entry["exit_code"] = result.exit_code
         if result.failure is not None:
@@ -384,7 +388,13 @@ class AgentRouter:
             lease_seconds=timeout * (self.same_provider_retries + 1) + 300,
         )
 
-    def _record_metrics(self, result: AgentResult, capacity_wait_seconds: float) -> None:
+    def _record_metrics(
+        self,
+        result: AgentResult,
+        capacity_wait_seconds: float,
+        *,
+        request_prompt_chars: int | None = None,
+    ) -> None:
         if self.metrics_store is None or result.provider == "openhands":
             return
         failure = result.failure
@@ -406,6 +416,9 @@ class AgentRouter:
             duration_seconds=duration,
             capacity_wait_seconds=capacity_wait_seconds,
             failure_kind=failure.kind.value if failure is not None else None,
+            request_prompt_chars=request_prompt_chars,
+            captured_output_chars=result.captured_output_chars,
+            output_truncated=result.output_truncated,
         )
 
     def _release_capacity(self, provider: str, owner: str) -> None:
@@ -545,6 +558,9 @@ class AgentRouter:
                     self._record_metrics(
                         result,
                         capacity_wait_seconds if provider_attempt == 1 else 0,
+                        request_prompt_chars=(
+                            len(provider_request.system_prompt) + len(provider_request.prompt)
+                        ),
                     )
                     job.provider_history.append(self._history_entry(result))
                     if len(job.provider_history) > MAX_PROVIDER_HISTORY:
