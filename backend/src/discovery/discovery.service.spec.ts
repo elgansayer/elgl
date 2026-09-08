@@ -1091,6 +1091,93 @@ describe('DiscoveryService', () => {
       ]);
     });
 
+    it('best_match: computes composite score when user profile is present', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify([])); // No partner of the week
+
+      const currentUserProfile: any = {
+        id: 'user-1',
+        native_languages: ['en'],
+        target_languages: ['ja'],
+        proficiency_level: 'B1',
+        available_time_start: '18:00',
+        available_time_end: '20:00',
+        interests: ['music', 'travel'],
+      };
+
+      // Mock date to ensure deterministic scoring for 'recent activity'
+      const mockNow = new Date('2026-08-20T12:00:00Z');
+      vi.setSystemTime(mockNow);
+
+      const partners = [
+        {
+          id: 'partner-1-perfect',
+          native_languages: ['ja'],
+          target_languages: ['en'],
+          proficiency_level: 'B2', // Gap 1 (10 pts)
+          available_time_start: '19:00', // Overlap (15 pts)
+          available_time_end: '21:00',
+          interests: ['music'], // Match 1 (2 pts)
+          last_active_at: '2026-08-20T10:00:00Z', // Recent (<1 day, 10 pts)
+          correction_ratio: 1.0, // (15 pts)
+          study_streak_days: 10, // (10 pts)
+          country: 'Japan',
+          age: 25,
+          // Base complementary: 20
+          // Total: 20+10+15+2+10+15+10 + 5 + 5 (country/age match) = 92
+        },
+        {
+          id: 'partner-2-poor',
+          native_languages: ['ko'],
+          target_languages: ['fr'],
+          proficiency_level: 'A1', // Gap 2 (0 pts)
+          available_time_start: '08:00', // No overlap (0 pts)
+          available_time_end: '10:00',
+          interests: ['sports'], // No match (0 pts)
+          last_active_at: '2026-07-20T10:00:00Z', // Not recent (>7 days, 0 pts)
+          correction_ratio: 0.1, // (1.5 pts)
+          study_streak_days: 1, // (1 pt)
+          country: 'Korea',
+          age: 20,
+          // Base complementary: 0
+          // Total: 2.5
+        },
+        {
+          id: 'partner-3-tie',
+          native_languages: ['ko'],
+          target_languages: ['fr'],
+          proficiency_level: 'A1',
+          available_time_start: '08:00',
+          available_time_end: '10:00',
+          interests: ['sports'],
+          last_active_at: '2026-07-20T10:00:00Z',
+          correction_ratio: 0.1,
+          study_streak_days: 1,
+          country: 'Korea',
+          age: 20,
+          // Identical score to partner-2-poor, should be sorted by id ascending
+        },
+      ];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartners(
+        'user-1',
+        currentUserProfile,
+        {
+          sort: 'best_match',
+          country: 'japan',
+          age_min: 21,
+        },
+      );
+
+      expect(result.map((u) => u.id)).toEqual([
+        'partner-1-perfect',
+        'partner-2-poor',
+        'partner-3-tie',
+      ]);
+
+      vi.useRealTimers();
+    });
+
     it('online_now: orders by most recent last_active_at first', async () => {
       const partners = [
         { id: 'a', last_active_at: '2026-07-01T00:00:00.000Z' },
