@@ -366,6 +366,75 @@
         color: rgb(var(--on-fill));
         font-weight: 800;
       }
+      .correction-editor {
+        display: grid;
+        gap: 9px;
+        margin: 10px;
+        border: 1px solid rgb(var(--warning) / 0.3);
+        border-radius: 14px;
+        padding: 12px;
+        background: rgb(var(--warning) / 0.1);
+      }
+      .editor-label,
+      .diff-label {
+        color: rgb(var(--text-secondary));
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .editor-field {
+        min-height: 44px;
+        border: 1px solid rgb(var(--warning) / 0.3);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        font-size: 12px;
+      }
+      .diff-preview {
+        min-width: 0;
+        border-radius: 10px;
+        padding: 10px;
+        background: rgb(var(--surface-200));
+      }
+      .diff-copy {
+        margin-top: 5px;
+        overflow-wrap: anywhere;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .removed {
+        border-radius: 3px;
+        background: rgb(var(--danger) / 0.15);
+        color: rgb(var(--danger));
+        text-decoration: line-through;
+      }
+      .added {
+        border-radius: 3px;
+        background: rgb(var(--success) / 0.15);
+        color: rgb(var(--success));
+      }
+      .editor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .editor-actions button {
+        min-height: 44px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 10px;
+        padding: 0 12px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .editor-actions .submit {
+        border-color: transparent;
+        background: rgb(var(--success));
+        color: rgb(var(--on-fill));
+      }
       .caption {
         max-width: 1230px;
         margin: 18px auto 0;
@@ -415,7 +484,10 @@
           <div class="header">
             <div class="identity">
               <div class="avatar">💬</div>
-              <div><h2>Chats</h2><p class="status">3 unread</p></div>
+              <div>
+                <h2>Chats</h2>
+                <p class="status">3 unread</p>
+              </div>
             </div>
             <button class="icon-button" type="button" aria-label="New chat">+</button>
           </div>
@@ -431,21 +503,30 @@
           <div class="conversation-row">
             <div class="avatar">陳</div>
             <div class="conversation-copy">
-              <div class="conversation-top"><span class="conversation-name">Chén Wěi</span><span class="conversation-time">2:14 PM</span></div>
+              <div class="conversation-top">
+                <span class="conversation-name">Chén Wěi</span
+                ><span class="conversation-time">2:14 PM</span>
+              </div>
               <div class="conversation-preview">Thanks for the correction just now 😄</div>
             </div>
           </div>
           <div class="conversation-row">
             <div class="avatar" style="background: rgb(var(--secondary))">S</div>
             <div class="conversation-copy">
-              <div class="conversation-top"><span class="conversation-name">Sofia Almeida</span><span class="conversation-time">11:02 AM</span></div>
+              <div class="conversation-top">
+                <span class="conversation-name">Sofia Almeida</span
+                ><span class="conversation-time">11:02 AM</span>
+              </div>
               <div class="conversation-preview">Voice note · 0:24</div>
             </div>
           </div>
           <div class="conversation-row">
             <div class="avatar">J</div>
             <div class="conversation-copy">
-              <div class="conversation-top"><span class="conversation-name">Jonas Weber</span><span class="conversation-time">Yesterday</span></div>
+              <div class="conversation-top">
+                <span class="conversation-name">Jonas Weber</span
+                ><span class="conversation-time">Yesterday</span>
+              </div>
               <div class="conversation-preview">Tap to chat</div>
             </div>
           </div>
@@ -458,7 +539,10 @@
           <div class="header">
             <div class="identity">
               <div class="avatar">陳</div>
-              <div><h2>Chén Wěi</h2><p class="status">● Online</p></div>
+              <div>
+                <h2>Chén Wěi</h2>
+                <p class="status">● Online</p>
+              </div>
             </div>
             <button class="icon-button" type="button" aria-label="Search conversation">⌕</button>
           </div>
@@ -486,10 +570,25 @@
             <button class="tool" type="button">🎙️ Voice</button>
             <button class="tool" type="button">😊 Sticker</button>
           </div>
-          <div class="composer">
-            <div class="composer-input">Type a message…</div>
-            <button class="send" type="button">Send</button>
-          </div>
+          <section class="correction-editor" aria-label="Inline correction editor">
+            <span class="editor-label">Original sentence</span>
+            <div class="editor-field">I goed to the café yesterday.</div>
+            <span class="editor-label">Corrected sentence</span>
+            <div class="editor-field">I went to the café yesterday.</div>
+            <div class="diff-preview">
+              <div class="diff-label">Live diff preview</div>
+              <div class="diff-copy">
+                I <span class="removed">goed</span><span class="added">went</span> to the café
+                yesterday.
+              </div>
+            </div>
+            <div class="editor-field">Use the irregular past tense “went”.</div>
+            <div class="editor-actions">
+              <button type="button">Create flashcard</button>
+              <button type="button">Cancel</button>
+              <button class="submit" type="button">Send correction</button>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -499,18 +598,36 @@
           <div class="header">
             <div class="identity">
               <div class="avatar" style="background: rgb(var(--secondary))">م</div>
-              <div><h2 dir="auto">مريم</h2><p class="status">● Online</p></div>
+              <div>
+                <h2 dir="auto">مريم</h2>
+                <p class="status">● Online</p>
+              </div>
             </div>
             <button class="icon-button" type="button" aria-label="Search conversation">⌕</button>
           </div>
           <div class="starter-wrap">
             <section class="starter-panel" aria-label="Conversation Starters">
               <h3>Conversation Starters</h3>
-              <p>Suggestions appear only while this direct chat is empty. Choosing one fills the composer but does not send it.</p>
+              <p>
+                Suggestions appear only while this direct chat is empty. Choosing one fills the
+                composer but does not send it.
+              </p>
               <div class="starter-list" role="list">
-                <div role="listitem"><button class="starter" type="button" dir="auto">What made you want to learn English?</button></div>
-                <div role="listitem"><button class="starter" type="button" dir="auto">What is a favourite place in your hometown?</button></div>
-                <div role="listitem"><button class="starter" type="button" dir="auto">What has been the highlight of your week?</button></div>
+                <div role="listitem">
+                  <button class="starter" type="button" dir="auto">
+                    What made you want to learn English?
+                  </button>
+                </div>
+                <div role="listitem">
+                  <button class="starter" type="button" dir="auto">
+                    What is a favourite place in your hometown?
+                  </button>
+                </div>
+                <div role="listitem">
+                  <button class="starter" type="button" dir="auto">
+                    What has been the highlight of your week?
+                  </button>
+                </div>
               </div>
             </section>
           </div>
@@ -527,7 +644,14 @@
     </main>
 
     <p class="caption">
-      The third frame reconciles issue #662: starters are a temporary, keyboard-accessible Relay card for an empty two-person chat. Suggestions use logical alignment and <code>dir="auto"</code>, remain readable in light/dark and RTL contexts, wrap at the 390px baseline and high zoom, and use 44px minimum touch targets. Selecting a starter populates the existing composer; the user remains responsible for sending it.
+      The active-chat frame includes the prefilled inline correction editor, live visual diff,
+      flashcard action, and submission state introduced by the correction workflow. An unchanged
+      prefilled value keeps submission disabled until the learner edits it. The third frame
+      reconciles issue #662: starters are a temporary, keyboard-accessible Relay card for an empty
+      two-person chat. Suggestions use logical alignment and <code>dir="auto"</code>, remain
+      readable in light/dark and RTL contexts, wrap at the 390px baseline and high zoom, and use
+      44px minimum touch targets. Selecting a starter populates the existing composer; the user
+      remains responsible for sending it.
     </p>
 
     <script>

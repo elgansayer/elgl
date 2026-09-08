@@ -501,6 +501,11 @@
           <button
             hlmBtn
             (click)="sendCorrection()"
+            [disabled]="
+              !originalText.trim() ||
+              !correctedText.trim() ||
+              correctedText.trim() === originalText.trim()
+            "
             class="rounded-app bg-success ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-on-fill"
             [attr.aria-label]="'chatRoom.sendCorrection' | t"
           >

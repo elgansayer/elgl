@@ -211,12 +211,14 @@ describe('ChatRoomComponent translation and correction contract', () => {
     component.startCorrection(message);
 
     expect(component.originalText).toBe('Je suis aller au parc.');
-    expect(component.correctedText).toBe(component.originalText);
+    expect(component.correctedText).toBe('Je suis aller au parc.');
     expect(component.explanationText).toBe('');
     expect(component.showCorrectionForm()).toBe(true);
 
     component.showCorrectionForm.set(false);
-    component.startCorrection(textMessage({ message_type: 'voice', media_url: 'https://example.test/a.ogg' }));
+    component.startCorrection(
+      textMessage({ message_type: 'voice', media_url: 'https://example.test/a.ogg' }),
+    );
     expect(component.showCorrectionForm()).toBe(false);
   });
 
@@ -251,7 +253,7 @@ describe('ChatRoomComponent translation and correction contract', () => {
     });
     expect(component.messages()).toContain(saved);
     expect(component.originalText).toBe('');
-    expect(component.correctedText).toBe(component.originalText);
+    expect(component.correctedText).toBe('');
     expect(component.explanationText).toBe('');
     expect(component.showCorrectionForm()).toBe(false);
   });
