@@ -83,7 +83,7 @@
           sans-serif;
       }
       .page-head {
-        max-width: 1220px;
+        max-width: 810px;
         margin: 0 auto 20px;
         display: flex;
         align-items: center;
@@ -128,7 +128,7 @@
       }
 
       .frames {
-        max-width: 1220px;
+        max-width: 810px;
         margin: 0 auto;
         display: flex;
         gap: 20px;
@@ -482,89 +482,8 @@
         color: rgba(255, 255, 255, 0.35);
       }
 
-      /* ---- Call history empty state (call-logs.component.ts) ---- */
-      .call-log-shell {
-        min-height: 520px;
-        padding: 16px;
-        background: rgb(var(--surface-300));
-      }
-      .call-log-shell h1 {
-        margin: 0 0 16px;
-        font-size: 24px;
-      }
-      .call-log-filters {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 28px;
-      }
-      .call-log-filter {
-        min-height: 44px;
-        padding: 8px 14px;
-        border: 1px solid rgb(var(--surface-100));
-        border-radius: 999px;
-        background: rgb(var(--surface-200));
-        color: rgb(var(--text-primary));
-        font: inherit;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .call-log-filter.active {
-        border-color: rgb(var(--primary));
-        background: rgb(var(--primary));
-        color: rgb(var(--on-fill));
-      }
-      .empty-state {
-        display: flex;
-        min-height: 280px;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 20px;
-        padding: 24px;
-        border: 1px dashed rgb(var(--surface-100));
-        border-radius: 16px;
-        background: rgb(var(--surface-200));
-        text-align: center;
-      }
-      .empty-header {
-        display: flex;
-        max-width: 320px;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-      }
-      .empty-media {
-        margin-bottom: 8px;
-        font-size: 40px;
-      }
-      .empty-title {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 700;
-      }
-      .empty-description {
-        margin: 0;
-        color: rgb(var(--text-secondary));
-        font-size: 13px;
-        line-height: 1.5;
-      }
-      .empty-action {
-        display: inline-flex;
-        min-height: 44px;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 16px;
-        border-radius: 12px;
-        background: rgb(var(--primary));
-        color: rgb(var(--on-fill));
-        font-size: 13px;
-        font-weight: 700;
-        text-decoration: none;
-      }
-
       .caption {
-        max-width: 1220px;
+        max-width: 810px;
         margin: 18px auto 0;
         font-size: 12px;
         color: rgb(var(--text-secondary));
@@ -713,33 +632,6 @@
           </div>
         </div>
       </div>
-
-      <div class="frame-col">
-        <span class="frame-label"
-          >Call history empty state<span class="sub">Spartan Empty + Relay tokens</span></span
-        >
-        <div class="phone">
-          <main class="call-log-shell">
-            <h1>Call Logs</h1>
-            <div class="call-log-filters" aria-label="Filter call history">
-              <button class="call-log-filter active">All</button>
-              <button class="call-log-filter">Incoming</button>
-              <button class="call-log-filter">Outgoing</button>
-              <button class="call-log-filter">Missed</button>
-            </div>
-            <section class="empty-state" aria-labelledby="call-logs-empty-title">
-              <div class="empty-header">
-                <span class="empty-media" aria-hidden="true">📞</span>
-                <h2 class="empty-title" id="call-logs-empty-title">No call logs</h2>
-                <p class="empty-description">
-                  You haven't made any calls yet. Find a language partner to start practising.
-                </p>
-              </div>
-              <a class="empty-action" href="/discovery">Find a partner</a>
-            </section>
-          </main>
-        </div>
-      </div>
     </div>
 
     <p class="caption">
@@ -748,14 +640,13 @@
       listener audience grid - participant counts trimmed to a representative sample instead of the
       full room roster. The in-call card mirrors <code>video-call.component.ts</code>'s full-screen
       dialog: local PiP preview, call-duration timer, screen-share badge and the
-      mute/camera/share/PiP/end-call toolbar. The call-history frame captures the translated Spartan
-      Empty state, touch-sized filter and discovery actions, and explicit heading relationship used
-      after loading completes. Per the video-call source (<code>bg-surface-900</code> hardcoded, not
-      theme-branched by the component's own design intent), this card is rendered with fixed literal
-      dark colours rather than the <code>--surface-900</code> token, so it deliberately does not
-      respond to the light/dark toggle above - the only intentional off-token colours in this file.
-      Omitted: the connecting and error states, the live-chat overlay, and the "remote screen share
-      + camera thumbnail" dual-video layout - all conditional states, not the steady-state screen.
+      mute/camera/share/PiP/end-call toolbar. Per its source (<code>bg-surface-900</code> hardcoded,
+      not theme-branched by the component's own design intent), this card is rendered with fixed
+      literal dark colours rather than the <code>--surface-900</code> token, so it deliberately does
+      not respond to the light/dark toggle above - the only intentional off-token colours in this
+      file. Omitted: the connecting and error states, the live-chat overlay, and the "remote screen
+      share + camera thumbnail" dual-video layout - all conditional states, not the steady-state
+      screen.
     </p>
 
     <script>

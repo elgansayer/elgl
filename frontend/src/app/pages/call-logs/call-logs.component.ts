@@ -1,14 +1,14 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
+import { Router } from '@angular/router';
 import { CallLogRecord, CallLogsService } from '../../services/call-logs.service';
 
 @Component({
   selector: 'app-call-logs',
-  imports: [HlmButton, ...HlmEmptyImports, CommonModule, RouterLink, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe, AppEmptyStateComponent],
   template: `
     <div class="p-4">
       <h1 class="text-2xl font-bold mb-4">
@@ -54,31 +54,14 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
         </button>
       </div>
 
-      @if (callLogsResource.isLoading()) {
-        <p role="status" aria-live="polite">{{ 'common.loading' | t }}</p>
-      } @else if (callLogsResource.error()) {
-        <section hlmEmpty aria-labelledby="call-logs-error-title">
-          <div hlmEmptyHeader>
-            <h2 hlmEmptyTitle id="call-logs-error-title">{{ 'call_logs.loadErrorTitle' | t }}</h2>
-            <p hlmEmptyDescription>{{ 'call_logs.loadErrorDescription' | t }}</p>
-          </div>
-          <div hlmEmptyContent>
-            <button hlmBtn size="touch" type="button" (click)="retryCallLogs()">
-              {{ 'call_logs.retry' | t }}
-            </button>
-          </div>
-        </section>
-      } @else if (logs().length === 0) {
-        <section hlmEmpty aria-labelledby="call-logs-empty-title">
-          <div hlmEmptyHeader>
-            <span hlmEmptyMedia class="text-4xl" aria-hidden="true">📞</span>
-            <h2 hlmEmptyTitle id="call-logs-empty-title">{{ 'call_logs.emptyTitle' | t }}</h2>
-            <p hlmEmptyDescription>{{ 'call_logs.emptyDesc' | t }}</p>
-          </div>
-          <div hlmEmptyContent>
-            <a hlmBtn size="touch" routerLink="/discovery">{{ 'call_logs.emptyAction' | t }}</a>
-          </div>
-        </section>
+      @if (logs().length === 0) {
+        <app-empty-state
+          icon="📞"
+          [title]="'call_logs.emptyTitle' | t"
+          [description]="'call_logs.emptyDesc' | t"
+          [actionLabel]="'call_logs.emptyAction' | t"
+          (actionClicked)="router.navigate(['/discovery'])"
+        />
       } @else {
         <ul class="space-y-2">
           @for (log of logs(); track log.id) {
@@ -104,9 +87,10 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
 })
 export class CallLogsComponent {
   private callLogsService = inject(CallLogsService);
+  router = inject(Router);
   selectedCallType = signal<string | undefined>(undefined);
 
-  readonly callLogsResource = resource<CallLogRecord[], { callType?: string }>({
+  private callLogsResource = resource<CallLogRecord[], { callType?: string }>({
     params: () => ({ callType: this.selectedCallType() }),
     loader: ({ params }) => this.callLogsService.getCallLogs({ callType: params.callType }),
   });
@@ -115,9 +99,5 @@ export class CallLogsComponent {
 
   onFilterChange(callType?: string): void {
     this.selectedCallType.set(callType);
-  }
-
-  retryCallLogs(): void {
-    this.callLogsResource.reload();
   }
 }

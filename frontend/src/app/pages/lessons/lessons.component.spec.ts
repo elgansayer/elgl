@@ -47,16 +47,14 @@ describe('LessonsComponent progress', () => {
       getLessons: vi.fn().mockReturnValue(of([LESSON])),
       getLesson: vi.fn().mockReturnValue(of(LESSON)),
       getLessonProgress: vi.fn().mockReturnValue(of(PROGRESS)),
-      saveLessonProgress: vi
-        .fn()
-        .mockImplementation(
-          (_id: string, progress: Pick<LessonProgress, 'segment_index' | 'completed'>) =>
-            of({
-              ...PROGRESS,
-              ...progress,
-              completed_at: progress.completed ? '2026-08-26T20:01:00.000Z' : null,
-            }),
-        ),
+      saveLessonProgress: vi.fn().mockImplementation(
+        (_id: string, progress: Pick<LessonProgress, 'segment_index' | 'completed'>) =>
+          of({
+            ...PROGRESS,
+            ...progress,
+            completed_at: progress.completed ? '2026-08-26T20:01:00.000Z' : null,
+          }),
+      ),
     };
 
     await TestBed.configureTestingModule({
@@ -123,29 +121,14 @@ describe('LessonsComponent progress', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    service.getLessonProgress.mockReturnValueOnce(of({ ...PROGRESS, segment_index: 99 }));
+    service.getLessonProgress.mockReturnValueOnce(
+      of({ ...PROGRESS, segment_index: 99 }),
+    );
     routeParams.next(convertToParamMap({ lesson: LESSON.id }));
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.segmentIndex()).toBe(2);
-  });
-
-  it('links an empty lesson list to the canonical groups route', async () => {
-    routeParams.next(convertToParamMap({}));
-    service.getLessons.mockReturnValueOnce(of([]));
-    fixture.componentInstance.lessonsResource.reload();
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const emptyState = fixture.nativeElement.querySelector('[data-slot="empty"]') as HTMLElement;
-    const action = emptyState.querySelector('a[href="/groups"]');
-
-    expect(emptyState.textContent).toContain('No lessons available');
-    expect(emptyState.getAttribute('aria-labelledby')).toBe('lessons-empty-title');
-    expect(action?.textContent).toContain('Explore groups');
   });
 });

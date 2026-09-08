@@ -23,8 +23,7 @@
       "@spartan-ng/helm/combobox": ["./src/app/components/ui/combobox/src/index.ts"],
       "@spartan-ng/helm/input-group": ["./src/app/components/ui/input-group/src/index.ts"],
       "@spartan-ng/helm/autocomplete": ["./src/app/components/ui/autocomplete/src/index.ts"],
-      "@spartan-ng/helm/popover": ["./src/app/components/ui/popover/src/index.ts"],
-      "@spartan-ng/helm/empty": ["./src/app/components/ui/empty/src/index.ts"]
+      "@spartan-ng/helm/popover": ["./src/app/components/ui/popover/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
