@@ -13,7 +13,7 @@ import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { UnreadCounterService } from './services/unread-counter.service';
-import { VersionCheckService } from './services/version-check.service';
+import { VersionService } from './services/version.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { NotificationService } from './services/notification.service';
@@ -86,9 +86,10 @@ getAccessToken: vi.fn(() => 'mock-token'),
     decrementNotificationUnread: vi.fn(),
   };
 
-  const versionCheckServiceMock = {
-    checkVersion: vi.fn(),
+  const versionServiceMock = {
+    checkVersion: vi.fn(() => Promise.resolve(false)),
     isDeprecated: vi.fn(() => false),
+    updateUrl: vi.fn(() => 'https://github.com/elgansayer/elgl/releases/latest'),
   };
 
   const fontScaleServiceMock = {
@@ -135,7 +136,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
         { provide: SafetyService, useValue: safetyServiceMock },
         { provide: ReportUserModalService, useValue: reportModalServiceMock },
         { provide: UnreadCounterService, useValue: unreadCounterMock },
-        { provide: VersionCheckService, useValue: versionCheckServiceMock },
+        { provide: VersionService, useValue: versionServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
@@ -169,7 +170,7 @@ it('should initialise unread counter', () => {
   });
 
   it('should call core services during ngOnInit', () => {
-    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalledTimes(1);
+    expect(versionServiceMock.checkVersion).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.loadInitialData).toHaveBeenCalledTimes(1);
     expect(safetyServiceMock.loadBlockedUsers).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.claimDailyCheckIn).toHaveBeenCalledTimes(1);
@@ -303,8 +304,8 @@ it('should initialise unread counter', () => {
     expect(component.biometricBusy()).toBe(false);
   });
 
-  it('should call versionCheckService on init', () => {
-    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalled();
-    expect(component.versionCheckService.isDeprecated()).toBe(false);
+  it('should call versionService on init', () => {
+    expect(versionServiceMock.checkVersion).toHaveBeenCalled();
+    expect(component.versionService.isDeprecated()).toBe(false);
   });
 });
