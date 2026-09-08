@@ -27,27 +27,21 @@ function installMockImage(width: number, height: number, fail = false): void {
 describe('ImageCompressionService', () => {
   let service: ImageCompressionService;
   let originalImage: typeof Image;
-  let originalCreateObjectURL: typeof URL.createObjectURL;
-  let originalRevokeObjectURL: typeof URL.revokeObjectURL;
   let originalGetContext: typeof HTMLCanvasElement.prototype.getContext;
   let originalToBlob: typeof HTMLCanvasElement.prototype.toBlob;
 
   beforeEach(() => {
     service = new ImageCompressionService();
     originalImage = globalThis.Image;
-    originalCreateObjectURL = URL.createObjectURL;
-    originalRevokeObjectURL = URL.revokeObjectURL;
     originalGetContext = HTMLCanvasElement.prototype.getContext;
     originalToBlob = HTMLCanvasElement.prototype.toBlob;
 
-    URL.createObjectURL = vi.fn(() => 'blob:compression-test');
-    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:compression-test');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     globalThis.Image = originalImage;
-    URL.createObjectURL = originalCreateObjectURL;
-    URL.revokeObjectURL = originalRevokeObjectURL;
     HTMLCanvasElement.prototype.getContext = originalGetContext;
     HTMLCanvasElement.prototype.toBlob = originalToBlob;
     vi.restoreAllMocks();
