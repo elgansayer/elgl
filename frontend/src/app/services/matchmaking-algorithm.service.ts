@@ -239,8 +239,12 @@ export class MatchmakingAlgorithmService {
       return 0;
     }
 
-    const myGoals = new Set(currentUser.learning_goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean));
-    const partnerGoals = partner.learning_goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean);
+    const myGoals = new Set(
+      currentUser.learning_goals.map((goal) => goal.trim().toLowerCase()).filter(Boolean),
+    );
+    const partnerGoals = partner.learning_goals
+      .map((goal) => goal.trim().toLowerCase())
+      .filter(Boolean);
 
     if (myGoals.size === 0 || partnerGoals.length === 0) return 0;
 

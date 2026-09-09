@@ -57,7 +57,7 @@ export interface UserProfile {
   gender?: string;
   status_visibility?: string;
   proficiency_level?: string;
-  learning_goals?: string;
+  learning_goals?: string[];
   availability_morning?: boolean;
   availability_afternoon?: boolean;
   availability_evening?: boolean;
