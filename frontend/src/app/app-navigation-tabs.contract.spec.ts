@@ -53,6 +53,33 @@ describe('primary navigation unread contract', () => {
     }
   });
 
+  it('suppresses zero-count badges while keeping compact badge text visual-only', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`@if (unreadCounter.tabCount('${tab}') > 0) {`);
+      expect(navigation).toContain(`{{ unreadCounter.badgeText('${tab}') }}`);
+    }
+
+    expect(navigation.match(/aria-hidden="true"/g)?.length ?? 0).toBeGreaterThanOrEqual(
+      PRIMARY_TABS.length * 2,
+    );
+    expect(desktopTemplate).toContain('@if (unreadCounter.tabCount(item.tab) > 0) {');
+    expect(desktopTemplate).toContain('{{ unreadCounter.badgeText(item.tab) }}');
+    expect(desktopTemplate).toContain('aria-hidden="true"');
+  });
+
+  it('announces the full unread count instead of the visually capped badge value', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`unreadCounter.tabCount('${tab}') + ' ' +`);
+    }
+
+    expect(desktopTemplate).toContain('{{ unreadCounter.tabCount(item.tab) }}');
+    expect(desktopTemplate).toContain("{{ 'chatList.filterUnread' | t }}");
+  });
+
   it('renders a top-level notification badge from totalUnread()', () => {
     const topBar = topBarTemplate();
 
@@ -63,7 +90,7 @@ describe('primary navigation unread contract', () => {
     );
   });
 
-  it('keeps the total unread badge visually hidden when there is no unread activity', () => {
+  it('omits the visual total-unread badge when there is no unread activity', () => {
     const topBar = topBarTemplate();
     const totalUnreadCondition = '@if (unreadCounter.totalUnread() > 0)';
     const totalUnreadBadge = topBar.slice(topBar.indexOf(totalUnreadCondition));
