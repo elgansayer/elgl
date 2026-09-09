@@ -46,8 +46,18 @@ describe('CloudflareStreamService', () => {
     vi.unstubAllGlobals();
   });
 
-  it('rejects the test API token in production', () => {
-    const productionConfig = { ...CONFIG, NODE_ENV: 'production' };
+  it.each([
+    ['CLOUDFLARE_STREAM_ACCOUNT_ID', 'test-cloudflare-account-id'],
+    ['CLOUDFLARE_STREAM_API_TOKEN', 'test-cloudflare-stream-api-token'],
+    ['CLOUDFLARE_STREAM_API_TOKEN', 'your-least-privilege-stream-api-token'],
+  ] as const)('rejects placeholder %s values in production', (key, value) => {
+    const productionConfig = {
+      ...CONFIG,
+      NODE_ENV: 'production',
+      CLOUDFLARE_STREAM_ACCOUNT_ID: 'secure-cloudflare-account-id',
+      CLOUDFLARE_STREAM_API_TOKEN: 'secure-cloudflare-stream-api-token',
+      [key]: value,
+    };
 
     expect(
       () =>
@@ -55,7 +65,7 @@ describe('CloudflareStreamService', () => {
           get: vi.fn((key: string) => productionConfig[key]),
         } as unknown as ConfigService),
     ).toThrow(
-      'CLOUDFLARE_STREAM_API_TOKEN must be securely configured in production',
+      'Cloudflare Stream credentials must be securely configured in production',
     );
   });
 

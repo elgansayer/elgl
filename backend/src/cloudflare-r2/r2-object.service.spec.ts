@@ -46,8 +46,15 @@ describe('R2ObjectService', () => {
     vi.unstubAllGlobals();
   });
 
-  it('rejects the test service token in production', () => {
-    const productionConfig = { ...CONFIG, NODE_ENV: 'production' };
+  it.each([
+    'test-r2-service-token-with-at-least-32-characters',
+    'replace-with-a-different-32-character-secret',
+  ])('rejects placeholder service token %s in production', (serviceToken) => {
+    const productionConfig = {
+      ...CONFIG,
+      NODE_ENV: 'production',
+      CLOUDFLARE_R2_SERVICE_TOKEN: serviceToken,
+    };
 
     expect(
       () =>

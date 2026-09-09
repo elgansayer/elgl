@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { isProductionPlaceholder } from '../config/environment.validation';
 
 const CLOUDFLARE_API_BASE_URL = 'https://api.cloudflare.com/client/v4';
 const DEFAULT_POLL_INTERVAL_MS = 5000;
@@ -63,11 +64,13 @@ export class CloudflareStreamService {
     this.accountId = this.readRequiredString('CLOUDFLARE_STREAM_ACCOUNT_ID');
     this.apiToken = this.readRequiredSecret('CLOUDFLARE_STREAM_API_TOKEN');
     if (
-      this.configService.get<string>('NODE_ENV') === 'production' &&
-      this.apiToken === 'test-cloudflare-stream-api-token'
+      this.configService.get<string>('NODE_ENV')?.trim().toLowerCase() ===
+        'production' &&
+      (isProductionPlaceholder(this.accountId) ||
+        isProductionPlaceholder(this.apiToken))
     ) {
       throw new Error(
-        'CLOUDFLARE_STREAM_API_TOKEN must be securely configured in production',
+        'Cloudflare Stream credentials must be securely configured in production',
       );
     }
     this.allowedOrigins = this.readCommaSeparated(

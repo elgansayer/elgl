@@ -50,17 +50,29 @@ describe('R2Service', () => {
   it.each([
     [
       'CLOUDFLARE_R2_SIGNING_SECRET',
-      'secure-signing-secret-with-at-least-32-characters',
+      'test-r2-signing-secret-with-at-least-32-characters',
     ],
     [
       'CLOUDFLARE_R2_SERVICE_TOKEN',
-      'secure-service-token-with-at-least-32-characters',
+      'test-r2-service-token-with-at-least-32-characters',
     ],
-  ] as const)('rejects the test %s in production', (secureKey, secureValue) => {
+    [
+      'CLOUDFLARE_R2_SIGNING_SECRET',
+      'replace-with-at-least-32-random-characters',
+    ],
+    [
+      'CLOUDFLARE_R2_SERVICE_TOKEN',
+      'replace-with-a-different-32-character-secret',
+    ],
+  ] as const)('rejects placeholder %s values in production', (key, value) => {
     const productionConfig = {
       ...CONFIG,
       NODE_ENV: 'production',
-      [secureKey]: secureValue,
+      CLOUDFLARE_R2_SIGNING_SECRET:
+        'secure-signing-secret-with-at-least-32-characters',
+      CLOUDFLARE_R2_SERVICE_TOKEN:
+        'secure-service-token-with-at-least-32-characters',
+      [key]: value,
     };
 
     expect(
