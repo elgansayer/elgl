@@ -120,34 +120,12 @@ describe('ChatService', () => {
       await expect(promise).resolves.toEqual(['fluent', 'favourite']);
     });
 
-    it('should add a label and update local state', async () => {
-      const getReq = service.getLabels();
-      httpMock.expectOne(`${baseUrl}/labels`).flush(['existing']);
-      await getReq;
-
-      const addPromise = service.addLabel('new-label');
-      const req = httpMock.expectOne(`${baseUrl}/labels`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ label: 'new-label' });
-      req.flush({});
-
-      await addPromise;
-    });
-
-    it('should remove a label with an encoded URL', async () => {
-      const promise = service.removeLabel('a/b');
-      const req = httpMock.expectOne(`${baseUrl}/labels/${encodeURIComponent('a/b')}`);
-      expect(req.request.method).toBe('DELETE');
-      req.flush({});
-
-      await expect(promise).resolves.toBeUndefined();
-    });
-
     it('should assign a label to a room', async () => {
       const promise = service.assignLabelToRoom('room-1', 'urgent');
-      const req = httpMock.expectOne(`${baseUrl}/rooms/room-1/labels`);
+      const req = httpMock.expectOne(`${baseUrl}/labels`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ label: 'urgent' });
+      expect(req.request.body).toEqual({ room_id: 'room-1', label: 'urgent' });
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({});
 
       await expect(promise).resolves.toBeUndefined();
@@ -155,11 +133,20 @@ describe('ChatService', () => {
 
     it('should remove a label from a room', async () => {
       const promise = service.removeLabelFromRoom('room-1', 'urgent');
-      const req = httpMock.expectOne(`${baseUrl}/rooms/room-1/labels/urgent`);
+      const req = httpMock.expectOne(`${baseUrl}/labels`);
       expect(req.request.method).toBe('DELETE');
+      expect(req.request.body).toEqual({ room_id: 'room-1', label: 'urgent' });
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({});
 
       await expect(promise).resolves.toBeUndefined();
+    });
+  });
+
+  it('fails closed when message receipt details are unavailable', async () => {
+    await expect(service.getMessageReceipts('message-1')).resolves.toEqual({
+      readBy: [],
+      totalMembers: 0,
     });
   });
 

@@ -1,7 +1,4 @@
-import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { computed, Injectable, signal } from '@angular/core';
 import type { DiagnosticQuizResult } from './quiz.service';
 
 /**
@@ -12,8 +9,6 @@ import type { DiagnosticQuizResult } from './quiz.service';
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
   readonly isOnboardingComplete = signal(false);
-
-  private readonly http = inject(HttpClient);
 
   readonly steps: { label: string }[] = [
     { label: 'diagnosticQuiz.title' },
@@ -81,20 +76,6 @@ export class OnboardingService {
       window.localStorage.setItem('hellotalk_onboarding_done', 'true');
     } catch {
       // Storage may be unavailable in privacy-restricted browser contexts.
-    }
-
-    try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/users/onboarding`, {
-          nativeLanguage: this.nativeLanguage(),
-          targetLanguages: Array.from(this.targetLanguages()),
-          displayName: this.displayName(),
-          quizResult: this.quizResult(),
-        }),
-      );
-    } catch {
-      // Existing onboarding persistence remains best-effort. The diagnostic
-      // itself is already persisted by the authenticated quiz endpoint.
     }
   }
 

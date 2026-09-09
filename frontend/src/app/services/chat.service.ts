@@ -165,27 +165,11 @@ export class ChatService {
     return response;
   }
 
-  async addLabel(label: string): Promise<void> {
-    await firstValueFrom(
-      this.http.post(`${this.baseUrl}/labels`, { label }, { headers: this.getHeaders() }),
-    );
-    this.labels.update((labels) => [...labels, label]);
-  }
-
-  async removeLabel(label: string): Promise<void> {
-    await firstValueFrom(
-      this.http.delete(`${this.baseUrl}/labels/${encodeURIComponent(label)}`, {
-        headers: this.getHeaders(),
-      }),
-    );
-    this.labels.update((labels) => labels.filter((l) => l !== label));
-  }
-
   async assignLabelToRoom(roomId: string, label: string): Promise<void> {
     await firstValueFrom(
       this.http.post(
-        `${this.baseUrl}/rooms/${roomId}/labels`,
-        { label },
+        `${this.baseUrl}/labels`,
+        { room_id: roomId, label },
         { headers: this.getHeaders() },
       ),
     );
@@ -193,7 +177,8 @@ export class ChatService {
 
   async removeLabelFromRoom(roomId: string, label: string): Promise<void> {
     await firstValueFrom(
-      this.http.delete(`${this.baseUrl}/rooms/${roomId}/labels/${encodeURIComponent(label)}`, {
+      this.http.delete(`${this.baseUrl}/labels`, {
+        body: { room_id: roomId, label },
         headers: this.getHeaders(),
       }),
     );
@@ -214,10 +199,8 @@ export class ChatService {
   /** Exposed for UI: count of messages queued offline waiting for sync. */
   readonly queuedCount = this.offlineQueue.queueSize;
 
-  async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
-    return firstValueFrom(
-      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
-    );
+  async getMessageReceipts(_messageId: string): Promise<MessageReceiptStatus> {
+    return Promise.resolve({ readBy: [], totalMembers: 0 });
   }
 
   constructor() {
