@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 import { DirectConversationService } from '../../services/direct-conversation.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
@@ -52,6 +53,7 @@ describe('UserDetailComponent', () => {
   let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
   let translateBio: ReturnType<typeof vi.fn>;
   let getUserProfile: ReturnType<typeof vi.fn>;
+  let recordVisit: ReturnType<typeof vi.fn>;
   let openOrCreate: ReturnType<typeof vi.fn>;
   let follow: ReturnType<typeof vi.fn>;
   let unfollow: ReturnType<typeof vi.fn>;
@@ -62,6 +64,9 @@ describe('UserDetailComponent', () => {
     currentUser = signal<{ id: string } | null>({ id: 'current-user' });
     translateBio = vi.fn();
     getUserProfile = vi.fn().mockResolvedValue(makeProfile('user-1'));
+    recordVisit = vi
+      .fn()
+      .mockResolvedValue({ recorded: true, ignored: false, visit_id: 'visit-1' });
     openOrCreate = vi.fn().mockResolvedValue('room-123');
     follow = vi.fn().mockResolvedValue(undefined);
     unfollow = vi.fn().mockResolvedValue(undefined);
@@ -82,6 +87,10 @@ describe('UserDetailComponent', () => {
             getUserProfile,
             likeProfile: vi.fn(),
           },
+        },
+        {
+          provide: ProfileVisitsService,
+          useValue: { recordVisit },
         },
         {
           provide: DirectConversationService,
@@ -119,13 +128,55 @@ describe('UserDetailComponent', () => {
     fixture.componentRef.setInput('userId', 'user-1');
     fixture.detectChanges();
     await Promise.resolve();
+    await Promise.resolve();
     fixture.detectChanges();
   });
 
-  it('loads the requested profile', () => {
+  it('loads the requested profile and records the successful external profile view', () => {
     expect(component).toBeTruthy();
     expect(getUserProfile).toHaveBeenCalledWith('user-1');
     expect(component.profile()?.id).toBe('user-1');
+    expect(recordVisit).toHaveBeenCalledWith('user-1');
+  });
+
+  it('does not record a self view', async () => {
+    recordVisit.mockClear();
+    currentUser.set({ id: 'user-1' });
+
+    await component.loadProfile('user-1');
+
+    expect(recordVisit).not.toHaveBeenCalled();
+  });
+
+  it('does not let visitor-log failure break profile rendering and permits a later safe retry', async () => {
+    recordVisit.mockClear();
+    getUserProfile.mockResolvedValue(makeProfile('user-2'));
+    recordVisit.mockRejectedValueOnce(new Error('visit API unavailable'));
+
+    fixture.componentRef.setInput('userId', 'user-2');
+    fixture.detectChanges();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(component.profile()?.id).toBe('user-2');
+    expect(component.errorMessage()).toBe('');
+
+    recordVisit.mockResolvedValueOnce({ recorded: false, ignored: true, reason: 'duplicate' });
+    await component.loadProfile('user-2');
+    expect(recordVisit).toHaveBeenCalledTimes(2);
+  });
+
+  it('coalesces repeated component loads after a successful visitor-log call', async () => {
+    recordVisit.mockClear();
+    getUserProfile.mockResolvedValue(makeProfile('user-3'));
+
+    fixture.componentRef.setInput('userId', 'user-3');
+    fixture.detectChanges();
+    await Promise.resolve();
+    await Promise.resolve();
+    await component.loadProfile('user-3');
+
+    expect(recordVisit).toHaveBeenCalledTimes(1);
+    expect(recordVisit).toHaveBeenCalledWith('user-3');
   });
 
   it('ignores a stale profile response after the route target changes', async () => {
@@ -277,7 +328,9 @@ describe('UserDetailComponent', () => {
     expect(component.chatErrorKey()).toBe('common.error_generic');
     expect(component.isOpeningChat()).toBe(false);
     expect(navigate).not.toHaveBeenCalled();
-    const status = fixture.nativeElement.querySelector(`#${component.chatStatusId()}`) as HTMLElement;
+    const status = fixture.nativeElement.querySelector(
+      `#${component.chatStatusId()}`,
+    ) as HTMLElement;
     expect(status.getAttribute('role')).toBe('status');
   });
 
