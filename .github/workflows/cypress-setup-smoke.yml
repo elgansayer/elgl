@@ -5,6 +5,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/cypress-setup-smoke.yml'
   merge_group:
     types: [checks_requested]
 
