@@ -28,4 +28,4 @@ There is no quarantine, manual-triage, or human-release path. Head movement rese
 
 ## Regression coverage
 
-`automation/tests/test_factory_instance_efficiency.py` requires all checked production/example Factory profiles to retain at least a ten-minute external-review quiet period. Existing `test_review_head_stability.py` coverage continues to verify that moving external heads consume no provider/review budget and that Factory-owned issue PRs are not delayed.
+`automation/tests/test_factory_instance_efficiency.py` requires all checked production/example Factory profiles to retain the bounded ten-minute external-review quiet period. Existing `test_review_head_stability.py` coverage continues to verify that moving external heads consume no provider/review budget and that Factory-owned issue PRs are not delayed.
