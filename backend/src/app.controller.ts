@@ -14,12 +14,12 @@ interface MockClockRequest {
 }
 
 interface FreezeMockClockRequest extends MockClockRequest {
-  now: string;
-  timeZone?: string;
+  now?: unknown;
+  timeZone?: unknown;
 }
 
 interface ShiftMockClockRequest extends MockClockRequest {
-  milliseconds: number;
+  milliseconds?: unknown;
 }
 
 @Controller()
@@ -43,31 +43,40 @@ export class AppController {
   }
 
   @Post('mock/clock/freeze')
-  freezeMockClock(@Body() body: FreezeMockClockRequest): MockClockSnapshot {
+  freezeMockClock(
+    @Body() body?: FreezeMockClockRequest,
+  ): MockClockSnapshot {
     this.assertMockClockEnabled();
     return this.appService.freezeMockClock(
-      body.now,
-      body.namespace,
-      body.timeZone,
+      body?.now,
+      body?.namespace,
+      body?.timeZone,
     );
   }
 
   @Post('mock/clock/advance')
-  advanceMockClock(@Body() body: ShiftMockClockRequest): MockClockSnapshot {
+  advanceMockClock(
+    @Body() body?: ShiftMockClockRequest,
+  ): MockClockSnapshot {
     this.assertMockClockEnabled();
-    return this.appService.advanceMockClock(body.milliseconds, body.namespace);
+    return this.appService.advanceMockClock(
+      body?.milliseconds,
+      body?.namespace,
+    );
   }
 
   @Post('mock/clock/rewind')
-  rewindMockClock(@Body() body: ShiftMockClockRequest): MockClockSnapshot {
+  rewindMockClock(
+    @Body() body?: ShiftMockClockRequest,
+  ): MockClockSnapshot {
     this.assertMockClockEnabled();
-    return this.appService.rewindMockClock(body.milliseconds, body.namespace);
+    return this.appService.rewindMockClock(body?.milliseconds, body?.namespace);
   }
 
   @Post('mock/clock/reset')
-  resetMockClock(@Body() body: MockClockRequest): MockClockSnapshot {
+  resetMockClock(@Body() body?: MockClockRequest): MockClockSnapshot {
     this.assertMockClockEnabled();
-    return this.appService.resetMockClock(body.namespace);
+    return this.appService.resetMockClock(body?.namespace);
   }
 
   private assertMockClockEnabled(): void {

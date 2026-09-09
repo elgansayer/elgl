@@ -31,7 +31,7 @@ export class AppService {
     return 'Hey there!';
   }
 
-  getMockClock(namespace?: string): MockClockSnapshot {
+  getMockClock(namespace?: unknown): MockClockSnapshot {
     const normalizedNamespace = this.normalizeMockClockNamespace(namespace);
     return this.snapshotMockClock(
       normalizedNamespace,
@@ -40,9 +40,9 @@ export class AppService {
   }
 
   freezeMockClock(
-    now: string,
-    namespace?: string,
-    timeZone?: string,
+    now: unknown,
+    namespace?: unknown,
+    timeZone?: unknown,
   ): MockClockSnapshot {
     const normalizedNamespace = this.normalizeMockClockNamespace(namespace);
     const nowMs = this.parseMockClockInstant(now);
@@ -58,17 +58,26 @@ export class AppService {
   }
 
   advanceMockClock(
-    milliseconds: number,
-    namespace?: string,
+    milliseconds: unknown,
+    namespace?: unknown,
   ): MockClockSnapshot {
-    return this.shiftMockClock(milliseconds, namespace);
+    return this.shiftMockClock(
+      this.normalizeMockClockShift(milliseconds),
+      namespace,
+    );
   }
 
-  rewindMockClock(milliseconds: number, namespace?: string): MockClockSnapshot {
-    return this.shiftMockClock(-milliseconds, namespace);
+  rewindMockClock(
+    milliseconds: unknown,
+    namespace?: unknown,
+  ): MockClockSnapshot {
+    return this.shiftMockClock(
+      -this.normalizeMockClockShift(milliseconds),
+      namespace,
+    );
   }
 
-  resetMockClock(namespace?: string): MockClockSnapshot {
+  resetMockClock(namespace?: unknown): MockClockSnapshot {
     const normalizedNamespace = this.normalizeMockClockNamespace(namespace);
     this.mockClocks.delete(normalizedNamespace);
     return this.snapshotMockClock(
@@ -79,7 +88,7 @@ export class AppService {
 
   private shiftMockClock(
     deltaMs: number,
-    namespace?: string,
+    namespace?: unknown,
   ): MockClockSnapshot {
     const normalizedNamespace = this.normalizeMockClockNamespace(namespace);
     const absoluteDelta = Math.abs(deltaMs);
@@ -114,12 +123,21 @@ export class AppService {
     );
   }
 
-  private normalizeMockClockNamespace(namespace?: string): string {
-    if (namespace === undefined || namespace.trim() === '') {
+  private normalizeMockClockNamespace(namespace?: unknown): string {
+    if (namespace === undefined) {
       return DEFAULT_MOCK_CLOCK_NAMESPACE;
     }
 
+    if (typeof namespace !== 'string') {
+      throw new BadRequestException(
+        'Mock clock namespace must be 1-64 letters, digits, dots, underscores or hyphens',
+      );
+    }
+
     const normalized = namespace.trim();
+    if (normalized === '') {
+      return DEFAULT_MOCK_CLOCK_NAMESPACE;
+    }
     if (!MOCK_CLOCK_NAMESPACE_PATTERN.test(normalized)) {
       throw new BadRequestException(
         'Mock clock namespace must be 1-64 letters, digits, dots, underscores or hyphens',
@@ -128,7 +146,13 @@ export class AppService {
     return normalized;
   }
 
-  private normalizeMockClockTimeZone(timeZone: string): string {
+  private normalizeMockClockTimeZone(timeZone: unknown): string {
+    if (typeof timeZone !== 'string') {
+      throw new BadRequestException(
+        'Mock clock timeZone must be a valid IANA time zone',
+      );
+    }
+
     const normalized = timeZone.trim();
     if (normalized === '' || normalized.length > 64) {
       throw new BadRequestException(
@@ -148,7 +172,7 @@ export class AppService {
     return normalized;
   }
 
-  private parseMockClockInstant(now: string): number {
+  private parseMockClockInstant(now: unknown): number {
     if (typeof now !== 'string' || !ISO_INSTANT_PATTERN.test(now.trim())) {
       throw new BadRequestException(
         'Mock clock now must be an ISO-8601 timestamp with an explicit UTC offset',
@@ -160,6 +184,20 @@ export class AppService {
       throw new BadRequestException('Mock clock now must be a valid timestamp');
     }
     return nowMs;
+  }
+
+  private normalizeMockClockShift(milliseconds: unknown): number {
+    if (
+      typeof milliseconds !== 'number' ||
+      !Number.isSafeInteger(milliseconds) ||
+      milliseconds < 0 ||
+      milliseconds > MAX_TIME_TRAVEL_MS
+    ) {
+      throw new BadRequestException(
+        'Mock clock delta must be a non-negative safe integer no greater than 10 years',
+      );
+    }
+    return milliseconds;
   }
 
   private snapshotMockClock(

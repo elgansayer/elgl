@@ -23,7 +23,7 @@ describe('AppController', () => {
     appService = app.get<AppService>(AppService);
   });
 
-  afterAll(() => {
+  afterEach(() => {
     if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
 
@@ -120,6 +120,18 @@ describe('AppController', () => {
       expect(() =>
         appService.advanceMockClock(Number.MAX_SAFE_INTEGER, 'worker'),
       ).toThrow(BadRequestException);
+      expect(() => appService.advanceMockClock(-1, 'worker')).toThrow(
+        BadRequestException,
+      );
+      expect(() => appService.rewindMockClock(-1, 'worker')).toThrow(
+        BadRequestException,
+      );
+      expect(() => appController.freezeMockClock(undefined)).toThrow(
+        BadRequestException,
+      );
+      expect(() => appController.advanceMockClock(undefined)).toThrow(
+        BadRequestException,
+      );
     });
 
     it('is unavailable unless the explicit mock backend profile is enabled', () => {

@@ -39,7 +39,7 @@ POST /api/mock/clock/freeze
 }
 ```
 
-Advance or rewind by deterministic milliseconds:
+Advance or rewind by a non-negative number of deterministic milliseconds:
 
 ```json
 POST /api/mock/clock/advance
@@ -64,7 +64,7 @@ Responses include the absolute UTC `now`, local wall-clock representation, IANA 
 
 Each namespace owns independent clock state. Use a stable test-worker or scenario name such as `worker-3` so one parallel test cannot advance another worker's clock. Reset deletes only that namespace and reconstructs its exact epoch state.
 
-Namespaces are limited to 64 letters, digits, dots, underscores and hyphens. Each advance/rewind operation is bounded to ten years to reject accidental runaway values.
+Namespaces are limited to 64 letters, digits, dots, underscores and hyphens. Each advance/rewind operation accepts only a non-negative safe integer and is bounded to ten years to reject reversed endpoint semantics and accidental runaway values.
 
 ## Determinism and scenarios
 
@@ -89,7 +89,7 @@ npm --prefix backend run lint:check
 npm --prefix backend run build
 ```
 
-The tests cover reset/replay, isolated namespaces, freeze/advance/rewind behavior, the US daylight-saving transition, invalid input, and the production-disabled boundary.
+The tests cover reset/replay, isolated namespaces, freeze/advance/rewind behavior, the US daylight-saving transition, invalid input including negative shifts and missing request bodies, and the production-disabled boundary.
 
 ## Rollback
 
