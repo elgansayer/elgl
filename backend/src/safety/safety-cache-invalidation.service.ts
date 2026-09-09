@@ -70,8 +70,8 @@ export class SafetyCacheInvalidationService {
           const deleted = await this.deleteByScan(redis, prefix);
           totalDeleted += deleted;
         } else if (pattern.endsWith(':')) {
-          // Prefix pattern – use KEYS (acceptable for small-to-medium instances)
-          const deleted = await this.deleteByPattern(redis, `${pattern}*`);
+          // Prefix pattern – use SCAN for safety on larger key spaces
+          const deleted = await this.deleteByScan(redis, pattern);
           totalDeleted += deleted;
         } else {
           // Exact single key
@@ -191,14 +191,4 @@ export class SafetyCacheInvalidationService {
     return deleted;
   }
 
-  private async deleteByPattern(
-    redis: Redis,
-    pattern: string,
-  ): Promise<number> {
-    const keys = await redis.keys(pattern);
-    if (keys.length === 0) {
-      return 0;
-    }
-    return redis.del(...keys);
-  }
 }
