@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, inject, signal, effect, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -17,8 +17,6 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
 @Component({
-  // Optimizes performance by preventing unnecessary re-renders in chat history lists
-  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-chat-message',
   imports: [
     HlmButton,
