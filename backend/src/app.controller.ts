@@ -43,9 +43,7 @@ export class AppController {
   }
 
   @Post('mock/clock/freeze')
-  freezeMockClock(
-    @Body() body?: FreezeMockClockRequest,
-  ): MockClockSnapshot {
+  freezeMockClock(@Body() body?: FreezeMockClockRequest): MockClockSnapshot {
     this.assertMockClockEnabled();
     return this.appService.freezeMockClock(
       body?.now,
@@ -55,9 +53,7 @@ export class AppController {
   }
 
   @Post('mock/clock/advance')
-  advanceMockClock(
-    @Body() body?: ShiftMockClockRequest,
-  ): MockClockSnapshot {
+  advanceMockClock(@Body() body?: ShiftMockClockRequest): MockClockSnapshot {
     this.assertMockClockEnabled();
     return this.appService.advanceMockClock(
       body?.milliseconds,
@@ -66,9 +62,7 @@ export class AppController {
   }
 
   @Post('mock/clock/rewind')
-  rewindMockClock(
-    @Body() body?: ShiftMockClockRequest,
-  ): MockClockSnapshot {
+  rewindMockClock(@Body() body?: ShiftMockClockRequest): MockClockSnapshot {
     this.assertMockClockEnabled();
     return this.appService.rewindMockClock(body?.milliseconds, body?.namespace);
   }
