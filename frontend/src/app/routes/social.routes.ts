@@ -19,6 +19,13 @@ export const socialRoutes: Routes = [
       import('../components/profile/profile.component').then((m) => m.ProfileComponent),
   },
   {
+    path: 'profile/visitors',
+    loadComponent: () =>
+      import('../components/profile-visitors/profile-visitors.component').then(
+        (m) => m.ProfileVisitorsComponent,
+      ),
+  },
+  {
     path: 'profile/:userId',
     loadComponent: () =>
       import('../components/user-detail/user-detail.component').then((m) => m.UserDetailComponent),
@@ -41,13 +48,6 @@ export const socialRoutes: Routes = [
     path: 'visitors',
     redirectTo: 'profile/visitors',
     pathMatch: 'full',
-  },
-  {
-    path: 'profile/visitors',
-    loadComponent: () =>
-      import('../components/profile-visitors/profile-visitors.component').then(
-        (m) => m.ProfileVisitorsComponent,
-      ),
   },
   {
     path: 'favourites',
