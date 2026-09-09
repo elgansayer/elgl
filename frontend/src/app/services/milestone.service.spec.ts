@@ -27,7 +27,7 @@ describe('MilestoneService', () => {
   describe('getMilestones', () => {
     it('GETs the milestones list', async () => {
       const promise = service.getMilestones();
-      const req = httpMock.expectOne('http://localhost:3000/api/milestones');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/milestones');
       expect(req.request.method).toBe('GET');
       req.flush([{ id: '1', title: 'Complete 10 flashcards', completed: false }]);
 
@@ -40,7 +40,7 @@ describe('MilestoneService', () => {
   describe('getProgress', () => {
     it('GETs the progress summary', async () => {
       const promise = service.getProgress();
-      const req = httpMock.expectOne('http://localhost:3000/api/milestones/progress');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/milestones/progress');
       expect(req.request.method).toBe('GET');
       req.flush({ total: 2, completed: 1, percentage: 50 });
 
@@ -51,7 +51,7 @@ describe('MilestoneService', () => {
   describe('createMilestone', () => {
     it('POSTs a new milestone', async () => {
       const promise = service.createMilestone('Learn 10 words', 'Vocabulary goal');
-      const req = httpMock.expectOne('http://localhost:3000/api/milestones');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/milestones');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({
         title: 'Learn 10 words',
@@ -70,7 +70,7 @@ describe('MilestoneService', () => {
   describe('markCompleted', () => {
     it('POSTs to the complete endpoint', async () => {
       const promise = service.markCompleted('1');
-      const req = httpMock.expectOne('http://localhost:3000/api/milestones/1/complete');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/milestones/1/complete');
       expect(req.request.method).toBe('POST');
       req.flush({ id: '1', title: 'Complete 10 flashcards', completed: true });
 
@@ -85,7 +85,7 @@ describe('MilestoneService', () => {
   describe('deleteMilestone', () => {
     it('DELETEs the milestone', async () => {
       const promise = service.deleteMilestone('1');
-      const req = httpMock.expectOne('http://localhost:3000/api/milestones/1');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/milestones/1');
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
 
