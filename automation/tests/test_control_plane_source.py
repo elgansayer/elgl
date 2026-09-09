@@ -53,7 +53,7 @@ def test_production_uses_subscription_first_phase_routing() -> None:
         AgentPhase.ARCHITECTURE: ["claude", "codex", "google", "opencode", "pi"],
         AgentPhase.IMPLEMENTATION: ["claude", "codex", "google", "opencode", "pi"],
         AgentPhase.SECURITY_REVIEW: ["claude", "codex", "google", "opencode", "pi"],
-        AgentPhase.QUALITY_REPAIR: ["codex", "claude", "google", "opencode", "pi"],
+        AgentPhase.QUALITY_REPAIR: ["opencode", "google", "claude", "pi", "codex"],
         AgentPhase.CODE_REVIEW: ["codex", "claude", "google", "opencode", "pi"],
         AgentPhase.CI_REPAIR: ["opencode", "google", "claude", "pi", "codex"],
         AgentPhase.GENERAL_ACTION: ["opencode", "google", "codex", "claude", "pi"],
@@ -62,8 +62,9 @@ def test_production_uses_subscription_first_phase_routing() -> None:
         assert routing[phase.value.replace("-", "_")] == candidates
         assert "openhands" not in candidates
 
-    # Keep the static preference cheap-first. Runtime history promotes Codex only
-    # after two real CI-repair provider starts.
+    # Keep bounded repair preferences cheap-first. Runtime history promotes Codex
+    # only after two real provider starts for that repair phase.
+    assert expected[AgentPhase.QUALITY_REPAIR][-1] == "codex"
     assert expected[AgentPhase.CI_REPAIR][-1] == "codex"
 
 
