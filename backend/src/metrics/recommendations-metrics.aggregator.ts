@@ -4,6 +4,8 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from './metrics.service';
 
+const SCAN_BATCH_SIZE = 500;
+
 /**
  * Aggregates matchmaking/recommendations stats from Redis and pushes
  * them to prometheus gauges on a regular schedule, enabling Datadog
@@ -29,18 +31,22 @@ export class RecommendationsMetricsAggregator {
       // Count active daily recommendation cache entries (indicates
       // the daily cron ran successfully)
       let cursor = '0';
-      let tier1SuccessCount = 0;
+      const cacheKeys = new Set<string>();
       do {
         const [nextCursor, keys] = await redis.scan(
           cursor,
           'MATCH',
           'recommendations:daily:*',
           'COUNT',
-          500,
+          SCAN_BATCH_SIZE,
         );
         cursor = nextCursor;
-        tier1SuccessCount += keys.length;
+        for (const key of keys) {
+          cacheKeys.add(key);
+        }
       } while (cursor !== '0');
+
+      const tier1SuccessCount = cacheKeys.size;
 
       // Use the tier_success_rate gauge to approximate tier-1 health:
       // when Redis daily cache is populated, tier-1 (interest) is working
