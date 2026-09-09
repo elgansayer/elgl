@@ -20,7 +20,7 @@ The endpoint remains behind the existing authenticated discovery boundary. No ad
 
 A normal Supabase read failure while resolving active hosts returns an empty host set. In that state an active-only search returns no matching hosts rather than exposing private-room hosts or stale room metadata. The failure is recorded through the existing audio-room logger without intentionally including room content.
 
-`DiscoveryService` also retains its existing degradation behavior for an unexpected exception from the audio-room subsystem: ordinary discovery remains available instead of failing the entire partner search. This is deliberately separate from the normal database-error path above and is covered by regression tests.
+`DiscoveryService` also fails closed to an empty active-host result if the audio-room subsystem unexpectedly throws. An explicitly active-only search never broadens into ordinary unfiltered discovery during provider failure. This is deliberately separate from the normal database-error path above and is covered by regression tests.
 
 The UI uses the standard discovery loading, empty and retry/error surfaces. The toggle is a native Spartan checkbox with an associated label and remains keyboard-operable at high zoom/reflow.
 

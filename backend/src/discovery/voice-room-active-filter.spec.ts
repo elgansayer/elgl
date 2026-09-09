@@ -70,12 +70,12 @@ describe('DiscoveryService voice room active filter', () => {
     await expect(filter([makeUser('host-a')], true)).resolves.toEqual([]);
   });
 
-  it('preserves ordinary discovery if the audio-room provider unexpectedly throws', async () => {
+  it('fails closed when the audio-room provider unexpectedly throws', async () => {
     const { filter, getActiveHostIds, logger } = createHarness();
     const candidates = [makeUser('host-a'), makeUser('host-b')];
     getActiveHostIds.mockRejectedValue(new Error('provider unavailable'));
 
-    await expect(filter(candidates, true)).resolves.toBe(candidates);
+    await expect(filter(candidates, true)).resolves.toEqual([]);
     expect(logger.error).toHaveBeenCalledTimes(1);
   });
 });

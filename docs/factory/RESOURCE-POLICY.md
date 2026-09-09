@@ -39,7 +39,7 @@ The Factory also bounds provider input before invocation:
 
 These are deterministic character limits, not claimed token counts. Subscription CLIs do not expose one portable tokenizer or exact remaining-quota API. Oversized untrusted text keeps its beginning and end with an explicit omission marker, which preserves the issue summary and trailing acceptance/verification details without forwarding unlimited release notes, logs or generated prose to every provider.
 
-`README.md` remains excluded from unconditional implementation context. `AGENTS.md` and `TODO.md` are included only inside the shared context budget, while task-specific source inspection remains the agent's responsibility inside the worktree.
+`README.md` remains excluded from unconditional implementation context. `AGENTS.md` is included only inside the shared context budget, while task-specific source inspection remains the agent's responsibility inside the worktree.
 
 ## What counts as an AI-backed route
 
@@ -75,7 +75,7 @@ A review admission key includes both PR number and head SHA. The same SHA cannot
 
 The provider-neutral router still filters disabled, unhealthy, rate-limited, quota-exhausted, unsupported, or unavailable providers before selection. The conservative wrapper then keeps only two eligible candidates for a phase.
 
-That means a provider-side failure can use one fallback, but a single difficult task cannot cascade across every authenticated subscription in one Factory transition. Immediate same-provider retry is disabled by the conservative wrapper even when the underlying general routing configuration allows one.
+That means a provider-side failure can use one fallback, but a single difficult task cannot cascade across every authenticated subscription in one Factory transition. Immediate same-provider retry is disabled in the production routing configuration and enforced again by the conservative wrapper.
 
 For code and security review, providers that previously mutated the job are moved behind independent providers before the two-candidate cap is applied. This preserves cross-provider review where possible.
 

@@ -22,7 +22,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p id="coins-cancel-message" class="mb-8 text-sm text-text-secondary sm:text-base">
           {{ 'coinsCancel.message' | t }}
         </p>
-        <a class="w-full sm:w-auto" hlmBtn size="touch" routerLink="/dashboard">
+        <a class="w-full sm:w-auto" hlmBtn size="touch" routerLink="/coin-economy">
           {{ 'coinsCancel.backBtn' | t }}
         </a>
       </div>
