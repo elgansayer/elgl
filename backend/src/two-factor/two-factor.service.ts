@@ -86,16 +86,19 @@ export class TwoFactorService {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('users')
-      .select('*')
+      .select('two_factor_enabled')
       .eq('id', userId)
       .single();
 
-    if (error) return false;
+    if (error) {
+      throw new InternalServerErrorException(
+        'Failed to check two-factor authentication status',
+      );
+    }
 
-    const secretRecord = data as {
-      totp_secret?: string;
-      two_factor_secret?: string;
+    const statusRecord = data as {
+      two_factor_enabled?: boolean | null;
     } | null;
-    return !!(secretRecord?.totp_secret || secretRecord?.two_factor_secret);
+    return statusRecord?.two_factor_enabled === true;
   }
 }
