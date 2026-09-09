@@ -46,29 +46,6 @@ describe('R2ObjectService', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each([
-    'test-r2-service-token-with-at-least-32-characters',
-    'replace-with-a-different-32-character-secret',
-  ])('rejects placeholder service token %s in production', (serviceToken) => {
-    const productionConfig = {
-      ...CONFIG,
-      NODE_ENV: 'production',
-      CLOUDFLARE_R2_SERVICE_TOKEN: serviceToken,
-    };
-
-    expect(
-      () =>
-        new R2ObjectService(
-          {
-            get: vi.fn((key: string) => productionConfig[key]),
-          } as unknown as ConfigService,
-          r2Service as unknown as R2Service,
-        ),
-    ).toThrow(
-      'CLOUDFLARE_R2_SERVICE_TOKEN must be securely configured in production',
-    );
-  });
-
   it('uploads server-produced bytes through a signed Worker URL', async () => {
     fetchMock.mockResolvedValue(
       new Response(

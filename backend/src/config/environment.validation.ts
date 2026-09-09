@@ -70,12 +70,6 @@ const PLACEHOLDER_PATTERNS = [
   /\.example\.(?:com|org|net)$/i,
 ] as const;
 
-export function isProductionPlaceholder(value: unknown): boolean {
-  if (typeof value !== 'string') return false;
-  const trimmed = value.trim();
-  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(trimmed));
-}
-
 function isBlank(value: unknown): boolean {
   return typeof value !== 'string' || value.trim().length === 0;
 }
@@ -96,7 +90,9 @@ function assertNoProductionPlaceholders(config: Record<string, unknown>): void {
 
   for (const key of PRODUCTION_REQUIRED_ENV_KEYS) {
     const value = config[key];
-    if (isProductionPlaceholder(value)) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(trimmed))) {
       placeholders.push(key);
     }
   }

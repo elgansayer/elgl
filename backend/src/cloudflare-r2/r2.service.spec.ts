@@ -47,44 +47,6 @@ describe('R2Service', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each([
-    [
-      'CLOUDFLARE_R2_SIGNING_SECRET',
-      'test-r2-signing-secret-with-at-least-32-characters',
-    ],
-    [
-      'CLOUDFLARE_R2_SERVICE_TOKEN',
-      'test-r2-service-token-with-at-least-32-characters',
-    ],
-    [
-      'CLOUDFLARE_R2_SIGNING_SECRET',
-      'replace-with-at-least-32-random-characters',
-    ],
-    [
-      'CLOUDFLARE_R2_SERVICE_TOKEN',
-      'replace-with-a-different-32-character-secret',
-    ],
-  ] as const)('rejects placeholder %s values in production', (key, value) => {
-    const productionConfig = {
-      ...CONFIG,
-      NODE_ENV: 'production',
-      CLOUDFLARE_R2_SIGNING_SECRET:
-        'secure-signing-secret-with-at-least-32-characters',
-      CLOUDFLARE_R2_SERVICE_TOKEN:
-        'secure-service-token-with-at-least-32-characters',
-      [key]: value,
-    };
-
-    expect(
-      () =>
-        new R2Service({
-          get: vi.fn((key: string) => productionConfig[key]),
-        } as unknown as ConfigService),
-    ).toThrow(
-      'Cloudflare R2 secrets must be securely configured in production',
-    );
-  });
-
   it('creates a bounded HMAC-signed Cloudflare Worker upload URL', async () => {
     const result = await service.generateUploadUrl(
       'voice note.webm',
