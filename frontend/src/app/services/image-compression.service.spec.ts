@@ -134,6 +134,7 @@ describe('ImageCompressionService', () => {
 
   it('rejects invalid dimensions and quality without decoding private image content', async () => {
     const file = createMockFile();
+    vi.mocked(URL.createObjectURL).mockClear();
 
     await expect(service.compressImage(file, 0, 1080)).rejects.toThrow(
       'Invalid image compression dimensions',
