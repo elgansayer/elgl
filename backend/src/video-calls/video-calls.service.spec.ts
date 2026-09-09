@@ -149,6 +149,25 @@ describe('VideoCallsService', () => {
     expect(service).toBeDefined();
   });
 
+  it('should throw an error if LIVEKIT_API_KEY or LIVEKIT_SECRET are test defaults in production', () => {
+    expect(() => {
+      new VideoCallsService(
+        {
+          get: (key: string) => {
+            if (key === 'NODE_ENV') return 'production';
+            if (key === 'LIVEKIT_API_KEY') return 'test-livekit-api-key';
+            if (key === 'LIVEKIT_SECRET') return 'test-livekit-secret';
+            return null;
+          },
+        } as any,
+        mockDegradationService as any,
+        mockEncryptionService as any,
+        { buildIceServers: vi.fn().mockReturnValue([]) } as any,
+        mockMetricsService as any,
+      );
+    }).toThrow('LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production');
+  });
+
   describe('createRoom', () => {
     it('should create a two-person room and return token plus E2EE key', async () => {
       const result = await service.createRoom(callerId, remoteUserId);
