@@ -2,7 +2,7 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -33,6 +33,8 @@ interface ChatRoomPreview {
 type ArchiveState = 'loading' | 'ready' | 'error';
 
 @Component({
+  // Optimizes performance by preventing unnecessary re-renders in chat history lists
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-chat-list',
   imports: [
     HlmInput,

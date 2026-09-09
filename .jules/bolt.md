@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-09 - Ensure Node Version Before Running Angular Tests
+**Learning:** Running `ng test` or `npm run test` in the frontend directory will fail if the system Node version (e.g. v22.22.1) doesn't exactly match the Angular CLI engine requirements (`^22.22.3 || ^24.15.0 || >=26.0.0`).
+**Action:** Always ensure the correct node version is used via `source ~/.nvm/nvm.sh && nvm use 22.22.3` before running frontend test commands in the shell.
