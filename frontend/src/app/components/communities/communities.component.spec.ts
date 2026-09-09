@@ -16,15 +16,23 @@ const community: Community = {
 };
 
 class MockCommunitiesService {
+  communities: Community[] = [community];
+  listMineCalls = 0;
+  createCalls: CreateCommunityPayload[] = [];
+  removeCalls: string[] = [];
+
   listMine(): Promise<Community[]> {
-    return Promise.resolve([community]);
+    this.listMineCalls += 1;
+    return Promise.resolve([...this.communities]);
   }
 
   create(payload: CreateCommunityPayload): Promise<Community> {
+    this.createCalls.push(payload);
     return Promise.resolve({ ...community, ...payload });
   }
 
-  remove(): Promise<void> {
+  remove(id: string): Promise<void> {
+    this.removeCalls.push(id);
     return Promise.resolve();
   }
 }
@@ -37,6 +45,16 @@ class MockI18nService {
 
 describe('CommunitiesComponent', () => {
   let fixture: ComponentFixture<CommunitiesComponent>;
+  let component: CommunitiesComponent;
+  let communitiesService: MockCommunitiesService;
+
+  const render = async (): Promise<void> => {
+    fixture = TestBed.createComponent(CommunitiesComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -47,10 +65,70 @@ describe('CommunitiesComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(CommunitiesComponent);
-    fixture.detectChanges();
+    communitiesService = TestBed.inject(CommunitiesService) as unknown as MockCommunitiesService;
+    await render();
+  });
+
+  it('loads the current user communities on initial render', () => {
+    expect(communitiesService.listMineCalls).toBe(1);
+    expect(component.communities()).toEqual([community]);
+    expect(fixture.nativeElement.textContent).toContain(community.name);
+  });
+
+  it('creates with trimmed values, clears the form and reloads the collection', async () => {
+    component.newName.set('  Japanese learners  ');
+    component.newDescription.set('  Saturday practice  ');
+
+    await component.create();
     await fixture.whenStable();
-    fixture.detectChanges();
+
+    expect(communitiesService.createCalls).toEqual([
+      { name: 'Japanese learners', description: 'Saturday practice' },
+    ]);
+    expect(component.newName()).toBe('');
+    expect(component.newDescription()).toBe('');
+    expect(communitiesService.listMineCalls).toBe(2);
+  });
+
+  it('omits a blank optional description from the create payload', async () => {
+    component.newName.set('  Korean learners  ');
+    component.newDescription.set('   ');
+
+    await component.create();
+
+    expect(communitiesService.createCalls).toEqual([{ name: 'Korean learners' }]);
+  });
+
+  it('does not create or reload when the trimmed name is empty', async () => {
+    component.newName.set('   ');
+    component.newDescription.set('Ignored');
+
+    await component.create();
+
+    expect(communitiesService.createCalls).toEqual([]);
+    expect(communitiesService.listMineCalls).toBe(1);
+  });
+
+  it('deletes the selected community and reloads the collection', async () => {
+    await component.delete(community.id);
+    await fixture.whenStable();
+
+    expect(communitiesService.removeCalls).toEqual([community.id]);
+    expect(communitiesService.listMineCalls).toBe(2);
+  });
+
+  it('renders the loaded empty state as valid list content', async () => {
+    fixture.destroy();
+    communitiesService.communities = [];
+    await render();
+
+    const list: HTMLUListElement = fixture.nativeElement.querySelector('ul');
+    const emptyItem = list.querySelector<HTMLLIElement>('li');
+
+    expect(emptyItem).not.toBeNull();
+    expect(emptyItem?.textContent).toContain('communities.empty');
+    expect(list.children).toHaveLength(1);
+    expect(emptyItem?.tagName).toBe('LI');
   });
 
   it('uses Relay semantic surfaces, radius and elevation roles', () => {
