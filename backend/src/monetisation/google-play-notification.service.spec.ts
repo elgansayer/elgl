@@ -343,6 +343,30 @@ describe('GooglePlayNotificationService', () => {
     });
   });
 
+  it('claims a token without overwriting an existing owner', async () => {
+    mockQueryBuilder.single.mockResolvedValue({
+      data: { user_id: 'other-user-id' },
+    });
+
+    await expect(
+      service.claimPurchaseToken(
+        'current-user-id',
+        'shared-token',
+        'consumer_8_ukp_10_usd',
+      ),
+    ).resolves.toBe(false);
+
+    expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
+      {
+        user_id: 'current-user-id',
+        purchase_token: 'shared-token',
+        subscription_id: 'consumer_8_ukp_10_usd',
+        status: 'active',
+      },
+      { onConflict: 'purchase_token', ignoreDuplicates: true },
+    );
+  });
+
   it('should acknowledge a test notification without touching VIP status', async () => {
     const payload = buildPubSubPayload({
       version: '1.0',
@@ -452,7 +476,9 @@ describe('GooglePlayNotificationService', () => {
   });
 
   it('should look up the purchase on the Google Play API and store it when the token is not yet known locally', async () => {
-    mockQueryBuilder.single.mockResolvedValue({ data: null });
+    mockQueryBuilder.single
+      .mockResolvedValueOnce({ data: null })
+      .mockResolvedValue({ data: { user_id: 'user-2' } });
     mockActiveSubscription({ obfuscatedExternalAccountId: 'user-2' });
     const payload = buildPubSubPayload({
       version: '1.0',
@@ -481,7 +507,7 @@ describe('GooglePlayNotificationService', () => {
         subscription_id: 'developer_20_ukp_26_usd',
         status: 'active',
       },
-      { onConflict: 'purchase_token', ignoreDuplicates: false },
+      { onConflict: 'purchase_token', ignoreDuplicates: true },
     );
     expect(monetisationService.updateVipStatusFromWebhook).toHaveBeenCalledWith(
       'user-2',
