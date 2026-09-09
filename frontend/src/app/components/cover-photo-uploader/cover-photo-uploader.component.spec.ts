@@ -1,9 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CoverPhotoUploaderComponent } from './cover-photo-uploader.component';
+
 
 describe('CoverPhotoUploaderComponent', () => {
   let component: CoverPhotoUploaderComponent;
@@ -11,6 +12,10 @@ describe('CoverPhotoUploaderComponent', () => {
   let httpMock: HttpTestingController;
   let createObjectUrl: ReturnType<typeof vi.fn>;
   let revokeObjectUrl: ReturnType<typeof vi.fn>;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   beforeEach(async () => {
     createObjectUrl = vi.fn(() => 'blob:cover-preview');
@@ -51,7 +56,10 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(trigger.tagName).toBe('BUTTON');
     expect(trigger.type).toBe('button');
     expect(trigger.getAttribute('role')).toBeNull();
+    expect(trigger.getAttribute('tabindex')).toBeNull();
     expect(trigger.classList.contains('focus-visible:opacity-100')).toBe(true);
+    expect(trigger.classList.contains('motion-reduce:transition-none')).toBe(true);
+    expect(trigger.classList.contains('whitespace-normal')).toBe(true);
     expect(frame.classList.contains('rounded-card')).toBe(true);
     expect(frame.classList.contains('bg-surface-200')).toBe(true);
 
@@ -71,7 +79,7 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(image.alt).toBe('Cover preview');
   });
 
-  it('stores the selected file and reads a local preview without starting crop mode', async () => {
+  it('stores the selected file, reads a local preview, and moves focus to Crop', async () => {
     const file = new File(['dummy image'], 'test.jpg', { type: 'image/jpeg' });
     const fileInput = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
     Object.defineProperty(fileInput, 'files', {
@@ -80,25 +88,86 @@ describe('CoverPhotoUploaderComponent', () => {
     });
 
     component.onFileSelected({ target: fileInput } as unknown as Event);
+    await vi.waitFor(() => expect(component.imageSource()).toContain('data:image/jpeg'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const cropButton = Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
+      (button as HTMLButtonElement).textContent?.includes('Crop'),
+    ) as HTMLButtonElement | undefined;
 
     expect(component.selectedFile()).toBe(file);
-    await vi.waitFor(() => expect(component.imageSource()).toContain('data:image/jpeg'));
     expect(component.isCropping()).toBe(false);
     expect(component.croppedBlob()).toBeNull();
+    expect(cropButton).toBeTruthy();
+    await vi.waitFor(() => expect(document.activeElement).toBe(cropButton));
   });
 
-  it('rejects unsupported file types before editor state changes', () => {
+  it('ignores a stale file read after a newer file is selected', () => {
+    type DeferredReader = {
+      onload: ((event: ProgressEvent<FileReader>) => void) | null;
+      onerror: ((event: ProgressEvent<FileReader>) => void) | null;
+      readAsDataURL: ReturnType<typeof vi.fn>;
+    };
+    const readers: DeferredReader[] = [];
+    class DeferredFileReader {
+      onload: DeferredReader['onload'] = null;
+      onerror: DeferredReader['onerror'] = null;
+      readAsDataURL = vi.fn();
+
+      constructor() {
+        readers.push(this);
+      }
+    }
+    vi.stubGlobal('FileReader', DeferredFileReader);
+
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    const first = new File(['first'], 'first.jpg', { type: 'image/jpeg' });
+    const second = new File(['second'], 'second.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [first] as unknown as FileList,
+    });
+    component.onFileSelected({ target: input } as unknown as Event);
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [second] as unknown as FileList,
+    });
+    component.onFileSelected({ target: input } as unknown as Event);
+
+    readers[1].onload?.({
+      target: { result: 'data:image/jpeg;base64,SECOND' },
+    } as unknown as ProgressEvent<FileReader>);
+    readers[0].onload?.({
+      target: { result: 'data:image/jpeg;base64,FIRST' },
+    } as unknown as ProgressEvent<FileReader>);
+
+    expect(component.selectedFile()).toBe(second);
+    expect(component.imageSource()).toBe('data:image/jpeg;base64,SECOND');
+  });
+
+  it('rejects unsupported file types with an accessible error and recoverable picker state', async () => {
     const file = new File(['svg'], 'unsafe.svg', { type: 'image/svg+xml' });
-    const input = document.createElement('input');
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
     Object.defineProperty(input, 'files', {
       configurable: true,
       value: [file] as unknown as FileList,
     });
 
     component.onFileSelected({ target: input } as unknown as Event);
+    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(component.selectedFile()).toBeNull();
     expect(component.imageSource()).toBeNull();
+    expect(component.uploadError()).toBe(true);
+    expect(input.value).toBe('');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'Error',
+    );
+
+    const trigger = fixture.nativeElement.querySelector('.group button') as HTMLButtonElement;
+    await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it('delegates cropping to the shared cover photo cropper', () => {
@@ -125,6 +194,26 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.isCropping()).toBe(false);
     expect(component.uploadError()).toBe(false);
     expect(createObjectUrl).toHaveBeenCalledWith(blob);
+  });
+
+  it('keeps editor actions touch-sized, wrap-safe, and direction-neutral at high zoom', () => {
+    component.selectedFile.set(new File(['image'], 'cover.png', { type: 'image/png' }));
+    component.imageSource.set('data:image/png;base64,AA==');
+    fixture.detectChanges();
+
+    const actionRow = fixture.nativeElement.querySelector('.mt-4') as HTMLElement;
+    const buttons = Array.from(actionRow.querySelectorAll('button')) as HTMLButtonElement[];
+
+    expect(actionRow.classList.contains('min-w-0')).toBe(true);
+    expect(actionRow.classList.contains('sm:flex-wrap')).toBe(true);
+    expect(buttons).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button.classList.contains('min-h-11')).toBe(true);
+      expect(button.classList.contains('max-w-full')).toBe(true);
+      expect(button.classList.contains('whitespace-normal')).toBe(true);
+      expect(button.classList.contains('break-words')).toBe(true);
+      expect(button.className).not.toMatch(/(?:^|\s)(?:ml|mr|left|right)-/);
+    }
   });
 
   it('keeps upload disabled until a valid crop result exists', () => {
@@ -202,13 +291,39 @@ describe('CoverPhotoUploaderComponent', () => {
 
     await uploadPromise;
     fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(component.croppedBlob()).toBe(blob);
     expect(component.croppedPreviewUrl()).toBe('blob:cover-preview');
     expect(component.uploadError()).toBe(true);
     expect(component.isUploading()).toBe(false);
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'Error',
+    );
+
+    const upload = Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
+      (button as HTMLButtonElement).textContent?.includes('Upload'),
+    ) as HTMLButtonElement | undefined;
+    await vi.waitFor(() => expect(document.activeElement).toBe(upload));
     fetchSpy.mockRestore();
+  });
+
+  it('restores focus to the file trigger when the editor is reset', async () => {
+    component.imageSource.set('data:image/webp;base64,AA==');
+    component.selectedFile.set(new File(['image'], 'cover.webp', { type: 'image/webp' }));
+    fixture.detectChanges();
+
+    const cancel = Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
+      (button as HTMLButtonElement).textContent?.includes('Cancel'),
+    ) as HTMLButtonElement;
+    cancel.focus();
+
+    component.reset();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const trigger = fixture.nativeElement.querySelector('.group button') as HTMLButtonElement;
+    await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it('revokes generated preview URLs when resetting', () => {
@@ -224,5 +339,16 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.croppedBlob()).toBeNull();
     expect(component.croppedPreviewUrl()).toBeNull();
     expect(component.uploadError()).toBe(false);
+  });
+
+  it('keeps upload progress in a polite atomic live region', () => {
+    component.selectedFile.set(new File(['image'], 'cover.png', { type: 'image/png' }));
+    component.imageSource.set('data:image/png;base64,AA==');
+    fixture.detectChanges();
+
+    const region = fixture.nativeElement.querySelector('[aria-live="polite"]') as HTMLElement;
+
+    expect(region).toBeTruthy();
+    expect(region.getAttribute('aria-atomic')).toBe('true');
   });
 });
