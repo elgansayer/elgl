@@ -18,7 +18,7 @@ async function findAvailablePort() {
   assert.ok(address && typeof address === 'object');
   const { port } = address;
   await new Promise((resolve, reject) => {
-    socket.close(error => error ? reject(error) : resolve());
+    socket.close((error) => (error ? reject(error) : resolve()));
   });
   return port;
 }
@@ -35,7 +35,7 @@ async function waitUntilReady(serverProcess, url, stderr) {
     } catch {
       // The child has not bound its socket yet.
     }
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error(`Dashboard did not become ready within 5 seconds: ${stderr()}`);
 }
@@ -54,7 +54,7 @@ test('server enforces basic auth on protected routes', async () => {
   });
   let stderr = '';
   serverProcess.stderr.setEncoding('utf8');
-  serverProcess.stderr.on('data', chunk => {
+  serverProcess.stderr.on('data', (chunk) => {
     stderr += chunk;
   });
 
