@@ -2280,13 +2280,15 @@ export class I18nService {
       'Download a copy of all your data. This may include profile info, moments, chat history, and more.',
     'gdpr.requestArchiveBtn': 'Request My Data Archive',
     'gdpr.archiveSuccess':
-      'Your data archive request has been submitted. You will receive an email when ready.',
+      'Your data archive is being prepared. Return here to download it when it is ready.',
     'gdpr.deleteSection': 'Delete My Account',
     'gdpr.deleteInfo':
       'Permanently delete your account and all associated data. This action is irreversible after a 30-day grace period.',
-    'gdpr.deleteConfirmLabel': 'I understand that this action is irreversible.',
+    'gdpr.deleteConfirmLabel':
+      'I understand that my account will be permanently deleted after the 30-day grace period.',
     'gdpr.deleteAccountBtn': 'Delete My Account',
-    'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
+    'gdpr.deleteSuccess':
+      'Account deletion scheduled. You can cancel during the 30-day grace period.',
     'gdpr.cancelDeletionSection': 'Cancel Account Deletion',
     'gdpr.cancelDeletionInfo':
       'Your account is currently scheduled for deletion. You can cancel this request during the 30-day grace period.',

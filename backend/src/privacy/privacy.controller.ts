@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -19,6 +20,14 @@ import { DeleteAccountDto } from './dto/delete-account.dto';
 @UseGuards(SupabaseAuthGuard)
 export class PrivacyController {
   constructor(private readonly privacyService: PrivacyService) {}
+
+  @Get('status')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 30, ttl: 60 * 60 * 1000 } })
+  async getStatus(@CurrentUser() user: User | null) {
+    if (!user) throw new UnauthorizedException();
+    return this.privacyService.getStatus(user.id);
+  }
 
   @Post('request-archive')
   @HttpCode(HttpStatus.OK)
