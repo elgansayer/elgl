@@ -9,9 +9,18 @@ const CANDIDATE_LIMIT = 80;
 const INTEREST_ROW_LIMIT = 400;
 const ACTIVE_DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_WEEK_MS = 7 * ACTIVE_DAY_MS;
+const MINUTES_PER_DAY = 24 * 60;
+const HIGH_CORRECTION_RATIO = 0.8;
 
 export type RecommendationReason =
-  'language_exchange' | 'shared_interests' | 'active_recently' | 'study_streak';
+  | 'language_exchange'
+  | 'shared_interests'
+  | 'active_recently'
+  | 'study_streak'
+  | 'proficiency_match'
+  | 'availability_match'
+  | 'high_correction_ratio'
+  | 'learning_goal_match';
 
 export interface DiscoveryRecommendationDto {
   id: string;
@@ -26,6 +35,13 @@ export interface DiscoveryRecommendationDto {
 interface CurrentUserSignals {
   nativeLanguages: string[];
   targetLanguages: string[];
+  proficiencyLevel?: string | null;
+  availabilityMorning?: boolean | null;
+  availabilityAfternoon?: boolean | null;
+  availabilityEvening?: boolean | null;
+  availableTimeStart?: string | null;
+  availableTimeEnd?: string | null;
+  learningGoals?: string[];
 }
 
 interface CandidateRow {
@@ -41,6 +57,14 @@ interface CandidateRow {
   is_serious_learner: boolean | null;
   study_streak_days: number | null;
   last_active_at: string | null;
+  proficiency_level: string | null;
+  availability_morning: boolean | null;
+  availability_afternoon: boolean | null;
+  availability_evening: boolean | null;
+  available_time_start: string | null;
+  available_time_end: string | null;
+  correction_ratio: number | null;
+  learning_goals: string[] | null;
 }
 
 interface InterestRow {
@@ -69,6 +93,46 @@ function hasOverlap(left: string[], right: string[]): boolean {
   if (left.length === 0 || right.length === 0) return false;
   const rightSet = new Set(right);
   return left.some((value) => rightSet.has(value));
+}
+
+function parseAvailabilityTime(
+  value: string | null | undefined,
+): number | null {
+  if (typeof value !== 'string') return null;
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function dailyIntervals(start: number, end: number): Array<[number, number]> {
+  if (start === end) return [];
+  return start < end
+    ? [[start, end]]
+    : [
+        [start, MINUTES_PER_DAY],
+        [0, end],
+      ];
+}
+
+function hasAvailabilityWindowOverlap(
+  candidateStart: string | null,
+  candidateEnd: string | null,
+  currentStart: string | null | undefined,
+  currentEnd: string | null | undefined,
+): boolean {
+  const cStart = parseAvailabilityTime(candidateStart);
+  const cEnd = parseAvailabilityTime(candidateEnd);
+  const uStart = parseAvailabilityTime(currentStart);
+  const uEnd = parseAvailabilityTime(currentEnd);
+  if (cStart === null || cEnd === null || uStart === null || uEnd === null) {
+    return false;
+  }
+
+  return dailyIntervals(cStart, cEnd).some(([leftStart, leftEnd]) =>
+    dailyIntervals(uStart, uEnd).some(
+      ([rightStart, rightEnd]) => leftStart < rightEnd && rightStart < leftEnd,
+    ),
+  );
 }
 
 function getActivityRank(candidate: CandidateRow, nowMs: number): number {
@@ -121,6 +185,45 @@ export function rankDiscoveryRecommendations(
     );
     const activityRank = getActivityRank(candidate, nowMs);
     const hasStudyStreak = (candidate.study_streak_days ?? 0) >= 7;
+    const hasHighCorrectionRatio =
+      typeof candidate.correction_ratio === 'number' &&
+      Number.isFinite(candidate.correction_ratio) &&
+      candidate.correction_ratio >= HIGH_CORRECTION_RATIO;
+    const candidateProficiency = candidate.proficiency_level
+      ?.trim()
+      .toUpperCase();
+    const currentProficiency = currentUser.proficiencyLevel
+      ?.trim()
+      .toUpperCase();
+    const hasProficiencyMatch =
+      typeof candidateProficiency === 'string' &&
+      /^(A1|A2|B1|B2|C1|C2)$/.test(candidateProficiency) &&
+      candidateProficiency === currentProficiency;
+
+    let hasAvailabilityMatch = false;
+    if (
+      (candidate.availability_morning && currentUser.availabilityMorning) ||
+      (candidate.availability_afternoon && currentUser.availabilityAfternoon) ||
+      (candidate.availability_evening && currentUser.availabilityEvening)
+    ) {
+      hasAvailabilityMatch = true;
+    }
+    if (
+      hasAvailabilityWindowOverlap(
+        candidate.available_time_start,
+        candidate.available_time_end,
+        currentUser.availableTimeStart,
+        currentUser.availableTimeEnd,
+      )
+    ) {
+      hasAvailabilityMatch = true;
+    }
+
+    const candidateGoals = normaliseLanguages(candidate.learning_goals);
+    const hasLearningGoalMatch = hasOverlap(
+      candidateGoals,
+      normaliseLanguages(currentUser.learningGoals),
+    );
 
     let score = 0;
     const reasons: RecommendationReason[] = [];
@@ -143,6 +246,22 @@ export function rankDiscoveryRecommendations(
     if (hasStudyStreak || candidate.is_serious_learner === true) {
       score += 10;
       reasons.push('study_streak');
+    }
+    if (hasHighCorrectionRatio) {
+      score += 10;
+      reasons.push('high_correction_ratio');
+    }
+    if (hasProficiencyMatch) {
+      score += 5;
+      reasons.push('proficiency_match');
+    }
+    if (hasAvailabilityMatch) {
+      score += 15;
+      reasons.push('availability_match');
+    }
+    if (hasLearningGoalMatch) {
+      score += 10;
+      reasons.push('learning_goal_match');
     }
 
     if (score === 0) continue;
@@ -191,7 +310,9 @@ export class DiscoveryRecommendationsService {
 
     const { data: currentUser, error: currentUserError } = await supabase
       .from('users')
-      .select('native_languages, target_languages')
+      .select(
+        'native_languages, target_languages, proficiency_level, availability_morning, availability_afternoon, availability_evening, available_time_start, available_time_end, learning_goals',
+      )
       .eq('id', userId)
       .maybeSingle();
 
@@ -202,6 +323,13 @@ export class DiscoveryRecommendationsService {
     const currentSignals: CurrentUserSignals = {
       nativeLanguages: normaliseLanguages(currentUser['native_languages']),
       targetLanguages: normaliseLanguages(currentUser['target_languages']),
+      proficiencyLevel: currentUser['proficiency_level'],
+      availabilityMorning: currentUser['availability_morning'],
+      availabilityAfternoon: currentUser['availability_afternoon'],
+      availabilityEvening: currentUser['availability_evening'],
+      availableTimeStart: currentUser['available_time_start'],
+      availableTimeEnd: currentUser['available_time_end'],
+      learningGoals: normaliseLanguages(currentUser['learning_goals']),
     };
 
     if (
@@ -315,7 +443,7 @@ export class DiscoveryRecommendationsService {
     const { data: candidates, error: candidatesError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, privacy_hide_from_search, privacy_hide_online_status, is_deletion_pending, is_deleted, is_serious_learner, study_streak_days, last_active_at',
+        'id, display_name, avatar_url, native_languages, target_languages, privacy_hide_from_search, privacy_hide_online_status, is_deletion_pending, is_deleted, is_serious_learner, study_streak_days, last_active_at, proficiency_level, availability_morning, availability_afternoon, availability_evening, available_time_start, available_time_end, correction_ratio, learning_goals',
       )
       .in('id', boundedIds)
       .eq('privacy_hide_from_search', false)

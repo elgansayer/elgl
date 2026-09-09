@@ -17,6 +17,14 @@ function candidate(id: string, overrides: Partial<Candidate> = {}): Candidate {
     is_serious_learner: false,
     study_streak_days: 0,
     last_active_at: '2026-08-21T09:00:00Z',
+    proficiency_level: null,
+    availability_morning: false,
+    availability_afternoon: false,
+    availability_evening: false,
+    available_time_start: null,
+    available_time_end: null,
+    correction_ratio: null,
+    learning_goals: null,
     ...overrides,
   };
 }
@@ -133,5 +141,161 @@ describe('rankDiscoveryRecommendations', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].recommendation_reasons).toEqual(['shared_interests']);
+  });
+
+  it('explains proficiency, availability, correction, and goal matches', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        proficiencyLevel: 'B1',
+        availabilityEvening: true,
+        availableTimeStart: '18:00',
+        availableTimeEnd: '20:00',
+        learningGoals: ['conversation'],
+      },
+      [
+        candidate('multidimensional-match', {
+          proficiency_level: 'B1',
+          availability_evening: true,
+          available_time_start: '19:00',
+          available_time_end: '21:00',
+          correction_ratio: 0.81,
+          learning_goals: ['Conversation'],
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).toEqual(
+      expect.arrayContaining([
+        'proficiency_match',
+        'availability_match',
+        'high_correction_ratio',
+        'learning_goal_match',
+      ]),
+    );
+  });
+
+  it('does not award new signals when profile data is missing or mismatched', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        proficiencyLevel: 'B1',
+        availabilityMorning: true,
+        learningGoals: ['grammar'],
+      },
+      [
+        candidate('language-only', {
+          proficiency_level: 'A2',
+          availability_evening: true,
+          correction_ratio: 0.79,
+          learning_goals: ['conversation'],
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).not.toEqual(
+      expect.arrayContaining([
+        'proficiency_match',
+        'availability_match',
+        'high_correction_ratio',
+        'learning_goal_match',
+      ]),
+    );
+  });
+
+  it('treats malformed proficiency values as neutral', () => {
+    const result = rankDiscoveryRecommendations(
+      { ...current, proficiencyLevel: '   ' },
+      [candidate('malformed-proficiency', { proficiency_level: '   ' })],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).not.toContain('proficiency_match');
+  });
+
+  it('uses the repository-wide inclusive high-correction threshold', () => {
+    const result = rankDiscoveryRecommendations(
+      current,
+      [candidate('threshold', { correction_ratio: 0.8 })],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).toContain('high_correction_ratio');
+  });
+
+  it('requires real time overlap rather than endpoint-only contact', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        availableTimeStart: '10:00',
+        availableTimeEnd: '12:00',
+      },
+      [
+        candidate('adjacent', {
+          available_time_start: '12:00',
+          available_time_end: '14:00',
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).not.toContain(
+      'availability_match',
+    );
+  });
+
+  it('matches overlapping overnight windows', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        availableTimeStart: '23:00',
+        availableTimeEnd: '02:00',
+      },
+      [
+        candidate('overnight', {
+          available_time_start: '01:00',
+          available_time_end: '03:00',
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).toContain('availability_match');
+  });
+
+  it('treats malformed and zero-duration windows as neutral', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        availableTimeStart: '10:00',
+        availableTimeEnd: '12:00',
+      },
+      [
+        candidate('malformed', {
+          available_time_start: 'not-a-time',
+          available_time_end: '11:00',
+        }),
+        candidate('zero-duration', {
+          available_time_start: '11:00',
+          available_time_end: '11:00',
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    for (const recommendation of result) {
+      expect(recommendation.recommendation_reasons).not.toContain(
+        'availability_match',
+      );
+    }
   });
 });
