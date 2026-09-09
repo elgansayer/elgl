@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import Redis from 'ioredis';
+import type Redis from 'ioredis-v6';
 import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
 import { MetricsService } from '../metrics/metrics.service';
