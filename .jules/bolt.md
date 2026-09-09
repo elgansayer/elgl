@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-09 - [Redis Invalidation DoS Fix]
+**Learning:** This codebase uses Redis cache tags and user lists. Using `redis.keys` with wildcards like `admin:users:list:*` runs blocking `KEYS` command which can freeze the Redis event loop, creating a DoS vulnerability or scaling bottleneck as the key count grows.
+**Action:** Always prefer `redis.scan` with `MATCH` using a cursor when invalidating or listing wildcard keys in Redis for scalable cache evictions.
