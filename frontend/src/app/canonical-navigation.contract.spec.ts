@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { routes } from './app.routes';
 
 const appRoot = resolve(process.cwd(), 'src/app');
 const legacyAliases = [
@@ -49,6 +50,16 @@ function productionSources(directory: string): string[] {
 }
 
 describe('canonical internal navigation contract', () => {
+  it('registers an executable destination for every compatibility redirect', () => {
+    const registeredPaths = new Set(routes.map((route) => route.path));
+    const missingRedirectTargets = routes
+      .filter((route) => typeof route.redirectTo === 'string' && route.path !== '**')
+      .map((route) => route.redirectTo as string)
+      .filter((target) => !registeredPaths.has(target));
+
+    expect(missingRedirectTargets).toEqual([]);
+  });
+
   it('keeps compatibility aliases in route definitions, not production navigation', () => {
     const violations: string[] = [];
 

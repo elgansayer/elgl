@@ -29,6 +29,7 @@ Core communication functionality.
 - `/chat` (Chat List)
 - `/chat/:id` (Direct Messaging / Individual Chat)
 - `/groups` (Groups Discovery)
+- `/community/groups/create` (Create Group)
 - `/join`, `/join/:code` (Joining Groups)
 
 ### 4. Commerce & Monetisation (`commerce.routes.ts`)
@@ -75,6 +76,7 @@ User profiles, discovery, feeds, and interactions.
 - `/leaderboard`, `/stats`, `/milestones`
 - `/notifications` (Inbox)
 - `/events`, `/events/calendar`
+- `/community/language-parties`, `/community/language-islands`
 - `/business-profile`
 
 ### 8. Settings & Configuration (`settings.routes.ts`)

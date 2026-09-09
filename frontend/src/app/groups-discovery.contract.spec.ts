@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { chatRoutes as registeredChatRoutes } from './routes/chat.routes';
 
 const chatListTemplate = readFileSync(
   resolve(process.cwd(), 'src/app/components/chat-list/chat-list.component.html'),
@@ -46,6 +47,16 @@ describe('groups discovery product contract', () => {
   it('links group creation directly to the canonical community route', () => {
     expect(discoverySource).toContain('[routerLink]="[\'/community/groups/create\']"');
     expect(discoverySource).not.toContain('[routerLink]="[\'/groups/create\']"');
+
+    const canonicalCreateRoute = registeredChatRoutes.find(
+      (route) => route.path === 'community/groups/create',
+    );
+    expect(canonicalCreateRoute).toBeDefined();
+    expect(canonicalCreateRoute?.loadComponent).toBeTypeOf('function');
+
+    const legacyCreateRoute = registeredChatRoutes.find((route) => route.path === 'groups/create');
+    expect(legacyCreateRoute?.redirectTo).toBe('community/groups/create');
+    expect(legacyCreateRoute?.pathMatch).toBe('full');
   });
 
   it('uses Spartan-owned native actions and avoids synthetic button semantics', () => {

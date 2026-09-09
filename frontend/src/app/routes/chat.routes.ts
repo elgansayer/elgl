@@ -25,6 +25,14 @@ export const chatRoutes: Routes = [
     title: 'Groups Discovery - HelloTalk',
   },
   {
+    path: 'community/groups/create',
+    loadComponent: () =>
+      import('../components/create-group/create-group.component').then(
+        (m) => m.CreateGroupComponent,
+      ),
+    title: 'Create Group - HelloTalk',
+  },
+  {
     path: 'groups/create',
     redirectTo: 'community/groups/create',
     pathMatch: 'full',
