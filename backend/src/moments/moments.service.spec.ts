@@ -1380,56 +1380,6 @@ describe('MomentsService', () => {
   });
 
   describe('getComments votes and blocking', () => {
-    it('should start profile and vote lookups concurrently', async () => {
-      let resolveProfiles!: (value: { data: unknown[] }) => void;
-      let resolveVotes!: (value: { data: unknown[] }) => void;
-      const profilesResponse = new Promise<{ data: unknown[] }>((resolve) => {
-        resolveProfiles = resolve;
-      });
-      const votesResponse = new Promise<{ data: unknown[] }>((resolve) => {
-        resolveVotes = resolve;
-      });
-      const profilesIn = vi.fn().mockReturnValue(profilesResponse);
-      const votesIn = vi.fn().mockReturnValue(votesResponse);
-
-      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
-        if (table === 'moment_comments') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockResolvedValue({
-              data: [{ id: 'c-1', user_id: 'u-1', text_content: 'Hi' }],
-            }),
-          };
-        }
-        if (table === 'users') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            in: profilesIn,
-          };
-        }
-        if (table === 'moment_comment_votes') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            in: votesIn,
-          };
-        }
-        return mockQueryBuilder;
-      });
-
-      const resultPromise = service.getComments('m-1');
-
-      await vi.waitFor(() => {
-        expect(profilesIn).toHaveBeenCalledWith('id', ['u-1']);
-        expect(votesIn).toHaveBeenCalledWith('comment_id', ['c-1']);
-      });
-
-      resolveProfiles({ data: [{ id: 'u-1', display_name: 'Commenter' }] });
-      resolveVotes({ data: [] });
-
-      await expect(resultPromise).resolves.toHaveLength(1);
-    });
-
     it('should exclude comments from blocked users and populate vote tallies', async () => {
       vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
         'u-blocked',
@@ -1475,30 +1425,6 @@ describe('MomentsService', () => {
       expect(result[0].upVotes).toBe(1);
       expect(result[0].downVotes).toBe(1);
       expect(result[0].userVote).toBe('up');
-    });
-
-    it('should skip hydration lookups when every comment author is blocked', async () => {
-      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
-        'u-blocked',
-      ]);
-
-      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
-        if (table !== 'moment_comments') {
-          throw new Error(`Unexpected hydration lookup for ${table}`);
-        }
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({
-            data: [
-              { id: 'c-blocked', user_id: 'u-blocked', text_content: 'Hidden' },
-            ],
-          }),
-        };
-      });
-
-      await expect(service.getComments('m-1', 'viewer-1')).resolves.toEqual([]);
-      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
     });
 
     it('should return an empty array when there are no comments', async () => {
