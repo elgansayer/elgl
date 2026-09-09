@@ -1,3 +1,5 @@
+import type { ProficiencyLevel } from '../proficiency-level';
+
 export interface User {
   id: string;
   aud: string;
@@ -9,5 +11,5 @@ export interface User {
   confirmation_sent_at?: string;
   confirmed_at?: string;
   cover_photo_url?: string;
-  proficiency_level?: string;
+  proficiency_level?: ProficiencyLevel | null;
 }

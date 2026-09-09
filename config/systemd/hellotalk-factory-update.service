@@ -1,0 +1,27 @@
+[Unit]
+Description=HelloTalk factory daily self-update (pull main and restart)
+After=network-online.target hellotalk-factory.service
+Wants=network-online.target
+# Never run while another update or the health watchdog is active.
+Conflicts=hellotalk-factory-health.service
+
+[Service]
+Type=oneshot
+# Run as root so we can stop/start the factory service and write to /opt.
+# The git pull and uv sync are delegated to the factory user via runuser.
+EnvironmentFile=/etc/hellotalk-factory/factory.env
+EnvironmentFile=/etc/hellotalk-factory/runtime.env
+Environment=HOME=/home/dev
+ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-update.sh
+UMask=0077
+PrivateTmp=true
+ProtectHome=false
+BindPaths=/run/user
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+# Needs write access to the venv, repository checkout, and factory state.
+ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory /opt/hellotalk-factory /run/systemd

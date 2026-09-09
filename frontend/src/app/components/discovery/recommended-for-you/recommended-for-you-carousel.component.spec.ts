@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DiscoveryRecommendation,
   RecommendationsService,
 } from '../../../services/recommendations.service';
+import { I18nService } from '../../../services/i18n.service';
+import { StudyBuddiesService } from '../../../services/study-buddies.service';
 import { RecommendedForYouCarouselComponent } from './recommended-for-you-carousel.component';
 
 function recommendation(id: string, name = id): DiscoveryRecommendation {
@@ -22,7 +24,10 @@ function recommendation(id: string, name = id): DiscoveryRecommendation {
 describe('RecommendedForYouCarouselComponent', () => {
   let fixture: ComponentFixture<RecommendedForYouCarouselComponent>;
   let component: RecommendedForYouCarouselComponent;
+  let router: Router;
   let getRecommendations: ReturnType<typeof vi.fn>;
+  let followUser: ReturnType<typeof vi.fn>;
+  let getOrCreateChannel: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     getRecommendations = vi.fn().mockResolvedValue([
@@ -37,6 +42,8 @@ describe('RecommendedForYouCarouselComponent', () => {
       },
       recommendation('p-2', 'Ren'),
     ]);
+    followUser = vi.fn().mockResolvedValue(undefined);
+    getOrCreateChannel = vi.fn().mockResolvedValue({ channel: 'room-1' });
 
     await TestBed.configureTestingModule({
       imports: [RecommendedForYouCarouselComponent],
@@ -46,11 +53,24 @@ describe('RecommendedForYouCarouselComponent', () => {
           provide: RecommendationsService,
           useValue: { getDiscoveryRecommendations: getRecommendations },
         },
+        {
+          provide: StudyBuddiesService,
+          useValue: {
+            follow: followUser,
+            getOrCreateChannel,
+          },
+        },
+        {
+          provide: I18nService,
+          useValue: { translate: (key: string) => key },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RecommendedForYouCarouselComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -106,8 +126,81 @@ describe('RecommendedForYouCarouselComponent', () => {
   });
 
   it('links recommendations to the canonical profile route', () => {
-    const link = fixture.nativeElement.querySelector('.recommended-card') as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector(
+      '.recommended-profile-link',
+    ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toContain('/profile/p-1');
+  });
+
+  it('renders direct Send Message and Follow actions for each recommendation', () => {
+    const cards = Array.from(
+      fixture.nativeElement.querySelectorAll('.recommended-card'),
+    ) as HTMLElement[];
+
+    for (const card of cards) {
+      const actions = Array.from(card.querySelectorAll('button.recommended-action')) as HTMLButtonElement[];
+      expect(actions).toHaveLength(2);
+      expect(actions[0].textContent?.trim()).toBe('chat.sendMessage');
+      expect(actions[1].textContent?.trim()).toBe('userProfile.follow');
+    }
+  });
+
+  it('follows a recommended user once and exposes the completed state', async () => {
+    await component.followUser('p-1');
+    fixture.detectChanges();
+
+    expect(followUser).toHaveBeenCalledWith('p-1');
+    expect(component.isFollowing('p-1')).toBe(true);
+
+    const followButton = fixture.nativeElement.querySelectorAll(
+      'button.recommended-action',
+    )[1] as HTMLButtonElement;
+    expect(followButton.disabled).toBe(true);
+    expect(followButton.getAttribute('aria-pressed')).toBe('true');
+    expect(followButton.textContent?.trim()).toBe('userProfile.following');
+  });
+
+  it('suppresses duplicate follow mutations while the first request is pending', async () => {
+    let resolveFollow!: () => void;
+    followUser.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveFollow = resolve;
+      }),
+    );
+
+    const first = component.followUser('p-1');
+    const second = component.followUser('p-1');
+
+    expect(followUser).toHaveBeenCalledTimes(1);
+    resolveFollow();
+    await Promise.all([first, second]);
+    expect(component.isFollowing('p-1')).toBe(true);
+  });
+
+  it('opens a direct chat from the Send Message action', async () => {
+    getOrCreateChannel.mockResolvedValueOnce({ channel: 'direct-p-1' });
+
+    await component.sendMessage('p-1');
+
+    expect(getOrCreateChannel).toHaveBeenCalledWith('p-1');
+    expect(router.navigate).toHaveBeenCalledWith(['/chat', 'room', 'direct-p-1']);
+    expect(component.hasActionError('p-1')).toBe(false);
+  });
+
+  it('surfaces a retryable action error without fabricating success', async () => {
+    followUser.mockRejectedValueOnce(new Error('network'));
+
+    await component.followUser('p-1');
+    fixture.detectChanges();
+
+    expect(component.isFollowing('p-1')).toBe(false);
+    expect(component.hasActionError('p-1')).toBe(true);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+
+    const followButton = fixture.nativeElement.querySelectorAll(
+      'button.recommended-action',
+    )[1] as HTMLButtonElement;
+    expect(followButton.disabled).toBe(false);
   });
 
   it('supports arrow-key carousel navigation', () => {
