@@ -247,7 +247,7 @@ export class CoinEconomyHealthService {
         };
       }
       // Lightweight check: just verify the key is valid by reading balance
-      const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
+      const stripe = new Stripe(stripeKey, { apiVersion: '2026-07-29.dahlia' });
       await this.withTimeout(
         stripe.balance.retrieve(),
         HEALTH_CHECK_TIMEOUT_MS,
