@@ -467,6 +467,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       // Do not report failures from an intentionally superseded request.
       if (!signal.aborted) {
         console.error('Partner search failed:', e);
+        this.partners.set([]);
         this.searchError.set(this.i18n.translate('discovery.searchError'));
       }
     } finally {

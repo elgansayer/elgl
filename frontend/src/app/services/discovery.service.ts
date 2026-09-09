@@ -79,9 +79,16 @@ export class DiscoveryService {
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
     abortSignal?: AbortSignal,
   ): Promise<UserProfile[]> {
-    const filtersKey = this.offlineCache.buildFiltersKey(
-      Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined)),
+    const hasLocation =
+      filters.latitude !== undefined || filters.longitude !== undefined;
+    const cacheFilters = Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => value !== undefined),
     );
+    // Precise-location results must stay in memory. Persisting them either
+    // exposes coordinates in a key or lets a different origin reuse them.
+    const filtersKey = hasLocation
+      ? null
+      : this.offlineCache.buildFiltersKey(cacheFilters);
     const isOnline = this.offlineCache.isOnline();
 
     let params = new HttpParams();
@@ -140,9 +147,15 @@ export class DiscoveryService {
     if (filters.voice_room_active !== undefined)
       params = params.set('voice_room_active', filters.voice_room_active.toString());
 
+    // Location results require a live proximity query; persisted discovery
+    // data cannot prove that it belongs to the current origin.
+    if (!isOnline && hasLocation) {
+      return [];
+    }
+
     // Offline-first: attempt cached results before making network request
     if (!isOnline) {
-      const cached = await this.offlineCache.getCachedSearchResults(filtersKey);
+      const cached = await this.offlineCache.getCachedSearchResults(filtersKey!);
       if (cached && cached.length > 0) {
         return this.enrichPartnersFallback(cached, filters);
       }
@@ -185,8 +198,8 @@ export class DiscoveryService {
         ),
     );
 
-    // Cache the fresh results for offline use
-    if (users !== MOCK_PARTNERS) {
+    // Cache only origin-independent results for offline use.
+    if (users !== MOCK_PARTNERS && filtersKey) {
       void this.offlineCache.cacheSearchResults(filtersKey, users);
       void this.offlineCache.cachePartners(users);
     }
