@@ -584,17 +584,13 @@ export class MonetisationService {
 
       // A provider purchase token is an account-bound credential. Never let a
       // token already associated with one account grant entitlement to another.
-      const existingUserId =
-        await this.googlePlayNotificationService.getUserIdByPurchaseToken(
-          purchaseToken,
-        );
-      if (!existingUserId) {
-        await this.googlePlayNotificationService.storePurchaseToken(
+      const ownsPurchase =
+        await this.googlePlayNotificationService.claimPurchaseToken(
           userId,
           purchaseToken,
           productId,
         );
-      } else if (existingUserId !== userId) {
+      if (!ownsPurchase) {
         this.logger.warn(
           'Android restore rejected: purchase belongs to a different account',
         );

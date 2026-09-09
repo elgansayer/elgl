@@ -15,7 +15,7 @@ This document defines the shared restore workflow and records the Android purcha
 5. A successful restore emits a `restored` event from the shared button. The My Subscription page reloads subscription details and billing history so the newly restored entitlement is visible without a manual page refresh.
 6. A no-subscription result remains a normal, non-destructive outcome. Provider/network/malformed-response failures are reported as retryable failures.
 
-For Google Play, the verified purchase token is account-bound. An unclaimed active token is associated with the authenticated account before entitlement is restored. A token already associated with that same account may be restored again idempotently. A token associated with a different account is rejected and must never grant VIP status to the caller.
+For Google Play, the verified purchase token is account-bound. An unclaimed active token is claimed with insert-on-conflict-do-nothing semantics and then read back before entitlement is restored, so concurrent requests cannot overwrite its owner. A token already associated with that same account may be restored again idempotently. A token associated with a different account is rejected and must never grant VIP status to the caller.
 
 ## State and retry behaviour
 
@@ -27,7 +27,7 @@ The client only treats a response as success when `received === true` and `statu
 
 Purchase receipts and provider tokens are sent only to the authenticated monetisation API. They are not persisted in local storage, drafts, analytics or client logs by this workflow. The client never derives or writes `is_vip`/`vip_tier`; entitlement changes remain server-controlled after provider verification.
 
-Google Play purchase tokens are credentials as well as ownership identifiers. Restore diagnostics must not log the token, the current account ID, or the existing owner ID. Cross-account token reuse is rejected before any VIP mutation. Missing and expired Google Play purchases are logged only with sanitized state descriptions.
+Google Play purchase tokens are credentials as well as ownership identifiers. Restore diagnostics must not log the token, the current account ID, or the existing owner ID. Cross-account token reuse, including a losing concurrent claim, is rejected before any VIP mutation. Missing and expired Google Play purchases are logged only with sanitized state descriptions.
 
 Receipt bodies must not be included in error messages, telemetry or support diagnostics. Provider responses are treated as untrusted input. A successful restore result may expose the restored tier when the backend supplies it, but never a receipt or purchase token.
 

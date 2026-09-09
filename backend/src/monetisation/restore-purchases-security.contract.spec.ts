@@ -22,8 +22,7 @@ describe('Restore purchases ownership security', () => {
 
   const googlePlay = {
     getSubscriptionPurchaseDetails: vi.fn(),
-    getUserIdByPurchaseToken: vi.fn(),
-    storePurchaseToken: vi.fn(),
+    claimPurchaseToken: vi.fn(),
   };
 
   const subscriptionPlans = {
@@ -87,7 +86,7 @@ describe('Restore purchases ownership security', () => {
     googlePlay.getSubscriptionPurchaseDetails.mockResolvedValue({
       expiryTimeMillis: String(Date.now() + 60_000),
     });
-    googlePlay.storePurchaseToken.mockResolvedValue(undefined);
+    googlePlay.claimPurchaseToken.mockResolvedValue(true);
     subscriptionPlans.getTierByProductId.mockReturnValue('consumer');
   });
 
@@ -97,7 +96,7 @@ describe('Restore purchases ownership security', () => {
 
   it('rejects an Android purchase token that is already owned by another account', async () => {
     const purchaseToken = 'secret-cross-account-token';
-    googlePlay.getUserIdByPurchaseToken.mockResolvedValue('other-user-id');
+    googlePlay.claimPurchaseToken.mockResolvedValue(false);
 
     await expect(
       service.restorePurchases(
@@ -111,7 +110,11 @@ describe('Restore purchases ownership security', () => {
       ),
     );
 
-    expect(googlePlay.storePurchaseToken).not.toHaveBeenCalled();
+    expect(googlePlay.claimPurchaseToken).toHaveBeenCalledWith(
+      'current-user-id',
+      purchaseToken,
+      'com.example.vip.monthly',
+    );
     expect(vipUpdateSpy).not.toHaveBeenCalled();
 
     const warnings = logger.warn.mock.calls.flat().join(' ');
@@ -124,13 +127,11 @@ describe('Restore purchases ownership security', () => {
   });
 
   it('claims an unowned Android purchase before restoring entitlement', async () => {
-    googlePlay.getUserIdByPurchaseToken.mockResolvedValue(null);
-
     await expect(
       service.restorePurchases('current-user-id', 'android', receipt()),
     ).resolves.toEqual({ received: true, status: 'restored' });
 
-    expect(googlePlay.storePurchaseToken).toHaveBeenCalledWith(
+    expect(googlePlay.claimPurchaseToken).toHaveBeenCalledWith(
       'current-user-id',
       'secret-purchase-token',
       'com.example.vip.monthly',
@@ -143,13 +144,15 @@ describe('Restore purchases ownership security', () => {
   });
 
   it('restores a purchase already owned by the authenticated account without re-storing it', async () => {
-    googlePlay.getUserIdByPurchaseToken.mockResolvedValue('current-user-id');
-
     await expect(
       service.restorePurchases('current-user-id', 'android', receipt()),
     ).resolves.toEqual({ received: true, status: 'restored' });
 
-    expect(googlePlay.storePurchaseToken).not.toHaveBeenCalled();
+    expect(googlePlay.claimPurchaseToken).toHaveBeenCalledWith(
+      'current-user-id',
+      'secret-purchase-token',
+      'com.example.vip.monthly',
+    );
     expect(vipUpdateSpy).toHaveBeenCalledWith(
       'current-user-id',
       true,
