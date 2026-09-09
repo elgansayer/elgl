@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { isProductionPlaceholder } from '../config/environment.validation';
 import { R2GatewayError, R2Service, StoredObjectMetadata } from './r2.service';
 
 const DEFAULT_SOURCE_FETCH_TIMEOUT_MS = 30_000;
@@ -28,6 +29,15 @@ export class R2ObjectService {
       'CLOUDFLARE_R2_PUBLIC_URL',
     ).toString();
     this.serviceToken = this.readRequiredSecret('CLOUDFLARE_R2_SERVICE_TOKEN');
+    if (
+      this.configService.get<string>('NODE_ENV')?.trim().toLowerCase() ===
+        'production' &&
+      isProductionPlaceholder(this.serviceToken)
+    ) {
+      throw new Error(
+        'CLOUDFLARE_R2_SERVICE_TOKEN must be securely configured in production',
+      );
+    }
     this.timeoutMs = this.readPositiveInteger(
       'CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS',
       DEFAULT_SOURCE_FETCH_TIMEOUT_MS,

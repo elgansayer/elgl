@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomUUID } from 'node:crypto';
+import { isProductionPlaceholder } from '../config/environment.validation';
 
 const DEFAULT_UPLOAD_TTL_SECONDS = 3600;
 const DEFAULT_MAX_SINGLE_UPLOAD_BYTES = 25 * 1024 * 1024;
@@ -72,6 +73,11 @@ export class R2Service {
       'CLOUDFLARE_R2_SIGNING_SECRET',
     );
     this.serviceToken = this.readRequiredSecret('CLOUDFLARE_R2_SERVICE_TOKEN');
+    if (this.isProduction() && this.hasPlaceholderCredential()) {
+      throw new Error(
+        'Cloudflare R2 secrets must be securely configured in production',
+      );
+    }
     this.uploadTtlSeconds = this.readPositiveInteger(
       'CLOUDFLARE_R2_UPLOAD_TTL_SECONDS',
       DEFAULT_UPLOAD_TTL_SECONDS,
@@ -89,6 +95,20 @@ export class R2Service {
       DEFAULT_SOURCE_FETCH_TIMEOUT_MS,
     );
     this.sourceHosts = this.readCommaSeparated('CLOUDFLARE_R2_SOURCE_HOSTS');
+  }
+
+  private isProduction(): boolean {
+    return (
+      this.configService.get<string>('NODE_ENV')?.trim().toLowerCase() ===
+      'production'
+    );
+  }
+
+  private hasPlaceholderCredential(): boolean {
+    return (
+      isProductionPlaceholder(this.signingSecret) ||
+      isProductionPlaceholder(this.serviceToken)
+    );
   }
 
   async generateUploadUrl(

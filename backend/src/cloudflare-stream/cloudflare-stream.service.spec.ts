@@ -46,6 +46,29 @@ describe('CloudflareStreamService', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each([
+    ['CLOUDFLARE_STREAM_ACCOUNT_ID', 'test-cloudflare-account-id'],
+    ['CLOUDFLARE_STREAM_API_TOKEN', 'test-cloudflare-stream-api-token'],
+    ['CLOUDFLARE_STREAM_API_TOKEN', 'your-least-privilege-stream-api-token'],
+  ] as const)('rejects placeholder %s values in production', (key, value) => {
+    const productionConfig = {
+      ...CONFIG,
+      NODE_ENV: 'production',
+      CLOUDFLARE_STREAM_ACCOUNT_ID: 'secure-cloudflare-account-id',
+      CLOUDFLARE_STREAM_API_TOKEN: 'secure-cloudflare-stream-api-token',
+      [key]: value,
+    };
+
+    expect(
+      () =>
+        new CloudflareStreamService({
+          get: vi.fn((key: string) => productionConfig[key]),
+        } as unknown as ConfigService),
+    ).toThrow(
+      'Cloudflare Stream credentials must be securely configured in production',
+    );
+  });
+
   it('creates a short-lived automatic Cloudflare Stream live input', async () => {
     fetchMock.mockResolvedValue(
       apiResponse({
