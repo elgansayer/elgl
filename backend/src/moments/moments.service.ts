@@ -1077,10 +1077,12 @@ export class MomentsService {
       commentRows = commentRows.filter((c) => !blockedIds.includes(c.user_id));
     }
 
+    if (commentRows.length === 0) return [];
+
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
     const commentIds = commentRows.map((c) => c.id);
 
-    // ⚡ Bolt Optimization: Replace sequential database requests with concurrent Promise.all execution to reduce latency.
+    // Run independent lookups concurrently to avoid serial database latency.
     const [profilesResponse, { data: votesData }] = await Promise.all([
       supabase
         .from('users')

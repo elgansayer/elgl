@@ -6,14 +6,19 @@ on:
       - main
     # Dependency Review is valuable when dependency graph inputs or workflow
     # action references can change. Factory Python, its tests/prompts, deployment
-    # configuration and documentation do not change a manifest/lockfile and were
-    # still allocating a runner for an inevitably empty dependency diff. Do not
-    # ignore automation/pyproject.toml or automation/uv.lock, and do not ignore
-    # workflows, so real Python or GitHub Actions dependency changes still run.
+    # configuration, dashboard source/tests, and documentation do not change a
+    # manifest/lockfile and were still allocating a runner for an inevitably
+    # empty dependency diff. Do not ignore automation/pyproject.toml,
+    # automation/uv.lock, factory-dashboard/package.json, Docker/Compose inputs,
+    # or workflows, so real dependency/infrastructure changes still run.
     paths-ignore:
       - 'automation/openhands_factory/**'
       - 'automation/tests/**'
       - 'automation/prompts/**'
+      - 'factory-dashboard/src/**'
+      - 'factory-dashboard/test/**'
+      - 'factory-dashboard/README.md'
+      - 'factory-dashboard/.env.example'
       - 'config/factory/**'
       - 'config/systemd/**'
       - 'docs/**'
