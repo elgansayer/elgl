@@ -195,7 +195,7 @@ export class DeepLinkService {
       case 'audio-rooms':
         return id ? `/audio-rooms/${id}${querySuffix}` : `/audio-rooms${querySuffix}`;
       case 'vip':
-        return `/subscription${querySuffix}`;
+        return `/vip${querySuffix}`;
       case 'milestones':
         return `/milestones${querySuffix}`;
       case 'study-buddy':
@@ -209,7 +209,7 @@ export class DeepLinkService {
       case 'favourites':
         return `/favourites${querySuffix}`;
       case 'help':
-        return `/support${querySuffix}`;
+        return `/help${querySuffix}`;
       case 'home':
         return `/home${querySuffix}`;
       default:

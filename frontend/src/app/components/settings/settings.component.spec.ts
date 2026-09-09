@@ -32,6 +32,6 @@ describe.skip('SettingsComponent', () => {
   
   it('should navigate to the My Subscription page', () => {
     component.goToMySubscription();
-    expect(routerMock.navigate).toHaveBeenCalledWith(['/settings/subscription']);
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/my-subscription']);
   });
 });

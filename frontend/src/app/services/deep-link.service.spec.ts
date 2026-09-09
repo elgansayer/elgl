@@ -78,7 +78,7 @@ describe('DeepLinkService', () => {
       expect(service.handleDeepLink('hellotalk://settings')).toBe(true);
       expect(router.navigateByUrl).toHaveBeenCalledWith('/settings');
       expect(service.handleDeepLink('hellotalk://vip')).toBe(true);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/subscription');
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/vip');
       expect(service.handleDeepLink('hellotalk://milestones')).toBe(true);
       expect(router.navigateByUrl).toHaveBeenCalledWith('/milestones');
       expect(service.handleDeepLink('hellotalk://study-buddy')).toBe(true);
@@ -92,7 +92,7 @@ describe('DeepLinkService', () => {
       expect(service.handleDeepLink('hellotalk://favourites')).toBe(true);
       expect(router.navigateByUrl).toHaveBeenCalledWith('/favourites');
       expect(service.handleDeepLink('hellotalk://help')).toBe(true);
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/support');
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/help');
       expect(service.handleDeepLink('hellotalk://home')).toBe(true);
       expect(router.navigateByUrl).toHaveBeenCalledWith('/home');
     });
