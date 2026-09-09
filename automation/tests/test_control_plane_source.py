@@ -62,9 +62,8 @@ def test_production_uses_subscription_first_phase_routing() -> None:
         assert routing[phase.value.replace("-", "_")] == candidates
         assert "openhands" not in candidates
 
-    # CI repair is mechanically bounded by failing-check evidence, local verification,
-    # fresh independent review and required GitHub checks. Prefer the lower-capacity
-    # routine models and keep flagship Codex as the final automatic fallback.
+    # Keep the static preference cheap-first. Runtime history promotes Codex only
+    # after two real CI-repair provider starts.
     assert expected[AgentPhase.CI_REPAIR][-1] == "codex"
 
 
