@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 
 from openhands_factory.config import FactoryConfig
-from openhands_factory.exceptions import FactoryError
+from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
 from openhands_factory.models import FailureKind, ProviderName
-from openhands_factory.provider_capacity import ProviderCapacityStore, provider_limit
+from openhands_factory.provider_capacity import ProviderCapacityStore, provider_limit, provider_slot
 from openhands_factory.provider_runtime import (
     ProviderAttributionStore,
     conversation_role,
@@ -86,6 +86,31 @@ def test_capacity_store_discards_previous_daemon_generation(tmp_path: Path) -> N
     )
 
     assert current.snapshot() == {"claude": 1}
+
+
+def test_shared_capacity_counts_leases_from_independent_instances(tmp_path: Path) -> None:
+    first = ProviderCapacityStore(tmp_path)
+    second = ProviderCapacityStore(tmp_path)
+    first.acquire("claude", limit=1, owner="hellotalk:1", wait_seconds=0, lease_seconds=60)
+
+    with pytest.raises(ProviderCapacityUnavailable):
+        second.acquire(
+            "claude",
+            limit=1,
+            owner="workout-agent:1",
+            wait_seconds=0,
+            lease_seconds=60,
+        )
+
+
+def test_conversation_provider_slot_uses_shared_capacity_directory(tmp_path: Path) -> None:
+    shared = tmp_path / "shared"
+    shared.mkdir()
+    factory_config = config(tmp_path).model_copy(update={"provider_capacity_dir": shared})
+
+    with provider_slot(factory_config, ProviderName.OPENAI_SUBSCRIPTION, owner="job:1"):
+        assert (shared / "provider-capacity.json").exists()
+        assert not (factory_config.state_dir / "provider-capacity.json").exists()
 
 
 def test_provider_model_is_non_secret_and_provider_specific(tmp_path: Path) -> None:

@@ -7,8 +7,10 @@ import {
   Param,
   Req,
   HttpCode,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ShoppingService } from './shopping.service';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
@@ -35,23 +37,27 @@ export class ShoppingController {
   }
 
   @Get('cart')
+  @UseGuards(SupabaseAuthGuard)
   getCart(@Req() req: AuthenticatedRequest) {
     return this.cartService.getCart(req.user.id);
   }
 
   @Post('cart')
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(200)
   addToCart(@Req() req: AuthenticatedRequest, @Body() dto: AddToCartDto) {
     return this.cartService.addItem(req.user.id, dto.itemId, dto.quantity);
   }
 
   @Delete('cart')
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(200)
   removeFromCart(@Req() req: AuthenticatedRequest, @Body() dto: AddToCartDto) {
     return this.cartService.removeItem(req.user.id, dto.itemId, dto.quantity);
   }
 
   @Post('cart/checkout')
+  @UseGuards(SupabaseAuthGuard)
   @HttpCode(200)
   async checkout(@Req() req: AuthenticatedRequest) {
     return this.cartService.checkout(req.user.id);
