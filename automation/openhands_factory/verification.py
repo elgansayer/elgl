@@ -6,6 +6,7 @@ import os
 import sys
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Literal
 
 from openhands_factory.exceptions import VerificationFailed
 from openhands_factory.repository_guard import ProcessResult, ProcessRunner, run_process
@@ -199,7 +200,12 @@ def run_isolated_verification_process(
         ),
         "TERM": "dumb",
         "UV_CACHE_DIR": "/tmp/uv-cache",
+        # The host updater owns dependency synchronisation. Verification mounts
+        # /opt read-only and must execute against that prepared environment rather
+        # than trying to reinstall the worktree's local project into it.
+        "UV_NO_SYNC": "1",
         "UV_OFFLINE": "1",
+        "UV_PROJECT_ENVIRONMENT": virtual_environment,
         "VIRTUAL_ENV": virtual_environment,
     }
     command = (
@@ -231,7 +237,76 @@ def _touches(changed_paths: set[Path], *prefixes: str) -> bool:
     return any(path.parts and path.parts[0] in prefixes for path in changed_paths)
 
 
-def commands_for(repository: Path, changed_paths: set[Path]) -> list[VerificationCommand]:
+RepositoryProfile = Literal["hellotalk", "workout-agent"]
+
+
+def workout_agent_commands_for(
+    repository: Path, changed_paths: set[Path]
+) -> list[VerificationCommand]:
+    """Return the trusted local gate for the Python and Angular repository."""
+
+    if not changed_paths:
+        raise VerificationFailed("Verification requires at least one changed path")
+    touches_backend = _touches(changed_paths, "backend")
+    touches_frontend = _touches(changed_paths, "frontend")
+    if not (touches_backend or touches_frontend):
+        touches_backend = touches_frontend = True
+    commands = [
+        VerificationCommand(
+            "control-plane-policy",
+            (".venv/bin/python", "tools/check_openhands_control_plane.py"),
+            repository,
+        ),
+        VerificationCommand(
+            "control-plane-policy-tests",
+            (
+                ".venv/bin/python",
+                "-m",
+                "unittest",
+                "tools.test_openhands_control_plane",
+                "-v",
+            ),
+            repository,
+        ),
+    ]
+    if touches_backend:
+        commands.extend(
+            [
+                VerificationCommand(
+                    "backend-compile",
+                    (".venv/bin/python", "-m", "compileall", "-q", "backend"),
+                    repository,
+                ),
+                VerificationCommand(
+                    "backend-tests",
+                    (".venv/bin/python", "-m", "pytest", "-q"),
+                    repository,
+                ),
+            ]
+        )
+    if touches_frontend:
+        commands.extend(
+            [
+                VerificationCommand(
+                    "frontend-build", ("npm", "run", "build"), repository / "frontend"
+                ),
+                VerificationCommand(
+                    "frontend-test",
+                    ("npm", "test", "--", "--watch=false"),
+                    repository / "frontend",
+                ),
+            ]
+        )
+    return [replace(command, workspace=repository) for command in commands]
+
+
+def commands_for(
+    repository: Path,
+    changed_paths: set[Path],
+    profile: RepositoryProfile = "hellotalk",
+) -> list[VerificationCommand]:
+    if profile == "workout-agent":
+        return workout_agent_commands_for(repository, changed_paths)
     if not changed_paths:
         raise VerificationFailed("Verification requires at least one changed path")
     # Each workspace's own build/lint/test commands only run when this diff
@@ -399,6 +474,38 @@ def commands_for(repository: Path, changed_paths: set[Path]) -> list[Verificatio
                 )
             )
     return [replace(command, workspace=repository) for command in commands]
+
+
+def verification_descriptions(profile: RepositoryProfile) -> list[str]:
+    if profile == "workout-agent":
+        return [
+            ".venv/bin/python tools/check_openhands_control_plane.py",
+            ".venv/bin/python -m unittest tools.test_openhands_control_plane -v",
+            ".venv/bin/python -m compileall -q backend",
+            ".venv/bin/python -m pytest -q",
+            "cd frontend && npm run build && npm test -- --watch=false",
+        ]
+    return [
+        "npm run check:constitution",
+        "npm run check:agent-ui-governance",
+        "npm run check:design-sync",
+        "npm run check:spartan-boundaries",
+        "npm run check:spartan-full-tree",
+        "npm run check:component-system",
+        "npm run check:design-sync-drift",
+        "npm run check:legacy-primitive-delta",
+        "node scripts/check-conflict-markers.mjs",
+        "node scripts/check-admin-audit-integrity.mjs",
+        "node scripts/check-migration-delta.mjs",
+        "cd automation && uv run --frozen ruff format --check .",
+        "cd automation && uv run --frozen ruff check .",
+        "cd automation && uv run --frozen mypy",
+        "cd automation && uv run --frozen pytest",
+        "cd frontend && npm run lint:check && npm run build && npm run test",
+        "cd frontend && npm run e2e when frontend or e2e files changed",
+        "cd backend && npm run lint:check && npm run build && npm run test && npm run test:e2e",
+        "cd admin-portal && npm run lint:check && npm run build && npm run test",
+    ]
 
 
 def run_verification(
