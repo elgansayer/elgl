@@ -88,7 +88,12 @@ describe('PrivacySettingsComponent', () => {
   });
 
   it('keeps the privacy hub destinations wired to the dedicated privacy routes', () => {
-    const expectedRoutes = ['/blocks', '/gdpr', '/account/deletion', '/privacy'];
+    const expectedRoutes = [
+      '/settings/blocks',
+      '/settings/gdpr',
+      '/settings/account/deletion',
+      '/privacy',
+    ];
 
     expect(component.hubNavItems.map((item) => item.route)).toEqual(expectedRoutes);
 
@@ -115,7 +120,7 @@ describe('PrivacySettingsComponent', () => {
     fixture.detectChanges();
 
     const blockedUsersLink = fixture.nativeElement.querySelector(
-      'a[href="/blocks"]',
+      'a[href="/settings/blocks"]',
     ) as HTMLAnchorElement | null;
 
     expect(blockedUsersLink?.textContent).toContain('3');

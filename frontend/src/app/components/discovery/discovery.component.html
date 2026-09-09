@@ -178,7 +178,7 @@
           @if (!isVip()) {
             <a
               id="genderVipNote"
-              routerLink="/vip"
+              routerLink="/subscription"
               class="text-[10px] sm:text-xs font-bold text-vip bg-vip/10 px-1.5 sm:px-2 py-1 rounded-md whitespace-nowrap"
               [attr.aria-label]="'discovery.genderVipRequired' | t"
             >
@@ -208,7 +208,7 @@
           @if (!isVip()) {
             <a
               id="distanceVipNote"
-              routerLink="/vip"
+              routerLink="/subscription"
               class="text-[10px] sm:text-xs font-bold text-vip bg-vip/10 px-1.5 sm:px-2 py-1 rounded-md whitespace-nowrap"
               [attr.aria-label]="'discovery.vipRadiusNote' | t"
             >
@@ -307,7 +307,7 @@
             </button>
             <button
               hlmBtn
-              [routerLink]="['/vip']"
+              [routerLink]="['/subscription']"
               class="bg-white text-accent px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider hover:opacity-90 transition-colors shadow-md"
               [attr.aria-label]="'discovery.bannerView' | t"
             >
