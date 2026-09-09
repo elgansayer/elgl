@@ -98,7 +98,7 @@
     "architecture": ["claude", "codex", "google", "opencode", "pi"],
     "implementation": ["claude", "codex", "google", "opencode", "pi"],
     "security_review": ["claude", "codex", "google", "opencode", "pi"],
-    "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
+    "quality_repair": ["opencode", "google", "claude", "pi", "codex"],
     "code_review": ["codex", "claude", "google", "opencode", "pi"],
     "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
     "general_action": ["opencode", "google", "codex", "claude", "pi"],
