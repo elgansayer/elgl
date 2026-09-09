@@ -165,22 +165,6 @@ export class ChatService {
     return response;
   }
 
-  async addLabel(label: string): Promise<void> {
-    await firstValueFrom(
-      this.http.post(`${this.baseUrl}/labels`, { label }, { headers: this.getHeaders() }),
-    );
-    this.labels.update((labels) => [...labels, label]);
-  }
-
-  async removeLabel(label: string): Promise<void> {
-    await firstValueFrom(
-      this.http.delete(`${this.baseUrl}/labels/${encodeURIComponent(label)}`, {
-        headers: this.getHeaders(),
-      }),
-    );
-    this.labels.update((labels) => labels.filter((l) => l !== label));
-  }
-
   async assignLabelToRoom(roomId: string, label: string): Promise<void> {
     await firstValueFrom(
       this.http.post(

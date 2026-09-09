@@ -120,29 +120,6 @@ describe('ChatService', () => {
       await expect(promise).resolves.toEqual(['fluent', 'favourite']);
     });
 
-    it('should add a label and update local state', async () => {
-      const getReq = service.getLabels();
-      httpMock.expectOne(`${baseUrl}/labels`).flush(['existing']);
-      await getReq;
-
-      const addPromise = service.addLabel('new-label');
-      const req = httpMock.expectOne(`${baseUrl}/labels`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ label: 'new-label' });
-      req.flush({});
-
-      await addPromise;
-    });
-
-    it('should remove a label with an encoded URL', async () => {
-      const promise = service.removeLabel('a/b');
-      const req = httpMock.expectOne(`${baseUrl}/labels/${encodeURIComponent('a/b')}`);
-      expect(req.request.method).toBe('DELETE');
-      req.flush({});
-
-      await expect(promise).resolves.toBeUndefined();
-    });
-
     it('should assign a label to a room', async () => {
       const promise = service.assignLabelToRoom('room-1', 'urgent');
       const req = httpMock.expectOne(`${baseUrl}/labels`);
