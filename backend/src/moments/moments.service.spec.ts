@@ -1477,6 +1477,30 @@ describe('MomentsService', () => {
       expect(result[0].userVote).toBe('up');
     });
 
+    it('should skip hydration lookups when every comment author is blocked', async () => {
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'u-blocked',
+      ]);
+
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table !== 'moment_comments') {
+          throw new Error(`Unexpected hydration lookup for ${table}`);
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockResolvedValue({
+            data: [
+              { id: 'c-blocked', user_id: 'u-blocked', text_content: 'Hidden' },
+            ],
+          }),
+        };
+      });
+
+      await expect(service.getComments('m-1', 'viewer-1')).resolves.toEqual([]);
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+    });
+
     it('should return an empty array when there are no comments', async () => {
       mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
         select: vi.fn().mockReturnThis(),

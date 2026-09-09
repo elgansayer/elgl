@@ -1077,6 +1077,8 @@ export class MomentsService {
       commentRows = commentRows.filter((c) => !blockedIds.includes(c.user_id));
     }
 
+    if (commentRows.length === 0) return [];
+
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
     const commentIds = commentRows.map((c) => c.id);
 
