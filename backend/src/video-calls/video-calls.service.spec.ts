@@ -90,8 +90,11 @@ describe('VideoCallsService', () => {
     it.each([
       ['test-livekit-api-key', 'production-secret'],
       ['dev_livekit_key_test_value_123', 'production-secret'],
+      ['devkey', 'production-secret'],
       ['production-key', 'test-livekit-secret'],
       ['production-key', 'dev_livekit_secret_test_value_123'],
+      ['production-key', 'secret'],
+      ['production-key', 'secret-livekit-api-secret-change-in-prod'],
     ])('rejects known development credentials', (apiKey, secret) => {
       const productionConfig: Record<string, string> = {
         NODE_ENV: 'production',
