@@ -53,21 +53,11 @@ export const authRoutes: Routes = [
     title: 'Privacy Policy - HelloTalk',
   },
   {
-    path: 'help',
-    redirectTo: 'support',
-    pathMatch: 'full',
-  },
-  {
     path: 'support',
     loadComponent: () =>
       import('../pages/support-centre/support-centre.component').then(
         (m) => m.SupportCentreComponent,
       ),
     title: 'Support Centre - HelloTalk',
-  },
-  {
-    path: 'help-about',
-    redirectTo: 'support',
-    pathMatch: 'full',
   },
 ];

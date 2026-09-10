@@ -125,7 +125,7 @@ export class SettingsComponent implements OnInit {
   }
 
   goToMySubscription(): void {
-    this.router.navigate(['/my-subscription']);
+    this.router.navigate(['/settings/subscription']);
   }
 
   toggleInterest(interest: string): void {
@@ -249,6 +249,6 @@ export class SettingsComponent implements OnInit {
   }
 
   openVersionCheck(): void {
-    this.router.navigate(['/version']);
+    this.router.navigate(['/settings/version']);
   }
 }

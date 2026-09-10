@@ -29,11 +29,6 @@ export const settingsRoutes: Routes = [
     title: 'Notification Settings - HelloTalk',
   },
   {
-    path: 'settings/notification-customization',
-    redirectTo: 'settings/notification',
-    pathMatch: 'full',
-  },
-  {
     path: 'settings/message-filters',
     loadComponent: () =>
       import('../pages/settings/message-filter-settings/message-filter-settings.component').then(
@@ -71,11 +66,6 @@ export const settingsRoutes: Routes = [
     title: 'Privacy Settings - HelloTalk',
   },
   {
-    path: 'blocks',
-    redirectTo: 'settings/blocks',
-    pathMatch: 'full',
-  },
-  {
     path: 'settings/blocks',
     loadComponent: () =>
       import('../pages/block-management/block-management.component').then(
@@ -98,20 +88,10 @@ export const settingsRoutes: Routes = [
     title: 'Linked Accounts - HelloTalk',
   },
   {
-    path: 'data-storage',
-    redirectTo: 'settings/data-storage',
-    pathMatch: 'full',
-  },
-  {
     path: 'settings/data-storage',
     loadComponent: () =>
       import('../pages/data-storage/data-storage.component').then((m) => m.DataStorageComponent),
     title: 'Data & Storage - HelloTalk',
-  },
-  {
-    path: 'device-transfer',
-    redirectTo: 'settings/device-transfer',
-    pathMatch: 'full',
   },
   {
     path: 'settings/device-transfer',
@@ -122,19 +102,9 @@ export const settingsRoutes: Routes = [
     title: 'Device Transfer - HelloTalk',
   },
   {
-    path: 'gdpr',
-    redirectTo: 'settings/gdpr',
-    pathMatch: 'full',
-  },
-  {
     path: 'settings/gdpr',
     loadComponent: () => import('../components/gdpr/gdpr.component').then((m) => m.GdprComponent),
     title: 'Personal Data - HelloTalk',
-  },
-  {
-    path: 'account/deletion',
-    redirectTo: 'settings/account/deletion',
-    pathMatch: 'full',
   },
   {
     path: 'settings/account/deletion',
@@ -143,11 +113,6 @@ export const settingsRoutes: Routes = [
         (m) => m.AccountDeletionComponent,
       ),
     title: 'Account Deletion - HelloTalk',
-  },
-  {
-    path: 'version',
-    redirectTo: 'settings/version',
-    pathMatch: 'full',
   },
   {
     path: 'settings/version',
