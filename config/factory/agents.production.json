@@ -84,7 +84,7 @@
       "phase_models": {
         "planning": "github-copilot/claude-opus-5",
         "architecture": "github-copilot/claude-opus-5",
-        "security_review": "github-copilot/claude-sonnet-5",
+        "security_review": "github-copilot/claude-opus-5",
         "implementation": "github-copilot/claude-sonnet-5",
         "quality_repair": "github-copilot/claude-haiku-4.5",
         "code_review": "github-copilot/claude-haiku-4.5",
@@ -100,10 +100,10 @@
     "security_review": ["claude", "codex", "google", "opencode", "pi"],
     "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
     "code_review": ["codex", "claude", "google", "opencode", "pi"],
-    "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
+    "ci_repair": ["codex", "claude", "google", "opencode", "pi"],
     "general_action": ["opencode", "google", "codex", "claude", "pi"],
     "skip_busy_providers": true,
-    "same_provider_retries": 0
+    "same_provider_retries": 1
   },
   "timeouts": {
     "planning": 1200,
@@ -113,7 +113,7 @@
     "quality_repair": 1800,
     "code_review": 900,
     "ci_repair": 1800,
-    "general_action": 300
+    "general_action": 1800
   },
   "circuit_breaker": {
     "failure_threshold": 1,
@@ -125,6 +125,6 @@
     "transport_cooldown_seconds": 300,
     "timeout_cooldown_seconds": 300,
     "crash_cooldown_seconds": 300,
-    "invalid_output_cooldown_seconds": 900
+    "invalid_output_cooldown_seconds": 60
   }
 }
