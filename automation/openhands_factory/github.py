@@ -363,6 +363,12 @@ class GitHubClient:
 
         current = now or datetime.now(UTC)
         cutoff = current - timedelta(days=recent_days)
+        json_fields = (
+            "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
+            "isCrossRepository,labels,author"
+        )
+        if known_path_fingerprint is not None:
+            json_fields += ",files"
         output = self._run(
             (
                 "gh",
@@ -375,8 +381,7 @@ class GitHubClient:
                 "--limit",
                 str(limit),
                 "--json",
-                "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
-                "isCrossRepository,labels,author,closingIssuesReferences,files",
+                json_fields,
             )
         )
         matches: list[PullRequestMatch] = []
@@ -404,12 +409,7 @@ class GitHubClient:
             number = int(item["number"])
             title = str(item.get("title") or "")
             body = str(item.get("body") or "")
-            closing_issues = {
-                str(reference.get("number"))
-                for reference in item.get("closingIssuesReferences", [])
-                if isinstance(reference, dict) and reference.get("number") is not None
-            }
-            closing_issues.update(_CLOSING_REFERENCE.findall(body))
+            closing_issues = set(_CLOSING_REFERENCE.findall(body))
             paths = frozenset(
                 str(file.get("path"))
                 for file in item.get("files", [])

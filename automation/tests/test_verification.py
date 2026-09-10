@@ -179,7 +179,10 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert environment["HOME"] == "/tmp/home"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
     assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
+    assert environment["UV_NO_SYNC"] == "1"
     assert environment["UV_OFFLINE"] == "1"
+    assert environment["UV_PROJECT_ENVIRONMENT"] == str(virtual_environment)
+    assert environment["VIRTUAL_ENV"] == str(virtual_environment)
 
 
 def test_uv_cache_mount_is_writable_not_read_only() -> None:
@@ -247,3 +250,35 @@ def test_a_change_outside_every_workspace_falls_back_to_running_everything(
     assert "frontend-build" in names
     assert "admin-build" in names
     assert "factory-tests" in names
+
+
+def test_workout_agent_backend_uses_python_native_gate(tmp_path: Path) -> None:
+    commands = commands_for(
+        tmp_path,
+        {Path("backend/dynamic_programme.py")},
+        "workout-agent",
+    )
+    names = {command.name for command in commands}
+
+    assert names == {
+        "control-plane-policy",
+        "control-plane-policy-tests",
+        "backend-compile",
+        "backend-tests",
+    }
+    assert all(command.workspace == tmp_path for command in commands)
+
+
+def test_workout_agent_frontend_uses_angular_native_gate(tmp_path: Path) -> None:
+    commands = commands_for(
+        tmp_path,
+        {Path("frontend/src/app/app.ts")},
+        "workout-agent",
+    )
+    names = {command.name for command in commands}
+
+    assert "frontend-build" in names
+    assert "frontend-test" in names
+    assert "backend-tests" not in names
+    frontend_test = next(command for command in commands if command.name == "frontend-test")
+    assert frontend_test.arguments == ("npm", "test", "--", "--watch=false")

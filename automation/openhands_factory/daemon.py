@@ -22,7 +22,7 @@ from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
 from openhands_factory.doctor import disk_space_checks, no_pr_progress_check
-from openhands_factory.exceptions import FactoryError
+from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
     FactoryGeneration,
@@ -464,6 +464,7 @@ class FactoryDaemon:
         next_refresh_at = 0.0
         next_prune_at = 0.0
         architect_future: Future[None] | None = None
+        architect_retry_not_before: datetime | None = None
         # Publish liveness before the first provider probe and GitHub refresh.
         # A large queue can make that first scheduling cycle slower than the
         # watchdog interval, but the daemon already owns its generation here.
@@ -624,9 +625,20 @@ class FactoryDaemon:
                     if architect_future is not None:
                         try:
                             architect_future.result()
+                        except ProviderCapacityUnavailable as error:
+                            retry = (
+                                error.retry_after_seconds or self.config.provider_cooldown_seconds
+                            )
+                            architect_retry_not_before = datetime.now(UTC) + timedelta(
+                                seconds=max(retry, 1)
+                            )
+                            LOGGER.warning("Architect cycle deferred: %s", error)
                         except Exception:
                             LOGGER.exception("Architect cycle crashed")
-                    if self.pipeline.architect_due():
+                    if (
+                        architect_retry_not_before is None
+                        or datetime.now(UTC) >= architect_retry_not_before
+                    ) and self.pipeline.architect_due():
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(
