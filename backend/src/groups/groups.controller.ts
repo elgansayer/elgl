@@ -14,7 +14,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { GroupsService } from './groups.service';
-import { AddMemberDto } from './dto/add-member.dto';
+import { AddMemberDto } from '../chat/dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
