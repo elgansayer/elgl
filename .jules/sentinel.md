@@ -83,3 +83,8 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-09-10 - [Replace blocking redis.keys with non-blocking SCAN]
+**Vulnerability:** Blocking KEYS command used for Redis pattern matching.
+**Learning:** Redis KEYS blocks the event loop causing DoS vulnerability.
+**Prevention:** Always use the non-blocking SCAN command via a cursor loop.

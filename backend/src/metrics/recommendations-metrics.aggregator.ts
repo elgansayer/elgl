@@ -28,7 +28,19 @@ export class RecommendationsMetricsAggregator {
 
       // Count active daily recommendation cache entries (indicates
       // the daily cron ran successfully)
-      const cacheKeys = await redis.keys('recommendations:daily:*');
+      let cursor = '0';
+      const cacheKeys: string[] = [];
+      do {
+        const [nextCursor, elements] = await redis.scan(
+          cursor,
+          'MATCH',
+          'recommendations:daily:*',
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        cacheKeys.push(...elements);
+      } while (cursor !== '0');
       const tier1SuccessCount = Array.isArray(cacheKeys) ? cacheKeys.length : 0;
 
       // Use the tier_success_rate gauge to approximate tier-1 health:

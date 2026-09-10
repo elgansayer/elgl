@@ -43,10 +43,27 @@ export class AdminService {
     return this.supabaseService.getRedisClient();
   }
 
+  private async scanKeys(redis: Redis, pattern: string): Promise<string[]> {
+    let cursor = '0';
+    const keys: string[] = [];
+    do {
+      const [nextCursor, elements] = await redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
+      cursor = nextCursor;
+      keys.push(...elements);
+    } while (cursor !== '0');
+    return keys;
+  }
+
   private async invalidateUserListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_USERS}*`);
+      const keys = await this.scanKeys(redis, `${CACHE_PREFIX_USERS}*`);
       if (keys.length > 0) {
         await redis.del(...keys);
         this.logger.info(
@@ -61,7 +78,7 @@ export class AdminService {
   private async invalidateBlocksListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_BLOCKS}*`);
+      const keys = await this.scanKeys(redis, `${CACHE_PREFIX_BLOCKS}*`);
       if (keys.length > 0) {
         await redis.del(...keys);
         this.logger.info(
@@ -76,7 +93,7 @@ export class AdminService {
   private async invalidateReportsListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_REPORTS}*`);
+      const keys = await this.scanKeys(redis, `${CACHE_PREFIX_REPORTS}*`);
       if (keys.length > 0) {
         await redis.del(...keys);
         this.logger.info(

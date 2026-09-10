@@ -101,19 +101,27 @@ describe('SafetyCacheInvalidationService', () => {
     });
 
     it('should handle delete for prefix patterns', async () => {
-      mockRedis.keys.mockResolvedValue([
-        'admin:login-history:user-1',
-        'admin:login-history:user-2',
-      ]);
+      mockRedis.scan
+        .mockResolvedValueOnce(['0', []]) // users list
+        .mockResolvedValueOnce(['0', []]) // blocks list
+        .mockResolvedValueOnce([
+          '0',
+          ['admin:login-history:user-1', 'admin:login-history:user-2'],
+        ])
+        .mockResolvedValue(['0', []]); // remaining calls
       mockRedis.del
         .mockResolvedValueOnce(0) // partner_of_week_ids
-        .mockResolvedValueOnce(0) // scan for admin:users:list:
-        .mockResolvedValueOnce(0) // scan for admin:blocks:list:
         .mockResolvedValueOnce(2); // del for login-history keys
 
       await service.invalidateTrustAndSafetyCaches();
 
-      expect(mockRedis.keys).toHaveBeenCalledWith('admin:login-history:*');
+      expect(mockRedis.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:login-history:*',
+        'COUNT',
+        100,
+      );
       expect(mockRedis.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
         'admin:login-history:user-2',
@@ -144,10 +152,11 @@ describe('SafetyCacheInvalidationService', () => {
 
     it('should handle scan with multiple iterations', async () => {
       // admin:users:list:* scan: two iterations (cursor '1' then '0')
-      // admin:blocks:list:* scan: one iteration (default mock returns ['0', []])
+      // other scans: one iteration each (default mock returns ['0', []])
       mockRedis.scan
         .mockResolvedValueOnce(['1', ['admin:users:list:1:20:']])
-        .mockResolvedValueOnce(['0', ['admin:users:list:2:20:']]);
+        .mockResolvedValueOnce(['0', ['admin:users:list:2:20:']])
+        .mockResolvedValue(['0', []]); // remaining calls
       mockRedis.del
         .mockResolvedValueOnce(0) // partner_of_week_ids
         .mockResolvedValueOnce(1) // admin:users:list scan batch 1
@@ -159,8 +168,8 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      // 2 iterations for admin:users:list:* + 1 iteration for admin:blocks:list:*
-      expect(mockRedis.scan).toHaveBeenCalledTimes(3);
+      // 2 iterations for admin:users:list:* + 1 for admin:blocks:list:* + 3 for other deletes
+      expect(mockRedis.scan).toHaveBeenCalledTimes(6);
     });
   });
 

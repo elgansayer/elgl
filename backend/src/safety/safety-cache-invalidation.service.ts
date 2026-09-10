@@ -195,7 +195,20 @@ export class SafetyCacheInvalidationService {
     redis: Redis,
     pattern: string,
   ): Promise<number> {
-    const keys = await redis.keys(pattern);
+    let cursor = '0';
+    const keys: string[] = [];
+    do {
+      const [nextCursor, elements] = await redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
+      cursor = nextCursor;
+      keys.push(...elements);
+    } while (cursor !== '0');
+
     if (keys.length === 0) {
       return 0;
     }
