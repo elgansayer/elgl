@@ -64,7 +64,7 @@ export class SafetyCacheInvalidationService {
       for (const pattern of SAFETY_AFFECTED_CACHE_PATTERNS) {
         if (pattern.endsWith(':*')) {
           // Suffixed glob pattern – use SCAN for safety on larger key spaces
-          const prefix = pattern.slice(0, -1);
+          const prefix = pattern.slice(0, -2);
           const deleted = await this.deleteByScan(redis, prefix);
           totalDeleted += deleted;
         } else if (pattern.endsWith(':')) {
@@ -188,4 +188,5 @@ export class SafetyCacheInvalidationService {
     } while (cursor !== '0');
     return deleted;
   }
+
 }

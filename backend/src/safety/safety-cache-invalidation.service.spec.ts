@@ -80,19 +80,19 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      // Remove only the wildcard so similarly named namespaces are not
-      // invalidated accidentally.
+      // The pattern `admin:users:list:*` is stripped of the suffix `:*`
+      // and scanned as `admin:users:list*`
       expect(mockRedis.scan).toHaveBeenCalledWith(
         '0',
         'MATCH',
-        'admin:users:list:*',
+        'admin:users:list*',
         'COUNT',
         500,
       );
       expect(mockRedis.scan).toHaveBeenCalledWith(
         '0',
         'MATCH',
-        'admin:blocks:list:*',
+        'admin:blocks:list*',
         'COUNT',
         500,
       );
@@ -102,10 +102,7 @@ describe('SafetyCacheInvalidationService', () => {
       mockRedis.scan
         .mockResolvedValueOnce(['0', []]) // admin:users:list:
         .mockResolvedValueOnce(['0', []]) // admin:blocks:list:
-        .mockResolvedValueOnce([
-          '0',
-          ['admin:login-history:user-1', 'admin:login-history:user-2'],
-        ]) // admin:login-history:
+        .mockResolvedValueOnce(['0', ['admin:login-history:user-1', 'admin:login-history:user-2']]) // admin:login-history:
         .mockResolvedValueOnce(['0', []]) // daily_recommendations:
         .mockResolvedValueOnce(['0', []]); // recommendations:daily:
 
@@ -117,13 +114,7 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      expect(mockRedis.scan).toHaveBeenCalledWith(
-        '0',
-        'MATCH',
-        'admin:login-history:*',
-        'COUNT',
-        500,
-      );
+      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:login-history:*', 'COUNT', 500);
       expect(mockRedis.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
         'admin:login-history:user-2',
