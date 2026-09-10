@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-10 - [Use SCAN instead of KEYS in Redis for Cache Invalidation]
+**Learning:** Using the `KEYS` command in Redis blocks the event loop, causing latency spikes and potential Denial of Service (DoS) vulnerabilities in production, especially as the number of keys grows. In NestJS services (like `admin.service.ts`), using `redis.keys` for bulk cache invalidation by pattern blocks all other database requests until it completes.
+**Action:** Replace `redis.keys` with a batched `redis.scan` loop (e.g., using a cursor and a `COUNT` limit) to distribute the work without blocking the Redis event loop, keeping cache invalidations snappy and stable under load.

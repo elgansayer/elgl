@@ -46,11 +46,25 @@ export class AdminService {
   private async invalidateUserListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_USERS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      let cursor = '0';
+      let totalDeleted = 0;
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          'MATCH',
+          `${CACHE_PREFIX_USERS}*`,
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          totalDeleted += await redis.del(...keys);
+        }
+      } while (cursor !== '0');
+
+      if (totalDeleted > 0) {
         this.logger.info(
-          `Invalidated ${keys.length} admin user list cache key(s)`,
+          `Invalidated ${totalDeleted} admin user list cache key(s)`,
         );
       }
     } catch (err) {
@@ -61,11 +75,25 @@ export class AdminService {
   private async invalidateBlocksListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_BLOCKS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      let cursor = '0';
+      let totalDeleted = 0;
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          'MATCH',
+          `${CACHE_PREFIX_BLOCKS}*`,
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          totalDeleted += await redis.del(...keys);
+        }
+      } while (cursor !== '0');
+
+      if (totalDeleted > 0) {
         this.logger.info(
-          `Invalidated ${keys.length} admin blocks list cache key(s)`,
+          `Invalidated ${totalDeleted} admin blocks list cache key(s)`,
         );
       }
     } catch (err) {
@@ -76,11 +104,25 @@ export class AdminService {
   private async invalidateReportsListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_REPORTS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      let cursor = '0';
+      let totalDeleted = 0;
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          'MATCH',
+          `${CACHE_PREFIX_REPORTS}*`,
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          totalDeleted += await redis.del(...keys);
+        }
+      } while (cursor !== '0');
+
+      if (totalDeleted > 0) {
         this.logger.info(
-          `Invalidated ${keys.length} admin reports list cache key(s)`,
+          `Invalidated ${totalDeleted} admin reports list cache key(s)`,
         );
       }
     } catch (err) {
