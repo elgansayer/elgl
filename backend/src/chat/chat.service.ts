@@ -4,6 +4,8 @@ import {
   BadRequestException,
   NotFoundException,
   Optional,
+  Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -61,6 +63,8 @@ interface GroupMember {
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
@@ -333,6 +337,28 @@ export class ChatService {
     }
 
     return rooms;
+  }
+
+  async getUnreadCount(userId: string): Promise<{ unreadCount: number }> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase.rpc('count_chat_unread', {
+      p_user_id: userId,
+    });
+
+    const unreadCount = typeof data === 'string' ? Number(data) : data;
+    if (
+      error ||
+      typeof unreadCount !== 'number' ||
+      !Number.isSafeInteger(unreadCount) ||
+      unreadCount < 0
+    ) {
+      this.logger.warn('chat.unread_count_failed');
+      throw new ServiceUnavailableException(
+        'Chat unread count is temporarily unavailable',
+      );
+    }
+
+    return { unreadCount };
   }
 
   async sendMessage(
