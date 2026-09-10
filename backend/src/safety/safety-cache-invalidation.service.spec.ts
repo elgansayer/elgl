@@ -102,7 +102,10 @@ describe('SafetyCacheInvalidationService', () => {
       mockRedis.scan
         .mockResolvedValueOnce(['0', []]) // admin:users:list:
         .mockResolvedValueOnce(['0', []]) // admin:blocks:list:
-        .mockResolvedValueOnce(['0', ['admin:login-history:user-1', 'admin:login-history:user-2']]) // admin:login-history:
+        .mockResolvedValueOnce([
+          '0',
+          ['admin:login-history:user-1', 'admin:login-history:user-2'],
+        ]) // admin:login-history:
         .mockResolvedValueOnce(['0', []]) // daily_recommendations:
         .mockResolvedValueOnce(['0', []]); // recommendations:daily:
 
@@ -114,7 +117,13 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:login-history:*', 'COUNT', 500);
+      expect(mockRedis.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:login-history:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedis.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
         'admin:login-history:user-2',

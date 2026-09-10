@@ -188,5 +188,4 @@ export class SafetyCacheInvalidationService {
     } while (cursor !== '0');
     return deleted;
   }
-
 }
