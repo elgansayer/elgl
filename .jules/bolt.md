@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-10 - [Batch Database/Storage Updates via Promise.all]
+**Learning:** Sequential awaits in database cleanup loops (like `purgeExpiredArchives`) create unnecessary N+1 latency, blocking subsequent deletions.
+**Action:** Replaced sequential `for...of` loops that perform Supabase storage removals and row updates with a single concurrent `Promise.all(rows.map(...))` block.
