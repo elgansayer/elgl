@@ -99,8 +99,17 @@ To build a truly personalised discovery experience, we should replace the cascad
 
 ### H. Conversation Compatibility (Past Success)
 
-**Why:** If a user tends to have long, successful conversations with users from a specific country or age group, the algorithm should learn and prioritise this preference. This adds a layer of personalisation that goes beyond explicit profile settings, adapting to the user's actual successful interactions.
+**Why:** Past mutually successful conversations can reveal which interaction patterns work well for a user. Compatibility should be learned from non-sensitive signals such as shared interests, language reciprocity, overlapping active hours, and response cadence, not from demographic proxies.
 **Implementation:**
 
-- Track "successful conversations" (e.g., chats exceeding 50 messages).
-- If a candidate matches the demographic profile (age, country, gender) of the searcher's historical successful partners, apply a small boost (+10-15 points).
+- Define success using mutual continuation and reply signals rather than message volume alone, which can be inflated by spam or unwanted contact.
+- Apply a small boost when a candidate matches the non-sensitive interaction patterns of the searcher's successful conversations.
+
+## 3. Safety, Privacy, and Fairness Constraints
+
+- Never learn or apply latent preferences from age, gender, country, or other protected or sensitive attributes. Explicit filters remain user-controlled and must not become inferred ranking signals.
+- Calculate behavioural signals from aggregate metadata only. Do not inspect or retain message content for ranking, and keep the retention window bounded.
+- Exclude blocked, reported, deleted, and moderation-related conversations from response and compatibility metrics so safety actions cannot reduce a user's ranking.
+- Use minimum sample sizes and smoothed defaults for response, correction, and conversation signals so new or low-activity users are not unfairly buried.
+- Cap every behavioural contribution and monitor outcomes by cohort to detect gaming, popularity feedback loops, or disparate impact before rollout.
+- Keep inferred timezone and activity patterns private, expose no raw activity history to other users, and document the ranking use in the product's privacy disclosures.
