@@ -363,6 +363,12 @@ class GitHubClient:
 
         current = now or datetime.now(UTC)
         cutoff = current - timedelta(days=recent_days)
+        json_fields = (
+            "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
+            "isCrossRepository,labels,author"
+        )
+        if known_path_fingerprint is not None:
+            json_fields += ",files"
         output = self._run(
             (
                 "gh",
@@ -375,8 +381,7 @@ class GitHubClient:
                 "--limit",
                 str(limit),
                 "--json",
-                "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
-                "isCrossRepository,labels,author,files",
+                json_fields,
             )
         )
         matches: list[PullRequestMatch] = []
