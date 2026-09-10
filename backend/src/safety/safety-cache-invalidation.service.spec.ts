@@ -17,13 +17,11 @@ describe('SafetyCacheInvalidationService', () => {
 
     mockRedis = {
       del: vi.fn(),
-      keys: vi.fn(),
       scan: vi.fn(),
     };
 
     // Default: del resolves to number of keys deleted
     mockRedis.del.mockResolvedValue(0);
-    mockRedis.keys.mockResolvedValue([]);
     mockRedis.scan.mockResolvedValue(['0', []]);
 
     mockSupabaseService = {
@@ -75,9 +73,9 @@ describe('SafetyCacheInvalidationService', () => {
         .mockResolvedValueOnce(0) // partner_of_week_ids
         .mockResolvedValueOnce(0) // scan result for admin:users:list:*
         .mockResolvedValueOnce(0) // scan result for admin:blocks:list:*
-        .mockResolvedValueOnce(0) // keys result for admin:login-history:*
-        .mockResolvedValueOnce(0) // keys result for daily_recommendations:*
-        .mockResolvedValueOnce(0); // keys result for recommendations:daily:*
+        .mockResolvedValueOnce(0) // scan result for admin:login-history:*
+        .mockResolvedValueOnce(0) // scan result for daily_recommendations:*
+        .mockResolvedValueOnce(0); // scan result for recommendations:daily:*
       mockRedis.scan.mockResolvedValue(['0', []]);
 
       await service.invalidateTrustAndSafetyCaches();
@@ -101,10 +99,13 @@ describe('SafetyCacheInvalidationService', () => {
     });
 
     it('should handle delete for prefix patterns', async () => {
-      mockRedis.keys.mockResolvedValue([
-        'admin:login-history:user-1',
-        'admin:login-history:user-2',
-      ]);
+      mockRedis.scan
+        .mockResolvedValueOnce(['0', []]) // admin:users:list:
+        .mockResolvedValueOnce(['0', []]) // admin:blocks:list:
+        .mockResolvedValueOnce(['0', ['admin:login-history:user-1', 'admin:login-history:user-2']]) // admin:login-history:
+        .mockResolvedValueOnce(['0', []]) // daily_recommendations:
+        .mockResolvedValueOnce(['0', []]); // recommendations:daily:
+
       mockRedis.del
         .mockResolvedValueOnce(0) // partner_of_week_ids
         .mockResolvedValueOnce(0) // scan for admin:users:list:
@@ -113,7 +114,7 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      expect(mockRedis.keys).toHaveBeenCalledWith('admin:login-history:*');
+      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:login-history:*', 'COUNT', 500);
       expect(mockRedis.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
         'admin:login-history:user-2',
@@ -147,7 +148,12 @@ describe('SafetyCacheInvalidationService', () => {
       // admin:blocks:list:* scan: one iteration (default mock returns ['0', []])
       mockRedis.scan
         .mockResolvedValueOnce(['1', ['admin:users:list:1:20:']])
-        .mockResolvedValueOnce(['0', ['admin:users:list:2:20:']]);
+        .mockResolvedValueOnce(['0', ['admin:users:list:2:20:']]) // end of users scan
+        .mockResolvedValueOnce(['0', []]) // admin:blocks:list:
+        .mockResolvedValueOnce(['0', []]) // login-history:
+        .mockResolvedValueOnce(['0', []]) // daily_recommendations:
+        .mockResolvedValueOnce(['0', []]); // recommendations:daily:
+
       mockRedis.del
         .mockResolvedValueOnce(0) // partner_of_week_ids
         .mockResolvedValueOnce(1) // admin:users:list scan batch 1
@@ -159,8 +165,8 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      // 2 iterations for admin:users:list:* + 1 iteration for admin:blocks:list:*
-      expect(mockRedis.scan).toHaveBeenCalledTimes(3);
+      // 2 iterations for admin:users:list:* + 1 iteration for admin:blocks:list:* + 3 iterations for remaining prefixes
+      expect(mockRedis.scan).toHaveBeenCalledTimes(6);
     });
   });
 
