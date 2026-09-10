@@ -7,9 +7,18 @@ const templateUrl = new URL(
   import.meta.url,
 );
 const auditUrl = new URL('../docs/moments-accessibility-audit.md', import.meta.url);
+const componentUrl = new URL(
+  '../frontend/src/app/components/moments-feed/moments-feed.component.ts',
+  import.meta.url,
+);
 
 const template = readFileSync(templateUrl, 'utf8');
 const audit = readFileSync(auditUrl, 'utf8');
+const component = readFileSync(componentUrl, 'utf8');
+const commentKeydown = component.slice(
+  component.indexOf('  onCommentKeydown('),
+  component.indexOf('\n  private async loadMentionSuggestions('),
+);
 
 function buttonFor(clickExpression) {
   const buttons = [...template.matchAll(/<button\b[\s\S]*?<\/button>/g)].map((match) => match[0]);
@@ -53,7 +62,7 @@ test('the accessibility audit records the exact current high-priority debt', () 
     },
     {
       id: 'MOM-A11Y-003',
-      present: (template.match(/\[attr\.aria-label\]="'text input'"/g) ?? []).length === 2,
+      present: (template.match(/\[attr\.aria-label\]="'text input'"/g) ?? []).length === 1,
     },
     {
       id: 'MOM-A11Y-004',
@@ -69,7 +78,10 @@ test('the accessibility audit records the exact current high-priority debt', () 
     },
     {
       id: 'MOM-A11Y-007',
-      present: template.includes('(keyup.enter)=\"submitComment(moment)\"'),
+      present:
+        template.includes('(keydown)=\"onCommentKeydown($event, moment)\"') &&
+        commentKeydown.includes("if (event.key === 'Enter')") &&
+        !commentKeydown.includes('event.isComposing'),
     },
   ];
 
