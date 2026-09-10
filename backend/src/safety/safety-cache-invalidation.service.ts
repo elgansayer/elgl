@@ -196,9 +196,9 @@ export class SafetyCacheInvalidationService {
     pattern: string,
   ): Promise<number> {
     let cursor = '0';
-    const keys: string[] = [];
+    let deleted = 0;
     do {
-      const [nextCursor, elements] = await redis.scan(
+      const [nextCursor, keys] = await redis.scan(
         cursor,
         'MATCH',
         pattern,
@@ -206,12 +206,10 @@ export class SafetyCacheInvalidationService {
         100,
       );
       cursor = nextCursor;
-      keys.push(...elements);
+      if (keys.length > 0) {
+        deleted += await redis.del(...keys);
+      }
     } while (cursor !== '0');
-
-    if (keys.length === 0) {
-      return 0;
-    }
-    return redis.del(...keys);
+    return deleted;
   }
 }

@@ -260,6 +260,28 @@ describe('AdminService', () => {
       );
     });
 
+    it('deletes matching cache keys one SCAN page at a time', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', is_vip: true, vip_tier: 'consumer' },
+        error: null,
+      });
+      mockRedisClient.scan
+        .mockResolvedValueOnce(['7', ['admin:users:list:1:20:']])
+        .mockResolvedValueOnce(['0', ['admin:users:list:2:20:']]);
+
+      await service.setVipStatus('user-1', {
+        is_vip: true,
+        vip_tier: 'consumer',
+      });
+
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:users:list:1:20:',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:users:list:2:20:',
+      );
+    });
+
     it('defaults vip_tier to free when revoking VIP without a tier', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { id: 'user-1', is_vip: false, vip_tier: 'free' },
