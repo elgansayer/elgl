@@ -80,19 +80,19 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      // The pattern `admin:users:list:*` is stripped of the suffix `:*`
-      // and scanned as `admin:users:list*`
+      // Remove only the wildcard so similarly named namespaces are not
+      // invalidated accidentally.
       expect(mockRedis.scan).toHaveBeenCalledWith(
         '0',
         'MATCH',
-        'admin:users:list*',
+        'admin:users:list:*',
         'COUNT',
         500,
       );
       expect(mockRedis.scan).toHaveBeenCalledWith(
         '0',
         'MATCH',
-        'admin:blocks:list*',
+        'admin:blocks:list:*',
         'COUNT',
         500,
       );
