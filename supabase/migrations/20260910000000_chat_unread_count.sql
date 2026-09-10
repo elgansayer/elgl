@@ -31,6 +31,7 @@ AS $$
     AND member.is_locked = false
     AND message.sender_id <> p_user_id
     AND message.delivery_status <> 'read'
+    AND message.is_read = false
     AND COALESCE(message.is_deleted_for_everyone, false) = false
     AND NOT COALESCE(
       TO_JSONB(message.deleted_for_user_ids) ? p_user_id::TEXT,

@@ -30,6 +30,7 @@ describe('chat unread count migration', () => {
     expect(migration).toMatch(/member\.is_locked = false/);
     expect(migration).toMatch(/message\.sender_id <> p_user_id/);
     expect(migration).toMatch(/message\.delivery_status <> 'read'/);
+    expect(migration).toMatch(/message\.is_read = false/);
   });
 
   it('excludes deleted and blocked messages from the visible unread count', () => {
