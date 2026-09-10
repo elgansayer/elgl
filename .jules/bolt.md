@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-10 - [Batch Supabase Storage Remove with Promise.all]
+**Learning:** In the `privacy.service.ts`, iterating through multiple items to sequentially await `supabase.storage.from().remove()` or `supabase.from().update()` introduces a severe N+1 bottleneck when executing the background purge for gdpr archives.
+**Action:** When applying operations like `remove` and `update` independently to multiple records from a database query result (e.g. `archive_requests`), use `Promise.all` with a map function over the records to process them concurrently, saving significant latency during data background processing.
