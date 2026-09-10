@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
@@ -23,28 +22,6 @@ HALF_OPEN_PROBE_LEASE_SECONDS = 60
 
 def _is_health_payload(value: object) -> bool:
     return isinstance(value, dict) and isinstance(value.get("breakers"), list)
-
-
-def _coordinated_health_path(path: Path) -> Path:
-    """Share subscription health when Repo Factory shares provider capacity.
-
-    Provider authentication, quota, rate limits, and outages belong to the
-    subscription/provider rather than to one repository. Multi-repository
-    instances already coordinate provider concurrency through
-    FACTORY_PROVIDER_CAPACITY_DIR, so use that same trusted coordination root
-    for the standard circuit-breaker file. Custom health-store filenames stay
-    local so tests and explicit tooling retain their existing isolation.
-    """
-
-    if path.name != "agent_health.json":
-        return path
-    configured = os.environ.get("FACTORY_PROVIDER_CAPACITY_DIR")
-    if not configured:
-        return path
-    coordination_root = Path(configured)
-    if not coordination_root.is_absolute():
-        return path
-    return coordination_root / path.name
 
 
 @dataclass
@@ -151,8 +128,8 @@ class AgentCircuitBreaker:
 
 class AgentHealthStore:
     def __init__(self, path: Path) -> None:
-        self.path = _coordinated_health_path(path)
-        self.lock = FileLock(str(self.path) + ".lock")
+        self.path = path
+        self.lock = FileLock(str(path) + ".lock")
 
     def _save(self, breakers: Mapping[str, AgentCircuitBreaker]) -> None:
         payload = []
