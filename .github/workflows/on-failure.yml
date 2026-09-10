@@ -10,9 +10,7 @@ on:
       - Admin portal CI
     types: [completed]
   schedule:
-    # Push and workflow_run events remain the primary recovery paths. This is only
-    # a bounded missed-event backstop, so six-hour polling avoids healthy no-op runners.
-    - cron: '17 */6 * * *'
+    - cron: '17 */3 * * *'
 
 permissions:
   contents: read
