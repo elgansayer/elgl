@@ -92,23 +92,3 @@ The `create()` and `delete()` methods in `communities.component.ts` are asynchro
 
 ## Suggested Labels
 bug, error-handling, high-priority
-
-# Issue 6: N+1 API request burst on application startup for chat unread counts
-
-## Title
-bug(performance): resolve N+1 API request burst when calculating initial chat unread counts
-
-## Description
-In `frontend/src/app/app.component.ts`, the `loadInitialUnreadCounts()` method determines the total unread chat messages for the current user by fetching all chat rooms, and then iterating over each room to fetch all its messages (in batches of 6). It calculates the unread count on the client side by filtering the messages.
-
-This causes a severe N+1 query problem on the frontend. A user with 100 chat rooms will trigger 1 request to `/rooms` followed by 100 requests to `/messages/:roomId` immediately upon application load. This degrades startup performance, increases memory footprint, needlessly burdens the backend, and is not scalable as the user's room history grows.
-
-## Acceptance Criteria
-* Add a new endpoint to the backend (e.g., `GET /chat/unread-count`) that executes a single optimised database query to calculate the total unread chat messages for the current user.
-* Alternatively, include the unread count per room in the response payload of the existing `GET /chat/rooms` endpoint.
-* Update `loadInitialUnreadCounts()` in `app.component.ts` to use the new optimised API endpoint instead of fetching and looping through all messages for every room.
-* Remove the batched `getMessages` client-side API requests from the startup sequence in `app.component.ts`.
-* Ensure unit tests for `app.component.ts` and the updated backend service verify the new unread count fetching logic.
-
-## Suggested Labels
-bug, performance, tech-debt
