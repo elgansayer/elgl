@@ -43,14 +43,32 @@ export class AdminService {
     return this.supabaseService.getRedisClient();
   }
 
+  private async deleteByScan(redis: Redis, pattern: string): Promise<number> {
+    let cursor = '0';
+    let deleted = 0;
+    do {
+      const [nextCursor, keys] = await redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        500,
+      );
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        deleted += await redis.del(...keys);
+      }
+    } while (cursor !== '0');
+    return deleted;
+  }
+
   private async invalidateUserListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_USERS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      const deletedCount = await this.deleteByScan(redis, `${CACHE_PREFIX_USERS}*`);
+      if (deletedCount > 0) {
         this.logger.info(
-          `Invalidated ${keys.length} admin user list cache key(s)`,
+          `Invalidated ${deletedCount} admin user list cache key(s)`,
         );
       }
     } catch (err) {
@@ -61,11 +79,10 @@ export class AdminService {
   private async invalidateBlocksListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_BLOCKS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      const deletedCount = await this.deleteByScan(redis, `${CACHE_PREFIX_BLOCKS}*`);
+      if (deletedCount > 0) {
         this.logger.info(
-          `Invalidated ${keys.length} admin blocks list cache key(s)`,
+          `Invalidated ${deletedCount} admin blocks list cache key(s)`,
         );
       }
     } catch (err) {
@@ -76,11 +93,10 @@ export class AdminService {
   private async invalidateReportsListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_REPORTS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      const deletedCount = await this.deleteByScan(redis, `${CACHE_PREFIX_REPORTS}*`);
+      if (deletedCount > 0) {
         this.logger.info(
-          `Invalidated ${keys.length} admin reports list cache key(s)`,
+          `Invalidated ${deletedCount} admin reports list cache key(s)`,
         );
       }
     } catch (err) {
