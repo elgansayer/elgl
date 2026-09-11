@@ -23,8 +23,8 @@ class HealthyProbeProvider:
     def supports(self, phase: AgentPhase) -> bool:
         return True
 
-    def run(self, request):  # pragma: no cover - this test records the operation result directly.
-        raise AssertionError("provider run is not expected")
+    def run(self, request):
+        raise AssertionError("provider run is not expected in this focused test")
 
 
 def test_repeated_quota_failures_back_off_exponentially_with_a_bound() -> None:
@@ -107,10 +107,12 @@ def test_half_open_health_probe_does_not_erase_quota_streak(tmp_path) -> None:
 
     health = router.health_snapshot()
     half_open = store.load()["quota-provider"]
+    leased = router.health_snapshot()
 
     assert health["quota-provider"].status is ProviderStatus.HEALTHY
     assert half_open.state == "half-open"
     assert half_open.consecutive_failures == 1
+    assert leased["quota-provider"].status is ProviderStatus.UNAVAILABLE
 
     now = datetime.now(UTC)
     router._record_breaker(
