@@ -1,100 +1,110 @@
-# Factory allowance audit: repeated quota probes
+# Factory allowance audit: subscription failure backoff
 
-Date: 2026-09-10
+Date: 2026-09-11
 
 ## Scope
 
-This pass re-audited provider routing and reasoning selection, retry and failover behavior,
-duplicate-work controls, prompt/context limits, CI and independent-review loops,
-concurrency/admission policy, GitHub Actions interaction, stalled-task recovery, and the
-provider circuit breaker. The architectural constraints remain unchanged: the Factory must
-recover autonomously, must not require human triage or quarantine, and must preserve local
-verification, security review, independent review, reviewed-SHA protection, and required
-merge checks.
+This pass re-audited current provider routing, retries, failover, health/circuit behavior,
+concurrency/admission, prompt/output telemetry, CI/review loops, recovery scheduling, GitHub
+Actions, and the live Factory control panel. The safety contract is unchanged: autonomous
+recovery, deterministic verification, security review, independent exact-head review,
+reviewed-SHA protection, mergeability, and required CI remain mandatory.
 
-## Finding
+## Live evidence
 
-The provider circuit breaker persisted `consecutive_failures`, but quota failures reset that
-counter to the configured failure threshold every time. A subscription that remained quota
-exhausted therefore received another half-open probe at the same fixed cadence forever.
-That is useful for a transient first failure but wasteful once repeated probes have already
-proved that the subscription is still exhausted.
+The live control panel still has a very large runnable queue and cumulative provider failures
+are dominated by persistent subscription/provider conditions rather than useful engineering
+work. In particular, OpenCode has recorded 219 quota failures in 221 calls, Pi has recorded
+242 quota failures with no successes, Codex has recorded 2,127 transport failures plus 256
+rate-limit and 139 authentication failures, and Claude has recorded 344 transport plus 172
+quota failures. These cumulative counters justify reducing repeated outage discovery; they are
+not a claim about a precise token-saving percentage.
 
-The live Factory evidence that motivated the separate cooldown-floor change in #8893 also
-shows why a bounded repeated-probe policy is useful: OpenCode recorded 219 quota failures in
-221 calls, while Pi recorded 242 quota failures and no successes. #8893 lengthens the first
-production quota cooldown; this change is complementary and does not depend on that PR. It
-reduces repeated probes only after a half-open quota probe fails again.
+The Factory already opens provider circuits on the first qualifying production failure and
+performs zero immediate same-provider retries. The remaining waste was how soon a known-bad
+subscription became eligible for another probe, and how repeated quota failures were treated
+as if each one were the first failure.
 
-Reviewing the first implementation exposed two integration details that mattered in the real
-router rather than isolated circuit-breaker tests.
+## Changes
 
-First, the router keeps the breaker's generic default at five minutes and supplies the
-failure-specific quota floor through `retry_after_seconds`. Multiplying only
-`cooldown_seconds` would therefore have left a one-hour production quota floor at one hour
-forever because the 1x/2x/4x generic values (5/10/20 minutes) never exceeded that floor. The
-corrected implementation backs off from the **effective** floor.
+### Conservative first-failure cooldowns
 
-Second, a half-open circuit previously closed as soon as the provider's shallow health probe
-reported healthy. Subscription CLI health probes mostly prove installation/authentication;
-they do not necessarily prove that an allowance or rate-limit condition has recovered. A
-quota failure from the real provider operation could therefore open the circuit, wait for its
-cooldown, pass a cheap auth probe, reset its failure streak, and then fail quota again. That
-would defeat repeated-probe backoff for exactly the subscription failures this change targets.
-The router now keeps a circuit half-open until the actual routed provider operation records
-success or failure. The existing half-open lease still admits only one such probe at a time.
+Production cooldown floors now match the persistence of the observed failure classes:
 
-## Change
+- transport: 5 minutes -> 30 minutes;
+- rate limit: 15 minutes -> 60 minutes;
+- quota: 60 minutes -> 6 hours;
+- authentication: 15 minutes -> 6 hours.
 
-Quota failures now retain a restart-safe streak and apply bounded exponential growth to the
-effective cooldown:
+Provider-supplied longer retry intervals remain authoritative. Generic unavailability,
+timeouts, crashes, and invalid output keep their shorter existing cooldowns so transient
+infrastructure/task-specific failures can recover quickly.
 
-- first quota failure: 1x effective quota floor;
-- second consecutive quota failure: 2x;
-- third and later consecutive quota failures: 4x maximum.
+Before other admission gates, those changes reduce the maximum expiry opportunities for a
+continuously failing route by 83.3%, 75%, 83.3%, and 95.8% respectively. They do not reduce
+productive issue admission, healthy-provider concurrency, provider diversity, or reasoning
+quality.
 
-The effective floor is the larger of the generic breaker cooldown and the current retry-after
-floor. Production uses that retry-after field for the configured failure-specific cooldown,
-so current `main` follows 1h -> 2h -> 4h. If #8893's six-hour production quota floor lands
-independently, the same policy becomes 6h -> 12h -> 24h. The multiplier remains bounded and
-the absolute circuit delay remains capped by the existing seven-day retry-after ceiling, so a
-provider is never permanently abandoned.
+### Bounded repeated quota backoff
 
-A provider-reported longer retry interval remains authoritative as the starting floor. If the
-provider is still quota-exhausted when that longer interval expires, the failed half-open
-probe backs off from that effective floor as well. This is intentional: the new evidence is
-that waiting the provider's own interval was still insufficient. Any successful **real
-provider operation** immediately clears the failure streak and returns the next quota event
-to the normal 1x cooldown. Authentication, rate-limit, transport, timeout, crash,
-invalid-output, and generic-unavailable cooldown behavior is otherwise unchanged.
+Quota failures retain a restart-safe streak and scale the **effective** cooldown floor 1x ->
+2x -> 4x. With the consolidated six-hour production quota floor, a continuously exhausted
+subscription follows 6h -> 12h -> 24h and remains bounded there, reducing steady-state
+recovery opportunities from four per day to one per day (75%) once the bound is reached.
+The absolute retry interval remains capped by the existing seven-day safety ceiling.
 
-## Autonomy and engineering-quality invariants
+A stronger provider-supplied quota retry floor is preserved across the unresolved quota
+streak instead of being replaced by a shorter local floor. A successful real provider
+operation resets the streak immediately.
 
-The provider remains enabled and is automatically half-opened again after the bounded
-cooldown. Other healthy providers remain available through the existing routing/failover
-policy while one subscription is cooling down. The existing restart-safe half-open probe
-lease remains unchanged, so a daemon crash cannot strand a provider indefinitely and
-concurrent workers cannot fan out multiple recovery probes.
+### Half-open recovery ownership
 
-This change does not alter provider ordering, model choice, reasoning effort, prompts,
-verification, security review, independent review, reviewed-head protection, mergeability
-checks, or `CI / required`. It introduces no manual release state, quarantine, or human
-interaction.
+A shallow CLI/auth health probe does not prove that quota/rate allowance has recovered, so it
+no longer closes a half-open circuit. The half-open lease remains authoritative until the
+actual routed provider operation records success/failure; concurrent routed callers stay
+ineligible during that lease.
 
-## Verification
+The deeper integration audit found an important interaction with daemon scheduling: the
+control loop calls `health_snapshot()` immediately before refreshing and dispatching work. If
+a diagnostic snapshot itself transitioned a due circuit to half-open, monitoring could take
+the only 60-second recovery lease immediately before the worker that could actually use it.
+At the normal five-minute control refresh this could repeatedly suppress a recovered provider
+at dispatch time.
 
-Focused regression coverage proves that:
+`health_snapshot()` is therefore observational for open/half-open circuits. It can still probe
+closed providers and record newly observed failures, but it cannot consume or renew a recovery
+lease. Actual routing remains the owner of the single half-open probe.
 
-- repeated quota failures grow 1x -> 2x -> 4x and remain bounded at 4x;
-- the real production-style failure-specific floor is scaled, even when the generic breaker
-  default is lower;
-- a shallow healthy auth/CLI probe leaves the circuit half-open and preserves the quota streak
-  until the actual provider operation resolves it;
-- a successful provider operation resets the quota backoff immediately;
-- a longer retry floor is respected first and then scaled only after another failed probe;
-- non-quota failures do not inherit this exponential policy;
-- the quota streak survives `AgentHealthStore` persistence and restart.
+## Validation contract
 
-The canonical Factory CI on the exact pull-request head remains authoritative for Ruff
-formatting, Ruff lint, mypy, the complete Factory pytest suite, repository governance, and
-`CI / required`.
+Regression coverage now locks all of the following:
+
+- production uses first-failure threshold 1 and zero immediate same-provider retries;
+- conservative production transport/rate/quota/auth cooldown floors remain in place;
+- repeated quota failures grow 1x -> 2x -> 4x and remain bounded;
+- production-style failure-specific retry floors are the values that get scaled;
+- a provider-supplied stronger quota retry floor is retained across the unresolved streak;
+- successful real provider execution resets the quota streak;
+- non-quota failures do not inherit exponential quota policy;
+- quota streak state survives the durable health store/restart;
+- shallow healthy CLI/auth probes do not erase a quota streak;
+- monitoring snapshots do not consume the single half-open recovery lease;
+- concurrent routing remains blocked while a half-open recovery operation is leased.
+
+No persisted-state migration is required. Existing health-store fields are reused and remain
+backward compatible. The canonical Factory CI remains authoritative for Ruff formatting/lint,
+mypy, the complete pytest suite, governance checks, and `CI / required`.
+
+## Other current audit findings
+
+The live control panel is fresh but scheduling is currently storage-blocked: the Factory state
+volume has 3.9 GiB free against the configured 5 GiB reserve, leaving 2,350 runnable jobs and
+no active tasks. The repository already contains the merged bounded archive retention,
+pressure eviction, rootless Podman maintenance, watchdog cleanup, and provider-state
+relocation work. Without host-level storage attribution it would be unsafe to lower the
+reserve or delete additional state blindly, so this change does not weaken that protection.
+
+Automatic GitHub Copilot PR review is also still generating redundant attempts even though
+the Factory has its own authoritative exact-head independent-review gate; recent attempts are
+failing because the Copilot review quota is exhausted. That setting lives in repository
+administration/ruleset state and is not worked around in Factory code.
