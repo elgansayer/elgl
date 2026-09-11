@@ -26,13 +26,23 @@ shows why a bounded repeated-probe policy is useful: OpenCode recorded 219 quota
 production quota cooldown; this change is complementary and does not depend on that PR. It
 reduces repeated probes only after a half-open quota probe fails again.
 
-A review of the first implementation found an important integration detail: the router keeps
-the breaker's generic default at five minutes and supplies the failure-specific quota floor
-through `retry_after_seconds`. Multiplying only `cooldown_seconds` would therefore have left a
-one-hour production quota floor at one hour forever because the 1x/2x/4x generic values
-(5/10/20 minutes) never exceeded that floor. The corrected implementation backs off from the
-**effective** floor, so the policy works in the real router rather than only in isolated unit
-tests.
+Reviewing the first implementation exposed two integration details that mattered in the real
+router rather than isolated circuit-breaker tests.
+
+First, the router keeps the breaker's generic default at five minutes and supplies the
+failure-specific quota floor through `retry_after_seconds`. Multiplying only
+`cooldown_seconds` would therefore have left a one-hour production quota floor at one hour
+forever because the 1x/2x/4x generic values (5/10/20 minutes) never exceeded that floor. The
+corrected implementation backs off from the **effective** floor.
+
+Second, a half-open circuit previously closed as soon as the provider's shallow health probe
+reported healthy. Subscription CLI health probes mostly prove installation/authentication;
+they do not necessarily prove that an allowance or rate-limit condition has recovered. A
+quota failure from the real provider operation could therefore open the circuit, wait for its
+cooldown, pass a cheap auth probe, reset its failure streak, and then fail quota again. That
+would defeat repeated-probe backoff for exactly the subscription failures this change targets.
+The router now keeps a circuit half-open until the actual routed provider operation records
+success or failure. The existing half-open lease still admits only one such probe at a time.
 
 ## Change
 
@@ -53,17 +63,18 @@ provider is never permanently abandoned.
 A provider-reported longer retry interval remains authoritative as the starting floor. If the
 provider is still quota-exhausted when that longer interval expires, the failed half-open
 probe backs off from that effective floor as well. This is intentional: the new evidence is
-that waiting the provider's own interval was still insufficient. Any successful provider call
-immediately clears the failure streak and returns the next quota event to the normal 1x
-cooldown. Authentication, rate-limit, transport, timeout, crash, invalid-output, and
-generic-unavailable cooldown behavior is unchanged.
+that waiting the provider's own interval was still insufficient. Any successful **real
+provider operation** immediately clears the failure streak and returns the next quota event
+to the normal 1x cooldown. Authentication, rate-limit, transport, timeout, crash,
+invalid-output, and generic-unavailable cooldown behavior is otherwise unchanged.
 
 ## Autonomy and engineering-quality invariants
 
 The provider remains enabled and is automatically half-opened again after the bounded
 cooldown. Other healthy providers remain available through the existing routing/failover
 policy while one subscription is cooling down. The existing restart-safe half-open probe
-lease remains unchanged, so a daemon crash cannot strand a provider indefinitely.
+lease remains unchanged, so a daemon crash cannot strand a provider indefinitely and
+concurrent workers cannot fan out multiple recovery probes.
 
 This change does not alter provider ordering, model choice, reasoning effort, prompts,
 verification, security review, independent review, reviewed-head protection, mergeability
@@ -77,7 +88,9 @@ Focused regression coverage proves that:
 - repeated quota failures grow 1x -> 2x -> 4x and remain bounded at 4x;
 - the real production-style failure-specific floor is scaled, even when the generic breaker
   default is lower;
-- a successful call resets the quota backoff immediately;
+- a shallow healthy auth/CLI probe leaves the circuit half-open and preserves the quota streak
+  until the actual provider operation resolves it;
+- a successful provider operation resets the quota backoff immediately;
 - a longer retry floor is respected first and then scaled only after another failed probe;
 - non-quota failures do not inherit this exponential policy;
 - the quota streak survives `AgentHealthStore` persistence and restart.
