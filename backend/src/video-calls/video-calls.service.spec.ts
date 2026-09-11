@@ -145,6 +145,48 @@ describe('VideoCallsService', () => {
     vi.clearAllMocks();
   });
 
+  describe('constructor', () => {
+    it('should throw an error in production if LIVEKIT_API_KEY or LIVEKIT_SECRET matches known insecure default values', () => {
+      const mockConfigService = {
+        get: vi.fn((key: string) => {
+          if (key === 'NODE_ENV') return 'production';
+          if (key === 'LIVEKIT_API_KEY') return 'test-livekit-api-key';
+          if (key === 'LIVEKIT_SECRET') return 'test-livekit-secret';
+          return null;
+        }),
+      } as unknown as ConfigService;
+
+      expect(() => {
+        new VideoCallsService(
+          mockConfigService,
+          mockDegradationService as any,
+          mockEncryptionService as any,
+          { buildIceServers: vi.fn().mockReturnValue([]) } as any,
+          mockMetricsService as any,
+        );
+      }).toThrow('LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production');
+    });
+
+    it('should throw an error in production if LIVEKIT_API_KEY or LIVEKIT_SECRET are missing', () => {
+      const mockConfigService = {
+        get: vi.fn((key: string) => {
+          if (key === 'NODE_ENV') return 'production';
+          return null;
+        }),
+      } as unknown as ConfigService;
+
+      expect(() => {
+        new VideoCallsService(
+          mockConfigService,
+          mockDegradationService as any,
+          mockEncryptionService as any,
+          { buildIceServers: vi.fn().mockReturnValue([]) } as any,
+          mockMetricsService as any,
+        );
+      }).toThrow('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured in production');
+    });
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
