@@ -63,17 +63,19 @@ class AgentCircuitBreaker:
         """Return the bounded cooldown for the current failure streak.
 
         Subscription quota exhaustion is persistent enough that repeatedly probing at
-        a fixed cadence wastes allowance without improving recovery. Increase only the
-        local quota cooldown after failed half-open probes; a successful call resets the
-        streak immediately, and a provider-reported longer retry interval still wins.
+        a fixed cadence wastes allowance without improving recovery. Increase the
+        effective quota cooldown after failed half-open probes. The effective base is
+        the larger of the breaker default and the current retry-after floor, because
+        production passes its failure-specific quota floor through that field. A
+        successful call resets the streak immediately.
         """
 
-        cooldown = self.cooldown_seconds
+        cooldown = max(self.cooldown_seconds, self.retry_after_seconds or 0)
         if self.last_failure_kind is AgentFailureKind.PROVIDER_QUOTA:
             excess_failures = max(0, self.consecutive_failures - self.failure_threshold)
             multiplier = min(2**excess_failures, MAX_QUOTA_COOLDOWN_MULTIPLIER)
             cooldown = min(cooldown * multiplier, MAX_RETRY_AFTER_SECONDS)
-        return max(cooldown, self.retry_after_seconds or 0)
+        return cooldown
 
     def permits_call(self, now: datetime | None = None) -> bool:
         current = now or datetime.now(UTC)
