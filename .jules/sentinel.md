@@ -83,3 +83,8 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-09-11 - [HIGH] Fix DoS vulnerability in Redis cache invalidation
+**Vulnerability:** The application used the blocking `KEYS` command in Redis to find and invalidate caches across the admin and safety services, which could pause the event loop and lead to DoS.
+**Learning:** The `KEYS` command scales poorly with large datasets, making it an architectural security flaw when used in production.
+**Prevention:** Always use the non-blocking `SCAN` command with an appropriate `COUNT` size when iterating over large patterns in Redis to prevent event loop exhaustion.
