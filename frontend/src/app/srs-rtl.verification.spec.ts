@@ -6,7 +6,7 @@
  * and never use physical direction properties. This serves as a production-readiness
  * gate for RTL support in the SRS feature set (Issue #2335).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, extname } from 'path';
 
