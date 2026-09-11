@@ -26,23 +26,37 @@ shows why a bounded repeated-probe policy is useful: OpenCode recorded 219 quota
 production quota cooldown; this change is complementary and does not depend on that PR. It
 reduces repeated probes only after a half-open quota probe fails again.
 
+A review of the first implementation found an important integration detail: the router keeps
+the breaker's generic default at five minutes and supplies the failure-specific quota floor
+through `retry_after_seconds`. Multiplying only `cooldown_seconds` would therefore have left a
+one-hour production quota floor at one hour forever because the 1x/2x/4x generic values
+(5/10/20 minutes) never exceeded that floor. The corrected implementation backs off from the
+**effective** floor, so the policy works in the real router rather than only in isolated unit
+tests.
+
 ## Change
 
 Quota failures now retain a restart-safe streak and apply bounded exponential growth to the
-configured local cooldown:
+effective cooldown:
 
-- first quota failure: 1x configured quota cooldown;
+- first quota failure: 1x effective quota floor;
 - second consecutive quota failure: 2x;
 - third and later consecutive quota failures: 4x maximum.
 
-On current `main`, whose production quota cooldown is one hour, that is a 1h -> 2h -> 4h
-sequence. If #8893's six-hour production quota floor lands independently, the same policy
-becomes 6h -> 12h -> 24h. The multiplier is bounded so the provider is never abandoned.
+The effective floor is the larger of the generic breaker cooldown and the current retry-after
+floor. Production uses that retry-after field for the configured failure-specific cooldown,
+so current `main` follows 1h -> 2h -> 4h. If #8893's six-hour production quota floor lands
+independently, the same policy becomes 6h -> 12h -> 24h. The multiplier remains bounded and
+the absolute circuit delay remains capped by the existing seven-day retry-after ceiling, so a
+provider is never permanently abandoned.
 
-A provider-reported longer `retry_after` continues to take precedence over the local
-cooldown. Any successful provider call immediately clears the failure streak and returns the
-next quota event to the normal 1x cooldown. Authentication, rate-limit, transport, timeout,
-crash, invalid-output, and generic-unavailable cooldown behavior is unchanged.
+A provider-reported longer retry interval remains authoritative as the starting floor. If the
+provider is still quota-exhausted when that longer interval expires, the failed half-open
+probe backs off from that effective floor as well. This is intentional: the new evidence is
+that waiting the provider's own interval was still insufficient. Any successful provider call
+immediately clears the failure streak and returns the next quota event to the normal 1x
+cooldown. Authentication, rate-limit, transport, timeout, crash, invalid-output, and
+generic-unavailable cooldown behavior is unchanged.
 
 ## Autonomy and engineering-quality invariants
 
@@ -61,8 +75,10 @@ interaction.
 Focused regression coverage proves that:
 
 - repeated quota failures grow 1x -> 2x -> 4x and remain bounded at 4x;
+- the real production-style failure-specific floor is scaled, even when the generic breaker
+  default is lower;
 - a successful call resets the quota backoff immediately;
-- longer provider-supplied retry intervals still win;
+- a longer retry floor is respected first and then scaled only after another failed probe;
 - non-quota failures do not inherit this exponential policy;
 - the quota streak survives `AgentHealthStore` persistence and restart.
 
