@@ -160,7 +160,10 @@ class AgentCircuitBreaker:
                     ProviderStatus.UNAVAILABLE,
                 )
         elif self.state == "half-open":
-            status = ProviderStatus.DEGRADED
+            # The half-open permit is a lease for one recovery operation. Any
+            # concurrent caller observing the persisted half-open state must stay
+            # ineligible until that operation resolves or the lease expires.
+            status = ProviderStatus.UNAVAILABLE
 
         retry_after = None
         if self.opened_at:
