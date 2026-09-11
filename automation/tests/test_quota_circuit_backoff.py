@@ -2,8 +2,29 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from openhands_factory.agents.base import AgentFailureKind
+from openhands_factory.agents.base import (
+    AgentFailure,
+    AgentFailureKind,
+    AgentPhase,
+    AgentResult,
+    ProviderHealth,
+    ProviderStatus,
+)
 from openhands_factory.agents.health import AgentCircuitBreaker, AgentHealthStore
+from openhands_factory.agents.router import AgentRouter
+
+
+class HealthyProbeProvider:
+    name = "quota-provider"
+
+    def health(self) -> ProviderHealth:
+        return ProviderHealth(self.name, ProviderStatus.HEALTHY, datetime.now(UTC))
+
+    def supports(self, phase: AgentPhase) -> bool:
+        return True
+
+    def run(self, request):  # pragma: no cover - this test records the operation result directly.
+        raise AssertionError("provider run is not expected")
 
 
 def test_repeated_quota_failures_back_off_exponentially_with_a_bound() -> None:
@@ -61,6 +82,56 @@ def test_quota_backoff_scales_the_failure_specific_production_floor() -> None:
         retry_after_seconds=3600,
     )
     assert breaker.effective_cooldown_seconds() == 14_400
+
+
+def test_half_open_health_probe_does_not_erase_quota_streak(tmp_path) -> None:
+    """CLI auth health is shallower than a real allowance-consuming provider call."""
+
+    store = AgentHealthStore(tmp_path / "health.json")
+    opened_at = datetime.now(UTC) - timedelta(hours=2)
+    breaker = AgentCircuitBreaker("quota-provider", failure_threshold=1, cooldown_seconds=300)
+    breaker.record_failure(
+        AgentFailureKind.PROVIDER_QUOTA,
+        opened_at,
+        retry_after_seconds=3600,
+    )
+    store.save({breaker.provider: breaker})
+    router = AgentRouter(
+        [HealthyProbeProvider()],
+        health_store=store,
+        failure_threshold=1,
+        cooldown_seconds=300,
+        failure_cooldowns={AgentFailureKind.PROVIDER_QUOTA: 3600},
+        same_provider_retries=0,
+    )
+
+    health = router.health_snapshot()
+    half_open = store.load()["quota-provider"]
+
+    assert health["quota-provider"].status is ProviderStatus.HEALTHY
+    assert half_open.state == "half-open"
+    assert half_open.consecutive_failures == 1
+
+    now = datetime.now(UTC)
+    router._record_breaker(
+        AgentResult(
+            provider="quota-provider",
+            phase=AgentPhase.IMPLEMENTATION,
+            success=False,
+            started_at=now,
+            finished_at=now,
+            exit_code=1,
+            summary=None,
+            output_path=None,
+            failure=AgentFailure(AgentFailureKind.PROVIDER_QUOTA, "quota still exhausted"),
+            transport="fake",
+            model="fake-model",
+        )
+    )
+    repeated = store.load()["quota-provider"]
+
+    assert repeated.consecutive_failures == 2
+    assert repeated.effective_cooldown_seconds() == 7200
 
 
 def test_success_resets_quota_backoff_immediately() -> None:
