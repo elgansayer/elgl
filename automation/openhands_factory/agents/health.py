@@ -115,12 +115,21 @@ class AgentCircuitBreaker:
         retry_after_seconds: int | None = None,
     ) -> None:
         previous_kind = self.last_failure_kind
+        previous_retry_after = self.retry_after_seconds
         self.last_failure_kind = kind
         if retry_after_seconds is not None:
-            self.retry_after_seconds = min(
+            bounded_retry_after = min(
                 max(retry_after_seconds, 0),
                 MAX_RETRY_AFTER_SECONDS,
             )
+            if (
+                kind is AgentFailureKind.PROVIDER_QUOTA
+                and previous_kind is AgentFailureKind.PROVIDER_QUOTA
+                and previous_retry_after is not None
+            ):
+                self.retry_after_seconds = max(previous_retry_after, bounded_retry_after)
+            else:
+                self.retry_after_seconds = bounded_retry_after
 
         if kind is AgentFailureKind.PROVIDER_AUTH:
             self.state = "open"
