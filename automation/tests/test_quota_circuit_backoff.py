@@ -84,8 +84,8 @@ def test_quota_backoff_scales_the_failure_specific_production_floor() -> None:
     assert breaker.effective_cooldown_seconds() == 14_400
 
 
-def test_half_open_health_probe_does_not_erase_quota_streak(tmp_path) -> None:
-    """CLI auth health is shallower than a real allowance-consuming provider call."""
+def test_health_snapshot_does_not_consume_half_open_quota_probe(tmp_path) -> None:
+    """Monitoring must not lease the one recovery operation immediately before dispatch."""
 
     store = AgentHealthStore(tmp_path / "health.json")
     opened_at = datetime.now(UTC) - timedelta(hours=2)
@@ -105,14 +105,23 @@ def test_half_open_health_probe_does_not_erase_quota_streak(tmp_path) -> None:
         same_provider_retries=0,
     )
 
-    health = router.health_snapshot()
-    half_open = store.load()["quota-provider"]
-    leased = router.health_snapshot()
+    snapshot = router.health_snapshot()
+    unleased = store.load()["quota-provider"]
 
-    assert health["quota-provider"].status is ProviderStatus.HEALTHY
+    assert snapshot["quota-provider"].status is ProviderStatus.QUOTA_EXHAUSTED
+    assert unleased.state == "open"
+    assert unleased.consecutive_failures == 1
+
+    route_health = router._health()
+    half_open = store.load()["quota-provider"]
+    concurrent = router._health()
+    observational = router.health_snapshot()
+
+    assert route_health["quota-provider"].status is ProviderStatus.HEALTHY
     assert half_open.state == "half-open"
     assert half_open.consecutive_failures == 1
-    assert leased["quota-provider"].status is ProviderStatus.UNAVAILABLE
+    assert concurrent["quota-provider"].status is ProviderStatus.UNAVAILABLE
+    assert observational["quota-provider"].status is ProviderStatus.UNAVAILABLE
 
     now = datetime.now(UTC)
     router._record_breaker(
