@@ -13,22 +13,13 @@ export class UserStatisticsService {
   }
 
   async getUserStatistics(userId: string, query?: UserStatisticsQueryDto) {
-    const { data: user, error: userError } = await this.supabase
+    const userQuery = this.supabase
       .from('users')
       .select(
         'study_streak_days, correction_ratio, coins_balance, created_at, is_vip',
       )
       .eq('id', userId)
       .single();
-
-    if (userError || !user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const studyStreakDays = user.study_streak_days ?? 0;
-    const correctionRatio = user.correction_ratio ?? 0;
-    const coinsBalance = user.coins_balance ?? 0;
-    const isVip = user.is_vip ?? false;
 
     // Moment posts
     let momentQuery = this.supabase
@@ -78,21 +69,33 @@ export class UserStatisticsService {
       visitQuery = visitQuery.lte('created_at', query.toDate);
     }
 
+    // ⚡ Bolt Optimization: Group independent database lookups with a single concurrent Promise.all batch fetch to mitigate additive network latency.
     const [
+      { data: user, error: userError },
       { count: totalMoments },
       { count: totalComments },
       { data: momentIds, error: momentIdsError },
       { count: totalProfileVisits },
     ] = await Promise.all([
+      userQuery,
       momentQuery,
       commentQuery,
       momentIdsQuery,
       visitQuery,
     ]);
 
+    if (userError || !user) {
+      throw new NotFoundException('User not found');
+    }
+
     if (momentIdsError) {
       throw new NotFoundException('Could not load moments');
     }
+
+    const studyStreakDays = user.study_streak_days ?? 0;
+    const correctionRatio = user.correction_ratio ?? 0;
+    const coinsBalance = user.coins_balance ?? 0;
+    const isVip = user.is_vip ?? false;
     const ids = momentIds?.map((m: { id: string }) => m.id) ?? [];
 
     let likesReceived = 0;

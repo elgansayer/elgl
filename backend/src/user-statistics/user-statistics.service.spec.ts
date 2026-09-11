@@ -150,6 +150,7 @@ describe('UserStatisticsService', () => {
     });
 
     it('should throw NotFoundException when user is missing', async () => {
+      let momentsCalls = 0;
       mockClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
           return createQueryBuilder({
@@ -157,6 +158,15 @@ describe('UserStatisticsService', () => {
             error: { message: 'User not found' },
           });
         }
+        if (table === 'moments') {
+          momentsCalls += 1;
+          return momentsCalls === 1
+            ? createQueryBuilder({ count: 0 })
+            : createQueryBuilder({ data: [], error: null });
+        }
+        if (table === 'moment_comments')
+          return createQueryBuilder({ count: 0 });
+        if (table === 'profile_visits') return createQueryBuilder({ count: 0 });
         throw new Error(`Unexpected table: ${table}`);
       });
 

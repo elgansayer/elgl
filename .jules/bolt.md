@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-11 - [Batch User Profile Query with User Statistics Queries in Promise.all]
+**Learning:** The `getUserStatistics` function in `user-statistics.service.ts` awaited the user query sequentially before dispatching the four remaining database queries, resulting in N+1 network latency delays for an independent query.
+**Action:** Extract the `user` lookup query execution, combining it with the `moments`, `moment_comments`, and `profile_visits` lookups in the same `Promise.all` concurrent array, reducing total network roundtrips.
