@@ -307,8 +307,10 @@ export class DiscoveryController {
     @Query() query: LanguagePairQueryDto,
   ): Promise<UserProfile[]> {
     if (!user) return [];
+    const profile = await this.usersService.getProfile(user.id);
     const result = await this.discoveryService.findByLanguagePair(
       user.id,
+      profile,
       query,
     );
     return sanitiseDiscoveryData(result);

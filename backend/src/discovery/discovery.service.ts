@@ -543,7 +543,7 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort));
+      return sanitiseDiscoveryData(this.sortUsers(enriched, _currentUserProfile, query.sort));
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -917,6 +917,7 @@ export class DiscoveryService {
 
   async findByLanguagePair(
     currentUserId: string,
+    currentUserProfile: UserProfile | null,
     query: LanguagePairQueryDto,
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
@@ -1041,6 +1042,11 @@ export class DiscoveryService {
         const aPoW = a.is_partner_of_week ? 1 : 0;
         const bPoW = b.is_partner_of_week ? 1 : 0;
         if (aPoW !== bPoW) return bPoW - aPoW;
+
+        const scoreA = this.calculateCompositeScore(currentUserProfile, a);
+        const scoreB = this.calculateCompositeScore(currentUserProfile, b);
+        if (scoreA !== scoreB) return scoreB - scoreA;
+
         const streakA = a.study_streak_days ?? 0;
         const streakB = b.study_streak_days ?? 0;
         if (streakB !== streakA) return streakB - streakA;
@@ -1201,8 +1207,78 @@ export class DiscoveryService {
     return result;
   }
 
+  private calculateCompositeScore(
+    currentUser: UserProfile | null,
+    candidate: DiscoveryUser,
+  ): number {
+    if (!currentUser) return 0;
+    let score = 0;
+
+    // 1. Reciprocity Score (Complementary Languages) - Max 30
+    const currentNative = currentUser.native_languages || [];
+    const currentTarget = currentUser.target_languages || [];
+    const candidateNative = candidate.native_languages || [];
+    const candidateTarget = candidate.target_languages || [];
+    const teachesCurrentTarget = candidateNative.some((l) =>
+      currentTarget.includes(l),
+    );
+    const learnsCurrentNative = candidateTarget.some((l) =>
+      currentNative.includes(l),
+    );
+    if (teachesCurrentTarget && learnsCurrentNative) score += 30;
+    else if (teachesCurrentTarget || learnsCurrentNative) score += 15;
+
+    // 2. Proficiency Level Gap - Max 10
+    if (currentUser.proficiency_level && candidate.proficiency_level) {
+      if (currentUser.proficiency_level === candidate.proficiency_level)
+        score += 10;
+      else score += 5;
+    }
+
+    // 3. Timezone / Active Hours Overlap - Max 10
+    const currentStart = currentUser.available_time_start;
+    const currentEnd = currentUser.available_time_end;
+    const candidateStart = candidate.available_time_start;
+    const candidateEnd = candidate.available_time_end;
+    if (currentStart && currentEnd && candidateStart && candidateEnd) {
+      if (candidateStart <= currentEnd && candidateEnd >= currentStart)
+        score += 10;
+    } else {
+      if (!candidateStart && !candidateEnd) score += 5;
+    }
+
+    // 4. Interest & Hobby Overlap - Max 15
+    const currentInterests = currentUser.interests || [];
+    const candidateInterests = candidate.interests || [];
+    const overlap = currentInterests.filter((i) =>
+      candidateInterests.includes(i),
+    ).length;
+    if (overlap > 0) score += Math.min(15, overlap * 5);
+
+    // 5. Response Behaviour (Responsiveness) - Max 10
+    if (candidate.last_active_at) {
+      const lastActive = new Date(candidate.last_active_at).getTime();
+      const now = Date.now();
+      const diffDays = (now - lastActive) / (1000 * 60 * 60 * 24);
+      if (diffDays <= 1) score += 10;
+      else if (diffDays <= 7) score += 5;
+    }
+
+    // 6. Correction Behaviour (Helpfulness) - Max 10
+    const correctionRatio = candidate.correction_ratio || 0;
+    score += Math.min(10, correctionRatio * 10);
+
+    // 7. Learning Seriousness (Dedication) - Max 15
+    if (candidate.is_serious_learner) score += 5;
+    const streak = candidate.study_streak_days || 0;
+    score += Math.min(10, (streak / 7) * 2);
+
+    return score;
+  }
+
   private sortUsers(
     users: UserProfile[],
+    currentUserProfile: UserProfile | null,
     sort?: string,
     _searchLat?: number,
     _searchLon?: number,
@@ -1215,6 +1291,11 @@ export class DiscoveryService {
           const aPow = a.is_partner_of_week ? 1 : 0;
           const bPow = b.is_partner_of_week ? 1 : 0;
           if (aPow !== bPow) return bPow - aPow;
+
+          const scoreA = this.calculateCompositeScore(currentUserProfile, a);
+          const scoreB = this.calculateCompositeScore(currentUserProfile, b);
+          if (scoreA !== scoreB) return scoreB - scoreA;
+
           const streakA = a.study_streak_days ?? 0;
           const streakB = b.study_streak_days ?? 0;
           if (streakB !== streakA) return streakB - streakA;

@@ -1267,7 +1267,7 @@ describe('DiscoveryService', () => {
         error: null,
       });
 
-      await service.findByLanguagePair('user-1', {
+      await service.findByLanguagePair('user-1', null, {
         native_language: 'EN',
         target_language: 'JA',
       });
@@ -1288,7 +1288,7 @@ describe('DiscoveryService', () => {
         error: null,
       });
 
-      await service.findByLanguagePair('user-1', {
+      await service.findByLanguagePair('user-1', null, {
         native_language: 'FR',
       });
 
@@ -1304,7 +1304,7 @@ describe('DiscoveryService', () => {
         error: null,
       });
 
-      await service.findByLanguagePair('user-1', {
+      await service.findByLanguagePair('user-1', null, {
         target_language: 'DE',
       });
 
@@ -1320,7 +1320,7 @@ describe('DiscoveryService', () => {
         error: { message: 'fail' },
       });
 
-      const result = await service.findByLanguagePair('user-1', {
+      const result = await service.findByLanguagePair('user-1', null, {
         native_language: 'EN',
       });
 
@@ -1333,7 +1333,7 @@ describe('DiscoveryService', () => {
         error: null,
       });
 
-      await service.findByLanguagePair('user-1', {
+      await service.findByLanguagePair('user-1', null, {
         native_language: 'EN',
         sort: 'newest',
       });
@@ -1349,7 +1349,7 @@ describe('DiscoveryService', () => {
         error: null,
       });
 
-      await service.findByLanguagePair('user-1', {
+      await service.findByLanguagePair('user-1', null, {
         native_language: 'EN',
         page: 2,
         limit: 20,
@@ -1374,7 +1374,7 @@ describe('DiscoveryService', () => {
         error: null,
       });
 
-      const result = await service.findByLanguagePair('user-1', {
+      const result = await service.findByLanguagePair('user-1', null, {
         native_language: 'EN',
       });
 
