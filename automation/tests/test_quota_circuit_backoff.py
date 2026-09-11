@@ -164,7 +164,11 @@ def test_quota_backoff_scales_a_longer_retry_floor_after_failed_probe() -> None:
 
     next_probe = start + timedelta(hours=6)
     assert breaker.permits_call(next_probe)
-    breaker.record_failure(AgentFailureKind.PROVIDER_QUOTA, next_probe)
+    breaker.record_failure(
+        AgentFailureKind.PROVIDER_QUOTA,
+        next_probe,
+        retry_after_seconds=3600,
+    )
 
     assert breaker.effective_cooldown_seconds() == 43_200
     assert breaker.get_health().retry_after == next_probe + timedelta(hours=12)
