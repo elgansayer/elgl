@@ -142,7 +142,7 @@ Required behavior:
 - selected state exposed to assistive technology;
 - horizontal overflow remains usable on mobile;
 - focus ring remains visible while scrolled;
-- selection state is not conveyed by color alone.
+- selection state is not conveyed by colour alone.
 
 Do not add a bespoke roving-tabindex implementation.
 
@@ -207,7 +207,7 @@ The component already records translated `error` and `successMessage` values, bu
 If retained:
 
 - failures must be visible and announced;
-- successes must be visible/announced without relying only on color;
+- successes must be visible/announced without relying only on colour;
 - feedback must not expose raw server errors;
 - use the repository's approved toast/status/error presentation rather than a new custom banner for each mutation.
 
@@ -402,7 +402,7 @@ The onboarding hint currently uses `showToast`, not analytics.
 
 The visual selected state of the status pills is not exposed to assistive technology.
 
-If retained, the migrated group must expose one selected option through the chosen selection primitive. Do not rely on primary background color alone.
+If retained, the migrated group must expose one selected option through the chosen selection primitive. Do not rely on primary background colour alone.
 
 ### Loading and busy semantics
 
@@ -424,7 +424,7 @@ If confirmation is added, focus must move into and return from the Dialog throug
 
 ### Status and amount
 
-Status is expressed by translated text as well as color, which is good.
+Status is expressed by translated text as well as colour, which is good.
 
 The amount currently uses `text-vip`, even though an escrow coin amount is not necessarily a VIP entitlement or celebratory state. #6175 should evaluate whether `vip` is semantically correct or whether `primary`/neutral currency styling better matches Relay's token taxonomy.
 
@@ -468,7 +468,7 @@ The status strip already scrolls horizontally. Ensure focus remains visible and 
 
 ## Theme and token audit
 
-The target uses Relay semantic color tokens rather than literal hex values, which is a good base:
+The target uses Relay semantic colour tokens rather than literal hex values, which is a good base:
 
 - `surface-*`;
 - `text-*`;
@@ -493,7 +493,7 @@ Selected filters, Help and Sync use `primary`, so they automatically inherit the
 
 Do not hard-code the fallback Ember value.
 
-### Semantic colors
+### Semantic colours
 
 - warning is appropriate for connectivity warning state;
 - danger is appropriate for dispute/destructive feedback;
