@@ -171,7 +171,12 @@ def exact_duplicate_groups(
         if len(members) < 2:
             continue
         canonical = min(members, key=_canonical_rank)
-        duplicates = tuple(sorted((item for item in members if item != canonical), key=lambda p: p.number))
+        duplicates = tuple(
+            sorted(
+                (item for item in members if item != canonical),
+                key=lambda pull_request: pull_request.number,
+            )
+        )
         groups.append(DuplicateGroup(canonical=canonical, duplicates=duplicates))
     return tuple(groups)
 
@@ -209,7 +214,9 @@ def _split_repository(repository: str) -> tuple[str, str]:
     return owner, name
 
 
-def load_open_pull_requests(repository: str, base_branch: str) -> tuple[PullRequestSnapshot, ...]:
+def load_open_pull_requests(
+    repository: str, base_branch: str
+) -> tuple[PullRequestSnapshot, ...]:
     owner, name = _split_repository(repository)
     after: str | None = None
     snapshots: list[PullRequestSnapshot] = []
@@ -333,7 +340,9 @@ def close_exact_duplicate(
     return True
 
 
-def run_guard(repository: str, base_branch: str, focus_pull_request: int | None = None) -> int:
+def run_guard(
+    repository: str, base_branch: str, focus_pull_request: int | None = None
+) -> int:
     snapshots = load_open_pull_requests(repository, base_branch)
     groups = exact_duplicate_groups(
         snapshots,
@@ -360,7 +369,9 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", required=True, help="Repository in owner/name form")
     parser.add_argument("--base", default="main", help="Target base branch")
-    parser.add_argument("--pull-request", type=int, help="Limit an event run to one duplicate group")
+    parser.add_argument(
+        "--pull-request", type=int, help="Limit an event run to one duplicate group"
+    )
     return parser.parse_args()
 
 
