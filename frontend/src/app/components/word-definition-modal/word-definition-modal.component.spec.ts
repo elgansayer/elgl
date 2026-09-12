@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 import { I18nService } from '../../services/i18n.service';
+import { ActivatedRoute } from '@angular/router';
 import { Flashcard, TranslationResult, VocabularyStore } from '../../services/vocabulary.store';
 import { WordDefinitionModalComponent } from './word-definition-modal.component';
 
@@ -54,6 +55,7 @@ describe('WordDefinitionModalComponent', () => {
     await TestBed.configureTestingModule({
       imports: [WordDefinitionModalComponent],
       providers: [
+        { provide: ActivatedRoute, useValue: {} },
         { provide: VocabularyStore, useValue: vocabStore },
         {
           provide: HtmlSanitisationService,
