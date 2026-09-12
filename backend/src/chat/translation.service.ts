@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 
@@ -16,7 +16,7 @@ export interface TranslationExplanations {
 }
 
 @Injectable()
-export class TranslationService {
+export class TranslationService implements OnModuleInit {
   private deeplApiKey?: string;
   private readonly translationCache = new Map<string, string>();
   private readonly detectionCache = new Map<string, string>();
@@ -27,6 +27,15 @@ export class TranslationService {
     private readonly logger: PinoLogger,
   ) {
     this.deeplApiKey = this.configService.get<string>('DEEPL_API_KEY');
+  }
+
+  onModuleInit() {
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+    if (env === 'production') {
+      if (this.deeplApiKey === 'test-deepl-key') {
+        throw new Error('DEEPL_API_KEY must be securely configured in production');
+      }
+    }
   }
 
   /**
