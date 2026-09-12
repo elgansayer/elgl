@@ -52,6 +52,14 @@ def test_repeated_quota_failures_back_off_exponentially_with_a_bound() -> None:
     assert breaker.effective_cooldown_seconds() == 14_400
 
 
+def test_quota_backoff_bounds_exponentiation_for_large_persisted_streaks() -> None:
+    breaker = AgentCircuitBreaker("quota-provider", failure_threshold=1, cooldown_seconds=3600)
+    breaker.last_failure_kind = AgentFailureKind.PROVIDER_QUOTA
+    breaker.consecutive_failures = 10**100
+
+    assert breaker.effective_cooldown_seconds() == 14_400
+
+
 def test_quota_backoff_scales_the_failure_specific_production_floor() -> None:
     """Production passes the quota floor as retry_after_seconds, not breaker default."""
 

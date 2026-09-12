@@ -73,7 +73,15 @@ class AgentCircuitBreaker:
         cooldown = max(self.cooldown_seconds, self.retry_after_seconds or 0)
         if self.last_failure_kind is AgentFailureKind.PROVIDER_QUOTA:
             excess_failures = max(0, self.consecutive_failures - self.failure_threshold)
-            multiplier = min(2**excess_failures, MAX_QUOTA_COOLDOWN_MULTIPLIER)
+            # Cap the exponent before exponentiation. Durable state is validated but
+            # may still contain an unexpectedly large non-negative streak, and
+            # computing an enormous intermediate integer would turn a bounded policy
+            # into a health-check denial of service.
+            bounded_exponent = min(
+                excess_failures,
+                MAX_QUOTA_COOLDOWN_MULTIPLIER.bit_length(),
+            )
+            multiplier = min(2**bounded_exponent, MAX_QUOTA_COOLDOWN_MULTIPLIER)
             cooldown = min(cooldown * multiplier, MAX_RETRY_AFTER_SECONDS)
         return cooldown
 
