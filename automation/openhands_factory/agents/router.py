@@ -126,7 +126,7 @@ class AgentRouter:
             self._review_capacity_tasks.add(task_id)
 
     def release_review_capacity(self, task_id: str) -> None:
-        """Release a pull request review reservation after its worker finishes."""
+        """Release a pull request review reservation after worker completion."""
 
         with self._review_capacity_lock:
             self._review_capacity_tasks.discard(task_id)
@@ -156,13 +156,20 @@ class AgentRouter:
             return self._memory_breakers
         return self.health_store.load(defaults)
 
-    def _health(self) -> dict[str, ProviderHealth]:
+    def _health(self, *, reserve_half_open: bool = True) -> dict[str, ProviderHealth]:
         defaults = self._default_breakers()
         breakers = self._breakers()
         health: dict[str, ProviderHealth] = {}
         for name, provider in self.providers.items():
+            breaker = breakers[name]
+            if not reserve_half_open and breaker.state != "closed":
+                # Status/diagnostic snapshots are observational. A due open circuit
+                # must be leased by the routed operation that can immediately use
+                # the single half-open recovery probe, not by monitoring immediately
+                # before the scheduler dispatches workers.
+                health[name] = breaker.get_health()
+                continue
             if self.health_store is None:
-                breaker = breakers[name]
                 with self._memory_breakers_lock:
                     permitted = breaker.permits_call()
             else:
@@ -183,16 +190,11 @@ class AgentRouter:
                 health[name] = provider_health
                 continue
             if provider_health.status in {ProviderStatus.HEALTHY, ProviderStatus.DEGRADED}:
-                if breaker.state == "half-open":
-                    if self.health_store is not None:
-                        self.health_store.update(
-                            name,
-                            defaults,
-                            lambda item: item.record_success(),
-                        )
-                    else:
-                        with self._memory_breakers_lock:
-                            breaker.record_success()
+                # A shallow CLI/auth health probe does not prove that the condition
+                # which opened the circuit (especially quota or rate-limit state)
+                # has recovered. Keep the circuit half-open until the actual routed
+                # provider operation records success or failure. This also preserves
+                # the single-probe lease across concurrent workers.
                 health[name] = provider_health
                 continue
             failure_by_status = {
@@ -277,8 +279,8 @@ class AgentRouter:
         return None
 
     def health_snapshot(self) -> dict[str, ProviderHealth]:
-        """Return non-secret live provider health for startup and diagnostics."""
-        return self._health()
+        """Return non-secret health without consuming a half-open recovery lease."""
+        return self._health(reserve_half_open=False)
 
     def has_usable_provider(self) -> bool:
         return any(
