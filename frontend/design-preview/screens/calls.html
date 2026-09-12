@@ -646,7 +646,8 @@
       not respond to the light/dark toggle above - the only intentional off-token colours in this
       file. Omitted: the connecting and error states, the live-chat overlay, and the "remote screen
       share + camera thumbnail" dual-video layout - all conditional states, not the steady-state
-      screen.
+      screen. The public voice-room share preview loads room metadata through the unauthenticated
+      <code>/audio-rooms/preview/:id</code> API route; private or missing rooms remain unavailable.
     </p>
 
     <script>
