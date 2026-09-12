@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: branch-pr-hygiene-${{ github.event.workflow_run.id || 'scheduled' }}
+  group: branch-pr-hygiene-${{ github.event_name == 'workflow_run' && 'duplicate-guard' || 'audit' }}
   cancel-in-progress: true
 
 permissions:
