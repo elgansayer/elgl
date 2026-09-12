@@ -66,7 +66,7 @@ There is exactly one interactive element in the target surface.
 | Spoken value | `aria-valuetext="scalePercentLabel()"` | Feature/i18n | Relay/i18n presentation | Preserve localized percent wording |
 | Visible value | Decorative `<span aria-hidden="true">` | Feature presentation | Relay presentation | Preserve if useful visually; it must not duplicate speech output |
 | Group wrapper | `<div role="group" aria-label=...>` | Feature template | Native/Relay grouping only if needed | Review redundancy because the slider already has a visible associated label |
-| Track/thumb styling | Browser range plus `accent-primary` | Browser + Relay primary token | Native/Relay or approved Slider Helm | Preserve per-user primary accent; avoid hard-coded product colors |
+| Track/thumb styling | Browser range plus `accent-primary` | Browser + Relay primary token | Native/Relay or approved Slider Helm | Preserve per-user primary accent; avoid hard-coded product colours |
 | Width/spacing | `w-24 h-1`, `ps-4`, `gap-2`, percentage `w-8` | Feature layout | Relay responsive composition | Remove fixed-width assumptions if they cause header/high-zoom overflow |
 | Label wrapping | `whitespace-nowrap` | Feature layout | Relay responsive composition | Revisit for translation expansion and high zoom |
 | Loading state | None | n/a | n/a | Do not invent asynchronous loading state |
@@ -159,7 +159,7 @@ The later conversion stage should first verify package capability and repository
 
 Relay should own the product presentation around the native/Spartan interaction:
 
-- semantic text colors;
+- semantic text colours;
 - dynamic primary accent treatment;
 - focus-visible presentation where native/global focus policy is insufficient;
 - responsive width and spacing;
@@ -167,7 +167,7 @@ Relay should own the product presentation around the native/Spartan interaction:
 - translated label/value layout;
 - light/dark theme parity.
 
-The current `accent-primary`, `text-text-secondary`, logical `ps-4`, and `text-end` usage already aligns with important Relay/RTL concepts. Conversion should converge layout/radius/size choices without replacing semantic tokens with literal colors.
+The current `accent-primary`, `text-text-secondary`, logical `ps-4`, and `text-end` usage already aligns with important Relay/RTL concepts. Conversion should converge layout/radius/size choices without replacing semantic tokens with literal colours.
 
 ## Bespoke utility audit
 
@@ -328,7 +328,7 @@ Before the surface is considered converted, focused tests should cover at least:
 6. **Fixed-ID collisions.** `fontScaleSlider` is safe only while exactly one instance exists.
 7. **Top-bar overflow.** Fixed range/readout widths plus `whitespace-nowrap` are fragile under translation, 150% application scale, and browser zoom.
 8. **Self-referential layout growth.** Raising root font size enlarges the control and its container; screenshots at only 100% app scale can miss failures.
-9. **Loss of per-user accent.** A replacement slider must not hard-code colors or bypass `primary`.
+9. **Loss of per-user accent.** A replacement slider must not hard-code colours or bypass `primary`.
 10. **Storage coupling.** UI migration must not make interaction fail because persistence is unavailable.
 11. **Incorrect account semantics.** Current scale is device-local, not a server/account preference; do not silently change that contract.
 12. **Conflating global and chat text size.** Both live in one service but are separate product preferences.
@@ -365,7 +365,7 @@ The absence of a Spartan Slider is not a blocker. Native `<input type="range">` 
 - remove fragile fixed-width/no-wrap assumptions;
 - preserve semantic text and dynamic primary accent roles;
 - verify top-bar composition at 390 px and maximum app scale;
-- verify light/dark states without literal product colors.
+- verify light/dark states without literal product colours.
 
 ### #6220: accessibility, RTL, zoom, and input methods
 
