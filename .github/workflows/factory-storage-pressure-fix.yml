@@ -1,0 +1,75 @@
+name: Factory storage pressure validation fix
+
+on:
+  push:
+    branches:
+      - perf/factory-storage-pressure-reconciliation
+
+permissions:
+  contents: write
+
+concurrency:
+  group: factory-storage-pressure-validation-fix
+  cancel-in-progress: false
+
+jobs:
+  fix-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: '0.12.5'
+          enable-cache: true
+          cache-dependency-glob: automation/uv.lock
+      - name: Fix constitution wording and Ruff formatting
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('docs/factory/AUDIT-2026-09-12-STORAGE-PRESSURE-RECONCILIATION.md')
+          text = path.read_text(encoding='utf-8')
+          old = '# Factory storage-pressure reconciliation audit — 2026-09-12'
+          new = '# Factory storage-pressure reconciliation audit - 2026-09-12'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one audit title to fix, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          cd automation
+          uv sync --frozen --extra development
+          uv run --frozen ruff format openhands_factory/daemon.py tests/test_daemon.py
+      - name: Validate Factory
+        shell: bash
+        run: |
+          cd automation
+          uv run --frozen ruff format --check .
+          uv run --frozen ruff check openhands_factory tests
+          uv run --frozen mypy openhands_factory
+          uv run --frozen pytest
+      - name: Validate repository constitution
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          npm run check:constitution
+          git diff --check
+      - name: Commit validated fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            automation/openhands_factory/daemon.py \
+            automation/tests/test_daemon.py \
+            docs/factory/AUDIT-2026-09-12-STORAGE-PRESSURE-RECONCILIATION.md
+          if git diff --cached --quiet; then
+            echo 'No validation fixes required.'
+            exit 0
+          fi
+          git commit -m "fix(factory): satisfy formatting and constitution gates"
+          git push origin HEAD:perf/factory-storage-pressure-reconciliation
