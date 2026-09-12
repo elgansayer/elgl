@@ -20,7 +20,7 @@ Recent repository history showed this gap can consume implementation/review allo
 - both heads are re-read immediately before closure so a synchronize race fails open;
 - the redundant PR is closed and marked `factory-skip`; the canonical PR remains subject to every normal Factory and GitHub gate.
 
-The existing Branch PR Hygiene workflow runs the guard immediately on relevant pull-request events. Its existing daily schedule also scans all open PRs, providing autonomous recovery if an event run is interrupted. GitHub CLI operations retry transient failures locally. The event path uses a sparse checkout and no dependency install, so the guard itself is substantially cheaper than a provider review or repair cycle.
+The existing Branch PR Hygiene workflow runs the guard from the trusted default branch after the repository's fast `Workflow lint` workflow completes. This deliberately uses `workflow_run` rather than `pull_request_target`, which is prohibited by repository security policy, and it never executes code from an untrusted PR head with a write-capable token. Its existing daily schedule also scans all open PRs, providing autonomous recovery if an event-driven execution is interrupted. GitHub CLI operations retry transient failures locally. The guard uses a sparse checkout and no dependency install, so its control-plane cost is substantially lower than a provider review or repair cycle.
 
 ## Deliberate non-goals
 
@@ -30,6 +30,6 @@ It also does not alter model routing, provider failover, security review, local 
 
 ## Autonomy and failure handling
 
-There is no quarantine, manual-triage, or human-release state. An exact duplicate is safely superseded by an equivalent canonical PR. A transient GitHub failure is retried by the guard; if an event execution still fails, the existing daily hygiene schedule retries the full open-PR scan. A PR whose head changes during the race check is left open and will be reconsidered from fresh state on a later event or scheduled scan.
+There is no quarantine, manual-triage, or human-release state. An exact duplicate is safely superseded by an equivalent canonical PR. A transient GitHub failure is retried by the guard; if a `workflow_run` execution still fails, the existing daily hygiene schedule retries the full open-PR scan. A PR whose head changes during the race check is left open and will be reconsidered from fresh state on the next lint completion or scheduled scan.
 
 No merge is performed by this guard, and no red or missing required check is bypassed.
