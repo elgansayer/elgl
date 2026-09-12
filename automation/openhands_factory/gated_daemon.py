@@ -101,6 +101,11 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         slot. Disabling issue admission limits preserves the original full-scan behavior.
         """
 
+        if getattr(self, "storage_blocked", False):
+            # Cached issue discovery is normally enough while admission is full, but under
+            # storage pressure we need authoritative closure evidence so clean stale issue
+            # worktrees can be reclaimed without admitting or executing new work.
+            return original(limit)
         available = self.issue_admission.available_slots(now or datetime.now(UTC))
         if available is None or available > 0:
             return original(limit)

@@ -331,7 +331,12 @@ class FactoryPipeline:
             github_token=self.config.github_token.get_secret_value(),
         )
 
-    def refresh(self, protected_task_ids: set[str] | None = None) -> dict[str, Job]:
+    def refresh(
+        self,
+        protected_task_ids: set[str] | None = None,
+        *,
+        storage_pressure: bool = False,
+    ) -> dict[str, Job]:
         if not self.labels_ready:
             self.github.ensure_factory_labels()
             self._reconcile_quarantine_labels()
@@ -359,6 +364,13 @@ class FactoryPipeline:
                 except RepositorySafetyError:
                     # A damaged or partially-created worktree is not safe to delete silently.
                     dirty = True
+                if dirty and storage_pressure:
+                    LOGGER.warning(
+                        "Preserving dirty stale worktree for task %s while storage is below "
+                        "the scheduling reserve",
+                        task_id,
+                    )
+                    continue
                 if dirty:
                     recovery = self.config.recovery_dir / (
                         f"issue-{task_id}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
