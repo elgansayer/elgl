@@ -1,22 +1,60 @@
 name: Branch PR Hygiene
 
 on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, labeled]
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
 
 concurrency:
-  group: branch-pr-hygiene
+  group: branch-pr-hygiene-${{ github.event.pull_request.number || 'scheduled' }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
+  exact-duplicate-pr-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      BASE_BRANCH: main
+      PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+    steps:
+      - name: Checkout exact-duplicate guard
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: automation/openhands_factory/exact_duplicate_pr_guard.py
+          sparse-checkout-cone-mode: false
+
+      - name: Supersede byte-identical external pull requests
+        run: |
+          set -euo pipefail
+          args=(
+            --repository "$REPOSITORY"
+            --base "$BASE_BRANCH"
+          )
+          if [[ -n "$PR_NUMBER" ]]; then
+            args+=(--pull-request "$PR_NUMBER")
+          fi
+          python3 automation/openhands_factory/exact_duplicate_pr_guard.py "${args[@]}"
+
   audit:
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
     env:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
@@ -77,7 +115,7 @@ jobs:
               '',
               f"Safe deletion candidates (dry-run only): **{len(report['safe_deletion_candidates'])}**",
               '',
-              'No branch is deleted and no pull request is created, modified, reopened, or merged by this workflow.',
+              'No branch is deleted and no pull request is created, modified, reopened, or merged by this audit job.',
           ])
           summary.write_text(summary.read_text() + '\n'.join(lines) + '\n')
           PY
