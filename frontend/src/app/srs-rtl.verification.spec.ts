@@ -62,7 +62,7 @@ function collectFiles(rootPath: string): string[] {
   return files.filter((f) => !f.endsWith('.spec.ts') && TEMPLATE_EXTS.has(extname(f)));
 }
 
-describe.skip('RTL Logical CSS Properties - Spaced Repetition System (SRS)', () => {
+describe('RTL Logical CSS Properties - Spaced Repetition System (SRS)', () => {
   let allContent: string;
   let fileList: string[];
 
@@ -118,6 +118,7 @@ describe.skip('RTL Logical CSS Properties - Spaced Repetition System (SRS)', () 
     // Strip all i18n expressions (translate pipe and interpolation) so only
     // literal text between HTML tags remains.
     const cleaned = htmlContent
+      .replace(/<!--[\s\S]*?-->/g, '')
       .replace(/\{\{.*?\}\}/gs, '')
       .replace(/'[^']*'\s*\|\s*t/g, '')
       .replace(/"[^"]*"\s*\|\s*t/g, '');
