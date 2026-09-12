@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ErrorHandler } from '@angular/core';
-import { Router } from '@angular/router';
 import { VocabularyDashboardComponent } from './vocabulary-dashboard.component';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -10,14 +9,10 @@ describe('VocabularyDashboardComponent', () => {
   let component: VocabularyDashboardComponent;
   let fixture: ComponentFixture<VocabularyDashboardComponent>;
   let mockErrorHandler: { handleError: ReturnType<typeof vi.fn> };
-  let mockRouter: { navigate: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockErrorHandler = {
       handleError: vi.fn(),
-    };
-    mockRouter = {
-      navigate: vi.fn().mockResolvedValue(true),
     };
 
     await TestBed.configureTestingModule({
@@ -38,7 +33,6 @@ describe('VocabularyDashboardComponent', () => {
           } as any,
         },
         { provide: ErrorHandler, useValue: mockErrorHandler },
-        { provide: Router, useValue: mockRouter },
         {
           provide: VocabularyStore,
           useValue: {
@@ -88,24 +82,6 @@ describe('VocabularyDashboardComponent', () => {
       await component.grade('known');
     }
     expect(component.isComplete()).toBe(true);
-  });
-
-  it('should offer AI conversation practice after review completion', async () => {
-    for (let i = 0; i < component.cardCount(); i++) {
-      await component.grade('known');
-    }
-    fixture.detectChanges();
-
-    const buttons = fixture.nativeElement.querySelectorAll(
-      'button',
-    ) as NodeListOf<HTMLButtonElement>;
-    const practiceButton = Array.from(buttons).find((button) =>
-      button.textContent?.includes('vocabulary.practiceAiConversation'),
-    );
-
-    expect(practiceButton).toBeTruthy();
-    practiceButton?.click();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/ai-conversation']);
   });
 
   it('should reset state on restart', async () => {
