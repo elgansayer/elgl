@@ -38,12 +38,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
           <div class="mt-12 rounded-2xl border border-surface-100 bg-surface-800 p-8 text-center">
             <p class="text-lg font-medium text-text-primary">📚 {{ 'vocabulary.noDue' | t }}</p>
             <div class="mt-6 flex flex-col gap-3">
-              <button
-                hlmBtn
-                type="button"
-                (click)="practiceInAiConversation()"
-                class="btn-primary w-full"
-              >
+              <button hlmBtn type="button" (click)="practiceInAiConversation()" class="w-full">
                 {{ 'vocabulary.practiceAiConversation' | t }}
               </button>
               <button hlmBtn type="button" (click)="restart()" class="btn-secondary w-full">
