@@ -123,7 +123,7 @@ The implementation stage should use an approved single-selection interaction pri
 
 ### Hard-coded accessible copy
 
-The header close button uses `aria-label="Cancel doodle"`. Colour swatches build names from `'Select ' + colour`, and brush controls build names from `w + 'px stroke width'`. These strings bypass `TranslatePipe`/`I18nService` and must be replaced with translated labels.
+The header close button uses `aria-label="Cancel doodle"`. Colour swatches build names from `'Select ' + color`, and brush controls build names from `w + 'px stroke width'`. These strings bypass `TranslatePipe`/`I18nService` and must be replaced with translated labels.
 
 Hex codes should not be the only human-readable colour names. The product palette needs localisable semantic colour names so screen-reader users can distinguish choices meaningfully.
 
@@ -182,7 +182,7 @@ The following accessible content needs translation ownership:
 - brush-width selector group name;
 - stroke-width label including a localisable value/unit representation.
 
-Existing visible translation keys such as `doodle.title`, `doodle.colourLabel`, `doodle.brushLabel`, `doodle.clearBtn`, `doodle.cancelBtn`, and `doodle.sendBtn` should remain canonical where they already express the correct product copy.
+Existing visible translation keys such as `doodle.title`, `doodle.colorLabel`, `doodle.brushLabel`, `doodle.clearBtn`, `doodle.cancelBtn`, and `doodle.sendBtn` should remain canonical where they already express the correct product copy.
 
 The emitted PNG data URL and numeric drawing coordinates are data contracts and must never be localised.
 

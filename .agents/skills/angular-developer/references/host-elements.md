@@ -13,7 +13,7 @@ Use the `host` property in the `@Component` decorator to bind properties, attrib
     role: 'slider', // Static attribute
     '[attr.aria-valuenow]': 'value', // Attribute binding
     '[class.active]': 'isActive()', // Class binding
-    '[style.colour]': 'colour()', // Style binding
+    '[style.color]': 'colour()', // Style binding
     '[tabIndex]': 'disabled ? -1 : 0', // Property binding
     '(keydown)': 'onKeyDown($event)', // Event binding
   },
