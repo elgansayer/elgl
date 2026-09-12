@@ -1,0 +1,49 @@
+[Unit]
+Description=Repository Factory instance for %i
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=900
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=dev
+Group=dev
+Slice=repo-factory.slice
+WorkingDirectory=/var/lib/repo-factory/%i/repository
+EnvironmentFile=/etc/repo-factory/common.env
+EnvironmentFile=/etc/repo-factory/instances/%i.env
+EnvironmentFile=/etc/hellotalk-factory/runtime.env
+Environment=HOME=/home/dev
+Environment=PATH=/home/dev/.local/bin:/home/dev/.opencode/bin:/home/dev/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+ExecStartPre=/opt/hellotalk-factory/venv/bin/repo-factory providers check
+ExecStart=/opt/hellotalk-factory/venv/bin/repo-factory daemon
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=120
+KillSignal=SIGTERM
+UMask=0077
+PrivateTmp=true
+ProtectProc=ptraceable
+PrivateDevices=false
+ProtectSystem=full
+ProtectHome=false
+BindPaths=/run/user
+ProtectKernelTunables=false
+ProtectKernelModules=true
+PrivateUsers=false
+Delegate=yes
+ProtectControlGroups=false
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/repo-factory /var/log/repo-factory /var/lib/hellotalk-factory /var/log/hellotalk-factory
+LimitNOFILE=4096
+LimitNPROC=768
+TasksMax=768
+MemoryHigh=3G
+MemoryMax=4G
+
+[Install]
+WantedBy=multi-user.target
