@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-12 - [Replace blocking Redis KEYS with SCAN]
+**Learning:** Using KEYS in Redis is a blocking operation that degrades performance and causes potential DoS vulnerabilities on large datasets. It blocks the Redis event loop when scanning for keys.
+**Action:** Use a non-blocking SCAN command via a cursor loop when iterating and deleting cached keys based on patterns (e.g., cache invalidation).

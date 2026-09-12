@@ -43,49 +43,55 @@ export class AdminService {
     return this.supabaseService.getRedisClient();
   }
 
-  private async invalidateUserListCaches(): Promise<void> {
+  private async invalidateCacheByPattern(
+    pattern: string,
+    cacheType: string,
+  ): Promise<void> {
     try {
       const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_USERS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      let cursor = '0';
+      let keysDeleted = 0;
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          100,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          await redis.del(...keys);
+          keysDeleted += keys.length;
+        }
+      } while (cursor !== '0');
+
+      if (keysDeleted > 0) {
         this.logger.info(
-          `Invalidated ${keys.length} admin user list cache key(s)`,
+          `Invalidated ${keysDeleted} admin ${cacheType} cache key(s)`,
         );
       }
     } catch (err) {
-      this.logger.error(err, 'Failed to invalidate admin user list caches');
+      this.logger.error(err, `Failed to invalidate admin ${cacheType} caches`);
     }
+  }
+
+  private async invalidateUserListCaches(): Promise<void> {
+    await this.invalidateCacheByPattern(`${CACHE_PREFIX_USERS}*`, 'user list');
   }
 
   private async invalidateBlocksListCaches(): Promise<void> {
-    try {
-      const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_BLOCKS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
-        this.logger.info(
-          `Invalidated ${keys.length} admin blocks list cache key(s)`,
-        );
-      }
-    } catch (err) {
-      this.logger.error(err, 'Failed to invalidate admin blocks list caches');
-    }
+    await this.invalidateCacheByPattern(
+      `${CACHE_PREFIX_BLOCKS}*`,
+      'blocks list',
+    );
   }
 
   private async invalidateReportsListCaches(): Promise<void> {
-    try {
-      const redis = this.getRedis();
-      const keys = await redis.keys(`${CACHE_PREFIX_REPORTS}*`);
-      if (keys.length > 0) {
-        await redis.del(...keys);
-        this.logger.info(
-          `Invalidated ${keys.length} admin reports list cache key(s)`,
-        );
-      }
-    } catch (err) {
-      this.logger.error(err, 'Failed to invalidate admin reports list caches');
-    }
+    await this.invalidateCacheByPattern(
+      `${CACHE_PREFIX_REPORTS}*`,
+      'reports list',
+    );
   }
 
   private async invalidateLoginHistoryCache(userId: string): Promise<void> {
