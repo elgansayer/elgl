@@ -214,9 +214,7 @@ def _split_repository(repository: str) -> tuple[str, str]:
     return owner, name
 
 
-def load_open_pull_requests(
-    repository: str, base_branch: str
-) -> tuple[PullRequestSnapshot, ...]:
+def load_open_pull_requests(repository: str, base_branch: str) -> tuple[PullRequestSnapshot, ...]:
     owner, name = _split_repository(repository)
     after: str | None = None
     snapshots: list[PullRequestSnapshot] = []
@@ -340,9 +338,7 @@ def close_exact_duplicate(
     return True
 
 
-def run_guard(
-    repository: str, base_branch: str, focus_pull_request: int | None = None
-) -> int:
+def run_guard(repository: str, base_branch: str, focus_pull_request: int | None = None) -> int:
     snapshots = load_open_pull_requests(repository, base_branch)
     groups = exact_duplicate_groups(
         snapshots,
