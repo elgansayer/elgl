@@ -215,9 +215,7 @@
         "frontend/src/app/pages/escrow",
         "frontend/src/app/pages/escrow-detail",
         "frontend/src/app/pages/my-subscription",
-        "frontend/src/app/pages/subscription",
-        "frontend/src/app/pages/vip",
-        "frontend/src/app/pages/vip-subscription"
+        "frontend/src/app/pages/subscription"
       ],
       "previewPaths": ["frontend/design-preview/screens/monetisation.html"],
       "claudeDesignPath": "screens/monetisation.html",
