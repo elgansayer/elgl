@@ -536,9 +536,7 @@ class FactoryDaemon:
                         )
                         _, next_refresh_at = await_refresh(
                             refresh_future,
-                            lambda: self._write_daemon_state(
-                                "running", active, active_started_at
-                            ),
+                            lambda: self._write_daemon_state("running", active, active_started_at),
                         )
                         LOGGER.warning(
                             "Storage reserve blocked scheduling; ran pressure-safe "

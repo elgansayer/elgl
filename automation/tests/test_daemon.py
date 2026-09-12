@@ -349,9 +349,7 @@ def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> N
 def test_refresh_jobs_propagates_storage_pressure_mode() -> None:
     calls: list[tuple[set[str], bool]] = []
 
-    def refresh(
-        protected: set[str], *, storage_pressure: bool = False
-    ) -> dict[str, Job]:
+    def refresh(protected: set[str], *, storage_pressure: bool = False) -> dict[str, Job]:
         calls.append((protected, storage_pressure))
         return {"42": job("42", 0)}
 
@@ -361,7 +359,11 @@ def test_refresh_jobs_propagates_storage_pressure_mode() -> None:
     )
 
     refreshed, retry_at = refresh_jobs(
-        pipeline, set(), 10.0, 900, storage_pressure=True  # type: ignore[arg-type]
+        pipeline,
+        set(),
+        10.0,
+        900,
+        storage_pressure=True,  # type: ignore[arg-type]
     )
 
     assert set(refreshed) == {"42"}

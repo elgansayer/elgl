@@ -1,4 +1,4 @@
-# Factory storage-pressure reconciliation audit — 2026-09-12
+# Factory storage-pressure reconciliation audit - 2026-09-12
 
 ## Finding
 
