@@ -1,14 +1,15 @@
 name: Branch PR Hygiene
 
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review, labeled]
+  workflow_run:
+    workflows: ['Workflow lint']
+    types: [completed]
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
 
 concurrency:
-  group: branch-pr-hygiene-${{ github.event.pull_request.number || 'scheduled' }}
+  group: branch-pr-hygiene-${{ github.event.workflow_run.id || 'scheduled' }}
   cancel-in-progress: true
 
 permissions:
@@ -26,9 +27,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
       BASE_BRANCH: main
-      PR_NUMBER: ${{ github.event.pull_request.number || '' }}
     steps:
-      - name: Checkout exact-duplicate guard
+      - name: Checkout trusted exact-duplicate guard
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
@@ -39,17 +39,12 @@ jobs:
       - name: Supersede byte-identical external pull requests
         run: |
           set -euo pipefail
-          args=(
-            --repository "$REPOSITORY"
+          python3 automation/openhands_factory/exact_duplicate_pr_guard.py \
+            --repository "$REPOSITORY" \
             --base "$BASE_BRANCH"
-          )
-          if [[ -n "$PR_NUMBER" ]]; then
-            args+=(--pull-request "$PR_NUMBER")
-          fi
-          python3 automation/openhands_factory/exact_duplicate_pr_guard.py "${args[@]}"
 
   audit:
-    if: github.event_name != 'pull_request_target'
+    if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
