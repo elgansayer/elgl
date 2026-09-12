@@ -69,7 +69,6 @@ export class UserStatisticsService {
       visitQuery = visitQuery.lte('created_at', query.toDate);
     }
 
-    // ⚡ Bolt Optimization: Group independent database lookups with a single concurrent Promise.all batch fetch to mitigate additive network latency.
     const [
       { data: user, error: userError },
       { count: totalMoments },
