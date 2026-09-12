@@ -454,6 +454,59 @@ def test_refresh_releases_closed_issue_before_pull_request(
     assert removed == [worktree]
 
 
+def test_refresh_under_storage_pressure_reclaims_clean_closed_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
+    )
+    github.tasks = []
+
+    refreshed = pipeline.refresh(storage_pressure=True)
+
+    assert refreshed["42"].state is JobState.DONE
+    assert refreshed["42"].last_error == "Issue closed before pull request creation"
+    assert removed == [worktree]
+
+
+def test_refresh_under_storage_pressure_preserves_dirty_closed_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    archived: list[Path] = []
+    removed: list[Path] = []
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(
+        GitWorkflow, "archive_worktree", lambda workflow, path, recovery: archived.append(path)
+    )
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
+    )
+    github.tasks = []
+
+    refreshed = pipeline.refresh(storage_pressure=True)
+
+    assert refreshed["42"].state is JobState.IMPLEMENTING
+    assert archived == []
+    assert removed == []
+    assert worktree.exists()
+
+
 def test_refresh_does_not_remove_a_closed_issue_while_its_worker_is_active(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

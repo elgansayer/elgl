@@ -179,11 +179,17 @@ def refresh_jobs(
     protected_task_ids: set[str],
     now: float,
     cooldown_seconds: int,
+    *,
+    storage_pressure: bool = False,
 ) -> tuple[dict[str, Job], float]:
     """Refresh GitHub work without turning a control-plane outage into a crash."""
 
     try:
-        return pipeline.refresh(protected_task_ids), now + cooldown_seconds
+        if storage_pressure:
+            jobs = pipeline.refresh(protected_task_ids, storage_pressure=True)
+        else:
+            jobs = pipeline.refresh(protected_task_ids)
+        return jobs, now + cooldown_seconds
     except FactoryError as error:
         LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
         return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
@@ -516,6 +522,28 @@ class FactoryDaemon:
                             self.config.recovery_retention_hours,
                         )
                     self._check_stall()
+                if not self.paused() and not storage_ready:
+                    now = time.monotonic()
+                    if now >= next_refresh_at:
+                        pressure_refresh_seconds = max(self.config.cooldown_seconds, 900)
+                        refresh_future = control.submit(
+                            refresh_jobs,
+                            self.pipeline,
+                            active_task_ids,
+                            now,
+                            pressure_refresh_seconds,
+                            storage_pressure=True,
+                        )
+                        _, next_refresh_at = await_refresh(
+                            refresh_future,
+                            lambda: self._write_daemon_state(
+                                "running", active, active_started_at
+                            ),
+                        )
+                        LOGGER.warning(
+                            "Storage reserve blocked scheduling; ran pressure-safe "
+                            "control-plane reconciliation without starting providers"
+                        )
                 if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
