@@ -343,10 +343,7 @@ describe('PrivacyService', () => {
         (keys: string[]) =>
           new Promise((resolve) => {
             activeRemovals += 1;
-            maxActiveRemovals = Math.max(
-              maxActiveRemovals,
-              activeRemovals,
-            );
+            maxActiveRemovals = Math.max(maxActiveRemovals, activeRemovals);
             queueMicrotask(() => {
               activeRemovals -= 1;
               resolve({
