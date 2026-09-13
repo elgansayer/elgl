@@ -31,7 +31,10 @@ query($owner: String!, $name: String!, $base: String!, $after: String) {
         headRefOid
         isDraft
         headRepository { nameWithOwner }
-        labels(first: 50) { nodes { name } }
+        labels(first: 100) {
+          pageInfo { hasNextPage }
+          nodes { name }
+        }
         commits(last: 1) { nodes { commit { tree { oid } } } }
       }
     }
@@ -50,7 +53,10 @@ query($owner: String!, $name: String!, $number: Int!) {
       headRefOid
       isDraft
       headRepository { nameWithOwner }
-      labels(first: 50) { nodes { name } }
+      labels(first: 100) {
+        pageInfo { hasNextPage }
+        nodes { name }
+      }
       commits(last: 1) { nodes { commit { tree { oid } } } }
     }
   }
@@ -71,6 +77,7 @@ class PullRequestSnapshot:
     head_repository: str
     is_draft: bool
     labels: frozenset[str]
+    labels_complete: bool
 
     def is_factory_review_candidate(self, repository: str, base_branch: str) -> bool:
         """Mirror the conservative subset of PRs that can consume Factory review allowance."""
@@ -81,6 +88,7 @@ class PullRequestSnapshot:
             and self.head_repository == repository
             and not self.is_draft
             and bool(self.tree_oid)
+            and self.labels_complete
             and not self.head_ref.startswith("factory/")
             and not self.labels.intersection(_FACTORY_SKIP_LABELS)
         )
@@ -116,6 +124,8 @@ def _snapshot(node_value: object, *, state: str = "OPEN") -> PullRequestSnapshot
         for label_value in _items(labels_container.get("nodes", []), field="labels.nodes")
         if (name := _string(_mapping(label_value, field="label").get("name")))
     )
+    labels_page_info = _mapping(labels_container.get("pageInfo", {}), field="labels.pageInfo")
+    labels_complete = labels_page_info.get("hasNextPage") is not True
     commits_container = _mapping(node.get("commits", {}), field="commits")
     commit_nodes = _items(commits_container.get("nodes", []), field="commits.nodes")
     tree_oid = ""
@@ -143,6 +153,7 @@ def _snapshot(node_value: object, *, state: str = "OPEN") -> PullRequestSnapshot
         head_repository=head_repository,
         is_draft=node.get("isDraft") is True,
         labels=labels,
+        labels_complete=labels_complete,
     )
 
 
