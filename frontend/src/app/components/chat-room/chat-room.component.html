@@ -471,6 +471,13 @@
       }
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <app-button-secondary
+          (clicked)="showCorrectionForm.set(!showCorrectionForm())"
+          customClass="bg-warning/20 text-warning ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.correctBtn' | t"
+        >
+          {{ 'chatRoom.correctBtn' | t }}
+        </app-button-secondary>
+        <app-button-secondary
           (clicked)="showDoodleModal.set(true)"
           customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
           [ariaLabel]="'chatRoom.doodleBtn' | t"

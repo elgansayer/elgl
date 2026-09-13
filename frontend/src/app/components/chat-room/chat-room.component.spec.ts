@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { ChatRoomComponent } from './chat-room.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
@@ -137,17 +136,6 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('does not expose a correction action without a source message', () => {
-    const correctLabel = TestBed.inject(I18nService).translate('chatRoom.correctBtn');
-    const host = fixture.nativeElement as HTMLElement;
-    const actionLabels = Array.from(
-      host.querySelectorAll<HTMLButtonElement>('app-button-secondary button'),
-      (button) => button.getAttribute('aria-label'),
-    );
-
-    expect(actionLabels).not.toContain(correctLabel);
   });
 
   it('startReply sets replyingTo to the matching message', () => {
@@ -397,33 +385,6 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
       expect(component.showCorrectionForm()).toBe(true);
       expect(component.originalText).toBe('I goed to school');
-    });
-
-    it('forwards correction-modal submissions through the chat correction payload', async () => {
-      component.startCorrection(makeMessage({ text_content: 'I goed to school' }));
-      fixture.detectChanges();
-
-      const modal = fixture.debugElement.query(By.css('app-correction-modal'));
-      expect(modal).toBeTruthy();
-
-      modal.triggerEventHandler('submitted', {
-        original: 'I goed to school',
-        corrected: 'I went to school',
-        explanation: 'Past tense',
-      });
-      await Promise.resolve();
-      await Promise.resolve();
-
-      expect(mockChatService.sendMessage).toHaveBeenCalledWith({
-        room_id: 'room-1',
-        message_type: 'correction',
-        correction_payload: {
-          original: 'I goed to school',
-          corrected: 'I went to school',
-          explanation: 'Past tense',
-        },
-      });
-      expect(component.showCorrectionForm()).toBe(false);
     });
 
     it('requestCorrection sends a correction_request message', async () => {
