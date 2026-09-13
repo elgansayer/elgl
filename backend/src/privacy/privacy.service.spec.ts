@@ -323,7 +323,6 @@ describe('PrivacyService', () => {
         }),
       );
     });
-  });
 
     it('bounds concurrent removals and continues after one row fails', async () => {
       tableRows.set(
