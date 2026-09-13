@@ -11,6 +11,7 @@ import { createReadStream } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { projectFor, projects, stateFile } from './projects.js';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -274,7 +275,27 @@ const server = createServer(async (req, res) => {
       const decoded = Buffer.from(b64, 'base64').toString('utf8');
       const [username, password] = decoded.split(':', 2);
 
-      if (username !== DASHBOARD_USER || password !== DASHBOARD_PASSWORD) {
+      let isAuthorized = false;
+      if (username !== undefined && password !== undefined) {
+        try {
+          const userBuf = Buffer.from(username);
+          const expectedUserBuf = Buffer.from(DASHBOARD_USER);
+          const passBuf = Buffer.from(password);
+          const expectedPassBuf = Buffer.from(DASHBOARD_PASSWORD);
+
+          if (userBuf.length === expectedUserBuf.length && passBuf.length === expectedPassBuf.length) {
+            const userMatch = crypto.timingSafeEqual(userBuf, expectedUserBuf);
+            const passMatch = crypto.timingSafeEqual(passBuf, expectedPassBuf);
+            if (userMatch && passMatch) {
+              isAuthorized = true;
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      if (!isAuthorized) {
         res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
         return res.end('Unauthorized');
       }
