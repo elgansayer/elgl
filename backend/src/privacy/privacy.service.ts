@@ -20,6 +20,7 @@ const ARCHIVE_PAGE_SIZE = 500;
 const MAX_ROWS_PER_DATASET = 50_000;
 const DEFAULT_RETENTION_DAYS = 7;
 const DEFAULT_SIGNED_URL_SECONDS = 300;
+const ARCHIVE_PURGE_CONCURRENCY = 5;
 
 type ArchiveStatus = 'processing' | 'ready' | 'failed' | 'expired';
 
@@ -217,31 +218,42 @@ export class PrivacyService {
     }
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
-    // ⚡ Bolt Optimization: Replace sequential database queries in a loop with a concurrent Promise.all execution to improve archive cleanup performance
-    const purgeResults = await Promise.all(
-      rows.map(async (row) => {
-        if (row.object_key) {
-          const { error: removeError } = await supabase.storage
-            .from(ARCHIVE_BUCKET)
-            .remove([row.object_key]);
-          if (removeError) {
-            this.logger.error('gdpr_archive_cleanup_object_failed');
-            return false;
-          }
+    const purgeRow = async (row: ArchiveRequestRow): Promise<boolean> => {
+      if (row.object_key) {
+        const { error: removeError } = await supabase.storage
+          .from(ARCHIVE_BUCKET)
+          .remove([row.object_key]);
+        if (removeError) {
+          this.logger.error('gdpr_archive_cleanup_object_failed');
+          return false;
         }
+      }
 
-        const { error: updateError } = await supabase
-          .from('archive_requests')
-          .update({
-            status: 'expired',
-            object_key: null,
-            archive_url: null,
-            updated_at: new Date().toISOString(),
-          } as never)
-          .eq('id', row.id);
-        return !updateError;
-      }),
+      const { error: updateError } = await supabase
+        .from('archive_requests')
+        .update({
+          status: 'expired',
+          object_key: null,
+          archive_url: null,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq('id', row.id);
+      return !updateError;
+    };
+
+    let nextRow = 0;
+    const purgeResults: boolean[] = [];
+    const workers = Array.from(
+      { length: Math.min(ARCHIVE_PURGE_CONCURRENCY, rows.length) },
+      async () => {
+        while (nextRow < rows.length) {
+          const row = rows[nextRow];
+          nextRow += 1;
+          purgeResults.push(await purgeRow(row));
+        }
+      },
     );
+    await Promise.all(workers);
 
     const purged = purgeResults.filter(Boolean).length;
 
