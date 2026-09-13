@@ -1,5 +1,6 @@
 import {
   Component,
+  ChangeDetectionStrategy,
   input,
   inject,
   DestroyRef,
@@ -11,6 +12,8 @@ import lottie, { AnimationItem } from 'lottie-web';
 
 @Component({
   selector: 'app-lottie-player',
+  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="w-full h-full"></div>`,
   styles: [`:host { display: block; width: 100%; height: 100%; }`],
 })
