@@ -55,6 +55,15 @@ describe('ForcedUpdateModalComponent', () => {
     expect(anchor?.getAttribute('href')).toBe('https://yourapp.com/update');
   });
 
+  it('should allow the rendered update link to navigate', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const anchor = compiled.querySelector('a');
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    expect(anchor?.dispatchEvent(event)).toBe(true);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it('should render title text', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('forcedUpdateModal.title');
