@@ -13,6 +13,7 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -137,6 +138,17 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('does not expose a correction action without a source message', () => {
+    const correctLabel = TestBed.inject(I18nService).translate('chatRoom.correctBtn');
+    const actionLabels = fixture.debugElement
+      .queryAll(By.directive(AppButtonSecondaryComponent))
+      .map((element) =>
+        (element.componentInstance as AppButtonSecondaryComponent).ariaLabel(),
+      );
+
+    expect(actionLabels).not.toContain(correctLabel);
   });
 
   it('startReply sets replyingTo to the matching message', () => {
