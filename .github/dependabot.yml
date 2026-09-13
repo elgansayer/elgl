@@ -8,9 +8,15 @@ updates:
       - '/admin-portal'
       - '/e2e'
       - '/tests/load'
+    # Batch routine version churn so the repository pays the CI matrix once per
+    # weekly update wave instead of continually refilling a large daily PR queue.
+    # Dependabot security updates remain separately grouped below.
     schedule:
-      interval: 'daily'
-    open-pull-requests-limit: 12
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:00'
+      timezone: 'Europe/London'
+    open-pull-requests-limit: 8
     assignees:
       - 'elgansayer'
     groups:
@@ -29,8 +35,11 @@ updates:
   - package-ecosystem: 'pip'
     directory: '/automation'
     schedule:
-      interval: 'daily'
-    open-pull-requests-limit: 5
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:15'
+      timezone: 'Europe/London'
+    open-pull-requests-limit: 3
     assignees:
       - 'elgansayer'
     groups:
@@ -49,8 +58,11 @@ updates:
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'daily'
-    open-pull-requests-limit: 5
+      interval: 'weekly'
+      day: 'monday'
+      time: '03:30'
+      timezone: 'Europe/London'
+    open-pull-requests-limit: 3
     assignees:
       - 'elgansayer'
     groups:
@@ -72,6 +84,9 @@ updates:
       - '/backend'
     schedule:
       interval: 'weekly'
+      day: 'monday'
+      time: '03:45'
+      timezone: 'Europe/London'
     open-pull-requests-limit: 5
     assignees:
       - 'elgansayer'

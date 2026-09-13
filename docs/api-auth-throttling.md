@@ -86,6 +86,17 @@ removal or duplication of the `@Throttle()` decorator fails CI:
 The metadata keys used by `@nestjs/throttler` for the `default` throttler are
 `THROTTLER:LIMITdefault` and `THROTTLER:TTLdefault`.
 
+A dependency-free cross-controller contract also verifies that the global guard and the
+complete documented sensitive-route throttle matrix stay wired together. Run it with:
+
+```bash
+node --test scripts/auth-throttling-contract.test.mjs
+```
+
+The `Auth Throttling Contract` GitHub Actions workflow runs this check on relevant pull
+requests, pushes to `main`/`develop`, and merge-queue validation. It is intentionally
+read-only and requires no credentials, database, Redis, or third-party provider access.
+
 ## Related Files
 
 | File | Purpose |
@@ -97,3 +108,5 @@ The metadata keys used by `@nestjs/throttler` for the `default` throttler are
 | `backend/src/users/users.controller.ts` | Account lifecycle endpoints |
 | `backend/src/transfer/transfer.controller.ts` | Device transfer endpoints |
 | `backend/src/users/device-link.controller.ts` | Device link generation endpoint |
+| `scripts/auth-throttling-contract.test.mjs` | Cross-controller global and sensitive-route throttle regression contract |
+| `.github/workflows/auth-throttling-contract.yml` | Read-only CI gate for the throttling contract |

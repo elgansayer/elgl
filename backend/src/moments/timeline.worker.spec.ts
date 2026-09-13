@@ -7,27 +7,30 @@ describe('TimelineWorker', () => {
   let mockSupabaseClient: any;
   let mockRedisClient: any;
   let mockQueryBuilder: any;
+  let mockTransaction: any;
 
   beforeEach(async () => {
     mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn(),
     };
 
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    const mockPipeline = {
-      lpush: vi.fn().mockReturnThis(),
+    mockTransaction = {
+      lrem: vi.fn().mockReturnThis(),
+      rpush: vi.fn().mockReturnThis(),
+      lmove: vi.fn().mockReturnThis(),
       ltrim: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     };
 
     mockRedisClient = {
-      lpush: vi.fn().mockResolvedValue(1),
-      ltrim: vi.fn().mockResolvedValue('OK'),
-      pipeline: vi.fn().mockReturnValue(mockPipeline),
+      multi: vi.fn().mockReturnValue(mockTransaction),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -55,16 +58,15 @@ describe('TimelineWorker', () => {
   });
 
   describe('fanOutMoment', () => {
-    it('should query followers, push moment ID to redis queues, and trim queues', async () => {
-      const followers = [
-        { follower_id: 'follower-1' },
-        { follower_id: 'follower-2' },
-      ];
-      mockQueryBuilder.eq.mockResolvedValue({
-        data: followers,
+    it('fans out with retry-safe RPUSH transactions and bounded queues', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
+        data: [
+          { follower_id: 'follower-1' },
+          { follower_id: 'follower-1' },
+          { follower_id: 'follower-2' },
+        ],
         error: null,
       });
-
       const logSpy = vi
         .spyOn((worker as any).logger, 'log')
         .mockImplementation(() => {});
@@ -77,58 +79,157 @@ describe('TimelineWorker', () => {
         'following_id',
         'author-1',
       );
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('follower_id', {
+        ascending: true,
+      });
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 499);
 
-      const mockPipeline = mockRedisClient.pipeline();
-
-      // follower-1, follower-2, author-1 -> 3 total pushes
-      expect(mockPipeline.lpush).toHaveBeenCalledTimes(3);
-      expect(mockPipeline.lpush).toHaveBeenCalledWith(
+      expect(mockRedisClient.multi).toHaveBeenCalledTimes(1);
+      expect(mockTransaction.lrem).toHaveBeenCalledTimes(3);
+      expect(mockTransaction.rpush).toHaveBeenCalledTimes(3);
+      expect(mockTransaction.rpush).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
         'moment-100',
       );
-      expect(mockPipeline.lpush).toHaveBeenCalledWith(
+      expect(mockTransaction.rpush).toHaveBeenCalledWith(
         'timeline_queue:follower-2',
         'moment-100',
       );
-      expect(mockPipeline.lpush).toHaveBeenCalledWith(
+      expect(mockTransaction.rpush).toHaveBeenCalledWith(
         'timeline_queue:author-1',
         'moment-100',
       );
-      expect(mockPipeline.ltrim).toHaveBeenCalledTimes(3);
-      expect(mockPipeline.ltrim).toHaveBeenCalledWith(
+      expect(mockTransaction.lmove).toHaveBeenCalledWith(
+        'timeline_queue:follower-1',
+        'timeline_queue:follower-1',
+        'RIGHT',
+        'LEFT',
+      );
+      expect(mockTransaction.ltrim).toHaveBeenCalledTimes(3);
+      expect(mockTransaction.ltrim).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
         0,
         499,
       );
-      expect(mockPipeline.exec).toHaveBeenCalledTimes(1);
-
+      expect(mockTransaction.exec).toHaveBeenCalledTimes(1);
       expect(logSpy).toHaveBeenCalledWith(
-        'Fanned out moment moment-100 to 3 followers via Redis queue.',
+        'Timeline fan-out completed for 3 recipients.',
       );
       logSpy.mockRestore();
     });
 
-    it('should return early when query returns error or null data', async () => {
-      mockQueryBuilder.eq.mockResolvedValue({
-        data: null,
-        error: { message: 'DB fail' },
-      });
+    it('queues the author when there are no followers', async () => {
+      mockQueryBuilder.range.mockResolvedValue({ data: [], error: null });
 
       await worker.fanOutMoment('moment-100', 'author-1');
 
-      expect(mockRedisClient.lpush).not.toHaveBeenCalled();
+      expect(mockTransaction.rpush).toHaveBeenCalledTimes(1);
+      expect(mockTransaction.rpush).toHaveBeenCalledWith(
+        'timeline_queue:author-1',
+        'moment-100',
+      );
     });
 
-    it('should catch error during execution and log error', async () => {
-      mockQueryBuilder.eq.mockRejectedValue(new Error('Redis crash'));
+    it('treats null follower data as a successful empty result', async () => {
+      mockQueryBuilder.range.mockResolvedValue({ data: null, error: null });
+
+      await worker.fanOutMoment('moment-100', 'author-1');
+
+      expect(mockTransaction.rpush).toHaveBeenCalledWith(
+        'timeline_queue:author-1',
+        'moment-100',
+      );
+    });
+
+    it('paginates large follower sets instead of relying on an unbounded query', async () => {
+      const firstPage = Array.from({ length: 500 }, (_, index) => ({
+        follower_id: `follower-${String(index).padStart(3, '0')}`,
+      }));
+      mockQueryBuilder.range
+        .mockResolvedValueOnce({ data: firstPage, error: null })
+        .mockResolvedValueOnce({
+          data: [{ follower_id: 'follower-500' }],
+          error: null,
+        });
+
+      await worker.fanOutMoment('moment-100', 'author-1');
+
+      expect(mockQueryBuilder.range).toHaveBeenNthCalledWith(1, 0, 499);
+      expect(mockQueryBuilder.range).toHaveBeenNthCalledWith(2, 500, 999);
+      expect(mockRedisClient.multi).toHaveBeenCalledTimes(2);
+      expect(mockTransaction.rpush).toHaveBeenCalledTimes(502);
+    });
+
+    it('retries a failed follower lookup once before succeeding', async () => {
+      mockQueryBuilder.range
+        .mockResolvedValueOnce({ data: null, error: { message: 'temporary' } })
+        .mockResolvedValueOnce({ data: [], error: null });
+
+      await worker.fanOutMoment('moment-100', 'author-1');
+
+      expect(mockQueryBuilder.range).toHaveBeenCalledTimes(2);
+      expect(mockTransaction.rpush).toHaveBeenCalledWith(
+        'timeline_queue:author-1',
+        'moment-100',
+      );
+    });
+
+    it('retries a failed Redis transaction without creating a second logical entry', async () => {
+      mockQueryBuilder.range.mockResolvedValue({ data: [], error: null });
+      mockTransaction.exec
+        .mockResolvedValueOnce([[new Error('temporary'), null]])
+        .mockResolvedValueOnce([]);
+
+      await worker.fanOutMoment('moment-100', 'author-1');
+
+      expect(mockRedisClient.multi).toHaveBeenCalledTimes(2);
+      expect(mockTransaction.lrem).toHaveBeenCalledTimes(2);
+      expect(mockTransaction.rpush).toHaveBeenCalledTimes(2);
+      expect(mockTransaction.exec).toHaveBeenCalledTimes(2);
+    });
+
+    it('logs only a sanitized failure classification after follower lookup failure', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
+        data: null,
+        error: { message: 'database host and credentials' },
+      });
       const errorSpy = vi
         .spyOn((worker as any).logger, 'error')
         .mockImplementation(() => {});
 
-      await worker.fanOutMoment('moment-100', 'author-1');
+      await worker.fanOutMoment('moment-secret', 'author-secret');
 
-      expect(errorSpy).toHaveBeenCalledWith(
-        'Failed to fan-out moment moment-100: Redis crash',
+      expect(mockQueryBuilder.range).toHaveBeenCalledTimes(2);
+      expect(mockRedisClient.multi).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith('Timeline fan-out failed (Error).');
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'moment-secret',
+      );
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'author-secret',
+      );
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain('credentials');
+      errorSpy.mockRestore();
+    });
+
+    it('does not expose Redis provider details when both transaction attempts fail', async () => {
+      mockQueryBuilder.range.mockResolvedValue({ data: [], error: null });
+      mockTransaction.exec.mockRejectedValue(
+        new Error('redis://user:secret@private-host'),
+      );
+      const errorSpy = vi
+        .spyOn((worker as any).logger, 'error')
+        .mockImplementation(() => {});
+
+      await worker.fanOutMoment('moment-secret', 'author-secret');
+
+      expect(mockTransaction.exec).toHaveBeenCalledTimes(2);
+      expect(errorSpy).toHaveBeenCalledWith('Timeline fan-out failed (Error).');
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'private-host',
+      );
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'moment-secret',
       );
       errorSpy.mockRestore();
     });

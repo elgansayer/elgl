@@ -1,0 +1,31 @@
+name: Deploy Workflow Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/deploy-workflow-contract.yml'
+      - 'scripts/deploy-workflow-contract.test.mjs'
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/deploy-workflow-contract.yml'
+      - 'scripts/deploy-workflow-contract.test.mjs'
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify tested deployment and Docker image contract
+        run: node --test scripts/deploy-workflow-contract.test.mjs

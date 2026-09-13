@@ -1,6 +1,10 @@
-<div class="visitor-logs-screen">
+<main
+  class="visitor-logs-screen"
+  aria-labelledby="visitor-logs-title"
+  [attr.aria-busy]="isLoading()"
+>
   <section class="visitor-header">
-    <h1 class="visitor-title">{{ 'visitors.title' | t }}</h1>
+    <h1 id="visitor-logs-title" class="visitor-title">{{ 'visitors.title' | t }}</h1>
     <p class="visitor-subtitle">{{ 'visitors.subtitle' | t }}</p>
     <div class="visitor-controls">
       <span class="visitor-chip visible-chip">
@@ -14,7 +18,7 @@
         type="button"
         class="visitor-toggle-btn"
         (click)="toggleHideBlurred()"
-        [attr.aria-label]="'visitors.showAllBtn' | t"
+        [attr.aria-label]="hideBlurredLabelKey() | t"
       >
         @if (hideBlurred()) {
           {{ 'visitors.showAllBtn' | t }}
@@ -25,8 +29,8 @@
     </div>
   </section>
 
-  @if (profile() && !profile()?.is_vip) {
-    <section class="vip-banner">
+  @if (showUpgrade()) {
+    <section class="vip-banner" aria-labelledby="visitor-vip-title">
       <div class="vip-banner-icon" aria-hidden="true">
         <svg
           width="24"
@@ -44,9 +48,9 @@
         </svg>
       </div>
       <div class="vip-banner-content">
-        <p class="vip-banner-title">{{ 'visitors.vipBannerTitle' | t }}</p>
+        <p id="visitor-vip-title" class="vip-banner-title">{{ 'visitors.vipBannerTitle' | t }}</p>
         <p class="vip-banner-desc">{{ 'visitors.vipBannerDesc' | t }}</p>
-        <p class="vip-banner-price">{{ 'visitors.vipPrice' | t }}</p>
+        <p class="vip-banner-price">{{ 'common.vipStdLabel' | t }}</p>
       </div>
       <a class="vip-banner-cta" routerLink="/vip" [attr.aria-label]="'vip.seePlans' | t">
         {{ 'vip.seePlans' | t }}
@@ -55,67 +59,89 @@
   }
 
   @if (isLoading()) {
-    <div class="visitor-empty-state">
+    <div class="visitor-empty-state" role="status" aria-live="polite">
       <div class="visitor-spinner" aria-hidden="true"></div>
       <p>{{ 'visitors.loading' | t }}</p>
     </div>
-  }
-
-  @if (!isLoading() && filteredVisitors().length === 0) {
+  } @else if (loadError()) {
+    <div class="visitor-empty-state" role="alert">
+      <p>{{ 'common.error_generic' | t }}</p>
+      <button hlmBtn type="button" (click)="reload()">
+        {{ 'discovery.retrySearch' | t }}
+      </button>
+    </div>
+  } @else if (filteredVisitors().length === 0) {
     <div class="visitor-empty-state">
       <p>{{ 'visitors.empty' | t }}</p>
     </div>
   }
 
-  <div class="visitor-list">
-    @for (log of filteredVisitors(); track log.id) {
-      <article class="visitor-card" [class.visitor-card--blurred]="log.is_blurred">
-        <div class="visitor-card-inner">
-          <div class="visitor-avatar-wrapper">
-            <img
-              [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
-              [alt]="'visitors.partnerFallback' | t"
-              class="visitor-avatar"
-              [class.visitor-avatar--blurred]="log.is_blurred"
-              loading="lazy"
-            />
-          </div>
-          <div class="visitor-details" [class.visitor-details--blurred]="log.is_blurred">
-            <p class="visitor-name">
-              {{ log.visitor.display_name || ('visitors.partnerFallback' | t) }}
-            </p>
-            <p class="visitor-languages">
-              <span class="visitor-lang-native">{{ log.visitor.native_languages }}</span>
-              <span class="visitor-lang-arrow" aria-hidden="true">&rarr;</span>
-              <span class="visitor-lang-target">{{ log.visitor.target_languages.join(', ') }}</span>
-            </p>
-          </div>
-          <div class="visitor-meta">
-            <p class="visitor-time">{{ log.created_at | date: 'short' }}</p>
-            @if (log.is_blurred) {
-              <span class="visitor-badge visitor-badge--blurred">
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
+  @if (!isLoading() && !loadError()) {
+    <div class="visitor-list">
+      @for (log of filteredVisitors(); track log.id) {
+        <article class="visitor-card" [class.visitor-card--blurred]="log.is_blurred">
+          <div class="visitor-card-inner">
+            <div class="visitor-avatar-wrapper">
+              @if (!log.is_blurred && log.visitor.avatar_url) {
+                <img
+                  [src]="log.visitor.avatar_url"
+                  [alt]="log.visitor.display_name || ('visitors.partnerFallback' | t)"
+                  class="visitor-avatar"
+                  loading="lazy"
+                />
+              } @else {
+                <div
+                  class="visitor-avatar"
+                  [class.visitor-avatar--blurred]="log.is_blurred"
                   aria-hidden="true"
-                >
-                  <path
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                {{ 'visitors.vipOnly' | t }}
-              </span>
+                ></div>
+              }
+            </div>
+
+            @if (log.is_blurred) {
+              <div class="visitor-details visitor-details--blurred" aria-hidden="true">
+                <p class="visitor-name">{{ 'visitors.partnerFallback' | t }}</p>
+                <p class="visitor-languages">•••</p>
+              </div>
+            } @else {
+              <div class="visitor-details">
+                <p class="visitor-name">
+                  {{ log.visitor.display_name || ('visitors.partnerFallback' | t) }}
+                </p>
+                <p class="visitor-languages">
+                  <span class="visitor-lang-native">{{ log.visitor.native_languages.join(', ') }}</span>
+                  <span class="visitor-lang-arrow" aria-hidden="true">&rarr;</span>
+                  <span class="visitor-lang-target">{{ log.visitor.target_languages.join(', ') }}</span>
+                </p>
+              </div>
             }
-            @if (!log.is_blurred) {
-              <span class="visitor-badge visitor-badge--visible">
-                {{ 'visitors.visibleStatus' | t }}
-              </span>
-            }
+
+            <div class="visitor-meta">
+              <p class="visitor-time">{{ log.created_at | date: 'short' }}</p>
+              @if (log.is_blurred) {
+                <span class="visitor-badge visitor-badge--blurred">
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                  {{ 'visitors.vipOnly' | t }}
+                </span>
+              } @else {
+                <span class="visitor-badge visitor-badge--visible">
+                  {{ 'visitors.visibleStatus' | t }}
+                </span>
+              }
+            </div>
           </div>
-        </div>
-      </article>
-    }
-  </div>
-</div>
+        </article>
+      }
+    </div>
+  }
+</main>

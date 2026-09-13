@@ -2,12 +2,14 @@ import base64
 import json
 import os
 from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
+from openhands_factory.models import Task, changed_path_fingerprint
 from openhands_factory.repository_guard import ProcessResult
 
 
@@ -458,6 +460,195 @@ def test_trusted_intake_gates_external_pull_requests_but_not_architecture_work(
     assert (
         "number,title,body,headRefName,isCrossRepository,isDraft,labels,author" in runner.calls[0]
     )
+
+
+def test_equivalent_pr_search_combines_all_supported_identity_signals(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 90,
+            "title": "Different wording",
+            "body": "Fixes #42",
+            "baseRefName": "main",
+            "headRefName": "factory/42-fix-build",
+            "headRefOid": "head-90",
+            "state": "OPEN",
+            "closedAt": None,
+            "mergedAt": None,
+            "isCrossRepository": False,
+            "labels": [],
+            "closingIssuesReferences": [{"number": 42}],
+            "files": [{"path": "automation/openhands_factory/pipeline.py"}],
+        },
+        {
+            "number": 91,
+            "title": "Unrelated title",
+            "body": "No issue link",
+            "baseRefName": "main",
+            "headRefName": "factory/path-overlap",
+            "headRefOid": "head-91",
+            "state": "OPEN",
+            "closedAt": None,
+            "mergedAt": None,
+            "isCrossRepository": False,
+            "labels": [],
+            "closingIssuesReferences": [],
+            "files": [{"path": "automation/tests/test_pipeline.py"}],
+        },
+        {
+            "number": 92,
+            "title": "Replacement",
+            "body": "Supersedes #42",
+            "baseRefName": "main",
+            "headRefName": "factory/replacement",
+            "headRefOid": "head-92",
+            "state": "OPEN",
+            "closedAt": None,
+            "mergedAt": None,
+            "isCrossRepository": False,
+            "labels": [],
+            "closingIssuesReferences": [],
+            "files": [],
+        },
+        {
+            "number": 80,
+            "title": "Fixes #42: Fix build (#80)",
+            "body": "",
+            "baseRefName": "main",
+            "headRefName": "factory/80-fix-build",
+            "headRefOid": "head-80",
+            "state": "MERGED",
+            "closedAt": "2026-08-20T00:00:00Z",
+            "mergedAt": "2026-08-20T00:00:00Z",
+            "isCrossRepository": False,
+            "labels": [],
+            "closingIssuesReferences": [],
+            "files": [],
+        },
+        {
+            "number": 70,
+            "title": "Fix build",
+            "body": "",
+            "baseRefName": "main",
+            "headRefName": "factory/70-old",
+            "headRefOid": "head-70",
+            "state": "CLOSED",
+            "closedAt": "2026-06-01T00:00:00Z",
+            "mergedAt": None,
+            "isCrossRepository": False,
+            "labels": [],
+            "closingIssuesReferences": [],
+            "files": [],
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+    task = Task("42", "Fix build", "Body", "github-issue", 0)
+
+    matches = client.find_equivalent_pull_requests(
+        task,
+        known_branch="factory/42-fix-build",
+        known_path_fingerprint=changed_path_fingerprint(["automation/tests/test_pipeline.py"]),
+        now=datetime(2026, 8, 24, tzinfo=UTC),
+    )
+
+    assert [match.number for match in matches] == [92, 90, 80, 91]
+    assert matches[0].reasons == frozenset({"supersession-link"})
+    assert matches[1].reasons == frozenset({"issue-link", "branch-metadata"})
+    assert matches[2].reasons == frozenset({"logical-title"})
+    assert matches[3].reasons == frozenset({"changed-path-fingerprint"})
+    assert not matches[3].is_open_canonical
+    assert "--state" in runner.calls[0] and "all" in runner.calls[0]
+    json_fields = runner.calls[0][runner.calls[0].index("--json") + 1]
+    assert "closingIssuesReferences" not in json_fields
+    assert json_fields.endswith("author,files")
+
+
+def test_equivalent_pr_search_omits_files_until_path_fingerprint_is_known(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 90,
+            "title": "Different wording",
+            "body": "Fixes #42",
+            "baseRefName": "main",
+            "headRefName": "factory/42-fix-build",
+            "headRefOid": "head-90",
+            "state": "OPEN",
+            "closedAt": None,
+            "mergedAt": None,
+            "isCrossRepository": False,
+            "labels": [],
+        }
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    matches = client.find_equivalent_pull_requests(
+        Task("42", "Fix build", "Body", "github-issue", 0),
+        known_branch="factory/42-fix-build",
+        now=datetime(2026, 8, 24, tzinfo=UTC),
+    )
+
+    assert [match.number for match in matches] == [90]
+    assert matches[0].reasons == frozenset({"issue-link", "branch-metadata"})
+    json_fields = runner.calls[0][runner.calls[0].index("--json") + 1]
+    assert json_fields.endswith("labels,author")
+    assert "files" not in json_fields.split(",")
+
+
+def test_equivalent_pr_search_does_not_trust_factory_branch_prefix(
+    tmp_path: Path,
+) -> None:
+    def candidate(number: int, author: str) -> dict[str, object]:
+        return {
+            "number": number,
+            "title": "Fix build",
+            "body": "Fixes #42",
+            "baseRefName": "main",
+            "headRefName": f"factory/{number}-fix-build",
+            "headRefOid": f"head-{number}",
+            "state": "OPEN",
+            "closedAt": None,
+            "mergedAt": None,
+            "isCrossRepository": False,
+            "labels": [],
+            "author": {"login": author},
+            "closingIssuesReferences": [{"number": 42}],
+            "files": [],
+        }
+
+    runner = Runner(
+        [
+            ProcessResult(
+                0,
+                json.dumps(
+                    [
+                        candidate(90, "outsider"),
+                        candidate(91, "repoowner"),
+                    ]
+                ),
+                "",
+            )
+        ]
+    )
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_trusted_intake=True,
+        trusted_github_actors={"repoowner"},
+    )
+
+    matches = client.find_equivalent_pull_requests(
+        Task("42", "Fix build", "Body", "github-issue", 0),
+        now=datetime(2026, 8, 24, tzinfo=UTC),
+    )
+
+    assert [match.number for match in matches] == [91]
 
 
 def test_list_all_open_issue_titles_ignores_labels(tmp_path: Path) -> None:

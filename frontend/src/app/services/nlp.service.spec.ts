@@ -84,6 +84,33 @@ describe('NlpService', () => {
     });
   });
 
+  it('rejects overlong simplification input before network I/O', async () => {
+    await expect(service.simplifyText({ text: 'a'.repeat(4001) })).rejects.toMatchObject({
+      kind: 'request',
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects simplification responses that do not correlate to the requested text', async () => {
+    fetchSpy.mockResolvedValue(
+      response({ original: 'Different sentence', simplified: 'Simple sentence' }),
+    );
+
+    await expect(service.simplifyText({ text: 'Complex sentence' })).rejects.toMatchObject({
+      kind: 'request',
+    });
+  });
+
+  it('rejects unexpectedly large simplification responses', async () => {
+    fetchSpy.mockResolvedValue(
+      response({ original: 'Complex sentence', simplified: 'a'.repeat(8001) }),
+    );
+
+    await expect(service.simplifyText({ text: 'Complex sentence' })).rejects.toMatchObject({
+      kind: 'request',
+    });
+  });
+
   it('classifies rate-limit responses and preserves Retry-After', async () => {
     fetchSpy.mockResolvedValue(
       response({ message: 'Too many requests' }, 429, { 'Retry-After': '17' }),

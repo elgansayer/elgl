@@ -1,92 +1,82 @@
 import { Injectable } from '@angular/core';
 
-const TRANSLATION_CACHE_PREFIX = 'elgl:tr:';
 const MAX_CACHE_ENTRIES = 500;
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+interface TranslationCacheEntry {
+  value: string;
+  timestamp: number;
+}
+
+/**
+ * Process-local cache for translated private content.
+ *
+ * Chat and Moment text can contain sensitive personal data. Translation results
+ * are therefore intentionally kept in memory only: they must not survive a page
+ * reload, browser restart, logout, or another user opening the same browser
+ * profile. The cache is a performance optimisation, never a source of truth.
+ */
 @Injectable({ providedIn: 'root' })
 export class TranslationCacheService {
-  /**
-   * Returns a cached translation for the given text+targetLang pair,
-   * or null if no valid cached entry exists.
-   */
+  private readonly cache = new Map<string, TranslationCacheEntry>();
+
+  /** Returns a fresh cached translation for an exact source/target pair. */
   get(text: string, targetLang: string): string | null {
     const key = this.buildKey(text, targetLang);
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    try {
-      const entry = JSON.parse(raw) as { value: string; timestamp: number };
-      if (Date.now() - entry.timestamp > MAX_AGE_MS) {
-        localStorage.removeItem(key);
-        return null;
-      }
-      return entry.value;
-    } catch {
-      localStorage.removeItem(key);
+    if (!key) return null;
+
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    if (Date.now() - entry.timestamp > MAX_AGE_MS) {
+      this.cache.delete(key);
       return null;
     }
+
+    // Refresh insertion order so the bounded cache behaves as a small LRU.
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    return entry.value;
   }
 
   /**
-   * Stores a translation result for the given text+targetLang pair.
+   * Stores a translation for the current application lifetime only.
+   * Empty or malformed cache inputs are ignored because cache availability must
+   * never affect whether the translation itself can be shown.
    */
   set(text: string, targetLang: string, translatedText: string): void {
-    this.evictIfNeeded();
     const key = this.buildKey(text, targetLang);
-    const entry = { value: translatedText, timestamp: Date.now() };
-    localStorage.setItem(key, JSON.stringify(entry));
+    if (!key || !translatedText.trim()) return;
+
+    this.cache.delete(key);
+    this.cache.set(key, {
+      value: translatedText,
+      timestamp: Date.now(),
+    });
+    this.evictIfNeeded();
   }
 
-  /**
-   * Removes all translation cache entries.
-   */
+  /** Removes all in-memory translation entries. */
   clear(): void {
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k?.startsWith(TRANSLATION_CACHE_PREFIX)) {
-        keysToRemove.push(k);
-      }
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    this.cache.clear();
   }
 
-  private buildKey(text: string, targetLang: string): string {
-    // Simple hash for storage key - we use the text directly truncated to avoid
-    // giant keys for very long texts, but prepend a hash for uniqueness
-    const hash = this.hashString(text);
-    return `${TRANSLATION_CACHE_PREFIX}${hash}:${targetLang}`;
-  }
+  private buildKey(text: string, targetLang: string): string | null {
+    if (!text) return null;
+    const normalizedTarget = targetLang.trim().toLowerCase();
+    if (!normalizedTarget) return null;
 
-  private hashString(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const chr = str.charCodeAt(i);
-      hash = ((hash << 5) - hash + chr) | 0;
-    }
-    return Math.abs(hash).toString(36);
+    // JSON encoding is collision-free for this pair and avoids the old
+    // non-cryptographic text hash, which could return a translation belonging to
+    // a different source string after a hash collision.
+    return JSON.stringify([normalizedTarget, text]);
   }
 
   private evictIfNeeded(): void {
-    const keys: Array<{ key: string; timestamp: number }> = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k?.startsWith(TRANSLATION_CACHE_PREFIX)) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          try {
-            const entry = JSON.parse(raw) as { timestamp: number };
-            keys.push({ key: k, timestamp: entry.timestamp ?? 0 });
-          } catch {
-            keys.push({ key: k, timestamp: 0 });
-          }
-        }
-      }
-    }
-    if (keys.length > MAX_CACHE_ENTRIES) {
-      keys.sort((a, b) => a.timestamp - b.timestamp);
-      const toRemove = keys.slice(0, keys.length - MAX_CACHE_ENTRIES + 50);
-      toRemove.forEach(({ key }) => localStorage.removeItem(key));
+    while (this.cache.size > MAX_CACHE_ENTRIES) {
+      const oldestKey = this.cache.keys().next().value as string | undefined;
+      if (oldestKey === undefined) return;
+      this.cache.delete(oldestKey);
     }
   }
 }

@@ -28,6 +28,8 @@ export class MediaService {
     'audio/x-m4a',
   ];
 
+  private static readonly MAX_OBJECT_KEY_LENGTH = 512;
+
   constructor(
     private readonly r2ObjectService: R2ObjectService,
     private readonly supabaseService: SupabaseService,
@@ -141,6 +143,8 @@ export class MediaService {
     userId: string,
     objectKey: string,
   ): Promise<{ coverUrl: string }> {
+    this.assertOwnedObjectKey(userId, objectKey, 'covers');
+
     const object = await this.r2ObjectService.downloadObject(objectKey);
     this.assertAllowedContentType(
       object.contentType,
@@ -300,6 +304,35 @@ export class MediaService {
       .toLowerCase();
     if (!allowedTypes.includes(normalisedContentType)) {
       throw new BadRequestException(message);
+    }
+  }
+
+  private assertOwnedObjectKey(
+    userId: string,
+    objectKey: string,
+    folder: string,
+  ): void {
+    if (
+      typeof objectKey !== 'string' ||
+      objectKey.length === 0 ||
+      objectKey.length > MediaService.MAX_OBJECT_KEY_LENGTH
+    ) {
+      throw new BadRequestException('Invalid media object key');
+    }
+
+    const prefix = `${folder}/${userId}/`;
+    const objectName = objectKey.startsWith(prefix)
+      ? objectKey.slice(prefix.length)
+      : '';
+
+    if (
+      objectName.length === 0 ||
+      objectName.includes('/') ||
+      objectName.includes('\\') ||
+      objectName === '.' ||
+      objectName === '..'
+    ) {
+      throw new BadRequestException('Media object is not owned by this user');
     }
   }
 

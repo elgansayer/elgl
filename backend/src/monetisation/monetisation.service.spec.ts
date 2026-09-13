@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MonetisationService } from './monetisation.service';
@@ -317,6 +318,23 @@ describe('MonetisationService', () => {
       });
     });
 
+    it('should fail closed when the generated API key cannot be persisted', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-dev', is_vip: true, vip_tier: 'developer' },
+        error: null,
+      });
+      mockQueryBuilder.eq
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'database write failed' },
+        });
+
+      await expect(service.generateApiKey('user-dev')).rejects.toThrow(
+        new InternalServerErrorException('Failed to generate API key'),
+      );
+    });
+
     it('should throw ForbiddenException for non-developer tier VIP user', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { id: 'user-vip', is_vip: true, vip_tier: 'consumer' },
@@ -481,6 +499,25 @@ describe('MonetisationService', () => {
         sessionUrl: 'https://checkout.stripe.com/session_456',
         sessionId: 'cs_test_def456',
       });
+    });
+
+    it('should reject unsupported plan identifiers before creating checkout', async () => {
+      vi.spyOn(configService, 'get').mockImplementation((key: string) => {
+        if (key === 'STRIPE_DEVELOPER_MONTHLY_PRICE_ID') {
+          return 'price_developer_monthly';
+        }
+        if (key === 'FRONTEND_URL') return 'http://localhost:4200';
+        return null;
+      });
+
+      await expect(
+        service.createCheckoutSession('user-1', 'unknown_plan', 'month'),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Unsupported subscription plan: "unknown_plan"',
+        ),
+      );
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when no Stripe price ID is configured', async () => {

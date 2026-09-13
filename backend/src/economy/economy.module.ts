@@ -3,21 +3,28 @@ import { HttpModule } from '@nestjs/axios';
 import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { MetricsModule } from '../metrics/metrics.module';
-import { EconomyController } from './economy.controller';
+import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
+import { AtomicEconomyController } from './atomic-economy.controller';
+import { PremiumAiController } from './premium-ai.controller';
 import { EconomyService } from './economy.service';
+import { AtomicEconomyService } from './atomic-economy.service';
+import { PremiumAiService } from './premium-ai.service';
+import { PremiumAiReconciliationService } from './premium-ai-reconciliation.service';
 import { CoinEconomyHealthService } from './coin-economy-health.service';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
 
 @Module({
-  imports: [UsersModule, ChatModule, HttpModule, MetricsModule],
-  controllers: [EconomyController],
+  imports: [UsersModule, ChatModule, HttpModule, MetricsModule, LlmProxyModule],
+  controllers: [AtomicEconomyController, PremiumAiController],
   providers: [
-    EconomyService,
+    { provide: EconomyService, useClass: AtomicEconomyService },
+    PremiumAiService,
+    PremiumAiReconciliationService,
     CoinEconomyHealthService,
     EconomyRateLimiterGuard,
     EconomyExceptionFilter,
   ],
-  exports: [EconomyService, CoinEconomyHealthService],
+  exports: [EconomyService, PremiumAiService, CoinEconomyHealthService],
 })
 export class EconomyModule {}

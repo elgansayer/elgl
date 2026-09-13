@@ -166,7 +166,119 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
+    assert "uv_cache=$service_home/.cache/uv" in sandbox_script
+    assert "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache" in sandbox_script
+    # PID 1 of the sandbox must reap children itself rather than exec-replacing
+    # straight into the target command, or an orphaned grandchild (a leftover
+    # dev server, a test's own subprocess-under-test) never gets reaped and
+    # sits as a zombie for the sandbox's whole lifetime.
+    assert "exec /usr/bin/setpriv" not in sandbox_script
+    assert "os.waitpid(-1, 0)" in sandbox_script
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
+    assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
+    assert environment["UV_NO_SYNC"] == "1"
+    assert environment["UV_OFFLINE"] == "1"
+    assert environment["UV_PROJECT_ENVIRONMENT"] == str(virtual_environment)
+    assert environment["VIRTUAL_ENV"] == str(virtual_environment)
+
+
+def test_uv_cache_mount_is_writable_not_read_only() -> None:
+    """Unlike Cypress's cache, the uv cache must stay writable: uv still
+    touches lock/tag metadata in it even on a full cache hit, and a
+    read-only remount (as used for Cypress and the repository) would turn
+    those routine writes into hard sandbox failures."""
+    from openhands_factory.verification import _VERIFICATION_SANDBOX_SCRIPT
+
+    uv_cache_block = _VERIFICATION_SANDBOX_SCRIPT.split("uv_cache=$service_home/.cache/uv")[
+        1
+    ].split("fi", 1)[0]
+    assert "remount" not in uv_cache_block
+    assert (
+        "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache"
+        in _VERIFICATION_SANDBOX_SCRIPT
+    )
+
+
+def test_a_backend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("backend/src/quiz/quiz.service.ts")})
+    names = {command.name for command in commands}
+
+    assert "backend-lint:check" in names
+    assert "backend-build" in names
+    assert "frontend-build" not in names
+    assert "admin-lint:check" not in names
+    assert "factory-tests" not in names
+    # Cross-cutting governance checks still run regardless of which
+    # workspace changed.
+    assert "constitution" in names
+    assert "migration-delta" in names
+
+
+def test_a_frontend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
+    names = {command.name for command in commands}
+
+    assert "frontend-build" in names
+    assert "backend-build" not in names
+    assert "admin-build" not in names
+    assert "factory-tests" not in names
+
+
+def test_an_automation_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("automation/openhands_factory/pipeline.py")})
+    names = {command.name for command in commands}
+
+    assert "factory-tests" in names
+    assert "factory-format" in names
+    assert "backend-build" not in names
+    assert "frontend-build" not in names
+    assert "admin-build" not in names
+
+
+def test_a_change_outside_every_workspace_falls_back_to_running_everything(
+    tmp_path: Path,
+) -> None:
+    # A root-level or CI-workflow-only change can't be attributed to any one
+    # workspace - verifying nothing would be worse than verifying everything.
+    commands = commands_for(tmp_path, {Path("AGENTS.md")})
+    names = {command.name for command in commands}
+
+    assert "backend-build" in names
+    assert "frontend-build" in names
+    assert "admin-build" in names
+    assert "factory-tests" in names
+
+
+def test_workout_agent_backend_uses_python_native_gate(tmp_path: Path) -> None:
+    commands = commands_for(
+        tmp_path,
+        {Path("backend/dynamic_programme.py")},
+        "workout-agent",
+    )
+    names = {command.name for command in commands}
+
+    assert names == {
+        "control-plane-policy",
+        "control-plane-policy-tests",
+        "backend-compile",
+        "backend-tests",
+    }
+    assert all(command.workspace == tmp_path for command in commands)
+
+
+def test_workout_agent_frontend_uses_angular_native_gate(tmp_path: Path) -> None:
+    commands = commands_for(
+        tmp_path,
+        {Path("frontend/src/app/app.ts")},
+        "workout-agent",
+    )
+    names = {command.name for command in commands}
+
+    assert "frontend-build" in names
+    assert "frontend-test" in names
+    assert "backend-tests" not in names
+    frontend_test = next(command for command in commands if command.name == "frontend-test")
+    assert frontend_test.arguments == ("npm", "test", "--", "--watch=false")

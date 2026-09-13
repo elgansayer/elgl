@@ -59,7 +59,7 @@ backend/src/<feature>/
 
 4. **Service** - inject `SupabaseService` (`backend/src/supabase/supabase.service.ts`) for `getClient()` (Postgres/Auth) and `getRedisClient()` (rate limits/queues/cache). Throw NestJS HTTP exceptions (`BadRequestException`, `ForbiddenException`, `NotFoundException`) for expected failure paths rather than returning ambiguous nulls.
 
-5. **Tests** - add a `*.spec.ts` next to every controller/service (Vitest, mocking `SupabaseService`/`CentrifugoService`/`ConfigService` as needed). Per `AGENTS.md` Section 7, every controller/service/guard must have coverage for DTO validation, auth flows, and external-service mocks.
+5. **Tests** - add a `*.spec.ts` next to every controller/service (Vitest, mocking `SupabaseService`/`CentrifugoService`/`ConfigService` as needed). Per `AGENTS.md` Section 6, every controller/service/guard must have coverage for DTO validation, auth flows, and external-service mocks.
 
 6. **Verify** - run the `verification-gate` skill's backend steps (`npm run lint`, `npm test`, `npm run build` inside `backend/`) before considering the module done.
 
@@ -128,7 +128,7 @@ backend/src/<feature>/
 
 4. **Service pattern** - inject `SupabaseService` and call `this.supabaseService.getClient()` per method (do not cache the client on `this` across requests). Use `NotFoundException`, `BadRequestException`, `ForbiddenException` from `@nestjs/common` for expected failure paths; throw plain `Error` only for truly unexpected states. Never build a raw SQL string by concatenating user input - always use the Supabase query builder (`.eq()`, `.contains()`, `.gt()`, etc.) or a Postgres RPC function (see `discovery.service.ts#searchPartners` calling `supabase.rpc('search_nearby_users', {...})` for the PostGIS pattern).
 
-5. **Money/quantity fields are server-authoritative.** If an endpoint changes `coins_balance`, `is_vip`, `vip_tier`, or anything else with real-world value, the amount/tier must be derived from a verified payment record on the server, never accepted as-is from the request body. See `payment-webhook-security` skill - this is a documented critical gap in this codebase (`AGENTS.md` Section 8.1).
+5. **Money/quantity fields are server-authoritative.** If an endpoint changes `coins_balance`, `is_vip`, `vip_tier`, or anything else with real-world value, the amount/tier must be derived from a verified payment record on the server, never accepted as-is from the request body. See the `payment-webhook-security` skill - this exact bug class was found and fixed here once already; don't reopen it.
 
 6. **Tests** - every controller and service needs a `*.spec.ts` using `@nestjs/testing`'s `Test.createTestingModule`, mocking `SupabaseService`/`ConfigService`/other collaborators. Cover: happy path, the guard rejecting an unauthenticated request, and at least one validation/error path (`NotFoundException`, `BadRequestException`, etc.).
 

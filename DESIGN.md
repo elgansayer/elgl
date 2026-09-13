@@ -112,7 +112,7 @@ work-list:
 - **app-toast:** a second, unused `Toast` class/selector collision exists - dead code, delete in
   Phase 2, along with adding its missing spec file.
 - **app-button, app-toast, app-fluency-indicator, app-lottie-player:** missing spec files -
-  add in Phase 2 alongside their rebuild, per AGENTS.md §7.
+  add in Phase 2 alongside their rebuild, per AGENTS.md §6.
 - **app-language-picker:** to be rebuilt on Spartan/ui's Combobox brain in Phase 2 - it's
   functionally already a combobox.
 

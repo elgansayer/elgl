@@ -1,13 +1,13 @@
 ---
 name: verification-gate
-description: 'Run the full completion checklist (lint, build, test, control-flow, RTL-logical, constitution) before marking any HelloTalk clone task complete in TODO.md. Use before every commit or before checking off a TODO.md item, for both frontend and backend changes.'
+description: 'Run the full completion checklist (lint, build, test, control-flow, RTL-logical, constitution) before marking any HelloTalk clone task complete in the GitHub issue backlog. Use before every commit or before checking off an issue, for both frontend and backend changes.'
 ---
 
 # Verification Gate
 
 ## When to Use
 
-Before marking any `TODO.md` item complete, before ending a work session, and after any non-trivial code change - per `AGENTS.md` Section 4 ("Autonomous Execution Protocol") and Section 6 ("Completion gate for frontend changes").
+Before marking any issue complete, before ending a work session, and after any non-trivial code change - per `AGENTS.md` Section 4 ("Autonomous Execution Protocol") and `frontend/AGENTS.md` ("Completion gate for frontend changes").
 
 ## Full Command Sequence
 
@@ -60,4 +60,4 @@ npm run check:control-flow
 
 ## After Verification Passes
 
-Only then check off the corresponding `TODO.md` item(s), and update `AGENTS.md` Section 8 if the change resolves (or newly reveals) a known issue.
+Only then check off the corresponding issue(s), and update the relevant GitHub issue if the change resolves (or newly reveals) a known issue - AGENTS.md is guidelines, not a changelog.

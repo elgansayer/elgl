@@ -1,14 +1,73 @@
+import { Type } from 'class-transformer';
 import {
   IsIn,
   IsNotEmpty,
   IsObject,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+
+const MEDIA_MESSAGE_TYPES = [
+  'voice',
+  'doodle',
+  'sticker',
+  'view_once_media',
+] as const;
+
+export class CorrectionPayloadDto {
+  @IsString()
+  @Matches(/\S/, { message: 'correction_payload.original must not be blank' })
+  @MaxLength(10000)
+  original!: string;
+
+  @IsString()
+  @Matches(/\S/, { message: 'correction_payload.corrected must not be blank' })
+  @MaxLength(10000)
+  corrected!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  explanation?: string;
+}
+
+export class CorrectionRequestPayloadDto {
+  @IsString()
+  @Matches(/\S/, {
+    message: 'correction_request_payload.original_text must not be blank',
+  })
+  @MaxLength(10000)
+  original_text!: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  target_language?: string;
+}
+
+export class StatusReplyPayloadDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  status_update_id!: string;
+
+  @IsString()
+  @Matches(/\S/, {
+    message: 'status_reply_payload.status_text must not be blank',
+  })
+  @MaxLength(1000)
+  status_text!: string;
+}
 
 export class SendMessageDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(128)
   room_id!: string;
 
   @IsString()
@@ -24,39 +83,60 @@ export class SendMessageDto {
   ])
   message_type!: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'text' || dto.text_content !== undefined,
+  )
   @IsString()
+  @Matches(/\S/, { message: 'text_content must not be blank' })
+  @MaxLength(10000)
   text_content?: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      MEDIA_MESSAGE_TYPES.includes(
+        dto.message_type as (typeof MEDIA_MESSAGE_TYPES)[number],
+      ) || dto.media_url !== undefined,
+  )
   @IsString()
+  @Matches(/\S/, { message: 'media_url must not be blank' })
+  @MaxLength(3000000)
   media_url?: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'correction' || dto.correction_payload !== undefined,
+  )
   @IsObject()
-  correction_payload?: {
-    original: string;
-    corrected: string;
-    explanation?: string;
-  };
+  @ValidateNested()
+  @Type(() => CorrectionPayloadDto)
+  correction_payload?: CorrectionPayloadDto;
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
   reply_to_id?: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'correction_request' ||
+      dto.correction_request_payload !== undefined,
+  )
   @IsObject()
-  correction_request_payload?: {
-    original_text: string;
-    target_language?: string;
-  };
+  @ValidateNested()
+  @Type(() => CorrectionRequestPayloadDto)
+  correction_request_payload?: CorrectionRequestPayloadDto;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'status_reply' ||
+      dto.status_reply_payload !== undefined,
+  )
   @IsObject()
-  status_reply_payload?: {
-    status_update_id: string;
-    status_text: string;
-  };
+  @ValidateNested()
+  @Type(() => StatusReplyPayloadDto)
+  status_reply_payload?: StatusReplyPayloadDto;
 }
 
 export class AiGenerateReplyDto {

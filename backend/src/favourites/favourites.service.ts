@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { AddFavouriteDto } from '../chat/dto/add-favourite.dto';
 
 @Injectable()
 export class FavouritesService {
@@ -7,45 +8,30 @@ export class FavouritesService {
 
   async addFavourite(
     userId: string,
-    dto: { message_id: string; note_text?: string },
-  ): Promise<{
-    id: string;
-    user_id: string;
-    item_type: string;
-    item_payload: Record<string, unknown>;
-    notes: string | null;
-  }> {
+    dto: AddFavouriteDto,
+  ): Promise<{ success: true }> {
     const supabase = this.supabaseService.getClient();
 
-    // Fetch the message to store as payload
-    const messageResponse = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('id', dto.message_id)
-      .single();
+    // Supply only the message identity in the application-facing shape. The
+    // database trigger resolves it onto the historical message_id column,
+    // verifies room membership, and rebuilds the canonical message snapshot.
+    const { error } = await supabase.from('favourites').insert({
+      user_id: userId,
+      item_type: 'message',
+      item_payload: { id: dto.message_id },
+      notes: dto.note_text ?? null,
+    });
 
-    if (messageResponse.error || !messageResponse.data) {
-      throw new Error('Message not found');
+    if (error) {
+      throw new Error('Failed to add favourite');
     }
-
-    const message = messageResponse.data as Record<string, unknown>;
-
-    const insertResponse = await supabase
-      .from('favourites')
-      .insert({
-        user_id: userId,
-        item_type: 'message' as const,
-        item_payload: message,
-        notes: dto.note_text ?? null,
-      })
-      .select()
-      .single();
-
-    if (insertResponse.error) throw insertResponse.error;
-    return insertResponse.data;
+    return { success: true };
   }
 
-  async removeFavourite(userId: string, favouriteId: string) {
+  async removeFavourite(
+    userId: string,
+    favouriteId: string,
+  ): Promise<{ success: true }> {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('favourites')
@@ -53,7 +39,7 @@ export class FavouritesService {
       .eq('id', favouriteId)
       .eq('user_id', userId);
 
-    if (error) throw error;
+    if (error) throw new Error('Failed to remove favourite');
     return { success: true };
   }
 
@@ -63,9 +49,10 @@ export class FavouritesService {
       .from('favourites')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
 
-    if (error) throw error;
+    if (error) throw new Error('Failed to load favourites');
     return data ?? [];
   }
 }

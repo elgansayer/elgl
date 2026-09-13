@@ -2,14 +2,19 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
-import { LinkedAccountsService, LinkedAccount } from '../../../services/linked-accounts.service';
+import {
+  LinkedAccountsService,
+  type LinkableAccountProvider,
+  type LinkedAccountProvider,
+} from '../../../services/linked-accounts.service';
 import { AppButtonSecondaryComponent } from '../../../components/primitives/button-secondary/button-secondary.component';
 
 interface ProviderInfo {
-  readonly id: string;
+  readonly id: LinkedAccountProvider;
   readonly icon: string;
   readonly colour: string;
   readonly labelKey: string;
+  readonly linkable: boolean;
 }
 
 @Component({
@@ -19,10 +24,11 @@ interface ProviderInfo {
   styleUrl: './linked-accounts.component.scss',
 })
 export class LinkedAccountsComponent {
-  private linkedAccountsService = inject(LinkedAccountsService);
-  private location = inject(Location);
+  private readonly linkedAccountsService = inject(LinkedAccountsService);
+  private readonly location = inject(Location);
 
   readonly loading = signal(false);
+  readonly pendingUnlinkProvider = signal<LinkableAccountProvider | null>(null);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
@@ -31,49 +37,64 @@ export class LinkedAccountsComponent {
   });
 
   readonly supportedProviders: readonly ProviderInfo[] = [
-    { id: 'google', icon: 'G', colour: '#4285F4', labelKey: 'settings.linkedAccounts.linkGoogle' },
-    { id: 'apple', icon: 'A', colour: '#A2AAAD', labelKey: 'settings.linkedAccounts.linkApple' },
-    { id: 'email', icon: '@', colour: '#34D399', labelKey: 'settings.linkedAccounts.linkEmail' },
     {
-      id: 'facebook',
-      icon: 'f',
-      colour: '#1877F2',
-      labelKey: 'settings.linkedAccounts.linkFacebook',
+      id: 'google',
+      icon: 'G',
+      colour: '#4285F4',
+      labelKey: 'settings.linkedAccounts.linkGoogle',
+      linkable: true,
     },
     {
-      id: 'twitter',
-      icon: 'X',
-      colour: '#E5E5E5',
-      labelKey: 'settings.linkedAccounts.linkTwitter',
+      id: 'apple',
+      icon: 'A',
+      colour: '#64748B',
+      labelKey: 'settings.linkedAccounts.linkApple',
+      linkable: true,
+    },
+    {
+      id: 'email',
+      icon: '@',
+      colour: '#059669',
+      labelKey: 'settings.linkedAccounts.linkEmail',
+      linkable: false,
     },
   ];
 
   readonly linkedCount = computed(
-    () => this.linkedAccountsResource.value()?.filter((a) => a.active).length ?? 0,
+    () => this.linkedAccountsResource.value()?.filter((account) => account.active).length ?? 0,
   );
 
-  isLinked(provider: string): boolean {
+  isLinked(provider: LinkedAccountProvider): boolean {
     return (
-      this.linkedAccountsResource.value()?.some((a) => a.provider === provider && a.active) ?? false
+      this.linkedAccountsResource
+        .value()
+        ?.some((account) => account.provider === provider && account.active) ?? false
     );
   }
 
-  getLinkedAccount(provider: string): LinkedAccount | undefined {
-    return this.linkedAccountsResource.value()?.find((a) => a.provider === provider);
-  }
-
-  canUnlink(provider: string): boolean {
+  canUnlink(provider: LinkedAccountProvider): boolean {
+    if (!this.isLinkableProvider(provider)) {
+      return false;
+    }
     const accounts = this.linkedAccountsResource.value();
-    if (!accounts) return false;
-    const activeCount = accounts.filter((a) => a.active).length;
-    if (activeCount <= 1 && this.isLinked(provider)) return false;
-    return this.isLinked(provider);
+    if (!accounts || !this.isLinked(provider)) {
+      return false;
+    }
+    return accounts.filter((account) => account.active).length > 1;
   }
 
-  async link(provider: string): Promise<void> {
+  isLinkable(provider: ProviderInfo): boolean {
+    return provider.linkable && this.isLinkableProvider(provider.id);
+  }
+
+  async link(provider: LinkedAccountProvider): Promise<void> {
+    if (!this.isLinkableProvider(provider) || this.loading()) {
+      return;
+    }
     this.loading.set(true);
     this.errorMessage.set('');
     this.successMessage.set('');
+    this.pendingUnlinkProvider.set(null);
     try {
       await this.linkedAccountsService.linkAccount(provider);
       this.linkedAccountsResource.reload();
@@ -85,13 +106,33 @@ export class LinkedAccountsComponent {
     }
   }
 
-  async unlink(provider: string): Promise<void> {
-    if (!this.canUnlink(provider)) return;
+  requestUnlink(provider: LinkedAccountProvider): void {
+    if (!this.isLinkableProvider(provider) || this.loading() || !this.canUnlink(provider)) {
+      return;
+    }
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.pendingUnlinkProvider.set(provider);
+  }
+
+  cancelUnlink(): void {
+    if (!this.loading()) {
+      this.pendingUnlinkProvider.set(null);
+    }
+  }
+
+  async confirmUnlink(): Promise<void> {
+    const provider = this.pendingUnlinkProvider();
+    if (!provider || this.loading() || !this.canUnlink(provider)) {
+      return;
+    }
+
     this.loading.set(true);
     this.errorMessage.set('');
     this.successMessage.set('');
     try {
       await this.linkedAccountsService.unlinkAccount(provider);
+      this.pendingUnlinkProvider.set(null);
       this.linkedAccountsResource.reload();
       this.successMessage.set('settings.linkedAccounts.unlinkSuccess');
     } catch {
@@ -101,7 +142,16 @@ export class LinkedAccountsComponent {
     }
   }
 
+  retryLoad(): void {
+    this.errorMessage.set('');
+    this.linkedAccountsResource.reload();
+  }
+
   goBack(): void {
     this.location.back();
+  }
+
+  private isLinkableProvider(provider: LinkedAccountProvider): provider is LinkableAccountProvider {
+    return provider === 'google' || provider === 'apple';
   }
 }

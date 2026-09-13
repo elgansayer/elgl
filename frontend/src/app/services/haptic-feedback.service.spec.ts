@@ -40,6 +40,16 @@ describe('HapticFeedbackService', () => {
     expect(vibrate).not.toHaveBeenCalled();
   });
 
+  it('defaults safely to enabled when the stored preference is malformed', () => {
+    localStorage.setItem('app_vibration_enabled', 'not-a-boolean');
+
+    const service = new HapticFeedbackService();
+    service.trigger('light');
+
+    expect(service.isEnabled()).toBe(true);
+    expect(vibrate).toHaveBeenCalledWith(10);
+  });
+
   it.each([
     ['light', 10],
     ['medium', 20],
@@ -51,6 +61,46 @@ describe('HapticFeedbackService', () => {
     service.trigger(intensity);
 
     expect(vibrate).toHaveBeenCalledWith(expected);
+  });
+
+  it.each([
+    ['again', 10],
+    ['good', 20],
+    ['known', [5, 10, 5]],
+  ] as const)('maps flashcard grade %s to its semantic haptic cue', (grade, expected) => {
+    const service = new HapticFeedbackService();
+
+    service.triggerFlashcardGrade(grade);
+
+    expect(vibrate).toHaveBeenCalledWith(expected);
+  });
+
+  it('keeps the in-memory preference when localStorage persistence fails', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('storage unavailable', 'SecurityError');
+    });
+    const service = new HapticFeedbackService();
+
+    expect(() => service.setEnabled(false)).not.toThrow();
+    expect(service.isEnabled()).toBe(false);
+    service.trigger('selection');
+    expect(vibrate).not.toHaveBeenCalled();
+
+    setItem.mockRestore();
+  });
+
+  it('defaults safely when localStorage cannot be read', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('storage unavailable', 'SecurityError');
+    });
+
+    const service = new HapticFeedbackService();
+
+    expect(service.isEnabled()).toBe(true);
+    expect(() => service.trigger('light')).not.toThrow();
+    expect(vibrate).toHaveBeenCalledWith(10);
+
+    getItem.mockRestore();
   });
 
   it('never lets a vibration API failure escape to the grading action', () => {

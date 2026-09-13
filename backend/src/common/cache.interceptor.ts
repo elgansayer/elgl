@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 /**
  * Cache-Control directives optimised for Cloudflare edge caching.
@@ -29,9 +29,12 @@ import { Response } from 'express';
  * database pressure on the origin.
  *
  * `Vary: Authorization` is set on every response to prevent Cloudflare
- * from serving one user's cached response to another user.  Cloudflare
- * respects Vary headers and will partition the cache by the Authorization
- * header value (JWT token).
+ * from serving one user's cached response to another user.  As a second,
+ * fail-closed boundary, public directives are automatically downgraded to
+ * `private, no-store` whenever the incoming request carries an Authorization
+ * header. This prevents accidental edge caching if a user-specific endpoint
+ * is ever wired to a public cache constant (for example the sticker store,
+ * which includes ownership and coin-balance state).
  */
 
 /** Used to partition Cloudflare's edge cache by auth token. */
@@ -162,15 +165,29 @@ export class CacheControlInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const response = context.switchToHttp().getResponse<Response>();
+    const http = context.switchToHttp();
+    const request = http.getRequest<Request>();
+    const response = http.getResponse<Response>();
+    const hasAuthorization =
+      typeof request?.headers?.authorization === 'string' &&
+      request.headers.authorization.trim().length > 0;
+    const isPublicDirective =
+      this.directive['Cache-Control']?.includes('public') === true ||
+      this.directive['CDN-Cache-Control']?.includes('public') === true;
+    const effectiveDirective =
+      hasAuthorization && isPublicDirective ? CACHE_NO_STORE : this.directive;
 
-    for (const [header, value] of Object.entries(this.directive)) {
+    for (const [header, value] of Object.entries(effectiveDirective)) {
       response.setHeader(header, value);
     }
 
-    // Set Cache-Tag header for targeted Cloudflare purging.
-    // Cloudflare aggregates multiple Cache-Tag values via comma-separated list.
-    if (this.cacheTags && this.cacheTags.length > 0) {
+    // Cache tags are useful only for cacheable responses. Never attach them
+    // after an authenticated public directive has been downgraded to no-store.
+    if (
+      effectiveDirective !== CACHE_NO_STORE &&
+      this.cacheTags &&
+      this.cacheTags.length > 0
+    ) {
       response.setHeader('Cache-Tag', this.cacheTags.join(','));
     }
 

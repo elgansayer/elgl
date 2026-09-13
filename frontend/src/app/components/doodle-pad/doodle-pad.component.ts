@@ -3,15 +3,22 @@ import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import {
   Component,
   ElementRef,
+  afterNextRender,
   output,
   viewChild,
-  afterNextRender,
 } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+
+const CANVAS_WIDTH = 600;
+const CANVAS_HEIGHT = 400;
+// The raster is user-created content rather than product chrome. Keep a stable paper surface
+// across themes so the default black brush remains legible and exported PNGs do not change
+// appearance when the viewer switches between light and dark UI themes.
+const CANVAS_BACKGROUND = '#ffffff';
 
 @Component({
   selector: 'app-doodle-pad',
@@ -27,15 +34,14 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
   styleUrls: ['./doodle-pad.component.scss'],
 })
 export class DoodlePadComponent {
-  doodleSaved = output<string>();
-  cancelled = output<void>();
+  readonly doodleSaved = output<string>();
+  readonly cancelled = output<void>();
 
-  canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
-  private ctx: CanvasRenderingContext2D | null = null;
-  private isDrawing = false;
+  readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
 
   currentColor = '#000000';
   brushWidth = 4;
+
   readonly colors = [
     '#000000',
     '#ef4444',
@@ -46,52 +52,83 @@ export class DoodlePadComponent {
   ];
   readonly brushWidths = [2, 4, 8, 14];
 
+  private ctx: CanvasRenderingContext2D | null = null;
+  private activePointerId: number | null = null;
+
   constructor() {
-    afterNextRender(() => {
-      const canvas = this.canvasRef().nativeElement;
-      canvas.width = 600;
-      canvas.height = 400;
-      this.ctx = canvas.getContext('2d');
-      if (this.ctx) {
-        this.ctx.fillStyle = '#1e1e1e';
-        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
+    afterNextRender(() => this.initialiseCanvas());
+  }
+
+  startDrawing(event: PointerEvent): void {
+    if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) {
+      return;
+    }
+
+    const canvas = this.canvasRef().nativeElement;
+    const pos = this.getPos(event);
+    if (!this.ctx || !pos) return;
+
+    event.preventDefault();
+    this.activePointerId = event.pointerId;
+
+    if (typeof canvas.setPointerCapture === 'function') {
+      try {
+        canvas.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture can fail when the pointer is no longer active. Drawing still works
+        // because pointerup/pointerleave reset local state below.
       }
-    });
-  }
-
-  startDrawing(event: MouseEvent | TouchEvent): void {
-    this.isDrawing = true;
-    const pos = this.getPos(event);
-    if (this.ctx && pos) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(pos.x, pos.y);
     }
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(pos.x, pos.y);
   }
 
-  draw(event: MouseEvent | TouchEvent): void {
-    if (!this.isDrawing || !this.ctx) return;
+  draw(event: PointerEvent): void {
+    if (this.activePointerId !== event.pointerId || !this.ctx) return;
+
     const pos = this.getPos(event);
-    if (pos) {
-      this.ctx.strokeStyle = this.currentColor;
-      this.ctx.lineWidth = this.brushWidth;
-      this.ctx.lineTo(pos.x, pos.y);
-      this.ctx.stroke();
-    }
+    if (!pos) return;
+
+    event.preventDefault();
+    this.ctx.strokeStyle = this.currentColor;
+    this.ctx.lineWidth = this.brushWidth;
+    this.ctx.lineTo(pos.x, pos.y);
+    this.ctx.stroke();
   }
 
-  stopDrawing(): void {
-    if (this.isDrawing && this.ctx) {
+  stopDrawing(event?: PointerEvent): void {
+    if (event && this.activePointerId !== event.pointerId) return;
+
+    const pointerId = this.activePointerId;
+    this.activePointerId = null;
+
+    if (this.ctx && pointerId !== null) {
       this.ctx.closePath();
-      this.isDrawing = false;
+    }
+
+    if (pointerId === null) return;
+
+    const canvas = this.canvasRef().nativeElement;
+    if (
+      typeof canvas.hasPointerCapture === 'function' &&
+      typeof canvas.releasePointerCapture === 'function' &&
+      canvas.hasPointerCapture(pointerId)
+    ) {
+      try {
+        canvas.releasePointerCapture(pointerId);
+      } catch {
+        // The browser may already have released capture after pointercancel/lostpointercapture.
+      }
     }
   }
 
   clearCanvas(): void {
-    if (!this.ctx || !this.canvasRef()) return;
+    this.stopDrawing();
     const canvas = this.canvasRef().nativeElement;
-    this.ctx.fillStyle = '#1e1e1e';
+    if (!this.ctx) return;
+
+    this.ctx.fillStyle = CANVAS_BACKGROUND;
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
@@ -102,50 +139,51 @@ export class DoodlePadComponent {
   }
 
   setBrushWidth(width: number): void {
-    this.brushWidth = width;
-  }
-
-  setBrushWidthFromValue(value: string | null | undefined): void {
-    if (typeof value === 'string') {
-      const width = Number(value);
-      if (this.brushWidths.includes(width)) {
-        this.setBrushWidth(width);
-      }
+    if (this.brushWidths.includes(width)) {
+      this.brushWidth = width;
     }
   }
 
+  setBrushWidthFromValue(value: string | null | undefined): void {
+    if (typeof value !== 'string') return;
+    this.setBrushWidth(Number(value));
+  }
+
   save(): void {
-    if (!this.canvasRef()) return;
+    this.stopDrawing();
     const dataUrl = this.canvasRef().nativeElement.toDataURL('image/png');
+    if (!dataUrl.startsWith('data:image/png;base64,')) return;
     this.doodleSaved.emit(dataUrl);
   }
 
   cancel(): void {
+    this.stopDrawing();
     this.cancelled.emit();
   }
 
-  private getPos(event: MouseEvent | TouchEvent): { x: number; y: number } | null {
-    if (!this.canvasRef()) return null;
+  private initialiseCanvas(): void {
+    const canvas = this.canvasRef().nativeElement;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    this.ctx = canvas.getContext('2d');
+    if (!this.ctx) return;
+
+    this.ctx.fillStyle = CANVAS_BACKGROUND;
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+  }
+
+  private getPos(event: Pick<PointerEvent, 'clientX' | 'clientY'>): { x: number; y: number } | null {
     const canvas = this.canvasRef().nativeElement;
     const rect = canvas.getBoundingClientRect();
-    let clientX: number;
-    let clientY: number;
-
-    if ('touches' in event && event.touches.length > 0) {
-      clientX = event.touches[0].clientX;
-      clientY = event.touches[0].clientY;
-    } else if ('clientX' in event) {
-      clientX = event.clientX;
-      clientY = event.clientY;
-    } else {
-      return null;
-    }
+    if (rect.width <= 0 || rect.height <= 0) return null;
 
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY,
     };
   }
 }

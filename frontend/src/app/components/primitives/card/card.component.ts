@@ -14,8 +14,11 @@ export class AppCardComponent {
   readonly padding = input<'none' | 'sm' | 'md' | 'lg'>('md');
   readonly variant = input<'default' | 'elevated' | 'outlined' | 'interactive'>('default');
   readonly customClass = input<string>('');
+  readonly role = input<string | undefined>(undefined);
 
   readonly roleAttribute = computed(() => {
+    const override = this.role();
+    if (override) return override;
     return this.variant() === 'interactive' ? 'button' : 'region';
   });
 

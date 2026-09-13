@@ -71,11 +71,11 @@ export class ModerationService {
     });
   }
 
-  async getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
-    const params: Record<string, string> = { type };
-    if (status) {
-      params['status'] = status;
-    }
+  async getItems(
+    type: 'moment' | 'profile',
+    status?: ModerationItem['status'],
+  ): Promise<ModerationItem[]> {
+    const params: Record<string, string> = status ? { type, status } : { type };
     try {
       return await withRetry(() =>
         firstValueFrom(

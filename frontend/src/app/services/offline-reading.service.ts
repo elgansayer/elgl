@@ -92,10 +92,13 @@ export class OfflineReadingService {
     const db = await this.ensureDB();
     const store = db.transaction(STORE_ARTICLES, 'readwrite').objectStore(STORE_ARTICLES);
 
-    for (const article of articles) {
-      const cached: CachedArticle = { ...article, cachedAt: Date.now() };
-      await this.putInStore(store, cached as unknown as Record<string, unknown>);
-    }
+    // ⚡ Bolt Optimization: Replace sequential awaits with Promise.all mapped concurrent operations
+    await Promise.all(
+      articles.map((article) => {
+        const cached: CachedArticle = { ...article, cachedAt: Date.now() };
+        return this.putInStore(store, cached as unknown as Record<string, unknown>);
+      }),
+    );
 
     // Evict old articles if exceeding max
     const allArticles = await this.getAllFromStore(db, STORE_ARTICLES);
@@ -103,9 +106,9 @@ export class OfflineReadingService {
       const sorted = (allArticles as CachedArticle[]).sort((a, b) => a.cachedAt - b.cachedAt);
       const toRemove = sorted.slice(0, sorted.length - MAX_CACHED_ARTICLES);
       const evictStore = db.transaction(STORE_ARTICLES, 'readwrite').objectStore(STORE_ARTICLES);
-      for (const item of toRemove) {
-        await this.deleteFromStore(evictStore, item.id);
-      }
+      await Promise.all(
+        toRemove.map((item) => this.deleteFromStore(evictStore, item.id)),
+      );
     }
   }
 

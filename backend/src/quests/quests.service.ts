@@ -1,202 +1,103 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { UsersService } from '../users/users.service';
+
+export type QuestType = 'daily' | 'weekly';
+export type QuestKey = 'correct_moments' | 'post_moment';
 
 export interface Quest {
   id: string;
   user_id: string;
-  quest_type: string;
-  quest_key: string;
+  quest_type: QuestType;
+  quest_key: QuestKey;
   progress: number;
   target: number;
   reward_coins: number;
   completed: boolean;
+  period_start: string;
+  reward_claimed_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
+interface QuestRpcResult {
+  data: unknown;
+  error: { message?: string } | null;
+}
+
+interface QuestRpcClient {
+  rpc(
+    functionName: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<QuestRpcResult>;
+}
+
+const QUEST_KEYS = new Set<QuestKey>(['correct_moments', 'post_moment']);
+const MAX_PROGRESS_INCREMENT = 100;
+
 @Injectable()
 export class QuestsService {
-  constructor(
-    private readonly supabaseService: SupabaseService,
-    private readonly usersService: UsersService,
-  ) {}
+  private readonly logger = new Logger(QuestsService.name);
 
-  async getDailyQuests(userId: string): Promise<Quest[]> {
-    const supabase = this.supabaseService.getClient();
+  constructor(private readonly supabaseService: SupabaseService) {}
 
-    const { data, error } = await supabase
-      .from('user_quests')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
+  async getQuests(userId: string): Promise<Quest[]> {
+    const rpcClient = this.getRpcClient();
+    const { data, error } = await rpcClient.rpc('get_or_create_user_quests', {
+      p_user_id: userId,
+    });
 
     if (error) {
-      throw error;
+      this.logger.error('Failed to load current quest periods');
+      throw new InternalServerErrorException('Unable to load quests');
     }
 
-    if (data && data.length > 0) {
-      return this.evaluateReset(userId, data);
-    }
-
-    await this.ensureDefaults(userId);
-    const { data: newData, error: newError } = await supabase
-      .from('user_quests')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-
-    if (newError) {
-      throw newError;
-    }
-
-    return (newData ?? []).map((q: Quest) => ({
-      ...q,
-      progress: q.progress ?? 0,
+    return ((data ?? []) as Quest[]).map((quest) => ({
+      ...quest,
+      progress: Math.max(0, Math.min(quest.progress ?? 0, quest.target)),
     }));
   }
 
-  private async evaluateReset(
-    userId: string,
-    quests: Quest[],
-  ): Promise<Quest[]> {
-    const now = new Date();
-    const supabase = this.supabaseService.getClient();
-
-    for (const q of quests) {
-      const lastReset = new Date(q.updated_at);
-      const diffHours = (now.getTime() - lastReset.getTime()) / 3600000;
-      const shouldReset =
-        (q.quest_type === 'daily' && diffHours >= 24) ||
-        (q.quest_type === 'weekly' && diffHours >= 168);
-
-      if (shouldReset) {
-        await supabase
-          .from('user_quests')
-          .update({
-            progress: 0,
-            completed: false,
-            updated_at: now.toISOString(),
-          })
-          .eq('id', q.id)
-          .eq('user_id', userId);
-      }
-    }
-
-    const { data } = await supabase
-      .from('user_quests')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-
-    return (data ?? []).map((q: Quest) => ({
-      ...q,
-      progress: q.progress ?? 0,
-    }));
-  }
-
-  private async ensureDefaults(userId: string): Promise<void> {
-    const defaultQuests: Array<{
-      quest_type: string;
-      quest_key: string;
-      target: number;
-      reward_coins: number;
-    }> = [
-      {
-        quest_type: 'daily',
-        quest_key: 'correct_moments',
-        target: 3,
-        reward_coins: 5,
-      },
-      {
-        quest_type: 'daily',
-        quest_key: 'post_moment',
-        target: 1,
-        reward_coins: 5,
-      },
-      {
-        quest_type: 'weekly',
-        quest_key: 'correct_moments',
-        target: 10,
-        reward_coins: 20,
-      },
-    ];
-
-    const supabase = this.supabaseService.getClient();
-
-    // ⚡ Bolt Optimization: Replace sequential query checks and single row inserts in ensureDefaults
-    // with a single bulk fetch using .select followed by calculating differences in memory,
-    // culminating in a single bulk .insert().
-    const { data: existingQuests } = await supabase
-      .from('user_quests')
-      .select('quest_type, quest_key')
-      .eq('user_id', userId);
-
-    const existingSet = new Set(
-      (existingQuests || []).map((q) => `${q.quest_type}:${q.quest_key}`),
-    );
-
-    const missingQuests = defaultQuests
-      .filter((q) => !existingSet.has(`${q.quest_type}:${q.quest_key}`))
-      .map((q) => ({
-        user_id: userId,
-        quest_type: q.quest_type,
-        quest_key: q.quest_key,
-        progress: 0,
-        target: q.target,
-        reward_coins: q.reward_coins,
-        completed: false,
-        updated_at: new Date().toISOString(),
-      }));
-
-    if (missingQuests.length > 0) {
-      await supabase.from('user_quests').insert(missingQuests);
-    }
+  // Backward-compatible alias for older callers while the API continues to
+  // return both daily and weekly quests from GET /quests.
+  async getDailyQuests(userId: string): Promise<Quest[]> {
+    return this.getQuests(userId);
   }
 
   async incrementProgress(
     userId: string,
     questKey: string,
-    amount: number,
+    amount = 1,
   ): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { data } = await supabase
-      .from('user_quests')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('quest_key', questKey)
-      .neq('completed', true);
+    if (!QUEST_KEYS.has(questKey as QuestKey)) {
+      throw new BadRequestException('Unknown quest key');
+    }
+    if (
+      !Number.isInteger(amount) ||
+      amount < 1 ||
+      amount > MAX_PROGRESS_INCREMENT
+    ) {
+      throw new BadRequestException('Quest progress amount must be 1 to 100');
+    }
 
-    if (!data || data.length === 0) return;
-
-    // ⚡ Bolt Optimization: Replace sequential await loop with Promise.allSettled mapped concurrent operations
-    const updatePromises = data.map(async (quest) => {
-      const newProgress = (quest.progress ?? 0) + amount;
-      const completed = newProgress >= quest.target;
-      const updatePayload: {
-        progress: number;
-        completed: boolean;
-        updated_at: string;
-      } = {
-        progress: completed ? quest.target : newProgress,
-        completed,
-        updated_at: new Date().toISOString(),
-      };
-      if (completed) {
-        await this.usersService.awardCoins(userId, quest.reward_coins);
-      }
-      await supabase
-        .from('user_quests')
-        .update(updatePayload)
-        .eq('id', quest.id);
+    const rpcClient = this.getRpcClient();
+    const { error } = await rpcClient.rpc('advance_user_quests', {
+      p_user_id: userId,
+      p_quest_key: questKey,
+      p_amount: amount,
     });
 
-    const results = await Promise.allSettled(updatePromises);
-    const failures = results.filter(
-      (result): result is PromiseRejectedResult => result.status === 'rejected',
-    );
-    if (failures.length > 0) {
-      throw failures[0].reason;
+    if (error) {
+      this.logger.error('Failed to atomically advance quest progress');
+      throw new InternalServerErrorException('Unable to update quest progress');
     }
+  }
+
+  private getRpcClient(): QuestRpcClient {
+    return this.supabaseService.getClient() as unknown as QuestRpcClient;
   }
 }

@@ -17,7 +17,13 @@ describe('GdprComponent', () => {
 
   beforeEach(async () => {
     mockGdprService = {
-      requestArchive: vi.fn().mockResolvedValue(undefined),
+      requestArchive: vi.fn().mockResolvedValue({
+        request_id: '11111111-1111-4111-8111-111111111111',
+        status: 'ready',
+        download_url: 'https://example.supabase.co/storage/v1/object/sign/gdpr-archives/archive.json?token=short-lived',
+        expires_at: '2026-09-01T00:00:00.000Z',
+        message: 'Archive ready for download.',
+      }),
       deleteAccount: vi.fn().mockResolvedValue(undefined),
       cancelDeletion: vi.fn().mockResolvedValue(undefined),
     };
@@ -38,6 +44,10 @@ describe('GdprComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should render the GDPR title and description', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.app-header-title')?.textContent).toContain('gdpr.title');
@@ -45,32 +55,98 @@ describe('GdprComponent', () => {
     expect(el.textContent).toContain('gdpr.deleteSection');
   });
 
-  it('should call requestArchive and show success', async () => {
-    fixture.componentInstance.requestArchive();
-    expect(mockGdprService.requestArchive).toHaveBeenCalled();
-    await fixture.whenStable();
+  it('requests a private archive, downloads the signed URL, and shows success', async () => {
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    await fixture.componentInstance.requestArchive();
     fixture.detectChanges();
 
+    expect(mockGdprService.requestArchive).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('gdpr.archiveSuccess');
+  });
+
+  it('accepts an idempotent in-progress response without inventing a download', async () => {
+    mockGdprService.requestArchive.mockResolvedValue({
+      request_id: '22222222-2222-4222-8222-222222222222',
+      status: 'processing',
+      message: 'Archive preparation is already in progress.',
+    });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+
+    await fixture.componentInstance.requestArchive();
+
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.archiveSuccess()).toBe(true);
+  });
+
+  it('rejects non-http signed URL schemes', async () => {
+    mockGdprService.requestArchive.mockResolvedValue({
+      request_id: '33333333-3333-4333-8333-333333333333',
+      status: 'ready',
+      download_url: 'javascript:alert(1)',
+      message: 'Archive ready for download.',
+    });
+
+    await fixture.componentInstance.requestArchive();
+
+    expect(fixture.componentInstance.archiveSuccess()).toBe(false);
+    expect(fixture.componentInstance.archiveError()).toBe('common.loadError');
+  });
+
+  it('deduplicates concurrent archive requests', async () => {
+    let resolveRequest: ((value: unknown) => void) | undefined;
+    mockGdprService.requestArchive.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+
+    const first = fixture.componentInstance.requestArchive();
+    const second = fixture.componentInstance.requestArchive();
+    expect(mockGdprService.requestArchive).toHaveBeenCalledTimes(1);
+
+    resolveRequest?.({
+      request_id: '44444444-4444-4444-8444-444444444444',
+      status: 'processing',
+      message: 'Archive preparation is already in progress.',
+    });
+    await Promise.all([first, second]);
   });
 
   it('should call deleteAccount when confirmed', async () => {
     fixture.componentInstance.confirmDelete.set(true);
     fixture.detectChanges();
 
-    fixture.componentInstance.deleteAccount();
-    expect(mockGdprService.deleteAccount).toHaveBeenCalledWith(true);
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await fixture.componentInstance.deleteAccount();
 
-    // After deletion, the cancel section should appear
+    expect(mockGdprService.deleteAccount).toHaveBeenCalledWith(true);
     expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
+  });
+
+  it('deduplicates concurrent delete submissions', async () => {
+    fixture.componentInstance.confirmDelete.set(true);
+    let resolveDelete: (() => void) | undefined;
+    mockGdprService.deleteAccount.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveDelete = resolve;
+      }),
+    );
+
+    const first = fixture.componentInstance.deleteAccount();
+    const second = fixture.componentInstance.deleteAccount();
+    expect(mockGdprService.deleteAccount).toHaveBeenCalledTimes(1);
+
+    resolveDelete?.();
+    await Promise.all([first, second]);
   });
 
   it('should not call deleteAccount when not confirmed', () => {
     fixture.componentInstance.confirmDelete.set(false);
-    fixture.componentInstance.deleteAccount();
+    void fixture.componentInstance.deleteAccount();
     expect(mockGdprService.deleteAccount).not.toHaveBeenCalled();
   });
 
@@ -86,19 +162,16 @@ describe('GdprComponent', () => {
     fixture.componentInstance.isPendingDeletion.set(true);
     fixture.detectChanges();
 
-    fixture.componentInstance.cancelDeletion();
-    expect(mockGdprService.cancelDeletion).toHaveBeenCalled();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await fixture.componentInstance.cancelDeletion();
 
+    expect(mockGdprService.cancelDeletion).toHaveBeenCalled();
     expect(fixture.componentInstance.isPendingDeletion()).toBe(false);
   });
 
   it('should show archive error when requestArchive fails', async () => {
     mockGdprService.requestArchive.mockRejectedValue(new Error('Network error'));
-    fixture.componentInstance.requestArchive();
-    await fixture.whenStable();
-    fixture.detectChanges();
+
+    await fixture.componentInstance.requestArchive();
 
     expect(fixture.componentInstance.archiveError()).toBe('common.loadError');
   });

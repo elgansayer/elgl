@@ -14,6 +14,7 @@ from openhands_factory.daemon import (
     queue_snapshot,
     refresh_jobs,
     select_batch,
+    stall_alert_decision,
 )
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.models import Job, JobState, Task
@@ -451,6 +452,148 @@ def test_storage_reserve_blocks_and_recovers_scheduling(
 
     assert daemon._storage_ready()
     assert not daemon.storage_blocked
+
+
+def test_stall_alert_decision_no_stall_returns_no_alert() -> None:
+    now = datetime(2024, 1, 1, tzinfo=UTC)
+    stall_since, reason = stall_alert_decision(
+        storage_blocked=False,
+        no_pr_progress_warning=False,
+        no_pr_progress_detail="",
+        stall_since=None,
+        now=now,
+        stall_alert_minutes=20,
+        already_dispatched=False,
+    )
+    assert stall_since is None
+    assert reason is None
+
+
+def test_stall_alert_decision_starts_tracking_before_threshold_elapses() -> None:
+    now = datetime(2024, 1, 1, tzinfo=UTC)
+    stall_since, reason = stall_alert_decision(
+        storage_blocked=True,
+        no_pr_progress_warning=False,
+        no_pr_progress_detail="",
+        stall_since=None,
+        now=now,
+        stall_alert_minutes=20,
+        already_dispatched=False,
+    )
+    assert stall_since == now
+    assert reason is None
+
+
+def test_stall_alert_decision_fires_once_threshold_elapsed() -> None:
+    since = datetime(2024, 1, 1, tzinfo=UTC)
+    now = since + timedelta(minutes=20)
+    stall_since, reason = stall_alert_decision(
+        storage_blocked=True,
+        no_pr_progress_warning=False,
+        no_pr_progress_detail="",
+        stall_since=since,
+        now=now,
+        stall_alert_minutes=20,
+        already_dispatched=False,
+    )
+    assert stall_since == since
+    assert reason == "Scheduling has been stalled for 20 minutes: storage reserve blocked"
+
+
+def test_stall_alert_decision_combines_both_reasons() -> None:
+    since = datetime(2024, 1, 1, tzinfo=UTC)
+    now = since + timedelta(minutes=25)
+    stall_since, reason = stall_alert_decision(
+        storage_blocked=True,
+        no_pr_progress_warning=True,
+        no_pr_progress_detail="no PR progress in 6.0 hours",
+        stall_since=since,
+        now=now,
+        stall_alert_minutes=20,
+        already_dispatched=False,
+    )
+    assert stall_since == since
+    assert reason == (
+        "Scheduling has been stalled for 25 minutes: "
+        "storage reserve blocked; no PR progress in 6.0 hours"
+    )
+
+
+def test_stall_alert_decision_does_not_repeat_once_dispatched() -> None:
+    since = datetime(2024, 1, 1, tzinfo=UTC)
+    now = since + timedelta(minutes=30)
+    stall_since, reason = stall_alert_decision(
+        storage_blocked=True,
+        no_pr_progress_warning=False,
+        no_pr_progress_detail="",
+        stall_since=since,
+        now=now,
+        stall_alert_minutes=20,
+        already_dispatched=True,
+    )
+    assert stall_since == since
+    assert reason is None
+
+
+def test_stall_alert_decision_resets_once_condition_clears() -> None:
+    since = datetime(2024, 1, 1, tzinfo=UTC)
+    now = since + timedelta(minutes=30)
+    stall_since, reason = stall_alert_decision(
+        storage_blocked=False,
+        no_pr_progress_warning=False,
+        no_pr_progress_detail="",
+        stall_since=since,
+        now=now,
+        stall_alert_minutes=20,
+        already_dispatched=True,
+    )
+    assert stall_since is None
+    assert reason is None
+
+
+def test_check_stall_dispatches_investigation_once_threshold_elapsed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace(  # type: ignore[assignment]
+        stall_alert_minutes=20, state_dir=Path("/tmp/factory-state")
+    )
+    daemon.storage_blocked = True
+    daemon.stall_since = datetime.now(UTC) - timedelta(minutes=21)
+    daemon.stall_investigation_dispatched = False
+    daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
+        run_stall_investigation=lambda reason, diagnostics: None
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.no_pr_progress_check",
+        lambda config: SimpleNamespace(warning=False, detail=""),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.gather_diagnostics", lambda state_dir: "diagnostics snapshot"
+    )
+    started_args: list[tuple[object, ...]] = []
+
+    class ImmediateThread:
+        def __init__(self, *, target, args, daemon, name):
+            self.target = target
+            self.args = args
+
+        def start(self) -> None:
+            started_args.append(self.args)
+
+    monkeypatch.setattr("openhands_factory.daemon.Thread", ImmediateThread)
+
+    daemon._check_stall()
+
+    assert daemon.stall_investigation_dispatched
+    assert len(started_args) == 1
+    reason, diagnostics = started_args[0]
+    assert "stalled for 21 minutes" in reason
+    assert diagnostics == "diagnostics snapshot"
+
+    # A second cycle within the same continuous stall must not dispatch again.
+    daemon._check_stall()
+    assert len(started_args) == 1
 
 
 def test_daemon_refuses_to_schedule_when_a_security_boundary_fails(

@@ -16,14 +16,15 @@ export class SuggestFlashcardsService {
 
   async suggestFromMessage(
     message: string,
-    userId?: string,
     targetLanguage?: string,
-    excludeKnown?: boolean,
+    excludeKnown = true,
+    maxResults?: number,
   ): Promise<SuggestResult> {
-    let params = new HttpParams().set('message', message);
-    if (userId) params = params.set('user_id', userId);
+    let params = new HttpParams()
+      .set('message', message)
+      .set('exclude_known', String(excludeKnown));
     if (targetLanguage) params = params.set('target_language', targetLanguage);
-    if (excludeKnown !== undefined) params = params.set('exclude_known', String(excludeKnown));
+    if (maxResults !== undefined) params = params.set('max_results', String(maxResults));
 
     const token = this.authService.getAccessToken();
     const headers = new HttpHeaders({ Authorization: `Bearer ${token ?? ''}` });

@@ -26,6 +26,7 @@ import { ReportUserModalComponent } from './components/report-user-modal/report-
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
+import { ConversationAnalysisLauncherComponent } from './features/premium-ai/conversation-analysis-launcher.component';
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
@@ -60,6 +61,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     ReportUserModalComponent,
     DailyLoginModalComponent,
     ConfirmDialogComponent,
+    ConversationAnalysisLauncherComponent,
     ThemeSelectorComponent,
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
@@ -263,18 +265,26 @@ export class AppComponent implements OnInit {
     // Load chat unread counts from backend
     try {
       const rooms = await this.chatService.getRooms();
+      const currentUserId = this.authService.currentUser()?.id;
       let totalChatUnread = 0;
-      for (const room of rooms) {
-        try {
-          const messages = await this.chatService.getMessages(room.id);
-          const currentUserId = this.authService.currentUser()?.id;
-          totalChatUnread += messages.filter(
-            (m) => !m.is_read && m.sender_id !== currentUserId,
+
+      // Fetch several rooms in parallel without creating an unbounded request burst for
+      // accounts with a large room history.
+      const unreadFetchConcurrency = 6;
+      for (let start = 0; start < rooms.length; start += unreadFetchConcurrency) {
+        const batch = rooms.slice(start, start + unreadFetchConcurrency);
+        const messageResults = await Promise.allSettled(
+          batch.map((room) => this.chatService.getMessages(room.id)),
+        );
+
+        for (const result of messageResults) {
+          if (result.status !== 'fulfilled') continue;
+          totalChatUnread += result.value.filter(
+            (message) => !message.is_read && message.sender_id !== currentUserId,
           ).length;
-        } catch {
-          // Skip rooms with errors
         }
       }
+
       this.unreadCounter.setChatUnread(totalChatUnread);
     } catch {
       // Silently ignore - real-time events will update counts

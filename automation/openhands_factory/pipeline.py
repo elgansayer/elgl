@@ -8,9 +8,11 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Semaphore
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from pydantic import SecretStr
 
+from openhands_factory.alerts import AlertService
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
@@ -22,22 +24,35 @@ from openhands_factory.exceptions import (
     VerificationFailed,
 )
 from openhands_factory.git_workflow import GitWorkflow
-from openhands_factory.github import GitHubClient, PullRequestStatus
+from openhands_factory.github import GitHubClient, PullRequestMatch, PullRequestStatus
 from openhands_factory.jobs import JobStore
+from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
-from openhands_factory.models import Job, JobState, Task
+from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
+from openhands_factory.pr_lifecycle import (
+    PullRequestLifecycleEvent,
+    PullRequestLifecycleTracker,
+)
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
 from openhands_factory.state import atomic_write_json, read_json
-from openhands_factory.task_source import TaskStore
-from openhands_factory.verification import commands_for, run_verification
+from openhands_factory.task_source import TaskClaimConflict, TaskStore
+from openhands_factory.verification import commands_for, run_verification, verification_descriptions
 
 if TYPE_CHECKING:
     from openhands_factory.agents.router import AgentRouter
 
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
+QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
+QUARANTINE_NOTICE = (
+    f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
+    "Provider outages and busy "
+    "subscriptions do not trigger this circuit. This is a bounded, "
+    "automatic cooldown - the Factory will requeue and retry this task "
+    "on its own; no manual action is needed."
+)
 CODE_MUTATING_AGENT_PHASES = {
     "architecture",
     "implementation",
@@ -45,6 +60,43 @@ CODE_MUTATING_AGENT_PHASES = {
     "quality-repair",
     "ci-repair",
 }
+
+# A path in one of these categories can never introduce the vulnerability
+# classes security.md's checklist scans for (hardcoded secrets, webhook/
+# payment trust, privileged-state handling, authz, injection, security
+# config) - it has no runtime execution surface at all. Translation content
+# files are included deliberately: a locale JSON's *values* are rendered
+# strings, never executed or trusted as privileged input.
+#
+# Test files are deliberately NOT exempt: a test fixture can accidentally
+# carry a real secret or credential, and no separate deterministic
+# secret-scanner gate covers that class of change, so a hardcoded-secrets
+# check still needs to run on them.
+_SECURITY_EXEMPT_SUFFIXES = (".md", ".txt")
+_SECURITY_EXEMPT_DIR_PARTS = ("i18n", "locales")
+_SECURITY_EXEMPT_PATH_PREFIXES = (Path(".agents/skills"),)
+
+
+def _is_security_review_exempt(changed_paths: set[Path]) -> bool:
+    """Whether every changed path is provably outside security.md's scope.
+
+    Deliberately conservative: any single path that isn't docs, translation
+    content, or a skill file forces a real security-review agent call.
+    False negatives here (running the agent when it wasn't strictly needed)
+    are cheap; false positives (skipping a review a diff actually needed)
+    are not, so this only skips when every path matches.
+    """
+    if not changed_paths:
+        return False
+    for path in changed_paths:
+        if path.suffix in _SECURITY_EXEMPT_SUFFIXES:
+            continue
+        if set(path.parts) & set(_SECURITY_EXEMPT_DIR_PARTS):
+            continue
+        if any(str(path).startswith(str(prefix)) for prefix in _SECURITY_EXEMPT_PATH_PREFIXES):
+            continue
+        return False
+    return True
 
 
 class FactoryPipeline:
@@ -72,8 +124,15 @@ class FactoryPipeline:
             max_repeated_failures=config.max_consecutive_failures,
         )
         self.tasks = TaskStore(config.state_dir)
-        self.prompt_dir = config.repository / "automation/prompts"
-        self.system_prompt = build_system_prompt(self.prompt_dir)
+        self.pr_lifecycle = PullRequestLifecycleTracker(
+            config.state_dir,
+            config.github_repository,
+            AlertService(config),
+        )
+        self.prompt_dir = config.prompt_dir
+        self.system_prompt = build_system_prompt(
+            self.prompt_dir, system_prompt_path=config.system_prompt_path
+        )
         openhands_settings = config.agents.providers["openhands"]
         openhands_runtime_config = config.model_copy(
             update={
@@ -238,10 +297,7 @@ class FactoryPipeline:
             policy=ConfigRoutingPolicy(config.agents),
             health_store=self.health_store,
             capacity_store=ProviderCapacityStore(
-                config.state_dir,
-                factory_generation=(
-                    config.factory_generation if config.factory_generation != "unknown" else None
-                ),
+                config.provider_capacity_dir,
                 max_lease_seconds=maximum_agent_lease_seconds(config),
             ),
             provider_limits=provider_limits,
@@ -288,11 +344,6 @@ class FactoryPipeline:
         for job in jobs.values():
             if job.state is JobState.QUARANTINED and job.quarantine_notification_pending:
                 self._publish_quarantine(job)
-        # A daemon restart or an interrupted worker can leave a lease behind while the
-        # durable job is still discovered. Such jobs are safe to reclaim before scheduling.
-        for task_id, job in jobs.items():
-            if job.state is JobState.DISCOVERED:
-                self.tasks.release(task_id)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
         retired_jobs: list[Job] = []
@@ -404,72 +455,144 @@ class FactoryPipeline:
         if not candidates:
             return None
         job = min(candidates, key=lambda item: (item.task.priority, int(item.task.identifier)))
-        try:
-            self._advance(job)
-            job.attempts = 0
-            job.last_error = None
-            job.next_attempt_at = None
-        except ProviderCapacityUnavailable as error:
-            job.last_error = str(error)[-2000:]
-            retry = error.retry_after_seconds or self.config.provider_cooldown_seconds
-            job.next_attempt_at = datetime.now(UTC) + timedelta(seconds=max(retry, 1))
-            self.tasks.release(job.task.identifier)
-            LOGGER.warning("Factory job %s deferred: %s", job.task.identifier, error)
-        except Exception as error:
-            job.attempts += 1
-            job.last_error = str(error)[-2000:]
-            self._record_failure(job)
-        job.updated_at = datetime.now(UTC)
-        self.jobs.save_job(job)
-        if job.state is JobState.QUARANTINED and job.quarantine_notification_pending:
-            self._publish_quarantine(job)
-        return job
+        return self._run_claimed_job(job.task.identifier)
 
     def run_job(self, task_id: str) -> Job | None:
-        """Advance one scheduler-selected job and merge only its durable state."""
-        job = self.jobs.load().get(task_id)
-        if job is None or job.state in TERMINAL_STATES:
+        """Advance one scheduler-selected job under a worker-distinct CAS lease."""
+
+        return self._run_claimed_job(task_id)
+
+    def _run_claimed_job(self, task_id: str) -> Job | None:
+        snapshot = self.jobs.load().get(task_id)
+        if snapshot is None or snapshot.state in TERMINAL_STATES:
             return None
+        lease_owner = (
+            f"{self.tasks.factory_generation}:{task_id}:{snapshot.state.value}:{uuid4().hex}"
+        )
+        producer_identity = snapshot.producer_identity or (
+            f"{self.tasks.factory_generation}:{task_id}"
+        )
         try:
-            self._advance(job)
-            job.attempts = 0
-            job.last_error = None
-            job.next_attempt_at = None
-        except ProviderCapacityUnavailable as error:
-            job.last_error = str(error)[-2000:]
-            retry = error.retry_after_seconds or self.config.provider_cooldown_seconds
-            job.next_attempt_at = datetime.now(UTC) + timedelta(seconds=max(retry, 1))
-            self.tasks.release(job.task.identifier)
-            LOGGER.warning("Factory job %s deferred: %s", job.task.identifier, error)
-        except Exception as error:
-            job.attempts += 1
-            job.last_error = str(error)[-2000:]
-            self._record_failure(job)
+            claim = self.tasks.acquire(
+                snapshot.task,
+                lease_owner,
+                producer_identity=producer_identity,
+            )
+        except TaskClaimConflict as conflict:
+            return self._handle_claim_conflict(snapshot, conflict.claim)
+
+        try:
+            # A sibling dispatch may have completed a transition while this worker
+            # waited for the claim lock. Reload only after acquisition, so stale
+            # in-memory state can never repeat branch or PR creation.
+            job = self.jobs.load().get(task_id)
+            if job is None or job.state in TERMINAL_STATES:
+                return None
+            self._copy_claim_metadata(job, claim)
+            try:
+                self._advance(job, lease_owner)
+                job.attempts = 0
+                job.last_error = None
+                job.next_attempt_at = None
+            except ProviderCapacityUnavailable as error:
+                job.last_error = str(error)[-2000:]
+                retry = error.retry_after_seconds or self.config.provider_cooldown_seconds
+                job.next_attempt_at = datetime.now(UTC) + timedelta(seconds=max(retry, 1))
+                LOGGER.warning("Factory job %s deferred: %s", job.task.identifier, error)
+            except Exception as error:
+                job.attempts += 1
+                job.last_error = str(error)[-2000:]
+                self._record_failure(job)
+            job.updated_at = datetime.now(UTC)
+            self.jobs.save_job(job)
+            if job.last_error and job.last_failure_fingerprint is not None:
+                self.tasks.record_failure(
+                    job.task.identifier,
+                    lease_owner,
+                    job.last_failure_fingerprint,
+                )
+            if job.state is JobState.QUARANTINED and job.quarantine_notification_pending:
+                self._publish_quarantine(job)
+            return job
+        finally:
+            try:
+                self.tasks.release(task_id, owner=lease_owner)
+            except TaskClaimConflict:
+                LOGGER.error(
+                    "factory.task.lease_release_rejected task=%s owner=%s",
+                    task_id,
+                    lease_owner,
+                )
+
+    def _handle_claim_conflict(self, job: Job, claim: Lease) -> Job | None:
+        """Attach an equivalent task to its durable canonical owner without executing it."""
+
+        if claim.task_id == job.task.identifier and claim.completed_at is None:
+            LOGGER.info(
+                "Skipped duplicate dispatch for task %s; worker %s owns the active claim",
+                job.task.identifier,
+                claim.owner,
+            )
+            return None
+        self._copy_claim_metadata(job, claim)
+        job.state = JobState.DONE
+        job.last_error = None
+        job.next_attempt_at = None
         job.updated_at = datetime.now(UTC)
         self.jobs.save_job(job)
-        if job.state is JobState.QUARANTINED and job.quarantine_notification_pending:
-            self._publish_quarantine(job)
+        if job.task.source == "github-issue" and claim.task_id != job.task.identifier:
+            destination = (
+                f"pull request #{claim.canonical_pull_request}"
+                if claim.canonical_pull_request is not None
+                else f"task #{claim.task_id}"
+            )
+            self.github.add_comment(
+                int(job.task.identifier),
+                (
+                    "OpenHands Factory skipped a sibling implementation because this "
+                    f"logical task is already owned by canonical {destination}."
+                ),
+            )
         return job
+
+    @staticmethod
+    def _copy_claim_metadata(job: Job, claim: Lease) -> None:
+        job.canonical_task_id = claim.task_id
+        job.producer_identity = claim.producer_identity
+        job.branch = claim.canonical_branch or job.branch
+        job.pull_request = claim.canonical_pull_request or job.pull_request
+        job.initial_base_sha = claim.initial_base_sha or job.initial_base_sha
+        job.latest_verified_sha = claim.latest_verified_sha or job.latest_verified_sha
+        job.predecessor_pull_request = (
+            claim.predecessor_pull_request or job.predecessor_pull_request
+        )
+        job.successor_pull_request = claim.successor_pull_request or job.successor_pull_request
+        job.changed_path_fingerprint = (
+            claim.changed_path_fingerprint or job.changed_path_fingerprint
+        )
 
     def _record_failure(self, job: Job) -> None:
         LOGGER.exception("Factory job %s failed", job.task.identifier)
-        self.tasks.release(job.task.identifier)
 
     def _publish_quarantine(self, job: Job) -> None:
-        """Publish one recoverable human-action circuit without retry spam."""
+        """Publish one recoverable, fully autonomous circuit without retry spam.
+
+        This is never a request for a human decision - see AGENTS.md's autonomy
+        mandate. It is a bounded cooldown: recover_due_quarantines() automatically
+        returns the task to DISCOVERED after quarantine_recovery_minutes, preserving
+        failure evidence so an unrelated transient error doesn't get treated as the
+        same repeated failure. No "needs-human" label is applied.
+        """
 
         issue = int(job.task.identifier)
         try:
             self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
-            self.github.add_issue_labels(issue, ("factory-quarantined", "needs-human"))
-            self.github.add_comment(
-                issue,
-                "OpenHands Factory paused this task after the same task-side failure "
-                "repeated to its configured safety limit. Provider outages and busy "
-                "subscriptions do not trigger this circuit. After resolving the cause, "
-                "run `hellotalk-factory backlog requeue-quarantined` to reset the "
-                "durable state and labels.",
-            )
+            self.github.add_issue_labels(issue, ("factory-quarantined",))
+            existing_comments = self.github.list_issue_comments(issue)
+            if not any(
+                comment.body.startswith(QUARANTINE_NOTICE_PREFIX) for comment in existing_comments
+            ):
+                self.github.add_comment(issue, QUARANTINE_NOTICE)
         except FactoryError:
             LOGGER.exception(
                 "factory.job.quarantine_notification_failed task=%s",
@@ -486,11 +609,15 @@ class FactoryPipeline:
         phase: str,
         prompt: str,
         *,
+        lease_owner: str | None = None,
         prepare_attempt: Callable[[], None] | None = None,
         validate_output: Callable[[], None] | None = None,
         require_repository_change: bool = False,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
+
+        if lease_owner is not None:
+            self.tasks.renew(job.task.identifier, lease_owner)
 
         # Map phase string to enum
         phase_map = {
@@ -586,15 +713,20 @@ class FactoryPipeline:
                 )
             raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
 
-    def _advance(self, job: Job) -> None:
+    def _advance(self, job: Job, lease_owner: str) -> None:
+        # Notification delivery is best-effort and never changes merge eligibility.
+        # Retry a small number of previously-recorded lifecycle events on ordinary
+        # Factory progress so a transient Telegram outage is eventually visible.
+        self.pr_lifecycle.flush_pending()
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
         # Control prompts must never come from the agent-modifiable worktree. The
         # dedicated Factory checkout is deployed from main and remains outside every
         # task diff, so an implementation cannot weaken its own security or review phase.
         prompt_dir = self.prompt_dir
+        self.tasks.renew(job.task.identifier, lease_owner)
         if job.state is JobState.DISCOVERED:
             if job.task.source == "github-pull-request":
-                self._discover_pull_request(job, worktree)
+                self._discover_pull_request(job, worktree, lease_owner)
                 return
             if worktree.exists():
                 stale_workflow = self._workflow(self.config.repository)
@@ -604,9 +736,65 @@ class FactoryPipeline:
                     )
                     stale_workflow.archive_worktree(worktree, recovery)
                 stale_workflow.remove_worktree(worktree, force=True)
-            self.tasks.acquire(job.task, "factory")
             workflow = self._workflow(self.config.repository)
-            job.branch = workflow.prepare_worktree(worktree, job.task.identifier, job.task.title)
+            claim = self.tasks.claims()[job.task.logical_key]
+            matches = self.github.find_equivalent_pull_requests(
+                job.task,
+                known_branch=claim.canonical_branch,
+                known_path_fingerprint=claim.changed_path_fingerprint,
+            )
+            active_match = next((match for match in matches if match.is_open_canonical), None)
+            if active_match is not None:
+                self._attach_pull_request(job, worktree, active_match, lease_owner)
+                return
+            merged_match = next(
+                (
+                    match
+                    for match in matches
+                    if match.state == "MERGED" and match.has_strong_identity
+                ),
+                None,
+            )
+            if merged_match is not None:
+                self._bind_matched_pull_request(job, merged_match, lease_owner)
+                job.state = JobState.MERGED
+                return
+            predecessor = next(
+                (
+                    match
+                    for match in matches
+                    if match.has_strong_identity
+                    and (
+                        match.state == "CLOSED"
+                        or match.labels.intersection({"duplicate", "factory-skip", "superseded"})
+                    )
+                ),
+                None,
+            )
+            if predecessor is not None:
+                job.predecessor_pull_request = predecessor.number
+            if claim.canonical_branch is None:
+                job.branch = workflow.prepare_worktree(
+                    worktree,
+                    job.task.identifier,
+                    job.task.title,
+                )
+            else:
+                workflow.prepare_claimed_worktree(
+                    worktree,
+                    claim.canonical_branch,
+                    claim.initial_base_sha,
+                )
+                job.branch = claim.canonical_branch
+            job.initial_base_sha = self._workflow(worktree).head_sha()
+            bound = self.tasks.bind_branch(
+                job.task.identifier,
+                lease_owner,
+                job.branch,
+                job.initial_base_sha,
+                predecessor_pull_request=job.predecessor_pull_request,
+            )
+            self._copy_claim_metadata(job, bound)
             self.github.add_issue_labels(int(job.task.identifier), ("factory-active",))
             self.github.add_comment(
                 int(job.task.identifier),
@@ -621,7 +809,7 @@ class FactoryPipeline:
 
         workflow = self._workflow(
             worktree,
-            external_branch=job.branch if job.task.source == "github-pull-request" else None,
+            external_branch=job.branch if job.pull_request is not None else None,
         )
         if job.state is JobState.IMPLEMENTING:
             context_files = self._context_files(worktree)
@@ -637,25 +825,37 @@ class FactoryPipeline:
                 worktree,
                 "implementation",
                 prompt,
+                lease_owner=lease_owner,
                 require_repository_change=True,
             )
             job.state = JobState.SECURITY_REVIEW
             return
 
         if job.state is JobState.SECURITY_REVIEW:
+            try:
+                exempt = _is_security_review_exempt(workflow.changed_paths())
+            except RepositorySafetyError:
+                # Can't prove the diff is out of scope, so fall through to a
+                # real review rather than crash the job or skip it blind.
+                exempt = False
+            if exempt:
+                job.state = JobState.VERIFYING
+                return
             self._run_agent(
                 job,
                 worktree,
                 "security",
                 build_phase_prompt(prompt_dir, "security", job.task),
+                lease_owner=lease_owner,
             )
             job.state = JobState.VERIFYING
             return
 
         if job.state is JobState.VERIFYING:
-            if self._refresh_pull_request_if_changed(job, worktree):
+            if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
                 return
-            if not self._verify_or_schedule_quality_repair(job, workflow):
+            verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
+            if verified_paths is None:
                 return
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
@@ -669,6 +869,17 @@ class FactoryPipeline:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
             job.head_sha = workflow.head_sha()
+            job.latest_verified_sha = job.head_sha
+            job.changed_path_fingerprint = changed_path_fingerprint(
+                str(path) for path in verified_paths
+            )
+            bound = self.tasks.record_verification(
+                job.task.identifier,
+                lease_owner,
+                job.head_sha,
+                job.changed_path_fingerprint,
+            )
+            self._copy_claim_metadata(job, bound)
             if job.pull_request is None:
                 job.state = JobState.PR_DRAFT
             else:
@@ -683,7 +894,7 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.QUALITY_REPAIRING:
-            if self._refresh_pull_request_if_changed(job, worktree):
+            if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
                 return
             findings = check_quality_gate(workflow, self.config.base_branch)
             if not findings and not job.review_findings:
@@ -708,6 +919,7 @@ class FactoryPipeline:
                 worktree,
                 "quality_repair",
                 build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
+                lease_owner=lease_owner,
                 require_repository_change=True,
             )
 
@@ -719,11 +931,43 @@ class FactoryPipeline:
         if job.state is JobState.PR_DRAFT:
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
+            claim = self.tasks.claims()[job.task.logical_key]
+            if claim.canonical_pull_request is not None:
+                self._copy_claim_metadata(job, claim)
+                job.state = JobState.REVIEWING
+                return
+            matches = self.github.find_equivalent_pull_requests(
+                job.task,
+                known_branch=job.branch,
+                known_path_fingerprint=(
+                    job.changed_path_fingerprint or claim.changed_path_fingerprint
+                ),
+            )
+            existing = next(
+                (match for match in matches if match.is_open_canonical),
+                None,
+            )
+            if existing is not None:
+                if existing.branch == job.branch:
+                    self._bind_matched_pull_request(job, existing, lease_owner)
+                    job.state = JobState.REVIEWING
+                else:
+                    self._attach_pull_request(job, worktree, existing, lease_owner)
+                return
             job.pull_request = self.github.create_pull_request(
                 job.branch,
                 f"Fixes #{job.task.identifier}: {job.task.title}",
                 self._pull_request_body(job),
             )
+            bound = self.tasks.bind_pull_request(
+                job.task.identifier,
+                lease_owner,
+                job.pull_request,
+                job.branch,
+                predecessor_pull_request=job.predecessor_pull_request,
+            )
+            self._copy_claim_metadata(job, bound)
+            job.successor_pull_request = bound.successor_pull_request
             self.github.add_comment(
                 job.pull_request,
                 (
@@ -736,7 +980,7 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
-            if self._refresh_pull_request_if_changed(job, worktree):
+            if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
                 return
 
             # The worktree persists across retries of this state, so a review report
@@ -756,6 +1000,7 @@ class FactoryPipeline:
                 worktree,
                 "review",
                 build_phase_prompt(prompt_dir, "review", job.task),
+                lease_owner=lease_owner,
                 prepare_attempt=clear_review_report,
                 validate_output=require_valid_review_report,
             )
@@ -769,7 +1014,7 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     raise FactoryError("Review repair limit exceeded")
                 self._mark_latest_review_as_mutating(job)
-                self._verify(workflow)
+                verified_paths = self._verify(workflow)
                 workflow.stage_all()
                 subject = self._subject(job)
                 workflow.commit(f"fix: address review for {subject} {job.task.identifier}")
@@ -777,6 +1022,17 @@ class FactoryPipeline:
                     raise FactoryError("Job branch is missing")
                 workflow.push(job.branch)
                 job.head_sha = workflow.head_sha()
+                job.latest_verified_sha = job.head_sha
+                job.changed_path_fingerprint = changed_path_fingerprint(
+                    str(path) for path in verified_paths
+                )
+                bound = self.tasks.record_verification(
+                    job.task.identifier,
+                    lease_owner,
+                    job.head_sha,
+                    job.changed_path_fingerprint,
+                )
+                self._copy_claim_metadata(job, bound)
                 job.repair_attempts += 1
                 job.state = JobState.REVIEWING
                 return
@@ -819,15 +1075,29 @@ class FactoryPipeline:
                     "checks before merge."
                 ),
             )
+            self._record_pr_lifecycle(
+                job,
+                "reviewed",
+                (
+                    "Factory independent review accepted this exact commit, published the "
+                    "factory/independent-review success status, and applied factory-reviewed. "
+                    "Required GitHub checks must still pass before merge."
+                ),
+            )
             job.state = JobState.CI_PENDING
             return
 
         if job.state is JobState.CI_PENDING:
             status = self._status(job)
             if status.state == "MERGED":
+                self._record_pr_lifecycle(
+                    job,
+                    "merged",
+                    "GitHub already reports the reviewed pull request as merged.",
+                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree)
+                self._refresh_pull_request_for_review(job, worktree, lease_owner)
             elif status.merge_state_status == "BEHIND":
                 self._update_pull_request_branch(job, status)
             elif (
@@ -841,11 +1111,19 @@ class FactoryPipeline:
                 and status.mergeable == "MERGEABLE"
                 and status.merge_state_status == "CLEAN"
             ):
-                # The scheduled merge workflow re-reads checks, head state, and
-                # human review immediately before merging. Do not arm GitHub's
-                # native auto-merge here: a later CHANGES_REQUESTED review could
-                # otherwise race the Factory gate when repository rules do not
-                # independently require that review decision.
+                # Persist a visible queue transition before the merge attempt. The
+                # MERGE_QUEUED worker re-reads GitHub immediately before using an
+                # exact-head merge. The scheduled workflow remains a recovery fallback
+                # if the daemon stops after review. Native auto-merge stays disabled so
+                # a later CHANGES_REQUESTED review cannot race the Factory gate.
+                self._record_pr_lifecycle(
+                    job,
+                    "merge-queued",
+                    (
+                        "All required checks passed, GitHub reports the reviewed head as clean "
+                        "and mergeable, and the Factory queued an exact-head squash merge."
+                    ),
+                )
                 job.state = JobState.MERGE_QUEUED
             else:
                 job.state = JobState.REPAIRING
@@ -859,7 +1137,7 @@ class FactoryPipeline:
                 job.state = JobState.MERGED
                 return
             if job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree)
+                self._refresh_pull_request_for_review(job, worktree, lease_owner)
                 return
             if (
                 status.checks_pending
@@ -875,20 +1153,44 @@ class FactoryPipeline:
                 f"Failed checks:\n{evidence}\n"
                 f"Mergeability: {status.mergeable}"
             )
-            self._run_agent(
-                job,
-                worktree,
-                "repair",
-                build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
-                require_repository_change=True,
-            )
-            self._verify(workflow)
+            # A large share of CI repairs are a workspace's own formatter or
+            # auto-fixable lint rule drifting, not something that needs an
+            # agent's judgement. Try that for free first; only spend an LLM
+            # call if the worktree is still unchanged afterwards.
+            attempt_mechanical_repair(worktree)
+            mechanically_repaired = workflow.has_changes()
+            if not mechanically_repaired:
+                self._run_agent(
+                    job,
+                    worktree,
+                    "repair",
+                    build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
+                    lease_owner=lease_owner,
+                    require_repository_change=True,
+                )
+            verified_paths = self._verify(workflow)
             workflow.stage_all()
-            workflow.commit(f"fix: repair CI for {self._subject(job)} {job.task.identifier}")
+            commit_subject = (
+                "fix: apply automatic formatting for"
+                if mechanically_repaired
+                else "fix: repair CI for"
+            )
+            workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
             job.head_sha = workflow.head_sha()
+            job.latest_verified_sha = job.head_sha
+            job.changed_path_fingerprint = changed_path_fingerprint(
+                str(path) for path in verified_paths
+            )
+            bound = self.tasks.record_verification(
+                job.task.identifier,
+                lease_owner,
+                job.head_sha,
+                job.changed_path_fingerprint,
+            )
+            self._copy_claim_metadata(job, bound)
             job.repair_attempts += 1
             if job.pull_request is not None:
                 self.github.add_comment(
@@ -902,11 +1204,26 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.MERGE_QUEUED:
+            # Backfill lifecycle evidence for jobs that were already queued before
+            # this Factory version, and make retries/restarts idempotently visible.
+            self._record_pr_lifecycle(
+                job,
+                "merge-queued",
+                (
+                    "All required checks passed, GitHub reports the reviewed head as clean "
+                    "and mergeable, and the Factory queued an exact-head squash merge."
+                ),
+            )
             status = self._status(job)
             if status.state == "MERGED":
+                self._record_pr_lifecycle(
+                    job,
+                    "merged",
+                    "GitHub confirmed that the reviewed pull request was merged.",
+                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree)
+                self._refresh_pull_request_for_review(job, worktree, lease_owner)
             elif status.merge_state_status == "BEHIND":
                 self._update_pull_request_branch(job, status)
             elif (
@@ -921,9 +1238,32 @@ class FactoryPipeline:
                 or status.merge_state_status != "CLEAN"
             ):
                 job.state = JobState.REPAIRING
+            else:
+                if job.pull_request is None or job.head_sha is None:
+                    raise FactoryError("Merge-queued job is missing pull request provenance")
+                # The queue state was established on an earlier transition. Re-read
+                # status above, then ask GitHub to merge only this exact reviewed SHA.
+                # No --admin or auto-merge bypass is used, so GitHub rules remain
+                # authoritative and a changed head is rejected server-side.
+                self.github.merge_pull_request(job.pull_request, job.head_sha)
+                confirmed = self._status(job)
+                if confirmed.state == "MERGED":
+                    self._record_pr_lifecycle(
+                        job,
+                        "merged",
+                        "GitHub confirmed the Factory exact-head squash merge completed.",
+                    )
+                    job.state = JobState.MERGED
+                elif confirmed.head_sha != job.head_sha:
+                    self._refresh_pull_request_for_review(job, worktree, lease_owner)
             return
 
         if job.state is JobState.MERGED:
+            self._record_pr_lifecycle(
+                job,
+                "merged",
+                "GitHub confirmed that the reviewed pull request is merged.",
+            )
             if job.pull_request is not None:
                 self.github.add_comment(
                     job.pull_request,
@@ -933,11 +1273,35 @@ class FactoryPipeline:
                 issue = int(job.task.identifier)
                 self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
                 self.github.close_issue(issue)
-            self._workflow(self.config.repository).remove_worktree(worktree)
-            self.tasks.release(job.task.identifier)
+            if worktree.exists():
+                self._workflow(self.config.repository).remove_worktree(worktree)
+            self.tasks.complete(job.task.identifier, lease_owner)
             job.state = JobState.DONE
 
-    def _discover_pull_request(self, job: Job, worktree: Path) -> None:
+    def _record_pr_lifecycle(
+        self,
+        job: Job,
+        event: PullRequestLifecycleEvent,
+        detail: str,
+    ) -> None:
+        """Persist and notify significant PR lifecycle transitions idempotently."""
+
+        if job.pull_request is None or job.head_sha is None:
+            return
+        self.pr_lifecycle.record(
+            event,
+            pull_request=job.pull_request,
+            head_sha=job.head_sha,
+            title=job.task.title,
+            detail=detail,
+        )
+
+    def _discover_pull_request(
+        self,
+        job: Job,
+        worktree: Path,
+        lease_owner: str,
+    ) -> None:
         """Start independently reviewing a pull request the factory did not create.
 
         Checks out and verifies the current head before entering REVIEWING, then
@@ -947,6 +1311,51 @@ class FactoryPipeline:
         """
         if job.task.pr_branch is None:
             raise FactoryError("Pull request branch is missing")
+        self._prepare_pull_request_for_review(
+            job,
+            worktree,
+            pull_request=int(job.task.identifier),
+            branch=job.task.pr_branch,
+            lease_owner=lease_owner,
+            comment=(
+                "OpenHands factory is independently reviewing this pull request. It will "
+                "run verification, repair failures if needed, and merge once its checks "
+                "pass and the reviewed commit is still current."
+            ),
+        )
+
+    def _attach_pull_request(
+        self,
+        job: Job,
+        worktree: Path,
+        match: PullRequestMatch,
+        lease_owner: str,
+    ) -> None:
+        """Attach issue work to an existing canonical PR instead of creating a sibling."""
+
+        self._prepare_pull_request_for_review(
+            job,
+            worktree,
+            pull_request=match.number,
+            branch=match.branch,
+            lease_owner=lease_owner,
+            comment=(
+                "OpenHands Factory attached this issue to the existing canonical pull "
+                "request after matching its durable logical-task evidence. Verification "
+                "and independent review continue on this branch."
+            ),
+        )
+
+    def _prepare_pull_request_for_review(
+        self,
+        job: Job,
+        worktree: Path,
+        *,
+        pull_request: int,
+        branch: str,
+        lease_owner: str,
+        comment: str,
+    ) -> None:
         if worktree.exists():
             stale_workflow = self._workflow(self.config.repository)
             if self._workflow(worktree).has_changes():
@@ -955,32 +1364,77 @@ class FactoryPipeline:
                 )
                 stale_workflow.archive_worktree(worktree, recovery)
             stale_workflow.remove_worktree(worktree, force=True)
-        self.tasks.acquire(job.task, "factory")
         workflow = self._workflow(self.config.repository)
-        workflow.prepare_pull_request_worktree(worktree, job.task.pr_branch)
-        job.branch = job.task.pr_branch
-        job.pull_request = int(job.task.identifier)
+        workflow.prepare_pull_request_worktree(worktree, branch)
+        job.branch = branch
+        job.pull_request = pull_request
         job.head_sha = self._workflow(worktree).head_sha()
+        bound = self.tasks.bind_pull_request(
+            job.task.identifier,
+            lease_owner,
+            pull_request,
+            branch,
+            predecessor_pull_request=job.predecessor_pull_request,
+        )
+        self._copy_claim_metadata(job, bound)
         self.github.publish_review_pending(
             job.head_sha,
             detail="Factory pull request verification in progress",
         )
-        self.github.add_comment(
-            job.pull_request,
-            (
-                "OpenHands factory is independently reviewing this pull request. It will "
-                "run verification, repair failures if needed, and merge once its checks "
-                "pass and the reviewed commit is still current."
-            ),
-        )
-        if not self._verify_or_schedule_quality_repair(
+        self.github.add_comment(job.pull_request, comment)
+        verified_paths = self._verify_or_schedule_quality_repair(
             job,
             self._workflow(worktree),
-        ):
+        )
+        if verified_paths is None:
             return
+        self._record_verified_head(job, lease_owner, verified_paths)
         job.state = JobState.REVIEWING
 
-    def _refresh_pull_request_for_review(self, job: Job, worktree: Path) -> None:
+    def _bind_matched_pull_request(
+        self,
+        job: Job,
+        match: PullRequestMatch,
+        lease_owner: str,
+    ) -> None:
+        job.branch = match.branch
+        job.pull_request = match.number
+        job.head_sha = match.head_sha or job.head_sha
+        bound = self.tasks.bind_pull_request(
+            job.task.identifier,
+            lease_owner,
+            match.number,
+            match.branch,
+            predecessor_pull_request=job.predecessor_pull_request,
+        )
+        self._copy_claim_metadata(job, bound)
+
+    def _record_verified_head(
+        self,
+        job: Job,
+        lease_owner: str,
+        verified_paths: set[Path],
+    ) -> None:
+        if job.head_sha is None:
+            raise FactoryError("Verified job is missing its head SHA")
+        job.latest_verified_sha = job.head_sha
+        job.changed_path_fingerprint = changed_path_fingerprint(
+            str(path) for path in verified_paths
+        )
+        bound = self.tasks.record_verification(
+            job.task.identifier,
+            lease_owner,
+            job.head_sha,
+            job.changed_path_fingerprint,
+        )
+        self._copy_claim_metadata(job, bound)
+
+    def _refresh_pull_request_for_review(
+        self,
+        job: Job,
+        worktree: Path,
+        lease_owner: str,
+    ) -> None:
         """Invalidate stale review provenance and rebuild at the current remote head."""
         if job.pull_request is None:
             raise FactoryError("Pull request number is missing")
@@ -1016,14 +1470,21 @@ class FactoryPipeline:
             detail="Factory pull request refresh in progress",
         )
         job.review_findings.clear()
-        if not self._verify_or_schedule_quality_repair(
+        verified_paths = self._verify_or_schedule_quality_repair(
             job,
             self._workflow(worktree),
-        ):
+        )
+        if verified_paths is None:
             return
+        self._record_verified_head(job, lease_owner, verified_paths)
         job.state = JobState.REVIEWING
 
-    def _refresh_pull_request_if_changed(self, job: Job, worktree: Path) -> bool:
+    def _refresh_pull_request_if_changed(
+        self,
+        job: Job,
+        worktree: Path,
+        lease_owner: str,
+    ) -> bool:
         """Refresh PR evidence before using or pushing it against a changed head."""
         if job.pull_request is None:
             return False
@@ -1035,7 +1496,7 @@ class FactoryPipeline:
         if job.head_sha == status.head_sha:
             return False
 
-        self._refresh_pull_request_for_review(job, worktree)
+        self._refresh_pull_request_for_review(job, worktree, lease_owner)
         return True
 
     def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> None:
@@ -1070,11 +1531,11 @@ class FactoryPipeline:
             raise FactoryError("Pull request number is missing")
         return self.github.pull_request_status(job.pull_request)
 
-    def _verify(self, workflow: GitWorkflow) -> None:
+    def _verify(self, workflow: GitWorkflow) -> set[Path]:
         changed = workflow.changed_paths()
         if not changed:
             raise FactoryError("No changed paths were found")
-        commands = commands_for(workflow.repository, changed)
+        commands = commands_for(workflow.repository, changed, self.config.repository_profile)
         # Only commands that bind a fixed host port (frontend-e2e's dev server)
         # need to be serialized across workers; everything else - lint, build,
         # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
@@ -1085,21 +1546,22 @@ class FactoryPipeline:
         exclusive = [command for command in commands if command.exclusive]
         run_verification(shared)
         if not exclusive:
-            return
+            return changed
         if self.verification_slots is None:
             run_verification(exclusive)
-            return
+            return changed
         with self.verification_slots:
             run_verification(exclusive)
+        return changed
 
     def _verify_or_schedule_quality_repair(
         self,
         job: Job,
         workflow: GitWorkflow,
-    ) -> bool:
+    ) -> set[Path] | None:
         """Route deterministic verification failures into bounded agent repair."""
         try:
-            self._verify(workflow)
+            changed = self._verify(workflow)
         except VerificationFailed as error:
             if job.quality_repairs >= 2:
                 raise
@@ -1109,12 +1571,18 @@ class FactoryPipeline:
                 f"Factory safety controls intact:\n{evidence}"
             ]
             job.state = JobState.QUALITY_REPAIRING
-            return False
-        return True
+            return None
+        return changed
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
+        # README.md deliberately excluded: it embeds the full feature-spec
+        # document (tens of KB), sent unconditionally on every implementation
+        # call regardless of task scope. AGENTS.md carries the actual
+        # enforceable constraints (i18n, RTL, Spartan, British English) that
+        # every task needs; the issue body already carries whatever
+        # task-specific scope README.md would otherwise repeat.
         context: list[tuple[Path, str]] = []
-        for relative in (Path("AGENTS.md"), Path("TODO.md"), Path("README.md")):
+        for relative in (Path("AGENTS.md"),):
             path = worktree / relative
             if path.is_file():
                 context.append((relative, path.read_text(encoding="utf-8")))
@@ -1122,27 +1590,7 @@ class FactoryPipeline:
 
     def _verification_descriptions(self, worktree: Path) -> list[str]:
         del worktree
-        return [
-            "npm run check:constitution",
-            "npm run check:agent-ui-governance",
-            "npm run check:design-sync",
-            "npm run check:spartan-boundaries",
-            "npm run check:spartan-full-tree",
-            "npm run check:component-system",
-            "npm run check:design-sync-drift",
-            "npm run check:legacy-primitive-delta",
-            "node scripts/check-conflict-markers.mjs",
-            "node scripts/check-admin-audit-integrity.mjs",
-            "node scripts/check-migration-delta.mjs",
-            "cd automation && uv run --frozen ruff format --check .",
-            "cd automation && uv run --frozen ruff check .",
-            "cd automation && uv run --frozen mypy",
-            "cd automation && uv run --frozen pytest",
-            "cd frontend && npm run lint:check && npm run build && npm run test",
-            "cd frontend && npm run e2e when frontend or e2e files changed",
-            "cd backend && npm run lint:check && npm run build && npm run test && npm run test:e2e",
-            "cd admin-portal && npm run lint:check && npm run build && npm run test",
-        ]
+        return verification_descriptions(self.config.repository_profile)
 
     def _pull_request_body(self, job: Job) -> str:
         successful = [entry for entry in job.provider_history if entry.get("success") is True]
@@ -1154,8 +1602,18 @@ class FactoryPipeline:
         )
         if not provenance:
             provenance = "- Provider provenance will be recorded before review."
+        predecessor = (
+            f"Supersedes #{job.predecessor_pull_request}\n"
+            if job.predecessor_pull_request is not None
+            else ""
+        )
         return (
             f"Fixes #{job.task.identifier}\n\n"
+            f"Logical-Task-Key: {job.task.logical_key}\n"
+            f"Canonical-Branch: {job.branch or 'pending'}\n"
+            f"Initial-Base-SHA: {job.initial_base_sha or 'pending'}\n"
+            f"Changed-Path-Fingerprint: {job.changed_path_fingerprint or 'pending'}\n"
+            f"{predecessor}\n"
             "## Factory execution\n\n"
             "This pull request was implemented, security reviewed, and locally verified by "
             "the bounded OpenHands factory. Independent review runs on this same branch before "
@@ -1303,6 +1761,62 @@ class FactoryPipeline:
                     "next_attempt_at": None,
                     "provider_history": job.provider_history,
                 }
+            )
+
+    def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
+        """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.
+
+        Two Telegram sends, not one, because the first must never depend on a healthy agent
+        provider - the exact thing a stall may itself have taken down. The AI pass is a
+        strictly-optional addition that reasons over the already-gathered evidence; it has no
+        tool access and cannot make the situation worse by touching the repository or host.
+        Never raises - this always runs from a background thread and must not affect scheduling.
+        """
+        from openhands_factory.agents.base import AgentPhase, AgentRequest
+
+        alerts = AlertService(self.config)
+        started_at = datetime.now(UTC)
+        alerts.send(
+            f"OpenHands factory alert: scheduling stalled\n\n{reason}\n\n{diagnostics}",
+            category="factory-scheduling-stalled",
+        )
+
+        cycle_id = f"stall-investigation-{started_at.strftime('%Y%m%dT%H%M%SZ')}"
+        task = Task(
+            identifier=cycle_id,
+            title="Factory stall investigation",
+            body=diagnostics,
+            source="factory-internal",
+            priority=0,
+        )
+        job = Job(task=task)
+        prompt = (
+            (self.prompt_dir / "stall_investigation.md").read_text(encoding="utf-8")
+            + "\n\n## Diagnostic snapshot\n\n"
+            + diagnostics
+        )
+        # A plain empty directory, not a git worktree - this call never reads or
+        # writes repository files, only reasons over the diagnostics text above.
+        scratch = self.config.worktree_dir / "stall-investigation"
+        scratch.mkdir(parents=True, exist_ok=True)
+        request = AgentRequest(
+            phase=AgentPhase.GENERAL_ACTION,
+            task=task,
+            prompt=prompt,
+            cwd=scratch,
+            system_prompt=self.system_prompt,
+        )
+        try:
+            result = self.router.run(request, job)
+            findings = (result.summary or "").strip() if result.success else None
+        except Exception as error:
+            LOGGER.warning("factory.stall_investigation.agent_failed error=%s", error)
+            findings = None
+
+        if findings:
+            alerts.send(
+                f"OpenHands factory alert: stall investigation findings\n\n{findings}",
+                category="factory-scheduling-stalled-findings",
             )
 
     def _create_deduplicated_issues(self, proposals: list[ArchitectProposal]) -> list[int]:

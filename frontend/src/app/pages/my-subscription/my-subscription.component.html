@@ -221,7 +221,7 @@
       <p class="text-xs text-text-secondary mb-2">
         {{ 'restore_purchases_description' | t }}
       </p>
-      <app-restore-purchases-button />
+      <app-restore-purchases-button (restored)="reload()" />
     </div>
   }
 </div>
