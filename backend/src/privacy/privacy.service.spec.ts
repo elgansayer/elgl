@@ -323,6 +323,51 @@ describe('PrivacyService', () => {
         }),
       );
     });
+
+    it('bounds concurrent removals and continues after one row fails', async () => {
+      tableRows.set(
+        'archive_requests',
+        Array.from({ length: 8 }, (_, index) => ({
+          id: `archive-${index}`,
+          user_id: 'user-1',
+          status: 'ready',
+          object_key: `archive-${index}.json`,
+          expires_at: '2026-08-01T00:00:00.000Z',
+          created_at: '2026-07-25T00:00:00.000Z',
+        })),
+      );
+
+      let activeRemovals = 0;
+      let maxActiveRemovals = 0;
+      mockRemove.mockImplementation(
+        (keys: string[]) =>
+          new Promise((resolve) => {
+            activeRemovals += 1;
+            maxActiveRemovals = Math.max(maxActiveRemovals, activeRemovals);
+            queueMicrotask(() => {
+              activeRemovals -= 1;
+              resolve({
+                error:
+                  keys[0] === 'archive-2.json'
+                    ? { message: 'storage unavailable' }
+                    : null,
+              });
+            });
+          }),
+      );
+
+      await expect(service.purgeExpiredArchives()).resolves.toBe(7);
+      expect(maxActiveRemovals).toBeGreaterThan(1);
+      expect(maxActiveRemovals).toBeLessThanOrEqual(5);
+      expect(mockRemove).toHaveBeenCalledTimes(8);
+      expect(
+        updates.filter(
+          (entry) =>
+            entry.table === 'archive_requests' &&
+            entry.value.status === 'expired',
+        ),
+      ).toHaveLength(7);
+    });
   });
 
   describe('deleteAccount', () => {
