@@ -82,10 +82,7 @@ export class TransferService {
    *   admin endpoint:
    *     POST /auth/v1/admin/generate_link
    *   (with type 'magiclink' and the user's email address)
-   *
-   * For the initial implementation we return dummy tokens and rely on the
-   * front‑end to fall back to manual sign‑in.  This is acceptable for the
-   * “account transfer between devices” MVP.
+   *   Then we parse the generated token from the link and use verifyOtp.
    */
   async swapTokenForSession(swapToken: string) {
     try {
@@ -98,15 +95,77 @@ export class TransferService {
       if (typeof sub !== 'string' || type !== 'device-transfer') {
         return null;
       }
-      // In this MVP we return dummy tokens; the real implementation would
-      // exchange the token for a Supabase session via the admin API.
-      await Promise.resolve();
+
+      const supabase = this.supabaseService.getClient();
+
+      // Retrieve the user's email
+      const { data: userData, error: userError } =
+        await supabase.auth.admin.getUserById(sub);
+      if (userError || !userData?.user?.email) {
+        this.logger.error(
+          `Unable to retrieve email for user ${sub} during device transfer swap`,
+        );
+        return null;
+      }
+      const email = userData.user.email;
+
+      // Generate magic link to get a token
+      const { data: linkData, error: linkError } =
+        await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email,
+        });
+      if (linkError || !linkData?.properties?.action_link) {
+        this.logger.error(
+          `Unable to generate link for user ${sub} during device transfer swap`,
+        );
+        return null;
+      }
+
+      const actionLink = linkData.properties.action_link;
+      const url = new URL(actionLink);
+
+      // Depending on Supabase settings, PKCE flow might use token_hash, or implicit might use token.
+      const tokenHash = url.searchParams.get('token_hash');
+      const token = url.searchParams.get('token');
+
+      let verifyResult;
+      if (tokenHash) {
+        verifyResult = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'magiclink',
+        });
+      } else if (token) {
+        verifyResult = await supabase.auth.verifyOtp({
+          email,
+          token,
+          type: 'magiclink',
+        });
+      } else {
+        this.logger.error(
+          `Unable to extract token from action_link for user ${sub}`,
+        );
+        return null;
+      }
+
+      if (verifyResult.error || !verifyResult.data?.session) {
+        this.logger.error(
+          `Failed to verify OTP during device transfer swap for user ${sub}: ${verifyResult.error?.message}`,
+        );
+        return null;
+      }
+
+      const session = verifyResult.data.session;
+
       return {
-        access_token: `dummy-access-${sub}`,
-        refresh_token: `dummy-refresh-${sub}`,
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
         user_id: sub,
       };
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        `Error exchanging token for session: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return null;
     }
   }
