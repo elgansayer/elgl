@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-16 - [Optimize Angular @for list tracking by identity]
+**Learning:** In standard Angular frontend architecture, `@for` loops that track objects by value (e.g. `track msg` instead of `track msg.id`) needlessly destroy and recreate DOM nodes when arrays change slightly, creating severe performance bottlenecks, layout thrashing, and re-renders, especially when processing real-time websocket pushes for chat lists.
+**Action:** Always prefer to track array iterations by unique stable identifier primitives (like `track msg.id`) when using the Angular control flow `@for` loop to optimize list renderings and DOM reuse.
