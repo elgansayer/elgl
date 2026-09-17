@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
+import { Component, input, output, inject, signal, effect, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -18,6 +18,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
 @Component({
   selector: 'app-chat-message',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmButton,
     CommonModule,
@@ -336,12 +337,12 @@ export class ChatMessageComponent {
     });
   }
 
-  isOwnMessage(): boolean {
+  isOwnMessage = computed(() => {
     if (this.currentUserId() != null) {
       return this.message().sender_id === this.currentUserId();
     }
     return this.message().sender_id === this.authService.currentUser()?.id;
-  }
+  });
 
   cycleVoicePlaybackSpeed(): void {
     const current = this.playbackSpeed();
