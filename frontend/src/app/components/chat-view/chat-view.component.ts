@@ -1,5 +1,5 @@
 import { HlmInput } from '@spartan-ng/helm/input';
-import { Component, input, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, input, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
@@ -10,11 +10,14 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-chat-view',
+  // ⚡ Bolt: Use OnPush change detection to skip deep checks of chat tree unless inputs/signals change
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, FormsModule, ChatMessageComponent],
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
-        @for (msg of filteredMessages(); track msg) {
+        <!-- ⚡ Bolt: Track by unique primitive ID to prevent complete DOM teardown on new messages -->
+        @for (msg of filteredMessages(); track msg.id) {
           <app-chat-message
             [message]="msg"
             [currentUserId]="effectiveUserId()"
