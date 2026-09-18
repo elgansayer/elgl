@@ -353,6 +353,38 @@ def test_remove_worktree_can_force_retirement_after_archive(tmp_path: Path) -> N
     assert "--force" in workflow.runner.calls[0]
 
 
+def test_remove_worktree_accepts_configured_root_outside_repository_parent(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([ProcessResult(0, "", "")]),
+        worktree_root=worktree_root,
+    )
+
+    workflow.remove_worktree(worktree_root / "issue-12", force=True)
+
+    assert workflow.runner.calls[0][-1] == str(worktree_root / "issue-12")
+
+
+def test_remove_worktree_rejects_path_outside_configured_root(tmp_path: Path) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([]),
+        worktree_root=tmp_path / "mounted-volume" / "worktrees",
+    )
+
+    with pytest.raises(RepositorySafetyError):
+        workflow.remove_worktree(tmp_path / "mounted-volume" / "other" / "issue-12")
+
+
 def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     repository = tmp_path / "state" / "repository"
     repository.mkdir(parents=True)
@@ -367,6 +399,53 @@ def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     assert archived == recovery
     assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
     assert (recovery / "RECOVERY.txt").is_file()
+
+
+def test_archive_worktree_accepts_configured_roots_outside_repository_parent(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    worktree = worktree_root / "issue-12"
+    worktree.mkdir(parents=True)
+    (worktree / "changed.ts").write_text("uncommitted", encoding="utf-8")
+    recovery_root = tmp_path / "mounted-volume" / "recovery"
+    recovery = recovery_root / "issue-12-archive"
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([]),
+        worktree_root=worktree_root,
+        recovery_root=recovery_root,
+    )
+
+    workflow.archive_worktree(worktree, recovery)
+
+    assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
+
+
+def test_archive_worktree_rejects_path_outside_configured_recovery_root(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    worktree = worktree_root / "issue-12"
+    worktree.mkdir(parents=True)
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([]),
+        worktree_root=worktree_root,
+        recovery_root=tmp_path / "mounted-volume" / "recovery",
+    )
+
+    with pytest.raises(RepositorySafetyError, match="recovery root"):
+        workflow.archive_worktree(
+            worktree,
+            tmp_path / "mounted-volume" / "other" / "issue-12-archive",
+        )
 
 
 def test_archive_worktree_excludes_regenerable_build_artifacts(tmp_path: Path) -> None:
