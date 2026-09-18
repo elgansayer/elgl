@@ -88,9 +88,13 @@ class GitWorkflow:
         *,
         external_branch: str | None = None,
         github_token: str | None = None,
+        worktree_root: Path | None = None,
+        recovery_root: Path | None = None,
     ) -> None:
         self.repository = repository
         self.base_branch = base_branch
+        self.worktree_root = (worktree_root or repository.parent).resolve()
+        self.recovery_root = (recovery_root or repository.parent).resolve()
         self.runner: ProcessRunner
         if runner is None and github_token is not None:
             self.runner = partial(
@@ -310,9 +314,10 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
 
     def remove_worktree(self, worktree: Path, *, force: bool = False) -> None:
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to remove a worktree outside the factory root")
         arguments = ["git", "worktree", "remove"]
         if force:
@@ -324,11 +329,16 @@ class GitWorkflow:
 
     def archive_worktree(self, worktree: Path, recovery_root: Path) -> Path:
         """Copy a dirty worktree before it is retired during durable recovery."""
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
         resolved_recovery = recovery_root.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to archive a worktree outside the factory root")
+        if resolved_recovery == self.recovery_root or not resolved_recovery.is_relative_to(
+            self.recovery_root
+        ):
+            raise RepositorySafetyError("Refusing to archive outside the factory recovery root")
         if resolved_recovery == resolved_worktree or resolved_recovery.is_relative_to(
             resolved_worktree
         ):
