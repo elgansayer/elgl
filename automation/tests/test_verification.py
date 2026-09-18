@@ -89,7 +89,7 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     factory_types = next(command for command in commands if command.name == "factory-types")
     assert factory_types.arguments == ("uv", "run", "--frozen", "mypy")
     factory = next(command for command in commands if command.name == "factory-tests")
-    assert factory.arguments == ("uv", "run", "--frozen", "pytest")
+    assert factory.arguments == ("uv", "run", "--frozen", "python", "-m", "pytest")
     assert all(command.workspace == tmp_path for command in commands)
     assert all(
         command.directory == tmp_path / "automation"
