@@ -435,7 +435,10 @@ def commands_for(
                 ),
                 VerificationCommand(
                     "factory-tests",
-                    ("uv", "run", "--frozen", "pytest"),
+                    # Use the worktree as Python's import root. The pytest console
+                    # script lives in the shared runtime venv and would otherwise
+                    # test the installed Factory package instead of this PR's code.
+                    ("uv", "run", "--frozen", "python", "-m", "pytest"),
                     repository / "automation",
                 ),
             ]
