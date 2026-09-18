@@ -188,7 +188,10 @@ class GitWorkflow:
             destination = worktree / relative
             if source.is_dir() and not destination.exists():
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                os.symlink(source, destination, target_is_directory=True)
+                # The configured repository may itself be a symlink. Verification
+                # exposes its resolved path inside the isolated mount namespace,
+                # so dependency links must target that same reachable identity.
+                os.symlink(source.resolve(), destination, target_is_directory=True)
 
     def create_branch(self, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
