@@ -5,7 +5,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { VocabularyStore, Flashcard } from './vocabulary.store';
 import { AuthService } from './auth.service';
 import { SrsOfflineService } from './srs-offline.service';
-import { SrsCircuitBreakerService } from './srs-circuit-breaker.service';
 import { environment } from '../../environments/environment';
 
 describe('VocabularyStore', () => {
@@ -20,14 +19,6 @@ describe('VocabularyStore', () => {
     queueSrsReview: ReturnType<typeof vi.fn>;
     syncQueuedReviews: ReturnType<typeof vi.fn>;
     online: ReturnType<typeof vi.fn>;
-  };
-
-  let circuitBreakerSpy: {
-    executeWithBreaker: ReturnType<typeof vi.fn>;
-    isAvailable: ReturnType<typeof vi.fn>;
-    recordSuccess: ReturnType<typeof vi.fn>;
-    recordFailure: ReturnType<typeof vi.fn>;
-    reset: ReturnType<typeof vi.fn>;
   };
 
   const mockFlashcard: Flashcard = {
@@ -60,22 +51,6 @@ describe('VocabularyStore', () => {
       online: vi.fn().mockReturnValue(true),
     };
 
-    circuitBreakerSpy = {
-      executeWithBreaker: vi
-        .fn()
-        .mockImplementation(
-          (
-            _service: string,
-            operation: () => Promise<unknown>,
-            _fallback: () => Promise<unknown>,
-          ) => operation(),
-        ),
-      isAvailable: vi.fn().mockReturnValue(true),
-      recordSuccess: vi.fn(),
-      recordFailure: vi.fn(),
-      reset: vi.fn(),
-    };
-
     TestBed.configureTestingModule({
       providers: [
         VocabularyStore,
@@ -83,7 +58,6 @@ describe('VocabularyStore', () => {
         provideHttpClientTesting(),
         { provide: AuthService, useValue: authSpy },
         { provide: SrsOfflineService, useValue: srsOfflineSpy },
-        { provide: SrsCircuitBreakerService, useValue: circuitBreakerSpy },
       ],
     });
 
