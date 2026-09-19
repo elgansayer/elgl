@@ -1,5 +1,7 @@
 # HelloTalk - Information Architecture Audit Report
 
+Status: source inventory and proposed information architecture. The proposed grouping is not the current route configuration or an approved migration. Preserve legacy deep links and their query parameters. Runtime route files under `frontend/src/app/routes` remain authoritative; root currently redirects to `/ai-conversation`.
+
 ## 1. Overview
 This report maps all user-facing routes and major capabilities in the HelloTalk application. It identifies overlapping, duplicate, redundant, or contradictory features and navigation paths, and proposes a consolidated product information architecture.
 
@@ -217,7 +219,7 @@ Every major capability is grouped with a clear purpose and single entry point.
 - `/wallet/escrow` - Escrow payments.
 
 #### 7. Settings (Strictly nested)
-- All settings securely nested under `/settings` without top-level aliases.
+- Preserve existing compatibility redirects for bookmarks, notifications and inbound links. New navigation may use canonical destinations; route removal requires a separate migration backed by usage evidence and redirect/query-parameter tests.
 - `/settings/account`
 - `/settings/privacy` (consolidates `/settings/blocks`, `/settings/gdpr`)
 - `/settings/preferences` (consolidates `/settings/language`, `/settings/notification`, `/settings/appearance`)
