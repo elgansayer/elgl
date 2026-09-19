@@ -1,4 +1,11 @@
-import { Controller, Get, Req, UseFilters, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  Req,
+  UseFilters,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -40,6 +47,7 @@ export class RecommendationsController {
    * revalidated before a profile is returned.
    */
   @Get('discovery')
+  @Header('Cache-Control', 'private, no-store')
   @ApiOperation({
     summary: 'Get privacy-safe Discovery carousel recommendations',
     description:
@@ -125,6 +133,7 @@ export class RecommendationsController {
    * Blocked users are excluded at every tier.
    */
   @Get('for-you')
+  @Header('Cache-Control', 'private, no-store')
   @ApiOperation({
     summary: 'Get personalised "For You" recommendations',
     description:
@@ -200,6 +209,7 @@ export class RecommendationsController {
    * empty array if nothing is available.
    */
   @Get('daily')
+  @Header('Cache-Control', 'private, no-store')
   @ApiOperation({
     summary: 'Get daily cached language exchange recommendations',
     description:

@@ -8,6 +8,7 @@ The candidate read is intentionally bounded to 50 profiles. A candidate must:
 
 - be discoverable (`privacy_hide_from_search = false`);
 - not be pending account deletion;
+- not have a scheduled account-deletion date;
 - have a non-empty display name;
 - have at least one native and one target language;
 - have `correction_ratio > 0.5`; and
@@ -19,12 +20,12 @@ The service validates those rules again after the datastore response so malforme
 
 Eligible candidates receive a deterministic composite score:
 
-| Signal | Weight | Normalisation |
-| --- | ---: | --- |
-| Correction ratio | 30% | Existing 0-1 ratio |
-| Average corrector rating | 35% | 1-5 rating mapped to 0-1 |
-| Corrector rating count | 15% | Log-scaled against the candidate pool |
-| Study streak | 20% | Log-scaled against the candidate pool |
+| Signal                   | Weight | Normalisation                         |
+| ------------------------ | -----: | ------------------------------------- |
+| Correction ratio         |    30% | Existing 0-1 ratio                    |
+| Average corrector rating |    35% | 1-5 rating mapped to 0-1              |
+| Corrector rating count   |    15% | Log-scaled against the candidate pool |
+| Study streak             |    20% | Log-scaled against the candidate pool |
 
 The highest ten scores are cached. User ID is the final tie-breaker so identical inputs produce stable ordering. The Redis key is `partner_of_week_ids` and expires after seven days.
 
@@ -32,7 +33,7 @@ Corrector-score lookup is best-effort per candidate. A failure for one candidate
 
 ## Privacy and security
 
-The cache stores IDs only. It does not copy profile text, languages, correction content, ratings, location, credentials, tokens, or other private payloads into Redis. Hidden and deletion-pending profiles are rejected both in the database query and in application-side validation.
+The cache stores IDs only. It does not copy profile text, languages, correction content, ratings, location, credentials, tokens, or other private payloads into Redis. Hidden, deletion-pending, and deletion-scheduled profiles are rejected both in the database query and in application-side validation. The ID endpoint revalidates the weekly Redis ranking against current user state on every read and fails closed if that check is unavailable. Its HTTP response is `private, no-store`, preventing a public CDN entry from retaining an ID after an account or privacy transition.
 
 Consumers must continue applying their normal discovery/blocking rules when resolving these IDs for a specific viewer. Partner of the Week is a ranking signal, not an authorization bypass.
 
@@ -51,8 +52,9 @@ Corrector-rating provider failures are isolated to the affected candidate. The s
 - weighted ranking in favour of strongly rated correctors;
 - per-candidate score-provider degradation;
 - the ten-user output bound and seven-day TTL;
-- deterministic tie-breaking; and
-- stale-cache removal on empty/provider/Redis failure paths.
+- deterministic tie-breaking;
+- stale-cache removal on empty/provider/Redis failure paths; and
+- fail-closed read-time privacy revalidation of cached IDs.
 
 Repository CI remains authoritative for the full backend test, lint, build, database, and E2E suites.
 
