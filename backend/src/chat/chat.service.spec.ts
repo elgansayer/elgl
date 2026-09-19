@@ -198,8 +198,16 @@ describe('ChatService', () => {
       );
     });
 
-    it('fails closed when the count is invalid', async () => {
-      mockSupabaseClient.rpc.mockResolvedValue({ data: '-1', error: null });
+    it.each([
+      '-1',
+      '',
+      '   ',
+      '1e2',
+      '1.5',
+      'Infinity',
+      Number.MAX_SAFE_INTEGER + 1,
+    ])('fails closed for invalid count %s', async (data) => {
+      mockSupabaseClient.rpc.mockResolvedValue({ data, error: null });
 
       await expect(service.getUnreadCount('user-1')).rejects.toBeInstanceOf(
         ServiceUnavailableException,

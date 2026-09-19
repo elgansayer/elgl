@@ -345,7 +345,8 @@ export class ChatService {
       p_user_id: userId,
     });
 
-    const unreadCount = typeof data === 'string' ? Number(data) : data;
+    const unreadCount =
+      typeof data === 'string' && /^[0-9]+$/.test(data) ? Number(data) : data;
     if (
       error ||
       typeof unreadCount !== 'number' ||
@@ -353,9 +354,7 @@ export class ChatService {
       unreadCount < 0
     ) {
       this.logger.warn('chat.unread_count_failed');
-      throw new ServiceUnavailableException(
-        'Chat unread count is temporarily unavailable',
-      );
+      throw new ServiceUnavailableException();
     }
 
     return { unreadCount };
