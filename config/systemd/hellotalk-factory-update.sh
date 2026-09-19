@@ -488,6 +488,7 @@ runuser -u "$FACTORY_USER" -- env \
   HOME="$FACTORY_HOME" VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
+    --reinstall-package repo-factory \
     --project "$REPOSITORY/automation"
 runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
   "$FACTORY_VENV/bin/uv" cache prune || true

@@ -9,6 +9,7 @@ import pytest
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
 from openhands_factory.daemon import (
     FactoryDaemon,
+    await_future_with_heartbeat,
     await_refresh,
     provider_status_snapshot,
     queue_snapshot,
@@ -369,6 +370,37 @@ def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None
 
     assert set(jobs) == {"42"}
     assert retry_at == 30.0
+    assert heartbeats == ["published"]
+
+
+def test_await_future_publishes_heartbeat_while_provider_health_is_busy() -> None:
+    attempts = 0
+    heartbeats: list[str] = []
+
+    class HealthFuture:
+        def result(self, timeout: float | None = None) -> dict[str, ProviderHealth]:
+            nonlocal attempts
+            assert timeout == 10.0
+            attempts += 1
+            if attempts == 1:
+                raise FutureTimeoutError
+            return {
+                "codex": ProviderHealth(
+                    "codex",
+                    ProviderStatus.HEALTHY,
+                    datetime.now(UTC),
+                )
+            }
+
+        def done(self) -> bool:
+            return attempts > 1
+
+    health = await_future_with_heartbeat(  # type: ignore[arg-type]
+        HealthFuture(),
+        lambda: heartbeats.append("published"),
+    )
+
+    assert health["codex"].status is ProviderStatus.HEALTHY
     assert heartbeats == ["published"]
 
 
