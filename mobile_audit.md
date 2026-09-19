@@ -1,54 +1,22 @@
-# Mobile Social Application Audit Report
+# Mobile UI source audit
 
-## 1. Safe Areas
-The application correctly utilizes `env(safe-area-inset-*)` CSS variables globally on `html` and `body` tags (found in `frontend/src/styles.scss` lines 117-119). It also properly mirrors them for RTL layouts (lines 132-133).
+This is a source review, not a device test or accessibility certification. It does not establish measured touch-target sizes, frame times, keyboard visibility, thumb reach or browser Back behaviour. Source baseline: main at b613278fe70f743c45d6ea9e5a2a291c6015ab27.
 
-## 2. Z-Index and Overlays
-- Lightbox uses `z-[100]` and `z-[110]` (`frontend/src/app/components/lightbox/lightbox.component.html`)
-- Modals like App Language Selector (`z-[110]`), Language Picker (`z-[120]`) and Moments Feed Overlay (`z-[100]`) exist.
-- Overlays like Incoming Call (`z-[9999]`), No Network Banner (`z-[10000]`), and Forced Update (`z-[11000]`) exist.
-Modal stacking logic is present across these high z-indexes.
+| Area | Source to inspect | Required runtime evidence |
+| --- | --- | --- |
+| Navigation and thumb reach | `frontend/src/app/app.component.html` and navigation components | Reachability on small and large phones in portrait and landscape; bottom controls remain visible with the keyboard open. |
+| Keyboard | Native form controls, skip link and focus styles in `frontend/src/styles.scss` | Logical focus order, visible focus, correct soft keyboard for each field, and no obscured submit action. |
+| Scrolling | Scroll containers and modal overflow classes | Long content scrolls within the intended container without trapping users or unexpectedly moving the page. Absence of legacy momentum-scrolling CSS is not evidence of a defect. |
+| Overlays | Owned Helm dialog components and their Brain primitives | Focus enters and returns correctly; stacking, inert background and dismissal work together. Do not assume Helm always renders a native HTML dialog. |
+| Safe areas | `frontend/src/styles.scss` and viewport layout | Insets work on notched devices, installed mode, landscape and RTL without double padding. |
+| Back navigation | Angular routes and per-dialog dismissal configuration | Test browser history, Android Back and iOS navigation separately. Escape handling does not prove any of these behaviours. The forced-update modal deliberately blocks Escape. |
+| Touch targets | Outer interactive controls, including icon buttons and checkbox labels | Measure each clickable bounding box and spacing. SVG dimensions, padding names, border radius and `min-w-0` on a noninteractive bubble do not establish a control's hit area. |
+| Media and voice | Recorder components using browser media APIs | Permission grant/denial, unsupported APIs, interruption, cancellation, track cleanup and upload recovery on supported browsers. Source use of getUserMedia does not prove these work. |
+| Long press and selection | `long-press-context-menu` and `flashcard-context-menu.directive.ts` | Context menu can be opened and dismissed; scrolling and essential text selection remain usable. Global selection suppression is a trade-off, not proof of native quality. |
+| Motion | Transition classes and reduced-motion rules | Check rendered motion and reduced-motion settings. CSS hooks alone do not establish frame rate or smoothness. |
 
-## 3. Scrolling and Overscroll
-Overscroll behaviours are well-managed in containers:
-- Global `overscroll-behaviour-y: none;` on body/html in `styles.scss`
-- Lightbox component applies `touch-pan-y overscroll-none` (`frontend/src/app/components/lightbox/lightbox.component.html`)
-- UI elements (autocomplete, combobox, report user modal) apply `overscroll-contain` or `overscroll-behaviour-inline: contain` to isolate scrolling.
+CSS/API identifiers retain their actual spelling, including `overscroll-behavior` and `transition-colors`. British English applies to prose, not renamed platform APIs.
 
-## 4. Touch Targets
-There are a number of small touch targets, often 14x14px (`w-3.5 h-3.5`), 16x16px (`w-4 h-4`) or 20x20px (`w-5 h-5`), found in:
-- `frontend/src/app/components/voiceroom-create-modal/voiceroom-create-modal.component.ts` (checkbox 16x16)
-- `frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts` (SVG 20x20)
-- `frontend/src/app/components/chat-message/chat-message.component.ts` (several `w-3.5 h-3.5` elements and an SVG `w-5 h-5`)
-- `frontend/src/app/components/chat-list/chat-list.component.html` (`w-7 h-7` element)
-These are smaller than the recommended 44x44px mobile touch target size.
+No claim is made that inputmode or enterkeyhint is present throughout the application. The previously cited discovery-search-bar and sms-verification examples were not substantiated. Audit actual form controls before recommending field-specific attributes.
 
-## 5. Long Presses
-The app implements long presses and context menus:
-- `flashcard-context-menu.directive.ts` handles `(contextmenu)` natively.
-- `long-press-context-menu.component.ts` handles long press natively via `(contextmenu)`.
-
-## 6. Voice / Media Capture
-The application extensively uses `navigator.mediaDevices.getUserMedia` for audio/video capture across:
-- `instant-video-recorder.component.ts`
-- `pronunciation-feedback.component.ts`
-- `voice-recorder.component.ts`
-- `audio-intro-recorder.component.ts`
-- `audio-recorder.component.ts`
-- `permission.service.ts`
-
-## 7. Back Navigation
-Keyboard accessibility and some focus-restoring behaviours were found, but explicit native back navigation behaviours for modals (like pushing history state) require deeper application-level review for proper mobile stacking teardown.
-
-## 8. Transitions
-Transitions (`transition-colours`) are used extensively across the app (like `frontend/src/app/app.component.html`), mostly for hover effects which are primarily applicable to desktop cursors rather than mobile touch inputs.
-
-## 9. Thumb Reach (Bottom Nav / Sheets)
-The bottom navigation bar correctly lives at the bottom of the screen (`bottom-0` and `pb-safe`) ensuring strong thumb accessibility.
-"Sheet" components use `rounded-sheet`, indicating modal presentation that's mobile-first.
-
-## Conclusion
-The application generally handles mobile considerations well (safe areas, scrolling isolation), but has areas for improvement:
-1. Touch targets (some are 14x14px and 20x20px, far below standard 44x44px).
-2. Modals may not natively pop states from the hardware back button.
-3. Transitions are mostly hover-based.
+The device matrix should include iOS Safari, Android Chrome, keyboard and screen-reader navigation, 320 CSS-pixel reflow, long translated text, RTL, light/dark themes and reduced motion. Record the build, device/browser, steps and measured result for each finding. Until that evidence exists, recommendations remain candidates for testing rather than confirmed defects or completed fixes.
