@@ -1030,7 +1030,7 @@ export class I18nService {
     'vocabulary.chipGrammar': '✏️ Grammar AI',
     'vocabulary.chipPronunciation': '🎙️ Pronunciation AI',
     'vocabulary.noDue': 'No review cards are due right now.',
-    'vocabulary.practiceAiConversation': 'Practice in AI conversation',
+    'vocabulary.practiceAiConversation': 'Practise in AI conversation',
     'vocabulary.restart': 'Restart review',
     'vocabulary.cardCounter': 'Card {{current}} of {{total}}',
     'vocabulary.levelBadge': 'Level {{level}}/4',
