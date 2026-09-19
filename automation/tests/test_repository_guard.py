@@ -22,6 +22,14 @@ def _process_alive(pid: int) -> bool:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
+    status_path = Path(f"/proc/{pid}/status")
+    if status_path.exists():
+        try:
+            for line in status_path.read_text().splitlines():
+                if line.startswith("State:") and "Z (zombie)" in line:
+                    return False
+        except (OSError, UnicodeDecodeError):
+            return False
     return True
 
 
