@@ -1,7 +1,9 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
   selector: 'app-skeleton-loader',
+  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: ``,
   host: {
     '[style.height]': 'height()',

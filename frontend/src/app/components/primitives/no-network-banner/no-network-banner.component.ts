@@ -1,10 +1,12 @@
-import { Component, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { NetworkStatusService } from '../../../services/network-status.service';
 import { ConfigurationService } from '../../../core/config/configuration.service';
 
 @Component({
   selector: 'app-no-network-banner',
+  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     <div class="fixed top-0 inset-x-0 z-[10000] flex flex-col items-stretch">
