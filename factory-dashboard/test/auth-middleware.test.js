@@ -1,70 +1,96 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fork } from 'node:child_process';
+import { once } from 'node:events';
+import { createServer } from 'node:net';
+import { spawn } from 'node:child_process';
+import test from 'node:test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serverPath = path.join(__dirname, '../src/server.js');
+const password = 'super:secret:password123';
 
-test('Server Authentication integration', async (t) => {
-  let child;
-  const port = 3199;
+async function findAvailablePort() {
+  const socket = createServer();
+  socket.listen(0, '127.0.0.1');
+  await once(socket, 'listening');
+  const address = socket.address();
+  assert.ok(address && typeof address === 'object');
+  const { port } = address;
+  await new Promise((resolve, reject) => {
+    socket.close((error) => (error ? reject(error) : resolve()));
+  });
+  return port;
+}
 
-  await t.test('setup server', async () => {
-    const serverPath = path.join(__dirname, '../src/server.js');
-    child = fork(serverPath, [], {
-      env: {
-        ...process.env,
-        PORT: port.toString(),
-        DASHBOARD_PASSWORD: 'supersecretpassword16chars',
-      },
-      stdio: 'pipe'
+async function waitUntilReady(serverProcess, url, stderr) {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    if (serverProcess.exitCode !== null) {
+      throw new Error(`Dashboard exited before becoming ready: ${stderr()}`);
+    }
+    try {
+      const response = await fetch(url);
+      if (response.status === 200) return;
+    } catch {
+      // The child has not bound its socket yet.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`Dashboard did not become ready within 5 seconds: ${stderr()}`);
+}
+
+test('server enforces basic auth on protected routes', { timeout: 10000 }, async () => {
+  const port = await findAvailablePort();
+  const env = {
+    ...process.env,
+    PORT: String(port),
+    DASHBOARD_USER: 'admin',
+    DASHBOARD_PASSWORD: password,
+  };
+  const serverProcess = spawn('node', [serverPath], {
+    env,
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  let stderr = '';
+  serverProcess.stderr.setEncoding('utf8');
+  serverProcess.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+
+  try {
+    await waitUntilReady(serverProcess, `http://127.0.0.1:${port}/health`, () => stderr);
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/projects`);
+    assert.strictEqual(response.status, 401, 'Expected 401 for missing credentials');
+    assert.match(response.headers.get('www-authenticate') ?? '', /Basic/);
+
+    const staticResponse = await fetch(`http://127.0.0.1:${port}/index.html`);
+    assert.strictEqual(staticResponse.status, 401);
+
+    const malformedResponse = await fetch(`http://127.0.0.1:${port}/api/projects`, {
+      headers: { Authorization: 'Basic invalid-base64' },
     });
+    assert.strictEqual(malformedResponse.status, 401);
 
-    await new Promise((resolve) => {
-        child.stdout.on('data', data => {
-            if (data.toString().includes('listening on')) resolve();
-        });
-        setTimeout(resolve, 5000); // 5s max
+    const invalidResponse = await fetch(`http://127.0.0.1:${port}/api/projects`, {
+      headers: { Authorization: `Basic ${Buffer.from('admin:wrong-password').toString('base64')}` },
     });
-  });
+    assert.strictEqual(invalidResponse.status, 401, 'Expected 401 for invalid credentials');
 
-  await t.test('protects API routes with Basic Auth and returns 401 Unauthorized', async () => {
-    const res = await fetch(`http://localhost:${port}/api/projects`);
-    assert.strictEqual(res.status, 401);
-  });
-
-  await t.test('allows health check without credentials', async () => {
-    const res = await fetch(`http://localhost:${port}/health`);
-    assert.strictEqual(res.status, 200);
-  });
-
-  await t.test('protects static assets with Basic Auth and returns 401', async () => {
-    const res = await fetch(`http://localhost:${port}/index.html`);
-    assert.strictEqual(res.status, 401);
-  });
-
-  await t.test('allows access with correct credentials', async () => {
-    const credentials = Buffer.from('admin:supersecretpassword16chars').toString('base64');
-    const res = await fetch(`http://localhost:${port}/api/projects`, {
-      headers: {
-        Authorization: `Basic ${credentials}`
-      }
+    const validResponse = await fetch(`http://127.0.0.1:${port}/api/projects`, {
+      headers: { Authorization: `Basic ${Buffer.from(`admin:${password}`).toString('base64')}` },
     });
-    assert.strictEqual(res.status, 200);
-  });
+    assert.strictEqual(validResponse.status, 200, 'Expected valid credentials to authorize');
 
-  await t.test('rejects access with incorrect credentials', async () => {
-    const credentials = Buffer.from('admin:wrongpassword16chars').toString('base64');
-    const res = await fetch(`http://localhost:${port}/api/projects`, {
-      headers: {
-        Authorization: `Basic ${credentials}`
-      }
+    const prefixResponse = await fetch(`http://127.0.0.1:${port}/api/projects`, {
+      headers: { Authorization: `Basic ${Buffer.from('admin:super').toString('base64')}` },
     });
-    assert.strictEqual(res.status, 401);
-  });
-
-  await t.test('teardown', () => {
-    if (child) child.kill();
-  });
+    assert.strictEqual(prefixResponse.status, 401);
+  } finally {
+    if (serverProcess.exitCode === null) {
+      serverProcess.kill();
+      await once(serverProcess, 'exit');
+    }
+  }
 });
