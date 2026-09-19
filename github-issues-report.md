@@ -26,7 +26,7 @@ The `communities.component.ts` file will become overly large and difficult to ma
 ## Acceptance Criteria
 * Create a separate component for the community creation form.
 * Create a separate component for rendering the community list item.
-* Refactor `communities.component.ts` to use these new components, passing data via `@Input` and handling events via `@Output`.
+* Refactor `communities.component.ts` to use these new components, passing data via signal `input()` and handling events via `output()`.
 
 ## Suggested Labels
 tech-debt, refactoring, medium-priority
@@ -42,7 +42,7 @@ Currently, there's no visual indication in the `communities.component.ts` inline
 
 ## Acceptance Criteria
 * Utilise Angular signals (e.g., `selectedCommunityId`) to track and apply distinct active styles.
-* Apply Tailwind classes like `bg-surface-300` and `border-l-4 border-indigo-500` to indicate the currently viewed community or group.
+* Apply Tailwind classes like `bg-surface-200` and `border-s-4 border-primary` to indicate the currently viewed community or group.
 
 ## Suggested Labels
 enhancement, ui/ux, good-first-issue
@@ -80,3 +80,7 @@ A review of the frontend codebase shows that `@angular/cdk` is present in `packa
 
 ## Suggested Labels
 bug, performance, tech-debt, ui
+
+## Review scope
+
+These are candidate outcomes, not proof that the current Communities implementation lacks them. Compare the current component and its tests before creating duplicate work. For virtual scrolling, preserve viewport position as data is prepended, dynamic heights, pagination, keyboard access and screen-reader behaviour; establish a measured baseline before asserting performance gains.

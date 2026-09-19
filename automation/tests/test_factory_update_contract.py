@@ -18,6 +18,7 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     assert "GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}" in updater
     assert "git -c safe.directory=" not in updater
     assert 'git -C "$REPOSITORY" reset --hard' not in updater
+    assert "--reinstall-package repo-factory" in updater
     assert "maintain-factory-host-storage.sh" in updater
     assert "restore_services_on_failure" in updater
     assert "Unknown state is not idle" in updater
