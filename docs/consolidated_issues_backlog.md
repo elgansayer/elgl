@@ -68,4 +68,8 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
 - Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag (Ref: PR #8448).
-- Complete comprehensive i18n localization across all frontend modules (replace hardcoded strings and ensure complete en.json coverage).
+- Complete comprehensive i18n localization across all frontend modules (replace hardcoded strings and ensure coverage in I18nService.baseDictionary with British English defaults and the applicable en-GB dictionary).
+
+## Acceptance criteria and provenance
+
+This file is a summary. The complete acceptance criteria and source references, including PR #8448, remain in `wiki/Issues_Backlog.md`; that document is authoritative when this summary omits detail. Preserve dynamic-height handling, pagination, DOM bounds and viewport position when evaluating virtual scrolling.
