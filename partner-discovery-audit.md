@@ -1,41 +1,18 @@
-# Audit Report: Partner Discovery
+# Partner discovery ranking proposals
 
-## Current State
+This is a design proposal, not evidence that a scoring experiment improves conversation quality. Current behaviour is split between discovery sorting and the recommendation service; do not describe all paths as a language-only binary filter. Inspect `backend/src/discovery/discovery.service.ts` and `backend/src/recommendations/discovery-recommendations.service.ts` for the deployed weights, privacy gates and candidate selection.
 
-The current partner discovery heavily relies on basic language pairing. In `backend/src/recommendations/recommendations.service.ts`, the function `recommendationsByLanguageExchange` relies on basic `.overlaps` of `native_languages` and `target_languages`, and ordering by `is_serious_learner` and `study_streak_days`.
+| Signal | Proposed use | Evidence or constraint required |
+| --- | --- | --- |
+| Language reciprocity | Prefer mutual native/target language compatibility | Preserve explicit user filters and validate ranking against the actual endpoint. |
+| Proficiency | Consider relative learning levels | Treat missing data neutrally; no claim that one pairing guarantees a better exchange. |
+| Availability | Compare stated time preferences | Clock times alone do not establish simultaneous availability across timezones. Use explicit timezone context before claiming actual overlap. |
+| Interests | Use shared topics as conversation starters | The existing recommendation ranker already considers shared interests; evaluate improvements against that baseline. |
+| Response behaviour | Explore aggregate responsiveness | Define consent, retention, minimum sample/cohort sizes, uncertainty and opt-out before collecting or exposing a behavioural score. Do not expose private contacts or individual response histories. |
+| Corrections | Consider established helpfulness signals | A high correction count or ratio is not proof of correctness or quality; measure abuse and learner outcomes. |
+| Learning goals and consistency | Match stated goals and suitable participation cadence | Preserve hard eligibility and privacy settings. Do not convert a consent or safety gate into a soft ranking preference. |
+| Conversation preferences | Prefer explicitly stated communication style | Do not infer sensitive preferences from age, nationality or message content. Start with optional user-supplied preferences. |
 
-While this establishes baseline linguistic compatibility, it lacks sophisticated scoring for predicting long-term conversation success. We need to expand ranking signals as requested.
+Keep blocked, hidden and otherwise ineligible users excluded before ranking. Missing or sparse signals should not fabricate a strong preference. Any new metric needs a documented sample threshold, privacy-preserving aggregation and failure behaviour before implementation.
 
-## Proposed Ranking Signals & Explanation
-
-### 1. Complementary Languages
-*   **What:** Not just direct matches (A learns B, B learns A), but also assessing secondary languages or bridging languages (e.g. both speak C at an intermediate level).
-*   **Why:** Even if the direct native/target match is imperfect, a shared bridge language significantly reduces early-stage communication friction, lowering drop-off rates and helping users explain concepts more effectively.
-
-### 2. Proficiency
-*   **What:** Evaluating the delta between users' proficiency levels in their respective target languages (e.g., using `proficiency_level` in `UserProfile`).
-*   **Why:** A large disparity (e.g., C2 matching with A1) often leads to a one-sided teaching dynamic rather than a reciprocal language exchange. Matching users with comparable relative proficiencies (or a deliberate slight offset where one is slightly stronger) yields more balanced and mutually beneficial conversations.
-
-### 3. Timezone Overlap
-*   **What:** Calculating the number of waking/active hours overlapping based on timezone or location data (or `available_time_start` / `available_time_end` fields in `UserProfile`).
-*   **Why:** A perfect language match is useless if the users are never awake at the same time. Synchronous communication is a huge driver of engagement in language exchange apps. Higher timezone overlap increases the probability of real-time chatting and voice calls.
-
-### 4. Interests
-*   **What:** Jaccard similarity or TF-IDF scoring on the `interests` and `hobbies` arrays in `UserProfile`.
-*   **Why:** Language is a medium, not the subject. Having shared interests (e.g., both like 'tech' and 'travel') provides immediate, natural conversation starters (icebreakers) and sustains long-term dialogue beyond basic introductions.
-
-### 5. Response Behaviour
-*   **What:** Historical metrics such as median response time, reply rate to new messages, and ghosting frequency.
-*   **Why:** Users who frequently initiate or promptly reply to messages are high-value network nodes. Surfacing users with healthy response behaviours prevents new users from sending messages into a void, thereby improving overall platform retention.
-
-### 6. Correction Behaviour
-*   **What:** Utilizing the existing `correction_ratio` and `corrector_score` in `UserProfile`.
-*   **Why:** A core value proposition of the app is getting native corrections. Users who actively and accurately correct others' mistakes (high ratio and score) should be promoted, as they directly contribute to the learning outcomes of their partners.
-
-### 7. Learning Seriousness
-*   **What:** Combining `is_serious_learner` (boolean), `study_streak_days`, and session frequency/duration.
-*   **Why:** Filtering out casual or low-intent users. Users with high study streaks and the 'Serious Learner' flag have demonstrated commitment. Matching them with similarly committed peers prevents frustration caused by flakey partners.
-
-### 8. Conversation Compatibility
-*   **What:** A predictive score based on historical chat length, average message size, and vocabulary overlap, perhaps utilizing the `learning_goals` field.
-*   **Why:** Some users prefer short, frequent chat messages, while others prefer long, detailed pen-pal style paragraphs. Matching based on conversation style ensures the cadence and depth of the exchange meet both users' expectations.
+Compare proposals using a controlled evaluation with clear quality and fairness measures, including cold-start users. Source inspection cannot establish retention gains, reduced drop-off or learning effectiveness. Proposed weights and collection mechanisms are not approved or shipped by this document.
