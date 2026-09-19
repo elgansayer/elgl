@@ -26,7 +26,7 @@
 - **PUT** `/uploadUrl` (Raw: `uploadUrl`) in `app/components/profile-edit/profile-edit.component.ts`
 - **GET** `/LICENCE_MANIFEST_URL` (Raw: `LICENCE_MANIFEST_URL`) in `app/pages/help-about/help-about.component.ts`
 
-## Unused Backend Routes (453)
+## Unused Backend Routes (452)
 - **GET** `/` in `app.controller.ts`
 - **GET** `/health` in `app.controller.ts`
 - **GET** `/achievements` in `achievements/achievements.controller.ts`
@@ -55,7 +55,6 @@
 - **DELETE** `/admin/blocks/:blockId` in `admin/admin.controller.ts`
 - **GET** `/ai-conversation/scenarios` in `ai-conversation/ai-conversation.controller.ts`
 - **POST** `/ai-conversation/message` in `ai-conversation/ai-conversation.controller.ts`
-- **GET** `/assessments/questions` in `assessments/assessments.controller.ts`
 - **GET** `/audio-intro/:userId` in `audio-intro/audio-intro.controller.ts`
 - **PATCH** `/audio-intro/:userId` in `audio-intro/audio-intro.controller.ts`
 - **POST** `/audio-intro/presigned-upload` in `audio-intro/audio-intro.controller.ts`
