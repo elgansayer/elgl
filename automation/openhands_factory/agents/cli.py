@@ -423,6 +423,8 @@ class CLIProvider:
             failure=failure,
             transport=self.transport,
             model=model,
+            captured_output_chars=len(result.stdout) + len(result.stderr),
+            output_truncated=result.output_truncated,
         )
 
 
