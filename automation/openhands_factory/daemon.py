@@ -189,12 +189,12 @@ def refresh_jobs(
         return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
 
 
-def await_refresh(
-    future: Future[tuple[dict[str, Job], float]],
+def await_future_with_heartbeat[T](
+    future: Future[T],
     publish_heartbeat: Callable[[], None],
     heartbeat_seconds: float = 10.0,
-) -> tuple[dict[str, Job], float]:
-    """Keep daemon liveness current while control-plane reconciliation blocks."""
+) -> T:
+    """Keep daemon liveness current while a control-plane operation blocks."""
 
     while True:
         try:
@@ -205,6 +205,16 @@ def await_refresh(
                 # misreport that failure as an ordinary heartbeat interval.
                 return future.result()
             publish_heartbeat()
+
+
+def await_refresh(
+    future: Future[tuple[dict[str, Job], float]],
+    publish_heartbeat: Callable[[], None],
+    heartbeat_seconds: float = 10.0,
+) -> tuple[dict[str, Job], float]:
+    """Keep compatibility for callers awaiting GitHub reconciliation."""
+
+    return await_future_with_heartbeat(future, publish_heartbeat, heartbeat_seconds)
 
 
 def stall_alert_decision(
@@ -519,7 +529,11 @@ class FactoryDaemon:
                 if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
-                        health = self.pipeline.router.health_snapshot()
+                        health_future = control.submit(self.pipeline.router.health_snapshot)
+                        health = await_future_with_heartbeat(
+                            health_future,
+                            lambda: self._write_daemon_state("running", active, active_started_at),
+                        )
                         self.provider_health = dict(health)
                         LOGGER.info(
                             "Factory provider health: %s",

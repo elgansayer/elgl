@@ -199,8 +199,10 @@ export class ChatService {
   /** Exposed for UI: count of messages queued offline waiting for sync. */
   readonly queuedCount = this.offlineQueue.queueSize;
 
-  async getMessageReceipts(_messageId: string): Promise<MessageReceiptStatus> {
-    return Promise.resolve({ readBy: [], totalMembers: 0 });
+  async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
+    return firstValueFrom(
+      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
+    );
   }
 
   constructor() {

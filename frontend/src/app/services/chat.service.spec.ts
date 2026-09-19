@@ -143,11 +143,11 @@ describe('ChatService', () => {
     });
   });
 
-  it('fails closed when message receipt details are unavailable', async () => {
-    await expect(service.getMessageReceipts('message-1')).resolves.toEqual({
-      readBy: [],
-      totalMembers: 0,
-    });
+  it('preserves receipt request failures instead of reporting fabricated empty status', async () => {
+    const request = service.getMessageReceipts('message-1');
+    const assertion = expect(request).rejects.toMatchObject({ status: 503 });
+    httpMock.expectOne(`${baseUrl}/messages/message-1/receipts`).flush({}, { status: 503, statusText: 'Unavailable' });
+    await assertion;
   });
 
   describe('blocked users', () => {
