@@ -1,33 +1,22 @@
-# Mobile UX/UI Audit Report
+# Mobile UI source audit
 
-This document evaluates the mobile user experience of the application, focusing on behavior, interactions, and interface design from the perspective of an actual mobile social app user.
+This is a source review, not a device test or accessibility certification. It does not establish measured touch-target sizes, frame times, keyboard visibility, thumb reach or browser Back behaviour. Source baseline: main at b613278fe70f743c45d6ea9e5a2a291c6015ab27.
 
-## 1. Thumb Reach
-**Evaluation:** The application successfully prioritizes mobile thumb reach by anchoring the primary navigation bar to the bottom of the screen using fixed positioning (`bottom-0`). This allows users to comfortably access core sections (HelloTalk, Moments, Connect, LiveRooms) without stretching to the top of the device. This provides a natural, native-app feel for one-handed usage.
+| Area | Source to inspect | Required runtime evidence |
+| --- | --- | --- |
+| Navigation and thumb reach | `frontend/src/app/app.component.html` and navigation components | Reachability on small and large phones in portrait and landscape; bottom controls remain visible with the keyboard open. |
+| Keyboard | Native form controls, skip link and focus styles in `frontend/src/styles.scss` | Logical focus order, visible focus, correct soft keyboard for each field, and no obscured submit action. |
+| Scrolling | Scroll containers and modal overflow classes | Long content scrolls within the intended container without trapping users or unexpectedly moving the page. Absence of legacy momentum-scrolling CSS is not evidence of a defect. |
+| Overlays | Owned Helm dialog components and their Brain primitives | Focus enters and returns correctly; stacking, inert background and dismissal work together. Do not assume Helm always renders a native HTML dialog. |
+| Safe areas | `frontend/src/styles.scss` and viewport layout | Insets work on notched devices, installed mode, landscape and RTL without double padding. |
+| Back navigation | Angular routes and per-dialog dismissal configuration | Test browser history, Android Back and iOS navigation separately. Escape handling does not prove any of these behaviours. The forced-update modal deliberately blocks Escape. |
+| Touch targets | Outer interactive controls, including icon buttons and checkbox labels | Measure each clickable bounding box and spacing. SVG dimensions, padding names, border radius and `min-w-0` on a noninteractive bubble do not establish a control's hit area. |
+| Media and voice | Recorder components using browser media APIs | Permission grant/denial, unsupported APIs, interruption, cancellation, track cleanup and upload recovery on supported browsers. Source use of getUserMedia does not prove these work. |
+| Long press and selection | `long-press-context-menu` and `flashcard-context-menu.directive.ts` | Context menu can be opened and dismissed; scrolling and essential text selection remain usable. Global selection suppression is a trade-off, not proof of native quality. |
+| Motion | Transition classes and reduced-motion rules | Check rendered motion and reduced-motion settings. CSS hooks alone do not establish frame rate or smoothness. |
 
-## 2. Keyboard Behaviour
-**Evaluation:** The experience for keyboard users is robust. The app includes a global skip-to-content link, facilitating efficient navigation. Focus states are carefully managed: interactive elements display clear focus rings when navigated via keyboard (`:focus-visible`), but remain unobtrusive during touch interactions (`:focus:not(:focus-visible)`). This ensures accessibility without compromising the visual cleanliness of the mobile touch interface.
+CSS/API identifiers retain their actual spelling, including `overscroll-behavior` and `transition-colors`. British English applies to prose, not renamed platform APIs.
 
-## 3. Scrolling & Overscroll
-**Evaluation:** The application employs a thoughtful approach to scrolling. By utilizing dynamic viewport heights (`100dvh`), the main layout adapts smoothly to the appearance and disappearance of mobile browser toolbars. Furthermore, modal windows (e.g., `report-user-modal`, `correction-modal`) effectively trap scrolling using `overscroll-contain`, preventing the frustrating "scroll chaining" effect where the background page scrolls unintentionally while interacting with an overlay.
+No claim is made that inputmode or enterkeyhint is present throughout the application. The previously cited discovery-search-bar and sms-verification examples were not substantiated. Audit actual form controls before recommending field-specific attributes.
 
-## 4. Overlays & Modal Stacking
-**Evaluation:** The management of overlapping elements (modals, lightboxes, and system alerts) is well-structured. The application enforces a clear visual hierarchy via z-indexes (e.g., `z-[100]` for lightboxes, `z-[11000]` for forced update modals), ensuring that critical alerts reliably appear above standard content. This prevents UI collisions and ensures users are never trapped behind invisible or un-dismissable layers.
-
-## 5. Safe Areas
-**Evaluation:** The app properly respects device safe areas, a critical aspect of modern mobile design. Global styles apply `env(safe-area-inset-top)` and corresponding logical directions to ensure content does not render beneath mobile hardware features such as notches or home indicators.
-
-## 6. Back-Navigation
-**Evaluation:** Navigation backwards through the app feels intuitive. Semantic dialogs support standard dismissal patterns, such as the Escape key handling by the underlying `hlm-dialog` primitive (as referenced in `report-user-modal.component.ts`), aligning with expected accessible behaviors and ensuring users can easily reverse their actions.
-
-## 7. Touch Targets
-**Evaluation:** Interactive elements are sized appropriately for touch. For example, primary navigation tab items use a width of `w-16`, and standard icon buttons use padding of `p-2` with `rounded-full`, creating sufficient hit areas and significantly reducing the likelihood of accidental mis-taps.
-
-## 8. Media Capture & Voice Recording
-**Evaluation:** The integration of media capture relies directly on native Web APIs (`navigator.mediaDevices.getUserMedia`) for audio (in `audio-recorder.component.ts`) and video (in `instant-video-recorder.component.ts`). This allows users to record voice messages and capture video instantly without relying on clunky third-party plugins.
-
-## 9. Long Presses
-**Evaluation:** The app captures long press interactions via `app-long-press-context-menu`. Crucially, it disables default browser behaviors like text selection (`user-select: none`) globally, except within specific text inputs (`-webkit-user-select: text`). This prevents the native operating system's magnifier or selection handles from interfering with the app's custom long-press actions, resulting in a true native app feel.
-
-## 10. Transitions
-**Evaluation:** State changes and interactions are enhanced by smooth CSS transitions. For instance, `transition-colors` is widely used on utility buttons and navigation items to provide immediate visual feedback upon interaction, making the interface feel responsive and polished.
+The device matrix should include iOS Safari, Android Chrome, keyboard and screen-reader navigation, 320 CSS-pixel reflow, long translated text, RTL, light/dark themes and reduced motion. Record the build, device/browser, steps and measured result for each finding. Until that evidence exists, recommendations remain candidates for testing rather than confirmed defects or completed fixes.
