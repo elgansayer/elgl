@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import Redis from 'ioredis';
+import Redis from 'ioredis-v6';
 
 export type UsersRow = {
   id: string;
@@ -2280,6 +2280,8 @@ export class SupabaseService implements OnModuleDestroy {
     this.redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
+      // ioredis 6 defaults to RESP3; retain v5 response shapes for cache callers.
+      protocol: 2,
     });
     this.redisClient.on('error', (err) => {
       this.logger.error(

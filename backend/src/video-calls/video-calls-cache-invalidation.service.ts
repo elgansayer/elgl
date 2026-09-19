@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import Redis from 'ioredis';
+import type Redis from 'ioredis-v6';
 import { SupabaseService } from '../supabase/supabase.service';
 
 /**
