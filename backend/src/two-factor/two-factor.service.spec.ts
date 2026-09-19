@@ -146,7 +146,7 @@ describe('TwoFactorService', () => {
   describe('isEnabled', () => {
     it('should return true if two-factor authentication is enabled', async () => {
       const userId = 'test-user';
-      const mockData = { totp_secret: 'mockSecret' };
+      const mockData = { two_factor_enabled: true };
 
       supabaseService
         .getClient()
@@ -155,18 +155,35 @@ describe('TwoFactorService', () => {
       const result = await service.isEnabled(userId);
 
       expect(result).toBe(true);
+      expect(supabaseService.getClient().select).toHaveBeenCalledWith(
+        'two_factor_enabled',
+      );
     });
 
     it('should return false if two-factor authentication is not enabled', async () => {
       const userId = 'test-user';
 
-      supabaseService
-        .getClient()
-        .single.mockResolvedValue({ data: null, error: null });
+      supabaseService.getClient().single.mockResolvedValue({
+        data: { two_factor_enabled: false },
+        error: null,
+      });
 
       const result = await service.isEnabled(userId);
 
       expect(result).toBe(false);
+    });
+
+    it('should fail closed if the status lookup fails', async () => {
+      const userId = 'test-user';
+
+      supabaseService.getClient().single.mockResolvedValue({
+        data: null,
+        error: new Error('database unavailable'),
+      });
+
+      await expect(service.isEnabled(userId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 });
