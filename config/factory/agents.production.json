@@ -118,11 +118,11 @@
   "circuit_breaker": {
     "failure_threshold": 1,
     "default_cooldown_seconds": 300,
-    "rate_limit_cooldown_seconds": 900,
-    "quota_cooldown_seconds": 3600,
-    "auth_cooldown_seconds": 900,
+    "rate_limit_cooldown_seconds": 3600,
+    "quota_cooldown_seconds": 21600,
+    "auth_cooldown_seconds": 21600,
     "unavailable_cooldown_seconds": 300,
-    "transport_cooldown_seconds": 300,
+    "transport_cooldown_seconds": 1800,
     "timeout_cooldown_seconds": 300,
     "crash_cooldown_seconds": 300,
     "invalid_output_cooldown_seconds": 900
