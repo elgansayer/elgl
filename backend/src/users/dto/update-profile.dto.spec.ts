@@ -49,4 +49,28 @@ describe('UpdateProfileDto', () => {
       false,
     );
   });
+
+  it('accepts learning goals using the database array contract', async () => {
+    const dto = Object.assign(new UpdateProfileDto(), {
+      learning_goals: ['conversation', 'grammar'],
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.some((error) => error.property === 'learning_goals')).toBe(
+      false,
+    );
+  });
+
+  it('rejects the obsolete comma-separated learning-goals contract', async () => {
+    const dto = Object.assign(new UpdateProfileDto(), {
+      learning_goals: 'conversation,grammar',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.some((error) => error.property === 'learning_goals')).toBe(
+      true,
+    );
+  });
 });
