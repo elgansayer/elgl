@@ -83,3 +83,8 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-09-16 - [IDOR in Audio Intro Update Endpoint]
+**Vulnerability:** The `updateAudioIntro` endpoint in `AudioIntroController` allowed any authenticated user to modify the audio intro URL for any other user by simply passing a different `userId` in the URL path.
+**Learning:** Endpoints that accept a `userId` as a path parameter must always validate that the requested `userId` matches the currently authenticated user's ID to prevent IDOR attacks.
+**Prevention:** Use `@Req() req: { user: { id: string } }` alongside the `@UseGuards(SupabaseAuthGuard)` to extract the authenticated user's ID, and explicitly throw a `ForbiddenException` if it doesn't match the requested path parameter.
