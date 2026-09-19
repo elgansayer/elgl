@@ -1,31 +1,9 @@
-# Pedagogical Architecture Audit Report
+# Pedagogical source review
 
-This report evaluates the application as a language-learning expert to determine if core features (chat, reading, corrections, vocabulary, AI conversations, pronunciation, lessons, streaks, and assessments) reinforce each other to maximize comprehensible input, retrieval practice, spaced repetition, active production, and meaningful feedback.
+The application contains reading, chat, corrections, vocabulary review, AI role-play and assessment features. Their presence is an implementation inventory; it does not demonstrate learning effectiveness or integration quality.
 
-## 1. Comprehensible Input (Reading & Chat)
-- **Observation (Verified):** The application features LingQ-style interactive reading (per `README.md`) and curated learning articles (`backend/src/database/migrations/002_create_curated_learning_tables.sql`).
-- **Analysis:** Provides robust input. The reading engine allows users to consume texts.
+This PR adds prompt guidance for comprehensible language, open-ended production, reuse of prior conversation vocabulary and gentle corrective modelling. Concrete scenario tasks and the 1-3 sentence turn limit remain in place. The prompts request these behaviours; model compliance and pedagogical benefit require evaluation.
 
-## 2. Active Production (Chat, Audio Rooms & AI Conversations)
-- **Observation (Verified):** The platform supports multi-user language exchange rooms (`LiveKit` integration per `README.md`) and AI conversations. AI system prompts explicitly mandate "Active Production: Ask engaging, open-ended questions related to their interests to prompt them to speak and produce language" (`backend/src/ai-conversation/ai-conversation.service.ts`).
-- **Analysis:** Highly effective for spoken and written production.
-- **Integration:** Audio rooms and AI conversations provide distinct production environments (spontaneous human vs. low-pressure AI).
+Test learners at different levels, inspect generated turns, measure recall over time and compare learning outcomes before claiming effectiveness. Reusing a word in dialogue is not itself a spaced-repetition scheduler. Existing vocabulary scheduling, correction-to-card actions and AI conversation context should be tested separately, including explicit user control over saving material.
 
-## 3. Meaningful Feedback (Corrections)
-- **Observation (Verified):** The platform includes a correction tool for both direct and group chats.
-- **Analysis:** Structured corrections provide immediate, explicit feedback on grammar and vocabulary.
-
-## 4. Retrieval Practice & Spaced Repetition (Vocabulary & Flashcards)
-- **Observation (Verified):** The `FlashcardsService` implements an algorithm for spaced repetition (`backend/src/flashcards/flashcards.service.ts`). It evaluates review quality to calculate the `easiness_factor` and `interval_days`. The system also suggests flashcards from chat messages (`backend/src/flashcards/suggest-flashcards.service.ts`).
-- **Analysis:** Core SRS mechanics are well-implemented.
-- **Integration:** The AI conversation service explicitly lists instructions to use recently learned material to reinforce learning via Spaced Repetition (`backend/src/ai-conversation/ai-conversation.service.ts`).
-
-## 5. Motivation & Consistency (Streaks & Assessments)
-- **Observation (Verified):** `AssessmentsService` evaluates self-reported skills and difficulty levels (`backend/src/assessments/assessments.service.ts`).
-- **Analysis:** Assessments provide a sense of progression.
-
-## Conclusion & Opportunities
-The architecture demonstrates a high degree of integration between features. The AI tutor's explicit prompting to reuse recently learned material during natural conversation is a best-in-class implementation of contextual retrieval practice.
-
-**Potential Enhancements:**
-- Automatically generate flashcards from user errors in the correction tool, turning community feedback directly into SRS material.
+No claim of best-in-class performance, improved retention or measured learning gains is made by this source review.
