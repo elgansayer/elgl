@@ -1,5 +1,7 @@
 # Product Information Architecture & Capability Mapping
 
+Status: source inventory and proposed information architecture. The proposed grouping is not the current route configuration or an approved migration. Preserve legacy deep links and their query parameters. Runtime route files under `frontend/src/app/routes` remain authoritative; root currently redirects to `/ai-conversation`.
+
 ## Overview
 This report outlines the user-facing routes, capabilities, overlaps, redundancies, and a consolidated architecture for the platform.
 
