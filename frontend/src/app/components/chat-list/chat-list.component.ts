@@ -199,13 +199,6 @@ export class ChatListComponent implements OnInit {
     );
   });
 
-  readonly pinnedPreviews = computed(() =>
-    this.filteredPreviews().filter((preview) => preview.isPinned),
-  );
-  readonly regularPreviews = computed(() =>
-    this.filteredPreviews().filter((preview) => !preview.isPinned),
-  );
-
   async ngOnInit(): Promise<void> {
     await Promise.all([
       this.loadPreviews(),
