@@ -1,31 +1,25 @@
-# Language Corrections Audit Report
+# Language corrections source audit
 
-## 1. Locations for User Corrections
-- **Moments Feed**: Users can correct public posts via the `CorrectionModalComponent` triggered from `MomentsFeedComponent`.
-- **Chat Rooms**: Users can correct direct messages via the inline correction form in `ChatRoomComponent`.
-- **Display Locations**: Corrections are displayed in `ChatMessageComponent`, `ChatRoomComponent`, `MomentsFeedComponent`, `CorrectionModalComponent`, and `FavouritesComponent`.
+Scope: implementation and caller review. No timed usability study, tone assessment, translated-session test or end-to-end SRS persistence test was performed. The presence of a method or translation key does not demonstrate those outcomes.
 
-## 2. Assessment against criteria
+## Authoring and presentation
 
-### Extremely fast to create
-- **Verified in**: `frontend/src/app/components/correction-modal/correction-modal.component.ts` and inline chat forms.
-- **Implementation**: The original text is automatically pre-filled into the input field (`correctedText.set(this.originalText())`). Users only need to edit the incorrect part rather than retyping the entire sentence.
+`CorrectionModalComponent` pre-fills an editable correction from the source text and emits corrected text with an optional explanation. The existing chat-room authoring path also needs to be considered separately: PR #8921 proposes consolidating it into the shared modal. This audit does not mark that proposed change as shipped.
 
-### Easy to understand
-- **Verified in**: `frontend/src/app/components/visual-diff/visual-diff.component.ts`
-- **Implementation**: Uses the native `Intl.Segmenter` for word-level granularity to render distinct visual markers (green background for additions, red strikethrough for removals). The live diff preview updates instantly as the user types.
+`VisualDiffComponent` uses Intl.Segmenter for multilingual token boundaries. That API does not guarantee minimal edits or fast rendering for arbitrary input lengths. PR #7632 bounds the proposed LCS implementation and adds long-input regressions; algorithm and performance claims must match the version actually deployed. Test CJK, Thai, punctuation, repeated words, whitespace and large messages.
 
-### Non-judgemental
-- **Verified in**: `frontend/src/app/components/correction-modal/correction-modal.component.html`
-- **Implementation**: The UI uses translation keys like `moments.correctSentenceTitle` and `moments.ghostOriginal` for positive framing. Explanations for corrections are marked as optional.
+## Translation and reuse
 
-### Translatable
-- **Verified in**: `frontend/src/app/components/visual-diff/visual-diff.component.ts`
-- **Implementation**: All static UI strings in both surfaces use the translation pipe (`| t`) relying on `I18nService`. The `VisualDiffComponent` provides an inline translate button for user-provided explanations that calls `ChatService.translateText()` and caches the result via `TranslationCacheService`.
+Static UI text uses the translation infrastructure. Explanation translation and flashcard creation are conditional component behaviours: callers must pass the explanation and enable the relevant action. Inspect each caller in chat messages, chat rooms, Moments, the correction modal and Favourites independently. Do not infer complete coverage from VisualDiff's API alone.
 
-### Reusable as learning material (SRS / Examples)
-- **Verified in**: `frontend/src/app/components/visual-diff/visual-diff.component.ts` and all consuming templates.
-- **Implementation**: The `VisualDiffComponent` exposes a `createFlashcard()` method bound to a "➕ {{ 'correction.createFlashcard' | t }}" button when `showActions=true`. The flag `[showActions]="true"` is actively passed in `chat-message.component.ts`, `chat-room.component.html`, `moments-feed.component.html`, `correction-modal.component.html`, and `favourites.component.html`, meaning corrections can be converted into SRS cards with one action across all surfaces.
+PR #7588 addresses missing explanation propagation in the correction modal preview. This source review therefore does not conclude that every surface is already complete. Existing inline chat authoring and shared-modal authoring also have different integration paths.
 
-## 3. Conclusion
-No functional changes are required. The current implementation successfully satisfies all specified architectural requirements.
+## Validation still required
+
+- Measure the steps and time to create a correction, including cancellation and failure recovery.
+- Review tone with learners and speakers of the target languages; positive-sounding translation keys alone do not establish neutrality.
+- Exercise explanation translation success, failure, language changes and cache behaviour.
+- Create an SRS card from each enabled surface and verify saved source, corrected text and explanation, including truncation limits and duplicate actions.
+- Check semantic additions/removals with a screen reader, long text, RTL, high zoom and both themes.
+
+These are validation requirements, not a claim that every item is broken or already complete.
