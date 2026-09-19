@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { environment } from '../../../environments/environment';
 import { CulturalTipComponent } from './cultural-tip.component';
 
 describe('CulturalTipComponent', () => {
@@ -12,7 +13,7 @@ describe('CulturalTipComponent', () => {
     guide = 'Bowing is the customary greeting in Japan.',
   ): Promise<HTMLElement> => {
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`).flush({
       language: 'ja',
       guide,
     });
@@ -40,7 +41,7 @@ describe('CulturalTipComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`).flush({
       language: 'ja',
       guide: 'Bowing is the customary greeting in Japan.',
     });
@@ -92,11 +93,11 @@ describe('CulturalTipComponent', () => {
     const classes = [...region.classList];
 
     expect(classes).toContain('border-s-4');
-    expect(classes.some((name) => /^(?:border|rounded|m|p)[lr]-/.test(name))).toBe(false);
+    expect(classes.some((name) => /^(?:(?:border|rounded)-(?:l|r)(?:-|$)|(?:m|p)[lr]-)/.test(name))).toBe(false);
     expect(region.getAttribute('dir')).toBeNull();
   });
 
-  it('should keep content reflowable at high zoom and with long unbroken text', async () => {
+  it('should preserve long text without fixed dimensions or truncation classes', async () => {
     const region = await flushGuide('A'.repeat(512));
     const classes = [...region.classList];
     const paragraph: HTMLElement = region.querySelector('p')!;
@@ -126,7 +127,7 @@ describe('CulturalTipComponent', () => {
 
   it('should render nothing when no guide is found for the language', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`);
     req.flush('Not Found', { status: 404, statusText: 'Not Found' });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -136,7 +137,7 @@ describe('CulturalTipComponent', () => {
 
   it('should refetch when the language input changes', async () => {
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`).flush({
       language: 'ja',
       guide: 'Bowing is the customary greeting in Japan.',
     });
@@ -144,7 +145,7 @@ describe('CulturalTipComponent', () => {
 
     fixture.componentRef.setInput('language', 'fr');
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/cultural-guides/fr');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/fr`);
     req.flush({ language: 'fr', guide: 'Bonjour is the customary greeting in France.' });
     await fixture.whenStable();
     fixture.detectChanges();

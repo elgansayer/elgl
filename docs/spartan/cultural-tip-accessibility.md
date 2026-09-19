@@ -2,18 +2,18 @@
 
 ## Scope
 
-This pass verifies the converted `CulturalTipComponent` after the Spartan/Relay audit and theme conversion. The component remains a read-only informational region; there are no controls, overlays, gestures, mutations, analytics hooks, or focus targets to migrate to a Spartan Brain primitive.
+This source and DOM-test pass reviews the converted `CulturalTipComponent` after the Spartan/Relay audit and theme conversion. The component remains a read-only informational region; there are no controls, overlays, gestures, mutations, analytics hooks, or focus targets to migrate to a Spartan Brain primitive.
 
-The runtime implementation already satisfies the issue's accessibility contract, so this change deliberately locks that behavior with focused regression tests instead of introducing unnecessary interaction or visual changes.
+The tests cover semantic and class-level contracts. They do not certify device accessibility, rendered reflow or inherited global styles; those require browser and assistive-technology validation.
 
-## Verified contract
+## Contracts covered by DOM tests
 
 ### Keyboard and input methods
 
 - The cultural tip is exposed as a named `role="region"` and is not itself focusable.
 - The rendered surface contains no links, buttons, form fields, `tabindex`, or synthetic `role="button"` elements.
 - There is no pointer-only click handler, cursor affordance, or gesture dependency.
-- Text remains selectable; `select-none` is not applied.
+- The component does not add `select-none`. Effective selection also depends on inherited global styles and must be tested in a browser.
 - Touch users receive the same read-only content as mouse and keyboard users because no action depends on a particular input method.
 
 ### RTL and bidirectional layout
@@ -29,7 +29,7 @@ The runtime implementation already satisfies the issue's accessibility contract,
 - It does not use `overflow-hidden`, `truncate`, or `whitespace-nowrap`, so browser zoom and user font scaling do not intentionally clip required content.
 - Mobile-first padding is retained and widens only at the existing `sm` breakpoint.
 - Long guide content remains normal document text rather than being placed in a fixed-height scrolling or clipped region.
-- The regression suite includes a long unbroken guide string to prevent future fixed-size/clipping regressions.
+- The regression suite preserves a long unbroken guide string and checks the absence of fixed-size/truncation classes. It does not measure wrapping or prove that the string fits a narrow viewport.
 
 ### Screen readers and semantics
 
@@ -53,7 +53,7 @@ This issue does not change the visual contract established by the preceding Rela
 - accessible named-region semantics;
 - absence of focusable/interactive descendants;
 - logical-direction styling and absence of physical left/right utilities;
-- high-zoom/reflow-safe sizing and clipping behavior;
+- structural sizing and clipping classes; rendered high-zoom reflow remains unverified;
 - absence of pointer-only, text-selection-blocking, and motion behavior;
 - existing Relay tokens, null/error behavior, and language-driven refetch behavior.
 
