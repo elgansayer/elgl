@@ -180,10 +180,8 @@ def provider_slot(
     owner: str,
 ) -> Iterator[float]:
     """Reserve one durable provider slot before starting the matching conversation."""
-    generation = config.factory_generation
     store = ProviderCapacityStore(
-        config.state_dir,
-        factory_generation=generation if generation != "unknown" else None,
+        config.provider_capacity_dir,
         max_lease_seconds=config.max_task_minutes * 60 + 300,
     )
     waited = store.acquire(

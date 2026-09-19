@@ -57,7 +57,7 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
 
 
 def parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser(prog="hellotalk-factory")
+    result = argparse.ArgumentParser(prog="repo-factory")
     subcommands = result.add_subparsers(dest="command", required=True)
     doctor = subcommands.add_parser("doctor")
     doctor.add_argument("--online", action="store_true")

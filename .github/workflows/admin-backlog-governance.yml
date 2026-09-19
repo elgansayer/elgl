@@ -19,10 +19,19 @@ concurrency:
 
 jobs:
   govern:
+    # The Factory opens large volumes of ordinary product issues. Previously every
+    # opened/reopened issue allocated a runner only for the Python body to discover
+    # it was not an admin issue. Use a conservative case-insensitive prefilter before
+    # runner allocation; the Python title check below remains authoritative. Using
+    # contains() rather than duplicating the exact startswith/whitespace normalization
+    # deliberately permits false positives rather than ever skipping a real admin issue.
     if: >-
       github.event_name != 'issues' ||
-      github.event.action != 'labeled' ||
-      github.event.label.name == 'factory-ready'
+      (
+        contains(github.event.issue.title, 'admin') &&
+        (github.event.action != 'labeled' ||
+         github.event.label.name == 'factory-ready')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
