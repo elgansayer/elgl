@@ -1,6 +1,6 @@
 import { Component, computed, inject, resource } from '@angular/core';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
-import { NgChartsModule } from 'ng2-charts';
+import { BaseChartDirective } from 'ng2-charts';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -57,7 +57,7 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
 
 @Component({
   selector: 'app-my-stats',
-  imports: [HlmButton, NgChartsModule, TranslatePipe],
+  imports: [BaseChartDirective, HlmButton, TranslatePipe],
   template: `
     <main
       class="mx-auto max-w-4xl space-y-6 p-4"
