@@ -13,19 +13,21 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <hlm-dialog-content
           *hlmDialogPortal
           [showCloseButton]="false"
-          class="w-full max-w-sm space-y-5 rounded-sheet border border-surface-100 bg-surface-200 p-6 shadow-lift"
-          aria-labelledby="confirm-message"
+          class="max-h-[calc(100dvh-2rem)] w-full max-w-sm space-y-5 overflow-y-auto rounded-sheet border border-surface-100 bg-surface-200 p-6 shadow-lift motion-reduce:animate-none"
         >
-          <p id="confirm-message" class="text-sm font-medium leading-relaxed text-text-primary">
+          <h2
+            hlmDialogTitle
+            class="min-w-0 break-words text-sm font-medium leading-relaxed text-text-primary"
+          >
             {{ state.message }}
-          </p>
+          </h2>
           <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
               hlmBtn
               type="button"
               variant="secondary"
               size="touch"
-              class="w-full sm:w-auto"
+              class="w-full min-w-0 whitespace-normal break-words sm:w-auto"
               (click)="confirmService.dismiss(false)"
             >
               {{ 'common.cancel' | t }}
@@ -34,7 +36,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               hlmBtn
               type="button"
               size="touch"
-              class="w-full sm:w-auto"
+              class="w-full min-w-0 whitespace-normal break-words sm:w-auto"
               (click)="confirmService.dismiss(true)"
             >
               {{ 'common.confirm' | t }}
