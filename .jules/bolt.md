@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-19 - Avoid modifying `package-lock.json` unless explicitly resolving local dependencies
+**Learning:** Running `npm install` blindly, especially when Node.js versions mismatch (`nvm` not being set up by default), can strip out critical native or optional dependencies (like `sass-embedded`) from `package-lock.json`, breaking the build and introducing massive diff noise.
+**Action:** Always prefer `git restore --staged package-lock.json && git checkout package-lock.json` if a lockfile modification was inadvertently made while trying to resolve local missing dependencies or tools. Never commit `package-lock.json` updates without explicit instructions when making purely frontend component changes.
