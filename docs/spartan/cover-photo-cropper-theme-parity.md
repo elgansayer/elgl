@@ -4,7 +4,7 @@ Tracks issue #6073 for `frontend/src/app/components/cover-photo-cropper/`.
 
 ## Scope
 
-This stage keeps the interaction contract established by #6072 and changes presentation only. Spartan Dialog continues to own modal mechanics, Spartan Button continues to own action mechanics, and `ngx-image-cropper` continues to own crop interaction and image processing.
+This stage keeps the interaction contract established by #6072 and updates presentation and uses the generated Spartan title association. Spartan Dialog continues to own modal mechanics, Spartan Button continues to own action mechanics, and `ngx-image-cropper` continues to own crop interaction and image processing.
 
 ## Relay presentation contract
 
@@ -21,7 +21,7 @@ This stage keeps the interaction contract established by #6072 and changes prese
 
 `frontend/design-preview/components/cover-photo-cropper.html` records the visual contract with explicit light/mobile and dark/wide states. The preview uses system semantic colours so it documents ownership and state composition rather than duplicating product palette values.
 
-Automated component coverage locks the Relay sheet/elevation/surface tokens, semantic crop surface, mobile-first action stacking, wider action row, and native button semantics while retaining the existing crop/save/cancel behavior tests.
+Automated component coverage locks the Relay sheet/elevation/surface tokens, semantic crop surface, mobile-first action stacking, wider action row, and native button semantics and the actual dialog/title ARIA relationship while retaining the existing crop/save/cancel behavior tests.
 
 ## Rollout and rollback
 

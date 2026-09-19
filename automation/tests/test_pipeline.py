@@ -12,7 +12,7 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationResult
 from openhands_factory.exceptions import FactoryError, VerificationFailed
 from openhands_factory.git_workflow import GitWorkflow
-from openhands_factory.github import PullRequestMatch, PullRequestStatus
+from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
 from openhands_factory.repository_guard import ensure_push_target
@@ -97,6 +97,13 @@ class GitHub:
 
     def add_comment(self, number: int, body: str) -> None:
         self.comments.append((number, body))
+
+    def list_issue_comments(self, issue: int, *, after: int = 0) -> list[IssueComment]:
+        return [
+            IssueComment(index, "factory", body, "2026-08-28T00:00:00Z")
+            for index, (number, body) in enumerate(self.comments, start=1)
+            if number == issue and index > after
+        ]
 
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
         self.created_pull_requests.append((branch, title, body))
@@ -350,20 +357,30 @@ def test_refresh_silently_reconciles_stale_github_quarantine_labels(
     assert github.comments == []
 
 
-def test_refresh_preserves_labels_backed_by_durable_quarantine(tmp_path: Path) -> None:
+def test_refresh_migrates_durable_quarantine_and_clears_stale_label(tmp_path: Path) -> None:
     github = GitHub()
     pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
     job = pipeline.jobs.reconcile(github.tasks)["42"]
     job.state = JobState.QUARANTINED
+    job.attempts = 3
+    job.last_error = "Repeated deterministic task failure"
+    job.failure_counts = {"task": 3}
+    job.last_failure_kind = "task"
+    job.last_failure_fingerprint = "legacy-task-failure"
+    job.repeated_failure_count = 3
     job.quarantine_reason = "Repeated deterministic task failure"
+    job.quarantined_at = datetime.now(UTC)
     pipeline.jobs.save_job(job)
     github.quarantined_issues = [42]
 
     refreshed = pipeline.refresh()
 
-    assert refreshed["42"].state is JobState.QUARANTINED
-    assert github.requeued_quarantines == []
-    assert github.quarantined_issues == [42]
+    assert refreshed["42"].state is JobState.DISCOVERED
+    assert refreshed["42"].next_attempt_at is not None
+    assert refreshed["42"].quarantine_reason is None
+    assert refreshed["42"].quarantined_at is None
+    assert github.requeued_quarantines == [([42], False)]
+    assert github.quarantined_issues == []
 
 
 def test_refresh_reconciles_labels_only_on_startup_or_explicit_request(tmp_path: Path) -> None:
@@ -1152,7 +1169,8 @@ def test_verify_only_serializes_the_exclusive_command(
         VerificationCommand("backend-test:e2e", ("true",), tmp_path),
     ]
     monkeypatch.setattr(
-        "openhands_factory.pipeline.commands_for", lambda repository, changed: fake_commands
+        "openhands_factory.pipeline.commands_for",
+        lambda repository, changed, profile: fake_commands,
     )
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("frontend/x.ts")})
     slot_held_during: dict[str, bool] = {}
@@ -1515,7 +1533,7 @@ def test_pr_creation_race_attaches_new_canonical_pr_instead_of_opening_sibling(
     assert claim.canonical_branch == "factory/concurrent-fix-build"
 
 
-def test_repeated_identical_task_failure_opens_recoverable_quarantine(
+def test_repeated_identical_task_failure_escalates_autonomous_backoff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1534,21 +1552,18 @@ def test_repeated_identical_task_failure_opens_recoverable_quarantine(
     first = pipeline.run_job("42")
     second = pipeline.run_job("42")
     third = pipeline.run_job("42")
-    fourth = pipeline.run_job("42")
 
     assert first is not None and first.attempts == 1
     assert second is not None and second.attempts == 2
     assert third is not None and third.attempts == 3
-    assert third.state is JobState.QUARANTINED
-    assert third.next_attempt_at is None
-    assert fourth is None
-    restored = pipeline.jobs.load()["42"]
-    assert restored.state is JobState.QUARANTINED
-    assert restored.quarantine_reason is not None
-    assert restored.quarantine_notification_pending is False
-    assert (42, ("factory-quarantined",)) in github.labels
-    assert (42, ("factory-quarantined", "needs-human")) not in github.labels
-    assert len(github.comments) == 1
+    assert third.state is JobState.IMPLEMENTING
+    assert third.next_attempt_at is not None
+    assert third.next_attempt_at > datetime.now(UTC) + timedelta(minutes=29)
+    assert third.quarantine_reason is None
+    assert third.quarantined_at is None
+    assert not third.quarantine_notification_pending
+    assert (42, ("factory-quarantined",)) not in github.labels
+    assert not any("manually requeue" in body.lower() for _, body in github.comments)
 
 
 def test_no_change_task_failure_is_bounded_without_disabling_provider(
@@ -1574,16 +1589,17 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
     assert first is not None and first.attempts == 1
     assert second is not None and second.attempts == 2
     assert third is not None and third.attempts == 3
-    assert third.state is JobState.QUARANTINED
-    assert third.next_attempt_at is None
+    assert third.state is JobState.IMPLEMENTING
+    assert third.next_attempt_at is not None
+    assert third.next_attempt_at > datetime.now(UTC) + timedelta(minutes=29)
     assert [entry.get("failure_classification") for entry in third.provider_history[-3:]] == [
         "task_failure",
         "task_failure",
         "task_failure",
     ]
     assert github.closed == []
-    assert (42, ("factory-quarantined",)) in github.labels
-    assert (42, ("factory-quarantined", "needs-human")) not in github.labels
+    assert (42, ("factory-quarantined",)) not in github.labels
+    assert not any("manually requeue" in body.lower() for _, body in github.comments)
     assert not any("already satisfied" in body for _, body in github.comments)
 
 
@@ -1679,7 +1695,7 @@ def test_external_pull_request_verification_failure_enters_repair_state(
     assert github.comments[-1][0] == 77
 
 
-def test_refresh_preserves_a_quarantined_job_whose_issue_is_still_open(
+def test_refresh_preserves_backing_off_failed_job_whose_issue_is_still_open(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1700,10 +1716,12 @@ def test_refresh_preserves_a_quarantined_job_whose_issue_is_still_open(
 
     refreshed = pipeline.refresh()
 
-    assert refreshed["42"].state is JobState.QUARANTINED
+    assert refreshed["42"].state is JobState.IMPLEMENTING
     assert refreshed["42"].last_error == "Conversation exceeded the maximum task duration"
-    assert refreshed["42"].next_attempt_at is None
-    assert refreshed["42"].quarantine_reason is not None
+    assert refreshed["42"].next_attempt_at is not None
+    assert refreshed["42"].next_attempt_at > datetime.now(UTC) + timedelta(minutes=59)
+    assert refreshed["42"].quarantine_reason is None
+    assert refreshed["42"].quarantined_at is None
 
 
 def test_security_review_runs_between_implementation_and_verification(
@@ -1912,7 +1930,7 @@ def test_pr_agent_phase_invalidates_merge_eligibility_before_execution(
     assert github.pending_reviews == ["current-head"]
 
 
-def test_security_review_repeated_task_failure_opens_quarantine(
+def test_security_review_repeated_task_failure_escalates_autonomous_backoff(
     tmp_path: Path,
 ) -> None:
     github = GitHub()
@@ -1932,8 +1950,11 @@ def test_security_review_repeated_task_failure_opens_quarantine(
     assert first is not None and first.attempts == 1
     assert second is not None and second.attempts == 2
     assert third is not None and third.attempts == 3
-    assert third.state is JobState.QUARANTINED
-    assert third.next_attempt_at is None
+    assert third.state is JobState.SECURITY_REVIEW
+    assert third.next_attempt_at is not None
+    assert third.next_attempt_at > datetime.now(UTC) + timedelta(minutes=29)
+    assert third.quarantine_reason is None
+    assert third.quarantined_at is None
 
 
 def test_architect_due_defaults_true_and_respects_cooldown(tmp_path: Path) -> None:

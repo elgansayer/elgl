@@ -35,6 +35,14 @@ describe('CoverPhotoCropperComponent', () => {
     expect(component.dialogState()).toBe('open');
   });
 
+  it('connects the actual dialog to its generated accessible title', () => {
+    const dialog = document.querySelector('[role="dialog"]');
+    const title = document.querySelector('[hlmDialogTitle]');
+    expect(title?.id).toBeTruthy();
+    expect(dialog?.getAttribute('aria-labelledby')).toBe(title?.id);
+    expect(title?.id).not.toBe('cover-photo-crop-title');
+  });
+
   it('uses Relay sheet, elevation, surface, and responsive spacing tokens', () => {
     const dialog = document.querySelector('hlm-dialog-content');
 

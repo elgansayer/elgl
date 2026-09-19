@@ -14,10 +14,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
         *hlmDialogPortal
         [showCloseButton]="false"
         class="max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-lg space-y-5 overflow-y-auto !rounded-sheet border border-surface-100 bg-surface-200 p-4 shadow-lift sm:w-full sm:p-6"
-        aria-labelledby="cover-photo-crop-title"
       >
         <h3
-          id="cover-photo-crop-title"
+          hlmDialogTitle
           class="break-words text-lg font-semibold leading-tight text-text-primary"
         >
           {{ 'coverPhoto.crop' | t }}

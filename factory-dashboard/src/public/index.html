@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Repo Factory</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --blue: #58a6ff;
+      --purple: #bc8cff;
+      --orange: #ffa657;
+      --accent: #238636;
+      --accent-hover: #2ea043;
+      --radius: 8px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .header-logo .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .header-subtitle {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .refresh-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: var(--border); }
+    .refresh-btn.spinning .icon { animation: spin 0.8s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .last-updated {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* ---- Status dot ---- */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .status-dot.yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .status-dot.blue { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+    .status-dot.grey { background: var(--text-muted); }
+    .status-dot.pulse { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ---- Layout ---- */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .projects-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-family: inherit;
+      background: transparent;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--text); border-color: var(--orange); font-weight: 500; }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .grid-full {
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 1100px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) {
+      .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+      .container { padding: 16px; }
+    }
+
+    /* ---- Cards ---- */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card-body { padding: 16px; }
+
+    /* ---- Stat cards ---- */
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.blue .stat-value { color: var(--blue); }
+    .stat-card.orange .stat-value { color: var(--orange); }
+    .stat-card.purple .stat-value { color: var(--purple); }
+    .stat-card.red .stat-value { color: var(--red); }
+    .stat-card.yellow .stat-value { color: var(--yellow); }
+
+    /* ---- Provider pills ---- */
+    .providers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .provider-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .provider-name {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .provider-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-healthy { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge-disabled { background: rgba(139,148,158,0.15); color: var(--text-muted); }
+    .badge-open { background: rgba(248,81,73,0.15); color: var(--red); }
+    .badge-half-open { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .badge-closed { background: rgba(63,185,80,0.15); color: var(--green); }
+
+    /* ---- Run list ---- */
+    .run-list { display: flex; flex-direction: column; }
+
+    .run-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .run-item:last-child { border-bottom: none; }
+    .run-item:hover { background: var(--bg3); }
+
+    .run-name {
+      flex: 1;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+    }
+
+    .run-workflow {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    .run-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      min-width: 80px;
+      text-align: right;
+    }
+
+    /* ---- PR list ---- */
+    .pr-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: background 0.1s;
+    }
+    .pr-item:last-child { border-bottom: none; }
+    .pr-item:hover { background: var(--bg3); }
+
+    .pr-number {
+      color: var(--text-muted);
+      font-size: 12px;
+      white-space: nowrap;
+      min-width: 36px;
+      padding-top: 1px;
+    }
+
+    .pr-title {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .pr-labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .label-chip {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .label-factory { background: rgba(188,140,255,0.15); color: var(--purple); }
+    .label-default { background: var(--bg3); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ---- Commits ---- */
+    .commit-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: background 0.1s;
+    }
+    .commit-item:last-child { border-bottom: none; }
+    .commit-item:hover { background: var(--bg3); }
+
+    .commit-sha {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      color: var(--blue);
+      min-width: 52px;
+    }
+
+    .commit-msg {
+      flex: 1;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .commit-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ---- Task list ---- */
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: background 0.1s;
+    }
+    .task-item:last-child { border-bottom: none; }
+    .task-item:hover { background: var(--bg3); }
+
+    .task-id {
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 36px;
+      padding-top: 2px;
+    }
+
+    .task-title {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .task-priority {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .priority-1, .priority-2 { background: rgba(248,81,73,0.15); color: var(--red); }
+    .priority-3, .priority-4, .priority-5 { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .priority-default { background: var(--bg3); color: var(--text-muted); }
+
+    /* ---- Disk usage bar ---- */
+    .disk-item {
+      margin-bottom: 16px;
+    }
+    .disk-item:last-child { margin-bottom: 0; }
+
+    .disk-label-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .disk-name { color: var(--text); font-weight: 500; }
+    .disk-pct { color: var(--text-muted); }
+
+    .disk-bar {
+      height: 6px;
+      background: var(--bg3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .disk-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s;
+    }
+    .disk-fill.ok { background: var(--green); }
+    .disk-fill.warn { background: var(--yellow); }
+    .disk-fill.crit { background: var(--red); }
+
+    .disk-detail {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ---- Active jobs ---- */
+    .active-job {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: background 0.1s;
+    }
+    .active-job:last-child { border-bottom: none; }
+    .active-job:hover { background: var(--bg3); }
+
+    .active-job-id {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--blue);
+    }
+
+    .active-job-elapsed {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ---- Status banner ---- */
+    .banner {
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .banner.healthy { background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); color: var(--green); }
+    .banner.paused { background: rgba(210,153,34,0.1); border: 1px solid rgba(210,153,34,0.3); color: var(--yellow); }
+    .banner.error { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); color: var(--red); }
+
+    /* ---- Section heading ---- */
+    .section-heading {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* ---- Error/loading states ---- */
+    .loading {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .error-msg {
+      padding: 12px 16px;
+      background: rgba(248,81,73,0.1);
+      border: 1px solid rgba(248,81,73,0.3);
+      border-radius: var(--radius);
+      color: var(--red);
+      font-size: 12px;
+      margin: 12px 16px;
+    }
+
+    /* ---- Scrollable card ---- */
+    .card-scroll { max-height: 420px; overflow-y: auto; }
+    .card-scroll::-webkit-scrollbar { width: 4px; }
+    .card-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ---- Tags ---- */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+    .tag-green { background: rgba(63,185,80,0.15); color: var(--green); }
+    .tag-red { background: rgba(248,81,73,0.15); color: var(--red); }
+    .tag-yellow { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .tag-blue { background: rgba(88,166,255,0.15); color: var(--blue); }
+    .tag-grey { background: var(--bg3); color: var(--text-muted); border: 1px solid var(--border); }
+    .tag-purple { background: rgba(188,140,255,0.15); color: var(--purple); }
+    .tag-orange { background: rgba(255,166,87,0.15); color: var(--orange); }
+
+    /* ---- auto-refresh indicator ---- */
+    .auto-refresh-bar {
+      height: 2px;
+      background: var(--blue);
+      position: fixed;
+      top: 0;
+      left: 0;
+      transition: width linear;
+      z-index: 200;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auto-refresh-bar" id="progressBar" style="width:0%"></div>
+
+  <header class="header">
+    <a href="/" class="header-logo">
+      <span class="logo-icon">&#9889;</span>
+      <span>Repo Factory</span>
+    </a>
+    <span class="header-subtitle">elgansayer / autonomous development</span>
+    <div class="header-right">
+      <span class="last-updated" id="lastUpdated">Loading...</span>
+      <button class="refresh-btn" id="refreshBtn" onclick="fetchAll()">
+        <span class="icon" id="refreshIcon">&#8635;</span>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Project tabs -->
+    <div class="projects-tabs" id="projectTabs" aria-label="Repository projects">
+      <button class="tab active" type="button">Loading projects...</button>
+    </div>
+
+    <!-- Factory status banner -->
+    <div id="factoryBanner" class="banner healthy">
+      <span class="status-dot green pulse"></span>
+      Checking factory status...
+    </div>
+
+    <!-- Row 1: stat cards -->
+    <div class="grid-4" id="statsRow">
+      <div class="stat-card blue">
+        <div class="stat-label">Active Jobs</div>
+        <div class="stat-value" id="statActiveJobs">-</div>
+        <div class="stat-sub" id="statActiveJobsSub">loading...</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Factory Backlog</div>
+        <div class="stat-value" id="statQueued">-</div>
+        <div class="stat-sub" id="statQueuedSub">loading...</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Open Issues</div>
+        <div class="stat-value" id="statOpenIssues">-</div>
+        <div class="stat-sub" id="statOpenIssuesSub">loading...</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Open PRs</div>
+        <div class="stat-value" id="statOpenPRs">-</div>
+        <div class="stat-sub" id="statOpenPRsSub">loading...</div>
+      </div>
+    </div>
+
+    <!-- Row 2: providers + disk -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">&#128296; AI Providers</div>
+        <div class="card-body">
+          <div class="providers-grid" id="providerGrid">
+            <div class="loading">Loading...</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">&#128190; Storage</div>
+        <div class="card-body" id="diskInfo">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Active jobs + recent runs -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">&#9889; Active Jobs</div>
+        <div class="card-scroll" id="activeJobsList">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">&#128203; Workflow Runs</div>
+        <div class="card-scroll" id="runsList">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: Backlog + PRs -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">&#128203; Backlog (top 10)</div>
+        <div class="card-scroll" id="backlogList">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">&#128256; Open Pull Requests</div>
+        <div class="card-scroll" id="prsList">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 5: Recent commits and History -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">&#128200; Recent Commits (main)</div>
+        <div class="card-scroll" id="commitsList">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">&#128640; Recent Factory Output (Completed Jobs)</div>
+        <div class="card-scroll" id="historyList">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let activeProject = 'hellotalk';
+    const projectRepositories = new Map();
+
+    // ---- Utilities ----
+    function relTime(iso) {
+      if (!iso) return '-';
+      const diff = Date.now() - new Date(iso).getTime();
+      const s = Math.floor(diff / 1000);
+      if (s < 60) return `${s}s ago`;
+      const m = Math.floor(s / 60);
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      const d = Math.floor(h / 24);
+      return `${d}d ago`;
+    }
+
+    function elapsed(iso) {
+      if (!iso) return '';
+      const diff = Date.now() - new Date(iso).getTime();
+      const m = Math.floor(diff / 60000);
+      const h = Math.floor(m / 60);
+      if (h > 0) return `${h}h ${m % 60}m`;
+      return `${m}m`;
+    }
+
+    function statusColour(status, conclusion) {
+      if (status === 'in_progress' || status === 'queued') return 'blue';
+      if (status === 'completed') {
+        if (conclusion === 'success') return 'green';
+        if (conclusion === 'failure') return 'red';
+        if (conclusion === 'cancelled') return 'grey';
+        if (conclusion === 'skipped') return 'grey';
+        return 'yellow';
+      }
+      return 'grey';
+    }
+
+    function statusTag(status, conclusion) {
+      const col = statusColour(status, conclusion);
+      const label = status === 'in_progress' ? 'running'
+                  : status === 'queued' ? 'queued'
+                  : conclusion || status;
+      return `<span class="tag tag-${col}">${label}</span>`;
+    }
+
+    function bytes(b) {
+      if (!b && b !== 0) return '-';
+      const gb = b / 1073741824;
+      return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(b / 1048576).toFixed(0)} MB`;
+    }
+
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // ---- Fetch helpers ----
+    async function api(path) {
+      const resp = await fetch(path);
+      if (!resp.ok) {
+        let msg = `${resp.status} ${resp.statusText}`;
+        try {
+          const body = await resp.json();
+          if (body.error) msg = body.error;
+        } catch(e) {}
+        throw new Error(msg);
+      }
+      return resp.json();
+    }
+
+    function setInner(id, html) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    }
+
+    function errHtml(msg) {
+      return `<div class="error-msg">&#9888; ${esc(String(msg))}</div>`;
+    }
+
+    function issueUrl(identifier) {
+      const repository = projectRepositories.get(activeProject) || 'elgansayer/elgl';
+      return `https://github.com/${repository}/issues/${identifier}`;
+    }
+
+    // ---- Render functions ----
+    function renderFactory(data) {
+      const { daemon, health, agent_health, generation, control_panel } = data;
+
+      // Banner
+      const paused = daemon?.paused;
+      const pid = daemon?.pid;
+      const started = generation?.started_at;
+      const banner = document.getElementById('factoryBanner');
+      if (paused) {
+        banner.className = 'banner paused';
+        banner.innerHTML = `<span class="status-dot yellow"></span> Factory is <strong>PAUSED</strong> - PID ${pid}, up since ${relTime(started)}`;
+      } else if (pid) {
+        banner.className = 'banner healthy';
+        banner.innerHTML = `<span class="status-dot green pulse"></span> Factory is <strong>RUNNING</strong> - PID ${pid} on ${generation?.hostname || '-'}, up since ${relTime(started)}`;
+      } else {
+        banner.className = 'banner error';
+        banner.innerHTML = `<span class="status-dot red"></span> Factory state unavailable`;
+      }
+
+      // Active jobs stat
+      const activeJobs = daemon?.active_jobs || [];
+      document.getElementById('statActiveJobs').textContent = activeJobs.length;
+      document.getElementById('statActiveJobsSub').textContent =
+        activeJobs.length ? `Issues: ${activeJobs.join(', ')}` : 'No active jobs';
+
+      // Active jobs list
+      if (!activeJobs.length) {
+        setInner('activeJobsList', '<div class="loading">No active jobs</div>');
+      } else {
+        const started_at = daemon?.active_started_at || {};
+        setInner('activeJobsList', activeJobs.map(id => `
+          <a class="active-job" href="${issueUrl(id)}" target="_blank" rel="noopener">
+            <span class="status-dot green pulse"></span>
+            <span class="active-job-id">#${id}</span>
+            <span class="active-job-elapsed">${elapsed(started_at[id]) ? 'Running ' + elapsed(started_at[id]) : 'Starting...'}</span>
+          </a>
+        `).join(''));
+      }
+
+      // Providers
+      const providers = daemon?.providers || [];
+      const agentBreakers = (agent_health?.breakers || []);
+      const breakerMap = {};
+      agentBreakers.forEach(b => breakerMap[b.provider] = b);
+
+      if (!providers.length) {
+        setInner('providerGrid', '<div class="loading">No provider data</div>');
+      } else {
+        setInner('providerGrid', providers.map(p => {
+          const breaker = breakerMap[p.name] || {};
+          const bState = breaker.state || '';
+          let badgeClass = 'badge-' + (p.status === 'healthy' ? 'healthy' : p.status === 'disabled' ? 'disabled' : 'open');
+          let statusLabel = p.status;
+
+          if (bState === 'open') { badgeClass = 'badge-open'; statusLabel = 'tripped'; }
+          else if (bState === 'half-open') { badgeClass = 'badge-half-open'; statusLabel = 'half-open'; }
+
+          return `
+            <div class="provider-pill">
+              <span class="status-dot ${p.status === 'healthy' && bState !== 'open' ? 'green' : p.status === 'disabled' ? 'grey' : 'red'}"></span>
+              <span class="provider-name">${esc(p.name)}</span>
+              <span class="provider-badge ${badgeClass}">${statusLabel}</span>
+            </div>
+          `;
+        }).join(''));
+      }
+
+      // Disk
+      const storage = control_panel?.storage_samples || [];
+      if (!storage.length) {
+        setInner('diskInfo', '<div class="loading">No storage data</div>');
+      } else {
+        setInner('diskInfo', storage.map(s => {
+          const pct = s.used_percent || 0;
+          const cls = pct >= 90 ? 'crit' : pct >= 70 ? 'warn' : 'ok';
+          return `
+            <div class="disk-item">
+              <div class="disk-label-row">
+                <span class="disk-name">${esc(s.name)}</span>
+                <span class="disk-pct ${pct >= 90 ? 'tag-red' : pct >= 70 ? 'tag-yellow' : ''}">${pct.toFixed(0)}%</span>
+              </div>
+              <div class="disk-bar">
+                <div class="disk-fill ${cls}" style="width:${pct}%"></div>
+              </div>
+              <div class="disk-detail">${bytes(s.used_bytes)} used of ${bytes(s.total_bytes)} - ${bytes(s.free_bytes)} free - <span class="tag tag-${s.status === 'healthy' ? 'green' : 'yellow'}">${s.status}</span></div>
+            </div>
+          `;
+        }).join(''));
+      }
+
+      // Health breakers (in health.json - cross-provider)
+      const healthBreakers = (health?.breakers || []).filter(b => b.state !== 'closed');
+      // Could add a warnings section here in future
+    }
+
+    function renderBacklog(data) {
+      document.getElementById('statQueued').textContent = data.queued;
+      document.getElementById('statQueuedSub').textContent = `${data.active} active, ${data.total} total`;
+
+      const tasks = data.top_tasks || [];
+      if (!tasks.length) {
+        setInner('backlogList', '<div class="loading">No tasks in backlog</div>');
+        return;
+      }
+      setInner('backlogList', tasks.map(t => {
+        const priNum = parseInt(t.priority) || 99;
+        const priClass = priNum <= 2 ? 'priority-1' : priNum <= 5 ? 'priority-3' : 'priority-default';
+        return `
+          <a class="task-item" href="${issueUrl(t.id)}" target="_blank" rel="noopener">
+            ${t.active ? '<span class="status-dot green pulse"></span>' : '<span class="status-dot grey"></span>'}
+            <span class="task-id">#${t.id}</span>
+            <span class="task-title">${esc(t.title)}</span>
+            <span class="task-priority ${priClass}">P${t.priority}</span>
+          </a>
+        `;
+      }).join(''));
+    }
+
+    function renderRuns(data) {
+      const runs = (data.runs || []).slice(0, 15);
+      if (!runs.length) {
+        setInner('runsList', '<div class="loading">No runs found</div>');
+        return;
+      }
+      setInner('runsList', runs.map(r => `
+        <a class="run-item" href="${esc(r.html_url)}" target="_blank" rel="noopener">
+          <span class="status-dot ${statusColour(r.status, r.conclusion)}${r.status === 'in_progress' ? ' pulse' : ''}"></span>
+          <span class="run-name">${esc(r.display_title || r.name)}</span>
+          <span class="run-workflow">${esc(r.name)}</span>
+          <span class="run-time">${relTime(r.updated_at)}</span>
+          ${statusTag(r.status, r.conclusion)}
+        </a>
+      `).join(''));
+    }
+
+    function renderPRs(data) {
+      const prs = data.prs || [];
+      const total = data.total_count !== undefined ? data.total_count : prs.length;
+      document.getElementById('statOpenPRs').textContent = total;
+
+      const factoryPRs = prs.filter(p => p.labels.includes('factory-reviewed'));
+      document.getElementById('statOpenPRsSub').textContent =
+        `Showing latest 30 (${factoryPRs.length} factory-reviewed)`;
+
+      if (!prs.length) {
+        setInner('prsList', '<div class="loading">No open PRs</div>');
+        return;
+      }
+      setInner('prsList', prs.map(pr => `
+        <a class="pr-item" href="${esc(pr.html_url)}" target="_blank" rel="noopener">
+          <span class="pr-number">#${pr.number}</span>
+          <span>
+            <div class="pr-title">${esc(pr.title)}</div>
+            <div class="pr-labels">
+              ${pr.draft ? '<span class="label-chip label-default">draft</span>' : ''}
+              ${pr.labels.map(l =>
+                `<span class="label-chip ${l.includes('factory') ? 'label-factory' : 'label-default'}">${esc(l)}</span>`
+              ).join('')}
+              <span class="label-chip label-default">${relTime(pr.updated_at)}</span>
+            </div>
+          </span>
+        </a>
+      `).join(''));
+    }
+
+    function renderCommits(data) {
+      const commits = data.commits || [];
+      if (!commits.length) {
+        setInner('commitsList', '<div class="loading">No commits found</div>');
+        return;
+      }
+      setInner('commitsList', commits.map(c => `
+        <a class="commit-item" href="${esc(c.html_url)}" target="_blank" rel="noopener">
+          <code class="commit-sha">${esc(c.sha)}</code>
+          <span class="commit-msg">${esc(c.message)}</span>
+          <span class="commit-meta">${esc(c.author)} - ${relTime(c.date)}</span>
+        </a>
+      `).join(''));
+    }
+
+    // ---- Main fetch orchestrator ----
+    let fetchInFlight = false;
+
+    function renderRepo(data) {
+      document.getElementById('statOpenIssues').textContent = data.open_issues_count || 0;
+      document.getElementById('statOpenIssuesSub').textContent = 'on github';
+    }
+
+    function renderHistory(data) {
+      const items = data.items || [];
+      if (!items.length) {
+        setInner('historyList', '<div class="loading">No completed jobs found</div>');
+        return;
+      }
+      setInner('historyList', items.map(pr => `
+        <a class="pr-item" href="${esc(pr.html_url)}" target="_blank" rel="noopener">
+          <span class="pr-number">#${pr.number}</span>
+          <span>
+            <div class="pr-title">${esc(pr.title)}</div>
+            <div class="pr-labels">
+              <span class="label-chip label-factory">completed</span>
+              <span class="label-chip label-default">${relTime(pr.closed_at)}</span>
+              <span class="label-chip label-default">by ${esc(pr.user)}</span>
+            </div>
+          </span>
+        </a>
+      `).join(''));
+    }
+
+    async function fetchAll() {
+      if (fetchInFlight) return;
+      fetchInFlight = true;
+      const requestedProject = activeProject;
+      const projectApi = `/api/projects/${encodeURIComponent(requestedProject)}`;
+
+      const btn = document.getElementById('refreshBtn');
+      const icon = document.getElementById('refreshIcon');
+      btn.classList.add('spinning');
+
+      const results = await Promise.allSettled([
+        api(`${projectApi}/factory/state`),
+        api(`${projectApi}/factory/backlog`),
+        api(`${projectApi}/github/runs?limit=20`),
+        api(`${projectApi}/github/prs`),
+        api(`${projectApi}/github/commits`),
+        api(`${projectApi}/github/repo`),
+        api(`${projectApi}/github/history`)
+      ]);
+
+      if (requestedProject !== activeProject) {
+        btn.classList.remove('spinning');
+        fetchInFlight = false;
+        return fetchAll();
+      }
+
+      const [factoryR, backlogR, runsR, prsR, commitsR, repoR, historyR] = results;
+
+      if (factoryR.status === 'fulfilled') renderFactory(factoryR.value);
+      else setInner('factoryBanner', errHtml(factoryR.reason));
+
+      if (backlogR.status === 'fulfilled') renderBacklog(backlogR.value);
+      else setInner('backlogList', errHtml(backlogR.reason));
+
+      if (runsR.status === 'fulfilled') renderRuns(runsR.value);
+      else setInner('runsList', errHtml(runsR.reason));
+
+      if (prsR.status === 'fulfilled') renderPRs(prsR.value);
+      else setInner('prsList', errHtml(prsR.reason));
+
+      if (commitsR.status === 'fulfilled') renderCommits(commitsR.value);
+      else setInner('commitsList', errHtml(commitsR.reason));
+
+      if (repoR.status === 'fulfilled') renderRepo(repoR.value);
+      else document.getElementById('statOpenIssuesSub').textContent = 'error loading';
+
+      if (historyR.status === 'fulfilled') renderHistory(historyR.value);
+      else setInner('historyList', errHtml(historyR.reason));
+
+      document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+      btn.classList.remove('spinning');
+      fetchInFlight = false;
+    }
+
+    // ---- Auto-refresh every 30s with progress bar ----
+    const REFRESH_INTERVAL = 30000;
+    let progressStart = Date.now();
+
+    function animateProgress() {
+      const bar = document.getElementById('progressBar');
+      const elapsed = Date.now() - progressStart;
+      const pct = Math.min((elapsed / REFRESH_INTERVAL) * 100, 100);
+      bar.style.width = pct + '%';
+      if (pct < 100) requestAnimationFrame(animateProgress);
+    }
+
+    setInterval(() => {
+      progressStart = Date.now();
+      animateProgress();
+      fetchAll();
+    }, REFRESH_INTERVAL);
+
+    async function initialiseProjects() {
+      try {
+        const data = await api('/api/projects');
+        const tabs = document.getElementById('projectTabs');
+        tabs.replaceChildren();
+        data.projects.forEach(project => {
+          projectRepositories.set(project.slug, project.repo);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = `tab${project.slug === activeProject ? ' active' : ''}`;
+          button.textContent = project.name;
+          button.addEventListener('click', () => {
+            activeProject = project.slug;
+            tabs.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            button.classList.add('active');
+            fetchAll();
+          });
+          tabs.append(button);
+        });
+      } catch (error) {
+        setInner('projectTabs', errHtml(error));
+      }
+
+      progressStart = Date.now();
+      animateProgress();
+      fetchAll();
+    }
+
+    initialiseProjects();
+  </script>
+</body>
+</html>
