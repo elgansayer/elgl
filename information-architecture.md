@@ -1,5 +1,7 @@
 # HelloTalk Information Architecture Audit & Consolidation
 
+Status: source inventory and proposed information architecture. The proposed grouping is not the current route configuration or an approved migration. Preserve legacy deep links and their query parameters. Runtime route files under `frontend/src/app/routes` remain authoritative; root currently redirects to `/ai-conversation`.
+
 ## 1. Current State & Route Mapping
 
 The application currently has a sprawling top-level routing structure. Many features have grown organically, resulting in top-level aliases, fragmented experiences, and redundant pathways.
@@ -89,7 +91,7 @@ The application currently has a sprawling top-level routing structure. Many feat
 
 ## 3. Consolidated Product Information Architecture
 
-To resolve the fragmentation, every feature should have a clear purpose and nest logically within **5 Primary Pillars**. We will eliminate top-level alias routing in favour of absolute deep-links.
+- Preserve existing compatibility redirects for bookmarks, notifications and inbound links. New navigation may use canonical destinations; route removal requires a separate migration backed by usage evidence and redirect/query-parameter tests.
 
 ### Pillar 1: Home & Timeline (`/home`)
 *Purpose: The daily habit, aggregate feed, and passive consumption.*
@@ -121,7 +123,7 @@ To resolve the fragmentation, every feature should have a clear purpose and nest
 - **Identity:** `/profile`, `/profile/visitors`, `/profile/business`.
 - **Progress (New Unified Dashboard):** `/profile/progress` (Consolidates `/stats`, `/milestones`, `/study-streak`, `/quests`, `/leaderboard`).
 - **Economy:** `/profile/store` (Consolidates `/shop`, `/sticker-store`, `/cart`, `/coin-economy`, `/vip`, `/subscription`).
-- **Settings:** `/settings` (Remains the hub for preferences, removing top-level aliases like `/language`, `/blocks`, etc.).
+- Preserve existing compatibility redirects for bookmarks, notifications and inbound links. New navigation may use canonical destinations; route removal requires a separate migration backed by usage evidence and redirect/query-parameter tests.
 
 ---
 
