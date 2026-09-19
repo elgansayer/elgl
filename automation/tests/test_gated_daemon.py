@@ -178,6 +178,26 @@ def test_issue_refresh_reuses_cached_backlog_while_admission_is_full() -> None:
     assert collector.calls == []
 
 
+def test_issue_refresh_hits_github_under_storage_pressure_when_admission_is_full() -> None:
+    daemon = object.__new__(MainCiGatedFactoryDaemon)
+    fresh_issue = _task("303", "github-issue")
+    daemon.issue_admission = AdmissionSlots(0)
+    daemon.storage_blocked = True
+    daemon.pipeline = SimpleNamespace(
+        tasks=SimpleNamespace(cached=lambda: [_task("101", "github-issue")])
+    )
+    collector = IssueCollector([fresh_issue])
+
+    tasks = daemon._collect_open_issues_for_refresh(
+        collector,
+        limit=777,
+        now=datetime(2026, 9, 12, tzinfo=UTC),
+    )
+
+    assert tasks == [fresh_issue]
+    assert collector.calls == [777]
+
+
 def test_issue_refresh_hits_github_when_admission_slot_opens() -> None:
     daemon = object.__new__(MainCiGatedFactoryDaemon)
     fresh_issue = _task("303", "github-issue")
