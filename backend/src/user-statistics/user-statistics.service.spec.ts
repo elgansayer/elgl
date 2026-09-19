@@ -149,7 +149,79 @@ describe('UserStatisticsService', () => {
       expect(visitCountBuilder.lte).toHaveBeenCalledWith('created_at', toDate);
     });
 
+    it('should start independent statistics queries before the user lookup settles', async () => {
+      let resolveUser: (value: Record<string, unknown>) => void = () =>
+        undefined;
+      const userResult = new Promise<Record<string, unknown>>((resolve) => {
+        resolveUser = resolve;
+      });
+      const userBuilder = createQueryBuilder({});
+      userBuilder.single.mockReturnValue(userResult);
+
+      const startedQueries: string[] = [];
+      const trackedBuilder = (
+        name: string,
+        result: Record<string, unknown>,
+      ): any => ({
+        ...createQueryBuilder(result),
+        then(
+          resolve: (value: unknown) => void,
+          reject: (reason: unknown) => void,
+        ) {
+          startedQueries.push(name);
+          return Promise.resolve(result).then(resolve, reject);
+        },
+      });
+
+      let momentsCalls = 0;
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'users') return userBuilder;
+        if (table === 'moments') {
+          momentsCalls += 1;
+          return momentsCalls === 1
+            ? trackedBuilder('moment count', { count: 0 })
+            : trackedBuilder('moment IDs', { data: [], error: null });
+        }
+        if (table === 'moment_comments') {
+          return trackedBuilder('comment count', { count: 0 });
+        }
+        if (table === 'profile_visits') {
+          return trackedBuilder('profile visit count', { count: 0 });
+        }
+        throw new Error(`Unexpected table: ${table}`);
+      });
+
+      const statistics = service.getUserStatistics('user-1');
+      await Promise.resolve();
+
+      expect(startedQueries).toEqual([
+        'moment count',
+        'comment count',
+        'moment IDs',
+        'profile visit count',
+      ]);
+
+      resolveUser({
+        data: {
+          study_streak_days: 5,
+          correction_ratio: 0.75,
+          coins_balance: 120,
+          created_at: '2024-01-01T00:00:00Z',
+          is_vip: true,
+        },
+        error: null,
+      });
+
+      await expect(statistics).resolves.toMatchObject({
+        studyStreakDays: 5,
+        totalMoments: 0,
+        totalComments: 0,
+        totalProfileVisits: 0,
+      });
+    });
+
     it('should throw NotFoundException when user is missing', async () => {
+      let momentsCalls = 0;
       mockClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
           return createQueryBuilder({
@@ -157,6 +229,15 @@ describe('UserStatisticsService', () => {
             error: { message: 'User not found' },
           });
         }
+        if (table === 'moments') {
+          momentsCalls += 1;
+          return momentsCalls === 1
+            ? createQueryBuilder({ count: 0 })
+            : createQueryBuilder({ data: [], error: null });
+        }
+        if (table === 'moment_comments')
+          return createQueryBuilder({ count: 0 });
+        if (table === 'profile_visits') return createQueryBuilder({ count: 0 });
         throw new Error(`Unexpected table: ${table}`);
       });
 
