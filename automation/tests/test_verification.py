@@ -6,10 +6,31 @@ import pytest
 from openhands_factory.exceptions import VerificationFailed
 from openhands_factory.repository_guard import ProcessResult
 from openhands_factory.verification import (
+    _VERIFICATION_SANDBOX_SCRIPT,
+    _verification_sandbox_root,
     commands_for,
     run_isolated_verification_process,
     run_verification,
 )
+
+
+def test_verification_stages_sources_before_masking_mnt() -> None:
+    stage_workspace = 'mount --bind "$workspace" "$staging/workspace"'
+    mask_roots = "for masked_root in /mnt /srv /media"
+
+    assert _VERIFICATION_SANDBOX_SCRIPT.index(stage_workspace) < _VERIFICATION_SANDBOX_SCRIPT.index(
+        mask_roots
+    )
+    assert _verification_sandbox_root(
+        Path("/mnt/factory/worktree"),
+        Path("/mnt/factory/repository"),
+        Path("/mnt/factory/home"),
+    ) == Path("/srv")
+    assert _verification_sandbox_root(
+        Path("/srv/factory/worktree"),
+        Path("/srv/factory/repository"),
+        Path("/srv/factory/home"),
+    ) == Path("/media")
 
 
 def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> None:
@@ -68,7 +89,7 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     factory_types = next(command for command in commands if command.name == "factory-types")
     assert factory_types.arguments == ("uv", "run", "--frozen", "mypy")
     factory = next(command for command in commands if command.name == "factory-tests")
-    assert factory.arguments == ("uv", "run", "--frozen", "pytest")
+    assert factory.arguments == ("uv", "run", "--frozen", "python", "-m", "pytest")
     assert all(command.workspace == tmp_path for command in commands)
     assert all(
         command.directory == tmp_path / "automation"
@@ -167,7 +188,7 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "uv_cache=$service_home/.cache/uv" in sandbox_script
-    assert "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache" in sandbox_script
+    assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in sandbox_script
     # PID 1 of the sandbox must reap children itself rather than exec-replacing
     # straight into the target command, or an orphaned grandchild (a leftover
     # dev server, a test's own subprocess-under-test) never gets reaped and
@@ -196,10 +217,7 @@ def test_uv_cache_mount_is_writable_not_read_only() -> None:
         1
     ].split("fi", 1)[0]
     assert "remount" not in uv_cache_block
-    assert (
-        "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache"
-        in _VERIFICATION_SANDBOX_SCRIPT
-    )
+    assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in _VERIFICATION_SANDBOX_SCRIPT
 
 
 def test_a_backend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:

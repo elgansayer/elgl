@@ -197,14 +197,14 @@ describe('rankDiscoveryRecommendations', () => {
       NOW,
     );
 
-    expect(result[0].recommendation_reasons).not.toEqual(
-      expect.arrayContaining([
-        'proficiency_match',
-        'availability_match',
-        'high_correction_ratio',
-        'learning_goal_match',
-      ]),
-    );
+    for (const reason of [
+      'proficiency_match',
+      'availability_match',
+      'high_correction_ratio',
+      'learning_goal_match',
+    ]) {
+      expect(result[0].recommendation_reasons).not.toContain(reason);
+    }
   });
 
   it('treats malformed proficiency values as neutral', () => {
@@ -229,7 +229,7 @@ describe('rankDiscoveryRecommendations', () => {
     expect(result[0].recommendation_reasons).toContain('high_correction_ratio');
   });
 
-  it('requires real time overlap rather than endpoint-only contact', () => {
+  it('requires overlapping preferred clock windows rather than endpoint-only contact', () => {
     const result = rankDiscoveryRecommendations(
       {
         ...current,

@@ -200,6 +200,7 @@ export function rankDiscoveryRecommendations(
       /^(A1|A2|B1|B2|C1|C2)$/.test(candidateProficiency) &&
       candidateProficiency === currentProficiency;
 
+    // These are self-reported wall-clock preferences, not timezone-normalised schedules.
     let hasAvailabilityMatch = false;
     if (
       (candidate.availability_morning && currentUser.availabilityMorning) ||

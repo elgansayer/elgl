@@ -463,7 +463,7 @@ export class I18nService {
     'discovery.recommendation.activeRecently': 'Recently active',
     'discovery.recommendation.activeLearner': 'Active learner',
     'discovery.recommendation.proficiencyMatch': 'Similar proficiency',
-    'discovery.recommendation.availabilityMatch': 'Matching availability',
+    'discovery.recommendation.availabilityMatch': 'Similar time preferences',
     'discovery.recommendation.helpfulCorrector': 'Helpful corrector',
     'discovery.recommendation.learningGoalMatch': 'Shared learning goal',
     'common.showMore': 'Show more',
