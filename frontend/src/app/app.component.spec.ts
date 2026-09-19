@@ -108,8 +108,10 @@ getAccessToken: vi.fn(() => 'mock-token'),
   };
 
   const chatServiceMock = {
-    getRooms: vi.fn(() => Promise.resolve([])),
-    getMessages: vi.fn(() => Promise.resolve([])),
+    getRooms: vi.fn<() => Promise<Array<{ id: string }>>>(() => Promise.resolve([])),
+    getMessages: vi.fn<
+      (roomId: string) => Promise<Array<{ is_read: boolean; sender_id: string }>>
+    >(() => Promise.resolve([])),
   };
 
   beforeEach(async () => {
@@ -175,6 +177,49 @@ it('should initialise unread counter', () => {
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.requestPermission).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
+  });
+
+  it('loads initial chat unread counts in bounded concurrent batches', async () => {
+    const resolvers: Array<() => void> = [];
+    chatServiceMock.getRooms.mockResolvedValueOnce(
+      Array.from({ length: 8 }, (_, index) => ({ id: `room-${index + 1}` })),
+    );
+    chatServiceMock.getMessages.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvers.push(() => resolve([]));
+        }),
+    );
+
+    const load = (
+      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
+    ).loadInitialUnreadCounts();
+
+    await vi.waitFor(() => expect(chatServiceMock.getMessages).toHaveBeenCalledTimes(6));
+    expect(resolvers).toHaveLength(6);
+
+    resolvers.splice(0).forEach((resolve) => resolve());
+    await vi.waitFor(() => expect(chatServiceMock.getMessages).toHaveBeenCalledTimes(8));
+    resolvers.splice(0).forEach((resolve) => resolve());
+    await load;
+  });
+
+  it('keeps unread counts from successful rooms when another room fails', async () => {
+    chatServiceMock.getRooms.mockResolvedValueOnce([{ id: 'ok' }, { id: 'failed' }]);
+    chatServiceMock.getMessages.mockImplementation((roomId: string) => {
+      if (roomId === 'failed') return Promise.reject(new Error('room unavailable'));
+      return Promise.resolve([
+        { is_read: false, sender_id: 'partner' },
+        { is_read: false, sender_id: 'test-user-1' },
+        { is_read: true, sender_id: 'partner' },
+      ]);
+    });
+
+    await (
+      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
+    ).loadInitialUnreadCounts();
+
+    expect(unreadCounterMock.setChatUnread).toHaveBeenLastCalledWith(1);
   });
 
   it('should trigger gift animation when receiving a virtual_gift payload', () => {

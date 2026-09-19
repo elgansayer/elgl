@@ -162,6 +162,26 @@ describe('VisualDiffComponent', () => {
     expect(segments.every((segment) => segment.type === 'unchanged')).toBe(true);
   });
 
+  it('preserves complete long texts with a bounded replacement instead of a quadratic diff', () => {
+    const original = 'old word '.repeat(600);
+    const corrected = 'new text '.repeat(600);
+    setInputs(original, corrected);
+
+    expect(component.segments()).toEqual([
+      { type: 'removed', text: original, index: 0 },
+      { type: 'added', text: corrected, index: 1 },
+    ]);
+    expect(fixture.nativeElement.querySelectorAll('[data-type]')).toHaveLength(2);
+  });
+
+  it('keeps identical long text unchanged without rendering a token for every word', () => {
+    const text = '同じ文章 unchanged '.repeat(600);
+    setInputs(text, text);
+
+    expect(component.segments()).toEqual([{ type: 'unchanged', text, index: 0 }]);
+    expect(fixture.nativeElement.querySelectorAll('[data-type]')).toHaveLength(1);
+  });
+
   it('should render additions and removals with semantic HTML', () => {
     setInputs('Hello old world', 'Hello new world');
 

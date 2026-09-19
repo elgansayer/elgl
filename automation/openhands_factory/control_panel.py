@@ -347,16 +347,34 @@ def build_status_snapshot(
         heartbeat_age is not None
         and -HEARTBEAT_FRESH_SECONDS <= heartbeat_age <= HEARTBEAT_FRESH_SECONDS
     )
-    service = (
-        unit_states.get("hellotalk-factory.service", "unavailable")
-        if unit_states is not None
-        else systemd_unit_state("hellotalk-factory.service")
+    service_name = f"repo-factory@{config.repository_profile}.service"
+    timer_name = f"repo-factory-health@{config.repository_profile}.timer"
+    legacy_service = (
+        "hellotalk-factory.service" if config.repository_profile == "hellotalk" else None
     )
-    timer = (
-        unit_states.get("hellotalk-factory-health.timer", "unavailable")
-        if unit_states is not None
-        else systemd_unit_state("hellotalk-factory-health.timer")
+    legacy_timer = (
+        "hellotalk-factory-health.timer" if config.repository_profile == "hellotalk" else None
     )
+
+    def selected_state(primary: str, legacy: str | None) -> str:
+        primary_state = (
+            unit_states.get(primary, "unavailable")
+            if unit_states is not None
+            else systemd_unit_state(primary)
+        )
+        legacy_state = (
+            unit_states.get(legacy, "unavailable")
+            if unit_states is not None and legacy is not None
+            else systemd_unit_state(legacy)
+            if legacy is not None
+            else "unavailable"
+        )
+        if primary_state in {"active", "activating", "deactivating", "failed"}:
+            return primary_state
+        return legacy_state if legacy_state != "unavailable" else primary_state
+
+    service = selected_state(service_name, legacy_service)
+    timer = selected_state(timer_name, legacy_timer)
     paused = control.get("paused") is True or daemon.get("paused") is True
     daemon_status = _text(daemon.get("status"))
     provider_snapshot = _provider_snapshot(config, daemon)
@@ -402,8 +420,8 @@ def build_status_snapshot(
         "generation": _text(daemon.get("generation")),
         "runtime_version": _text(daemon.get("runtime_version")),
         "components": {
-            "hellotalk-factory.service": service,
-            "hellotalk-factory-health.timer": timer,
+            service_name: service,
+            timer_name: timer,
         },
         "active_tasks": active_task_ids,
         "queue": _queue_snapshot(daemon),
@@ -672,15 +690,15 @@ class FactoryControlPanel:
         now: datetime,
         previous_storage_samples: object = None,
     ) -> dict[str, object]:
+        service_name = f"repo-factory@{self.config.repository_profile}.service"
+        timer_name = f"repo-factory-health@{self.config.repository_profile}.timer"
+        unit_names = [service_name, timer_name]
+        if self.config.repository_profile == "hellotalk":
+            unit_names.extend(("hellotalk-factory.service", "hellotalk-factory-health.timer"))
         return build_status_snapshot(
             self.config,
             now=now,
-            unit_states={
-                "hellotalk-factory.service": self.unit_state_reader("hellotalk-factory.service"),
-                "hellotalk-factory-health.timer": self.unit_state_reader(
-                    "hellotalk-factory-health.timer"
-                ),
-            },
+            unit_states={name: self.unit_state_reader(name) for name in unit_names},
             previous_storage_samples=previous_storage_samples,
             disk_usage_reader=self.disk_usage_reader,
         )

@@ -42,7 +42,7 @@ Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL.
 
 ## 4. Autonomous Execution Protocol
 
-- **Verification & Test Visiting:** before checking off any `TODO.md` task or completing code changes, run `npm run lint` and `npm test` (`npm test -- --watch=false` on frontend) and confirm no TypeScript compiler errors or failing tests. Whenever modifying or adding feature code, visit, review, and update/add the corresponding unit tests (`*.spec.ts`) and E2E tests (`*.e2e-spec.ts`).
+- **Verification & Test Visiting:** before checking off any task or completing code changes, run `npm run lint` and `npm test` (`npm test -- --watch=false` on frontend) and confirm no TypeScript compiler errors or failing tests. Whenever modifying or adding feature code, visit, review, and update/add the corresponding unit tests (`*.spec.ts`) and E2E tests (`*.e2e-spec.ts`).
 - **API First:** Angular never connects to the database directly - every data request routes through the NestJS REST API or Centrifugo WebSockets.
 - **A failing build must not reach `main`.** Every PR passes the full verification suite before merge; fix build errors and failing tests within the PR branch itself rather than opening a follow-up "fix" PR.
   - Mechanically enforced: verification workflows run `npm run build && npm test` for backend and frontend. If verification fails, fix the code and re-verify within the same PR. Only green builds merge.
@@ -90,5 +90,5 @@ conventions from scratch:
 - **Never Hardcode Anything:** never hardcode data, coin balances, usernames, languages, or UI strings in frontend or backend services, except inside dedicated mock data generators (`mock-data.ts`) or i18n dictionaries. Every piece of dynamic state flows from a backend service, state store, or translation pipe.
 - **Competitive UX Research:** when building features or UX flows, study relevant patterns from leading language-learning, social, communication, conferencing, and collaboration products. Adopt useful ideas only when they fit the Relay design system, accessibility requirements, product goals, and legal/licensing constraints - never copy proprietary assets or duplicate another product's visual identity.
 
-Known issues, audit findings, and completion status live in `TODO.md` and the GitHub issue backlog, not here -
+Known issues, audit findings, and completion status live in the GitHub issue backlog, not here -
 this file is guidelines, not a changelog.

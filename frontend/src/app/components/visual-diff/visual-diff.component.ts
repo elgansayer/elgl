@@ -147,6 +147,21 @@ export class VisualDiffComponent {
   readonly segments = computed<DiffSegment[]>(() => {
     const originalTokens = this.tokenise(this.original());
     const correctedTokens = this.tokenise(this.corrected());
+    // User-authored text must not trigger a quadratic allocation on the UI thread.
+    // Preserve both complete texts when a word-level comparison exceeds this budget.
+    if ((originalTokens.length + 1) * (correctedTokens.length + 1) > 250_000) {
+      if (this.original() === this.corrected()) {
+        return [{ type: 'unchanged', text: this.corrected(), index: 0 }];
+      }
+      const fallback: DiffSegment[] = [];
+      if (this.original()) {
+        fallback.push({ type: 'removed', text: this.original(), index: 0 });
+      }
+      if (this.corrected()) {
+        fallback.push({ type: 'added', text: this.corrected(), index: fallback.length });
+      }
+      return fallback;
+    }
     const lcs = this.buildLcsMatrix(originalTokens, correctedTokens);
     const result: DiffSegment[] = [];
     let originalIndex = 0;
