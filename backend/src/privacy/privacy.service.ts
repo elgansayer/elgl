@@ -249,7 +249,13 @@ export class PrivacyService {
         while (nextRow < rows.length) {
           const row = rows[nextRow];
           nextRow += 1;
-          purgeResults.push(await purgeRow(row));
+          try {
+            purgeResults.push(await purgeRow(row));
+          } catch {
+            // Preserve the rest of the batch without logging private archive paths.
+            this.logger.error('gdpr_archive_cleanup_row_failed');
+            purgeResults.push(false);
+          }
         }
       },
     );

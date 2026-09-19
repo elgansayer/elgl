@@ -329,6 +329,8 @@ class FactoryPipeline:
             self.config.base_branch,
             external_branch=external_branch,
             github_token=self.config.github_token.get_secret_value(),
+            worktree_root=self.config.worktree_dir,
+            recovery_root=self.config.recovery_dir,
         )
 
     def refresh(self, protected_task_ids: set[str] | None = None) -> dict[str, Job]:
