@@ -38,6 +38,15 @@ class ConfigRoutingPolicy(RoutingPolicy):
             if name not in target:
                 target.append(name)
 
+        # Factory-internal GENERAL_ACTION work is strictly best-effort control-plane
+        # analysis. The current caller is stall diagnosis, which already sends a
+        # deterministic diagnostic snapshot to the operator before invoking an agent.
+        # Do not cascade that optional analysis across subscriptions or into an
+        # emergency/PAYG provider: one healthy regular provider is sufficient, and a
+        # failure should leave the deterministic evidence intact for the next cycle.
+        if phase is AgentPhase.GENERAL_ACTION and job.task.source == "factory-internal":
+            return eligible[:1]
+
         if phase in {AgentPhase.QUALITY_REPAIR, AgentPhase.CI_REPAIR}:
             used = {
                 str(entry.get("provider"))
@@ -47,4 +56,18 @@ class ConfigRoutingPolicy(RoutingPolicy):
             eligible = [name for name in eligible if name not in used] + [
                 name for name in eligible if name in used
             ]
+            # Keep the ordinary CI-repair preference list cheap-first even when a
+            # provider is unhealthy. Once two configured providers have actually
+            # started for this task, promote unused Codex into the next bounded
+            # candidate window so a fresh repair sequence can reach it inside the
+            # four-start budget.
+            attempted = used.intersection(preferred)
+            if (
+                phase is AgentPhase.CI_REPAIR
+                and len(attempted) >= 2
+                and "codex" in eligible
+                and "codex" not in attempted
+            ):
+                eligible.remove("codex")
+                eligible.insert(0, "codex")
         return [*eligible, *emergency]

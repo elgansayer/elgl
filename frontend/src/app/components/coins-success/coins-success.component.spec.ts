@@ -109,11 +109,11 @@ describe('CoinsSuccessComponent', () => {
     expect(text).not.toContain('coinsSuccess.pending');
   });
 
-  it('should use a native Spartan navigation link for the dashboard action', () => {
+  it('should use a native Spartan navigation link for the coin dashboard action', () => {
     const dashboardLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
 
     expect(dashboardLink).toBeTruthy();
-    expect(dashboardLink.getAttribute('href')).toBe('/dashboard');
+    expect(dashboardLink.getAttribute('href')).toBe('/coin-economy');
     expect(dashboardLink.getAttribute('size')).toBe('touch');
     expect(dashboardLink.hasAttribute('role')).toBe(false);
     expect(dashboardLink.hasAttribute('tabindex')).toBe(false);
