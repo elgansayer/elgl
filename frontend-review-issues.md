@@ -1,31 +1,13 @@
-# Issue 1: Missing Angular CDK Virtual Scrolling in Reading Views and Chat
+# Frontend review follow-ups
 
-## Title
-perf(ui): implement virtual scrolling for reading engine and chat
+## Large lists: measure before choosing virtualisation
 
-## Description
-A review of `frontend/src/app/components/reading-engine/reading-engine.component.ts` and `frontend/src/app/pages/chat/chat-page.component.ts` indicates that `@angular/cdk/scrolling` is not being used to render data-heavy UI components. Standard Angular `@for` loops are used for rendering potentially extensive reading articles (`@for (article of filteredArticles(); track article.id)`) and long chat histories. This approach causes severe DOM bloat, increased memory footprint, and UI lag, ultimately degrading performance.
+Reading and chat source contains standard Angular loops. That alone does not prove severe memory use or visible lag. Profile representative article and chat histories with realistic message sizes, images, device memory and pagination. Record DOM-node count, frame time and memory before deciding whether CDK virtual scrolling improves the observed bottleneck.
 
-## Acceptance Criteria
-*   Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into `reading-engine.component.ts` and `chat-page.component.ts`.
-*   Replace standard `@for` loops rendering large lists of articles/messages with `<cdk-virtual-scroll-viewport>`.
-*   Ensure dynamic height recalculation works correctly.
+If virtualisation is justified, preserve dynamic item heights, pagination, scroll position when prepending messages, keyboard navigation, search, selection and screen-reader access. Compare the same workload before and after the change. Existing use of stable tracking keys is a separate concern.
 
-## Suggested Labels
-bug, performance, tech-debt, ui
+## Conversation analysis: preserve the current request contract
 
+The alleged close-while-pending race was not reproduced. The current template shows the result close control only after a result exists, so the original report's proposed click sequence is not available in that state. Do not reset `running` or cancel a paid operation solely on this claim.
 
-# Issue 2: Race Condition / Unsafe State Clearing on Modal Close during Execution
-
-## Title
-bug(ai): race condition in ConversationAnalysisLauncher state management
-
-## Description
-In `frontend/src/app/features/premium-ai/conversation-analysis-launcher.component.ts`, the component implements a `closeResult()` method and a `runAnalysis()` method that sets a `running` signal state. The `closeResult()` method clears the `result` signal and `runError` signal but fails to reset the `running` state or abort any in-flight asynchronous operations initiated by `runAnalysis()`. Consequently, closing the modal while an analysis request is pending can lead to race conditions where stale network responses override or mutate state unexpectedly.
-
-## Acceptance Criteria
-*   Implement a cancellation mechanism (e.g., using `AbortController` or RxJS) to abort ongoing `runConversationAnalysis` requests when the component is closed or unmounted.
-*   Update `closeResult()` to safely abort any pending operations and explicitly reset the `running` state to `false`.
-
-## Suggested Labels
-bug, state-management
+A useful follow-up is to test route teardown, request failure, retry and repeated activation while preserving payment idempotency and the existing single-flight guard. Document a reachable sequence and expected behaviour before changing cancellation semantics.
