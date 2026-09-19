@@ -1,6 +1,7 @@
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { showToast } from '../../services/toast.service';
 import {
   Component,
@@ -45,12 +46,33 @@ interface MentionSuggestion {
   avatar_url: string | null;
 }
 
+export function formatMentionSuggestion(
+  text: string,
+  rangeStart: number | undefined,
+  rangeEnd: number | undefined,
+  displayName: string,
+): string {
+  if (
+    !Number.isInteger(rangeStart) ||
+    !Number.isInteger(rangeEnd) ||
+    rangeStart === undefined ||
+    rangeEnd === undefined ||
+    rangeStart < 0 ||
+    rangeEnd < rangeStart ||
+    rangeEnd > text.length
+  ) {
+    return text;
+  }
+  return text.slice(0, rangeStart) + `@${displayName} ` + text.slice(rangeEnd);
+}
+
 @Component({
   selector: 'app-moments-feed',
   imports: [
     HlmTextarea,
     HlmInput,
     HlmButton,
+    ...HlmAutocompleteImports,
     CommonModule,
     FormsModule,
     RouterLink,
@@ -164,9 +186,9 @@ export class MomentsFeedComponent {
   // @mention autocomplete state per momentId
   readonly mentionQueryMap = signal<Record<string, string | null>>({});
   readonly mentionSuggestionsMap = signal<Record<string, MentionSuggestion[]>>({});
-  readonly mentionActiveIndexMap = signal<Record<string, number>>({});
   private mentionRangeStartMap: Record<string, number> = {};
   private mentionRangeEndMap: Record<string, number> = {};
+  private readonly mentionItemToStringMap = new Map<string, (value: unknown) => string>();
 
   // New Comment / Correction form states per momentId
   commentInputMap: Record<string, string> = {};
@@ -490,7 +512,6 @@ export class MomentsFeedComponent {
       this.mentionRangeStartMap[momentId] = match.index;
       this.mentionRangeEndMap[momentId] = cursor;
       this.mentionQueryMap.update((m) => ({ ...m, [momentId]: match[1] }));
-      this.mentionActiveIndexMap.update((m) => ({ ...m, [momentId]: 0 }));
       void this.loadMentionSuggestions(momentId);
     } else {
       this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
@@ -498,41 +519,36 @@ export class MomentsFeedComponent {
   }
 
   onCommentKeydown(event: KeyboardEvent, moment: MomentRecord): void {
-    const momentId = moment.id;
-    const suggestions = this.mentionSuggestionsMap()[momentId] ?? [];
-    if (suggestions.length > 0) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        this.mentionActiveIndexMap.update((m) => ({
-          ...m,
-          [momentId]: Math.min((m[momentId] ?? 0) + 1, suggestions.length - 1),
-        }));
-        return;
-      }
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        this.mentionActiveIndexMap.update((m) => ({
-          ...m,
-          [momentId]: Math.max((m[momentId] ?? 0) - 1, 0),
-        }));
-        return;
-      }
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const idx = this.mentionActiveIndexMap()[momentId] ?? 0;
-        this.selectMention(momentId, suggestions[idx]);
-        return;
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
-        return;
-      }
-    }
-    if (event.key === 'Enter') {
+    if (event.isComposing) return;
+    if (event.key === 'Enter' && (this.mentionSuggestionsMap()[moment.id]?.length ?? 0) === 0) {
       event.preventDefault();
       void this.submitComment(moment);
     }
+  }
+
+  mentionItemToString(momentId: string): (value: unknown) => string {
+    let formatter = this.mentionItemToStringMap.get(momentId);
+    if (!formatter) {
+      formatter = (value: unknown): string => {
+        const current = this.commentInputMap[momentId] ?? '';
+        if (!value || typeof value !== 'object' || !('display_name' in value)) return current;
+        const displayName = value.display_name;
+        if (typeof displayName !== 'string' || !displayName) return current;
+        return formatMentionSuggestion(
+          current,
+          this.mentionRangeStartMap[momentId],
+          this.mentionRangeEndMap[momentId],
+          displayName,
+        );
+      };
+      this.mentionItemToStringMap.set(momentId, formatter);
+    }
+    return formatter;
+  }
+
+  onMentionSelected(momentId: string, member: unknown): void {
+    if (!member) return;
+    this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
   }
 
   private async loadMentionSuggestions(momentId: string): Promise<void> {
@@ -552,11 +568,12 @@ export class MomentsFeedComponent {
   selectMention(momentId: string, member: MentionSuggestion | undefined): void {
     const displayName = member?.display_name;
     if (!displayName) return;
-    const mentionText = '@' + displayName + ' ';
-    this.commentInputMap[momentId] =
-      (this.commentInputMap[momentId] ?? '').slice(0, this.mentionRangeStartMap[momentId]) +
-      mentionText +
-      (this.commentInputMap[momentId] ?? '').slice(this.mentionRangeEndMap[momentId]);
+    this.commentInputMap[momentId] = formatMentionSuggestion(
+      this.commentInputMap[momentId] ?? '',
+      this.mentionRangeStartMap[momentId],
+      this.mentionRangeEndMap[momentId],
+      displayName,
+    );
     this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
   }
 
