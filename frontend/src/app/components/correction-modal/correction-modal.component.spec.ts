@@ -159,7 +159,7 @@ describe('CorrectionModalComponent', () => {
     const footer = document.body.querySelector('footer');
     const actions = footer?.querySelectorAll<HTMLButtonElement>('button') ?? [];
 
-    expect(footer?.getAttribute('class')).toContain('flex-col-reverse');
+    expect(footer?.getAttribute('class')).toContain('flex-col');
     expect(footer?.getAttribute('class')).toContain('sm:flex-row');
     expect(actions.length).toBe(2);
     for (const action of actions) {
