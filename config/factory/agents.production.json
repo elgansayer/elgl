@@ -19,7 +19,7 @@
         "quality_repair": "haiku",
         "code_review": "haiku",
         "ci_repair": "haiku",
-        "general_action": "fable"
+        "general_action": "haiku"
       }
     },
     "codex": {
