@@ -1,5 +1,7 @@
 # Product Information Architecture Audit
 
+Status: source inventory and proposed information architecture. The proposed grouping is not the current route configuration or an approved migration. Preserve legacy deep links and their query parameters. Runtime route files under `frontend/src/app/routes` remain authoritative; root currently redirects to `/ai-conversation`.
+
 ## Core Capabilities & Entry Points
 
 ### 1. Social & Community
@@ -72,7 +74,7 @@ Many URLs exist solely as aliases to primary paths, leading to a sprawling surfa
 - `/notification-preferences` and `/settings/notification-customization` redirect to `/settings/notification`.
 - `/visitors` redirects to `/profile/visitors`.
 
-**Consolidation Recommendation**: Remove root-level aliases where possible and enforce a strict hierarchy (e.g., all settings belong under `/settings`).
+- Preserve existing compatibility redirects for bookmarks, notifications and inbound links. New navigation may use canonical destinations; route removal requires a separate migration backed by usage evidence and redirect/query-parameter tests.
 
 ### 2. Community vs. Groups vs. Events
 - We have `/community`, `/communities`, `/groups`, and `/events`.
@@ -81,7 +83,7 @@ Many URLs exist solely as aliases to primary paths, leading to a sprawling surfa
 
 ### 3. AI Conversation as Root
 - The root path (`/`) redirects to `/ai-conversation`, bypassing `/home`. However, `/home` contains the study streak, word of the day, and daily learning tips.
-- **Consolidation Recommendation**: Re-evaluate the root redirect. If `/home` is intended to be the landing experience summarizing activity (as per `ui_architecture.md`), the root path should resolve to `/home`.
+- The current root redirects to `/ai-conversation`. Changing the default landing page is a product proposal requiring explicit acceptance criteria and navigation tests; it is not an implemented correction in this report.
 
 ### 4. Fragmented Learning Hub
 - `/vocabulary`, `/decks`, `/review`, `/lessons`, `/quests`, `/read`, `/resource-library`, `/study-buddy`, `/diagnostic-quiz`, `/proficiency`, `/pronunciation-feedback`, `/study-streak` all live at the top-level route space.
