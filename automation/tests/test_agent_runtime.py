@@ -157,6 +157,22 @@ def test_provider_sandbox_restores_only_explicit_home_mounts(tmp_path: Path) -> 
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
+    assert "for masked_root in /mnt /srv /media" in sandbox_script
+
+
+def test_provider_sandbox_staging_does_not_mask_a_protected_source(tmp_path: Path) -> None:
+    masked_root = tmp_path / "masked"
+    safe_root = tmp_path / "safe"
+    repository = masked_root / "repository"
+    repository.mkdir(parents=True)
+    safe_root.mkdir()
+
+    selected = AgentProcessRunner._sandbox_root(
+        (repository,),
+        candidates=(masked_root, safe_root),
+    )
+
+    assert selected == safe_root
 
 
 def test_provider_sandbox_rejects_home_mount_escape(tmp_path: Path) -> None:

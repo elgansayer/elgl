@@ -78,3 +78,7 @@
   - Ensure dynamic height recalculation works correctly for varying content lengths.
   - Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
   - Write or update unit tests to verify DOM nodes are correctly limited to the visible viewport slice.
+
+## Consolidation provenance
+
+The Communities and virtual-scroll requirements consolidated here originated in the issue drafts associated with PR #8448. Preserve the detailed acceptance criteria above when removing duplicate generated reports.
