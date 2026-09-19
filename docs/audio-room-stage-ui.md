@@ -27,7 +27,7 @@ LiveKit degradation continues to be handled by `AudioRoomDegradationService`; th
 
 ## Accessibility and responsive behavior
 
-The stage and audience are exposed as semantic lists with list items. Empty states use status semantics. Host/co-host and muted state have textual labels in addition to color or icons, and the active-speaker indicator remains supplementary rather than the only description of a participant.
+The stage and audience are exposed as semantic lists with list items. Empty states use status semantics. Host/co-host and muted state have textual labels in addition to colour or icons, and the active-speaker indicator remains supplementary rather than the only description of a participant.
 
 The existing responsive grid remains two columns on narrow viewports and expands at larger breakpoints. The bounded participant count prevents the room surface from becoming unusable under high zoom or unusually large room state.
 

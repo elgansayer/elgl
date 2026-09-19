@@ -43,7 +43,7 @@ Direct subscription-CLI attempts now carry two content-free fields through the p
 
 Aggregate usage adds measured-call, total retained characters, maximum retained characters, and truncation-count fields per provider/model/phase. Existing metrics files restore with zero values for the new fields, so the change is backward compatible and requires no state migration.
 
-The metric intentionally does **not** store model output text and does **not** estimate tokens. Character counts are a stable cross-provider proxy; tokenization differs by provider/model. When `output_truncated` is true, the retained character count is a lower bound rather than the total generated output. That distinction is preserved in both aggregate and bounded per-job history.
+The metric intentionally does **not** store model output text and does **not** estimate tokens. Character counts are a stable cross-provider proxy; tokenisation differs by provider/model. When `output_truncated` is true, the retained character count is a lower bound rather than the total generated output. That distinction is preserved in both aggregate and bounded per-job history.
 
 ## Expected efficiency effect
 
