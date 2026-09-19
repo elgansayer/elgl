@@ -47,6 +47,7 @@ describe('AppearanceSettingsComponent', () => {
       currentTheme: signal<'light' | 'dark' | 'system'>('system'),
       setTheme: vi.fn(),
       setPrimaryAccentColor: vi.fn(),
+      resetPrimaryAccentColor: vi.fn(),
       primaryAccentColor: signal('#4f46e5'),
       loadFromProfile: vi.fn(),
     };
@@ -186,19 +187,36 @@ describe('AppearanceSettingsComponent', () => {
     expect(component.primaryAccentColor()).toBe('#4f46e5');
   });
 
-  it('should update theme service accent colour when profile loads', () => {
-    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#4f46e5');
+  it('should load the profile accent through the theme service entitlement boundary', () => {
+    expect(themeServiceMock.loadFromProfile).toHaveBeenCalledWith({
+      primary_accent_color: '#4f46e5',
+    });
   });
 
-  it('should persist chat text size and update the accent on save', async () => {
+  it('should persist chat text size and update the accent on VIP save', async () => {
     component.setChatTextSize('large');
     component.primaryAccentColor.set('#e11d48');
 
     await component.saveSettings();
 
+    expect(userServiceMock.updateMyProfile).toHaveBeenCalledWith({
+      primary_accent_color: '#e11d48',
+    });
     expect(chatSettingsServiceMock.updateSetting).toHaveBeenCalledWith('textSize', 'large');
     expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#e11d48');
     expect(component.successMessage()).toBe('settings.saved');
+  });
+
+  it('should not resubmit or apply a stored accent after VIP entitlement is lost', async () => {
+    component.isVip.set(false);
+    component.primaryAccentColor.set('#e11d48');
+
+    await component.saveSettings();
+
+    expect(userServiceMock.updateMyProfile).toHaveBeenCalledWith({});
+    expect(chatSettingsServiceMock.updateSetting).toHaveBeenCalledWith('textSize', 'medium');
+    expect(themeServiceMock.setPrimaryAccentColor).not.toHaveBeenCalledWith('#e11d48');
+    expect(themeServiceMock.resetPrimaryAccentColor).toHaveBeenCalledOnce();
   });
 
   it('should restore the server chat size and expose a retryable error when persistence fails', async () => {

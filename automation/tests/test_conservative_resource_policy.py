@@ -307,3 +307,120 @@ def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Pa
     assert not thread.is_alive()
     assert result and result[0].success
     assert provider.calls == 1
+
+
+def test_conservative_budget_counts_fallback_provider_starts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One failed provider start must leave no free allowance for a fallback start."""
+
+    monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "1")
+    monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    first = Provider("first", AgentFailureKind.PROVIDER_RATE_LIMIT)
+    second = Provider("second")
+    router = ConservativeAgentRouter(
+        [first, second],
+        policy=OrderedPolicy(["first", "second"]),
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 1, "second": 1},
+        enabled=True,
+    )
+    task = Task("60", "Issue", "Body", "github-issue", 0)
+
+    with pytest.raises(ProviderCapacityUnavailable, match="agent-route budget is exhausted"):
+        router.run(
+            AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path),
+            Job(task),
+        )
+
+    assert first.calls == 1
+    assert second.calls == 0
+
+
+def test_conservative_budget_is_not_spent_when_provider_capacity_is_busy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Control-plane routing with no provider start must not consume paid allowance."""
+
+    monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "1")
+    monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    store = ProviderCapacityStore(tmp_path)
+    store.acquire(
+        "first",
+        limit=1,
+        owner="external-holder",
+        wait_seconds=0,
+        lease_seconds=300,
+    )
+    provider = Provider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=store,
+        provider_limits={"first": 1},
+        enabled=True,
+    )
+    blocked_task = Task("61", "Issue", "Body", "github-issue", 0)
+
+    with pytest.raises(ProviderCapacityUnavailable, match="All eligible providers are busy"):
+        router.run(
+            AgentRequest(AgentPhase.IMPLEMENTATION, blocked_task, "implement", tmp_path),
+            Job(blocked_task),
+        )
+
+    assert provider.calls == 0
+    store.release("first", owner="external-holder")
+
+    runnable_task = Task("62", "Issue", "Body", "github-issue", 0)
+    result = router.run(
+        AgentRequest(AgentPhase.IMPLEMENTATION, runnable_task, "implement", tmp_path),
+        Job(runnable_task),
+    )
+
+    assert result.success
+    assert provider.calls == 1
+
+
+def test_conservative_budget_is_not_spent_when_prepare_attempt_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A pre-provider validation failure must leave the provider-start allowance intact."""
+
+    monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "1")
+    monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    provider = Provider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 1},
+        enabled=True,
+    )
+    failed_task = Task("63", "Issue", "Body", "github-issue", 0)
+
+    def fail_prepare() -> None:
+        raise RuntimeError("prepare failed before provider start")
+
+    with pytest.raises(RuntimeError, match="prepare failed"):
+        router.run(
+            AgentRequest(
+                AgentPhase.CODE_REVIEW,
+                failed_task,
+                "review",
+                tmp_path,
+                prepare_attempt=fail_prepare,
+            ),
+            Job(failed_task, pull_request=63, head_sha="abc"),
+        )
+
+    assert provider.calls == 0
+
+    runnable_task = Task("64", "Issue", "Body", "github-issue", 0)
+    result = router.run(
+        AgentRequest(AgentPhase.IMPLEMENTATION, runnable_task, "implement", tmp_path),
+        Job(runnable_task),
+    )
+
+    assert result.success
+    assert provider.calls == 1

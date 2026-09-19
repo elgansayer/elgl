@@ -27,7 +27,7 @@ describe('CulturalTipComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja').flush({
       language: 'ja',
       guide: 'Bowing is the customary greeting in Japan.',
     });
@@ -35,7 +35,7 @@ describe('CulturalTipComponent', () => {
 
   it('should render the guide text once the API responds', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja');
+    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja');
     req.flush({ language: 'ja', guide: 'Bowing is the customary greeting in Japan.' });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -52,7 +52,7 @@ describe('CulturalTipComponent', () => {
 
   it('should use Relay theme tokens and mobile-first responsive spacing', async () => {
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja').flush({
       language: 'ja',
       guide: 'Bowing is the customary greeting in Japan.',
     });
@@ -77,7 +77,7 @@ describe('CulturalTipComponent', () => {
 
   it('should render nothing when no guide is found for the language', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja');
+    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja');
     req.flush('Not Found', { status: 404, statusText: 'Not Found' });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -87,7 +87,7 @@ describe('CulturalTipComponent', () => {
 
   it('should refetch when the language input changes', async () => {
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja').flush({
       language: 'ja',
       guide: 'Bowing is the customary greeting in Japan.',
     });
@@ -95,7 +95,7 @@ describe('CulturalTipComponent', () => {
 
     fixture.componentRef.setInput('language', 'fr');
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/cultural-guides/fr');
+    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/fr');
     req.flush({ language: 'fr', guide: 'Bonjour is the customary greeting in France.' });
     await fixture.whenStable();
     fixture.detectChanges();

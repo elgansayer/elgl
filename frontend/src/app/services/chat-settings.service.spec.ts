@@ -48,7 +48,7 @@ describe('ChatSettingsService', () => {
       expect(service.loaded()).toBe(false);
       expect(service.loadFailed()).toBe(false);
 
-      const req = httpTesting.expectOne('http://localhost:3000/api/chat/settings');
+      const req = httpTesting.expectOne('http://127.0.0.1:3000/api/chat/settings');
       expect(req.request.method).toBe('GET');
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush({ autoTranslate: true, readReceipts: true, enterToSend: false, textSize: 'large' });
@@ -65,7 +65,7 @@ describe('ChatSettingsService', () => {
     it('uses boolean-safe defaults for missing values', async () => {
       const promise = service.loadSettings();
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne('http://127.0.0.1:3000/api/chat/settings')
         .flush({ autoTranslate: 'yes', readReceipts: 1, textSize: 'huge' });
 
       expect(await promise).toBe(true);
@@ -77,7 +77,7 @@ describe('ChatSettingsService', () => {
 
     it('marks malformed responses unavailable instead of presenting defaults as saved state', async () => {
       const promise = service.loadSettings();
-      httpTesting.expectOne('http://localhost:3000/api/chat/settings').flush(null);
+      httpTesting.expectOne('http://127.0.0.1:3000/api/chat/settings').flush(null);
 
       expect(await promise).toBe(false);
       expect(service.loaded()).toBe(true);
@@ -87,7 +87,7 @@ describe('ChatSettingsService', () => {
     it('marks transport failures unavailable and keeps safe in-memory defaults', async () => {
       const promise = service.loadSettings();
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne('http://127.0.0.1:3000/api/chat/settings')
         .error(new ProgressEvent('error'));
 
       expect(await promise).toBe(false);
@@ -105,7 +105,7 @@ describe('ChatSettingsService', () => {
       expect(service.saving()).toBe(true);
       expect(service.autoTranslate()).toBe(false);
 
-      const req = httpTesting.expectOne('http://localhost:3000/api/chat/settings');
+      const req = httpTesting.expectOne('http://127.0.0.1:3000/api/chat/settings');
       expect(req.request.method).toBe('PUT');
       expect(req.request.body).toEqual({ autoTranslate: true });
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
@@ -122,7 +122,7 @@ describe('ChatSettingsService', () => {
 
       expect(second).toBe(false);
       expect(service.enterToSend()).toBe(false);
-      const req = httpTesting.expectOne('http://localhost:3000/api/chat/settings');
+      const req = httpTesting.expectOne('http://127.0.0.1:3000/api/chat/settings');
       expect(req.request.body).toEqual({ readReceipts: true });
       req.flush({ readReceipts: true });
 
@@ -135,7 +135,7 @@ describe('ChatSettingsService', () => {
 
       const promise = service.updateSetting('autoTranslate', false);
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne('http://127.0.0.1:3000/api/chat/settings')
         .error(new ProgressEvent('error'));
 
       expect(await promise).toBe(false);
@@ -148,12 +148,12 @@ describe('ChatSettingsService', () => {
 
       expect(saved).toBe(false);
       expect(service.readReceipts()).toBe(false);
-      httpTesting.expectNone('http://localhost:3000/api/chat/settings');
+      httpTesting.expectNone('http://127.0.0.1:3000/api/chat/settings');
     });
 
     it('still supports the existing chat text-size preference contract', async () => {
       const promise = service.updateSetting('textSize', 'small');
-      httpTesting.expectOne('http://localhost:3000/api/chat/settings').flush({ textSize: 'small' });
+      httpTesting.expectOne('http://127.0.0.1:3000/api/chat/settings').flush({ textSize: 'small' });
 
       expect(await promise).toBe(true);
       expect(service.textSize()).toBe('small');
@@ -168,7 +168,7 @@ describe('ChatSettingsService', () => {
       service.textSize.set('large');
 
       const promise = service.resetToDefaults();
-      const req = httpTesting.expectOne('http://localhost:3000/api/chat/settings');
+      const req = httpTesting.expectOne('http://127.0.0.1:3000/api/chat/settings');
       expect(req.request.method).toBe('PUT');
       expect(req.request.body).toEqual({
         autoTranslate: false,
@@ -190,7 +190,7 @@ describe('ChatSettingsService', () => {
 
       const promise = service.resetToDefaults();
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne('http://127.0.0.1:3000/api/chat/settings')
         .error(new ProgressEvent('error'));
 
       expect(await promise).toBe(false);

@@ -5,23 +5,15 @@
     <meta charset="utf-8" />
     <title>Relay - Screens · Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
-      rel="stylesheet"
-    />
     <style>
       :root {
         --surface-50: 255, 255, 255;
         --surface-100: 228, 231, 237;
         --surface-200: 253, 253, 254;
         --surface-300: 241, 243, 247;
-        --surface-400: 233, 235, 241;
         --surface-500: 246, 247, 250;
         --surface-600: 219, 223, 230;
         --surface-700: 199, 204, 214;
-        --surface-800: 154, 161, 175;
-        --surface-900: 18, 21, 28;
         --text-primary: 18, 21, 28;
         --text-secondary: 74, 81, 99;
         --text-muted: 107, 113, 130;
@@ -30,27 +22,17 @@
         --danger: 217, 58, 58;
         --success: 25, 134, 84;
         --warning: 161, 108, 9;
-        --vip: 153, 111, 16;
         --on-fill: 255, 255, 255;
         --shadow: 16, 19, 28;
-        --accent: 204, 72, 60;
-        --neon-violet: 139, 108, 240;
-        --neon-pink: 232, 87, 143;
-        --neon-cyan: 47, 198, 217;
-        --neon-blue: 91, 141, 239;
-        --neon-orange: 240, 149, 74;
       }
       html.dark {
         --surface-50: 58, 65, 82;
         --surface-100: 46, 52, 68;
         --surface-200: 30, 35, 48;
         --surface-300: 35, 40, 56;
-        --surface-400: 25, 29, 40;
         --surface-500: 18, 21, 28;
         --surface-600: 13, 15, 21;
         --surface-700: 10, 12, 17;
-        --surface-800: 6, 7, 10;
-        --surface-900: 0, 0, 0;
         --text-primary: 243, 244, 247;
         --text-secondary: 180, 186, 201;
         --text-muted: 126, 132, 148;
@@ -59,7 +41,6 @@
         --danger: 255, 107, 107;
         --success: 52, 211, 153;
         --warning: 242, 179, 61;
-        --vip: 232, 184, 75;
         --on-fill: 18, 21, 28;
         --shadow: 0, 0, 0;
       }
@@ -68,802 +49,499 @@
       }
       body {
         margin: 0;
-        padding: 40px 20px 80px;
+        padding: 32px 18px 64px;
         background: rgb(var(--surface-600));
         color: rgb(var(--text-primary));
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        transition:
-          background 0.2s ease,
-          color 0.2s ease;
       }
-      .display {
-        font-family:
-          'Instrument Sans',
-          -apple-system,
-          sans-serif;
+      button {
+        font: inherit;
       }
       .page-head {
-        max-width: 810px;
-        margin: 0 auto 20px;
+        max-width: 1230px;
+        margin: 0 auto 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 16px;
       }
       .page-head h1 {
-        font-family: 'Instrument Sans', sans-serif;
-        font-size: 20px;
-        font-weight: 700;
         margin: 0;
+        font-size: 20px;
+      }
+      .page-head p,
+      .caption {
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+        line-height: 1.55;
       }
       .page-head p {
-        margin: 2px 0 0;
-        font-size: 12px;
-        color: rgb(var(--text-secondary));
+        margin: 3px 0 0;
       }
       .toggle {
         display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px;
-        background: rgb(var(--surface-200));
-        border: 1px solid rgb(var(--surface-600) / 0.5);
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid rgb(var(--surface-100));
         border-radius: 999px;
-        font-size: 13px;
-        font-weight: 600;
+        background: rgb(var(--surface-200));
       }
       .toggle button {
-        border: none;
-        background: transparent;
-        padding: 7px 14px;
+        min-height: 44px;
+        border: 0;
         border-radius: 999px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
+        padding: 0 14px;
+        background: transparent;
         color: rgb(var(--text-secondary));
-        font-family: inherit;
+        font-weight: 700;
+        cursor: pointer;
       }
       .toggle button.active {
         background: rgb(var(--primary));
         color: rgb(var(--on-fill));
       }
-
       .frames {
-        max-width: 810px;
+        max-width: 1230px;
         margin: 0 auto;
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 390px));
         gap: 20px;
-        flex-wrap: wrap;
         justify-content: center;
       }
       .frame-col {
+        min-width: 0;
+      }
+      .frame-label {
+        display: block;
+        margin: 0 0 8px;
+        color: rgb(var(--text-secondary));
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .phone {
+        width: 100%;
+        min-height: 680px;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.45);
+        border-radius: 28px;
+        background: rgb(var(--surface-500));
+        box-shadow: 0 20px 42px rgb(var(--shadow) / 0.2);
       }
-      .frame-col .frame-label {
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 15px 14px 12px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+      }
+      .identity {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 10px;
+      }
+      .avatar {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-weight: 800;
+      }
+      .identity h2 {
+        margin: 0;
+        overflow: hidden;
+        color: rgb(var(--text-primary));
+        font-size: 14px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .status {
+        margin: 2px 0 0;
+        color: rgb(var(--success));
         font-size: 11px;
         font-weight: 700;
-        color: rgb(var(--text-secondary));
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        margin-bottom: 8px;
       }
-
-      .phone {
-        width: 390px;
-        background: rgb(var(--surface-500));
-        border-radius: 28px;
-        overflow: hidden;
-        border: 1px solid rgb(var(--surface-700) / 0.4);
-        box-shadow:
-          0 1px 2px rgb(var(--shadow) / 0.06),
-          0 24px 48px rgb(var(--shadow) / 0.28);
-        height: 780px;
-        display: flex;
-        flex-direction: column;
-      }
-
-      /* ---- Chat list ---- */
-      .cl-header {
-        background: linear-gradient(180deg, rgb(var(--surface-400)), rgb(var(--surface-500)));
-        padding: 16px 14px 10px;
-        flex-shrink: 0;
-      }
-      .cl-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
-      }
-      .cl-top .menu,
-      .cl-top .plus {
-        font-size: 18px;
-        color: rgb(var(--text-primary));
-        width: 24px;
-        text-align: center;
-      }
-      .cl-top h1 {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 700;
-      }
-      .cl-tabs {
-        display: flex;
-        border-radius: 999px;
-        background: rgb(var(--surface-300));
-        padding: 4px;
-        margin-bottom: 14px;
-      }
-      .cl-tabs .tab {
-        flex: 1;
-        text-align: center;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 700;
-        padding: 8px 0;
-        color: rgb(var(--text-secondary));
-      }
-      .cl-tabs .tab.active {
-        background: rgb(var(--accent));
-        color: rgb(var(--on-fill));
-      }
-      .quick-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 16px;
-      }
-      .quick-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-      }
-      .quick-tile {
+      .icon-button {
         width: 44px;
         height: 44px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        color: rgb(var(--on-fill));
-        box-shadow: 0 3px 8px rgb(var(--shadow) / 0.18);
-      }
-      .quick-item span.lbl {
-        font-size: 9px;
-        color: rgb(var(--text-secondary));
-        font-weight: 600;
-      }
-      .cl-search {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: rgb(var(--surface-200));
-        border-radius: 999px;
-        padding: 7px 12px;
-        margin-bottom: 10px;
-        font-size: 12px;
-        color: rgb(var(--text-muted));
-      }
-      .cl-filters {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        overflow-x: auto;
-      }
-      .cl-filters .hamburger {
-        flex-shrink: 0;
-        width: 26px;
-        height: 26px;
-        border-radius: 999px;
-        background: rgb(var(--surface-200));
-        color: rgb(var(--text-secondary));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 11px;
-      }
-      .cl-filters .pill {
-        flex-shrink: 0;
-        white-space: nowrap;
-        border-radius: 999px;
-        border: 1px solid rgb(var(--surface-100));
-        font-size: 10px;
-        font-weight: 700;
-        padding: 5px 10px;
-        background: rgb(var(--surface-300));
-        color: rgb(var(--text-primary));
-      }
-      .cl-filters .pill.on {
-        background: rgb(var(--surface-200));
-      }
-
-      .cl-list {
-        flex: 1;
-        overflow-y: auto;
-      }
-      .cl-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border-top: 1px solid rgb(var(--surface-200));
-      }
-      .cl-avatar-wrap {
-        position: relative;
-        flex-shrink: 0;
-      }
-      .cl-avatar {
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 16px;
-        color: rgb(var(--on-fill));
-        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--accent)));
-      }
-      .cl-online {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: rgb(var(--success));
-        border: 2px solid rgb(var(--surface-500));
-      }
-      .cl-row-main {
-        flex: 1;
-        min-width: 0;
-      }
-      .cl-row-top {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        margin-bottom: 2px;
-      }
-      .cl-name-wrap {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        min-width: 0;
-      }
-      .cl-name {
-        font-size: 14px;
-        font-weight: 700;
-        color: rgb(var(--text-primary));
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .cl-vip {
-        border-radius: 4px;
-        background: rgb(var(--vip));
-        color: rgb(var(--on-fill));
-        font-size: 8px;
-        font-weight: 900;
-        text-transform: uppercase;
-        font-style: italic;
-        padding: 2px 4px;
-        flex-shrink: 0;
-      }
-      .cl-time {
-        font-size: 10px;
-        color: rgb(var(--text-secondary));
-        flex-shrink: 0;
-      }
-      .cl-row-bottom {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      .cl-preview {
-        font-size: 12px;
-        color: rgb(var(--text-secondary));
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .cl-unread {
-        flex-shrink: 0;
-        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--accent)));
-        color: rgb(var(--on-fill));
-        font-size: 10px;
-        font-weight: 700;
-        border-radius: 999px;
-        height: 20px;
-        min-width: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 6px;
-        box-shadow: 0 2px 5px rgb(var(--accent) / 0.3);
-      }
-      .cl-lock {
-        flex-shrink: 0;
-        font-size: 12px;
-        color: rgb(var(--text-muted));
-      }
-
-      /* ---- Chat room ---- */
-      .cr-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 16px 14px 10px;
-        border-bottom: 1px solid rgb(var(--surface-100));
-        background: rgb(var(--surface-500));
-        flex-shrink: 0;
-      }
-      .cr-id {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .cr-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-        background: rgb(var(--primary) / 0.1);
-        color: rgb(var(--primary));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-      }
-      .cr-id h1 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 900;
-        color: rgb(var(--text-primary));
-      }
-      .cr-status {
-        margin: 1px 0 0;
-        font-size: 11px;
-        font-weight: 600;
-        color: rgb(var(--success));
-      }
-      .cr-actions {
-        display: flex;
-        gap: 6px;
-      }
-      .cr-actions .ibtn {
-        width: 30px;
-        height: 30px;
+        border: 0;
         border-radius: 999px;
         background: rgb(var(--surface-100));
+        color: rgb(var(--text-primary));
+      }
+      .chat-list-tools {
+        display: grid;
+        gap: 10px;
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .search {
+        min-height: 44px;
         display: flex;
         align-items: center;
-        justify-content: center;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 12px;
+        padding: 0 12px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-muted));
         font-size: 13px;
       }
-
-      .cr-messages {
-        flex: 1;
-        overflow-y: auto;
-        background: rgb(var(--surface-300));
-        margin: 10px;
-        border-radius: 14px;
+      .filters {
+        display: flex;
+        gap: 7px;
+        overflow-x: auto;
+      }
+      .pill {
+        min-height: 44px;
+        flex: 0 0 auto;
         border: 1px solid rgb(var(--surface-100));
-        padding: 10px;
+        border-radius: 999px;
+        padding: 0 14px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        font-weight: 700;
+      }
+      .pill.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .conversation-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 14px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+      }
+      .conversation-copy {
+        min-width: 0;
+        flex: 1;
+      }
+      .conversation-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .conversation-name {
+        font-weight: 800;
+      }
+      .conversation-time,
+      .conversation-preview {
+        color: rgb(var(--text-secondary));
+        font-size: 11px;
+      }
+      .conversation-preview {
+        margin-top: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .messages {
+        flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+        padding: 14px 12px;
+        background: rgb(var(--surface-300));
       }
-      .msg-row {
-        display: flex;
-      }
-      .msg-row.mine {
-        justify-content: flex-end;
-      }
-      .bubble {
-        max-width: 78%;
-        padding: 9px 12px;
-        font-size: 13px;
-        line-height: 1.4;
-        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
-      }
-      .bubble.them {
-        background: rgb(var(--surface-200));
+      .message {
+        max-width: 82%;
         border: 1px solid rgb(var(--surface-100));
-        color: rgb(var(--text-primary));
         border-radius: 16px 16px 16px 4px;
+        padding: 10px 12px;
+        background: rgb(var(--surface-200));
+        font-size: 13px;
+        line-height: 1.45;
       }
-      .bubble.mine {
+      .message.mine {
+        align-self: flex-end;
+        border: 0;
+        border-radius: 16px 16px 4px 16px;
         background: rgb(var(--primary));
         color: rgb(var(--on-fill));
-        border-radius: 16px 16px 4px 16px;
       }
-      .bubble .meta {
-        font-size: 10px;
-        opacity: 0.7;
-        margin: 0 0 3px;
-      }
-      .bubble p {
-        margin: 0;
-      }
-      .bubble .reply-ref {
-        border-inline-start: 3px solid rgb(var(--accent));
-        background: rgb(0 0 0 / 0.08);
-        border-radius: 8px;
-        padding: 4px 8px;
-        margin-bottom: 6px;
-        font-size: 11px;
-      }
-      .bubble .reply-ref .who {
-        display: block;
-        font-weight: 700;
-      }
-      .correction-bubble {
-        background: rgb(var(--surface-200));
-        border: 1px solid rgb(var(--surface-100));
-        border-radius: 16px 16px 16px 4px;
-        padding: 9px 12px;
-        max-width: 78%;
-        font-size: 12px;
-      }
-      .correction-bubble .orig {
-        text-decoration: line-through;
-        color: rgb(var(--danger));
-      }
-      .correction-bubble .fixed {
-        color: rgb(var(--success));
-        font-weight: 700;
-      }
-      .correction-bubble .why {
-        margin-top: 4px;
+      .meta {
+        margin-bottom: 4px;
         color: rgb(var(--text-secondary));
-        font-size: 11px;
-      }
-      .system-row {
-        text-align: center;
         font-size: 10px;
-        color: rgb(var(--text-muted));
-        font-weight: 600;
-        padding: 2px 0;
       }
-
-      .cr-toolbar {
+      .message.mine .meta {
+        color: inherit;
+        opacity: 0.75;
+      }
+      .starter-wrap {
+        flex: 1;
         display: flex;
+        align-items: center;
+        padding: 14px;
+        background: rgb(var(--surface-300));
+      }
+      .starter-panel {
+        width: 100%;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+        background: rgb(var(--surface-100));
+        box-shadow: 0 8px 22px rgb(var(--shadow) / 0.08);
+      }
+      .starter-panel h3 {
+        margin: 0;
+        font-size: 14px;
+      }
+      .starter-panel p {
+        margin: 5px 0 12px;
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .starter-list {
+        display: grid;
+        gap: 8px;
+      }
+      .starter {
+        min-height: 44px;
+        width: 100%;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        text-align: start;
+        line-height: 1.35;
+        cursor: pointer;
+      }
+      .starter:focus-visible,
+      .composer-input:focus-visible,
+      .toggle button:focus-visible,
+      .pill:focus-visible {
+        outline: 3px solid rgb(var(--primary) / 0.45);
+        outline-offset: 2px;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
         gap: 6px;
-        padding: 0 10px 8px;
-        flex-shrink: 0;
+        padding: 10px 10px 0;
       }
-      .tb-btn {
+      .tool {
+        min-height: 44px;
+        border: 0;
         border-radius: 999px;
-        font-size: 10px;
+        padding: 0 11px;
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-primary));
+        font-size: 11px;
         font-weight: 700;
-        padding: 6px 10px;
-        border: none;
       }
-      .tb-correct {
-        background: rgb(var(--warning) / 0.2);
-        color: rgb(var(--warning));
-      }
-      .tb-doodle {
-        background: rgb(var(--secondary) / 0.2);
-        color: rgb(var(--secondary));
-      }
-      .tb-voice {
-        background: rgb(var(--accent) / 0.2);
-        color: rgb(var(--accent));
-      }
-      .tb-sticker {
-        background: rgb(var(--neon-violet) / 0.2);
-        color: rgb(var(--neon-violet));
-      }
-
-      .cr-composer {
+      .composer {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 0 10px 14px;
-        flex-shrink: 0;
+        padding: 10px 10px 14px;
       }
-      .cr-input {
+      .composer-input {
+        min-height: 44px;
+        min-width: 0;
         flex: 1;
-        border-radius: 12px;
         border: 1px solid rgb(var(--surface-100));
+        border-radius: 12px;
+        padding: 10px 12px;
         background: rgb(var(--surface-300));
-        padding: 11px 14px;
-        font-size: 13px;
         color: rgb(var(--text-muted));
       }
-      .cr-send {
+      .send {
+        min-height: 44px;
+        border: 0;
         border-radius: 999px;
+        padding: 0 17px;
         background: rgb(var(--primary));
         color: rgb(var(--on-fill));
-        border: none;
-        font-size: 13px;
-        font-weight: 700;
-        padding: 11px 20px;
+        font-weight: 800;
       }
-
       .caption {
-        max-width: 810px;
+        max-width: 1230px;
         margin: 18px auto 0;
-        font-size: 12px;
-        color: rgb(var(--text-secondary));
-        line-height: 1.6;
+      }
+      @media (max-width: 900px) {
+        .frames {
+          grid-template-columns: minmax(0, 390px);
+        }
+        .page-head {
+          max-width: 390px;
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+      @media (max-width: 430px) {
+        body {
+          padding-inline: 0;
+        }
+        .phone {
+          border-inline: 0;
+          border-radius: 0;
+        }
+        .frame-label,
+        .page-head,
+        .caption {
+          margin-inline: 14px;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="page-head">
+    <header class="page-head">
       <div>
-        <h1 class="display">Chat</h1>
-        <p>chat-list.component.html + chat-room.component.html</p>
+        <h1>Chat</h1>
+        <p>List, active conversation, and new direct-chat Conversation Starter states.</p>
       </div>
-      <div class="toggle" id="toggle">
-        <button id="btn-light" class="active">Light</button>
-        <button id="btn-dark">Dark</button>
+      <div class="toggle" aria-label="Preview theme">
+        <button id="btn-light" class="active" type="button">Light</button>
+        <button id="btn-dark" type="button">Dark</button>
       </div>
-    </div>
+    </header>
 
-    <div class="frames">
-      <div class="frame-col">
-        <span class="frame-label">Chat list</span>
+    <main class="frames">
+      <section class="frame-col" aria-labelledby="chat-list-label">
+        <span id="chat-list-label" class="frame-label">Chat list · 390px</span>
         <div class="phone">
-          <div class="cl-header">
-            <div class="cl-top">
-              <span class="menu">≡</span>
-              <h1>Chats</h1>
-              <span class="plus">+</span>
+          <div class="header">
+            <div class="identity">
+              <div class="avatar">💬</div>
+              <div><h2>Chats</h2><p class="status">3 unread</p></div>
             </div>
-            <div class="cl-tabs">
-              <div class="tab active">Chats</div>
-              <div class="tab">Groups</div>
-            </div>
-            <div class="quick-row">
-              <div class="quick-item">
-                <div class="quick-tile" style="background: rgb(var(--secondary))">📚</div>
-                <span class="lbl">Courses</span>
-              </div>
-              <div class="quick-item">
-                <div
-                  class="quick-tile"
-                  style="
-                    background: linear-gradient(135deg, rgb(var(--neon-cyan)), rgb(var(--success)));
-                  "
-                >
-                  🎮
-                </div>
-                <span class="lbl">Play</span>
-              </div>
-              <div class="quick-item">
-                <div
-                  class="quick-tile"
-                  style="
-                    background: linear-gradient(
-                      135deg,
-                      rgb(var(--neon-violet)),
-                      rgb(var(--accent))
-                    );
-                  "
-                >
-                  🌐
-                </div>
-                <span class="lbl">AI Translate</span>
-              </div>
-              <div class="quick-item">
-                <div class="quick-tile" style="background: rgb(var(--neon-pink))">🤖</div>
-                <span class="lbl">JP AI</span>
-              </div>
-              <div class="quick-item">
-                <div
-                  class="quick-tile"
-                  style="background: rgb(var(--surface-200)); color: rgb(var(--text-secondary))"
-                >
-                  ⌄
-                </div>
-                <span class="lbl">More</span>
-              </div>
-            </div>
-            <div class="cl-search">🔍 Search chats</div>
-            <div class="cl-filters">
-              <div class="hamburger">≡</div>
-              <span class="pill on">All</span>
-              <span class="pill">Unread</span>
-              <span class="pill">Pinned</span>
-              <span class="pill">Groups</span>
+            <button class="icon-button" type="button" aria-label="New chat">+</button>
+          </div>
+          <div class="chat-list-tools">
+            <div class="search">🔍 Search chats</div>
+            <div class="filters" aria-label="Chat filters">
+              <button class="pill active" type="button">All</button>
+              <button class="pill" type="button">Unread</button>
+              <button class="pill" type="button">Pinned</button>
+              <button class="pill" type="button">Groups</button>
             </div>
           </div>
-
-          <div class="cl-list">
-            <a class="cl-row" href="#">
-              <div class="cl-avatar-wrap">
-                <div class="cl-avatar">陈</div>
-                <span class="cl-online"></span>
-              </div>
-              <div class="cl-row-main">
-                <div class="cl-row-top">
-                  <div class="cl-name-wrap">
-                    <span class="cl-name">Chén Wěi</span>
-                    <span class="cl-vip">VIP</span>
-                  </div>
-                  <span class="cl-time">2:14 PM</span>
-                </div>
-                <div class="cl-row-bottom">
-                  <span class="cl-preview">Thanks for the correction just now 😄</span>
-                  <span class="cl-unread">3</span>
-                </div>
-              </div>
-              <span class="cl-lock">🔓</span>
-            </a>
-            <a class="cl-row" href="#">
-              <div class="cl-avatar-wrap">
-                <div
-                  class="cl-avatar"
-                  style="
-                    background: linear-gradient(
-                      135deg,
-                      rgb(var(--secondary)),
-                      rgb(var(--neon-cyan))
-                    );
-                  "
-                >
-                  S
-                </div>
-                <span class="cl-online"></span>
-              </div>
-              <div class="cl-row-main">
-                <div class="cl-row-top">
-                  <div class="cl-name-wrap"><span class="cl-name">Sofia Almeida</span></div>
-                  <span class="cl-time">11:02 AM</span>
-                </div>
-                <div class="cl-row-bottom">
-                  <span class="cl-preview">Voice note · 0:24</span>
-                </div>
-              </div>
-              <span class="cl-lock">🔓</span>
-            </a>
-            <a class="cl-row" href="#">
-              <div class="cl-avatar-wrap">
-                <div
-                  class="cl-avatar"
-                  style="
-                    background: linear-gradient(135deg, rgb(var(--neon-blue)), rgb(var(--primary)));
-                  "
-                >
-                  J
-                </div>
-              </div>
-              <div class="cl-row-main">
-                <div class="cl-row-top">
-                  <div class="cl-name-wrap"><span class="cl-name">Jonas Weber</span></div>
-                  <span class="cl-time">Yesterday</span>
-                </div>
-                <div class="cl-row-bottom">
-                  <span class="cl-preview">Tap to chat</span>
-                </div>
-              </div>
-              <span class="cl-lock">🔓</span>
-            </a>
-            <a class="cl-row" href="#">
-              <div class="cl-avatar-wrap">
-                <div
-                  class="cl-avatar"
-                  style="background: linear-gradient(135deg, rgb(var(--accent)), rgb(var(--vip)))"
-                >
-                  語学サークル
-                </div>
-              </div>
-              <div class="cl-row-main">
-                <div class="cl-row-top">
-                  <div class="cl-name-wrap"><span class="cl-name">語学サークル (12)</span></div>
-                  <span class="cl-time">Mon</span>
-                </div>
-                <div class="cl-row-bottom">
-                  <span class="cl-preview">Amara: See you all Saturday!</span>
-                  <span class="cl-unread">12</span>
-                </div>
-              </div>
-              <span class="cl-lock">🔓</span>
-            </a>
+          <div class="conversation-row">
+            <div class="avatar">陳</div>
+            <div class="conversation-copy">
+              <div class="conversation-top"><span class="conversation-name">Chén Wěi</span><span class="conversation-time">2:14 PM</span></div>
+              <div class="conversation-preview">Thanks for the correction just now 😄</div>
+            </div>
+          </div>
+          <div class="conversation-row">
+            <div class="avatar" style="background: rgb(var(--secondary))">S</div>
+            <div class="conversation-copy">
+              <div class="conversation-top"><span class="conversation-name">Sofia Almeida</span><span class="conversation-time">11:02 AM</span></div>
+              <div class="conversation-preview">Voice note · 0:24</div>
+            </div>
+          </div>
+          <div class="conversation-row">
+            <div class="avatar">J</div>
+            <div class="conversation-copy">
+              <div class="conversation-top"><span class="conversation-name">Jonas Weber</span><span class="conversation-time">Yesterday</span></div>
+              <div class="conversation-preview">Tap to chat</div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="frame-col">
-        <span class="frame-label">Open chat room</span>
+      <section class="frame-col" aria-labelledby="active-chat-label">
+        <span id="active-chat-label" class="frame-label">Existing direct chat · wide state</span>
         <div class="phone">
-          <div class="cr-header">
-            <div class="cr-id">
-              <div class="cr-icon">💬</div>
-              <div>
-                <h1>Chén Wěi</h1>
-                <p class="cr-status">● Live</p>
-              </div>
+          <div class="header">
+            <div class="identity">
+              <div class="avatar">陳</div>
+              <div><h2>Chén Wěi</h2><p class="status">● Online</p></div>
             </div>
-            <div class="cr-actions">
-              <div class="ibtn">🔓</div>
-              <div class="ibtn">🔍</div>
+            <button class="icon-button" type="button" aria-label="Search conversation">⌕</button>
+          </div>
+          <div class="messages">
+            <div class="message">
+              <div class="meta">Chén Wěi · 2:01 PM</div>
+              你好! Ready to practise some English today?
+            </div>
+            <div class="message mine">
+              <div class="meta">You · 2:02 PM ✓✓</div>
+              Yes! I want to practise ordering food at a restaurant.
+            </div>
+            <div class="message">
+              <div class="meta">Chén Wěi · 2:03 PM</div>
+              Great idea! Try: “Could I get the check, please?”
+            </div>
+            <div class="message mine">
+              <div class="meta">You · correction</div>
+              Could I get the check, please?
             </div>
           </div>
-
-          <div class="cr-messages">
-            <div class="system-row">Chén Wěi joined the conversation</div>
-
-            <div class="msg-row">
-              <div class="bubble them">
-                <p class="meta">Chén Wěi · 2:01 PM</p>
-                <p>你好! Ready to practise some English today?</p>
-              </div>
-            </div>
-
-            <div class="msg-row mine">
-              <div class="bubble mine">
-                <p class="meta">You · 2:02 PM ✓✓</p>
-                <p>Yes! I want to practise ordering food at a restaurant</p>
-              </div>
-            </div>
-
-            <div class="msg-row">
-              <div class="bubble them">
-                <p class="meta">Chén Wěi · 2:03 PM</p>
-                <div class="reply-ref">
-                  <span class="who">You</span>
-                  <span>Yes! I want to practise ordering food...</span>
-                </div>
-                <p>Great idea! Try: "Could I get the check, please?"</p>
-              </div>
-            </div>
-
-            <div class="msg-row mine">
-              <div class="correction-bubble">
-                <p class="meta" style="opacity: 0.6">You · 2:05 PM · correction</p>
-                <p><span class="orig">I want the check please</span></p>
-                <p><span class="fixed">Could I get the check, please?</span></p>
-                <p class="why">More polite phrasing for a restaurant setting</p>
-              </div>
-            </div>
-
-            <div class="msg-row">
-              <div class="bubble them">
-                <p class="meta">Chén Wěi · 2:14 PM</p>
-                <p>Thanks for the correction just now 😄</p>
-              </div>
-            </div>
+          <div class="toolbar">
+            <button class="tool" type="button">✏️ Correct</button>
+            <button class="tool" type="button">🎨 Doodle</button>
+            <button class="tool" type="button">🎙️ Voice</button>
+            <button class="tool" type="button">😊 Sticker</button>
           </div>
-
-          <div class="cr-toolbar">
-            <button class="tb-btn tb-correct">✏️ Correct</button>
-            <button class="tb-btn tb-doodle">🎨 Doodle</button>
-            <button class="tb-btn tb-voice">🎙️ Voice</button>
-            <button class="tb-btn tb-sticker">😊 Sticker</button>
-          </div>
-          <div class="cr-composer">
-            <div class="cr-input">Type a message…</div>
-            <button class="cr-send">Send</button>
+          <div class="composer">
+            <div class="composer-input">Type a message…</div>
+            <button class="send" type="button">Send</button>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+
+      <section class="frame-col" aria-labelledby="new-chat-label" dir="rtl">
+        <span id="new-chat-label" class="frame-label">New direct chat · RTL / starter state</span>
+        <div class="phone">
+          <div class="header">
+            <div class="identity">
+              <div class="avatar" style="background: rgb(var(--secondary))">م</div>
+              <div><h2 dir="auto">مريم</h2><p class="status">● Online</p></div>
+            </div>
+            <button class="icon-button" type="button" aria-label="Search conversation">⌕</button>
+          </div>
+          <div class="starter-wrap">
+            <section class="starter-panel" aria-label="Conversation Starters">
+              <h3>Conversation Starters</h3>
+              <p>Suggestions appear only while this direct chat is empty. Choosing one fills the composer but does not send it.</p>
+              <div class="starter-list" role="list">
+                <div role="listitem"><button class="starter" type="button" dir="auto">What made you want to learn English?</button></div>
+                <div role="listitem"><button class="starter" type="button" dir="auto">What is a favourite place in your hometown?</button></div>
+                <div role="listitem"><button class="starter" type="button" dir="auto">What has been the highlight of your week?</button></div>
+              </div>
+            </section>
+          </div>
+          <div class="toolbar">
+            <button class="tool" type="button">✏️ Correct</button>
+            <button class="tool" type="button">🎙️ Voice</button>
+          </div>
+          <div class="composer">
+            <div class="composer-input">Type a message…</div>
+            <button class="send" type="button">Send</button>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <p class="caption">
-      Two frames side by side: the chat list (tab toggle, quick-access tiles, search, filter pills)
-      and one open chat room showing the duet pairing (Ember for "you", bubble tail omitted here as
-      a decorative CSS-only detail), a correction bubble, and a reply reference. Omitted:
-      sticker/wallpaper picker overlays, admin panel, mention autocomplete, voice/doodle recorder
-      modals, and delivery-tick SVGs (rendered here as plain "✓✓" text) - all interaction-triggered
-      overlays better suited to a components/overlays page than a static screen mock.
+      The third frame reconciles issue #662: starters are a temporary, keyboard-accessible Relay card for an empty two-person chat. Suggestions use logical alignment and <code>dir="auto"</code>, remain readable in light/dark and RTL contexts, wrap at the 390px baseline and high zoom, and use 44px minimum touch targets. Selecting a starter populates the existing composer; the user remains responsible for sending it.
     </p>
 
     <script>
-      document.getElementById('btn-light').addEventListener('click', () => {
+      const light = document.getElementById('btn-light');
+      const dark = document.getElementById('btn-dark');
+      light.addEventListener('click', () => {
         document.documentElement.classList.remove('dark');
-        document.getElementById('btn-light').classList.add('active');
-        document.getElementById('btn-dark').classList.remove('active');
+        light.classList.add('active');
+        dark.classList.remove('active');
       });
-      document.getElementById('btn-dark').addEventListener('click', () => {
+      dark.addEventListener('click', () => {
         document.documentElement.classList.add('dark');
-        document.getElementById('btn-dark').classList.add('active');
-        document.getElementById('btn-light').classList.remove('active');
+        dark.classList.add('active');
+        light.classList.remove('active');
       });
     </script>
   </body>

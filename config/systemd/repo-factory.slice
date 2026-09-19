@@ -1,0 +1,10 @@
+[Unit]
+Description=Shared resource envelope for repository factories
+
+[Slice]
+MemoryHigh=6G
+MemoryMax=7G
+TasksMax=1500
+CPUAccounting=true
+MemoryAccounting=true
+IOAccounting=true
