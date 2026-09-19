@@ -328,6 +328,6 @@ export class ProfileVisitorsComponent {
   }
 
   onUpgradeClick(): void {
-    this.router.navigate(['/vip']);
+    this.router.navigate(['/subscription']);
   }
 }
