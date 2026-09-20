@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2024-05-18 - Centrifugo Status Updates and Angular @for Tracking
+**Learning:** Real-time chat apps using Centrifugo for status updates (like delivery/read receipts) mutate the messages array frequently. If Angular's `@for` loop tracks items by object reference (`track msg`), every single real-time update forces a full DOM re-render of the entire chat list, causing severe scroll jank and main thread blocking.
+**Action:** Always verify that Angular `@for` loops in high-frequency update scenarios (like chat rooms or websockets) strictly track by a unique scalar identifier (`track msg.id`) rather than the object reference.
