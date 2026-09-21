@@ -72,8 +72,8 @@
     "@eslint/js": "^10.0.1",
     "artillery": "^2.0.34",
     "husky": "^9.1.7",
-    "lint-staged": "^17.3.0",
-    "prettier": "^3.3.3"
+    "lint-staged": "^17.5.1",
+    "prettier": "^3.9.8"
   },
   "lint-staged": {
     "*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": [
