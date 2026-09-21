@@ -66,4 +66,26 @@ export class StudyBuddyService {
   async declineRequest(id: string): Promise<void> {
     await firstValueFrom(this.http.post(`${this.apiUrl}/requests/${id}/decline`, {}));
   }
+
+  async follow(targetUserId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`${this.apiUrl}/follow`, { targetUserId }),
+    );
+  }
+
+  async unfollow(targetUserId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.delete(`${this.apiUrl}/unfollow`, {
+        body: { targetUserId },
+      }),
+    );
+  }
+
+  async getOrCreateChannel(partnerId: string): Promise<{ channel: string }> {
+    return firstValueFrom(
+      this.http.get<{ channel: string }>(`${this.apiUrl}/channel`, {
+        params: { partnerId },
+      }),
+    );
+  }
 }
