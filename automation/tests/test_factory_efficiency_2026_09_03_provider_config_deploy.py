@@ -61,7 +61,7 @@ def test_provider_config_rollback_reloads_both_services(tmp_path: Path) -> None:
     functions = _function_range(
         updater,
         "validate_agents_config() {",
-        "\ntrap restore_services_on_failure EXIT",
+        "\ntrap finish_update EXIT",
     )
 
     config = tmp_path / "agents.json"
@@ -116,7 +116,7 @@ def test_failed_provider_config_rollback_refuses_service_restart(tmp_path: Path)
     functions = _function_range(
         updater,
         "validate_agents_config() {",
-        "\ntrap restore_services_on_failure EXIT",
+        "\ntrap finish_update EXIT",
     )
     config = tmp_path / "agents.json"
     config.write_text("new-config", encoding="utf-8")

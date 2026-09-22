@@ -26,3 +26,21 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     assert "restore_services_on_failure" in updater
     assert "Unknown state is not idle" in updater
     assert "raise SystemExit(1)" in updater
+
+
+def test_factory_updater_drains_continuously_busy_daemons_only_when_needed() -> None:
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-7500}" in updater
+    assert "pause_factories" in updater
+    assert "resume_factories" in updater
+    assert 'json.dump({"paused": paused}, handle)' in updater
+    assert "os.fchown(handle.fileno(), uid, gid)" in updater
+    assert updater.index("log 'Fetching origin/main'") < updater.index(
+        "log 'Pausing new Factory scheduling while active jobs drain'"
+    )
+    assert updater.index('systemctl start "$SECONDARY_SERVICE"') < updater.rindex(
+        "resume_factories"
+    )

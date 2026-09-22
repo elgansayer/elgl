@@ -30,7 +30,7 @@ RUNTIME_MAINTENANCE="$RUNTIME_ROOT/scripts/maintain-factory-host-storage.sh"
 AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}
 AGENTS_CONFIG_SOURCE=config/factory/agents.production.json
 RESTART_GRACE_SECONDS=${FACTORY_UPDATE_RESTART_GRACE_SECONDS:-60}
-ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-300}
+ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-7500}
 GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}
 MAINTENANCE_ONLY=false
 update_completed=false
@@ -38,6 +38,7 @@ services_stopped=false
 secondary_was_active=false
 agents_config_changed=false
 agents_config_backup=
+controls_paused=false
 
 case "${1:-}" in
   '') ;;
@@ -110,7 +111,71 @@ restore_services_on_failure() {
     fi
   fi
 }
-trap restore_services_on_failure EXIT
+
+set_pause_file() {
+  local heartbeat=$1 paused=$2
+  local control factory_uid factory_gid
+  control="$(dirname -- "$heartbeat")/control.json"
+  factory_uid=$(id -u "$FACTORY_USER") || return 1
+  factory_gid=$(id -g "$FACTORY_USER") || return 1
+  python3 - "$control" "$paused" "$factory_uid" "$factory_gid" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+paused = sys.argv[2] == "true"
+uid = int(sys.argv[3])
+gid = int(sys.argv[4])
+path.parent.mkdir(parents=True, exist_ok=True)
+temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+try:
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        json.dump({"paused": paused}, handle)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+        os.fchown(handle.fileno(), uid, gid)
+    os.replace(temporary, path)
+finally:
+    temporary.unlink(missing_ok=True)
+PY
+}
+
+pause_factories() {
+  set_pause_file "$HEARTBEAT" true || return 1
+  controls_paused=true
+  if [ -n "$SECONDARY_HEARTBEAT" ]; then
+    if ! set_pause_file "$SECONDARY_HEARTBEAT" true; then
+      set_pause_file "$HEARTBEAT" false || true
+      controls_paused=false
+      return 1
+    fi
+  fi
+}
+
+resume_factories() {
+  local failed=false
+  if [ "$controls_paused" != true ]; then
+    return 0
+  fi
+  set_pause_file "$HEARTBEAT" false || failed=true
+  if [ -n "$SECONDARY_HEARTBEAT" ]; then
+    set_pause_file "$SECONDARY_HEARTBEAT" false || failed=true
+  fi
+  [ "$failed" = false ] || return 1
+  controls_paused=false
+}
+
+finish_update() {
+  restore_services_on_failure || true
+  if ! resume_factories; then
+    log 'ERROR: could not resume Factory scheduling during updater cleanup'
+  fi
+}
+trap finish_update EXIT
 
 factory_git_read() {
   runuser -u "$FACTORY_USER" -- env \
@@ -396,18 +461,6 @@ all_factories_idle() {
   fi
 }
 
-log "Waiting up to ${ACTIVE_JOB_WAIT_SECONDS}s for factory to be idle"
-waited=0
-while ! all_factories_idle; do
-  if [ "$waited" -ge "$ACTIVE_JOB_WAIT_SECONDS" ]; then
-    log "Active jobs still running after ${ACTIVE_JOB_WAIT_SECONDS}s - skipping update, will retry tomorrow"
-    exit 0
-  fi
-  sleep 15
-  waited=$((waited + 15))
-done
-log 'Factory is idle'
-
 log 'Fetching origin/main'
 timeout "${GIT_TIMEOUT}s" \
   runuser -u "$FACTORY_USER" -- env \
@@ -449,6 +502,20 @@ verify_commit_identity "$remote_sha" || {
   log 'ERROR: origin/main identity could not be verified'
   exit 1
 }
+
+log 'Pausing new Factory scheduling while active jobs drain'
+pause_factories
+log "Waiting up to ${ACTIVE_JOB_WAIT_SECONDS}s for active jobs to drain"
+waited=0
+while ! all_factories_idle; do
+  if [ "$waited" -ge "$ACTIVE_JOB_WAIT_SECONDS" ]; then
+    log "Active jobs did not drain after ${ACTIVE_JOB_WAIT_SECONDS}s - resuming scheduling and deferring update"
+    exit 0
+  fi
+  sleep 15
+  waited=$((waited + 15))
+done
+log 'Factory is drained and ready to update'
 
 log 'Stopping factory service'
 systemctl stop "$SERVICE" || true
@@ -533,6 +600,7 @@ if [ "$secondary_was_active" = true ]; then
   systemctl reset-failed "$SECONDARY_SERVICE" || true
   systemctl start "$SECONDARY_SERVICE"
 fi
+resume_factories
 
 sleep "$RESTART_GRACE_SECONDS"
 
