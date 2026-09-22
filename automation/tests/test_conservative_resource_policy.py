@@ -280,7 +280,11 @@ def test_conservative_router_defaults_support_continuous_pr_drain(tmp_path: Path
     assert router._review_admission.max_admissions == 12
 
 
-def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Path) -> None:
+def test_conservative_router_honours_single_review_lane(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")
     entered = threading.Event()
     release = threading.Event()
 
@@ -328,6 +332,65 @@ def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Pa
     assert not thread.is_alive()
     assert result and result[0].success
     assert provider.calls == 1
+
+
+def test_conservative_router_allows_configured_review_lanes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "2")
+    entered = threading.Barrier(3)
+    release = threading.Event()
+
+    class BlockingProvider(Provider):
+        def run(self, request: AgentRequest) -> AgentResult:
+            self.calls += 1
+            entered.wait(timeout=5)
+            assert release.wait(timeout=5)
+            now = datetime.now(UTC)
+            return AgentResult(
+                self.name,
+                request.phase,
+                True,
+                now,
+                now,
+                0,
+                "done",
+                None,
+                None,
+                "fake",
+                "fake-model",
+            )
+
+    provider = BlockingProvider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 2},
+        enabled=True,
+    )
+    requests = [
+        review_request(tmp_path, "10", "aaa"),
+        review_request(tmp_path, "11", "bbb"),
+    ]
+    results: list[AgentResult] = []
+    threads = [
+        threading.Thread(target=lambda pair=pair: results.append(router.run(*pair)))
+        for pair in requests
+    ]
+    for thread in threads:
+        thread.start()
+    try:
+        entered.wait(timeout=5)
+    finally:
+        release.set()
+        for thread in threads:
+            thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(results) == 2
+    assert all(result.success for result in results)
+    assert provider.calls == 2
 
 
 def test_conservative_budget_counts_fallback_provider_starts(
