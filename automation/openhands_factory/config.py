@@ -282,6 +282,19 @@ class AgentsConfig(BaseModel):
                 normalised_providers[name] = provider
                 continue
             normalised_provider = dict(provider)
+            if name == "claude":
+                # Root-managed production configuration can lag the package during
+                # a rolling deployment. Fable now requires separate usage credits,
+                # so migrate that retired alias at load time until the root updater
+                # installs the current Sonnet/Haiku configuration.
+                if normalised_provider.get("model") == "fable":
+                    normalised_provider["model"] = "sonnet"
+                phase_models = normalised_provider.get("phase_models")
+                if isinstance(phase_models, dict) and phase_models.get("general_action") == "fable":
+                    normalised_provider["phase_models"] = {
+                        **phase_models,
+                        "general_action": "haiku",
+                    }
             normalised_provider.setdefault(
                 "transport", "openhands-sdk" if name == "openhands" else "cli"
             )

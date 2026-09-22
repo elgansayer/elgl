@@ -6,7 +6,7 @@ import pytest
 from openhands_factory import cli
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.cli import _config
-from openhands_factory.config import FactoryConfig
+from openhands_factory.config import AgentsConfig, FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
 RETIRED_SYSTEMD_UNITS = {
@@ -561,6 +561,26 @@ def test_production_agent_configuration_loads() -> None:
         "claude",
         "pi",
     ]
+
+
+def test_legacy_fable_configuration_migrates_to_subscription_backed_models() -> None:
+    agents = AgentsConfig.model_validate(
+        {
+            "providers": {
+                "claude": {
+                    "enabled": True,
+                    "model": "fable",
+                    "phase_models": {"implementation": "sonnet", "general_action": "fable"},
+                }
+            }
+        }
+    )
+
+    assert agents.providers["claude"].model == "sonnet"
+    assert agents.providers["claude"].phase_models == {
+        "implementation": "sonnet",
+        "general_action": "haiku",
+    }
 
 
 @pytest.mark.parametrize(
