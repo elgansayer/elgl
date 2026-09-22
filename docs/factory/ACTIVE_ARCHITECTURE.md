@@ -181,8 +181,9 @@ Review approval publishes `factory/independent-review` on the exact reviewed hea
 Before every PR-backed AI phase, refresh, or base update, the Factory removes review labels and republishes that
 status as `PENDING` on the current SHA. A crash or timeout therefore leaves the merge gate closed. If GitHub
 reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
-If GitHub reports the reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound to that exact head
-SHA. The resulting head is then rebuilt, verified, and reviewed again. Merge readiness requires all of the
+If GitHub reports a newly discovered or reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound
+to that exact head before local verification. The resulting head is then rebuilt, verified, and reviewed. Merge
+readiness requires all of the
 following:
 
 - the PR head equals the reviewed SHA;

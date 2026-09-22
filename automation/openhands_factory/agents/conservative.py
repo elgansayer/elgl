@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 from datetime import UTC, datetime
-from threading import BoundedSemaphore, Semaphore
+from threading import BoundedSemaphore
 from typing import Any
 
 from openhands_factory.agents.base import (
@@ -16,6 +16,7 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import (
     DurableAdmissionGate,
     ReviewAdmissionGate,
@@ -137,7 +138,7 @@ class ConservativeAgentRouter(AgentRouter):
         self,
         *args: Any,
         enabled: bool | None = None,
-        host_resource_slots: Semaphore | None = None,
+        host_resource_slots: HostResourceGate | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -323,7 +324,7 @@ class ConservativeAgentRouter(AgentRouter):
         review_slot_acquired = False
         try:
             if self._host_resource_slots is not None:
-                if not self._host_resource_slots.acquire(blocking=False):
+                if not self._host_resource_slots.acquire_shared(blocking=False):
                     raise ProviderCapacityUnavailable(
                         "Host resource capacity is full",
                         retry_after_seconds=_RESOURCE_RETRY_SECONDS,
@@ -395,5 +396,5 @@ class ConservativeAgentRouter(AgentRouter):
             if review_slot_acquired:
                 self._review_slots.release()
             if host_slot_acquired and self._host_resource_slots is not None:
-                self._host_resource_slots.release()
+                self._host_resource_slots.release_shared()
             self._global_agent_slots.release()

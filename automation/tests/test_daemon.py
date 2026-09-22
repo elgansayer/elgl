@@ -15,6 +15,7 @@ from openhands_factory.daemon import (
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
+    review_lane_is_busy,
     select_batch,
     select_batch_failsafe,
     selection_diagnostics,
@@ -52,6 +53,17 @@ def factory_pull_request_job(
     factory_job.pull_request = int(identifier) + 1000
     factory_job.branch = f"factory/change-{identifier}"
     return factory_job
+
+
+def test_review_lane_busy_only_for_active_pull_request_work() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "7348": pull_request_job("7348"),
+    }
+
+    assert review_lane_is_busy(jobs, {"7348"}) is True
+    assert review_lane_is_busy(jobs, {"10"}) is False
+    assert review_lane_is_busy(jobs, set()) is False
 
 
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:

@@ -12,7 +12,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from threading import BoundedSemaphore, Semaphore, Thread
+from threading import Semaphore, Thread
 
 from filelock import FileLock, Timeout
 
@@ -30,6 +30,7 @@ from openhands_factory.generation import (
     assert_generation_current,
 )
 from openhands_factory.host_diagnostics import gather_diagnostics
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import IssueAdmissionGate
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
@@ -76,6 +77,12 @@ def is_review_lane_job(job: Job) -> bool:
         or job.pull_request is not None
         or job.state is JobState.PR_DRAFT
     )
+
+
+def review_lane_is_busy(jobs: Mapping[str, Job], task_ids: set[str]) -> bool:
+    """Keep background architecture work from competing with active PR throughput."""
+
+    return any(task_id in task_ids and is_review_lane_job(job) for task_id, job in jobs.items())
 
 
 def is_new_github_issue(job: Job) -> bool:
@@ -418,16 +425,14 @@ class FactoryDaemon:
         self.stopping = False
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
-        # Two lightweight agent sessions may run together. An exclusive frontend
-        # verification drains both permits so an agent-triggered Angular build
-        # cannot overlap the authoritative build, test, lint, or browser gate.
-        self.host_resource_slots = BoundedSemaphore(2)
+        # Two lightweight agent sessions may run together. The fair exclusive side
+        # prevents either session from overlapping an authoritative frontend gate.
+        self.host_resource_slots = HostResourceGate(2)
         self.verification_slots = Semaphore(1)
         self.pipeline = FactoryPipeline(
             config,
             verification_slots=self.verification_slots,
             host_resource_slots=self.host_resource_slots,
-            exclusive_host_permits=2,
         )
         self.issue_admission = self._issue_admission_gate(config)
         self.provider_health: dict[str, ProviderHealth] = {}
@@ -611,6 +616,7 @@ class FactoryDaemon:
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
+                review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
                 capacity = self.config.max_parallel_jobs - len(active)
                 # storage_ready and everything in this block must run
                 # unconditionally, before the scheduling gate below and
@@ -764,6 +770,9 @@ class FactoryDaemon:
                             "selection_diagnostics": diagnostic,
                         }
                     )
+                    review_lane_busy = review_lane_busy or any(
+                        is_review_lane_job(job) for job in selected_jobs
+                    )
                     for job in selected_jobs:
                         self._assert_owner()
                         if is_new_github_issue(job) and not self.issue_admission.admit(
@@ -778,7 +787,6 @@ class FactoryDaemon:
                             self.config,
                             verification_slots=self.verification_slots,
                             host_resource_slots=self.host_resource_slots,
-                            exclusive_host_permits=2,
                             agent_router=self.pipeline.router,
                         )
                         review_priority = is_review_lane_job(job)
@@ -834,11 +842,14 @@ class FactoryDaemon:
                             or datetime.now(UTC) >= architect_retry_not_before
                         )
                         and self.pipeline.architect_due()
+                        and not review_lane_busy
                     ):
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(
                             self.config,
+                            verification_slots=self.verification_slots,
+                            host_resource_slots=self.host_resource_slots,
                             agent_router=self.pipeline.router,
                         )
                         architect_future = architect.submit(architect_worker.run_architect_cycle)

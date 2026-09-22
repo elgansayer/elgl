@@ -696,6 +696,7 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
     github.statuses = [
         PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
         PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
         PullRequestStatus(77, "MERGED", False, "UNKNOWN", "", "abcdef1234567", True, False),
     ]
 
@@ -733,6 +734,48 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
     # try to close_issue() a pull request number.
     assert github.closed == []
     assert github.reviewed == ["abcdef1234567"]
+
+
+def test_behind_pull_request_updates_base_before_local_verification(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.tasks = []
+    github.pull_requests = [
+        Task("77", "Refresh base", "Body", "github-pull-request", 10, pr_branch="fix/old")
+    ]
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "old-head",
+            True,
+            False,
+            merge_state_status="BEHIND",
+        )
+    ]
+
+    def prepare_pr(workflow: GitWorkflow, worktree: Path, branch: str) -> None:
+        worktree.mkdir(parents=True)
+
+    monkeypatch.setattr(GitWorkflow, "prepare_pull_request_worktree", prepare_pr)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "old-head")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: pytest.fail("stale head must not be verified"),
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    pipeline.refresh()
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.CI_PENDING
+    assert github.updated_branches == [(77, "old-head")]
 
 
 def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
@@ -1222,17 +1265,17 @@ def test_verify_only_serializes_the_exclusive_command(
     """Shared checks run freely while memory-heavy and fixed-port checks hold
     the single host-wide verification slot.
     """
-    from threading import BoundedSemaphore, Semaphore
+    from threading import Semaphore
 
+    from openhands_factory.host_resource_gate import HostResourceGate
     from openhands_factory.verification import VerificationCommand
 
-    host_resource_slots = BoundedSemaphore(2)
+    host_resource_slots = HostResourceGate(2)
     pipeline = FactoryPipeline(
         config(tmp_path),
         github=GitHub(),  # type: ignore[arg-type]
         verification_slots=Semaphore(1),
         host_resource_slots=host_resource_slots,
-        exclusive_host_permits=2,
     )
     fake_commands = [
         VerificationCommand("frontend-lint:check", ("true",), tmp_path, exclusive=True),
@@ -1256,11 +1299,11 @@ def test_verify_only_serializes_the_exclusive_command(
         for command in commands:
             slot_held_during[command.name] = not held
             acquired = 0
-            while host_resource_slots.acquire(blocking=False):
+            while host_resource_slots.acquire_shared(blocking=False):
                 acquired += 1
             host_permits_available_during[command.name] = acquired
             for _ in range(acquired):
-                host_resource_slots.release()
+                host_resource_slots.release_shared()
 
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", fake_run_verification)
     workflow = GitWorkflow(tmp_path, "main")
@@ -1473,6 +1516,9 @@ def test_existing_equivalent_pr_is_attached_before_new_branch_creation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     github = GitHub()
+    github.statuses = [
+        PullRequestStatus(88, "OPEN", False, "MERGEABLE", "", "existing-head", True, False)
+    ]
     github.equivalent_pull_requests = [
         PullRequestMatch(
             number=88,
@@ -1628,6 +1674,9 @@ def test_pr_creation_race_attaches_new_canonical_pr_instead_of_opening_sibling(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     github = GitHub()
+    github.statuses = [
+        PullRequestStatus(89, "OPEN", False, "MERGEABLE", "", "concurrent-head", True, False)
+    ]
     github.equivalent_pull_requests = [
         PullRequestMatch(
             number=89,
@@ -1834,6 +1883,9 @@ def test_external_pull_request_verification_failure_enters_repair_state(
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "external-head", True, False)
+    ]
     pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
     job = Job(
         Task(

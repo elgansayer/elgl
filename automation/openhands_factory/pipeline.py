@@ -25,6 +25,7 @@ from openhands_factory.exceptions import (
 )
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestMatch, PullRequestStatus
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.jobs import JobStore
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
@@ -114,8 +115,7 @@ class FactoryPipeline:
         github: GitHubClient | None = None,
         conversations: ConversationRunner | None = None,
         verification_slots: Semaphore | None = None,
-        host_resource_slots: Semaphore | None = None,
-        exclusive_host_permits: int = 0,
+        host_resource_slots: HostResourceGate | None = None,
         agent_router: AgentRouter | None = None,
     ) -> None:
         self.config = config
@@ -203,7 +203,6 @@ class FactoryPipeline:
             self.labels_ready = False
             self.verification_slots = verification_slots
             self.host_resource_slots = host_resource_slots
-            self.exclusive_host_permits = exclusive_host_permits
             return
 
         claude = config.agents.providers["claude"]
@@ -329,7 +328,6 @@ class FactoryPipeline:
         self.active_label_reconciliation_pending = True
         self.verification_slots = verification_slots
         self.host_resource_slots = host_resource_slots
-        self.exclusive_host_permits = exclusive_host_permits
 
     def _workflow(
         self,
@@ -1444,6 +1442,14 @@ class FactoryPipeline:
             detail="Factory pull request verification in progress",
         )
         self.github.add_comment(job.pull_request, comment)
+        status = self._status(job)
+        if status.merge_state_status == "BEHIND":
+            # Verify the merge candidate, not a stale head. Otherwise old pull
+            # requests miss fixes already on main and get sent through unnecessary
+            # AI repair for failures the base branch has already resolved.
+            self._update_pull_request_branch(job, status)
+            job.state = JobState.CI_PENDING
+            return
         verified_paths = self._verify_or_schedule_quality_repair(
             job,
             self._workflow(worktree),
@@ -1611,17 +1617,11 @@ class FactoryPipeline:
             run_verification(exclusive)
             return changed
         with self.verification_slots:
-            acquired_host_permits = 0
-            try:
-                if self.host_resource_slots is not None:
-                    for _ in range(self.exclusive_host_permits):
-                        self.host_resource_slots.acquire()
-                        acquired_host_permits += 1
+            if self.host_resource_slots is None:
                 run_verification(exclusive)
-            finally:
-                if self.host_resource_slots is not None:
-                    for _ in range(acquired_host_permits):
-                        self.host_resource_slots.release()
+            else:
+                with self.host_resource_slots.exclusive():
+                    run_verification(exclusive)
         return changed
 
     def _verify_or_schedule_quality_repair(
