@@ -1219,10 +1219,8 @@ def test_successful_transition_resets_previous_failures(
 def test_verify_only_serializes_the_exclusive_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Shared commands (lint, build, unit tests, backend-test:e2e) must run
-    without holding verification_slots, so other workers' verification isn't
-    blocked behind them; only the fixed-port frontend-e2e command should ever
-    acquire that single global slot.
+    """Shared checks run freely while memory-heavy and fixed-port checks hold
+    the single host-wide verification slot.
     """
     from threading import Semaphore
 
@@ -1235,6 +1233,8 @@ def test_verify_only_serializes_the_exclusive_command(
     )
     fake_commands = [
         VerificationCommand("frontend-lint:check", ("true",), tmp_path),
+        VerificationCommand("frontend-build", ("true",), tmp_path, exclusive=True),
+        VerificationCommand("frontend-test", ("true",), tmp_path, exclusive=True),
         VerificationCommand("frontend-e2e", ("true",), tmp_path, exclusive=True),
         VerificationCommand("backend-test:e2e", ("true",), tmp_path),
     ]
@@ -1260,6 +1260,8 @@ def test_verify_only_serializes_the_exclusive_command(
     assert slot_held_during == {
         "frontend-lint:check": False,
         "backend-test:e2e": False,
+        "frontend-build": True,
+        "frontend-test": True,
         "frontend-e2e": True,
     }
 

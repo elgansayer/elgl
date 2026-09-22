@@ -18,11 +18,9 @@ class VerificationCommand:
     arguments: tuple[str, ...]
     directory: Path
     timeout: int = 1800
-    # True only for commands that bind a fixed host port (frontend-e2e's dev
-    # server on 127.0.0.1:4200) and so cannot run concurrently with another
-    # instance of themselves. Everything else - including backend-test:e2e,
-    # which talks to its NestJS app in-process via supertest on an ephemeral
-    # port - is safe under full worker parallelism.
+    # Memory-heavy frontend commands and fixed-port browser commands share one
+    # host-wide slot. Three concurrent Angular builds can exceed the Factory
+    # cgroup's memory high-water mark even though each build is healthy alone.
     exclusive: bool = False
     workspace: Path | None = None
 
@@ -500,7 +498,10 @@ def commands_for(
         ):
             commands.append(
                 VerificationCommand(
-                    f"frontend-{script}", ("npm", "run", script), repository / "frontend"
+                    f"frontend-{script}",
+                    ("npm", "run", script),
+                    repository / "frontend",
+                    exclusive=script in {"build", "test"},
                 )
             )
     if touches_frontend_directly:
