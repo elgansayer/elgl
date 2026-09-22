@@ -151,6 +151,7 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     workdir = workspace / "frontend"
     for directory in (repository, log_dir, virtual_environment / "bin", workdir):
         directory.mkdir(parents=True)
+    (repository / "backend/node_modules").mkdir(parents=True)
     captured: dict[str, object] = {}
 
     def fake_run_process(arguments, cwd, timeout, *, environment=None):
@@ -189,6 +190,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "uv_cache=$service_home/.cache/uv" in sandbox_script
     assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in sandbox_script
+    assert 'writable_vite_cache="$repository/$dependency_path/.vite-temp"' in sandbox_script
+    assert 'tmpfs "$writable_vite_cache"' in sandbox_script
+    assert (repository / "backend/node_modules/.vite-temp").is_dir()
     # PID 1 of the sandbox must reap children itself rather than exec-replacing
     # straight into the target command, or an orphaned grandchild (a leftover
     # dev server, a test's own subprocess-under-test) never gets reaped and

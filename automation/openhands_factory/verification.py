@@ -106,6 +106,18 @@ if [ "$same_repository" = false ]; then
   /usr/bin/mount --bind "$staging/repository" "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
+# Vite bundles TypeScript configuration through node_modules/.vite-temp even
+# during a read-only test run. Worktrees deliberately symlink their dependencies
+# to the trusted repository cache, which is remounted read-only above. Overlay only
+# this disposable cache directory with sandbox-local tmpfs; dependencies and the
+# rest of the trusted repository remain read-only.
+for dependency_path in node_modules frontend/node_modules backend/node_modules \
+  e2e/node_modules admin-portal/node_modules; do
+  writable_vite_cache="$repository/$dependency_path/.vite-temp"
+  if [ -d "$writable_vite_cache" ]; then
+    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$writable_vite_cache"
+  fi
+done
 if [ "$has_cypress_cache" = true ]; then
   /usr/bin/mkdir -p /tmp/cypress-cache
   /usr/bin/mount --bind "$staging/cypress" /tmp/cypress-cache
@@ -184,6 +196,25 @@ def _verification_sandbox_root(*sources: Path) -> Path:
     raise VerificationFailed("No safe verification staging root is available")
 
 
+def _prepare_vite_cache_mountpoints(repository: Path) -> None:
+    """Create safe host mountpoints for Vite's sandbox-local transient cache."""
+
+    for relative in (
+        Path("node_modules"),
+        Path("frontend/node_modules"),
+        Path("backend/node_modules"),
+        Path("e2e/node_modules"),
+        Path("admin-portal/node_modules"),
+    ):
+        dependency_dir = repository / relative
+        if not dependency_dir.is_dir():
+            continue
+        cache_dir = dependency_dir / ".vite-temp"
+        if cache_dir.is_symlink():
+            raise VerificationFailed(f"Refusing symlinked Vite cache mountpoint: {cache_dir}")
+        cache_dir.mkdir(exist_ok=True)
+
+
 def run_isolated_verification_process(
     arguments: tuple[str, ...],
     cwd: Path,
@@ -201,6 +232,7 @@ def run_isolated_verification_process(
     state_dir = Path(os.environ.get("FACTORY_STATE_DIR", "/var/lib/hellotalk-factory"))
     log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
+    _prepare_vite_cache_mountpoints(repository)
     service_home = state_dir / "home"
     sandbox_root = _verification_sandbox_root(
         resolved_workspace,
