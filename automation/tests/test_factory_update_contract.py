@@ -19,6 +19,9 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     assert "git -c safe.directory=" not in updater
     assert 'git -C "$REPOSITORY" reset --hard' not in updater
     assert "--reinstall-package repo-factory" in updater
+    assert 'readlink -f -- "$FACTORY_VENV"' in updater
+    assert 'chown -R "$FACTORY_USER:$FACTORY_USER" "$factory_venv_real"' in updater
+    assert 'test -x "$FACTORY_VENV/bin/repo-factory"' in updater
     assert "maintain-factory-host-storage.sh" in updater
     assert "restore_services_on_failure" in updater
     assert "Unknown state is not idle" in updater

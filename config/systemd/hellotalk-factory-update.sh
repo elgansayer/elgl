@@ -483,13 +483,25 @@ fi
 log 'Reinstalling factory Python package'
 # Ensure dev can write the venv before uv runs as dev. Running uv as root with
 # HOME=/home/dev previously created unreadable root-owned cache entries there.
-chown -R dev:dev "$FACTORY_VENV"
+factory_venv_real=$(readlink -f -- "$FACTORY_VENV")
+case "$factory_venv_real" in
+  /opt/hellotalk-factory/venv-*) ;;
+  *)
+    log "ERROR: factory venv resolved outside the versioned runtime: $factory_venv_real"
+    exit 1
+    ;;
+esac
+chown -R "$FACTORY_USER:$FACTORY_USER" "$factory_venv_real"
 runuser -u "$FACTORY_USER" -- env \
   HOME="$FACTORY_HOME" VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
     --reinstall-package repo-factory \
     --project "$REPOSITORY/automation"
+if ! test -x "$FACTORY_VENV/bin/repo-factory"; then
+  log 'ERROR: package refresh did not install the repo-factory executable'
+  exit 1
+fi
 runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
   "$FACTORY_VENV/bin/uv" cache prune || true
 
