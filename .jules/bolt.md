@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-22 - [Avoid Replacing IndexedDB store.put() Loops with .map()]
+**Learning:** Calling `store.put(item)` inside an IndexedDB transaction simply queues the requests synchronously. Replacing a `for...of` loop of `store.put()` calls with `.map()` does not change the concurrency model and actually degrades performance by allocating an unnecessary array of `IDBRequest` objects that are immediately discarded.
+**Action:** Retain `for...of` loops for queuing operations inside IndexedDB transactions instead of attempting to "parallelise" them with `.map()`.
