@@ -166,6 +166,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     monkeypatch.setenv("FACTORY_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("FACTORY_LOG_DIR", str(log_dir))
     monkeypatch.setenv("FACTORY_REPOSITORY", str(repository))
+    cypress_cache = tmp_path / "deployment-home" / ".cache" / "Cypress"
+    cypress_cache.mkdir(parents=True)
+    monkeypatch.setenv("FACTORY_CYPRESS_CACHE_DIR", str(cypress_cache))
     monkeypatch.setenv("GITHUB_TOKEN", "must-not-propagate")
     monkeypatch.setattr("openhands_factory.verification.sys.prefix", str(virtual_environment))
     monkeypatch.setattr("openhands_factory.verification.run_process", fake_run_process)
@@ -189,7 +192,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "uv_cache=$service_home/.cache/uv" in sandbox_script
+    assert "cypress_cache=$6" in sandbox_script
     assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in sandbox_script
+    assert str(cypress_cache) in arguments
     assert 'writable_vite_cache="$repository/$dependency_path/.vite-temp"' in sandbox_script
     assert 'tmpfs "$writable_vite_cache"' in sandbox_script
     assert (repository / "backend/node_modules/.vite-temp").is_dir()

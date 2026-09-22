@@ -467,7 +467,7 @@ class FactoryConfig(BaseModel):
     quarantine_recovery_minutes: int = 30
     review_lane_first: bool = True
     review_reserve_provider_slot: bool = True
-    review_lane_max_concurrent: int = 1
+    review_lane_max_concurrent: int = 2
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
@@ -699,7 +699,7 @@ class FactoryConfig(BaseModel):
                 ),
                 review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
                 review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
-                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
+                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "2")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),

@@ -741,7 +741,8 @@ def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
     ]
     pushed: list[str] = []
 
@@ -783,13 +784,25 @@ def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
     monkeypatch.setattr(GitWorkflow, "push", fake_push)
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "1111111")
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [],
+    )
+
+    reviewed = pipeline.run_job("77")
+
+    assert reviewed is not None and reviewed.last_error is None
+    assert reviewed.state is JobState.VERIFYING
+    assert pushed == []
+    assert reviewed.provider_history[-1]["phase"] == "code-review"
+    assert reviewed.provider_history[-1]["mutated_code"] is True
 
     result = pipeline.run_job("77")
 
     assert result is not None and result.last_error is None
+    assert result.state is JobState.REVIEWING
     assert pushed == ["bolt/optimize-quests"]
-    assert result.provider_history[-1]["phase"] == "code-review"
-    assert result.provider_history[-1]["mutated_code"] is True
+    assert len(result.provider_history) == 1
 
 
 def test_verified_repair_of_existing_pull_request_returns_to_review_without_new_pr(
@@ -1759,6 +1772,41 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert repaired.state is JobState.VERIFYING
     assert repaired.quality_repairs == 1
     assert repaired.provider_history[-1]["phase"] == "quality-repair"
+
+
+def test_verification_infrastructure_failure_retries_without_agent_repair(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Retry Factory infrastructure", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-retry-infrastructure",
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed("frontend-e2e failed with exit 1: The Cypress binary is missing")
+        ),
+    )
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.VERIFYING
+    assert failed.attempts == 1
+    assert failed.review_findings == []
+    assert failed.next_attempt_at is not None
 
 
 def test_external_pull_request_verification_failure_enters_repair_state(

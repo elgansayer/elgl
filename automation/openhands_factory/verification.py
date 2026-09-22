@@ -34,9 +34,10 @@ repository=$2
 state_dir=$3
 log_dir=$4
 service_home=$5
-sandbox_root=$6
-workdir=$7
-shift 7
+cypress_cache=$6
+sandbox_root=$7
+workdir=$8
+shift 8
 
 /usr/bin/mount --make-rprivate /
 /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
@@ -53,7 +54,6 @@ else
   /usr/bin/mount -o remount,bind,ro "$staging/repository"
 fi
 
-cypress_cache=$service_home/.cache/Cypress
 has_cypress_cache=false
 if [ -d "$cypress_cache" ]; then
   has_cypress_cache=true
@@ -234,10 +234,21 @@ def run_isolated_verification_process(
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
     _prepare_vite_cache_mountpoints(repository)
     service_home = state_dir / "home"
+    # Dependency deployment installs Cypress as the service user with HOME set
+    # to its real login home. The isolated state home is intentionally separate
+    # and may retain an older binary after package-lock updates. Bind the same
+    # deployment-owned cache that `npm exec -- cypress install` refreshes.
+    cypress_cache = Path(
+        os.environ.get(
+            "FACTORY_CYPRESS_CACHE_DIR",
+            str(Path.home() / ".cache" / "Cypress"),
+        )
+    )
     sandbox_root = _verification_sandbox_root(
         resolved_workspace,
         repository,
         service_home,
+        cypress_cache,
     )
     # Resolving a virtual environment's Python executable follows its symlink to
     # the system interpreter and loses the environment's bin directory. sys.prefix
@@ -284,6 +295,7 @@ def run_isolated_verification_process(
         _sandbox_path(state_dir, name="state"),
         _sandbox_path(log_dir, name="log"),
         _sandbox_path(service_home, name="home"),
+        _sandbox_path(cypress_cache, name="Cypress cache"),
         str(sandbox_root),
         _sandbox_path(resolved_cwd, name="working directory"),
         *arguments,
