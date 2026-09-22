@@ -34,30 +34,32 @@ repository=$2
 state_dir=$3
 log_dir=$4
 service_home=$5
-workdir=$6
-shift 6
+sandbox_root=$6
+workdir=$7
+shift 7
 
 /usr/bin/mount --make-rprivate /
-/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs /mnt
-/usr/bin/mkdir -p /mnt/factory-verification/workspace
-/usr/bin/mount --bind "$workspace" /mnt/factory-verification/workspace
+/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
+staging=$sandbox_root/factory-verification
+/usr/bin/mkdir -p "$staging/workspace"
+/usr/bin/mount --bind "$workspace" "$staging/workspace"
 
 same_repository=false
 if [ "$repository" = "$workspace" ]; then
   same_repository=true
 else
-  /usr/bin/mkdir -p /mnt/factory-verification/repository
-  /usr/bin/mount --bind "$repository" /mnt/factory-verification/repository
-  /usr/bin/mount -o remount,bind,ro /mnt/factory-verification/repository
+  /usr/bin/mkdir -p "$staging/repository"
+  /usr/bin/mount --bind "$repository" "$staging/repository"
+  /usr/bin/mount -o remount,bind,ro "$staging/repository"
 fi
 
 cypress_cache=$service_home/.cache/Cypress
 has_cypress_cache=false
 if [ -d "$cypress_cache" ]; then
   has_cypress_cache=true
-  /usr/bin/mkdir -p /mnt/factory-verification/cypress
-  /usr/bin/mount --bind "$cypress_cache" /mnt/factory-verification/cypress
-  /usr/bin/mount -o remount,bind,ro /mnt/factory-verification/cypress
+  /usr/bin/mkdir -p "$staging/cypress"
+  /usr/bin/mount --bind "$cypress_cache" "$staging/cypress"
+  /usr/bin/mount -o remount,bind,ro "$staging/cypress"
 fi
 
 # uv resolves each worktree as its own project and needs its dependencies
@@ -69,16 +71,22 @@ uv_cache=$service_home/.cache/uv
 has_uv_cache=false
 if [ -d "$uv_cache" ]; then
   has_uv_cache=true
-  /usr/bin/mkdir -p /mnt/factory-verification/uv-cache
-  /usr/bin/mount --bind "$uv_cache" /mnt/factory-verification/uv-cache
+  /usr/bin/mkdir -p "$staging/uv-cache"
+  /usr/bin/mount --bind "$uv_cache" "$staging/uv-cache"
 fi
 
+for masked_root in /mnt /srv /media; do
+  if [ "$masked_root" != "$sandbox_root" ] && [ -d "$masked_root" ]; then
+    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
+  fi
+done
 if [ -d "$state_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$state_dir"
 fi
 if [ -d "$log_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$log_dir"
 fi
+/usr/bin/mkdir -p /run/user
 /usr/bin/mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run/user
 /usr/bin/mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 if [ -d /var/tmp ]; then
@@ -93,18 +101,30 @@ if [ -d /opt/hellotalk-factory ]; then
 fi
 
 /usr/bin/mkdir -p "$workspace" "$repository" /tmp/home /tmp/npm-cache /tmp/uv-cache
-/usr/bin/mount --bind /mnt/factory-verification/workspace "$workspace"
+/usr/bin/mount --bind "$staging/workspace" "$workspace"
 if [ "$same_repository" = false ]; then
-  /usr/bin/mount --bind /mnt/factory-verification/repository "$repository"
+  /usr/bin/mount --bind "$staging/repository" "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
+# Vite bundles TypeScript configuration through node_modules/.vite-temp even
+# during a read-only test run. Worktrees deliberately symlink their dependencies
+# to the trusted repository cache, which is remounted read-only above. Overlay only
+# this disposable cache directory with sandbox-local tmpfs; dependencies and the
+# rest of the trusted repository remain read-only.
+for dependency_path in node_modules frontend/node_modules backend/node_modules \
+  e2e/node_modules admin-portal/node_modules; do
+  writable_vite_cache="$repository/$dependency_path/.vite-temp"
+  if [ -d "$writable_vite_cache" ]; then
+    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$writable_vite_cache"
+  fi
+done
 if [ "$has_cypress_cache" = true ]; then
   /usr/bin/mkdir -p /tmp/cypress-cache
-  /usr/bin/mount --bind /mnt/factory-verification/cypress /tmp/cypress-cache
+  /usr/bin/mount --bind "$staging/cypress" /tmp/cypress-cache
   /usr/bin/mount -o remount,bind,ro /tmp/cypress-cache
 fi
 if [ "$has_uv_cache" = true ]; then
-  /usr/bin/mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache
+  /usr/bin/mount --bind "$staging/uv-cache" /tmp/uv-cache
 fi
 
 /usr/sbin/ip link set lo up
@@ -164,6 +184,37 @@ def _sandbox_path(value: Path, *, name: str) -> str:
     return str(resolved)
 
 
+def _verification_sandbox_root(*sources: Path) -> Path:
+    """Choose a staging root that does not hide a verification source."""
+
+    resolved_sources = tuple(source.resolve() for source in sources)
+    for candidate in (Path("/srv"), Path("/media"), Path("/run")):
+        if not any(
+            source == candidate or source.is_relative_to(candidate) for source in resolved_sources
+        ):
+            return candidate
+    raise VerificationFailed("No safe verification staging root is available")
+
+
+def _prepare_vite_cache_mountpoints(repository: Path) -> None:
+    """Create safe host mountpoints for Vite's sandbox-local transient cache."""
+
+    for relative in (
+        Path("node_modules"),
+        Path("frontend/node_modules"),
+        Path("backend/node_modules"),
+        Path("e2e/node_modules"),
+        Path("admin-portal/node_modules"),
+    ):
+        dependency_dir = repository / relative
+        if not dependency_dir.is_dir():
+            continue
+        cache_dir = dependency_dir / ".vite-temp"
+        if cache_dir.is_symlink():
+            raise VerificationFailed(f"Refusing symlinked Vite cache mountpoint: {cache_dir}")
+        cache_dir.mkdir(exist_ok=True)
+
+
 def run_isolated_verification_process(
     arguments: tuple[str, ...],
     cwd: Path,
@@ -181,7 +232,13 @@ def run_isolated_verification_process(
     state_dir = Path(os.environ.get("FACTORY_STATE_DIR", "/var/lib/hellotalk-factory"))
     log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
+    _prepare_vite_cache_mountpoints(repository)
     service_home = state_dir / "home"
+    sandbox_root = _verification_sandbox_root(
+        resolved_workspace,
+        repository,
+        service_home,
+    )
     # Resolving a virtual environment's Python executable follows its symlink to
     # the system interpreter and loses the environment's bin directory. sys.prefix
     # remains the owning environment and therefore exposes uv inside the sandbox.
@@ -227,6 +284,7 @@ def run_isolated_verification_process(
         _sandbox_path(state_dir, name="state"),
         _sandbox_path(log_dir, name="log"),
         _sandbox_path(service_home, name="home"),
+        str(sandbox_root),
         _sandbox_path(resolved_cwd, name="working directory"),
         *arguments,
     )
@@ -409,7 +467,10 @@ def commands_for(
                 ),
                 VerificationCommand(
                     "factory-tests",
-                    ("uv", "run", "--frozen", "pytest"),
+                    # Use the worktree as Python's import root. The pytest console
+                    # script lives in the shared runtime venv and would otherwise
+                    # test the installed Factory package instead of this PR's code.
+                    ("uv", "run", "--frozen", "python", "-m", "pytest"),
                     repository / "automation",
                 ),
             ]
