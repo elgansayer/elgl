@@ -61,6 +61,13 @@ CODE_MUTATING_AGENT_PHASES = {
     "quality-repair",
     "ci-repair",
 }
+VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
+    "the cypress binary is missing",
+    "we expected the binary to be installed here",
+    "no space left on device",
+    "failed with exit 137",
+    "failed with exit 143",
+)
 
 # A path in one of these categories can never introduce the vulnerability
 # classes security.md's checklist scans for (hardcoded secrets, webhook/
@@ -1020,27 +1027,13 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     raise FactoryError("Review repair limit exceeded")
                 self._mark_latest_review_as_mutating(job)
-                verified_paths = self._verify(workflow)
-                workflow.stage_all()
-                subject = self._subject(job)
-                workflow.commit(f"fix: address review for {subject} {job.task.identifier}")
-                if job.branch is None:
-                    raise FactoryError("Job branch is missing")
-                workflow.push(job.branch)
-                job.head_sha = workflow.head_sha()
-                job.latest_verified_sha = job.head_sha
-                job.changed_path_fingerprint = changed_path_fingerprint(
-                    str(path) for path in verified_paths
-                )
-                bound = self.tasks.record_verification(
-                    job.task.identifier,
-                    lease_owner,
-                    job.head_sha,
-                    job.changed_path_fingerprint,
-                )
-                self._copy_claim_metadata(job, bound)
                 job.repair_attempts += 1
-                job.state = JobState.REVIEWING
+                # Keep the review repair in the worktree and let the ordinary
+                # VERIFYING state own verification, commit and push. If a
+                # transient tool or cache failure occurs, the durable state then
+                # retries verification instead of paying for another review and
+                # layering more edits onto the same uncommitted repair.
+                job.state = JobState.VERIFYING
                 return
             failed_criteria = [
                 f"Acceptance criterion failed: {criterion.get('criterion')}"
@@ -1625,9 +1618,18 @@ class FactoryPipeline:
         try:
             changed = self._verify(workflow)
         except VerificationFailed as error:
+            detail = str(error)
+            if any(
+                marker in detail.lower() for marker in VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS
+            ):
+                # Host/cache/resource failures cannot be corrected by editing the
+                # pull request. Preserve the current pipeline state so the durable
+                # retry policy backs off and retries the same verification without
+                # spending an agent call or introducing unrelated code churn.
+                raise
             if job.quality_repairs >= 2:
                 raise
-            evidence = str(error)[-1800:]
+            evidence = detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
                 f"Factory safety controls intact:\n{evidence}"

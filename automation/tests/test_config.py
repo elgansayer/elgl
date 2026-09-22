@@ -424,6 +424,7 @@ def test_default_repository_is_production_clone() -> None:
     assert config.recovery_retention_hours == 72
     assert config.stall_alert_minutes == 20
     assert config.max_parallel_jobs == 5
+    assert config.review_lane_max_concurrent == 2
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
     assert config.repository_profile == "hellotalk"
@@ -766,6 +767,13 @@ def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> Non
     assert "FACTORY_REQUIRE_READY_LABEL=true" in profile
     assert "FACTORY_PROVIDER_CAPACITY_DIR=/var/lib/repo-factory/shared" in profile
     assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
+
+
+def test_hellotalk_instance_uses_two_review_lanes() -> None:
+    root = Path(__file__).parents[2]
+    profile = (root / "config/factory/instances/hellotalk.env").read_text(encoding="utf-8")
+
+    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=2" in profile
 
 
 def test_instance_installer_preserves_legacy_rollback_path() -> None:

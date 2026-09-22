@@ -99,6 +99,17 @@ _REVIEW_STATE_ORDER = {
 }
 
 
+def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
+    """Prioritise merge proximity while rotating equally eligible PRs fairly."""
+
+    return (
+        job.task.priority,
+        _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
+        job.updated_at,
+        int(job.task.identifier),
+    )
+
+
 def select_issue_admitted(
     candidates: list[Job],
     limit: int,
@@ -149,11 +160,7 @@ def select_batch(
     remaining = [item for item in candidates if not is_review_lane_job(item)]
     review_ready = sorted(
         (item for item in candidates if is_review_lane_job(item)),
-        key=lambda item: (
-            item.task.priority,
-            _REVIEW_STATE_ORDER.get(item.state, len(_REVIEW_STATE_ORDER)),
-            int(item.task.identifier),
-        ),
+        key=_review_sort_key,
     )[:review_capacity]
 
     if not review_ready:
@@ -201,7 +208,13 @@ def selection_diagnostics(
         "excluded_jobs": sorted(excluded_task_ids, key=int)[:25],
         "active_review_count": active_review_count,
         "review_capacity": review_capacity,
-        "review_jobs": [job.task.identifier for job in candidates if is_review_lane_job(job)][:25],
+        "review_jobs": [
+            job.task.identifier
+            for job in sorted(
+                (candidate for candidate in candidates if is_review_lane_job(candidate)),
+                key=_review_sort_key,
+            )[:25]
+        ],
     }
 
 
@@ -230,11 +243,7 @@ def select_batch_failsafe(
     review_slots = max(0, review_lane_max_concurrent - active_reviews)
     reviews = sorted(
         (job for job in eligible if is_review_lane_job(job)),
-        key=lambda job: (
-            job.task.priority,
-            _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
-            int(job.task.identifier),
-        ),
+        key=_review_sort_key,
     )[: min(limit, review_slots)]
     remaining = [job for job in eligible if not is_review_lane_job(job)]
     remaining.sort(key=lambda job: (job.task.priority, int(job.task.identifier)))

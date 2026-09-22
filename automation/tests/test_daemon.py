@@ -169,6 +169,18 @@ def test_select_batch_prefers_review_jobs_closer_to_merge() -> None:
     assert [item.task.identifier for item in selected] == ["7347", "7348"]
 
 
+def test_select_batch_rotates_equally_eligible_review_jobs_by_last_progress() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "7347": replace(pull_request_job("7347"), updated_at=now),
+        "7348": replace(pull_request_job("7348"), updated_at=now - timedelta(minutes=5)),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
+
+
 def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
     jobs = {
         "10": job("10", 0),
