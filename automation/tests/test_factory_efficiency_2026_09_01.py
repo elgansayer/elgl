@@ -23,7 +23,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
         (AgentPhase.QUALITY_REPAIR, "low"),
         (AgentPhase.CODE_REVIEW, "medium"),
         (AgentPhase.CI_REPAIR, "low"),
-        (AgentPhase.GENERAL_ACTION, "low"),
+        (AgentPhase.GENERAL_ACTION, "medium"),
     ],
 )
 def test_pi_reasoning_is_phase_scoped(
@@ -50,7 +50,7 @@ def test_production_resource_policy_has_no_immediate_retry_and_bounds_diagnostic
     )
 
     assert config.agents.routing.same_provider_retries == 0
-    assert config.agents.timeouts.general_action == 300
+    assert config.agents.timeouts.general_action == 600
     assert maximum_agent_lease_seconds(config) == 3900
 
 
