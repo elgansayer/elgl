@@ -9,11 +9,15 @@ import pytest
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
 from openhands_factory.daemon import (
     FactoryDaemon,
+    await_future_with_heartbeat,
     await_refresh,
+    consume_completed_architect_future,
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
     select_batch,
+    select_batch_failsafe,
+    selection_diagnostics,
     stall_alert_decision,
 )
 from openhands_factory.exceptions import FactoryError
@@ -215,6 +219,39 @@ def test_select_batch_refills_free_capacity_without_rescheduling_active_jobs() -
     assert [item.task.identifier for item in selected] == ["11", "12"]
 
 
+def test_selection_diagnostics_explains_review_capacity() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+        "7348": pull_request_job("7348", state=JobState.MERGE_QUEUED),
+    }
+
+    diagnostic = selection_diagnostics(jobs, {"7347"}, now, 2)
+
+    assert diagnostic == {
+        "candidate_jobs": ["10", "7348"],
+        "candidate_count": 2,
+        "excluded_jobs": ["7347"],
+        "active_review_count": 1,
+        "review_capacity": 1,
+        "review_jobs": ["7348"],
+    }
+
+
+def test_failsafe_selector_prioritises_merge_queued_review() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+        "7348": pull_request_job("7348", state=JobState.MERGE_QUEUED),
+    }
+
+    selected = select_batch_failsafe(jobs, 1, set(), now, 1, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
+
+
 def test_select_batch_skips_jobs_still_backing_off() -> None:
     now = datetime(2026, 1, 1, tzinfo=UTC)
     jobs = {
@@ -333,17 +370,33 @@ def test_provider_status_snapshot_exposes_no_provider_detail_or_credentials() ->
     assert "detail" not in snapshot[0]
 
 
-def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> None:
+def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     durable = {"42": job("42", 0)}
     pipeline = SimpleNamespace(
         refresh=lambda protected: (_ for _ in ()).throw(FactoryError("HTTP 503")),
         jobs=SimpleNamespace(load=lambda: durable),
     )
+    monkeypatch.setattr("openhands_factory.daemon.time.monotonic", lambda: 100.0)
 
     refreshed, retry_at = refresh_jobs(pipeline, set(), 10.0, 5)  # type: ignore[arg-type]
 
     assert refreshed == durable
-    assert retry_at == 40.0
+    assert retry_at == 130.0
+
+
+def test_refresh_jobs_schedules_next_refresh_from_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    durable = {"42": job("42", 0)}
+    pipeline = SimpleNamespace(refresh=lambda protected: durable)
+    monkeypatch.setattr("openhands_factory.daemon.time.monotonic", lambda: 100.0)
+
+    refreshed, retry_at = refresh_jobs(pipeline, set(), 10.0, 5)  # type: ignore[arg-type]
+
+    assert refreshed == durable
+    assert retry_at == 105.0
 
 
 def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None:
@@ -372,6 +425,37 @@ def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None
     assert heartbeats == ["published"]
 
 
+def test_await_future_publishes_heartbeat_while_provider_health_is_busy() -> None:
+    attempts = 0
+    heartbeats: list[str] = []
+
+    class HealthFuture:
+        def result(self, timeout: float | None = None) -> dict[str, ProviderHealth]:
+            nonlocal attempts
+            assert timeout == 10.0
+            attempts += 1
+            if attempts == 1:
+                raise FutureTimeoutError
+            return {
+                "codex": ProviderHealth(
+                    "codex",
+                    ProviderStatus.HEALTHY,
+                    datetime.now(UTC),
+                )
+            }
+
+        def done(self) -> bool:
+            return attempts > 1
+
+    health = await_future_with_heartbeat(  # type: ignore[arg-type]
+        HealthFuture(),
+        lambda: heartbeats.append("published"),
+    )
+
+    assert health["codex"].status is ProviderStatus.HEALTHY
+    assert heartbeats == ["published"]
+
+
 def test_await_refresh_propagates_timeout_raised_by_completed_refresh() -> None:
     class FailedRefreshFuture:
         def result(self, timeout: float | None = None) -> tuple[dict[str, Job], float]:
@@ -385,6 +469,30 @@ def test_await_refresh_propagates_timeout_raised_by_completed_refresh() -> None:
             FailedRefreshFuture(),
             lambda: pytest.fail("completed failure must not publish a heartbeat"),
         )
+
+
+def test_completed_architect_failure_is_consumed_only_once() -> None:
+    calls = 0
+    failure = RuntimeError("architect verification failed")
+
+    class FailedArchitectFuture:
+        def done(self) -> bool:
+            return True
+
+        def result(self) -> None:
+            nonlocal calls
+            calls += 1
+            raise failure
+
+    remaining, error = consume_completed_architect_future(  # type: ignore[arg-type]
+        FailedArchitectFuture()
+    )
+    remaining, repeated_error = consume_completed_architect_future(remaining)
+
+    assert remaining is None
+    assert error is failure
+    assert repeated_error is None
+    assert calls == 1
 
 
 def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(

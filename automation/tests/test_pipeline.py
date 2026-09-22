@@ -900,6 +900,63 @@ def test_terminal_ci_failure_enters_provider_repair_instead_of_waiting(
     assert result.state is JobState.REPAIRING
 
 
+def test_terminal_ci_failure_is_not_masked_by_pending_factory_status(
+    tmp_path: Path,
+) -> None:
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "reviewed-head",
+            False,
+            True,
+            frozenset({"Container evidence (agent)"}),
+        )
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = Job(
+        task=Task("77", "Repair mixed CI", "Body", "github-pull-request", 10),
+        state=JobState.CI_PENDING,
+        branch="fix/mixed-ci",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    pipeline.jobs.save({"77": job})
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.REPAIRING
+
+
+def test_pending_ci_poll_is_rate_limited(tmp_path: Path) -> None:
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, True)
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = Job(
+        task=Task("77", "Wait for CI", "Body", "github-pull-request", 10),
+        state=JobState.CI_PENDING,
+        branch="fix/wait-for-ci",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    pipeline.jobs.save({"77": job})
+
+    before = datetime.now(UTC)
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.CI_PENDING
+    assert result.next_attempt_at is not None
+    assert before + timedelta(seconds=55) <= result.next_attempt_at
+
+
 def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
@@ -1429,6 +1486,58 @@ def test_existing_equivalent_pr_is_attached_before_new_branch_creation(
     claim = pipeline.tasks.claims()[attached.task.logical_key]
     assert claim.canonical_pull_request == 88
     assert claim.latest_verified_sha == "existing-head"
+
+
+def test_issue_defers_to_existing_external_pr_job_without_second_worktree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    github.equivalent_pull_requests = [
+        PullRequestMatch(
+            number=88,
+            title="Fix build",
+            body="Fixes #42",
+            branch="factory/older-fix-build",
+            head_sha="existing-head",
+            state="OPEN",
+            closed_at=None,
+            labels=frozenset(),
+            changed_paths=frozenset({"automation/openhands_factory/pipeline.py"}),
+            reasons=frozenset({"issue-link"}),
+        )
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    jobs = pipeline.refresh()
+    jobs["88"] = Job(
+        task=Task(
+            "88",
+            "PR title differs from its issue",
+            "Fixes #42",
+            "github-pull-request",
+            5,
+            pr_branch="factory/older-fix-build",
+        ),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/older-fix-build",
+        pull_request=88,
+        head_sha="existing-head",
+    )
+    pipeline.jobs.save(jobs)
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_pull_request_worktree",
+        lambda workflow, worktree, branch: pytest.fail("second worktree was created"),
+    )
+
+    attached = pipeline.run_job("42")
+
+    assert attached is not None
+    assert attached.state is JobState.DONE
+    assert attached.canonical_task_id == "88"
+    assert attached.pull_request == 88
+    assert github.pending_reviews == []
+    assert github.comments[-1][0] == 42
 
 
 def test_path_fingerprint_alone_cannot_complete_or_supersede_a_task(

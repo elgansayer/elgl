@@ -200,17 +200,13 @@ bootstrap_repo_factory_updater() {
   local neutral_root=/opt/repo-factory
   local neutral="$neutral_root/repo-factory-update.sh"
   local marker=FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1
+  local repository branch head tracking actual_commit updater_blob actual_blob temporary
 
   [ -e "$neutral_root" ] || return 0
   if [ ! -d "$neutral_root" ] || [ -L "$neutral_root" ] || \
     [ "$(readlink -f -- "$neutral_root")" != "$neutral_root" ] || \
     [ "$(stat -Lc '%u:%g:%a' -- "$neutral_root")" != '0:0:755' ]; then
     log "WARNING: neutral Repo Factory runtime root is not a safe root-owned directory"
-    return 1
-  fi
-  if [ ! -f "$legacy" ] || [ -L "$legacy" ] || \
-    [ "$(stat -Lc '%u:%g:%a' -- "$legacy")" != '0:0:755' ]; then
-    log 'WARNING: verified legacy updater is unavailable for neutral-runtime bootstrap'
     return 1
   fi
   if [ -L "$neutral" ]; then
@@ -220,17 +216,60 @@ bootstrap_repo_factory_updater() {
   if [ -f "$neutral" ] && grep -q "$marker" "$neutral"; then
     return 0
   fi
-  if ! grep -q "$marker" "$legacy"; then
-    # The old updater installs the new verified legacy runtime after its first
-    # pull. A later bounded maintenance pass sees the marker and completes the
-    # one-time neutral-runtime migration without copying stale code.
+  if [ -f "$legacy" ] && [ ! -L "$legacy" ] && \
+    [ "$(stat -Lc '%u:%g:%a' -- "$legacy")" = '0:0:755' ] && \
+    grep -q "$marker" "$legacy"; then
+    if ! install -o root -g root -m 0755 "$legacy" "$neutral"; then
+      log 'WARNING: failed to bootstrap the neutral Repo Factory updater'
+      return 1
+    fi
+    log 'Bootstrapped neutral Repo Factory updater from verified legacy runtime'
     return 0
   fi
-  if ! install -o root -g root -m 0755 "$legacy" "$neutral"; then
-    log 'WARNING: failed to bootstrap the neutral Repo Factory updater'
+
+  # Some hosts predate the verified legacy runtime and can never reach the
+  # marker-based branch above. Extract the replacement from an immutable Git
+  # object only when the factory-owned checkout is cleanly pinned to the fetched
+  # origin/main tip and the commit and blob hashes both verify independently.
+  repository=$(readlink -f -- "$SCRIPT_DIRECTORY/..") || return 1
+  branch=$(run_as_factory_user git -C "$repository" symbolic-ref --quiet --short HEAD) || return 0
+  head=$(run_as_factory_user git -C "$repository" rev-parse --verify HEAD) || return 0
+  tracking=$(
+    run_as_factory_user git -C "$repository" rev-parse --verify refs/remotes/origin/main
+  ) || return 0
+  if [ "$branch" != main ] || [ "$head" != "$tracking" ] || \
+    [[ ! "$head" =~ ^[0-9a-f]{40,64}$ ]]; then
+    return 0
+  fi
+  actual_commit=$(
+    run_as_factory_user git -C "$repository" cat-file commit "$head" | \
+      git hash-object -t commit --stdin
+  ) || return 1
+  [ "$actual_commit" = "$head" ] || return 1
+  updater_blob=$(
+    run_as_factory_user git -C "$repository" rev-parse \
+      "$head:config/systemd/hellotalk-factory-update.sh"
+  ) || return 1
+  [[ "$updater_blob" =~ ^[0-9a-f]{40,64}$ ]] || return 1
+  temporary=$(mktemp "$neutral.new.XXXXXX") || return 1
+  if ! run_as_factory_user git -C "$repository" cat-file blob "$updater_blob" > "$temporary"; then
+    rm -f -- "$temporary"
     return 1
   fi
-  log 'Bootstrapped neutral Repo Factory updater from verified legacy runtime'
+  actual_blob=$(git hash-object "$temporary") || {
+    rm -f -- "$temporary"
+    return 1
+  }
+  if [ "$actual_blob" != "$updater_blob" ] || ! grep -q "$marker" "$temporary"; then
+    rm -f -- "$temporary"
+    return 1
+  fi
+  if ! chown root:root "$temporary" || ! chmod 0755 "$temporary" || \
+    ! mv -fT -- "$temporary" "$neutral"; then
+    rm -f -- "$temporary"
+    return 1
+  fi
+  log "Bootstrapped neutral Repo Factory updater from verified commit ${head:0:12}"
 }
 
 prune_docker_storage() {

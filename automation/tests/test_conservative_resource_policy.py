@@ -177,6 +177,7 @@ def test_conservative_router_caps_one_task_without_spending_review_admission(
     monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "6")
     monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_TASK_PER_INTERVAL", "2")
     monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    monkeypatch.setenv("FACTORY_REVIEWS_PER_INTERVAL", "2")
     provider = Provider("first")
     router = ConservativeAgentRouter(
         [provider],
@@ -238,7 +239,12 @@ def test_conservative_router_preserves_independent_review_before_candidate_cap(
     assert candidates == ["second", "third"]
 
 
-def test_conservative_router_enforces_two_review_shas_per_hour(tmp_path: Path) -> None:
+def test_conservative_router_enforces_configured_review_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEWS_PER_INTERVAL", "2")
+    monkeypatch.setenv("FACTORY_REVIEW_INTERVAL_SECONDS", "3600")
     provider = Provider("first")
     router = ConservativeAgentRouter(
         [provider],
@@ -253,10 +259,25 @@ def test_conservative_router_enforces_two_review_shas_per_hour(tmp_path: Path) -
 
     assert router.run(first_request, first_job).success
     assert router.run(second_request, second_job).success
-    with pytest.raises(ProviderCapacityUnavailable, match="2 reviews/hour"):
+    with pytest.raises(ProviderCapacityUnavailable, match="2 reviews per configured interval"):
         router.run(third_request, third_job)
 
     assert provider.calls == 2
+
+
+def test_conservative_router_defaults_support_continuous_pr_drain(tmp_path: Path) -> None:
+    provider = Provider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 2},
+        enabled=True,
+    )
+
+    assert router._agent_route_admission is not None
+    assert router._agent_route_admission.max_admissions == 24
+    assert router._review_admission is not None
+    assert router._review_admission.max_admissions == 12
 
 
 def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Path) -> None:
