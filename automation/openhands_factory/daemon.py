@@ -427,7 +427,11 @@ class FactoryDaemon:
         self.tasks = TaskStore(config.state_dir)
         # Two lightweight agent sessions may run together. The fair exclusive side
         # prevents either session from overlapping an authoritative frontend gate.
-        self.host_resource_slots = HostResourceGate(2)
+        self.host_resource_slots = HostResourceGate(
+            config.provider_capacity_dir / "host-resource-gate.json",
+            2,
+            lease_seconds=config.max_task_minutes * 60 + 300,
+        )
         self.verification_slots = Semaphore(1)
         self.pipeline = FactoryPipeline(
             config,

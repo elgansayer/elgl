@@ -170,11 +170,13 @@ issue work. HelloTalk currently uses two lanes; smaller repositories can retain 
 process, but it prevents new issue phases from repeatedly taking a newly freed slot before required review can
 acquire it. The reservation is released by the worker future on success, failure, cancellation, or shutdown drain.
 
-Two lightweight provider sessions may run concurrently. A fair shared/exclusive host-resource gate admits those
-sessions as readers and memory-heavy frontend lint, build, unit-test, and browser commands as an atomic writer.
-Once verification is waiting, new provider sessions cannot overtake it. This prevents an agent-triggered Angular
-build from overlapping authoritative frontend verification, while inexpensive repository checks remain parallel.
-Issue, pull-request, and weekly architecture work all share the same gate and verification lock.
+Two lightweight provider sessions may run concurrently. A durable, fair shared/exclusive host-resource gate in
+the common capacity directory admits those sessions as readers and memory-heavy frontend lint, build, unit-test,
+and browser commands as an atomic writer. Once verification is waiting, new provider sessions cannot overtake it.
+The file-backed lease coordinates every repository daemon on the host and recovers dead daemon owners by PID and
+bounded expiry. This prevents an agent-triggered Angular build from overlapping authoritative frontend
+verification, while inexpensive repository checks remain parallel. Issue, pull-request, and weekly architecture
+work all share the same gate and verification lock.
 
 `jobs.json` read-modify-write operations also use a cross-process lock. Provider history is bounded to the latest
 500 entries per job on append and deserialisation, preserving useful provenance without unbounded state growth.
