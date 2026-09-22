@@ -39,7 +39,7 @@ sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
 ```
 
 The adapter uses `claude -p` in non-interactive mode with subscription-backed aliases: Opus for planning and
-architecture, Sonnet for implementation and security review, and Haiku for bounded repair and review work.
+architecture, Sonnet for implementation and merge-critical reviews, and Haiku for bounded repair and general work.
 Fable is intentionally excluded because it requires separately purchased usage credits even for an authenticated
 Claude Pro account. The adapter applies a Factory-enforced phase timeout, safe mode, no session persistence, and
 text output. Safe mode preserves authentication and built-in tools while disabling personal and repository

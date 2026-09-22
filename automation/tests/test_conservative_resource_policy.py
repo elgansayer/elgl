@@ -17,6 +17,7 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.conservative import ConservativeAgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import ReviewAdmissionGate
 from openhands_factory.models import Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -141,9 +142,9 @@ def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Pa
 def test_conservative_router_shares_host_capacity_with_exclusive_verification(
     tmp_path: Path,
 ) -> None:
-    host_resource_slots = threading.BoundedSemaphore(2)
-    assert host_resource_slots.acquire(blocking=False)
-    assert host_resource_slots.acquire(blocking=False)
+    host_resource_slots = HostResourceGate(2)
+    assert host_resource_slots.acquire_shared(blocking=False)
+    assert host_resource_slots.acquire_shared(blocking=False)
     provider = Provider("first")
     task = Task("42", "Issue", "Body", "github-issue", 0)
     request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
@@ -158,11 +159,11 @@ def test_conservative_router_shares_host_capacity_with_exclusive_verification(
         router.run(request, Job(task))
 
     assert provider.calls == 0
-    host_resource_slots.release()
-    host_resource_slots.release()
+    host_resource_slots.release_shared()
+    host_resource_slots.release_shared()
     assert router.run(request, Job(task)).success
-    assert host_resource_slots.acquire(blocking=False)
-    assert host_resource_slots.acquire(blocking=False)
+    assert host_resource_slots.acquire_shared(blocking=False)
+    assert host_resource_slots.acquire_shared(blocking=False)
 
 
 def test_conservative_router_enforces_global_hourly_agent_route_budget(

@@ -29,12 +29,14 @@ Disabled, unhealthy, cooling down, unsupported, and busy providers are skipped. 
 checks also require every configured phase model to appear in the authenticated account catalogue. Emergency
 providers are always placed after healthy non-emergency providers. `skip_busy_providers=true` lets lower-priority
 subscriptions start instead of waiting for the preferred provider's slot.
+Weekly architecture analysis runs only when no pull-request review is active or newly scheduled, so background
+planning cannot take an agent slot from the merge queue.
 
 ## Model policy as of 2026-09-22
 
 | Provider     | Coding default        | Reasoning and review override                                                                                               | Policy                                                                                                                                                       |
 | ------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code  | `sonnet`               | `opus` for planning and architecture, `sonnet` for implementation and security review, `haiku` for bounded repair/review actions | Verified Claude Pro subscription aliases. `fable` is not used because it requires separately purchased usage credits                                         |
+| Claude Code  | `sonnet`               | `opus` for planning and architecture, `sonnet` for implementation and merge-critical review, `haiku` for bounded repair/general actions | Verified Claude Pro subscription aliases. Sonnet reliably emits structured independent-review reports; `fable` requires separately purchased usage credits |
 | Codex CLI    | `gpt-5.6-sol`         | `gpt-5.6-sol`, `max` effort                                                                                                 | Current OpenAI flagship for complex production and coding work                                                                                               |
 | Google agent | `gemini-3.1-pro-high` | same, `high` effort                                                                                                         | Strongest Google-native Pro reasoning tier exposed by the verified Antigravity catalogue                                                                     |
 | OpenCode Go  | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
@@ -168,10 +170,11 @@ issue work. HelloTalk currently uses two lanes; smaller repositories can retain 
 process, but it prevents new issue phases from repeatedly taking a newly freed slot before required review can
 acquire it. The reservation is released by the worker future on success, failure, cancellation, or shutdown drain.
 
-Two lightweight provider sessions may run concurrently. Memory-heavy frontend lint, build, unit-test, and browser
-commands drain both permits from the same host-resource gate before starting. This also prevents an agent-triggered
-Angular build from overlapping authoritative frontend verification, while inexpensive repository checks remain
-parallel.
+Two lightweight provider sessions may run concurrently. A fair shared/exclusive host-resource gate admits those
+sessions as readers and memory-heavy frontend lint, build, unit-test, and browser commands as an atomic writer.
+Once verification is waiting, new provider sessions cannot overtake it. This prevents an agent-triggered Angular
+build from overlapping authoritative frontend verification, while inexpensive repository checks remain parallel.
+Issue, pull-request, and weekly architecture work all share the same gate and verification lock.
 
 `jobs.json` read-modify-write operations also use a cross-process lock. Provider history is bounded to the latest
 500 entries per job on append and deserialisation, preserving useful provenance without unbounded state growth.

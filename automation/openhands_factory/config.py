@@ -191,7 +191,7 @@ class AgentsConfig(BaseModel):
                     "security_review": "opus",
                     "implementation": "sonnet",
                     "quality_repair": "haiku",
-                    "code_review": "haiku",
+                    "code_review": "sonnet",
                     "ci_repair": "haiku",
                     "general_action": "haiku",
                 },
@@ -287,14 +287,17 @@ class AgentsConfig(BaseModel):
                 # a rolling deployment. Fable now requires separate usage credits,
                 # so migrate that retired alias at load time until the root updater
                 # installs the current Sonnet/Haiku configuration.
-                if normalised_provider.get("model") == "fable":
+                migrating_fable = normalised_provider.get("model") == "fable"
+                if migrating_fable:
                     normalised_provider["model"] = "sonnet"
                 phase_models = normalised_provider.get("phase_models")
-                if isinstance(phase_models, dict) and phase_models.get("general_action") == "fable":
-                    normalised_provider["phase_models"] = {
-                        **phase_models,
-                        "general_action": "haiku",
-                    }
+                if isinstance(phase_models, dict):
+                    migrated_phase_models = dict(phase_models)
+                    if migrated_phase_models.get("general_action") == "fable":
+                        migrated_phase_models["general_action"] = "haiku"
+                    if migrating_fable and migrated_phase_models.get("code_review") == "haiku":
+                        migrated_phase_models["code_review"] = "sonnet"
+                    normalised_provider["phase_models"] = migrated_phase_models
             normalised_provider.setdefault(
                 "transport", "openhands-sdk" if name == "openhands" else "cli"
             )

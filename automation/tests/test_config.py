@@ -518,6 +518,7 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["claude"].enabled
     assert factory_config.agents.providers["claude"].model == "sonnet"
     assert factory_config.agents.providers["claude"].phase_models["general_action"] == "haiku"
+    assert factory_config.agents.providers["claude"].phase_models["code_review"] == "sonnet"
     assert factory_config.agents.providers["claude"].credential_paths == [
         ".claude",
         ".claude.json",
@@ -570,7 +571,11 @@ def test_legacy_fable_configuration_migrates_to_subscription_backed_models() -> 
                 "claude": {
                     "enabled": True,
                     "model": "fable",
-                    "phase_models": {"implementation": "sonnet", "general_action": "fable"},
+                    "phase_models": {
+                        "implementation": "sonnet",
+                        "code_review": "haiku",
+                        "general_action": "fable",
+                    },
                 }
             }
         }
@@ -579,6 +584,7 @@ def test_legacy_fable_configuration_migrates_to_subscription_backed_models() -> 
     assert agents.providers["claude"].model == "sonnet"
     assert agents.providers["claude"].phase_models == {
         "implementation": "sonnet",
+        "code_review": "sonnet",
         "general_action": "haiku",
     }
 
