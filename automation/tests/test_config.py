@@ -516,7 +516,8 @@ def test_production_agent_configuration_loads() -> None:
 
     assert factory_config.agents.routing_enabled
     assert factory_config.agents.providers["claude"].enabled
-    assert factory_config.agents.providers["claude"].model == "fable"
+    assert factory_config.agents.providers["claude"].model == "sonnet"
+    assert factory_config.agents.providers["claude"].phase_models["general_action"] == "haiku"
     assert factory_config.agents.providers["claude"].credential_paths == [
         ".claude",
         ".claude.json",

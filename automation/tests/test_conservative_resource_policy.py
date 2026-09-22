@@ -138,6 +138,33 @@ def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Pa
     assert second.calls == 1
 
 
+def test_conservative_router_shares_host_capacity_with_exclusive_verification(
+    tmp_path: Path,
+) -> None:
+    host_resource_slots = threading.BoundedSemaphore(2)
+    assert host_resource_slots.acquire(blocking=False)
+    assert host_resource_slots.acquire(blocking=False)
+    provider = Provider("first")
+    task = Task("42", "Issue", "Body", "github-issue", 0)
+    request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
+    router = ConservativeAgentRouter(
+        [provider],
+        policy=OrderedPolicy(["first"]),
+        host_resource_slots=host_resource_slots,
+        enabled=True,
+    )
+
+    with pytest.raises(ProviderCapacityUnavailable, match="Host resource capacity is full"):
+        router.run(request, Job(task))
+
+    assert provider.calls == 0
+    host_resource_slots.release()
+    host_resource_slots.release()
+    assert router.run(request, Job(task)).success
+    assert host_resource_slots.acquire(blocking=False)
+    assert host_resource_slots.acquire(blocking=False)
+
+
 def test_conservative_router_enforces_global_hourly_agent_route_budget(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

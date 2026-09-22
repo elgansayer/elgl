@@ -12,7 +12,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from threading import Semaphore, Thread
+from threading import BoundedSemaphore, Semaphore, Thread
 
 from filelock import FileLock, Timeout
 
@@ -418,9 +418,18 @@ class FactoryDaemon:
         self.stopping = False
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
-        self.pipeline = FactoryPipeline(config)
-        self.issue_admission = self._issue_admission_gate(config)
+        # Two lightweight agent sessions may run together. An exclusive frontend
+        # verification drains both permits so an agent-triggered Angular build
+        # cannot overlap the authoritative build, test, lint, or browser gate.
+        self.host_resource_slots = BoundedSemaphore(2)
         self.verification_slots = Semaphore(1)
+        self.pipeline = FactoryPipeline(
+            config,
+            verification_slots=self.verification_slots,
+            host_resource_slots=self.host_resource_slots,
+            exclusive_host_permits=2,
+        )
+        self.issue_admission = self._issue_admission_gate(config)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
         self.stall_since: datetime | None = None
@@ -768,6 +777,8 @@ class FactoryDaemon:
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
+                            host_resource_slots=self.host_resource_slots,
+                            exclusive_host_permits=2,
                             agent_router=self.pipeline.router,
                         )
                         review_priority = is_review_lane_job(job)

@@ -501,7 +501,7 @@ def commands_for(
                     f"frontend-{script}",
                     ("npm", "run", script),
                     repository / "frontend",
-                    exclusive=script in {"build", "test"},
+                    exclusive=script in {"lint:check", "build", "test"},
                 )
             )
     if touches_frontend_directly:
