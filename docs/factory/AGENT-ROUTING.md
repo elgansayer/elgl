@@ -178,6 +178,11 @@ bounded expiry. This prevents an agent-triggered Angular build from overlapping 
 verification, while inexpensive repository checks remain parallel. Issue, pull-request, and weekly architecture
 work all share the same gate and verification lock.
 
+The scheduler caps new worker selection to the gate's currently available reader slots. A reserved writer or two
+active readers therefore suppresses doomed worker dispatch instead of cycling unrelated backlog items through
+identical host-capacity deferrals. Existing workers and the daemon heartbeat continue normally while admission is
+closed.
+
 `jobs.json` read-modify-write operations also use a cross-process lock. Provider history is bounded to the latest
 500 entries per job on append and deserialisation, preserving useful provenance without unbounded state growth.
 

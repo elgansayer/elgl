@@ -14,7 +14,9 @@ def test_exclusive_gate_waits_for_shared_work_and_blocks_new_shared_work(
     other_daemon_gate = HostResourceGate(state_path, 2)
     exclusive_entered = Event()
     exclusive_release = Event()
+    assert gate.available_shared_slots() == 2
     assert gate.acquire_shared("test:first")
+    assert other_daemon_gate.available_shared_slots() == 1
 
     def run_exclusive() -> None:
         with other_daemon_gate.exclusive():
@@ -24,6 +26,7 @@ def test_exclusive_gate_waits_for_shared_work_and_blocks_new_shared_work(
     worker = Thread(target=run_exclusive)
     worker.start()
     assert exclusive_entered.wait(timeout=0.05) is False
+    assert gate.available_shared_slots() == 0
     assert gate.acquire_shared("test:blocked") is False
 
     gate.release_shared("test:first")
@@ -33,5 +36,6 @@ def test_exclusive_gate_waits_for_shared_work_and_blocks_new_shared_work(
     exclusive_release.set()
     worker.join(timeout=1)
     assert worker.is_alive() is False
+    assert other_daemon_gate.available_shared_slots() == 2
     assert gate.acquire_shared("test:after")
     gate.release_shared("test:after")
