@@ -115,15 +115,10 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     assert frontend_e2e.arguments[-1] == "cypress/e2e/cypress-setup.cy.ts"
 
 
-def test_only_the_fixed_port_command_is_exclusive(tmp_path: Path) -> None:
-    """frontend-e2e binds a fixed host port (127.0.0.1:4200) and cannot run
-    concurrently with another instance of itself - everything else, including
-    backend-test:e2e (an in-process supertest server on an ephemeral port), is
-    safe under full worker parallelism and must not be serialized alongside it.
-    """
+def test_memory_heavy_and_fixed_port_frontend_commands_are_exclusive(tmp_path: Path) -> None:
     commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     exclusive = {command.name for command in commands if command.exclusive}
-    assert exclusive == {"frontend-e2e"}
+    assert exclusive == {"frontend-build", "frontend-test", "frontend-e2e"}
 
 
 def test_frontend_e2e_runs_only_changed_cypress_specs(tmp_path: Path) -> None:

@@ -1591,12 +1591,10 @@ class FactoryPipeline:
         if not changed:
             raise FactoryError("No changed paths were found")
         commands = commands_for(workflow.repository, changed, self.config.repository_profile)
-        # Only commands that bind a fixed host port (frontend-e2e's dev server)
-        # need to be serialized across workers; everything else - lint, build,
-        # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
-        # port) - is safe to run at full worker parallelism. Running the shared
-        # commands first also means a cheap, fast-failing check (lint, a broken
-        # build) is judged before spending minutes on the exclusive one.
+        # Memory-heavy Angular commands and fixed-port browser commands are
+        # serialized across workers. The remaining checks can run at full worker
+        # parallelism. Running shared checks first means cheap failures are judged
+        # before spending minutes in the host-wide verification slot.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
         run_verification(shared)
