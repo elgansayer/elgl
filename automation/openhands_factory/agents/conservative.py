@@ -7,7 +7,6 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from threading import BoundedSemaphore
 from typing import Any
-from uuid import uuid4
 
 from openhands_factory.agents.base import (
     AgentPhase,
@@ -17,7 +16,6 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
-from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import (
     DurableAdmissionGate,
     ReviewAdmissionGate,
@@ -139,12 +137,10 @@ class ConservativeAgentRouter(AgentRouter):
         self,
         *args: Any,
         enabled: bool | None = None,
-        host_resource_slots: HostResourceGate | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
-        self._host_resource_slots = host_resource_slots
         self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
         self._review_slots = BoundedSemaphore(
             _positive_int_environment(
@@ -321,21 +317,8 @@ class ConservativeAgentRouter(AgentRouter):
                 retry_after_seconds=_RESOURCE_RETRY_SECONDS,
             )
 
-        host_slot_acquired = False
-        host_slot_owner: str | None = None
         review_slot_acquired = False
         try:
-            if self._host_resource_slots is not None:
-                host_slot_owner = (
-                    f"shared:{os.getpid()}:{job.task.identifier}:"
-                    f"{request.phase.value}:{uuid4().hex}"
-                )
-                if not self._host_resource_slots.acquire_shared(host_slot_owner):
-                    raise ProviderCapacityUnavailable(
-                        "Host resource capacity is full",
-                        retry_after_seconds=_RESOURCE_RETRY_SECONDS,
-                    )
-                host_slot_acquired = True
             now = datetime.now(UTC)
             route_gate = self._agent_route_admission
             route_slots = route_gate.available_slots(now) if route_gate is not None else None
@@ -401,10 +384,4 @@ class ConservativeAgentRouter(AgentRouter):
         finally:
             if review_slot_acquired:
                 self._review_slots.release()
-            if (
-                host_slot_acquired
-                and host_slot_owner is not None
-                and self._host_resource_slots is not None
-            ):
-                self._host_resource_slots.release_shared(host_slot_owner)
             self._global_agent_slots.release()

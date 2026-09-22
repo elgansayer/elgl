@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import uuid
 from collections.abc import Mapping, Sequence
@@ -29,6 +30,7 @@ from openhands_factory.exceptions import (
     FactoryError,
     ProviderCapacityUnavailable,
 )
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -93,6 +95,7 @@ class AgentRouter:
         capacity_wait_seconds: int = 30,
         skip_busy_providers: bool = True,
         same_provider_retries: int = 1,
+        host_resource_slots: HostResourceGate | None = None,
     ) -> None:
         self.providers = {provider.name: provider for provider in providers}
         self.policy = policy
@@ -109,6 +112,7 @@ class AgentRouter:
         self.capacity_wait_seconds = capacity_wait_seconds
         self.skip_busy_providers = skip_busy_providers
         self.same_provider_retries = same_provider_retries
+        self.host_resource_slots = host_resource_slots
         self._stopping = threading.Event()
         self._memory_breakers_lock = threading.Lock()
         self._review_capacity_lock = threading.Lock()
@@ -485,6 +489,30 @@ class AgentRouter:
         return result
 
     def run(
+        self,
+        request: AgentRequest,
+        job: Job,
+        exclude: set[str] | None = None,
+    ) -> AgentResult:
+        """Route one provider while holding the host-wide reader lease."""
+
+        gate = self.host_resource_slots
+        if gate is None:
+            return self._run_routed(request, job, exclude=exclude)
+        owner = (
+            f"shared:{os.getpid()}:{job.task.identifier}:{request.phase.value}:{uuid.uuid4().hex}"
+        )
+        if not gate.acquire_shared(owner):
+            raise ProviderCapacityUnavailable(
+                "Host resource capacity is full",
+                retry_after_seconds=max(self.capacity_wait_seconds, 1),
+            )
+        try:
+            return self._run_routed(request, job, exclude=exclude)
+        finally:
+            gate.release_shared(owner)
+
+    def _run_routed(
         self,
         request: AgentRequest,
         job: Job,
