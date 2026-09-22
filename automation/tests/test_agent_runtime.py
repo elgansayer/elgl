@@ -580,6 +580,16 @@ def test_router_holds_host_reader_for_provider_lifetime(tmp_path: Path) -> None:
     assert other_daemon_gate.acquire_shared("other:after")
 
 
+def test_router_derives_host_gate_from_durable_provider_capacity(tmp_path: Path) -> None:
+    capacity = ProviderCapacityStore(tmp_path, max_lease_seconds=900)
+
+    router = AgentRouter([Provider("first")], capacity_store=capacity)
+
+    assert router.host_resource_slots is not None
+    assert router.host_resource_slots.path == tmp_path / "host-resource-gate.json"
+    assert router.host_resource_slots.lease_seconds == 900
+
+
 def test_router_reserves_provider_slot_for_pull_request_review(tmp_path: Path) -> None:
     provider = Provider("first")
     capacity = ProviderCapacityStore(tmp_path)

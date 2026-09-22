@@ -36,6 +36,7 @@ from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
 
 LOGGER = logging.getLogger(__name__)
+DEFAULT_HOST_RESOURCE_SHARED_LIMIT = 2
 FALLBACK_FAILURES = {
     AgentFailureKind.PROVIDER_UNAVAILABLE,
     AgentFailureKind.PROVIDER_AUTH,
@@ -113,6 +114,12 @@ class AgentRouter:
         self.skip_busy_providers = skip_busy_providers
         self.same_provider_retries = same_provider_retries
         self.host_resource_slots = host_resource_slots
+        if self.host_resource_slots is None and capacity_store is not None:
+            self.host_resource_slots = HostResourceGate(
+                capacity_store.path.with_name("host-resource-gate.json"),
+                DEFAULT_HOST_RESOURCE_SHARED_LIMIT,
+                lease_seconds=capacity_store.max_lease_seconds,
+            )
         self._stopping = threading.Event()
         self._memory_breakers_lock = threading.Lock()
         self._review_capacity_lock = threading.Lock()
@@ -507,10 +514,22 @@ class AgentRouter:
                 "Host resource capacity is full",
                 retry_after_seconds=max(self.capacity_wait_seconds, 1),
             )
+        LOGGER.info(
+            "factory.host_resource.reader_acquired task=%s phase=%s owner=%s",
+            job.task.identifier,
+            request.phase.value,
+            owner,
+        )
         try:
             return self._run_routed(request, job, exclude=exclude)
         finally:
             gate.release_shared(owner)
+            LOGGER.info(
+                "factory.host_resource.reader_released task=%s phase=%s owner=%s",
+                job.task.identifier,
+                request.phase.value,
+                owner,
+            )
 
     def _run_routed(
         self,
