@@ -112,6 +112,7 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     # npm run e2e against a server that was never coming up.
     assert "kill -0" in script
     assert "factory-angular-e2e.log" in script
+    assert frontend_e2e.arguments[-1] == "cypress/e2e/cypress-setup.cy.ts"
 
 
 def test_only_the_fixed_port_command_is_exclusive(tmp_path: Path) -> None:
@@ -123,6 +124,33 @@ def test_only_the_fixed_port_command_is_exclusive(tmp_path: Path) -> None:
     commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     exclusive = {command.name for command in commands if command.exclusive}
     assert exclusive == {"frontend-e2e"}
+
+
+def test_frontend_e2e_runs_only_changed_cypress_specs(tmp_path: Path) -> None:
+    first = Path("frontend/cypress/e2e/chat-flow.cy.ts")
+    second = Path("frontend/cypress/e2e/moments-flow.cy.ts")
+    for path in (first, second):
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    commands = commands_for(tmp_path, {first, second, Path("frontend/src/app/app.ts")})
+    frontend_e2e = next(command for command in commands if command.name == "frontend-e2e")
+
+    assert frontend_e2e.arguments[-2] == "factory-frontend-e2e"
+    assert frontend_e2e.arguments[-1] == (
+        "cypress/e2e/chat-flow.cy.ts,cypress/e2e/moments-flow.cy.ts"
+    )
+
+
+def test_root_playwright_change_runs_discovery_not_cypress(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("e2e/tests/auth.spec.ts")})
+    names = {command.name for command in commands}
+
+    assert "playwright-discovery" in names
+    assert "frontend-e2e" not in names
+    discovery = next(command for command in commands if command.name == "playwright-discovery")
+    assert discovery.arguments == ("npm", "test", "--", "--list")
+    assert discovery.directory == tmp_path / "e2e"
 
 
 def test_empty_diff_cannot_claim_verification(tmp_path: Path) -> None:

@@ -390,8 +390,10 @@ def commands_for(
     # verifying nothing.
     touches_automation = _touches(changed_paths, "automation")
     touches_frontend = _touches(changed_paths, "frontend")
+    touches_frontend_directly = touches_frontend
     touches_backend = _touches(changed_paths, "backend")
     touches_admin = _touches(changed_paths, "admin-portal")
+    touches_playwright = _touches(changed_paths, "e2e")
     if not (touches_automation or touches_frontend or touches_backend or touches_admin):
         touches_automation = touches_frontend = touches_backend = touches_admin = True
     commands = [
@@ -501,7 +503,16 @@ def commands_for(
                     f"frontend-{script}", ("npm", "run", script), repository / "frontend"
                 )
             )
-    if any(path.parts and path.parts[0] in {"frontend", "e2e"} for path in changed_paths):
+    if touches_frontend_directly:
+        changed_cypress_specs = sorted(
+            str(path.relative_to("frontend"))
+            for path in changed_paths
+            if len(path.parts) >= 4
+            and path.parts[:3] == ("frontend", "cypress", "e2e")
+            and path.suffix in {".js", ".ts"}
+            and (repository / path).is_file()
+        )
+        cypress_specs = changed_cypress_specs or ["cypress/e2e/cypress-setup.cy.ts"]
         commands.append(
             VerificationCommand(
                 "frontend-e2e",
@@ -524,10 +535,20 @@ def commands_for(
                     'if [ "$attempt" = 180 ]; then '
                     "echo 'dev server did not become ready within 180s:' >&2; "
                     "tail -n 50 /tmp/factory-angular-e2e.log >&2; exit 1; fi; "
-                    "done; npm run e2e",
+                    'done; npm run e2e -- --spec "$1"',
+                    "factory-frontend-e2e",
+                    ",".join(cypress_specs),
                 ),
                 repository / "frontend",
                 exclusive=True,
+            )
+        )
+    if touches_playwright:
+        commands.append(
+            VerificationCommand(
+                "playwright-discovery",
+                ("npm", "test", "--", "--list"),
+                repository / "e2e",
             )
         )
     if touches_backend:
