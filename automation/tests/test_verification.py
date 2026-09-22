@@ -118,7 +118,12 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
 def test_memory_heavy_and_fixed_port_frontend_commands_are_exclusive(tmp_path: Path) -> None:
     commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     exclusive = {command.name for command in commands if command.exclusive}
-    assert exclusive == {"frontend-build", "frontend-test", "frontend-e2e"}
+    assert exclusive == {
+        "frontend-lint:check",
+        "frontend-build",
+        "frontend-test",
+        "frontend-e2e",
+    }
 
 
 def test_frontend_e2e_runs_only_changed_cypress_specs(tmp_path: Path) -> None:

@@ -182,7 +182,7 @@ class AgentsConfig(BaseModel):
                 enabled=True,
                 command="claude",
                 auth_mode="subscription",
-                model="fable",
+                model="sonnet",
                 credential_paths=[".claude", ".claude.json"],
                 runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
                 phase_models={
@@ -193,7 +193,7 @@ class AgentsConfig(BaseModel):
                     "quality_repair": "haiku",
                     "code_review": "haiku",
                     "ci_repair": "haiku",
-                    "general_action": "fable",
+                    "general_action": "haiku",
                 },
             ),
             "codex": ProviderConfig(

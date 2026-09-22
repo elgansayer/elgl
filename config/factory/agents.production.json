@@ -7,7 +7,7 @@
       "auth_mode": "subscription",
       "transport": "cli",
       "max_concurrency": 2,
-      "model": "fable",
+      "model": "sonnet",
       "max_turns": 100,
       "credential_paths": [".claude", ".claude.json"],
       "runtime_paths": [".local/bin", ".local/share/claude", ".npm-global"],
@@ -19,7 +19,7 @@
         "quality_repair": "haiku",
         "code_review": "haiku",
         "ci_repair": "haiku",
-        "general_action": "fable"
+        "general_action": "haiku"
       }
     },
     "codex": {

@@ -114,6 +114,8 @@ class FactoryPipeline:
         github: GitHubClient | None = None,
         conversations: ConversationRunner | None = None,
         verification_slots: Semaphore | None = None,
+        host_resource_slots: Semaphore | None = None,
+        exclusive_host_permits: int = 0,
         agent_router: AgentRouter | None = None,
     ) -> None:
         self.config = config
@@ -200,6 +202,8 @@ class FactoryPipeline:
             self.router = agent_router
             self.labels_ready = False
             self.verification_slots = verification_slots
+            self.host_resource_slots = host_resource_slots
+            self.exclusive_host_permits = exclusive_host_permits
             return
 
         claude = config.agents.providers["claude"]
@@ -319,10 +323,13 @@ class FactoryPipeline:
             skip_busy_providers=config.agents.routing.skip_busy_providers,
             same_provider_retries=config.agents.routing.same_provider_retries,
             metrics_store=MetricsStore(config.state_dir / "metrics.json"),
+            host_resource_slots=host_resource_slots,
         )
         self.labels_ready = False
         self.active_label_reconciliation_pending = True
         self.verification_slots = verification_slots
+        self.host_resource_slots = host_resource_slots
+        self.exclusive_host_permits = exclusive_host_permits
 
     def _workflow(
         self,
@@ -1604,7 +1611,17 @@ class FactoryPipeline:
             run_verification(exclusive)
             return changed
         with self.verification_slots:
-            run_verification(exclusive)
+            acquired_host_permits = 0
+            try:
+                if self.host_resource_slots is not None:
+                    for _ in range(self.exclusive_host_permits):
+                        self.host_resource_slots.acquire()
+                        acquired_host_permits += 1
+                run_verification(exclusive)
+            finally:
+                if self.host_resource_slots is not None:
+                    for _ in range(acquired_host_permits):
+                        self.host_resource_slots.release()
         return changed
 
     def _verify_or_schedule_quality_repair(

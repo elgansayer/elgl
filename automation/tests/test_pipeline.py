@@ -1222,17 +1222,20 @@ def test_verify_only_serializes_the_exclusive_command(
     """Shared checks run freely while memory-heavy and fixed-port checks hold
     the single host-wide verification slot.
     """
-    from threading import Semaphore
+    from threading import BoundedSemaphore, Semaphore
 
     from openhands_factory.verification import VerificationCommand
 
+    host_resource_slots = BoundedSemaphore(2)
     pipeline = FactoryPipeline(
         config(tmp_path),
         github=GitHub(),  # type: ignore[arg-type]
         verification_slots=Semaphore(1),
+        host_resource_slots=host_resource_slots,
+        exclusive_host_permits=2,
     )
     fake_commands = [
-        VerificationCommand("frontend-lint:check", ("true",), tmp_path),
+        VerificationCommand("frontend-lint:check", ("true",), tmp_path, exclusive=True),
         VerificationCommand("frontend-build", ("true",), tmp_path, exclusive=True),
         VerificationCommand("frontend-test", ("true",), tmp_path, exclusive=True),
         VerificationCommand("frontend-e2e", ("true",), tmp_path, exclusive=True),
@@ -1244,6 +1247,7 @@ def test_verify_only_serializes_the_exclusive_command(
     )
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("frontend/x.ts")})
     slot_held_during: dict[str, bool] = {}
+    host_permits_available_during: dict[str, int] = {}
 
     def fake_run_verification(commands: list[VerificationCommand]) -> None:
         held = pipeline.verification_slots.acquire(blocking=False)  # type: ignore[union-attr]
@@ -1251,6 +1255,12 @@ def test_verify_only_serializes_the_exclusive_command(
             pipeline.verification_slots.release()  # type: ignore[union-attr]
         for command in commands:
             slot_held_during[command.name] = not held
+            acquired = 0
+            while host_resource_slots.acquire(blocking=False):
+                acquired += 1
+            host_permits_available_during[command.name] = acquired
+            for _ in range(acquired):
+                host_resource_slots.release()
 
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", fake_run_verification)
     workflow = GitWorkflow(tmp_path, "main")
@@ -1258,11 +1268,18 @@ def test_verify_only_serializes_the_exclusive_command(
     pipeline._verify(workflow)
 
     assert slot_held_during == {
-        "frontend-lint:check": False,
+        "frontend-lint:check": True,
         "backend-test:e2e": False,
         "frontend-build": True,
         "frontend-test": True,
         "frontend-e2e": True,
+    }
+    assert host_permits_available_during == {
+        "backend-test:e2e": 2,
+        "frontend-lint:check": 0,
+        "frontend-build": 0,
+        "frontend-test": 0,
+        "frontend-e2e": 0,
     }
 
 

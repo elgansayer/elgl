@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 from datetime import UTC, datetime
-from threading import BoundedSemaphore
+from threading import BoundedSemaphore, Semaphore
 from typing import Any
 
 from openhands_factory.agents.base import (
@@ -133,9 +133,16 @@ def conservative_policy_enabled() -> bool:
 class ConservativeAgentRouter(AgentRouter):
     """Bound expensive execution without weakening the existing Factory pipeline."""
 
-    def __init__(self, *args: Any, enabled: bool | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        enabled: bool | None = None,
+        host_resource_slots: Semaphore | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
+        self._host_resource_slots = host_resource_slots
         self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
         self._review_slots = BoundedSemaphore(
             _positive_int_environment(
@@ -312,8 +319,16 @@ class ConservativeAgentRouter(AgentRouter):
                 retry_after_seconds=_RESOURCE_RETRY_SECONDS,
             )
 
+        host_slot_acquired = False
         review_slot_acquired = False
         try:
+            if self._host_resource_slots is not None:
+                if not self._host_resource_slots.acquire(blocking=False):
+                    raise ProviderCapacityUnavailable(
+                        "Host resource capacity is full",
+                        retry_after_seconds=_RESOURCE_RETRY_SECONDS,
+                    )
+                host_slot_acquired = True
             now = datetime.now(UTC)
             route_gate = self._agent_route_admission
             route_slots = route_gate.available_slots(now) if route_gate is not None else None
@@ -379,4 +394,6 @@ class ConservativeAgentRouter(AgentRouter):
         finally:
             if review_slot_acquired:
                 self._review_slots.release()
+            if host_slot_acquired and self._host_resource_slots is not None:
+                self._host_resource_slots.release()
             self._global_agent_slots.release()
