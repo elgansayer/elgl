@@ -18,6 +18,12 @@ requireFragment(tailwind, '-apple-system', 'Display fallback stack');
 requireFragment(tailwind, 'BlinkMacSystemFont', 'Display fallback stack');
 requireFragment(tailwind, 'sans-serif', 'Display fallback stack');
 
+if (/@import\s+url\(["']?https?:\/\//i.test(styles)) {
+  failures.push(
+    'Global styles must not import remote fonts because production builds must work without network access',
+  );
+}
+
 const allowedExtensions = new Set(['.html', '.ts', '.scss', '.css']);
 const languageContentPathFragments = [
   '/chat',

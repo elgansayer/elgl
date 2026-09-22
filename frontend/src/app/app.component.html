@@ -67,9 +67,10 @@
         <span class="text-xl leading-none">🔔</span>
         @if (unreadCounter.totalUnread() > 0) {
           <span
+            aria-hidden="true"
             class="absolute -top-0.5 -end-0.5 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
           >
-            {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+            {{ unreadCounter.totalBadgeText() }}
           </span>
         }
       </a>

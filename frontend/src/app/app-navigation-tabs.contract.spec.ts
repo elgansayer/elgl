@@ -99,6 +99,12 @@ describe('primary navigation unread contract', () => {
     expect(desktopTemplate).toContain('class="sr-only"');
   });
 
+  it('uses the shared compact formatter for the global navigation badge', () => {
+    expect(template).toContain('{{ unreadCounter.totalBadgeText() }}');
+    expect(template).not.toContain("unreadCounter.totalUnread() > 99 ? '99+' :");
+    expect(template).toMatch(/aria-hidden="true"[\s\S]*unreadCounter\.totalBadgeText\(\)/);
+  });
+
   it('does not regress to unrelated audio-room co-host controls', () => {
     const navigation = mobileNavigationTemplate();
 
