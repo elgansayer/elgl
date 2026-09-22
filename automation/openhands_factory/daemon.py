@@ -621,7 +621,9 @@ class FactoryDaemon:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
                 review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
-                capacity = self.config.max_parallel_jobs - len(active)
+                worker_capacity = self.config.max_parallel_jobs - len(active)
+                available_host_slots = self.host_resource_slots.available_shared_slots()
+                capacity = min(worker_capacity, available_host_slots)
                 # storage_ready and everything in this block must run
                 # unconditionally, before the scheduling gate below and
                 # regardless of pause/capacity state: pruning is what's
@@ -636,6 +638,8 @@ class FactoryDaemon:
                     {
                         "max_parallel_jobs": self.config.max_parallel_jobs,
                         "capacity": capacity,
+                        "worker_capacity": worker_capacity,
+                        "available_host_slots": available_host_slots,
                         "paused": paused,
                         "storage_ready": storage_ready,
                         "review_lane_max_concurrent": (self.config.review_lane_max_concurrent),
@@ -847,6 +851,7 @@ class FactoryDaemon:
                         )
                         and self.pipeline.architect_due()
                         and not review_lane_busy
+                        and available_host_slots > 0
                     ):
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")

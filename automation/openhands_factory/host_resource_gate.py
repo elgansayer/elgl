@@ -102,6 +102,16 @@ class HostResourceGate:
             self._save(payload)
             return True
 
+    def available_shared_slots(self) -> int:
+        """Return current reader capacity without mutating durable admission."""
+
+        with self.lock:
+            payload = self._load_active()
+            shared = payload["shared"]
+            if payload["exclusive"] is not None or not isinstance(shared, list):
+                return 0
+            return max(self.shared_limit - len(shared), 0)
+
     def release_shared(self, owner: str) -> None:
         with self.lock:
             payload = self._load_active()
