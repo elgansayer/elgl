@@ -587,7 +587,7 @@ def test_check_stall_dispatches_investigation_once_threshold_elapsed(
     daemon.stall_since = datetime.now(UTC) - timedelta(minutes=21)
     daemon.stall_investigation_dispatched = False
     daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
-        run_stall_investigation=lambda reason, diagnostics: None
+        run_stall_investigation=lambda reason, diagnostics, provider_backed: None
     )
     monkeypatch.setattr(
         "openhands_factory.daemon.no_pr_progress_check",
@@ -612,9 +612,10 @@ def test_check_stall_dispatches_investigation_once_threshold_elapsed(
 
     assert daemon.stall_investigation_dispatched
     assert len(started_args) == 1
-    reason, diagnostics = started_args[0]
+    reason, diagnostics, provider_backed = started_args[0]
     assert "stalled for 21 minutes" in reason
     assert diagnostics == "diagnostics snapshot"
+    assert provider_backed is False
 
     # A second cycle within the same continuous stall must not dispatch again.
     daemon._check_stall()

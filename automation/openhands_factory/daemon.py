@@ -398,7 +398,7 @@ class FactoryDaemon:
         diagnostics = gather_diagnostics(self.config.state_dir)
         Thread(
             target=self.pipeline.run_stall_investigation,
-            args=(reason, diagnostics),
+            args=(reason, diagnostics, not self.storage_blocked),
             daemon=True,
             name="factory-stall-investigation",
         ).start()

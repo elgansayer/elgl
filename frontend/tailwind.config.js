@@ -104,10 +104,10 @@ module.exports = {
         // user-generated or translated content, only to guaranteed-Latin
         // product copy (headlines, streak numerals, onboarding).
         display: [
-          '"Instrument Sans"',
           'ui-sans-serif',
           '-apple-system',
           'BlinkMacSystemFont',
+          '"Segoe UI"',
           'sans-serif',
         ],
       },

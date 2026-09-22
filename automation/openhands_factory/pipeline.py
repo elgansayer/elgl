@@ -361,7 +361,7 @@ class FactoryPipeline:
                 inspection = self._workflow(worktree)
                 try:
                     dirty = inspection.has_changes()
-                except RepositorySafetyError:
+                except (OSError, RepositorySafetyError):
                     # A damaged or partially-created worktree is not safe to delete silently.
                     dirty = True
                 if dirty and storage_pressure:
@@ -1775,23 +1775,31 @@ class FactoryPipeline:
                 }
             )
 
-    def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
+    def run_stall_investigation(
+        self,
+        reason: str,
+        diagnostics: str,
+        provider_backed: bool = True,
+    ) -> None:
         """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.
 
         Two Telegram sends, not one, because the first must never depend on a healthy agent
         provider - the exact thing a stall may itself have taken down. The AI pass is a
         strictly-optional addition that reasons over the already-gathered evidence; it has no
-        tool access and cannot make the situation worse by touching the repository or host.
-        Never raises - this always runs from a background thread and must not affect scheduling.
+        tool access and cannot make the situation worse by touching the repository or host. It is
+        disabled while storage pressure blocks provider-backed work. Never raises - this always
+        runs from a background thread and must not affect scheduling.
         """
-        from openhands_factory.agents.base import AgentPhase, AgentRequest
-
         alerts = AlertService(self.config)
         started_at = datetime.now(UTC)
         alerts.send(
             f"OpenHands factory alert: scheduling stalled\n\n{reason}\n\n{diagnostics}",
             category="factory-scheduling-stalled",
         )
+        if not provider_backed:
+            return
+
+        from openhands_factory.agents.base import AgentPhase, AgentRequest
 
         cycle_id = f"stall-investigation-{started_at.strftime('%Y%m%dT%H%M%SZ')}"
         task = Task(

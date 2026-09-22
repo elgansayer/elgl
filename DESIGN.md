@@ -56,11 +56,11 @@ sizes; its `50-700` tint scale stays static.
 
 - **Body:** stays the platform-native system-UI stack (`font-sans`), deliberately - it's what
   reliably covers every script HelloTalk's users type in (CJK, Arabic, Cyrillic, Devanagari, etc).
-- **Display:** new `font-display` (`"Instrument Sans"`, self-hosted via Google Fonts import in
-  `styles.scss`) for headline/numeral contexts only - streak counters, onboarding hero text,
-  product-authored marketing copy. **Never** apply it to user-generated or translated content; the
-  risk of a Latin-only display face silently dropping non-Latin glyphs is real for a
-  language-exchange app with a global user base.
+- **Display:** `font-display` uses the platform-native UI stack for headline and numeral contexts
+  such as streak counters, onboarding hero text, and product-authored marketing copy. Production
+  styles do not import remote fonts, keeping builds and first render deterministic without a
+  third-party network dependency. **Never** apply display styling to user-generated or translated
+  content so non-Latin glyph coverage remains reliable.
 - **Base size:** 16px, unchanged.
 - **Scale:** Tailwind's default `text-xs` .. `text-3xl` scale, unchanged.
 
