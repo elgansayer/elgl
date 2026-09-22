@@ -45,6 +45,7 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
+CI_POLL_INTERVAL = timedelta(minutes=1)
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -492,10 +493,13 @@ class FactoryPipeline:
                 return None
             self._copy_claim_metadata(job, claim)
             try:
+                # The selected cooldown is due. Clear it before advancing so a
+                # polling transition can explicitly schedule its next read without
+                # inheriting stale backoff from the previous attempt.
+                job.next_attempt_at = None
                 self._advance(job, lease_owner)
                 job.attempts = 0
                 job.last_error = None
-                job.next_attempt_at = None
             except ProviderCapacityUnavailable as error:
                 job.last_error = str(error)[-2000:]
                 retry = error.retry_after_seconds or self.config.provider_cooldown_seconds
@@ -1102,11 +1106,18 @@ class FactoryPipeline:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner)
             elif status.merge_state_status == "BEHIND":
                 self._update_pull_request_branch(job, status)
+            elif status.failed_checks:
+                # A pending status can coexist with a terminal failure. In
+                # particular, the Factory's own review context stays pending while
+                # a CI repair is queued. Terminal evidence must win or the job
+                # waits forever on the status that only the repair can complete.
+                job.state = JobState.REPAIRING
             elif (
                 status.checks_pending
                 or status.mergeable == "UNKNOWN"
                 or status.merge_state_status in {"UNKNOWN", "BLOCKED", "HAS_HOOKS", "DRAFT"}
             ):
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
                 return
             elif (
                 status.checks_passed
@@ -1141,12 +1152,13 @@ class FactoryPipeline:
             if job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner)
                 return
-            if (
+            if not status.failed_checks and (
                 status.checks_pending
                 or (status.checks_passed and status.mergeable == "MERGEABLE")
                 or status.mergeable == "UNKNOWN"
             ):
                 job.state = JobState.CI_PENDING
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
                 return
             failed_checks = "\n".join(f"- {name}" for name in sorted(status.failed_checks))
             evidence = failed_checks or "- No terminal failed check name was reported by GitHub."
@@ -1334,6 +1346,54 @@ class FactoryPipeline:
         lease_owner: str,
     ) -> None:
         """Attach issue work to an existing canonical PR instead of creating a sibling."""
+
+        existing_owner = next(
+            (
+                candidate
+                for candidate in self.jobs.load().values()
+                if candidate.task.identifier != job.task.identifier
+                and candidate.task.source == "github-pull-request"
+                and (
+                    candidate.pull_request == match.number
+                    or candidate.task.identifier == str(match.number)
+                )
+                and candidate.state not in TERMINAL_STATES
+            ),
+            None,
+        )
+        if existing_owner is not None:
+            # The pull-request intake already owns this branch and its isolated
+            # worktree. Treat the issue as an attached sibling instead of trying to
+            # check out the same local branch twice. The PR job remains responsible
+            # for verification, repair, and merge; its issue-closing reference is
+            # preserved by the existing PR body.
+            job.branch = match.branch
+            job.pull_request = match.number
+            job.head_sha = match.head_sha or existing_owner.head_sha
+            bound = self.tasks.bind_pull_request(
+                job.task.identifier,
+                lease_owner,
+                match.number,
+                match.branch,
+                predecessor_pull_request=job.predecessor_pull_request,
+            )
+            self._copy_claim_metadata(job, bound)
+            job.canonical_task_id = existing_owner.task.identifier
+            self.tasks.complete(job.task.identifier, lease_owner)
+            self.github.add_comment(
+                int(job.task.identifier),
+                (
+                    "OpenHands Factory attached this issue to the existing canonical pull "
+                    f"request #{match.number}. Its active pull-request job already owns the "
+                    "branch and will continue verification, repair, and merge."
+                ),
+            )
+            self.github.remove_issue_labels(
+                int(job.task.identifier),
+                ("factory-active", "swarm-active"),
+            )
+            job.state = JobState.DONE
+            return
 
         self._prepare_pull_request_for_review(
             job,
