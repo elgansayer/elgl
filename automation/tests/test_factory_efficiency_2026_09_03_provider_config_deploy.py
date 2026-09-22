@@ -163,3 +163,8 @@ def test_neutral_repo_factory_updater_has_autonomous_bootstrap_path() -> None:
     assert "bootstrap_repo_factory_updater" in maintenance
     assert "FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1" in maintenance
     assert 'install -o root -g root -m 0755 "$legacy" "$neutral"' in maintenance
+    assert "refs/remotes/origin/main" in maintenance
+    assert 'cat-file commit "$head"' in maintenance
+    assert 'cat-file blob "$updater_blob"' in maintenance
+    assert "git hash-object -t commit --stdin" in maintenance
+    assert 'actual_blob=$(git hash-object "$temporary")' in maintenance
