@@ -142,9 +142,9 @@ def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Pa
 def test_conservative_router_shares_host_capacity_with_exclusive_verification(
     tmp_path: Path,
 ) -> None:
-    host_resource_slots = HostResourceGate(2)
-    assert host_resource_slots.acquire_shared(blocking=False)
-    assert host_resource_slots.acquire_shared(blocking=False)
+    host_resource_slots = HostResourceGate(tmp_path / "host-resources.json", 2)
+    assert host_resource_slots.acquire_shared("test:first")
+    assert host_resource_slots.acquire_shared("test:second")
     provider = Provider("first")
     task = Task("42", "Issue", "Body", "github-issue", 0)
     request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
@@ -159,11 +159,11 @@ def test_conservative_router_shares_host_capacity_with_exclusive_verification(
         router.run(request, Job(task))
 
     assert provider.calls == 0
-    host_resource_slots.release_shared()
-    host_resource_slots.release_shared()
+    host_resource_slots.release_shared("test:first")
+    host_resource_slots.release_shared("test:second")
     assert router.run(request, Job(task)).success
-    assert host_resource_slots.acquire_shared(blocking=False)
-    assert host_resource_slots.acquire_shared(blocking=False)
+    assert host_resource_slots.acquire_shared("test:third")
+    assert host_resource_slots.acquire_shared("test:fourth")
 
 
 def test_conservative_router_enforces_global_hourly_agent_route_budget(

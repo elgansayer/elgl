@@ -7,6 +7,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from threading import BoundedSemaphore
 from typing import Any
+from uuid import uuid4
 
 from openhands_factory.agents.base import (
     AgentPhase,
@@ -321,10 +322,15 @@ class ConservativeAgentRouter(AgentRouter):
             )
 
         host_slot_acquired = False
+        host_slot_owner: str | None = None
         review_slot_acquired = False
         try:
             if self._host_resource_slots is not None:
-                if not self._host_resource_slots.acquire_shared(blocking=False):
+                host_slot_owner = (
+                    f"shared:{os.getpid()}:{job.task.identifier}:"
+                    f"{request.phase.value}:{uuid4().hex}"
+                )
+                if not self._host_resource_slots.acquire_shared(host_slot_owner):
                     raise ProviderCapacityUnavailable(
                         "Host resource capacity is full",
                         retry_after_seconds=_RESOURCE_RETRY_SECONDS,
@@ -395,6 +401,10 @@ class ConservativeAgentRouter(AgentRouter):
         finally:
             if review_slot_acquired:
                 self._review_slots.release()
-            if host_slot_acquired and self._host_resource_slots is not None:
-                self._host_resource_slots.release_shared()
+            if (
+                host_slot_acquired
+                and host_slot_owner is not None
+                and self._host_resource_slots is not None
+            ):
+                self._host_resource_slots.release_shared(host_slot_owner)
             self._global_agent_slots.release()

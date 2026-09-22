@@ -1270,7 +1270,7 @@ def test_verify_only_serializes_the_exclusive_command(
     from openhands_factory.host_resource_gate import HostResourceGate
     from openhands_factory.verification import VerificationCommand
 
-    host_resource_slots = HostResourceGate(2)
+    host_resource_slots = HostResourceGate(tmp_path / "host-resources.json", 2)
     pipeline = FactoryPipeline(
         config(tmp_path),
         github=GitHub(),  # type: ignore[arg-type]
@@ -1299,11 +1299,13 @@ def test_verify_only_serializes_the_exclusive_command(
         for command in commands:
             slot_held_during[command.name] = not held
             acquired = 0
-            while host_resource_slots.acquire_shared(blocking=False):
+            owner = f"test:{command.name}:{acquired}"
+            while host_resource_slots.acquire_shared(owner):
                 acquired += 1
+                owner = f"test:{command.name}:{acquired}"
             host_permits_available_during[command.name] = acquired
-            for _ in range(acquired):
-                host_resource_slots.release_shared()
+            for index in range(acquired):
+                host_resource_slots.release_shared(f"test:{command.name}:{index}")
 
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", fake_run_verification)
     workflow = GitWorkflow(tmp_path, "main")
