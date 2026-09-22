@@ -27,9 +27,9 @@ MAX_PROVIDER_CANDIDATES_PER_PHASE = 2
 MAX_GLOBAL_AGENT_CONCURRENCY = 2
 MAX_REVIEW_CONCURRENCY = 1
 REVIEW_INTERVAL_SECONDS = 60 * 60
-REVIEWS_PER_INTERVAL = 2
+REVIEWS_PER_INTERVAL = 12
 AGENT_ROUTE_INTERVAL_SECONDS = 60 * 60
-AGENT_ROUTES_PER_INTERVAL = 6
+AGENT_ROUTES_PER_INTERVAL = 24
 AGENT_ROUTES_PER_TASK_PER_INTERVAL = 4
 _RESOURCE_RETRY_SECONDS = 60
 _CODE_MUTATING_PHASES = {
@@ -156,8 +156,14 @@ class ConservativeAgentRouter(AgentRouter):
             state_dir = self.capacity_store.path.parent
             self._review_admission = ReviewAdmissionGate(
                 state_dir / "review-admissions.json",
-                interval_seconds=REVIEW_INTERVAL_SECONDS,
-                max_admissions=REVIEWS_PER_INTERVAL,
+                interval_seconds=_positive_int_environment(
+                    "FACTORY_REVIEW_INTERVAL_SECONDS",
+                    REVIEW_INTERVAL_SECONDS,
+                ),
+                max_admissions=_positive_int_environment(
+                    "FACTORY_REVIEWS_PER_INTERVAL",
+                    REVIEWS_PER_INTERVAL,
+                ),
             )
             self._review_head_stability = ReviewHeadStabilityGate(
                 state_dir / "review-head-stability.json",
@@ -279,7 +285,8 @@ class ConservativeAgentRouter(AgentRouter):
         if not gate.admit(review_key, now):
             raise ProviderCapacityUnavailable(
                 "Independent PR review budget is exhausted "
-                f"({REVIEWS_PER_INTERVAL} reviews/hour or SHA already admitted)",
+                f"({gate.max_admissions} reviews per configured interval or SHA already "
+                "admitted)",
                 retry_after_seconds=_gate_retry_seconds(gate, now),
             )
         return review_key, now

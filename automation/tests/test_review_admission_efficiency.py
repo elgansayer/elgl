@@ -77,14 +77,20 @@ def test_busy_provider_does_not_consume_exact_head_review_budget(tmp_path: Path)
 
     assert provider.calls == 0
     assert router._review_admission is not None
-    assert router._review_admission.available_slots() == 2
+    assert (
+        router._review_admission.available_slots()
+        == router._review_admission.max_admissions
+    )
 
     store.release("first", owner="external-holder")
     result = router.run(request, job)
 
     assert result.success
     assert provider.calls == 1
-    assert router._review_admission.available_slots() == 1
+    assert (
+        router._review_admission.available_slots()
+        == router._review_admission.max_admissions - 1
+    )
 
 
 def test_prepare_failure_does_not_consume_exact_head_review_budget(tmp_path: Path) -> None:
@@ -107,7 +113,10 @@ def test_prepare_failure_does_not_consume_exact_head_review_budget(tmp_path: Pat
 
     assert provider.calls == 0
     assert router._review_admission is not None
-    assert router._review_admission.available_slots() == 2
+    assert (
+        router._review_admission.available_slots()
+        == router._review_admission.max_admissions
+    )
 
 
 def test_route_budget_race_rolls_back_exact_head_review_admission(tmp_path: Path) -> None:
@@ -139,4 +148,7 @@ def test_route_budget_race_rolls_back_exact_head_review_admission(tmp_path: Path
 
     assert provider.calls == 0
     assert router._review_admission is not None
-    assert router._review_admission.available_slots() == 2
+    assert (
+        router._review_admission.available_slots()
+        == router._review_admission.max_admissions
+    )
