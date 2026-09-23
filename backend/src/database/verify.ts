@@ -90,10 +90,12 @@ function verifyLinguistics(assertCheck: AssertCheckFn) {
 function verifyLiveKit(assertCheck: AssertCheckFn) {
   // 3. Verify LiveKit & Centrifugo Token Cryptography
   try {
-    const lkSecret =
-      process.env.LIVEKIT_SECRET || 'dev_livekit_secret_test_value_123';
-    const lkApiKey =
-      process.env.LIVEKIT_API_KEY || 'dev_livekit_key_test_value_123';
+    const lkSecret = process.env.LIVEKIT_SECRET;
+    const lkApiKey = process.env.LIVEKIT_API_KEY;
+
+    if (!lkSecret || !lkApiKey) {
+      throw new Error('LIVEKIT_SECRET and LIVEKIT_API_KEY must be configured in environment variables');
+    }
 
     const lkToken = jwt.sign(
       {
