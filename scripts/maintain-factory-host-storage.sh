@@ -9,6 +9,8 @@ JOURNAL_POLICY_TARGET=/etc/systemd/journald.conf.d/99-hellotalk-factory-storage.
 FACTORY_USER=${FACTORY_STORAGE_USER:-dev}
 FACTORY_HOME=${FACTORY_STORAGE_HOME:-/home/dev}
 FACTORY_VENV=${FACTORY_STORAGE_VENV:-/opt/hellotalk-factory/venv}
+FACTORY_REPOSITORY=${FACTORY_REPOSITORY:-/home/dev/hellotalk}
+CYPRESS_CACHE=${FACTORY_CYPRESS_CACHE:-$FACTORY_HOME/.cache/Cypress}
 PRUNE_AGE=${FACTORY_CONTAINER_PRUNE_AGE:-168h}
 DOCKER_CACHE_LIMIT=${FACTORY_DOCKER_CACHE_LIMIT:-2GB}
 MINIMUM_FREE_GIB=${FACTORY_MINIMUM_FREE_DISK_GIB:-5}
@@ -195,6 +197,27 @@ prune_uv_cache() {
   fi
 }
 
+prune_cypress_cache() {
+  local cypress
+  [ -d "$CYPRESS_CACHE" ] || return 0
+  filesystem_below_target "$CYPRESS_CACHE" || return 0
+
+  for cypress in \
+    "$FACTORY_REPOSITORY/frontend/node_modules/.bin/cypress" \
+    "/var/lib/repo-factory/hellotalk/repository/frontend/node_modules/.bin/cypress" \
+    "/var/lib/hellotalk-factory/repository/frontend/node_modules/.bin/cypress"; do
+    [ -x "$cypress" ] || continue
+    log 'Factory-state filesystem is below target; pruning obsolete Cypress binaries'
+    if ! run_as_factory_user env CYPRESS_CACHE_FOLDER="$CYPRESS_CACHE" \
+      "$cypress" cache prune; then
+      log 'WARNING: Cypress binary cache prune failed'
+    fi
+    return 0
+  done
+
+  log 'WARNING: Cypress cache is present but no installed Cypress CLI can prune it'
+}
+
 bootstrap_repo_factory_updater() {
   local legacy=/opt/hellotalk-factory/hellotalk-factory-update.sh
   local neutral_root=/opt/repo-factory
@@ -374,6 +397,7 @@ if ! install_journal_policy; then
   log 'WARNING: journal policy/vacuum maintenance failed'
 fi
 prune_uv_cache
+prune_cypress_cache
 if [ "$PRUNE_CONTAINERS" = true ]; then
   prune_docker_storage
   prune_podman_storage
