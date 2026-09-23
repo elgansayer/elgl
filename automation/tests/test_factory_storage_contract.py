@@ -33,6 +33,16 @@ def test_host_maintenance_is_serialized_and_missing_engines_are_nonfatal() -> No
     assert "Rootless Podman unavailable; skipping Podman cleanup" in script
 
 
+def test_host_maintenance_prunes_only_obsolete_cypress_binaries_under_pressure() -> None:
+    script = _read("scripts/maintain-factory-host-storage.sh")
+
+    assert 'filesystem_below_target "$CYPRESS_CACHE"' in script
+    assert 'CYPRESS_CACHE_FOLDER="$CYPRESS_CACHE"' in script
+    assert '"$cypress" cache prune' in script
+    assert "prune_cypress_cache\n" in script
+    assert '"$cypress" cache clear' not in script
+
+
 def test_host_report_covers_every_relocated_provider_directory() -> None:
     script = _read("scripts/maintain-factory-host-storage.sh")
 
