@@ -1071,7 +1071,7 @@ describe('DiscoveryService', () => {
   // Sort algorithms
   // ---------------------------------------------------------------------------
   describe('sort algorithms', () => {
-    it('best_match: promotes partner-of-week first, then study streak, then correction ratio', async () => {
+    it('best_match: promotes partner-of-week first, then uses composite score', async () => {
       mockRedisClient.get.mockResolvedValue(JSON.stringify(['partner-c']));
       const partners = [
         { id: 'partner-a', study_streak_days: 3, correction_ratio: 0.9 },
@@ -1084,10 +1084,14 @@ describe('DiscoveryService', () => {
         sort: 'best_match',
       });
 
+      // With composite score:
+      // partner-a score = 39 (streak 3 + 36 ratio score)
+      // partner-b score = 30 (streak 10 + 20 ratio score)
+      // partner-c score = 10000+ (Partner of the Week)
       expect(result.map((u) => u.id)).toEqual([
         'partner-c',
-        'partner-b',
         'partner-a',
+        'partner-b',
       ]);
     });
 
