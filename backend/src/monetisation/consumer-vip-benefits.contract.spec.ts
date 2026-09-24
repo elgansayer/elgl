@@ -64,12 +64,19 @@ describe('consumer VIP API benefit contract (#1363)', () => {
       'this.usersService.updatePrivacySettings(user.id, dto, isVip)',
     );
 
-    expect(profileVisitsService).toContain('if (isVipVisitor)');
-    expect(profileVisitsService).toContain('if (user.incognito_visits)');
     expect(profileVisitsService).toContain(
-      'return { incognito: true, ignored: true };',
+      ".select('is_vip, incognito_visits, is_deleted, scheduled_for_deletion_at')",
     );
-    expect(profileVisitsService).toContain('if (!isOwnerVip)');
+    expect(profileVisitsService).toContain(
+      'visitorPrivacy.is_vip && visitorPrivacy.incognito_visits',
+    );
+    expect(profileVisitsService).toContain(
+      "return { recorded: false, ignored: true, reason: 'incognito' };",
+    );
+    expect(profileVisitsService).toContain(
+      'const identityVisible = Boolean(ownerPrivacy.is_vip);',
+    );
+    expect(profileVisitsService).toContain('if (!identityVisible)');
     expect(profileVisitsService).toContain("id: 'hidden-vip-only'");
     expect(profileVisitsService).toContain('is_blurred: true');
   });

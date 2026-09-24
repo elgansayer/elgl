@@ -7,6 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { AuthService } from '../../services/auth.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { DirectConversationService } from '../../services/direct-conversation.service';
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
@@ -31,10 +32,12 @@ export class UserDetailComponent {
   private userService = inject(UserService);
   private discoveryService = inject(DiscoveryService);
   private authService = inject(AuthService);
+  private profileVisitsService = inject(ProfileVisitsService);
   private directConversationService = inject(DirectConversationService);
   private relationshipService = inject(ProfileRelationshipService);
   private readonly i18n = inject(I18nService);
   private translationContextKey = '';
+  private readonly visitAttempts = new Set<string>();
 
   userId = input.required<string>();
 
@@ -55,9 +58,7 @@ export class UserDetailComponent {
   readonly isTranslating = signal<boolean>(false);
   readonly translationErrorKey = signal<string>('');
 
-  readonly isOwnProfile = computed(
-    () => this.profile()?.id === this.authService.currentUser()?.id,
-  );
+  readonly isOwnProfile = computed(() => this.profile()?.id === this.authService.currentUser()?.id);
 
   constructor() {
     effect(() => {
@@ -95,6 +96,7 @@ export class UserDetailComponent {
         this.profile.set(data);
         this.isFollowing.set(data.is_followed_by_me || false);
         this.isLiked.set(data.is_liked_by_me || false);
+        void this.recordVisibleProfileVisit(data.id);
       } else {
         this.errorMessage.set(this.i18n.translate('userProfile.notFound'));
       }
@@ -253,6 +255,22 @@ export class UserDetailComponent {
     if (!url) return;
     const audio = new Audio(url);
     audio.play();
+  }
+
+  private async recordVisibleProfileVisit(profileId: string): Promise<void> {
+    if (this.authService.currentUser()?.id === profileId || this.visitAttempts.has(profileId)) {
+      return;
+    }
+
+    this.visitAttempts.add(profileId);
+    try {
+      await this.profileVisitsService.recordVisit(profileId);
+    } catch {
+      // Profile rendering must not fail because the audit trail is temporarily unavailable.
+      // Remove the attempt marker so a later successful reload can retry; the backend's
+      // daily unique key makes that retry safe if the first request actually committed.
+      this.visitAttempts.delete(profileId);
+    }
   }
 
   private getTranslationContext(): string {
