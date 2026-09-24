@@ -41,9 +41,14 @@ export class VideoCallsService {
     const env = this.configService.get<string>('NODE_ENV') || 'development';
 
     if (env === 'production') {
-      if (!apiKey || !secret) {
+      if (
+        !apiKey ||
+        !secret ||
+        apiKey === 'test-livekit-api-key' ||
+        secret === 'test-livekit-secret'
+      ) {
         throw new Error(
-          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured in production',
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
         );
       }
     }
