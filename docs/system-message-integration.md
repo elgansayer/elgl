@@ -42,7 +42,7 @@ Known-event lookup uses an explicit `Map`, not a JavaScript object property look
 
 If a display-name lookup is unavailable, publication can still continue without private provider/database details. The frontend then renders the generic localised `notifications.systemAlert` label instead of exposing a translation key or interpolation placeholder. Unknown but syntactically valid future event types receive this same generic fallback, which makes mixed-version deployments safe.
 
-Room fan-out uses `Promise.allSettled`: one Centrifugo publish failure does not prevent delivery to other rooms, and the service records only an aggregate failure count. Membership-query failures fail closed and do not publish to guessed rooms. Direct-message events are published only to a mutually shared room with exactly two members.
+Room fan-out uses `Promise.allSettled`: one Centrifugo publish failure does not prevent delivery to other rooms, and the service records only an aggregate failure count. Both rejected publications and a `false` delivery result from the shared Centrifugo client count as failures. Failed room publications log only the room identifier and validated event type for operational correlation; payload content is excluded. Membership-query failures fail closed and do not publish to guessed rooms. Direct-message events are published only to a mutually shared room with exactly two members.
 
 ## Security and privacy
 

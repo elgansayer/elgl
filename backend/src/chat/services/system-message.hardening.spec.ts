@@ -96,6 +96,34 @@ describe('SystemMessageService hardening', () => {
     );
   });
 
+  it('reports a Centrifugo false result as a failed room publication', async () => {
+    const publish = vi.fn().mockResolvedValue(false);
+    const { service } = createService({ publish });
+
+    await expect(
+      service.publishToRoom('room-1', 'memberRemoved'),
+    ).resolves.toBe(false);
+  });
+
+  it('isolates false publish results while continuing room fan-out', async () => {
+    const publish = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+    const { service } = createService({
+      publish,
+      memberships: [{ room_id: 'room-a' }, { room_id: 'room-b' }],
+    });
+
+    await expect(
+      service.publishToAllUserRooms('user-1', 'profileUpdated', {
+        name: 'Partner',
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(publish).toHaveBeenCalledTimes(2);
+  });
+
   it('fails closed when room membership lookup fails', async () => {
     const { service, publish } = createService({
       membershipError: { message: 'database unavailable' },

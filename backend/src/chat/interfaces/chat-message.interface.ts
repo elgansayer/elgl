@@ -6,9 +6,11 @@ export interface CorrectionPayload {
   explanation?: string;
 }
 
+export type SystemEventParam = string | number | boolean | null;
+
 export interface SystemEventPayload {
   type: string; // e.g., 'user_joined', 'correction_given', 'call_ended', 'language_exchange'
-  [key: string]: any;
+  [key: string]: SystemEventParam;
 }
 
 export interface ChatMessage {
