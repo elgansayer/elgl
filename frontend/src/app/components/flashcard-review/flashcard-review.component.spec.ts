@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { I18nService } from '../../services/i18n.service';
+import { ActivatedRoute } from '@angular/router';
 import { Flashcard, VocabularyStore } from '../../services/vocabulary.store';
 import { FlashcardReviewComponent } from './flashcard-review.component';
 
@@ -44,6 +45,7 @@ describe('FlashcardReviewComponent', () => {
     await TestBed.configureTestingModule({
       imports: [FlashcardReviewComponent],
       providers: [
+        { provide: ActivatedRoute, useValue: {} },
         {
           provide: I18nService,
           useValue: {

@@ -1218,6 +1218,7 @@ export class I18nService {
     'review.completeTitle': 'Review Complete!',
     'review.completeDesc': 'Great job! Come back regularly to keep your vocabulary fresh.',
     'review.restart': 'Start Again',
+    'review.practiceInAiConversationBtn': 'Practice in AI Conversation',
 
     // SRS Tour (ngx-joyride onboarding tooltips)
     'srsTour.startBtn': '🎓 Take the tour',
@@ -1545,6 +1546,10 @@ export class I18nService {
     'wordModal.saveLearningBtn': '🟡 Save to learning',
     'wordModal.markKnownBtn': '⚪ Mark known',
     'wordModal.resetBtn': 'Reset to new (Level 0 / Blue)',
+    'wordModal.srsLabel': 'Spaced Repetition',
+    'wordModal.learningBtn': 'Learning',
+    'wordModal.knownBtn': 'Known',
+    'wordModal.reviewFlashcardsBtn': 'Review Flashcards',
 
     // Voice Recorder
     'voiceRecorder.title': '🎙️ Voice Note Recorder',
