@@ -1,0 +1,160 @@
+<!-- @dsCard group="Components" name="Cover photo cropper" subtitle="Relay sheet · Spartan dialog · mobile + desktop" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cover photo cropper - Relay + Spartan</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color-scheme: light dark;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 1rem;
+        background: Canvas;
+        color: CanvasText;
+      }
+      main {
+        max-width: 64rem;
+        margin-inline: auto;
+        display: grid;
+        gap: 1rem;
+      }
+      .states {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+      }
+      .stage {
+        min-block-size: 28rem;
+        padding: 1rem;
+        display: grid;
+        place-items: center;
+        border-radius: 1rem;
+        background: color-mix(in srgb, CanvasText 55%, transparent);
+      }
+      .stage.light { color-scheme: light; }
+      .stage.dark { color-scheme: dark; }
+      .sheet {
+        inline-size: min(100%, 32rem);
+        max-block-size: calc(100dvh - 1.5rem);
+        overflow: auto;
+        display: grid;
+        gap: 1.25rem;
+        padding: 1rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 1.25rem;
+        background: color-mix(in srgb, CanvasText 7%, Canvas);
+        box-shadow: 0 12px 32px color-mix(in srgb, CanvasText 16%, transparent);
+      }
+      h2 {
+        margin: 0;
+        overflow-wrap: anywhere;
+        font-size: 1.125rem;
+        line-height: 1.25;
+      }
+      .crop-surface {
+        inline-size: 100%;
+        aspect-ratio: 3 / 1;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid ButtonBorder;
+        border-radius: .75rem;
+        background: color-mix(in srgb, CanvasText 5%, Canvas);
+      }
+      .photo {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(135deg, color-mix(in srgb, Highlight 38%, Canvas), transparent 62%),
+          linear-gradient(315deg, color-mix(in srgb, CanvasText 18%, Canvas), transparent 65%);
+        color: CanvasText;
+        font-weight: 700;
+      }
+      .crop-frame {
+        position: absolute;
+        inset: 12% 10%;
+        border: 2px solid Highlight;
+        box-shadow: 0 0 0 999px color-mix(in srgb, CanvasText 42%, transparent);
+        pointer-events: none;
+      }
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+      }
+      button {
+        inline-size: 100%;
+        min-block-size: 44px;
+        padding-inline: 1rem;
+        border: 1px solid ButtonBorder;
+        border-radius: .75rem;
+        background: ButtonFace;
+        color: ButtonText;
+        font: inherit;
+        font-weight: 700;
+      }
+      button.primary {
+        border-color: Highlight;
+        background: Highlight;
+        color: HighlightText;
+      }
+      button:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+      }
+      .wide .sheet { padding: 1.5rem; }
+      .wide .actions {
+        flex-direction: row;
+        justify-content: end;
+      }
+      .wide button { inline-size: auto; }
+      @media (min-width: 40rem) {
+        body { padding: 2rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Cover photo cropper</h1>
+      <p>
+        Spartan owns dialog and button mechanics. Relay owns semantic surfaces, sheet radius,
+        elevation, per-user primary accent, theme parity, and the mobile-first action layout.
+      </p>
+      <div class="states">
+        <section class="stage light" aria-label="Light theme 390 pixel cover photo cropper">
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="crop-mobile-title">
+            <h2 id="crop-mobile-title">Crop cover photo</h2>
+            <div class="crop-surface" aria-label="Cover photo crop preview">
+              <div class="photo">Cover preview</div>
+              <div class="crop-frame" aria-hidden="true"></div>
+            </div>
+            <div class="actions">
+              <button type="button">Cancel</button>
+              <button class="primary" type="button">Save cover</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="stage dark wide" aria-label="Dark theme desktop cover photo cropper">
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="crop-desktop-title">
+            <h2 id="crop-desktop-title">Crop cover photo</h2>
+            <div class="crop-surface" aria-label="Cover photo crop preview">
+              <div class="photo">Cover preview</div>
+              <div class="crop-frame" aria-hidden="true"></div>
+            </div>
+            <div class="actions">
+              <button type="button">Cancel</button>
+              <button class="primary" type="button">Save cover</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

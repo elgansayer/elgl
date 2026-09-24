@@ -16,7 +16,7 @@ Do not set `font-family` inside feature components. Do not use arbitrary Tailwin
 
 ### Display typography
 
-`font-display` uses Instrument Sans followed by the shared sans-serif fallback chain. It is optional and reserved for product-authored display contexts where the content is known to be suitable for that face, such as branded headings, large counters and short marketing copy.
+`font-display` prefers a locally available Instrument Sans followed by the shared sans-serif fallback chain. It does not load a remote font stylesheet, so application builds and startup remain independent of a third-party font host. The role is optional and reserved for product-authored display contexts where the content is known to be suitable for that face, such as branded headings, large counters and short marketing copy.
 
 `font-display` must not be applied to user messages, translated or target-language text, vocabulary/example sentences, corrections, reading passages, AI conversation content, or language labels whose script is not guaranteed in advance. If a container mixes a product-authored heading with language content, apply `font-display` only to the heading.
 
