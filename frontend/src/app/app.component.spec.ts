@@ -9,7 +9,7 @@ import { AuthService } from './services/auth.service';
 import { AppLockService } from './services/app-lock.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
-import { FcmService } from './services/fcm.service';
+import { FirebaseMessagingService } from './services/firebase-messaging.service';
 import { SafetyService } from './services/safety.service';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { UnreadCounterService } from './services/unread-counter.service';
@@ -59,7 +59,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
   };
 
   const fcmServiceMock = {
-    requestPermission: vi.fn(() => Promise.resolve()),
+    requestPermissionAndGetToken: vi.fn(() => Promise.resolve()),
     persistFcmToken: vi.fn(() => Promise.resolve()),
   };
 
@@ -131,7 +131,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
         { provide: AppLockService, useValue: appLockServiceMock },
         { provide: EconomyStore, useValue: economyStoreMock },
         { provide: CentrifugeService, useValue: centrifugeServiceMock },
-        { provide: FcmService, useValue: fcmServiceMock },
+        { provide: FirebaseMessagingService, useValue: fcmServiceMock },
         { provide: SafetyService, useValue: safetyServiceMock },
         { provide: ReportUserModalService, useValue: reportModalServiceMock },
         { provide: UnreadCounterService, useValue: unreadCounterMock },
@@ -175,7 +175,7 @@ it('should initialise unread counter', () => {
     expect(economyStoreMock.claimDailyCheckIn).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
-    expect(fcmServiceMock.requestPermission).toHaveBeenCalledTimes(1);
+    expect(fcmServiceMock.requestPermissionAndGetToken).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
   });
 

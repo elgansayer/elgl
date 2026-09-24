@@ -1,7 +1,7 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
-import { HelpFaqService, FAQResponse } from '../../services/help-faq.service';
+import { HelpService, HelpResult } from '../../services/help.service';
 import { I18nService } from '../../services/i18n.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -65,16 +65,16 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class SupportCentreComponent {
-  private helpFaqService = inject(HelpFaqService);
+  private helpService = inject(HelpService);
   private i18n = inject(I18nService);
 
   readonly selectedCategory = signal<string>('');
   readonly categories = signal<string[]>([]);
 
-  protected readonly faqResource = resource<FAQResponse, { category?: string }>({
+  protected readonly faqResource = resource<HelpResult, { category?: string }>({
     params: () => ({ category: this.selectedCategory() || undefined }),
     loader: async ({ params }) => {
-      const res = await this.helpFaqService.getFAQs(params.category);
+      const res = await this.helpService.fetchArticles({ category: params.category, limit: 50 });
       return res ?? { items: [], total: 0, page: 1, limit: 50 };
     },
     defaultValue: { items: [], total: 0, page: 1, limit: 50 },
@@ -86,7 +86,7 @@ export class SupportCentreComponent {
 
   private async loadCategories(): Promise<void> {
     try {
-      const cats = await this.helpFaqService.getCategories();
+      const cats = await this.helpService.fetchCategories();
       this.categories.set(cats ?? []);
     } catch {
       // fallback
