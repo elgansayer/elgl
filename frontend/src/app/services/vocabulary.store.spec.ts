@@ -130,6 +130,17 @@ describe('VocabularyStore', () => {
       expect(store.flashcardMap().get('HELLO')).toBeUndefined();
     });
 
+    it('should trim word tokens when building flashcardMap', async () => {
+      const paddedCard = { ...mockFlashcard, word_token: '  hello  ' };
+      const promise = store.loadAllFlashcards();
+
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([paddedCard]);
+      await promise;
+
+      expect(store.getWordStatus('hello').flashcard).toEqual(paddedCard);
+      expect(store.flashcardMap().has('  hello  ')).toBe(false);
+    });
+
     it('should handle error gracefully and set isLoading to false', async () => {
       const promise = store.loadAllFlashcards();
 
@@ -248,6 +259,41 @@ describe('VocabularyStore', () => {
       expect(store.allFlashcards()[0].translation).toBe('hola-updated');
       expect(store.flashcardMap().get('hello')?.translation).toBe('hola-updated');
     });
+
+    it('should replace a duplicate word regardless of case and surrounding whitespace', async () => {
+      store.allFlashcards.set([mockFlashcard]);
+      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
+
+      const savedCard = {
+        ...mockFlashcard,
+        id: '2',
+        word_token: '  HELLO  ',
+        translation: 'saludo',
+      };
+      const promise = store.saveWord({ word_token: '  HELLO  ', translation: 'saludo' });
+
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(savedCard);
+      await promise;
+
+      expect(store.allFlashcards()).toEqual([savedCard]);
+      expect(store.flashcardMap().size).toBe(1);
+      expect(store.flashcardMap().get('hello')).toEqual(savedCard);
+    });
+
+    it('should remove the obsolete map key when the server normalises a saved card token', async () => {
+      const existingCard = { ...mockFlashcard, word_token: 'old spelling' };
+      store.allFlashcards.set([existingCard]);
+      store.flashcardMap.set(new Map([['old spelling', existingCard]]));
+
+      const savedCard = { ...existingCard, word_token: 'new spelling' };
+      const promise = store.saveWord({ word_token: 'new spelling', translation: 'hola' });
+
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(savedCard);
+      await promise;
+
+      expect(store.flashcardMap().has('old spelling')).toBe(false);
+      expect(store.flashcardMap().get('new spelling')).toEqual(savedCard);
+    });
   });
 
   describe('updateSrsLevel', () => {
@@ -296,6 +342,21 @@ describe('VocabularyStore', () => {
       expect(store.allFlashcards()[1].srs_level).toBe(1);
       expect(store.flashcardMap().get('hello')?.srs_level).toBe(3);
       expect(store.flashcardMap().get('world')?.srs_level).toBe(1);
+    });
+
+    it('should remove the obsolete map key when an SRS response normalises the token', async () => {
+      const existingCard = { ...mockFlashcard, word_token: 'old spelling' };
+      store.allFlashcards.set([existingCard]);
+      store.flashcardMap.set(new Map([['old spelling', existingCard]]));
+
+      const updatedCard = { ...existingCard, word_token: 'new spelling', srs_level: 2 };
+      const promise = store.updateSrsLevel('1', 4);
+
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
+      await promise;
+
+      expect(store.flashcardMap().has('old spelling')).toBe(false);
+      expect(store.flashcardMap().get('new spelling')).toEqual(updatedCard);
     });
   });
 

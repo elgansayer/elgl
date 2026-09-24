@@ -98,13 +98,10 @@ module.exports = {
         },
       },
       fontFamily: {
-        // Body stays the platform-native stack deliberately - it's what
-        // reliably covers every script HelloTalk's users type in (CJK,
-        // Arabic, Cyrillic, Devanagari, etc). Never apply `font-display` to
-        // user-generated or translated content, only to guaranteed-Latin
-        // product copy (headlines, streak numerals, onboarding).
+        // Display copy uses the platform-native stack too. This keeps
+        // production builds deterministic and avoids fetching external font
+        // stylesheets while retaining broad script coverage.
         display: [
-          '"Instrument Sans"',
           'ui-sans-serif',
           '-apple-system',
           'BlinkMacSystemFont',
