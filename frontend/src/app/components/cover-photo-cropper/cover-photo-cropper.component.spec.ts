@@ -51,8 +51,12 @@ describe('CoverPhotoCropperComponent', () => {
     expect(dialog?.classList.contains('shadow-lift')).toBe(true);
     expect(dialog?.classList.contains('bg-surface-200')).toBe(true);
     expect(dialog?.classList.contains('border-surface-100')).toBe(true);
+    expect(dialog?.classList.contains('gap-5')).toBe(true);
     expect(dialog?.classList.contains('p-4')).toBe(true);
+    expect(dialog?.classList.contains('sm:max-w-lg')).toBe(true);
     expect(dialog?.classList.contains('sm:p-6')).toBe(true);
+    expect(dialog?.classList.contains('space-y-5')).toBe(false);
+    expect(dialog?.classList.contains('sm:max-w-sm')).toBe(false);
     expect(dialog?.classList.contains('shadow-2xl')).toBe(false);
   });
 

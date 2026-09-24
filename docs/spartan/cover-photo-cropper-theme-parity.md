@@ -13,6 +13,7 @@ This stage keeps the interaction contract established by #6072 and updates prese
 - The default Spartan primary button remains the per-user accent-aware Save action; Cancel remains the secondary action.
 - Actions stack full-width at the 390px mobile baseline and become an end-aligned row at the `sm` breakpoint.
 - Dialog padding is mobile-first (`p-4`) and increases on wider layouts (`sm:p-6`).
+- The wider sheet retains the 32rem `max-w-lg` composition instead of inheriting Helm's narrower default, and uses a single grid gap for consistent spacing.
 - Long translated titles can wrap without forcing horizontal overflow.
 - The dialog is bounded to the dynamic viewport and scrolls vertically when content cannot fit.
 - Directional layout remains logical/direction-neutral; no physical left/right utilities are introduced.
