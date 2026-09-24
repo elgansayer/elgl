@@ -39,6 +39,17 @@ export interface ArchiveRequestResult {
   expires_at?: string;
 }
 
+export interface PrivacyStatus {
+  is_deletion_pending: boolean;
+  scheduled_for_deletion_at: string | null;
+  latest_archive: {
+    request_id: string;
+    status: ArchiveStatus;
+    download_url?: string;
+    expires_at: string | null;
+  } | null;
+}
+
 interface PageResult {
   data: unknown[] | null;
   error: { message?: string } | null;
@@ -198,6 +209,68 @@ export class PrivacyService {
         'Unable to build a complete data archive. Please try again.',
       );
     }
+  }
+
+  async getStatus(userId: string): Promise<PrivacyStatus> {
+    const supabase = this.supabaseService.getClient();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('is_deletion_pending, scheduled_for_deletion_at')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      this.logger.error('gdpr_status_user_lookup_failed');
+      throw new ServiceUnavailableException('Unable to load privacy status');
+    }
+
+    const { data: latestRaw, error: latestError } = await supabase
+      .from('archive_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestError) {
+      this.logger.error('gdpr_status_archive_lookup_failed');
+      throw new ServiceUnavailableException('Unable to load privacy status');
+    }
+
+    const latest = latestRaw as unknown as ArchiveRequestRow | null;
+    let latestArchive: PrivacyStatus['latest_archive'] = null;
+    if (latest) {
+      const expiresAt = latest.expires_at
+        ? new Date(latest.expires_at).getTime()
+        : Number.NaN;
+      const isExpired =
+        latest.status === 'ready' &&
+        (!Number.isFinite(expiresAt) || expiresAt <= Date.now());
+      const status: ArchiveStatus = isExpired ? 'expired' : latest.status;
+      let downloadUrl: string | undefined;
+
+      if (status === 'ready' && latest.object_key) {
+        try {
+          downloadUrl = (await this.signReadyArchive(latest)).download_url;
+        } catch {
+          // Deletion status must remain available during a transient signing
+          // outage. signReadyArchive records a redacted operational event.
+        }
+      }
+
+      latestArchive = {
+        request_id: latest.id,
+        status,
+        ...(downloadUrl ? { download_url: downloadUrl } : {}),
+        expires_at: latest.expires_at,
+      };
+    }
+
+    return {
+      is_deletion_pending: Boolean(user.is_deletion_pending),
+      scheduled_for_deletion_at: user.scheduled_for_deletion_at ?? null,
+      latest_archive: latestArchive,
+    };
   }
 
   async purgeExpiredArchives(limit = 100): Promise<number> {

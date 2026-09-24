@@ -73,7 +73,14 @@ describe('PrivacyService', () => {
         return { data: rows.slice(from, to + 1), error };
       }),
       single: vi.fn(async () => ({
-        data: table === 'users' ? { id: 'user-1' } : null,
+        data:
+          table === 'users'
+            ? {
+                id: 'user-1',
+                is_deletion_pending: true,
+                scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
+              }
+            : null,
         error: queryErrors.get(table) ?? null,
       })),
       maybeSingle: vi.fn(async () => ({
@@ -295,6 +302,94 @@ describe('PrivacyService', () => {
         { table: 'moments', from: 0, to: 499 },
         { table: 'moments', from: 500, to: 999 },
       ]);
+    });
+  });
+
+  describe('getStatus', () => {
+    it('restores pending deletion and a fresh signed URL for the latest ready archive', async () => {
+      latestArchive = {
+        id: '55555555-5555-4555-8555-555555555555',
+        user_id: 'user-1',
+        status: 'ready',
+        object_key: 'opaque.json',
+        expires_at: '2099-09-01T00:00:00.000Z',
+        created_at: '2026-08-30T00:00:00.000Z',
+      };
+
+      await expect(service.getStatus('user-1')).resolves.toEqual({
+        is_deletion_pending: true,
+        scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
+        latest_archive: {
+          request_id: '55555555-5555-4555-8555-555555555555',
+          status: 'ready',
+          download_url: 'https://storage.example/signed/archive?token=short',
+          expires_at: '2099-09-01T00:00:00.000Z',
+        },
+      });
+      expect(mockCreateSignedUrl).toHaveBeenCalledWith('opaque.json', 300);
+    });
+
+    it('maps a stale ready row to expired without signing it', async () => {
+      latestArchive = {
+        id: '66666666-6666-4666-8666-666666666666',
+        user_id: 'user-1',
+        status: 'ready',
+        object_key: 'stale.json',
+        expires_at: '2000-01-01T00:00:00.000Z',
+        created_at: '1999-12-25T00:00:00.000Z',
+      };
+
+      const result = await service.getStatus('user-1');
+
+      expect(result.latest_archive).toMatchObject({ status: 'expired' });
+      expect(result.latest_archive).not.toHaveProperty('download_url');
+      expect(mockCreateSignedUrl).not.toHaveBeenCalled();
+    });
+
+    it('fails closed on a malformed ready-archive expiry', async () => {
+      latestArchive = {
+        id: '88888888-8888-4888-8888-888888888888',
+        user_id: 'user-1',
+        status: 'ready',
+        object_key: 'malformed-expiry.json',
+        expires_at: 'not-a-date',
+        created_at: '2026-08-30T00:00:00.000Z',
+      };
+
+      const result = await service.getStatus('user-1');
+
+      expect(result.latest_archive).toMatchObject({ status: 'expired' });
+      expect(result.latest_archive).not.toHaveProperty('download_url');
+      expect(mockCreateSignedUrl).not.toHaveBeenCalled();
+    });
+
+    it('keeps deletion state available during a transient signing failure', async () => {
+      latestArchive = {
+        id: '77777777-7777-4777-8777-777777777777',
+        user_id: 'user-1',
+        status: 'ready',
+        object_key: 'opaque.json',
+        expires_at: '2099-09-01T00:00:00.000Z',
+        created_at: '2026-08-30T00:00:00.000Z',
+      };
+      mockCreateSignedUrl.mockResolvedValue({
+        data: null,
+        error: { message: 'provider detail' },
+      });
+
+      const result = await service.getStatus('user-1');
+
+      expect(result.is_deletion_pending).toBe(true);
+      expect(result.latest_archive).toMatchObject({ status: 'ready' });
+      expect(result.latest_archive).not.toHaveProperty('download_url');
+    });
+
+    it('fails closed when persisted deletion state cannot be read', async () => {
+      queryErrors.set('users', { message: 'DB unavailable' });
+
+      await expect(service.getStatus('user-1')).rejects.toThrow(
+        ServiceUnavailableException,
+      );
     });
   });
 
