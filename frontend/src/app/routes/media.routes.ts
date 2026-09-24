@@ -2,6 +2,13 @@ import { Routes } from '@angular/router';
 
 export const mediaRoutes: Routes = [
   {
+    path: 'audio-rooms/archive',
+    loadComponent: () =>
+      import('../components/audio-room-archive/audio-room-archive.component').then(
+        (m) => m.AudioRoomArchiveComponent,
+      ),
+  },
+  {
     path: 'audio-rooms',
     loadComponent: () =>
       import('../components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
