@@ -90,20 +90,23 @@ export class UsersService {
     }
     profile.corrector_score = correctorScore;
 
+    // ⚡ Bolt Optimization: Replace sequential database queries with a concurrent Promise.all execution to improve profile latency.
     // Attach follower / following counts
     let followersCount = 0;
     let followingCount = 0;
     try {
-      const { count: fc } = await supabase
-        .from('user_follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', userId);
-      const { count: fng } = await supabase
-        .from('user_follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('follower_id', userId);
-      followersCount = fc ?? 0;
-      followingCount = fng ?? 0;
+      const [fcResult, fngResult] = await Promise.all([
+        supabase
+          .from('user_follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', userId),
+        supabase
+          .from('user_follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('follower_id', userId),
+      ]);
+      followersCount = fcResult.count ?? 0;
+      followingCount = fngResult.count ?? 0;
     } catch {
       // leave zero.
     }
