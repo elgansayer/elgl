@@ -316,7 +316,7 @@ The user's role: Someone practising casual English.
     }
 
     let knowledgeContext = '';
-    if (learnerKnowledge) {
+    if (learnerKnowledge && learnerKnowledge.knowledgeItems) {
       const strugglingItems = Array.from(
         learnerKnowledge.knowledgeItems.values(),
       )
