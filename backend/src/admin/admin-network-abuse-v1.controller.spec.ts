@@ -105,4 +105,34 @@ describe('AdminNetworkAbuseV1Controller emergency throttles', () => {
       }),
     );
   });
+
+  describe('rate limiting metadata', () => {
+    const throttleLimitKey = 'THROTTLER:LIMITdefault';
+    const throttleTtlKey = 'THROTTLER:TTLdefault';
+    const protectedEndpoints: Array<{
+      method: keyof AdminNetworkAbuseV1Controller;
+      limit: number;
+      ttl: number;
+    }> = [
+      { method: 'lookup', limit: 5, ttl: 60000 },
+      { method: 'impact', limit: 5, ttl: 60000 },
+      { method: 'inspectRateLimit', limit: 5, ttl: 60000 },
+      { method: 'createBlock', limit: 5, ttl: 60000 },
+      { method: 'revokeBlock', limit: 5, ttl: 60000 },
+      { method: 'createRateLimit', limit: 5, ttl: 60000 },
+      { method: 'revokeRateLimit', limit: 5, ttl: 60000 },
+      { method: 'createAllowlist', limit: 5, ttl: 60000 },
+      { method: 'revokeAllowlist', limit: 5, ttl: 60000 },
+    ];
+
+    it.each(protectedEndpoints)(
+      'limits $method to $limit requests per $ttl ms window',
+      ({ method, limit, ttl }) => {
+        const handler = AdminNetworkAbuseV1Controller.prototype[method];
+
+        expect(Reflect.getMetadata(throttleLimitKey, handler)).toBe(limit);
+        expect(Reflect.getMetadata(throttleTtlKey, handler)).toBe(ttl);
+      },
+    );
+  });
 });
