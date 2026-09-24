@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-08-30 - [Overlap Independent Bulk Queries in getComments]
+**Learning:** `getComments` issues two fixed-count bulk queries after loading comments. Running those independent lookups sequentially adds their network latencies even though neither result depends on the other.
+**Action:** Start independent bulk lookups together with `Promise.all` when their combined request load is bounded and partial results are not required.
