@@ -1,0 +1,117 @@
+
+> frontend@2.0.0 prestart
+> npm run generate:help-about
+
+
+> frontend@2.0.0 generate:help-about
+> node scripts/generate-help-about-data.mjs
+
+
+> frontend@2.0.0 start
+> ng serve
+
+❯ Building...
+✔ Building...
+Browser bundles
+Initial chunk files  | Names                         |  Raw size
+main.js              | main                          | 327.55 kB |
+styles.css           | styles                        | 217.49 kB |
+chunk-YWI3MTLU.js    | -                             | 131.78 kB |
+chunk-DBLK5DFG.js    | -                             |  43.24 kB |
+chunk-FBVUFQH4.js    | -                             |  33.01 kB |
+chunk-CHY7D776.js    | -                             |  30.34 kB |
+chunk-SBCCX7VY.js    | -                             |  20.89 kB |
+chunk-L2GQMMPG.js    | -                             |  16.61 kB |
+chunk-HGROYM4D.js    | -                             |  13.30 kB |
+chunk-MF7WQMLN.js    | -                             |  12.98 kB |
+chunk-RAMSAR6V.js    | -                             |  12.79 kB |
+chunk-2BPDATPC.js    | -                             |   9.66 kB |
+chunk-BAWC46WP.js    | -                             |   7.40 kB |
+chunk-LOVKDROT.js    | -                             |   6.44 kB |
+chunk-DWNOVJWK.js    | -                             |   5.55 kB |
+chunk-SMWGOSTM.js    | -                             |   5.11 kB |
+chunk-LX2LJ4EJ.js    | -                             |   3.79 kB |
+chunk-D22Z6JLW.js    | -                             |   3.63 kB |
+chunk-NFNIJTKU.js    | -                             |   2.89 kB |
+chunk-6DJEDA3G.js    | -                             |   2.11 kB |
+chunk-TVU2WRJH.js    | -                             |   2.04 kB |
+chunk-6TBHVGPJ.js    | -                             |   1.41 kB |
+chunk-2FUFL6OG.js    | -                             |   1.19 kB |
+chunk-ZYGDUXHH.js    | -                             |   1.04 kB |
+chunk-LDTWNNXQ.js    | -                             | 953 bytes |
+
+                     | Initial total                 | 913.20 kB
+
+Lazy chunk files     | Names                         |  Raw size
+chunk-IPCHNMQ4.js    | chat-room-page-component      | 441.00 kB |
+chunk-AGAQ265B.js    | audio-room-component          | 318.77 kB |
+chunk-UHYW7C2I.js    | discovery-component           | 240.21 kB |
+chunk-6H3D37E6.js    | profile-component             | 211.67 kB |
+chunk-ZRVYYDTQ.js    | moments-feed-component        | 190.45 kB |
+chunk-J74HTIPL.js    | settings-component            |  85.58 kB |
+chunk-BY5G7CAQ.js    | chat-list-component           |  78.84 kB |
+chunk-JAMAHBCC.js    | flashcard-deck-component      |  74.11 kB |
+chunk-CDVMP4DD.js    | developer-dashboard-component |  70.91 kB |
+chunk-AG7D5BJM.js    | reading-engine-component      |  69.52 kB |
+chunk-OYY6FHTN.js    | -                             |  62.84 kB |
+chunk-WDMA2ZFZ.js    | -                             |  58.74 kB |
+chunk-52XZYK57.js    | resource-library-component    |  58.58 kB |
+chunk-NMASEFZ7.js    | admin-users-component         |  56.56 kB |
+chunk-N3LBIPTY.js    | flashcard-review-component    |  51.87 kB |
+...and 120 more lazy chunks files. Use "--verbose" to show all the files.
+
+
+Server bundles
+Initial chunk files  | Names                         |  Raw size
+main.server.mjs      | main.server                   | 329.06 kB |
+chunk-L2BZA4DO.mjs   | -                             | 131.76 kB |
+chunk-DNJR7CYJ.mjs   | -                             |  43.24 kB |
+chunk-ZNDE3AUZ.mjs   | -                             |  33.00 kB |
+chunk-6QT6UTEM.mjs   | -                             |  30.33 kB |
+chunk-QPMFSIT5.mjs   | -                             |  20.88 kB |
+chunk-B3OGEJDK.mjs   | -                             |  16.60 kB |
+chunk-IWBFPTHR.mjs   | -                             |  13.28 kB |
+chunk-TSJL3GXU.mjs   | -                             |  12.97 kB |
+chunk-WI7OK3QR.mjs   | -                             |  12.78 kB |
+chunk-YKE66PSX.mjs   | -                             |   9.65 kB |
+chunk-U6WIESET.mjs   | -                             |   7.38 kB |
+chunk-XAZIS5UF.mjs   | -                             |   6.43 kB |
+chunk-OVGKTLRE.mjs   | -                             |   5.53 kB |
+chunk-6JE34O7Q.mjs   | -                             |   5.09 kB |
+chunk-QHQL76ZR.mjs   | -                             |   3.78 kB |
+chunk-SSY5HHKZ.mjs   | -                             |   3.62 kB |
+chunk-M2P4ITKO.mjs   | -                             |   2.87 kB |
+chunk-JHFZ2H4R.mjs   | -                             |   2.10 kB |
+chunk-FXWTWSRH.mjs   | -                             |   2.03 kB |
+server.mjs           | server                        |   1.85 kB |
+chunk-HDC3Z6CT.mjs   | -                             |   1.39 kB |
+chunk-CFZ6IJZT.mjs   | -                             |   1.18 kB |
+chunk-U55UVRSJ.mjs   | -                             |   1.03 kB |
+chunk-3OWWI3O2.mjs   | -                             | 939 bytes |
+polyfills.server.mjs | polyfills.server              | 268 bytes |
+
+Lazy chunk files     | Names                         |  Raw size
+chunk-NZOTFIAI.mjs   | chat-room-page-component      | 441.01 kB |
+chunk-Y2XQ6RUC.mjs   | audio-room-component          | 318.79 kB |
+chunk-73A3VZKO.mjs   | discovery-component           | 240.22 kB |
+chunk-QNFR2ZSK.mjs   | profile-component             | 211.68 kB |
+chunk-QELYOU33.mjs   | moments-feed-component        | 190.46 kB |
+chunk-JPR276ZW.mjs   | settings-component            |  85.58 kB |
+chunk-OLE3NHEF.mjs   | chat-list-component           |  78.84 kB |
+chunk-O5IMNJKD.mjs   | flashcard-deck-component      |  74.11 kB |
+chunk-5C2OVTLZ.mjs   | developer-dashboard-component |  70.92 kB |
+chunk-3AUW4LCF.mjs   | reading-engine-component      |  69.52 kB |
+chunk-WZF5YQOU.mjs   | -                             |  62.83 kB |
+chunk-NUNPE3V6.mjs   | -                             |  58.73 kB |
+chunk-2YYLNXWM.mjs   | resource-library-component    |  58.58 kB |
+chunk-Z6FORDEQ.mjs   | admin-users-component         |  56.56 kB |
+chunk-VFMOLBU5.mjs   | flashcard-review-component    |  51.87 kB |
+...and 119 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [29.831 seconds] - 2026-09-16T06:21:14.098Z
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  ➜  Local:   http://localhost:4200/
+6:21:15 AM [vite] (client) [optimizer] bundling dependencies...
+6:21:16 AM [vite] (ssr) [optimizer] bundling dependencies...
