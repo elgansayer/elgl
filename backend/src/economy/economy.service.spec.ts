@@ -660,6 +660,11 @@ describe('EconomyService', () => {
         data: giftRow,
         error: null,
       });
+      // 2nd call: validate that the receiver hosts the attributed room
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { host_id: 'receiver-1' },
+        error: null,
+      });
       // 2nd single() call: getBalance(senderId)
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { id: 'sender-1', coins_balance: 200 },
@@ -727,6 +732,35 @@ describe('EconomyService', () => {
         coins_remaining: 150,
         gift: giftRow,
       });
+    });
+
+    it('rejects room attribution when the receiver is not its host', async () => {
+      const giftRow = {
+        id: 'gift-1',
+        name: 'Heart',
+        cost_coins: 50,
+        icon: 'heart.png',
+        animation_type: 'pop',
+      };
+      mockQueryBuilder.maybeSingle
+        .mockResolvedValueOnce({ data: giftRow, error: null })
+        .mockResolvedValueOnce({
+          data: { host_id: 'different-host' },
+          error: null,
+        });
+
+      await expect(
+        service.sendGift('sender-1', {
+          gift_id: 'gift-1',
+          receiver_id: 'receiver-1',
+          room_id: 'room-101',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith(
+        'gift_transactions',
+      );
     });
 
     it('should publish to user channel when room_id is not provided', async () => {

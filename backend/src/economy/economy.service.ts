@@ -10,6 +10,7 @@ import { HttpService } from '@nestjs/axios';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
 import Stripe from 'stripe';
+import { randomInt } from 'node:crypto';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -574,7 +575,7 @@ export class EconomyService {
     }
 
     // Grant between 5 and 10 coins
-    const reward = Math.floor(Math.random() * 6) + 5;
+    const reward = randomInt(5, 11);
     const { coins_balance } = await this.getBalance(userId);
     const newBalance = coins_balance + reward;
 
@@ -1214,6 +1215,27 @@ export class EconomyService {
       );
     }
     const gift = giftData;
+
+    if (dto.room_id) {
+      const roomId = dto.room_id;
+      const roomResponse = await withExponentialBackoff(
+        () =>
+          supabase
+            .from('audio_rooms')
+            .select('host_id')
+            .eq('id', roomId)
+            .maybeSingle(),
+        'sendGift',
+        { logger: this.logger },
+      );
+      if (
+        roomResponse.error ||
+        !roomResponse.data ||
+        roomResponse.data.host_id !== dto.receiver_id
+      ) {
+        throw new BadRequestException();
+      }
+    }
 
     const { coins_balance: senderBalance } = await this.getBalance(senderId);
     if (senderBalance < gift.cost_coins) {
