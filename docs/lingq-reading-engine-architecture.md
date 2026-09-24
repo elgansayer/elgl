@@ -263,14 +263,14 @@ All cached responses include Cloudflare's `CDN-Cache-Control` header for edge ca
 
 ```typescript
 // Inputs
-text: InputSignal<string>          // Raw text to tokenise
-language: InputSignal<string>      // ISO 639-1 locale for Intl.Segmenter
+text = input<string>('');          // Raw text to tokenise
+language = input('en');            // ISO 639-1 locale for Intl.Segmenter
 
 // Outputs
-wordClicked: OutputEmitter<{       // Fires on word token click
+wordClicked = output<{             // Fires on word token click
   token: string
   context: string
-}>
+}>();
 ```
 
 Internally uses `Intl.Segmenter(language, { granularity: 'word' })` to parse text into clickable tokens. Integrates with `VocabularyStore` for live colour highlighting based on SRS level and `TransliterationService` for script conversion.
