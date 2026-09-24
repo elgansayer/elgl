@@ -11,6 +11,7 @@ import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
+import { HEADERS_METADATA } from '@nestjs/common/constants';
 
 vi.mock('./sanitise-recommendations.helper', () => ({
   sanitiseRecommendationsData: <T>(value: T): T => value,
@@ -68,6 +69,18 @@ describe('RecommendationsController', () => {
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
+
+  it.each(['getDiscoveryRecommendations', 'getForYou', 'getDaily'] as const)(
+    'marks %s responses private and non-cacheable',
+    (methodName) => {
+      expect(
+        Reflect.getMetadata(
+          HEADERS_METADATA,
+          RecommendationsController.prototype[methodName],
+        ),
+      ).toContainEqual({ name: 'Cache-Control', value: 'private, no-store' });
+    },
+  );
 
   describe('GET /recommendations/discovery', () => {
     it('returns the authenticated user recommendation set', async () => {

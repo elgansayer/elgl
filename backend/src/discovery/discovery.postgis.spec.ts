@@ -26,6 +26,7 @@ describe('DiscoveryService PostGIS search contract', () => {
       'select',
       'neq',
       'eq',
+      'is',
       'contains',
       'gt',
       'gte',
