@@ -175,6 +175,13 @@ grouped feature areas in this doc will have at least one synced representative s
 
 **Sync coverage target**: every route above gets at least one synced screen preview; every modal in §3 gets one; every primitive in §2 gets one. Track completion as each Phase 4 feature-folder PR merges - update this doc's checkboxes (add `- [ ]`/`- [x]` per group above) as sync work actually happens, rather than leaving this as a static snapshot.
 
+### Component sync completion log
+
+- [x] `components/daily-learning-tip` - Spartan UI 0311-0315 completed (2026-08-24). The converted
+  non-interactive Relay card has active unit and Relay coverage, and
+  `frontend/design-preview/screens/home.html` records light 390px loading/fallback plus dark wide
+  RTL success states aligned with the runtime `role="region"` and `aria-busy` contract.
+
 ## 6a. Major finding (session 2): unresolved git conflict markers checked into `main`
 
 While migrating `report-user-modal` and `appearance-settings` this session, found both had literal
