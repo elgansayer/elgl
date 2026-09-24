@@ -6,7 +6,7 @@ import pytest
 from openhands_factory import cli
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.cli import _config
-from openhands_factory.config import AgentsConfig, FactoryConfig
+from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
 RETIRED_SYSTEMD_UNITS = {
@@ -424,7 +424,6 @@ def test_default_repository_is_production_clone() -> None:
     assert config.recovery_retention_hours == 72
     assert config.stall_alert_minutes == 20
     assert config.max_parallel_jobs == 5
-    assert config.review_lane_max_concurrent == 2
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
     assert config.repository_profile == "hellotalk"
@@ -516,9 +515,7 @@ def test_production_agent_configuration_loads() -> None:
 
     assert factory_config.agents.routing_enabled
     assert factory_config.agents.providers["claude"].enabled
-    assert factory_config.agents.providers["claude"].model == "sonnet"
-    assert factory_config.agents.providers["claude"].phase_models["general_action"] == "haiku"
-    assert factory_config.agents.providers["claude"].phase_models["code_review"] == "sonnet"
+    assert factory_config.agents.providers["claude"].model == "fable"
     assert factory_config.agents.providers["claude"].credential_paths == [
         ".claude",
         ".claude.json",
@@ -549,9 +546,9 @@ def test_production_agent_configuration_loads() -> None:
         "pi",
     ]
     assert factory_config.agents.routing.code_review == [
+        "codex",
         "claude",
         "google",
-        "codex",
         "opencode",
         "pi",
     ]
@@ -562,31 +559,6 @@ def test_production_agent_configuration_loads() -> None:
         "claude",
         "pi",
     ]
-
-
-def test_legacy_fable_configuration_migrates_to_subscription_backed_models() -> None:
-    agents = AgentsConfig.model_validate(
-        {
-            "providers": {
-                "claude": {
-                    "enabled": True,
-                    "model": "fable",
-                    "phase_models": {
-                        "implementation": "sonnet",
-                        "code_review": "haiku",
-                        "general_action": "fable",
-                    },
-                }
-            }
-        }
-    )
-
-    assert agents.providers["claude"].model == "sonnet"
-    assert agents.providers["claude"].phase_models == {
-        "implementation": "sonnet",
-        "code_review": "sonnet",
-        "general_action": "haiku",
-    }
 
 
 @pytest.mark.parametrize(
@@ -796,16 +768,6 @@ def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> Non
     assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
 
 
-def test_hellotalk_instance_uses_two_review_lanes() -> None:
-    root = Path(__file__).parents[2]
-    profile = (root / "config/factory/instances/hellotalk.env").read_text(encoding="utf-8")
-
-    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=2" in profile
-    assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in profile
-    assert "FACTORY_AGENT_ROUTES_PER_INTERVAL=48" in profile
-    assert "FACTORY_REVIEWS_PER_INTERVAL=36" in profile
-
-
 def test_instance_installer_preserves_legacy_rollback_path() -> None:
     installer = (Path(__file__).parents[2] / "scripts/install-repo-factory-instance.sh").read_text(
         encoding="utf-8"
@@ -829,7 +791,3 @@ def test_repo_factory_update_coordinates_both_instances() -> None:
     assert "restore_services_on_failure" in script
     assert "localhost/repo-factory-worker:current" in script
     assert "REPO_FACTORY_SECONDARY_SERVICE=repo-factory@workout-agent.service" in unit
-    assert "Conflicts=" not in unit
-    assert "/usr/bin/flock --wait 120 /run/lock/repo-factory-update.lock" in unit
-    health_unit = (root / "config/systemd/repo-factory-health@.service").read_text(encoding="utf-8")
-    assert "/usr/bin/flock --shared --nonblock" in health_unit

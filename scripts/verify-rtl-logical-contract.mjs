@@ -16,6 +16,7 @@ let base = process.env.RTL_LOGICAL_BASE_SHA;
 if (!base) {
   try {
     base = execFileSync('git', ['merge-base', 'HEAD', 'origin/main'], { cwd: root, encoding: 'utf8' }).trim();
+    if (!base) base = 'HEAD^';
   } catch {
     base = 'HEAD^';
   }

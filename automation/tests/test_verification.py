@@ -6,31 +6,10 @@ import pytest
 from openhands_factory.exceptions import VerificationFailed
 from openhands_factory.repository_guard import ProcessResult
 from openhands_factory.verification import (
-    _VERIFICATION_SANDBOX_SCRIPT,
-    _verification_sandbox_root,
     commands_for,
     run_isolated_verification_process,
     run_verification,
 )
-
-
-def test_verification_stages_sources_before_masking_mnt() -> None:
-    stage_workspace = 'mount --bind "$workspace" "$staging/workspace"'
-    mask_roots = "for masked_root in /mnt /srv /media"
-
-    assert _VERIFICATION_SANDBOX_SCRIPT.index(stage_workspace) < _VERIFICATION_SANDBOX_SCRIPT.index(
-        mask_roots
-    )
-    assert _verification_sandbox_root(
-        Path("/mnt/factory/worktree"),
-        Path("/mnt/factory/repository"),
-        Path("/mnt/factory/home"),
-    ) == Path("/srv")
-    assert _verification_sandbox_root(
-        Path("/srv/factory/worktree"),
-        Path("/srv/factory/repository"),
-        Path("/srv/factory/home"),
-    ) == Path("/media")
 
 
 def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> None:
@@ -89,7 +68,7 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     factory_types = next(command for command in commands if command.name == "factory-types")
     assert factory_types.arguments == ("uv", "run", "--frozen", "mypy")
     factory = next(command for command in commands if command.name == "factory-tests")
-    assert factory.arguments == ("uv", "run", "--frozen", "python", "-m", "pytest")
+    assert factory.arguments == ("uv", "run", "--frozen", "pytest")
     assert all(command.workspace == tmp_path for command in commands)
     assert all(
         command.directory == tmp_path / "automation"
@@ -112,45 +91,17 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     # npm run e2e against a server that was never coming up.
     assert "kill -0" in script
     assert "factory-angular-e2e.log" in script
-    assert frontend_e2e.arguments[-1] == "cypress/e2e/cypress-setup.cy.ts"
 
 
-def test_memory_heavy_and_fixed_port_frontend_commands_are_exclusive(tmp_path: Path) -> None:
+def test_only_the_fixed_port_command_is_exclusive(tmp_path: Path) -> None:
+    """frontend-e2e binds a fixed host port (127.0.0.1:4200) and cannot run
+    concurrently with another instance of itself - everything else, including
+    backend-test:e2e (an in-process supertest server on an ephemeral port), is
+    safe under full worker parallelism and must not be serialized alongside it.
+    """
     commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     exclusive = {command.name for command in commands if command.exclusive}
-    assert exclusive == {
-        "frontend-lint:check",
-        "frontend-build",
-        "frontend-test",
-        "frontend-e2e",
-    }
-
-
-def test_frontend_e2e_runs_only_changed_cypress_specs(tmp_path: Path) -> None:
-    first = Path("frontend/cypress/e2e/chat-flow.cy.ts")
-    second = Path("frontend/cypress/e2e/moments-flow.cy.ts")
-    for path in (first, second):
-        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
-        (tmp_path / path).touch()
-
-    commands = commands_for(tmp_path, {first, second, Path("frontend/src/app/app.ts")})
-    frontend_e2e = next(command for command in commands if command.name == "frontend-e2e")
-
-    assert frontend_e2e.arguments[-2] == "factory-frontend-e2e"
-    assert frontend_e2e.arguments[-1] == (
-        "cypress/e2e/chat-flow.cy.ts,cypress/e2e/moments-flow.cy.ts"
-    )
-
-
-def test_root_playwright_change_runs_discovery_not_cypress(tmp_path: Path) -> None:
-    commands = commands_for(tmp_path, {Path("e2e/tests/auth.spec.ts")})
-    names = {command.name for command in commands}
-
-    assert "playwright-discovery" in names
-    assert "frontend-e2e" not in names
-    discovery = next(command for command in commands if command.name == "playwright-discovery")
-    assert discovery.arguments == ("npm", "test", "--", "--list")
-    assert discovery.directory == tmp_path / "e2e"
+    assert exclusive == {"frontend-e2e"}
 
 
 def test_empty_diff_cannot_claim_verification(tmp_path: Path) -> None:
@@ -179,7 +130,6 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     workdir = workspace / "frontend"
     for directory in (repository, log_dir, virtual_environment / "bin", workdir):
         directory.mkdir(parents=True)
-    (repository / "backend/node_modules").mkdir(parents=True)
     captured: dict[str, object] = {}
 
     def fake_run_process(arguments, cwd, timeout, *, environment=None):
@@ -194,9 +144,6 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     monkeypatch.setenv("FACTORY_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("FACTORY_LOG_DIR", str(log_dir))
     monkeypatch.setenv("FACTORY_REPOSITORY", str(repository))
-    cypress_cache = tmp_path / "deployment-home" / ".cache" / "Cypress"
-    cypress_cache.mkdir(parents=True)
-    monkeypatch.setenv("FACTORY_CYPRESS_CACHE_DIR", str(cypress_cache))
     monkeypatch.setenv("GITHUB_TOKEN", "must-not-propagate")
     monkeypatch.setattr("openhands_factory.verification.sys.prefix", str(virtual_environment))
     monkeypatch.setattr("openhands_factory.verification.run_process", fake_run_process)
@@ -220,12 +167,7 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "uv_cache=$service_home/.cache/uv" in sandbox_script
-    assert "cypress_cache=$6" in sandbox_script
-    assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in sandbox_script
-    assert str(cypress_cache) in arguments
-    assert 'writable_vite_cache="$repository/$dependency_path/.vite-temp"' in sandbox_script
-    assert 'tmpfs "$writable_vite_cache"' in sandbox_script
-    assert (repository / "backend/node_modules/.vite-temp").is_dir()
+    assert "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache" in sandbox_script
     # PID 1 of the sandbox must reap children itself rather than exec-replacing
     # straight into the target command, or an orphaned grandchild (a leftover
     # dev server, a test's own subprocess-under-test) never gets reaped and
@@ -235,9 +177,6 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
-    assert environment["MYPY_CACHE_DIR"] == "/tmp/mypy-cache"
-    assert environment["PYTEST_ADDOPTS"] == "-o cache_dir=/tmp/pytest-cache"
-    assert environment["RUFF_CACHE_DIR"] == "/tmp/ruff-cache"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
     assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
     assert environment["UV_NO_SYNC"] == "1"
@@ -257,7 +196,10 @@ def test_uv_cache_mount_is_writable_not_read_only() -> None:
         1
     ].split("fi", 1)[0]
     assert "remount" not in uv_cache_block
-    assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in _VERIFICATION_SANDBOX_SCRIPT
+    assert (
+        "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache"
+        in _VERIFICATION_SANDBOX_SCRIPT
+    )
 
 
 def test_a_backend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:

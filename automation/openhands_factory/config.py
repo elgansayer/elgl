@@ -182,7 +182,7 @@ class AgentsConfig(BaseModel):
                 enabled=True,
                 command="claude",
                 auth_mode="subscription",
-                model="sonnet",
+                model="fable",
                 credential_paths=[".claude", ".claude.json"],
                 runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
                 phase_models={
@@ -191,9 +191,9 @@ class AgentsConfig(BaseModel):
                     "security_review": "opus",
                     "implementation": "sonnet",
                     "quality_repair": "haiku",
-                    "code_review": "sonnet",
+                    "code_review": "haiku",
                     "ci_repair": "haiku",
-                    "general_action": "haiku",
+                    "general_action": "fable",
                 },
             ),
             "codex": ProviderConfig(
@@ -282,22 +282,6 @@ class AgentsConfig(BaseModel):
                 normalised_providers[name] = provider
                 continue
             normalised_provider = dict(provider)
-            if name == "claude":
-                # Root-managed production configuration can lag the package during
-                # a rolling deployment. Fable now requires separate usage credits,
-                # so migrate that retired alias at load time until the root updater
-                # installs the current Sonnet/Haiku configuration.
-                migrating_fable = normalised_provider.get("model") == "fable"
-                if migrating_fable:
-                    normalised_provider["model"] = "sonnet"
-                phase_models = normalised_provider.get("phase_models")
-                if isinstance(phase_models, dict):
-                    migrated_phase_models = dict(phase_models)
-                    if migrated_phase_models.get("general_action") == "fable":
-                        migrated_phase_models["general_action"] = "haiku"
-                    if migrating_fable and migrated_phase_models.get("code_review") == "haiku":
-                        migrated_phase_models["code_review"] = "sonnet"
-                    normalised_provider["phase_models"] = migrated_phase_models
             normalised_provider.setdefault(
                 "transport", "openhands-sdk" if name == "openhands" else "cli"
             )
@@ -483,7 +467,7 @@ class FactoryConfig(BaseModel):
     quarantine_recovery_minutes: int = 30
     review_lane_first: bool = True
     review_reserve_provider_slot: bool = True
-    review_lane_max_concurrent: int = 2
+    review_lane_max_concurrent: int = 1
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
@@ -715,7 +699,7 @@ class FactoryConfig(BaseModel):
                 ),
                 review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
                 review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
-                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "2")),
+                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
