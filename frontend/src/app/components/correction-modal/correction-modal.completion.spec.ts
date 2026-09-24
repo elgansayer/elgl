@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { CorrectionModalComponent } from './correction-modal.component';
 
 const componentDirectory = dirname(fileURLToPath(import.meta.url));
@@ -50,6 +52,16 @@ describe('CorrectionModalComponent completion contract', () => {
 
     const diff = document.body.querySelector('app-visual-diff');
     expect(diff).not.toBeNull();
+  });
+
+  it('passes the current tutor explanation into the live diff', () => {
+    component.correctedText.set('I went to the market yesterday.');
+    component.explanation.set('Use the past tense here.');
+    fixture.detectChanges();
+
+    const diff = fixture.debugElement.query(By.directive(VisualDiffComponent));
+
+    expect(diff.componentInstance.explanation()).toBe('Use the past tense here.');
   });
 });
 

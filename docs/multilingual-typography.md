@@ -16,7 +16,7 @@ Do not set `font-family` inside feature components. Do not use arbitrary Tailwin
 
 ### Display typography
 
-`font-display` uses Instrument Sans followed by the shared sans-serif fallback chain. It is optional and reserved for product-authored display contexts where the content is known to be suitable for that face, such as branded headings, large counters and short marketing copy.
+`font-display` uses the shared platform sans-serif stack. It is optional and reserved for product-authored display contexts such as branded headings, large counters and short marketing copy. The frontend does not import remote font stylesheets because production builds and runtime rendering must remain independent of third-party font hosts.
 
 `font-display` must not be applied to user messages, translated or target-language text, vocabulary/example sentences, corrections, reading passages, AI conversation content, or language labels whose script is not guaranteed in advance. If a container mixes a product-authored heading with language content, apply `font-display` only to the heading.
 
@@ -25,7 +25,7 @@ Do not set `font-family` inside feature components. Do not use arbitrary Tailwin
 The current foundation is sound but incomplete as an explicit rendering contract:
 
 - `frontend/src/styles.scss` applies the universal `font-sans` stack to the document body.
-- `frontend/tailwind.config.js` keeps Instrument Sans behind the optional `font-display` role and includes system fallbacks.
+- `frontend/tailwind.config.js` keeps `font-display` on the platform sans-serif stack without a remote font dependency.
 - `frontend/scripts/check-multilingual-typography.mjs` rejects feature-level `font-family`, arbitrary Tailwind font families and `font-display` in known language-content surfaces.
 - `I18nService` exposes Japanese (`ja`), Mandarin Chinese (`zh`) and Korean (`ko`) as application languages and correctly treats them as horizontal LTR locales.
 - Feature code currently relies largely on browser-native CJK shaping and line breaking. There is no competing CJK font stack, which is desirable.

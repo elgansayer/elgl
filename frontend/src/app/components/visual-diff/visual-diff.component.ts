@@ -126,7 +126,8 @@ export class VisualDiffComponent {
     try {
       const wordToken = this.corrected().substring(0, 200);
       const translation = this.original().substring(0, 500);
-      const originalContext = this.explanation() ? this.explanation()!.substring(0, 1000) : undefined;
+      const explanation = this.explanation()?.trim();
+      const originalContext = explanation ? explanation.substring(0, 1000) : undefined;
 
       await this.flashcardService.createFlashcard({
         word_token: wordToken,
