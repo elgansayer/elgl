@@ -144,11 +144,13 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
       }
 
       @if (isCropping() && selectedFile()) {
-        <app-cover-photo-cropper
-          [imageFile]="selectedFile()!"
-          (saveCover)="onCropSaved($event)"
-          (cancelCrop)="cancelCrop()"
-        />
+        @if (selectedFile(); as imageFile) {
+          <app-cover-photo-cropper
+            [imageFile]="imageFile"
+            (saveCover)="onCropSaved($event)"
+            (cancelCrop)="cancelCrop()"
+          />
+        }
       }
     </div>
   `,
@@ -212,17 +214,21 @@ export class CoverPhotoUploaderComponent {
       if (typeof result === 'string') {
         this.imageSource.set(result);
         this.focusAfterRender(this.cropButton);
+      } else {
+        this.rejectLocalFile(selectionVersion);
       }
     };
     reader.onerror = () => {
-      if (selectionVersion !== this.fileSelectionVersion) return;
-      this.selectedFile.set(null);
-      this.imageSource.set(null);
-      this.uploadError.set(true);
-      this.clearFileInput();
-      this.focusAfterRender(this.fileTrigger);
+      this.rejectLocalFile(selectionVersion);
     };
-    reader.readAsDataURL(file);
+    reader.onabort = () => {
+      this.rejectLocalFile(selectionVersion);
+    };
+    try {
+      reader.readAsDataURL(file);
+    } catch {
+      this.rejectLocalFile(selectionVersion);
+    }
   }
 
   startCropping(): void {
@@ -335,6 +341,17 @@ export class CoverPhotoUploaderComponent {
     if (input) {
       input.value = '';
     }
+  }
+
+  private rejectLocalFile(selectionVersion: number): void {
+    if (selectionVersion !== this.fileSelectionVersion) return;
+    this.selectedFile.set(null);
+    this.imageSource.set(null);
+    this.isCropping.set(false);
+    this.clearCroppedPreview();
+    this.uploadError.set(true);
+    this.clearFileInput();
+    this.focusAfterRender(this.fileTrigger);
   }
 
   private focusAfterRender(target: () => ElementRef<HTMLButtonElement> | undefined): void {

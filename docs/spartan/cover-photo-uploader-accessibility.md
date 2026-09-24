@@ -88,3 +88,5 @@ This pass does not introduce a new component composition or product visual state
 Deploy as a normal frontend release. There is no migration, feature flag or persisted-state transition.
 
 Rollback is a direct revert of the #6079 commits. Existing uploaded cover URLs and R2 objects remain valid. If rollback occurs after a client has selected a file, only local transient editor state is affected; no server cleanup is required.
+
+The production build keeps script and stylesheet optimisation enabled but leaves the external font stylesheet for the browser to resolve. This prevents transient font-host DNS failures from blocking an otherwise deterministic application build.

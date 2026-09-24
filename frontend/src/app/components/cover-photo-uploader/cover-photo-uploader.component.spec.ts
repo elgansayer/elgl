@@ -146,6 +146,39 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.imageSource()).toBe('data:image/jpeg;base64,SECOND');
   });
 
+  it('rejects a local file when the reader completes without preview data', async () => {
+    class EmptyFileReader {
+      onload: ((event: ProgressEvent<FileReader>) => void) | null = null;
+      onerror: ((event: ProgressEvent<FileReader>) => void) | null = null;
+      onabort: ((event: ProgressEvent<FileReader>) => void) | null = null;
+
+      readAsDataURL(): void {
+        this.onload?.({ target: { result: null } } as unknown as ProgressEvent<FileReader>);
+      }
+    }
+    vi.stubGlobal('FileReader', EmptyFileReader);
+
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['unreadable'], 'cover.png', { type: 'image/png' });
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file] as unknown as FileList,
+    });
+
+    component.onFileSelected({ target: input } as unknown as Event);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.selectedFile()).toBeNull();
+    expect(component.imageSource()).toBeNull();
+    expect(component.uploadError()).toBe(true);
+    expect(input.value).toBe('');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Error');
+
+    const trigger = fixture.nativeElement.querySelector('.group button') as HTMLButtonElement;
+    await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
   it('rejects unsupported file types with an accessible error and recoverable picker state', async () => {
     const file = new File(['svg'], 'unsafe.svg', { type: 'image/svg+xml' });
     const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
