@@ -15,14 +15,14 @@ const mockFlashcard: Flashcard = {
   created_at: new Date().toISOString(),
 };
 
-describe.skip('SrsOfflineService', () => {
+describe('SrsOfflineService', () => {
   let service: SrsOfflineService;
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  describe.skip('initial state (no IndexedDB)', () => {
+  describe('initial state (no IndexedDB)', () => {
     beforeEach(() => {
       vi.stubGlobal('indexedDB', undefined);
     });
@@ -38,7 +38,7 @@ describe.skip('SrsOfflineService', () => {
     });
   });
 
-  describe.skip('SSR guard (no IndexedDB)', () => {
+  describe('SSR guard (no IndexedDB)', () => {
     beforeEach(() => {
       vi.stubGlobal('indexedDB', undefined);
       service = new SrsOfflineService();
@@ -89,7 +89,7 @@ describe.skip('SrsOfflineService', () => {
     });
   });
 
-  describe.skip('with IndexedDB available', () => {
+  describe('with IndexedDB available', () => {
     let mockStores: Map<string, Map<string, unknown>>;
 
     function makeRequest(result?: unknown) {

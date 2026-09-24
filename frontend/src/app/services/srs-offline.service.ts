@@ -41,9 +41,7 @@ export class SrsOfflineService {
         resolve();
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
-        const db = target.result;
+        const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains('flashcards')) {
           db.createObjectStore('flashcards', { keyPath: 'id' });
         }
@@ -75,12 +73,14 @@ export class SrsOfflineService {
     if (list.length === 0) return;
     const tx = db.transaction('flashcards', 'readwrite');
     const store = tx.objectStore('flashcards');
-    // Bulk put using Promise.all instead of sequential awaits.
-    await Promise.all(
-      list.map((item) =>
-        this.putInStore(store, item as unknown as Record<string, unknown>),
-      ),
-    );
+    // ⚡ Bolt Optimization: Bulk put using synchronous store.put and awaiting transaction completion
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      for (const item of list) {
+        store.put(item as unknown as Record<string, unknown>);
+      }
+    });
   }
 
   /** Retrieve cached flashcards when offline */
@@ -98,11 +98,14 @@ export class SrsOfflineService {
     if (list.length === 0) return;
     const tx = db.transaction('due_reviews', 'readwrite');
     const store = tx.objectStore('due_reviews');
-    await Promise.all(
-      list.map((item) =>
-        this.putInStore(store, item as unknown as Record<string, unknown>),
-      ),
-    );
+    // ⚡ Bolt Optimization: Bulk put using synchronous store.put and awaiting transaction completion
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      for (const item of list) {
+        store.put(item as unknown as Record<string, unknown>);
+      }
+    });
   }
 
   /** Retrieve cached due reviews when offline */
