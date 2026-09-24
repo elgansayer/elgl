@@ -21,7 +21,8 @@ interface DiscoverableGroup {
 }
 
 interface InterestTopic {
-  id: string;
+  id: string | null;
+  tag: string;
   name: string;
 }
 
@@ -52,7 +53,7 @@ interface InterestTopic {
           >
             {{ 'groups_discovery_all_topics' | t }}
           </button>
-          @for (topic of interestPills(); track topic.id) {
+          @for (topic of interestPills(); track topic.id ?? topic.tag) {
             <button
               hlmBtn
               (click)="selectedInterest.set(topic.id)"
@@ -211,7 +212,9 @@ export class GroupsDiscoveryComponent {
       try {
         const lang = this.i18n.currentLang();
         return await firstValueFrom(
-          this.http.get<InterestTopic[]>(`${this.apiUrl}/interests?language=${lang}`),
+          this.http.get<InterestTopic[]>(
+            `${this.apiUrl}/interests?language=${lang}&includeEmpty=true`,
+          ),
         );
       } catch {
         return [];
@@ -221,7 +224,9 @@ export class GroupsDiscoveryComponent {
 
   protected interestPills = computed(() => {
     const interests = this.interestsResource.value();
-    return interests ?? [];
+    return (interests ?? []).filter((interest): interest is InterestTopic & { id: string } =>
+      Boolean(interest.id),
+    );
   });
 
   /** Load discoverable groups from the API */
