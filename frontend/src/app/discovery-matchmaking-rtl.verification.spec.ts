@@ -6,7 +6,7 @@
  * exclusively use RTL-aware logical CSS properties (ps-, pe-, ms-, me-, border-s,
  * border-e, etc.) and never use physical direction properties.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, extname } from 'path';
 
