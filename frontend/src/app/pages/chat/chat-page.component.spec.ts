@@ -103,6 +103,39 @@ describe('ChatPageComponent', () => {
   });
 
   describe('room and message loading', () => {
+    it('preserves room elements and keyboard focus when refreshed rooms are reordered', () => {
+      const secondRoom = { ...room, id: 'room-2', title: 'Second room' };
+      component.rooms.set([room, secondRoom]);
+      fixture.detectChanges();
+      const originalRooms = fixture.nativeElement.querySelectorAll('div[role="button"]');
+      originalRooms[0].focus();
+
+      component.rooms.set([{ ...secondRoom }, { ...room, title: 'Updated room' }]);
+      fixture.detectChanges();
+
+      const refreshedRooms = fixture.nativeElement.querySelectorAll('div[role="button"]');
+      expect(refreshedRooms[0]).toBe(originalRooms[1]);
+      expect(refreshedRooms[1]).toBe(originalRooms[0]);
+      expect(refreshedRooms[1].textContent).toContain('Updated room');
+      expect(document.activeElement).toBe(originalRooms[0]);
+    });
+
+    it('preserves message elements while updating refreshed text and removing deleted messages', () => {
+      component.selectedRoom.set(room);
+      component.messages.set([message, { ...message, id: 'msg-2' }]);
+      fixture.detectChanges();
+      const originalMessages = fixture.nativeElement.querySelectorAll('.group');
+
+      component.messages.set([{ ...message, text_content: 'Edited message' }]);
+      fixture.detectChanges();
+
+      const refreshedMessages = fixture.nativeElement.querySelectorAll('.group');
+      expect(refreshedMessages).toHaveLength(1);
+      expect(refreshedMessages[0]).toBe(originalMessages[0]);
+      expect(refreshedMessages[0].textContent).toContain('Edited message');
+      expect(originalMessages[1].isConnected).toBe(false);
+    });
+
     it('should load rooms on init', async () => {
       const rooms = [room];
       chatServiceMock.getRooms.mockReset();
