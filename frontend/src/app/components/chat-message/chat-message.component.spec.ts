@@ -14,9 +14,11 @@ import { ChatMessageComponent } from './chat-message.component';
 
 describe('ChatMessageComponent', () => {
   let fixture: ComponentFixture<ChatMessageComponent>;
+  let currentUser: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     const blockedUserIds = signal<ReadonlySet<string>>(new Set());
+    currentUser = vi.fn().mockReturnValue({ id: 'viewer-id' });
 
     await TestBed.configureTestingModule({
       imports: [ChatMessageComponent],
@@ -24,7 +26,7 @@ describe('ChatMessageComponent', () => {
         {
           provide: AuthService,
           useValue: {
-            currentUser: vi.fn().mockReturnValue({ id: 'viewer-id' }),
+            currentUser,
             getAccessToken: vi.fn().mockReturnValue('access-token'),
           },
         },
@@ -118,6 +120,25 @@ describe('ChatMessageComponent', () => {
 
   it('does not render a rich link preview when the message has no preview payload', () => {
     expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
+  });
+
+  it('updates memoized message ownership when the current user input changes', () => {
+    const component = fixture.componentInstance;
+
+    expect(component.isOwnMessage()).toBe(false);
+    expect(currentUser).toHaveBeenCalledOnce();
+
+    component.isOwnMessage();
+    component.isOwnMessage();
+    expect(currentUser).toHaveBeenCalledOnce();
+
+    fixture.componentRef.setInput('currentUserId', 'sender-id');
+    fixture.detectChanges();
+    expect(component.isOwnMessage()).toBe(true);
+
+    fixture.componentRef.setInput('currentUserId', 'another-user');
+    fixture.detectChanges();
+    expect(component.isOwnMessage()).toBe(false);
   });
 
   it('cycles voice playback speed through 1x, 1.5x, and 2x', () => {
