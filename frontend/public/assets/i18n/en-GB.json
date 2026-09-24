@@ -2039,6 +2039,7 @@
   "settings.messageFiltersDescription": "Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.",
   "settings.age": "Age",
   "settings.ageMinPlaceholder": "Min",
+  "chatRoom.initialMessageRestricted": "You cannot send the first message because this user has restricted who may contact them.",
   "settings.ageMaxPlaceholder": "Max",
   "settings.ageRangeTo": "to",
   "settings.allowedGenders": "Allowed Genders",

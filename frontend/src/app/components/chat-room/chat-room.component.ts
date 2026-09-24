@@ -40,6 +40,25 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error !== 'object' || error === null) return '';
+
+  if ('error' in error) {
+    const responseBody = error.error;
+    if (
+      typeof responseBody === 'object' &&
+      responseBody !== null &&
+      'message' in responseBody &&
+      typeof responseBody.message === 'string'
+    ) {
+      return responseBody.message;
+    }
+  }
+
+  return 'message' in error && typeof error.message === 'string' ? error.message : '';
+}
+
 @Component({
   selector: 'app-chat-room',
   imports: [
@@ -83,6 +102,11 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private presentMessageFilterError(error: unknown): void {
+    if (errorMessage(error).includes('filter settings')) {
+      showErrorToast(this.i18n.translate('chatRoom.initialMessageRestricted'));
+    }
+  }
 
   id = input.required<string>();
 
@@ -502,6 +526,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send text message:', e);
+      this.presentMessageFilterError(e);
       this.draftService.saveChatDraft(this.roomId, text);
     }
   }
@@ -526,6 +551,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send correction:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -541,6 +567,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to request correction:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -556,6 +583,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send doodle:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -571,6 +599,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send voice note:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -586,6 +615,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send sticker:', e);
+      this.presentMessageFilterError(e);
     }
   }
 

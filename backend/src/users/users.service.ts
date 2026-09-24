@@ -521,6 +521,7 @@ export class UsersService {
     if (dto.privacy_hide_online_status !== undefined)
       updatePayload.privacy_hide_online_status = dto.privacy_hide_online_status;
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
+    if (dto.age !== undefined) updatePayload.age = dto.age;
     if (dto.profile_visibility !== undefined)
       updatePayload.profile_visibility = dto.profile_visibility;
     if (dto.status_visibility !== undefined)

@@ -2365,8 +2365,27 @@ export class I18nService {
     'settings.messageFiltersSection': 'Message Filters',
     'settings.messageFiltersDescription':
       'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
+    'settings.messageFilters.title': 'Message Filters',
+    'settings.messageFilters.description': 'Who can send you messages',
+    'settings.messageFilters.subtitle':
+      'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
+    'settings.messageFilters.ageRange': 'Age Range',
+    'settings.messageFilters.ageMin': 'Minimum Age',
+    'settings.messageFilters.ageMinPlaceholder': 'Min',
+    'settings.messageFilters.ageMax': 'Maximum Age',
+    'settings.messageFilters.ageMaxPlaceholder': 'Max',
+    'settings.messageFilters.nativeLanguage': 'Allowed Native Languages',
+    'settings.messageFilters.nativeLanguageHint':
+      'Select native languages that senders must speak to message you for the first time.',
+    'settings.messageFilters.gender': 'Allowed Genders',
+    'settings.messageFilters.genderHint':
+      'Select allowed sender genders for first-time messages.',
+    'settings.messageFilters.saved': 'Message filters saved successfully.',
+    'settings.messageFilters.saveError': 'Failed to save message filters. Please try again.',
     'settings.age': 'Age',
     'settings.ageMinPlaceholder': 'Min',
+    'chatRoom.initialMessageRestricted':
+      'You cannot send the first message because this user has restricted who may contact them.',
     'settings.ageMaxPlaceholder': 'Max',
     'settings.ageRangeTo': 'to',
     'settings.allowedGenders': 'Allowed Genders',

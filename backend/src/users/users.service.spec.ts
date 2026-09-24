@@ -404,6 +404,7 @@ describe('UsersService', () => {
         bio_text: 'Learning English',
         avatar_url: 'https://example.com/avatar.png',
         audio_intro_url: 'https://example.com/audio.mp3',
+        age: 31,
         privacy_hide_age: true,
         privacy_hide_location: false,
         privacy_hide_from_search: true,
@@ -420,6 +421,7 @@ describe('UsersService', () => {
         bio_text: 'Learning English',
         avatar_url: 'https://example.com/avatar.png',
         audio_intro_url: 'https://example.com/audio.mp3',
+        age: 31,
         privacy_hide_age: true,
         privacy_hide_location: false,
         privacy_hide_from_search: true,
@@ -743,6 +745,43 @@ describe('UsersService', () => {
         incognito_visits: false,
       });
       expect(result).toMatchObject(updatedProfile);
+    });
+  });
+
+  describe('getMessageFilters and setMessageFilters', () => {
+    it('should return empty object if user has no message filters or on error', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Not found' },
+      });
+      const result = await service.getMessageFilters('user-1');
+      expect(result).toEqual({});
+    });
+
+    it('should return user message filters when present', async () => {
+      const filters = {
+        age_min: 18,
+        age_max: 35,
+        allowed_native_languages: ['en', 'es'],
+      };
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { message_filters: filters },
+        error: null,
+      });
+      const result = await service.getMessageFilters('user-1');
+      expect(result).toEqual(filters);
+    });
+
+    it('should update user message filters successfully', async () => {
+      const filters = { age_min: 20, age_max: 30 };
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+
+      await expect(
+        service.setMessageFilters('user-1', filters),
+      ).resolves.toBeUndefined();
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        message_filters: filters,
+      });
     });
   });
 

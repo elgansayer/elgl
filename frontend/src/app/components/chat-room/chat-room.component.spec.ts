@@ -12,6 +12,7 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
+import { toastsSignal } from '../../services/toast.service';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -49,6 +50,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
   let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    toastsSignal.set([]);
     mockChatService = {
       getRooms: vi.fn().mockResolvedValue([]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
@@ -181,6 +183,25 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect.objectContaining({ text_content: 'A reply', reply_to_id: 'm1' }),
     );
     expect(component.replyingTo()).toBeNull();
+  });
+
+  it('shows a translated restriction error when profile filters reject the initial message', async () => {
+    mockChatService.sendMessage.mockRejectedValue({
+      error: {
+        message: 'You cannot send the first message to this user due to their age filter settings.',
+      },
+    });
+    component.textInput = 'Hello';
+
+    await component.sendTextMessage();
+
+    expect(toastsSignal()).toEqual([
+      expect.objectContaining({
+        message:
+          'You cannot send the first message because this user has restricted who may contact them.',
+        type: 'error',
+      }),
+    ]);
   });
 
   it('scrollToMessage scrolls to and briefly highlights the target message', () => {
