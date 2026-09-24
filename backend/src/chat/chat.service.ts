@@ -805,7 +805,7 @@ export class ChatService {
     try {
       const response = await this.chatLlmService.generateText(prompt, {
         system:
-          'You are a helpful language learning conversation assistant. Provide concise, natural suggestions that fit the given context.',
+          'You are a helpful language learning conversation assistant. Provide concise, natural suggestions that fit the given context. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
         temperature: 0.8,
         maxTokens: 150,
       });
@@ -2225,7 +2225,7 @@ export class ChatService {
     }
     const prompt = [
       'You are a friendly language learning conversation partner.',
-      'Keep responses short, natural, and helpful.',
+      'Keep responses short, natural, and helpful. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
       `The user wrote: "${messageText}"`,
     ].join('\n');
     const result = await this.chatLlmService.proxyMessage(prompt);

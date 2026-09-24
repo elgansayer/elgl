@@ -59,7 +59,7 @@ describe('ChatLlmProxyService', () => {
         {
           role: 'system',
           content:
-            'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner.',
+            'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
         },
         { role: 'user', content: 'Hi' },
       ]);
@@ -86,7 +86,7 @@ describe('ChatLlmProxyService', () => {
         {
           role: 'system',
           content:
-            'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner.',
+            'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
         },
         { role: 'user', content: 'What is the weather?' },
         { role: 'assistant', content: 'I cannot check the weather.' },
@@ -133,7 +133,7 @@ describe('ChatLlmProxyService', () => {
         {
           role: 'system',
           content:
-            'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner.',
+            'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
         },
         { role: 'user', content: 'Hello' },
         { role: 'assistant', content: 'Hi, how can I help?' },
