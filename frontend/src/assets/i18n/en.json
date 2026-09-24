@@ -912,6 +912,11 @@
   "notifications.repliedComment": "replied to your comment",
   "notifications.followedYou": "started following you",
   "notifications.viewedProfile": "viewed your profile",
-  "notifications.mentionedInChat": "mentioned you in a chat",
-  "notifications.systemAlert": "System alert"
+  "notifications.systemAlert": "System alert",
+  "system.profileUpdated": "{{name}} updated their profile.",
+  "system.missedCall": "You missed a call from {{name}}.",
+  "system.groupRenamed": "Group renamed to \"{{name}}\".",
+  "system.memberAdded": "{{count}} member(s) joined the group.",
+  "system.memberRemoved": "A member left the group.",
+  "system.announcement": "📢 {{message}}"
 }
