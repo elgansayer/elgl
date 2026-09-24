@@ -56,7 +56,7 @@ export interface UserProfile {
   is_admin?: boolean;
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   proficiency_level?: string;
-  learning_goals?: string;
+  learning_goals?: string[];
   xp_total?: number;
   availability_morning?: boolean;
   availability_afternoon?: boolean;

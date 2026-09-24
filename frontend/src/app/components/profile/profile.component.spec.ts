@@ -123,6 +123,28 @@ describe('ProfileComponent', () => {
     );
   });
 
+  it('round-trips comma-separated learning goals through the array API contract', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({ learning_goals: ['conversation', 'grammar'] }),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.learningGoals()).toBe(
+      'conversation, grammar',
+    );
+
+    fixture.componentInstance.learningGoals.set('conversation, vocabulary,  ');
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        learning_goals: ['conversation', 'vocabulary'],
+      }),
+    );
+  });
+
   it('should bind the saved audio intro to the profile audio player', async () => {
     const audioIntroUrl = 'https://media.example.test/audio/profile-intro.webm';
     mockUserService.getMyProfile.mockResolvedValue(makeProfile({ audio_intro_url: audioIntroUrl }));

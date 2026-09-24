@@ -34,11 +34,7 @@ describe('RecommendedForYouCarouselComponent', () => {
       {
         ...recommendation('p-1', 'Aiko'),
         shared_interest_count: 2,
-        recommendation_reasons: [
-          'language_exchange',
-          'shared_interests',
-          'active_recently',
-        ],
+        recommendation_reasons: ['language_exchange', 'shared_interests', 'active_recently'],
       },
       recommendation('p-2', 'Ren'),
     ]);
@@ -62,7 +58,22 @@ describe('RecommendedForYouCarouselComponent', () => {
         },
         {
           provide: I18nService,
-          useValue: { translate: (key: string) => key },
+          useValue: {
+            translate: (key: string, params?: Record<string, unknown>) => {
+              const labels: Record<string, string> = {
+                'discovery.recommendation.languageExchange': 'Language exchange match',
+                'discovery.recommendation.sharedInterest': '{{count}} shared interest',
+                'discovery.recommendation.sharedInterests': '{{count}} shared interests',
+                'discovery.recommendation.activeRecently': 'Recently active',
+                'discovery.recommendation.activeLearner': 'Active learner',
+                'discovery.recommendation.proficiencyMatch': 'Similar proficiency',
+                'discovery.recommendation.availabilityMatch': 'Matching availability',
+                'discovery.recommendation.helpfulCorrector': 'Helpful corrector',
+                'discovery.recommendation.learningGoalMatch': 'Shared learning goal',
+              };
+              return (labels[key] ?? key).replace('{{count}}', String(params?.['count'] ?? ''));
+            },
+          },
         },
       ],
     }).compileComponents();
@@ -90,6 +101,15 @@ describe('RecommendedForYouCarouselComponent', () => {
     expect(cards[0].textContent).toContain('2 shared interests');
     expect(cards[0].textContent).toContain('Recently active');
     expect(component.recommendations()[0]).not.toHaveProperty('recommendation_score');
+  });
+
+  it('renders every multidimensional recommendation reason', () => {
+    const match = recommendation('p-3');
+
+    expect(component.reasonLabel('proficiency_match', match)).toBe('Similar proficiency');
+    expect(component.reasonLabel('availability_match', match)).toBe('Matching availability');
+    expect(component.reasonLabel('high_correction_ratio', match)).toBe('Helpful corrector');
+    expect(component.reasonLabel('learning_goal_match', match)).toBe('Shared learning goal');
   });
 
   it('bounds the client contract to ten recommendations', async () => {
@@ -138,7 +158,9 @@ describe('RecommendedForYouCarouselComponent', () => {
     ) as HTMLElement[];
 
     for (const card of cards) {
-      const actions = Array.from(card.querySelectorAll('button.recommended-action')) as HTMLButtonElement[];
+      const actions = Array.from(
+        card.querySelectorAll('button.recommended-action'),
+      ) as HTMLButtonElement[];
       expect(actions).toHaveLength(2);
       expect(actions[0].textContent?.trim()).toBe('chat.sendMessage');
       expect(actions[1].textContent?.trim()).toBe('userProfile.follow');
