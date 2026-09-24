@@ -14,7 +14,7 @@ import { FormsModule } from '@angular/forms';
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
-        @for (msg of filteredMessages(); track msg) {
+        @for (msg of filteredMessages(); track msg.id) {
           <app-chat-message
             [message]="msg"
             [currentUserId]="effectiveUserId()"
