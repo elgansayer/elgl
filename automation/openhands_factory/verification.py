@@ -258,6 +258,7 @@ def run_isolated_verification_process(
         "GIT_OPTIONAL_LOCKS": "0",
         "HOME": "/tmp/home",
         "LANG": os.environ.get("LANG", "C.UTF-8"),
+        "MYPY_CACHE_DIR": "/tmp/mypy-cache",
         "NO_COLOR": "1",
         "NPM_CONFIG_CACHE": "/tmp/npm-cache",
         "PATH": (
@@ -265,6 +266,8 @@ def run_isolated_verification_process(
             "/usr/bin:/usr/sbin:/bin:/sbin"
         ),
         "TERM": "dumb",
+        "PYTEST_ADDOPTS": "-o cache_dir=/tmp/pytest-cache",
+        "RUFF_CACHE_DIR": "/tmp/ruff-cache",
         "UV_CACHE_DIR": "/tmp/uv-cache",
         # The host updater owns dependency synchronisation. Verification mounts
         # /opt read-only and must execute against that prepared environment rather
