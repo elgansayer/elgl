@@ -235,6 +235,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
+    assert environment["MYPY_CACHE_DIR"] == "/tmp/mypy-cache"
+    assert environment["PYTEST_ADDOPTS"] == "-o cache_dir=/tmp/pytest-cache"
+    assert environment["RUFF_CACHE_DIR"] == "/tmp/ruff-cache"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
     assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
     assert environment["UV_NO_SYNC"] == "1"

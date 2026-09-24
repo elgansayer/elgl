@@ -549,9 +549,9 @@ def test_production_agent_configuration_loads() -> None:
         "pi",
     ]
     assert factory_config.agents.routing.code_review == [
-        "codex",
         "claude",
         "google",
+        "codex",
         "opencode",
         "pi",
     ]
@@ -801,6 +801,9 @@ def test_hellotalk_instance_uses_two_review_lanes() -> None:
     profile = (root / "config/factory/instances/hellotalk.env").read_text(encoding="utf-8")
 
     assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=2" in profile
+    assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in profile
+    assert "FACTORY_AGENT_ROUTES_PER_INTERVAL=48" in profile
+    assert "FACTORY_REVIEWS_PER_INTERVAL=36" in profile
 
 
 def test_instance_installer_preserves_legacy_rollback_path() -> None:
@@ -826,3 +829,7 @@ def test_repo_factory_update_coordinates_both_instances() -> None:
     assert "restore_services_on_failure" in script
     assert "localhost/repo-factory-worker:current" in script
     assert "REPO_FACTORY_SECONDARY_SERVICE=repo-factory@workout-agent.service" in unit
+    assert "Conflicts=" not in unit
+    assert "/usr/bin/flock --wait 120 /run/lock/repo-factory-update.lock" in unit
+    health_unit = (root / "config/systemd/repo-factory-health@.service").read_text(encoding="utf-8")
+    assert "/usr/bin/flock --shared --nonblock" in health_unit

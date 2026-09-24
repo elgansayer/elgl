@@ -303,9 +303,9 @@ def test_conservative_router_defaults_support_continuous_pr_drain(tmp_path: Path
     )
 
     assert router._agent_route_admission is not None
-    assert router._agent_route_admission.max_admissions == 24
+    assert router._agent_route_admission.max_admissions == 48
     assert router._review_admission is not None
-    assert router._review_admission.max_admissions == 12
+    assert router._review_admission.max_admissions == 36
 
 
 def test_conservative_router_honours_single_review_lane(

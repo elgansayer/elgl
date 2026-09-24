@@ -156,6 +156,18 @@ def test_select_batch_admits_multiple_pull_requests_when_lane_widened() -> None:
     assert [item.task.identifier for item in selected] == ["7347", "7348", "10"]
 
 
+def test_select_batch_preserves_issue_progress_when_host_has_only_two_slots() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "10"]
+
+
 def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
     jobs = {
         "10": job("10", 5),
@@ -569,13 +581,23 @@ def test_daemon_publishes_heartbeat_before_first_scheduling_cycle(
 
 
 def test_storage_reserve_blocks_and_recovers_scheduling(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     daemon = FactoryDaemon.__new__(FactoryDaemon)
-    daemon.config = SimpleNamespace()  # type: ignore[assignment]
+    daemon.config = SimpleNamespace(  # type: ignore[assignment]
+        cooldown_seconds=60,
+        minimum_free_disk_gib=5,
+        worktree_dir=tmp_path,
+    )
     daemon.storage_blocked = False
+    daemon._next_worktree_cache_prune_at = 0.0
     checks = [SimpleNamespace(passed=False, detail="root: 2.0 GiB available")]
     monkeypatch.setattr("openhands_factory.daemon.disk_space_checks", lambda config: checks)
+    monkeypatch.setattr(
+        "openhands_factory.daemon.prune_inactive_worktree_caches",
+        lambda *args, **kwargs: [],
+    )
 
     assert not daemon._storage_ready()
     assert daemon.storage_blocked

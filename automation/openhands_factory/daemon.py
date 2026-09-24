@@ -37,6 +37,7 @@ from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
+from openhands_factory.worktree_cache import prune_inactive_worktree_caches
 
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
@@ -170,6 +171,17 @@ def select_batch(
         key=_review_sort_key,
     )[:review_capacity]
 
+    # Two shared host slots are deliberate on the 8 GiB production host. When
+    # both are filled from a large PR backlog, issue implementation otherwise
+    # starves indefinitely. Preserve one slot for eligible non-review work while
+    # still using both review lanes whenever no issue or repair can advance.
+    issue_candidate_available = any(
+        not is_new_github_issue(item) or new_issue_slots is None or new_issue_slots > 0
+        for item in remaining
+    )
+    if review_first and limit > 1 and issue_candidate_available:
+        review_ready = review_ready[: limit - 1]
+
     if not review_ready:
         return select_issue_admitted(remaining, limit, new_issue_slots)
 
@@ -254,6 +266,12 @@ def select_batch_failsafe(
     )[: min(limit, review_slots)]
     remaining = [job for job in eligible if not is_review_lane_job(job)]
     remaining.sort(key=lambda job: (job.task.priority, int(job.task.identifier)))
+    issue_candidate_available = any(
+        not is_new_github_issue(job) or new_issue_slots is None or new_issue_slots > 0
+        for job in remaining
+    )
+    if limit > 1 and issue_candidate_available:
+        reviews = reviews[: limit - 1]
     return [
         *reviews,
         *select_issue_admitted(remaining, limit - len(reviews), new_issue_slots),
@@ -441,6 +459,7 @@ class FactoryDaemon:
         self.issue_admission = self._issue_admission_gate(config)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
+        self._next_worktree_cache_prune_at = 0.0
         self.stall_since: datetime | None = None
         self.stall_investigation_dispatched = False
         self.scheduler_snapshot: dict[str, object] = {
@@ -476,9 +495,22 @@ class FactoryDaemon:
     def paused(self) -> bool:
         return bool(read_json(self.control_path, {"paused": False}).get("paused", False))
 
-    def _storage_ready(self) -> bool:
+    def _storage_ready(self, active_task_ids: set[str] | None = None) -> bool:
         failed = [check for check in disk_space_checks(self.config) if not check.passed]
         blocked = bool(failed)
+        now = time.monotonic()
+        if blocked and now >= getattr(self, "_next_worktree_cache_prune_at", 0.0):
+            self._next_worktree_cache_prune_at = now + self.config.cooldown_seconds
+            reserve = int(self.config.minimum_free_disk_gib * 1024**3)
+            pruned = prune_inactive_worktree_caches(
+                self.config.worktree_dir,
+                active_task_ids or set(),
+                minimum_free_bytes=reserve,
+                target_free_bytes=reserve + 1024**3,
+            )
+            if pruned:
+                failed = [check for check in disk_space_checks(self.config) if not check.passed]
+                blocked = bool(failed)
         if blocked and not self.storage_blocked:
             LOGGER.warning(
                 "Factory scheduling paused by storage reserve: %s",
@@ -632,7 +664,7 @@ class FactoryDaemon:
                 # hasn't. Gating either behind storage_ready/scheduling (as
                 # an earlier version of the pruning fix did) deadlocks -
                 # once blocked, nothing ever runs to notice or unblock it.
-                storage_ready = self._storage_ready()
+                storage_ready = self._storage_ready(active_task_ids)
                 paused = self.paused()
                 self.scheduler_snapshot.update(
                     {
