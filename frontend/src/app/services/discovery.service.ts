@@ -108,8 +108,7 @@ export class DiscoveryService {
 
     if (filters.sort) params = params.set('sort', filters.sort);
 
-    if (filters.has_audio_intro !== undefined)
-      params = params.set('has_audio_intro', filters.has_audio_intro.toString());
+    if (filters.has_audio_intro === true) params = params.set('has_audio_intro', 'true');
 
     if (filters.country !== undefined) params = params.set('country', filters.country);
 
@@ -162,7 +161,7 @@ export class DiscoveryService {
           return this.enrichPartnersFallback(fallbackUsers, filters);
         }
       }
-      return MOCK_PARTNERS;
+      return this.applyRequiredFilters(MOCK_PARTNERS, filters);
     }
 
     // Build cancellation notifier from AbortSignal
@@ -200,7 +199,7 @@ export class DiscoveryService {
   ): Promise<UserProfile[]> {
     // Filter out blocked users client-side
     const currentUser = this.authService.currentUser();
-    let filtered = users;
+    let filtered = this.applyRequiredFilters(users, filters);
     if (currentUser?.id) {
       const blockedIds = await this.safetyService
         .getBlockedAndBlockerIds(currentUser.id)
@@ -243,7 +242,7 @@ export class DiscoveryService {
     const currentUser = this.authService.currentUser();
 
     // Filter out blocked users from cached data
-    let filtered = users;
+    let filtered = this.applyRequiredFilters(users, filters);
     if (currentUser?.id) {
       const blockedIds = await this.safetyService
         .getBlockedAndBlockerIds(currentUser.id)
@@ -264,6 +263,12 @@ export class DiscoveryService {
     }
 
     return filtered;
+  }
+
+  private applyRequiredFilters(users: UserProfile[], filters: SearchFilterParams): UserProfile[] {
+    if (filters.has_audio_intro !== true) return users;
+
+    return users.filter((user) => Boolean(user.audio_intro_url?.trim()));
   }
 
   async searchByCountryCity(country?: string, city?: string): Promise<UserProfile[]> {

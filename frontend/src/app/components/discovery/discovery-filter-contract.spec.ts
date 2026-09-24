@@ -135,6 +135,19 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
     );
   });
 
+  it('omits the requirement instead of requesting profiles without intros when unchecked', async () => {
+    component.onGlobalSearch({
+      has_audio_intro: false,
+    });
+    await flushPromises();
+
+    expect(component.hasAudioIntroOnly()).toBe(false);
+    expect(findPartners).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ has_audio_intro: expect.anything() }),
+      expect.anything(),
+    );
+  });
+
   it('switches the Serious Learner filter without changing language criteria', async () => {
     component.selectedNativeLanguage.set('JA');
     component.selectedTargetLanguage.set('EN');

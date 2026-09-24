@@ -299,6 +299,19 @@ describe('MatchmakingAlgorithmService', () => {
       expect(filtered.data).toHaveLength(1);
       expect(filtered.data[0].partner.id).toBe('morning');
     });
+
+    it('should require a non-blank audio introduction when requested', () => {
+      const current = makeUser();
+      const scored = service.scoreAndRank(current, [
+        makeUser({ id: 'with-audio', audio_intro_url: 'https://media.example.test/intro.webm' }),
+        makeUser({ id: 'without-audio', audio_intro_url: undefined }),
+        makeUser({ id: 'blank-audio', audio_intro_url: '   ' }),
+      ]);
+
+      const filtered = service.applyOfflineFilters(scored.data, { has_audio_intro: true });
+
+      expect(filtered.data.map(({ partner }) => partner.id)).toEqual(['with-audio']);
+    });
   });
 
   describe('applyOfflineFilters - error boundary', () => {

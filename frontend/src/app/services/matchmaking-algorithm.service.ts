@@ -155,6 +155,7 @@ export class MatchmakingAlgorithmService {
     if (filters.availability_morning && !partner.availability_morning) return false;
     if (filters.availability_afternoon && !partner.availability_afternoon) return false;
     if (filters.availability_evening && !partner.availability_evening) return false;
+    if (filters.has_audio_intro && !partner.audio_intro_url?.trim()) return false;
 
     if (filters.age_min !== undefined || filters.age_max !== undefined) {
       const age = partner.age;
