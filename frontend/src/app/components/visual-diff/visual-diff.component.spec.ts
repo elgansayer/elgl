@@ -1,17 +1,49 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
+import { ChatService } from '../../services/chat.service';
+import { FlashcardService } from '../../services/flashcard.service';
+import { I18nService } from '../../services/i18n.service';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from './visual-diff.component';
 
-describe.skip('VisualDiffComponent', () => {
+describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [VisualDiffComponent],
+      providers: [
+        {
+          provide: FlashcardService,
+          useValue: { createFlashcard: vi.fn().mockResolvedValue(undefined) },
+        },
+        {
+          provide: I18nService,
+          useValue: {
+            currentLang: signal('en'),
+            translate: (key: string) => key,
+          },
+        },
+        {
+          provide: ChatService,
+          useValue: { translateText: vi.fn().mockResolvedValue({ translated_text: 'Translated' }) },
+        },
+        {
+          provide: TranslationCacheService,
+          useValue: {
+            get: vi.fn().mockReturnValue(null),
+            set: vi.fn(),
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VisualDiffComponent);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('original', '');
+    fixture.componentRef.setInput('corrected', '');
     fixture.detectChanges();
   });
 
@@ -87,17 +119,20 @@ describe.skip('VisualDiffComponent', () => {
     expect(segments.every((segment) => segment.type === 'unchanged')).toBe(true);
   });
 
-  it('should render added spans in the DOM', () => {
+  it('should render added text using the success visual contract', () => {
     setInputs('Hello', 'Hello World');
 
     const addedEls = fixture.nativeElement.querySelectorAll('[data-type="added"]');
     expect(addedEls.length).toBeGreaterThan(0);
+    expect(Array.from(addedEls).every((element) => (element as HTMLElement).classList.contains('text-success'))).toBe(true);
   });
 
-  it('should render removed spans in the DOM', () => {
+  it('should render removed text with danger styling and strikethrough', () => {
     setInputs('Hello World', 'Hello');
 
     const removedEls = fixture.nativeElement.querySelectorAll('[data-type="removed"]');
     expect(removedEls.length).toBeGreaterThan(0);
+    expect(Array.from(removedEls).every((element) => (element as HTMLElement).classList.contains('text-danger'))).toBe(true);
+    expect(Array.from(removedEls).every((element) => (element as HTMLElement).classList.contains('line-through'))).toBe(true);
   });
 });
