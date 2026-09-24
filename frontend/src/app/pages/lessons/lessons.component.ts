@@ -7,6 +7,8 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { LessonsService } from '../../services/lessons.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { TokenisedTextComponent } from '../../components/tokenised-text/tokenised-text.component';
+import { WordDefinitionModalComponent } from '../../components/word-definition-modal/word-definition-modal.component';
 import {
   lessonCefr,
   lessonContent,
@@ -19,7 +21,14 @@ import {
 @Component({
   selector: 'app-lessons',
   standalone: true,
-  imports: [CommonModule, RouterLink, HlmButton, TranslatePipe],
+  imports: [
+    CommonModule,
+    RouterLink,
+    HlmButton,
+    TranslatePipe,
+    TokenisedTextComponent,
+    WordDefinitionModalComponent,
+  ],
   template: `
     <main class="min-h-screen bg-surface-300 px-4 py-6 text-primary sm:px-6 lg:px-8" aria-labelledby="lessons-title">
       <div class="mx-auto max-w-6xl">
@@ -83,7 +92,13 @@ import {
                     @if (segment.title) {
                       <h2 class="break-words text-xl font-bold">{{ segment.title }}</h2>
                     }
-                    <p class="mt-3 whitespace-pre-wrap break-words text-base leading-7">{{ segment.text }}</p>
+                    <div class="mt-3 text-base leading-7">
+                      <app-tokenised-text
+                        [text]="segment.text"
+                        [language]="lesson.language_code"
+                        (wordClicked)="onWordClicked($event)"
+                      ></app-tokenised-text>
+                    </div>
 
                     @if (safeUrl(segment.stream_url); as streamUrl) {
                       <a
@@ -182,6 +197,13 @@ import {
         }
       </div>
     </main>
+    @if (activeWordToken(); as token) {
+      <app-word-definition-modal
+        [wordToken]="token"
+        [contextSentence]="activeWordContext() ?? ''"
+        (closed)="activeWordToken.set(null)"
+      ></app-word-definition-modal>
+    }
 
     <ng-template #lessonCard let-lesson>
       <a
@@ -217,6 +239,14 @@ import {
   `,
 })
 export class LessonsComponent {
+  readonly activeWordToken = signal<string | null>(null);
+  readonly activeWordContext = signal<string | null>(null);
+
+  onWordClicked(event: { token: string; context: string }): void {
+    this.activeWordToken.set(event.token);
+    this.activeWordContext.set(event.context);
+  }
+
   private readonly lessonsService = inject(LessonsService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
