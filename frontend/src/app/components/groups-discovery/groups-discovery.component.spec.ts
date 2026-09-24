@@ -1,14 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { GroupsDiscoveryComponent } from './groups-discovery.component';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nService } from '../../services/i18n.service';
-import { signal } from '@angular/core';
+import { GroupsDiscoveryComponent } from './groups-discovery.component';
 
 describe('GroupsDiscoveryComponent', () => {
   let fixture: ComponentFixture<GroupsDiscoveryComponent>;
@@ -70,12 +70,10 @@ describe('GroupsDiscoveryComponent', () => {
     httpTesting.verify();
   });
 
-  async function loadDiscovery(): Promise<void> {
+  async function loadDiscovery(groups = mockGroups): Promise<void> {
     fixture.detectChanges();
 
-    const interestsReq = httpTesting.expectOne((request) =>
-      request.url.includes('/interests'),
-    );
+    const interestsReq = httpTesting.expectOne((request) => request.url.includes('/interests'));
     expect(interestsReq.request.method).toBe('GET');
     expect(interestsReq.request.urlWithParams).toContain('language=en-GB');
     interestsReq.flush(mockInterests);
@@ -84,7 +82,7 @@ describe('GroupsDiscoveryComponent', () => {
       request.url.includes('/groups/discoverable'),
     );
     expect(groupsReq.request.method).toBe('GET');
-    groupsReq.flush(mockGroups);
+    groupsReq.flush(groups);
 
     await fixture.whenStable();
     fixture.detectChanges();
@@ -120,16 +118,12 @@ describe('GroupsDiscoveryComponent', () => {
 
   it('joins a selected group through the authenticated groups API and refreshes discovery', async () => {
     await loadDiscovery();
-    const reload = vi
-      .spyOn((component as any).groupsResource, 'reload')
-      .mockReturnValue(true);
+    const reload = vi.spyOn((component as any).groupsResource, 'reload').mockReturnValue(true);
 
     const joinPromise = component.joinGroup('g1');
     expect((component as any).joiningId()).toBe('g1');
 
-    const joinReq = httpTesting.expectOne((request) =>
-      request.url.includes('/groups/g1/join'),
-    );
+    const joinReq = httpTesting.expectOne((request) => request.url.includes('/groups/g1/join'));
     expect(joinReq.request.method).toBe('POST');
     expect(joinReq.request.body).toEqual({});
     joinReq.flush({ success: true });
@@ -140,18 +134,54 @@ describe('GroupsDiscoveryComponent', () => {
     expect((component as any).joiningId()).toBeNull();
   });
 
-  it('keeps join failures retryable and does not refresh a failed mutation', async () => {
+  it('serializes join mutations so rapid clicks cannot issue conflicting requests', async () => {
+    const secondJoinableGroup = {
+      ...mockGroups[1],
+      id: 'g3',
+      is_member: false,
+      member_count: 2,
+    };
+    await loadDiscovery([mockGroups[0], secondJoinableGroup]);
+    const reload = vi.spyOn((component as any).groupsResource, 'reload').mockReturnValue(true);
+
+    const firstJoin = component.joinGroup('g1');
+    const secondJoin = component.joinGroup('g3');
+
+    httpTesting.expectNone((request) => request.url.includes('/groups/g3/join'));
+    const firstRequest = httpTesting.expectOne((request) => request.url.includes('/groups/g1/join'));
+    firstRequest.flush({ success: true });
+
+    await Promise.all([firstJoin, secondJoin]);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect((component as any).joiningId()).toBeNull();
+  });
+
+  it('does not send a join mutation for unknown, joined, or full groups', async () => {
+    const fullGroup = {
+      ...mockGroups[0],
+      id: 'g3',
+      max_members: 5,
+      member_count: 5,
+    };
+    await loadDiscovery([...mockGroups, fullGroup]);
+
+    await component.joinGroup('missing');
+    await component.joinGroup('g2');
+    await component.joinGroup('g3');
+
+    httpTesting.expectNone(
+      (request) => request.url.includes('/groups/') && request.method === 'POST',
+    );
+  });
+
+  it('keeps join failures retryable without reflecting provider error text', async () => {
     await loadDiscovery();
-    const reload = vi
-      .spyOn((component as any).groupsResource, 'reload')
-      .mockReturnValue(true);
+    const reload = vi.spyOn((component as any).groupsResource, 'reload').mockReturnValue(true);
 
     const joinPromise = component.joinGroup('g1');
-    const joinReq = httpTesting.expectOne((request) =>
-      request.url.includes('/groups/g1/join'),
-    );
+    const joinReq = httpTesting.expectOne((request) => request.url.includes('/groups/g1/join'));
     joinReq.flush(
-      { message: 'temporarily unavailable' },
+      { message: 'database host secret.internal refused connection' },
       { status: 503, statusText: 'Service Unavailable' },
     );
 
@@ -159,15 +189,28 @@ describe('GroupsDiscoveryComponent', () => {
 
     expect(reload).not.toHaveBeenCalled();
     expect((component as any).joiningId()).toBeNull();
-    expect((component as any).error()).not.toBe('');
+    expect((component as any).error()).toBe('common.error_generic');
+    expect((component as any).error()).not.toContain('secret.internal');
   });
 
-  it('surfaces discovery load failure instead of fabricating groups', async () => {
+  it('fails closed when the join endpoint returns an invalid contract', async () => {
+    await loadDiscovery();
+    const reload = vi.spyOn((component as any).groupsResource, 'reload').mockReturnValue(true);
+
+    const joinPromise = component.joinGroup('g1');
+    const joinReq = httpTesting.expectOne((request) => request.url.includes('/groups/g1/join'));
+    joinReq.flush({ success: 'yes' });
+
+    await joinPromise;
+
+    expect(reload).not.toHaveBeenCalled();
+    expect((component as any).error()).toBe('common.error_generic');
+  });
+
+  it('surfaces discovery load failure without fabricating groups or an empty state', async () => {
     fixture.detectChanges();
 
-    const interestsReq = httpTesting.expectOne((request) =>
-      request.url.includes('/interests'),
-    );
+    const interestsReq = httpTesting.expectOne((request) => request.url.includes('/interests'));
     interestsReq.flush([]);
 
     const groupsReq = httpTesting.expectOne((request) =>
@@ -179,6 +222,80 @@ describe('GroupsDiscoveryComponent', () => {
     fixture.detectChanges();
 
     expect((component as any).items()).toEqual([]);
-    expect((component as any).error()).toBe('Failed to load groups');
+    expect((component as any).error()).toBe('common.error_generic');
+    expect(fixture.nativeElement.textContent).not.toContain('groups_discovery_empty');
+  });
+
+  it('allows a failed discovery request to be retried explicitly', async () => {
+    fixture.detectChanges();
+
+    httpTesting.expectOne((request) => request.url.includes('/interests')).flush([]);
+    const failedRequest = httpTesting.expectOne((request) =>
+      request.url.includes('/groups/discoverable'),
+    );
+    failedRequest.error(new ProgressEvent('network error'));
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect((component as any).error()).toBe('common.error_generic');
+
+    (component as any).retryDiscovery();
+    fixture.detectChanges();
+
+    const retryRequest = httpTesting.expectOne((request) =>
+      request.url.includes('/groups/discoverable'),
+    );
+    retryRequest.flush(mockGroups);
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((component as any).error()).toBe('');
+    expect((component as any).items()).toEqual(mockGroups);
+  });
+
+  it('rejects malformed or oversized discovery payloads before they reach UI state', async () => {
+    fixture.detectChanges();
+
+    const interestsReq = httpTesting.expectOne((request) => request.url.includes('/interests'));
+    interestsReq.flush(mockInterests);
+
+    const groupsReq = httpTesting.expectOne((request) =>
+      request.url.includes('/groups/discoverable'),
+    );
+    groupsReq.flush([
+      {
+        ...mockGroups[0],
+        member_count: 99,
+      },
+    ]);
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((component as any).items()).toEqual([]);
+    expect((component as any).error()).toBe('common.error_generic');
+  });
+
+  it('treats malformed optional topic metadata as non-fatal presentation failure', async () => {
+    fixture.detectChanges();
+
+    const interestsReq = httpTesting.expectOne((request) => request.url.includes('/interests'));
+    interestsReq.flush([
+      { id: 'duplicate', name: 'One' },
+      { id: 'duplicate', name: 'Two' },
+    ]);
+
+    const groupsReq = httpTesting.expectOne((request) =>
+      request.url.includes('/groups/discoverable'),
+    );
+    groupsReq.flush(mockGroups);
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((component as any).interestPills()).toEqual([]);
+    expect((component as any).items()).toEqual(mockGroups);
+    expect((component as any).error()).toBe('');
   });
 });
