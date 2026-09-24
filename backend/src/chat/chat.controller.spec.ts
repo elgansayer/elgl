@@ -51,6 +51,7 @@ describe('ChatController', () => {
             generateConnectionToken: vi.fn(),
             sendMessage: vi.fn(),
             getRooms: vi.fn(),
+            getUnreadCount: vi.fn(),
             getMessages: vi.fn(),
             addFavourite: vi.fn(),
             getFavourites: vi.fn(),
@@ -223,6 +224,24 @@ describe('ChatController', () => {
       const result = await controller.getRooms(mockUser());
       expect(chatService.getRooms).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(rooms);
+    });
+  });
+
+  describe('getUnreadCount', () => {
+    it('returns null without an authenticated user', async () => {
+      await expect(controller.getUnreadCount(null)).resolves.toBeNull();
+      expect(chatService.getUnreadCount).not.toHaveBeenCalled();
+    });
+
+    it('returns the authenticated user count', async () => {
+      (chatService.getUnreadCount as Mock).mockResolvedValue({
+        unreadCount: 4,
+      });
+
+      await expect(controller.getUnreadCount(mockUser())).resolves.toEqual({
+        unreadCount: 4,
+      });
+      expect(chatService.getUnreadCount).toHaveBeenCalledWith('user-1');
     });
   });
 

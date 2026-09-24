@@ -118,6 +118,14 @@ export class ChatController {
     return await this.chatService.getRooms(user.id);
   }
 
+  @Get('unread-count')
+  async getUnreadCount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ unreadCount: number } | null> {
+    if (!user) return null;
+    return await this.chatService.getUnreadCount(user.id);
+  }
+
   @Get('messages/:roomId')
   async getMessages(
     @Param('roomId') roomId: string,
