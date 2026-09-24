@@ -102,9 +102,25 @@ export const socialRoutes: Routes = [
     title: 'Event Calendar - HelloTalk',
   },
   {
+    path: 'community/language-parties',
+    loadComponent: () =>
+      import('../components/language-parties/language-parties.component').then(
+        (m) => m.LanguagePartiesComponent,
+      ),
+    title: 'Language Parties - HelloTalk',
+  },
+  {
     path: 'language-parties',
     redirectTo: 'community/language-parties',
     pathMatch: 'full',
+  },
+  {
+    path: 'community/language-islands',
+    loadComponent: () =>
+      import('../pages/language-islands/language-islands.component').then(
+        (m) => m.LanguageIslandsComponent,
+      ),
+    title: 'Language Islands - HelloTalk',
   },
   {
     path: 'language-islands',

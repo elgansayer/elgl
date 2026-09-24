@@ -108,7 +108,7 @@ interface InterestTopic {
           }
           @if (!isEmbedded()) {
             <a
-              [routerLink]="['/groups/create']"
+              [routerLink]="['/community/groups/create']"
               class="mt-3 bg-accent-500 hover:bg-accent-400 text-on-fill px-4 py-1.5 rounded-full text-sm font-bold transition-colors"
             >
               {{ 'groups_discovery_create' | t }}
@@ -167,7 +167,7 @@ interface InterestTopic {
       <!-- Create group FAB for embedded mode -->
       @if (isEmbedded()) {
         <a
-          [routerLink]="['/groups/create']"
+          [routerLink]="['/community/groups/create']"
           class="fixed bottom-20 end-4 bg-accent-500 hover:bg-accent-400 text-on-fill w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg shadow-accent-500/30 transition-colors z-10"
           [attr.aria-label]="'groups_discovery_create' | t"
         >

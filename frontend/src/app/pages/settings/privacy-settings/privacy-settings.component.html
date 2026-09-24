@@ -60,7 +60,9 @@
                 class="min-h-11 w-full cursor-pointer rounded-app border border-transparent p-3 text-start transition-colors data-[checked=true]:border-primary data-[checked=true]:bg-primary/10"
               >
                 <span class="flex min-w-0 flex-col gap-1">
-                  <span class="text-sm font-medium text-text-primary">{{ option.labelKey | t }}</span>
+                  <span class="text-sm font-medium text-text-primary">{{
+                    option.labelKey | t
+                  }}</span>
                   <span class="text-xs text-text-secondary break-words">{{
                     option.descriptionKey | t
                   }}</span>
@@ -178,7 +180,7 @@
               item.descriptionKey | t
             }}</span>
           </div>
-          @if (item.route === '/blocks' && blockedCount() > 0) {
+          @if (item.route === '/settings/blocks' && blockedCount() > 0) {
             <span
               class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-danger/20 text-danger text-xs font-medium"
             >
