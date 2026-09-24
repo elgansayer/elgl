@@ -83,3 +83,8 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-09-07 - [Strict Secrets Validation in Production for VideoCallsService]
+
+**Vulnerability:** The VideoCallsService lacked strict environment secret validation, allowing it to potentially use default or known test keys for `LIVEKIT_API_KEY` and `LIVEKIT_SECRET` in a production environment if misconfigured.
+**Learning:** Services like audio rooms and general calls successfully fail-fast when encountering these known test keys. Video calls bypassed this explicit validation, representing a critical risk of silent insecure fallback.
+**Prevention:** Always apply strict fail-fast validation checks where `NODE_ENV === 'production'` alongside explicit validation for known development fallback credentials directly within the initialization.
