@@ -41,7 +41,7 @@ def test_production_provider_policy_is_locked() -> None:
         "implementation": ["claude", "codex", "google", "opencode", "pi"],
         "security_review": ["claude", "codex", "google", "opencode", "pi"],
         "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
-        "code_review": ["codex", "claude", "google", "opencode", "pi"],
+        "code_review": ["claude", "google", "codex", "opencode", "pi"],
         "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
         "general_action": ["opencode", "google", "codex", "claude", "pi"],
     }

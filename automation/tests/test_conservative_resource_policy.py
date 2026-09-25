@@ -17,6 +17,7 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.conservative import ConservativeAgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import ReviewAdmissionGate
 from openhands_factory.models import Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -138,6 +139,33 @@ def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Pa
     assert second.calls == 1
 
 
+def test_conservative_router_shares_host_capacity_with_exclusive_verification(
+    tmp_path: Path,
+) -> None:
+    host_resource_slots = HostResourceGate(tmp_path / "host-resources.json", 2)
+    assert host_resource_slots.acquire_shared("test:first")
+    assert host_resource_slots.acquire_shared("test:second")
+    provider = Provider("first")
+    task = Task("42", "Issue", "Body", "github-issue", 0)
+    request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
+    router = ConservativeAgentRouter(
+        [provider],
+        policy=OrderedPolicy(["first"]),
+        host_resource_slots=host_resource_slots,
+        enabled=True,
+    )
+
+    with pytest.raises(ProviderCapacityUnavailable, match="Host resource capacity is full"):
+        router.run(request, Job(task))
+
+    assert provider.calls == 0
+    host_resource_slots.release_shared("test:first")
+    host_resource_slots.release_shared("test:second")
+    assert router.run(request, Job(task)).success
+    assert host_resource_slots.acquire_shared("test:third")
+    assert host_resource_slots.acquire_shared("test:fourth")
+
+
 def test_conservative_router_enforces_global_hourly_agent_route_budget(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -177,6 +205,7 @@ def test_conservative_router_caps_one_task_without_spending_review_admission(
     monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "6")
     monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_TASK_PER_INTERVAL", "2")
     monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    monkeypatch.setenv("FACTORY_REVIEWS_PER_INTERVAL", "2")
     provider = Provider("first")
     router = ConservativeAgentRouter(
         [provider],
@@ -238,7 +267,12 @@ def test_conservative_router_preserves_independent_review_before_candidate_cap(
     assert candidates == ["second", "third"]
 
 
-def test_conservative_router_enforces_two_review_shas_per_hour(tmp_path: Path) -> None:
+def test_conservative_router_enforces_configured_review_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEWS_PER_INTERVAL", "2")
+    monkeypatch.setenv("FACTORY_REVIEW_INTERVAL_SECONDS", "3600")
     provider = Provider("first")
     router = ConservativeAgentRouter(
         [provider],
@@ -253,13 +287,32 @@ def test_conservative_router_enforces_two_review_shas_per_hour(tmp_path: Path) -
 
     assert router.run(first_request, first_job).success
     assert router.run(second_request, second_job).success
-    with pytest.raises(ProviderCapacityUnavailable, match="2 reviews/hour"):
+    with pytest.raises(ProviderCapacityUnavailable, match="2 reviews per configured interval"):
         router.run(third_request, third_job)
 
     assert provider.calls == 2
 
 
-def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Path) -> None:
+def test_conservative_router_defaults_support_continuous_pr_drain(tmp_path: Path) -> None:
+    provider = Provider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 2},
+        enabled=True,
+    )
+
+    assert router._agent_route_admission is not None
+    assert router._agent_route_admission.max_admissions == 48
+    assert router._review_admission is not None
+    assert router._review_admission.max_admissions == 36
+
+
+def test_conservative_router_honours_single_review_lane(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")
     entered = threading.Event()
     release = threading.Event()
 
@@ -307,6 +360,65 @@ def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Pa
     assert not thread.is_alive()
     assert result and result[0].success
     assert provider.calls == 1
+
+
+def test_conservative_router_allows_configured_review_lanes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "2")
+    entered = threading.Barrier(3)
+    release = threading.Event()
+
+    class BlockingProvider(Provider):
+        def run(self, request: AgentRequest) -> AgentResult:
+            self.calls += 1
+            entered.wait(timeout=5)
+            assert release.wait(timeout=5)
+            now = datetime.now(UTC)
+            return AgentResult(
+                self.name,
+                request.phase,
+                True,
+                now,
+                now,
+                0,
+                "done",
+                None,
+                None,
+                "fake",
+                "fake-model",
+            )
+
+    provider = BlockingProvider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 2},
+        enabled=True,
+    )
+    requests = [
+        review_request(tmp_path, "10", "aaa"),
+        review_request(tmp_path, "11", "bbb"),
+    ]
+    results: list[AgentResult] = []
+    threads = [
+        threading.Thread(target=lambda pair=pair: results.append(router.run(*pair)))
+        for pair in requests
+    ]
+    for thread in threads:
+        thread.start()
+    try:
+        entered.wait(timeout=5)
+    finally:
+        release.set()
+        for thread in threads:
+            thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(results) == 2
+    assert all(result.success for result in results)
+    assert provider.calls == 2
 
 
 def test_conservative_budget_counts_fallback_provider_starts(
