@@ -30,12 +30,14 @@ from openhands_factory.generation import (
     assert_generation_current,
 )
 from openhands_factory.host_diagnostics import gather_diagnostics
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import IssueAdmissionGate
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
+from openhands_factory.worktree_cache import prune_inactive_worktree_caches
 
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
@@ -78,6 +80,12 @@ def is_review_lane_job(job: Job) -> bool:
     )
 
 
+def review_lane_is_busy(jobs: Mapping[str, Job], task_ids: set[str]) -> bool:
+    """Keep background architecture work from competing with active PR throughput."""
+
+    return any(task_id in task_ids and is_review_lane_job(job) for task_id, job in jobs.items())
+
+
 def is_new_github_issue(job: Job) -> bool:
     """Return whether the job is entering the Factory from issue discovery."""
 
@@ -92,11 +100,27 @@ _REVIEW_STATE_ORDER = {
     JobState.MERGE_QUEUED: 0,
     JobState.READY_TO_MERGE: 1,
     JobState.CI_PENDING: 2,
-    JobState.REVIEWING: 3,
-    JobState.QUALITY_REPAIRING: 4,
-    JobState.REPAIRING: 5,
-    JobState.PR_DRAFT: 6,
+    # A review that already produced a repair must finish deterministic local
+    # verification before it can return to independent review. Rank that durable
+    # continuation ahead of fresh reviews and AI-backed repair retries so verified
+    # work clears the queue instead of repeatedly losing its lane after a restart.
+    JobState.VERIFYING: 3,
+    JobState.REVIEWING: 4,
+    JobState.QUALITY_REPAIRING: 5,
+    JobState.REPAIRING: 6,
+    JobState.PR_DRAFT: 7,
 }
+
+
+def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
+    """Prioritise merge proximity while rotating equally eligible PRs fairly."""
+
+    return (
+        job.task.priority,
+        _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
+        job.updated_at,
+        int(job.task.identifier),
+    )
 
 
 def select_issue_admitted(
@@ -149,12 +173,19 @@ def select_batch(
     remaining = [item for item in candidates if not is_review_lane_job(item)]
     review_ready = sorted(
         (item for item in candidates if is_review_lane_job(item)),
-        key=lambda item: (
-            item.task.priority,
-            _REVIEW_STATE_ORDER.get(item.state, len(_REVIEW_STATE_ORDER)),
-            int(item.task.identifier),
-        ),
+        key=_review_sort_key,
     )[:review_capacity]
+
+    # Two shared host slots are deliberate on the 8 GiB production host. When
+    # both are filled from a large PR backlog, issue implementation otherwise
+    # starves indefinitely. Preserve one slot for eligible non-review work while
+    # still using both review lanes whenever no issue or repair can advance.
+    issue_candidate_available = any(
+        not is_new_github_issue(item) or new_issue_slots is None or new_issue_slots > 0
+        for item in remaining
+    )
+    if review_first and limit > 1 and issue_candidate_available:
+        review_ready = review_ready[: limit - 1]
 
     if not review_ready:
         return select_issue_admitted(remaining, limit, new_issue_slots)
@@ -201,7 +232,13 @@ def selection_diagnostics(
         "excluded_jobs": sorted(excluded_task_ids, key=int)[:25],
         "active_review_count": active_review_count,
         "review_capacity": review_capacity,
-        "review_jobs": [job.task.identifier for job in candidates if is_review_lane_job(job)][:25],
+        "review_jobs": [
+            job.task.identifier
+            for job in sorted(
+                (candidate for candidate in candidates if is_review_lane_job(candidate)),
+                key=_review_sort_key,
+            )[:25]
+        ],
     }
 
 
@@ -230,14 +267,16 @@ def select_batch_failsafe(
     review_slots = max(0, review_lane_max_concurrent - active_reviews)
     reviews = sorted(
         (job for job in eligible if is_review_lane_job(job)),
-        key=lambda job: (
-            job.task.priority,
-            _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
-            int(job.task.identifier),
-        ),
+        key=_review_sort_key,
     )[: min(limit, review_slots)]
     remaining = [job for job in eligible if not is_review_lane_job(job)]
     remaining.sort(key=lambda job: (job.task.priority, int(job.task.identifier)))
+    issue_candidate_available = any(
+        not is_new_github_issue(job) or new_issue_slots is None or new_issue_slots > 0
+        for job in remaining
+    )
+    if limit > 1 and issue_candidate_available:
+        reviews = reviews[: limit - 1]
     return [
         *reviews,
         *select_issue_admitted(remaining, limit - len(reviews), new_issue_slots),
@@ -409,11 +448,23 @@ class FactoryDaemon:
         self.stopping = False
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
-        self.pipeline = FactoryPipeline(config)
-        self.issue_admission = self._issue_admission_gate(config)
+        # Two lightweight agent sessions may run together. The fair exclusive side
+        # prevents either session from overlapping an authoritative frontend gate.
+        self.host_resource_slots = HostResourceGate(
+            config.provider_capacity_dir / "host-resource-gate.json",
+            2,
+            lease_seconds=config.max_task_minutes * 60 + 300,
+        )
         self.verification_slots = Semaphore(1)
+        self.pipeline = FactoryPipeline(
+            config,
+            verification_slots=self.verification_slots,
+            host_resource_slots=self.host_resource_slots,
+        )
+        self.issue_admission = self._issue_admission_gate(config)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
+        self._next_worktree_cache_prune_at = 0.0
         self.stall_since: datetime | None = None
         self.stall_investigation_dispatched = False
         self.scheduler_snapshot: dict[str, object] = {
@@ -449,9 +500,22 @@ class FactoryDaemon:
     def paused(self) -> bool:
         return bool(read_json(self.control_path, {"paused": False}).get("paused", False))
 
-    def _storage_ready(self) -> bool:
+    def _storage_ready(self, active_task_ids: set[str] | None = None) -> bool:
         failed = [check for check in disk_space_checks(self.config) if not check.passed]
         blocked = bool(failed)
+        now = time.monotonic()
+        if blocked and now >= getattr(self, "_next_worktree_cache_prune_at", 0.0):
+            self._next_worktree_cache_prune_at = now + self.config.cooldown_seconds
+            reserve = int(self.config.minimum_free_disk_gib * 1024**3)
+            pruned = prune_inactive_worktree_caches(
+                self.config.worktree_dir,
+                active_task_ids or set(),
+                minimum_free_bytes=reserve,
+                target_free_bytes=reserve + 1024**3,
+            )
+            if pruned:
+                failed = [check for check in disk_space_checks(self.config) if not check.passed]
+                blocked = bool(failed)
         if blocked and not self.storage_blocked:
             LOGGER.warning(
                 "Factory scheduling paused by storage reserve: %s",
@@ -593,7 +657,10 @@ class FactoryDaemon:
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
-                capacity = self.config.max_parallel_jobs - len(active)
+                review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
+                worker_capacity = self.config.max_parallel_jobs - len(active)
+                available_host_slots = self.host_resource_slots.available_shared_slots()
+                capacity = min(worker_capacity, available_host_slots)
                 # storage_ready and everything in this block must run
                 # unconditionally, before the scheduling gate below and
                 # regardless of pause/capacity state: pruning is what's
@@ -602,12 +669,14 @@ class FactoryDaemon:
                 # hasn't. Gating either behind storage_ready/scheduling (as
                 # an earlier version of the pruning fix did) deadlocks -
                 # once blocked, nothing ever runs to notice or unblock it.
-                storage_ready = self._storage_ready()
+                storage_ready = self._storage_ready(active_task_ids)
                 paused = self.paused()
                 self.scheduler_snapshot.update(
                     {
                         "max_parallel_jobs": self.config.max_parallel_jobs,
                         "capacity": capacity,
+                        "worker_capacity": worker_capacity,
+                        "available_host_slots": available_host_slots,
                         "paused": paused,
                         "storage_ready": storage_ready,
                         "review_lane_max_concurrent": (self.config.review_lane_max_concurrent),
@@ -746,6 +815,9 @@ class FactoryDaemon:
                             "selection_diagnostics": diagnostic,
                         }
                     )
+                    review_lane_busy = review_lane_busy or any(
+                        is_review_lane_job(job) for job in selected_jobs
+                    )
                     for job in selected_jobs:
                         self._assert_owner()
                         if is_new_github_issue(job) and not self.issue_admission.admit(
@@ -759,6 +831,7 @@ class FactoryDaemon:
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
+                            host_resource_slots=self.host_resource_slots,
                             agent_router=self.pipeline.router,
                         )
                         review_priority = is_review_lane_job(job)
@@ -814,11 +887,15 @@ class FactoryDaemon:
                             or datetime.now(UTC) >= architect_retry_not_before
                         )
                         and self.pipeline.architect_due()
+                        and not review_lane_busy
+                        and available_host_slots > 0
                     ):
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(
                             self.config,
+                            verification_slots=self.verification_slots,
+                            host_resource_slots=self.host_resource_slots,
                             agent_router=self.pipeline.router,
                         )
                         architect_future = architect.submit(architect_worker.run_architect_cycle)

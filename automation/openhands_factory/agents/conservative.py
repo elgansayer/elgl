@@ -25,11 +25,11 @@ from openhands_factory.models import Job
 
 MAX_PROVIDER_CANDIDATES_PER_PHASE = 2
 MAX_GLOBAL_AGENT_CONCURRENCY = 2
-MAX_REVIEW_CONCURRENCY = 1
+MAX_REVIEW_CONCURRENCY = 2
 REVIEW_INTERVAL_SECONDS = 60 * 60
-REVIEWS_PER_INTERVAL = 12
+REVIEWS_PER_INTERVAL = 36
 AGENT_ROUTE_INTERVAL_SECONDS = 60 * 60
-AGENT_ROUTES_PER_INTERVAL = 24
+AGENT_ROUTES_PER_INTERVAL = 48
 AGENT_ROUTES_PER_TASK_PER_INTERVAL = 4
 _RESOURCE_RETRY_SECONDS = 60
 _CODE_MUTATING_PHASES = {
@@ -133,11 +133,21 @@ def conservative_policy_enabled() -> bool:
 class ConservativeAgentRouter(AgentRouter):
     """Bound expensive execution without weakening the existing Factory pipeline."""
 
-    def __init__(self, *args: Any, enabled: bool | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        enabled: bool | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
         self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
-        self._review_slots = BoundedSemaphore(MAX_REVIEW_CONCURRENCY)
+        self._review_slots = BoundedSemaphore(
+            _positive_int_environment(
+                "FACTORY_REVIEW_LANE_MAX_CONCURRENT",
+                MAX_REVIEW_CONCURRENCY,
+            )
+        )
         self._review_admission: ReviewAdmissionGate | None = None
         self._review_head_stability: ReviewHeadStabilityGate | None = None
         self._agent_route_admission: DurableAdmissionGate | None = None

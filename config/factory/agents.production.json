@@ -7,7 +7,7 @@
       "auth_mode": "subscription",
       "transport": "cli",
       "max_concurrency": 2,
-      "model": "fable",
+      "model": "sonnet",
       "max_turns": 100,
       "credential_paths": [".claude", ".claude.json"],
       "runtime_paths": [".local/bin", ".local/share/claude", ".npm-global"],
@@ -17,9 +17,9 @@
         "security_review": "sonnet",
         "implementation": "sonnet",
         "quality_repair": "haiku",
-        "code_review": "haiku",
+        "code_review": "sonnet",
         "ci_repair": "haiku",
-        "general_action": "fable"
+        "general_action": "haiku"
       }
     },
     "codex": {
@@ -99,7 +99,7 @@
     "implementation": ["claude", "codex", "google", "opencode", "pi"],
     "security_review": ["claude", "codex", "google", "opencode", "pi"],
     "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
-    "code_review": ["codex", "claude", "google", "opencode", "pi"],
+    "code_review": ["claude", "google", "codex", "opencode", "pi"],
     "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
     "general_action": ["opencode", "google", "codex", "claude", "pi"],
     "skip_busy_providers": true,

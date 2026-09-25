@@ -346,6 +346,36 @@ install_runtime_bundle() {
   record_runtime_commit "$commit" || return 1
 }
 
+install_service_configuration() {
+  local commit=$1
+  verify_commit_identity "$commit" || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/systemd/repo-factory.slice \
+    /etc/systemd/system/repo-factory.slice 0644 || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/systemd/repo-factory@.service \
+    /etc/systemd/system/repo-factory@.service 0644 || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/systemd/repo-factory-health@.service \
+    /etc/systemd/system/repo-factory-health@.service 0644 || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/systemd/repo-factory-health@.timer \
+    /etc/systemd/system/repo-factory-health@.timer 0644 || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/systemd/repo-factory-update.service \
+    /etc/systemd/system/repo-factory-update.service 0644 || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/systemd/repo-factory-update.timer \
+    /etc/systemd/system/repo-factory-update.timer 0644 || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/factory/instances/hellotalk.env \
+    /etc/repo-factory/instances/hellotalk.env 0644 || return 1
+  install_runtime_file_from_commit \
+    "$commit" config/factory/instances/workout-agent.env \
+    /etc/repo-factory/instances/workout-agent.env 0644 || return 1
+  systemctl daemon-reload
+}
+
 reconcile_agents_config_from_commits() {
   local base_commit=$1
   local desired_commit=$2
@@ -480,6 +510,8 @@ if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
 fi
 
 if [ "$local_sha" = "$remote_sha" ] && [ "$config_is_current" = true ]; then
+  log 'Refreshing verified Factory service units and instance policy'
+  install_service_configuration "$local_sha"
   log "Already up to date at ${local_sha:0:12} with valid provider config - no restart needed"
   exit 0
 fi
@@ -574,6 +606,9 @@ runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
 
 log 'Reconciling repository provider policy while preserving host overrides'
 reconcile_agents_config_from_commits "$local_sha" "$pulled_sha"
+
+log 'Refreshing verified Factory service units and instance policy'
+install_service_configuration "$pulled_sha"
 
 log 'Rebuilding the shared Factory worker image'
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 \

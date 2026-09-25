@@ -112,17 +112,45 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     # npm run e2e against a server that was never coming up.
     assert "kill -0" in script
     assert "factory-angular-e2e.log" in script
+    assert frontend_e2e.arguments[-1] == "cypress/e2e/cypress-setup.cy.ts"
 
 
-def test_only_the_fixed_port_command_is_exclusive(tmp_path: Path) -> None:
-    """frontend-e2e binds a fixed host port (127.0.0.1:4200) and cannot run
-    concurrently with another instance of itself - everything else, including
-    backend-test:e2e (an in-process supertest server on an ephemeral port), is
-    safe under full worker parallelism and must not be serialized alongside it.
-    """
+def test_memory_heavy_and_fixed_port_frontend_commands_are_exclusive(tmp_path: Path) -> None:
     commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     exclusive = {command.name for command in commands if command.exclusive}
-    assert exclusive == {"frontend-e2e"}
+    assert exclusive == {
+        "frontend-lint:check",
+        "frontend-build",
+        "frontend-test",
+        "frontend-e2e",
+    }
+
+
+def test_frontend_e2e_runs_only_changed_cypress_specs(tmp_path: Path) -> None:
+    first = Path("frontend/cypress/e2e/chat-flow.cy.ts")
+    second = Path("frontend/cypress/e2e/moments-flow.cy.ts")
+    for path in (first, second):
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    commands = commands_for(tmp_path, {first, second, Path("frontend/src/app/app.ts")})
+    frontend_e2e = next(command for command in commands if command.name == "frontend-e2e")
+
+    assert frontend_e2e.arguments[-2] == "factory-frontend-e2e"
+    assert frontend_e2e.arguments[-1] == (
+        "cypress/e2e/chat-flow.cy.ts,cypress/e2e/moments-flow.cy.ts"
+    )
+
+
+def test_root_playwright_change_runs_discovery_not_cypress(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("e2e/tests/auth.spec.ts")})
+    names = {command.name for command in commands}
+
+    assert "playwright-discovery" in names
+    assert "frontend-e2e" not in names
+    discovery = next(command for command in commands if command.name == "playwright-discovery")
+    assert discovery.arguments == ("npm", "test", "--", "--list")
+    assert discovery.directory == tmp_path / "e2e"
 
 
 def test_empty_diff_cannot_claim_verification(tmp_path: Path) -> None:
@@ -166,6 +194,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     monkeypatch.setenv("FACTORY_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("FACTORY_LOG_DIR", str(log_dir))
     monkeypatch.setenv("FACTORY_REPOSITORY", str(repository))
+    cypress_cache = tmp_path / "deployment-home" / ".cache" / "Cypress"
+    cypress_cache.mkdir(parents=True)
+    monkeypatch.setenv("FACTORY_CYPRESS_CACHE_DIR", str(cypress_cache))
     monkeypatch.setenv("GITHUB_TOKEN", "must-not-propagate")
     monkeypatch.setattr("openhands_factory.verification.sys.prefix", str(virtual_environment))
     monkeypatch.setattr("openhands_factory.verification.run_process", fake_run_process)
@@ -189,7 +220,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "uv_cache=$service_home/.cache/uv" in sandbox_script
+    assert "cypress_cache=$6" in sandbox_script
     assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in sandbox_script
+    assert str(cypress_cache) in arguments
     assert 'writable_vite_cache="$repository/$dependency_path/.vite-temp"' in sandbox_script
     assert 'tmpfs "$writable_vite_cache"' in sandbox_script
     assert (repository / "backend/node_modules/.vite-temp").is_dir()
@@ -202,6 +235,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
+    assert environment["MYPY_CACHE_DIR"] == "/tmp/mypy-cache"
+    assert environment["PYTEST_ADDOPTS"] == "-o cache_dir=/tmp/pytest-cache"
+    assert environment["RUFF_CACHE_DIR"] == "/tmp/ruff-cache"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
     assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
     assert environment["UV_NO_SYNC"] == "1"

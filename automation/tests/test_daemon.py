@@ -15,6 +15,7 @@ from openhands_factory.daemon import (
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
+    review_lane_is_busy,
     select_batch,
     select_batch_failsafe,
     selection_diagnostics,
@@ -52,6 +53,17 @@ def factory_pull_request_job(
     factory_job.pull_request = int(identifier) + 1000
     factory_job.branch = f"factory/change-{identifier}"
     return factory_job
+
+
+def test_review_lane_busy_only_for_active_pull_request_work() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "7348": pull_request_job("7348"),
+    }
+
+    assert review_lane_is_busy(jobs, {"7348"}) is True
+    assert review_lane_is_busy(jobs, {"10"}) is False
+    assert review_lane_is_busy(jobs, set()) is False
 
 
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:
@@ -144,6 +156,18 @@ def test_select_batch_admits_multiple_pull_requests_when_lane_widened() -> None:
     assert [item.task.identifier for item in selected] == ["7347", "7348", "10"]
 
 
+def test_select_batch_preserves_issue_progress_when_host_has_only_two_slots() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "10"]
+
+
 def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
     jobs = {
         "10": job("10", 5),
@@ -167,6 +191,30 @@ def test_select_batch_prefers_review_jobs_closer_to_merge() -> None:
     selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
 
     assert [item.task.identifier for item in selected] == ["7347", "7348"]
+
+
+def test_select_batch_finishes_verification_before_ai_repair_retries() -> None:
+    jobs = {
+        "7346": pull_request_job("7346", state=JobState.QUALITY_REPAIRING),
+        "7347": pull_request_job("7347", state=JobState.VERIFYING),
+        "7348": pull_request_job("7348", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "7346"]
+
+
+def test_select_batch_rotates_equally_eligible_review_jobs_by_last_progress() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "7347": replace(pull_request_job("7347"), updated_at=now),
+        "7348": replace(pull_request_job("7348"), updated_at=now - timedelta(minutes=5)),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
 
 
 def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
@@ -545,13 +593,23 @@ def test_daemon_publishes_heartbeat_before_first_scheduling_cycle(
 
 
 def test_storage_reserve_blocks_and_recovers_scheduling(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     daemon = FactoryDaemon.__new__(FactoryDaemon)
-    daemon.config = SimpleNamespace()  # type: ignore[assignment]
+    daemon.config = SimpleNamespace(  # type: ignore[assignment]
+        cooldown_seconds=60,
+        minimum_free_disk_gib=5,
+        worktree_dir=tmp_path,
+    )
     daemon.storage_blocked = False
+    daemon._next_worktree_cache_prune_at = 0.0
     checks = [SimpleNamespace(passed=False, detail="root: 2.0 GiB available")]
     monkeypatch.setattr("openhands_factory.daemon.disk_space_checks", lambda config: checks)
+    monkeypatch.setattr(
+        "openhands_factory.daemon.prune_inactive_worktree_caches",
+        lambda *args, **kwargs: [],
+    )
 
     assert not daemon._storage_ready()
     assert daemon.storage_blocked

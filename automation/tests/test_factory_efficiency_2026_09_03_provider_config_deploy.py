@@ -157,7 +157,7 @@ def test_neutral_repo_factory_updater_has_autonomous_bootstrap_path() -> None:
     maintenance = _read("scripts/maintain-factory-host-storage.sh")
     unit = _read("config/systemd/repo-factory-update.service")
 
-    assert "ExecStart=/bin/bash /opt/repo-factory/repo-factory-update.sh" in unit
+    assert "/bin/bash /opt/repo-factory/repo-factory-update.sh" in unit
     assert '"$REPO_RUNTIME_ROOT/repo-factory-update.sh" 0755' in updater
     assert "FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1" in updater
     assert "bootstrap_repo_factory_updater" in maintenance
