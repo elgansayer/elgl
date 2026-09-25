@@ -76,6 +76,184 @@ test('accepts root Playwright discovery with the canonical e2e config', () => {
   );
 });
 
+// Regression: a bare `playwright test` at the repository root or in frontend/ discovers Angular and
+// NestJS Vitest specs and fails with `ReferenceError: describe is not defined`. The e2e context must
+// belong to the invocation itself, never to a neighbouring line or workflow step.
+test('rejects a workflow step that omits working-directory when only the previous step sets it', () => {
+  const violations = analyse({
+    '.github/workflows/e2e.yml': [
+      '      - name: Install E2E dependencies',
+      '        run: npm ci',
+      '        working-directory: e2e',
+      '',
+      '      - name: Run Playwright',
+      '        run: npx playwright test',
+    ].join('\n'),
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(
+    violations[0],
+    /^\.github\/workflows\/e2e\.yml:6 invokes Playwright without the e2e working directory/,
+  );
+  assert.match(violations[0], /"working-directory: e2e" on the same workflow step$/);
+});
+
+test('rejects a workflow step whose working-directory belongs to the following step', () => {
+  const violations = analyse({
+    '.github/workflows/e2e.yml': [
+      '      - name: Run Playwright',
+      '        run: |',
+      '          set -euo pipefail',
+      '          npx playwright test',
+      '',
+      '      - name: Upload report',
+      '        run: echo done',
+      '        working-directory: e2e',
+    ].join('\n'),
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /^\.github\/workflows\/e2e\.yml:4 invokes Playwright/);
+});
+
+test('accepts a workflow step that owns working-directory before or after its run script', () => {
+  assert.deepEqual(
+    analyse({
+      '.github/workflows/e2e.yml': [
+        '      - name: Install E2E dependencies',
+        '        run: npm ci',
+        '        working-directory: e2e',
+        '',
+        '      - name: Run Playwright',
+        '        # Discovery must stay inside the e2e package.',
+        '        run: |',
+        '          set -euo pipefail',
+        '          npx playwright test',
+        '        working-directory: "./e2e"',
+        '',
+        '      - working-directory: e2e',
+        '        run: npx playwright test --project=rtl-arabic',
+        '',
+        '      - run: npx playwright test --project=rtl-hebrew',
+        '        working-directory: e2e',
+        '',
+        '      - name: Upload report',
+        '        run: echo done',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('rejects Playwright run from the root after only an install subshell entered e2e', () => {
+  const violations = analyse({
+    'scripts/run-e2e.sh': ['#!/usr/bin/env bash', '(cd e2e && npm ci)', 'npx playwright test'].join(
+      '\n',
+    ),
+    'scripts/run-e2e-inline.sh': '(cd e2e && npm ci) && npx playwright test',
+  });
+
+  assert.equal(violations.length, 2);
+  assert.match(violations[0], /^scripts\/run-e2e\.sh:3 invokes Playwright/);
+  assert.match(violations[1], /^scripts\/run-e2e-inline\.sh:1 invokes Playwright/);
+});
+
+test('rejects Playwright after a later cd leaves e2e', () => {
+  const violations = analyse({
+    'scripts/run-e2e.sh': 'cd e2e && npm ci && cd ../frontend && npx playwright test',
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /^scripts\/run-e2e\.sh:1 invokes Playwright/);
+});
+
+test('accepts a cd into e2e on the same command, including continuations and path prefixes', () => {
+  assert.deepEqual(
+    analyse({
+      'scripts/run-e2e.sh': 'cd e2e && npx playwright test --project=rtl-arabic',
+      'scripts/run-e2e-from-anywhere.sh': [
+        'cd "$REPO_ROOT/e2e" && \\',
+        '  npx playwright test',
+      ].join('\n'),
+      'package.json': JSON.stringify(
+        { scripts: { 'test:e2e': 'cd ../e2e && npx playwright test' } },
+        null,
+        2,
+      ),
+    }),
+    [],
+  );
+});
+
+test('lets an explicit cd in the command override the working-directory of its step', () => {
+  const violations = analyse({
+    '.github/workflows/e2e.yml': [
+      '      - name: Run Playwright',
+      '        run: cd ../frontend && npx playwright test',
+      '        working-directory: e2e',
+    ].join('\n'),
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /^\.github\/workflows\/e2e\.yml:2 invokes Playwright/);
+});
+
+test('tracks which cd is still in effect through nested subshells', () => {
+  assert.deepEqual(
+    analyse({
+      'scripts/nested.sh': 'cd e2e && (cd ../frontend && npm ci) && npx playwright test',
+      '.github/workflows/e2e.yml': [
+        '      - name: Run Playwright',
+        '        run: (cd ../frontend && npm ci) && npx playwright test',
+        '        working-directory: e2e',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('ignores commented-out invocations but not a real command after a commented backslash', () => {
+  assert.deepEqual(
+    analyse({
+      '.github/workflows/e2e.yml': [
+        '      # Never run `npx playwright test` from the repository root.',
+        '      - run: (cd e2e && npm test)',
+      ].join('\n'),
+      'scripts/run-e2e.sh': '# npx playwright test fails with describe is not defined at the root',
+      'scripts/tool.mjs': '// npx playwright test',
+    }),
+    [],
+  );
+
+  const violations = analyse({
+    'scripts/run-e2e.sh': ['# start the suite \\', 'npx playwright test'].join('\n'),
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /^scripts\/run-e2e\.sh:2 invokes Playwright/);
+});
+
+test('detects an invocation split across a shell continuation', () => {
+  const violations = analyse({
+    'scripts/run-e2e.sh': ['npx playwright \\', '  test --project=rtl-arabic'].join('\n'),
+  });
+
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /^scripts\/run-e2e\.sh:1 invokes Playwright/);
+});
+
+test('checks every invocation on a line and scopes an explicit config to its own command', () => {
+  const violations = analyse({
+    'scripts/two-invocations.sh': '(cd e2e && npx playwright test) && npx playwright test',
+    'scripts/config-elsewhere.sh': 'npx playwright test && lint --config e2e/playwright.config.ts',
+  });
+
+  assert.equal(violations.length, 2);
+  assert.match(violations[0], /^scripts\/two-invocations\.sh:1 invokes Playwright/);
+  assert.match(violations[1], /^scripts\/config-elsewhere\.sh:1 invokes Playwright/);
+});
+
 test('rejects frontend unit tests importing the Playwright runner', () => {
   const violations = analyse({
     'frontend/src/app/example.spec.ts': "import { test } from '@playwright/test';",

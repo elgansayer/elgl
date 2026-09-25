@@ -51,6 +51,8 @@ Current Playwright coverage includes authentication/onboarding pages, chat/messa
 
 Playwright is the better home for cross-browser, RTL, device-profile, and full-stack/infrastructure-sensitive flows. Cypress remains appropriate for existing Angular-centric feature flows.
 
+Always launch Playwright from `e2e/`. Started anywhere else it discovers the Angular and NestJS Vitest specs and fails with a misleading `ReferenceError: describe is not defined`; see [Playwright test-runner boundary](playwright-test-boundary.md) for the enforced contract and triage steps.
+
 ## Playwright web-server readiness contract
 
 Playwright starts the NestJS and Angular web servers as separate `webServer` entries. Playwright may launch entries in that array concurrently, so the Angular development/SSR server must not assume that NestJS is already accepting connections merely because the backend process has been spawned.
