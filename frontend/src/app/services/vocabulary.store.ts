@@ -92,6 +92,10 @@ export class VocabularyStore {
     };
   }
 
+  private normaliseWordToken(wordToken: string): string {
+    return wordToken.trim().toLowerCase();
+  }
+
   // Reactive state map of word_token -> Flashcard
   readonly flashcardMap = signal<Map<string, Flashcard>>(new Map());
   readonly allFlashcards = signal<Flashcard[]>([]);
@@ -122,7 +126,7 @@ export class VocabularyStore {
       const sanitised = list.map((fc) => this.sanitiseFlashcard(fc));
       this.allFlashcards.set(sanitised);
       const map = new Map<string, Flashcard>();
-      sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+      sanitised.forEach((fc) => map.set(this.normaliseWordToken(fc.word_token), fc));
       this.flashcardMap.set(map);
       // Cache for offline access
       this.srsOffline.cacheFlashcards(sanitised).catch(() => undefined);
@@ -136,7 +140,7 @@ export class VocabularyStore {
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
           this.allFlashcards.set(sanitised);
           const map = new Map<string, Flashcard>();
-          sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+          sanitised.forEach((fc) => map.set(this.normaliseWordToken(fc.word_token), fc));
           this.flashcardMap.set(map);
         }
       }
@@ -174,7 +178,7 @@ export class VocabularyStore {
     colourClass: string;
     flashcard?: Flashcard;
   } {
-    const clean = word.toLowerCase().trim();
+    const clean = this.normaliseWordToken(word);
     const fc = this.flashcardMap().get(clean);
     if (!fc) {
       // Level 0 = New / secondary accent
@@ -219,15 +223,21 @@ export class VocabularyStore {
       }),
     );
     const sanitisedFc = this.sanitiseFlashcard(fc);
+    const token = this.normaliseWordToken(sanitisedFc.word_token);
     this.allFlashcards.update((list) => {
       const filtered = list.filter(
-        (item) => item.id !== sanitisedFc.id && item.word_token !== sanitisedFc.word_token,
+        (item) => item.id !== sanitisedFc.id && this.normaliseWordToken(item.word_token) !== token,
       );
       return [sanitisedFc, ...filtered];
     });
     this.flashcardMap.update((map) => {
       const next = new Map(map);
-      next.set(sanitisedFc.word_token.toLowerCase(), sanitisedFc);
+      for (const [key, item] of next) {
+        if (item.id === sanitisedFc.id || this.normaliseWordToken(item.word_token) === token) {
+          next.delete(key);
+        }
+      }
+      next.set(token, sanitisedFc);
       return next;
     });
     return sanitisedFc;
@@ -253,7 +263,12 @@ export class VocabularyStore {
       );
       this.flashcardMap.update((map) => {
         const next = new Map(map);
-        next.set(sanitisedFc.word_token.toLowerCase(), sanitisedFc);
+        for (const [key, item] of next) {
+          if (item.id === sanitisedFc.id) {
+            next.delete(key);
+          }
+        }
+        next.set(this.normaliseWordToken(sanitisedFc.word_token), sanitisedFc);
         return next;
       });
       return sanitisedFc;
@@ -268,9 +283,9 @@ export class VocabularyStore {
         );
         this.flashcardMap.update((map) => {
           const next = new Map(map);
-          const card = next.get(current?.word_token?.toLowerCase() ?? '');
+          const card = next.get(current ? this.normaliseWordToken(current.word_token) : '');
           if (card) {
-            next.set(card.word_token.toLowerCase(), { ...card, srs_level: newLevel });
+            next.set(this.normaliseWordToken(card.word_token), { ...card, srs_level: newLevel });
           }
           return next;
         });
