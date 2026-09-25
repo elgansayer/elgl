@@ -25,6 +25,7 @@ describe('Tailwind logical layout contract', () => {
   it('loads Tailwind utilities and the project config from global styles', () => {
     const styles = readFrontendFile('src/styles.scss');
 
+    expect(styles).not.toMatch(/@import\s+url\(['"]https?:\/\//);
     expect(styles).toContain("@import 'tailwindcss/theme.css' layer(theme);");
     expect(styles).toContain("@import 'tailwindcss/preflight.css' layer(base);");
     expect(styles).toContain("@import 'tailwindcss/utilities.css';");
