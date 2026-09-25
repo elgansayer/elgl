@@ -1172,6 +1172,10 @@ export class MomentsService {
     const momentAuthorId = (momentData as unknown as { user_id: string })
       .user_id;
 
+    if (userId !== momentAuthorId) {
+      throw new ForbiddenException('You can only edit your own Moments.');
+    }
+
     // Check if the editor is blocked by the moment author
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(momentAuthorId);
