@@ -83,3 +83,7 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-09-25 - IDOR in Moment Text Editing
+**Vulnerability:** Insecure Direct Object Reference (IDOR) allowed any user to edit the text of any moment created by others. The check for whether the editor was the author of the moment (`userId === momentAuthorId`) was missing in `editMomentText`.
+**Learning:** Security checks that verify if a user is *blocked* by the author were present, creating a false sense of security that authorization was handled, while the most basic ownership check was omitted.
+**Prevention:** Always verify ownership (`userId === ownerId`) *before* checking secondary authorization conditions like blocklists or privacy settings on mutable endpoints.

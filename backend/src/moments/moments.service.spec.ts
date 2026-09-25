@@ -1508,7 +1508,7 @@ describe('MomentsService', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
-          data: { user_id: 'author-1', text_content: 'old' },
+          data: { user_id: 'user-1', text_content: 'old' },
           error: null,
         }),
       }));
@@ -1516,6 +1516,23 @@ describe('MomentsService', () => {
       await expect(
         service.editMomentText('user-1', 'm-1', { textContent: 'New text' }),
       ).rejects.toThrow('You cannot edit this moment.');
+    });
+
+    it('should throw ForbiddenException if user is not the author', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { user_id: 'author-1', text_content: 'old' },
+          error: null,
+        }),
+      }));
+
+      await expect(
+        service.editMomentText('user-1', 'm-1', { textContent: 'New text' }),
+      ).rejects.toThrow(
+        new ForbiddenException('You can only edit your own Moments.'),
+      );
     });
 
     it('should update the text and return the hydrated moment', async () => {
