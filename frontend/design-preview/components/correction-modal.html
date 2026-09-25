@@ -86,7 +86,7 @@
         background: rgb(var(--surface-400));
       }
       header { justify-content: space-between; border-block-end: 1px solid rgb(var(--surface-100)); }
-      footer { flex-direction: column; justify-content: flex-end; flex-wrap: wrap; border-block-start: 1px solid rgb(var(--surface-100)); }
+      footer { justify-content: flex-end; flex-wrap: wrap; border-block-start: 1px solid rgb(var(--surface-100)); }
       h1 { min-width: 0; margin: 0; font-size: 16px; overflow-wrap: anywhere; }
       .body { display: grid; gap: 16px; padding: 16px; }
       .field-label {
@@ -143,11 +143,12 @@
       }
       .tag { min-height: 36px; border: 1px solid rgb(var(--surface-100)); padding: 6px 10px; color: rgb(var(--text-secondary)); font-size: 11px; }
       .send { background: rgb(var(--primary)); color: rgb(var(--on-fill)); }
+      .correction-modal-preview.mobile footer { flex-direction: column; align-items: stretch; }
+      .correction-modal-preview.mobile footer button { width: 100%; }
       @media (max-width: 900px) { .states { grid-template-columns: minmax(0, 390px); } }
       @media (max-width: 420px) {
         body { padding: 12px; }
         .correction-modal-preview { padding: 8px; }
-        footer { flex-direction: row; }
         footer button { flex: 1 1 auto; }
       }
     </style>
