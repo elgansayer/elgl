@@ -33,6 +33,16 @@ def test_host_maintenance_is_serialized_and_missing_engines_are_nonfatal() -> No
     assert "Rootless Podman unavailable; skipping Podman cleanup" in script
 
 
+def test_host_maintenance_prunes_only_obsolete_cypress_binaries_under_pressure() -> None:
+    script = _read("scripts/maintain-factory-host-storage.sh")
+
+    assert 'filesystem_below_target "$CYPRESS_CACHE"' in script
+    assert 'CYPRESS_CACHE_FOLDER="$CYPRESS_CACHE"' in script
+    assert '"$cypress" cache prune' in script
+    assert "prune_cypress_cache\n" in script
+    assert '"$cypress" cache clear' not in script
+
+
 def test_host_report_covers_every_relocated_provider_directory() -> None:
     script = _read("scripts/maintain-factory-host-storage.sh")
 
@@ -105,5 +115,9 @@ def test_update_materializes_root_runtime_from_verified_git_blobs() -> None:
     assert 'install_runtime_bundle "$commit" || return 1' in updater
     assert '"$RUNTIME_ROOT/hellotalk-factory-watchdog.sh"' in updater
     assert '"$RUNTIME_ROOT/hellotalk-factory-update.sh"' in updater
+    assert "install_service_configuration()" in updater
+    assert "/etc/systemd/system/repo-factory-update.service 0644" in updater
+    assert "/etc/repo-factory/instances/hellotalk.env 0644" in updater
+    assert "systemctl daemon-reload" in updater
     assert 'cp "$REPOSITORY/config/systemd/' not in updater
     assert 'install "$REPOSITORY/config/systemd/' not in updater
