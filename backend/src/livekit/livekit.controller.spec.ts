@@ -81,7 +81,7 @@ describe('LivekitController', () => {
 
   describe('getToken', () => {
     it('should return a token and ICE servers', async () => {
-      const result = await controller.getToken({
+      const result = await controller.getToken({ id: 'user-123' } as any, {
         room_name: 'test-room',
         participant_identity: 'user-123',
       });
@@ -157,7 +157,7 @@ describe('LivekitController', () => {
         .compile();
 
       const ctrl = module.get<LivekitController>(LivekitController);
-      const result = await ctrl.getToken({
+      const result = await ctrl.getToken({ id: 'user-2' } as any, {
         room_name: 'bare-room',
         participant_identity: 'user-2',
       });
@@ -170,7 +170,7 @@ describe('LivekitController', () => {
       mockToJwt.mockRejectedValueOnce(new Error('JWT signing failed'));
 
       await expect(
-        controller.getToken({
+        controller.getToken({ id: 'user-3' } as any, {
           room_name: 'fail-room',
           participant_identity: 'user-3',
         }),
