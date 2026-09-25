@@ -11,10 +11,14 @@ from openhands_factory.daemon import (
     FactoryDaemon,
     await_future_with_heartbeat,
     await_refresh,
+    consume_completed_architect_future,
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
+    review_lane_is_busy,
     select_batch,
+    select_batch_failsafe,
+    selection_diagnostics,
     stall_alert_decision,
 )
 from openhands_factory.exceptions import FactoryError
@@ -49,6 +53,17 @@ def factory_pull_request_job(
     factory_job.pull_request = int(identifier) + 1000
     factory_job.branch = f"factory/change-{identifier}"
     return factory_job
+
+
+def test_review_lane_busy_only_for_active_pull_request_work() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "7348": pull_request_job("7348"),
+    }
+
+    assert review_lane_is_busy(jobs, {"7348"}) is True
+    assert review_lane_is_busy(jobs, {"10"}) is False
+    assert review_lane_is_busy(jobs, set()) is False
 
 
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:
@@ -141,6 +156,18 @@ def test_select_batch_admits_multiple_pull_requests_when_lane_widened() -> None:
     assert [item.task.identifier for item in selected] == ["7347", "7348", "10"]
 
 
+def test_select_batch_preserves_issue_progress_when_host_has_only_two_slots() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "10"]
+
+
 def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
     jobs = {
         "10": job("10", 5),
@@ -164,6 +191,30 @@ def test_select_batch_prefers_review_jobs_closer_to_merge() -> None:
     selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
 
     assert [item.task.identifier for item in selected] == ["7347", "7348"]
+
+
+def test_select_batch_finishes_verification_before_ai_repair_retries() -> None:
+    jobs = {
+        "7346": pull_request_job("7346", state=JobState.QUALITY_REPAIRING),
+        "7347": pull_request_job("7347", state=JobState.VERIFYING),
+        "7348": pull_request_job("7348", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "7346"]
+
+
+def test_select_batch_rotates_equally_eligible_review_jobs_by_last_progress() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "7347": replace(pull_request_job("7347"), updated_at=now),
+        "7348": replace(pull_request_job("7348"), updated_at=now - timedelta(minutes=5)),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
 
 
 def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
@@ -214,6 +265,39 @@ def test_select_batch_refills_free_capacity_without_rescheduling_active_jobs() -
     selected = select_batch(jobs, 2, {"10"})
 
     assert [item.task.identifier for item in selected] == ["11", "12"]
+
+
+def test_selection_diagnostics_explains_review_capacity() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+        "7348": pull_request_job("7348", state=JobState.MERGE_QUEUED),
+    }
+
+    diagnostic = selection_diagnostics(jobs, {"7347"}, now, 2)
+
+    assert diagnostic == {
+        "candidate_jobs": ["10", "7348"],
+        "candidate_count": 2,
+        "excluded_jobs": ["7347"],
+        "active_review_count": 1,
+        "review_capacity": 1,
+        "review_jobs": ["7348"],
+    }
+
+
+def test_failsafe_selector_prioritises_merge_queued_review() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+        "7348": pull_request_job("7348", state=JobState.MERGE_QUEUED),
+    }
+
+    selected = select_batch_failsafe(jobs, 1, set(), now, 1, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
 
 
 def test_select_batch_skips_jobs_still_backing_off() -> None:
@@ -334,17 +418,33 @@ def test_provider_status_snapshot_exposes_no_provider_detail_or_credentials() ->
     assert "detail" not in snapshot[0]
 
 
-def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> None:
+def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     durable = {"42": job("42", 0)}
     pipeline = SimpleNamespace(
         refresh=lambda protected: (_ for _ in ()).throw(FactoryError("HTTP 503")),
         jobs=SimpleNamespace(load=lambda: durable),
     )
+    monkeypatch.setattr("openhands_factory.daemon.time.monotonic", lambda: 100.0)
 
     refreshed, retry_at = refresh_jobs(pipeline, set(), 10.0, 5)  # type: ignore[arg-type]
 
     assert refreshed == durable
-    assert retry_at == 40.0
+    assert retry_at == 130.0
+
+
+def test_refresh_jobs_schedules_next_refresh_from_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    durable = {"42": job("42", 0)}
+    pipeline = SimpleNamespace(refresh=lambda protected: durable)
+    monkeypatch.setattr("openhands_factory.daemon.time.monotonic", lambda: 100.0)
+
+    refreshed, retry_at = refresh_jobs(pipeline, set(), 10.0, 5)  # type: ignore[arg-type]
+
+    assert refreshed == durable
+    assert retry_at == 105.0
 
 
 def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None:
@@ -419,6 +519,30 @@ def test_await_refresh_propagates_timeout_raised_by_completed_refresh() -> None:
         )
 
 
+def test_completed_architect_failure_is_consumed_only_once() -> None:
+    calls = 0
+    failure = RuntimeError("architect verification failed")
+
+    class FailedArchitectFuture:
+        def done(self) -> bool:
+            return True
+
+        def result(self) -> None:
+            nonlocal calls
+            calls += 1
+            raise failure
+
+    remaining, error = consume_completed_architect_future(  # type: ignore[arg-type]
+        FailedArchitectFuture()
+    )
+    remaining, repeated_error = consume_completed_architect_future(remaining)
+
+    assert remaining is None
+    assert error is failure
+    assert repeated_error is None
+    assert calls == 1
+
+
 def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -469,13 +593,23 @@ def test_daemon_publishes_heartbeat_before_first_scheduling_cycle(
 
 
 def test_storage_reserve_blocks_and_recovers_scheduling(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     daemon = FactoryDaemon.__new__(FactoryDaemon)
-    daemon.config = SimpleNamespace()  # type: ignore[assignment]
+    daemon.config = SimpleNamespace(  # type: ignore[assignment]
+        cooldown_seconds=60,
+        minimum_free_disk_gib=5,
+        worktree_dir=tmp_path,
+    )
     daemon.storage_blocked = False
+    daemon._next_worktree_cache_prune_at = 0.0
     checks = [SimpleNamespace(passed=False, detail="root: 2.0 GiB available")]
     monkeypatch.setattr("openhands_factory.daemon.disk_space_checks", lambda config: checks)
+    monkeypatch.setattr(
+        "openhands_factory.daemon.prune_inactive_worktree_caches",
+        lambda *args, **kwargs: [],
+    )
 
     assert not daemon._storage_ready()
     assert daemon.storage_blocked

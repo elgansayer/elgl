@@ -54,7 +54,7 @@ def test_production_uses_subscription_first_phase_routing() -> None:
         AgentPhase.IMPLEMENTATION: ["claude", "codex", "google", "opencode", "pi"],
         AgentPhase.SECURITY_REVIEW: ["claude", "codex", "google", "opencode", "pi"],
         AgentPhase.QUALITY_REPAIR: ["codex", "claude", "google", "opencode", "pi"],
-        AgentPhase.CODE_REVIEW: ["codex", "claude", "google", "opencode", "pi"],
+        AgentPhase.CODE_REVIEW: ["claude", "google", "codex", "opencode", "pi"],
         AgentPhase.CI_REPAIR: ["opencode", "google", "claude", "pi", "codex"],
         AgentPhase.GENERAL_ACTION: ["opencode", "google", "codex", "claude", "pi"],
     }
