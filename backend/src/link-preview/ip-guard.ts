@@ -76,7 +76,7 @@ function isPrivateIpv4(ip: string): boolean {
   if (!isIpv4(ip)) {
     return false;
   }
-  const [first, second] = ip.split('.').map(Number);
+  const [first, second, third] = ip.split('.').map(Number);
   if (first === 0) {
     // 0.0.0.0/8: "this network" and the unspecified address
     return true;
@@ -105,7 +105,7 @@ function isPrivateIpv4(ip: string): boolean {
     // 192.168.0.0/16: private network
     return true;
   }
-  if (first === 192 && second === 0) {
+  if (first === 192 && second === 0 && third === 0) {
     // 192.0.0.0/24: IETF protocol assignments
     return true;
   }
@@ -113,7 +113,28 @@ function isPrivateIpv4(ip: string): boolean {
     // 198.18.0.0/15: network benchmarking
     return true;
   }
+  if (first === 192 && second === 88 && third === 99) {
+    // 192.88.99.0/24: deprecated 6to4 relay anycast
+    return true;
+  }
+  if (
+    (first === 192 && second === 0 && third === 2) ||
+    (first === 198 && second === 51 && third === 100) ||
+    (first === 203 && second === 0 && third === 113)
+  ) {
+    // 192.0.2.0/24, 198.51.100.0/24 and 203.0.113.0/24: documentation ranges
+    return true;
+  }
+  if (first >= 224) {
+    // 224.0.0.0/4 multicast and 240.0.0.0/4 reserved (including broadcast)
+    return true;
+  }
   return false;
+}
+
+/** Dotted-quad text for the IPv4 address held in two consecutive IPv6 words. */
+function ipv4FromWords(high: number, low: number): string {
+  return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
 }
 
 function isPrivateIpv6(ip: string): boolean {
@@ -122,18 +143,50 @@ function isPrivateIpv6(ip: string): boolean {
     return false;
   }
 
-  const isIpv4Mapped =
-    words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff;
-  const isIpv4Compatible = words.slice(0, 6).every((word) => word === 0);
-  if (isIpv4Mapped || isIpv4Compatible) {
-    const high = words[6] ?? 0;
-    const low = words[7] ?? 0;
-    return isPrivateIpv4(
-      `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`,
+  const isZero = (from: number, to: number): boolean =>
+    words.slice(from, to).every((word) => word === 0);
+  const embeddedIpv4IsPrivate = (highIndex: number): boolean =>
+    isPrivateIpv4(
+      ipv4FromWords(words[highIndex] ?? 0, words[highIndex + 1] ?? 0),
     );
-  }
 
   const first = words[0] ?? 0;
+  const second = words[1] ?? 0;
+  const third = words[2] ?? 0;
+
+  if (isZero(0, 5) && words[5] === 0xffff) {
+    // ::ffff:0:0/96: IPv4-mapped addresses
+    return embeddedIpv4IsPrivate(6);
+  }
+  if (isZero(0, 6)) {
+    // ::/96: IPv4-compatible addresses, including :: and ::1
+    return embeddedIpv4IsPrivate(6);
+  }
+  if (isZero(0, 4) && words[4] === 0xffff && words[5] === 0) {
+    // ::ffff:0:0:0/96: SIIT IPv4-translated addresses
+    return embeddedIpv4IsPrivate(6);
+  }
+  if (first === 0x64 && second === 0xff9b) {
+    // 64:ff9b::/96 NAT64 embeds a routable IPv4 address; 64:ff9b:1::/48 is
+    // local-use only and never a public web destination.
+    return third === 1 || (isZero(2, 6) && embeddedIpv4IsPrivate(6));
+  }
+  if (first === 0x2002) {
+    // 2002::/16: 6to4 embeds the IPv4 address in words 1 and 2
+    return embeddedIpv4IsPrivate(1);
+  }
+  if (first === 0x2001 && second === 0) {
+    // 2001::/32: Teredo tunnelling, never a public web destination
+    return true;
+  }
+  if (first === 0x100 && isZero(1, 4)) {
+    // 100::/64: discard-only prefix
+    return true;
+  }
+  if ((first & 0xff00) === 0xff00) {
+    // ff00::/8: multicast
+    return true;
+  }
   if ((first & 0xfe00) === 0xfc00) {
     // fc00::/7: unique local addresses
     return true;

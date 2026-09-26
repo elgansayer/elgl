@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseService } from '../supabase/supabase.service';
 import type { SafetyService } from '../safety/safety.service';
 import type { LinkPreviewService } from '../link-preview/link-preview.service';
+import type { MessageLinkPreviewStore } from '../link-preview/message-link-preview.store';
 import type { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import type { XpService } from '../xp/xp.service';
 import type { UsersService } from '../users/users.service';
@@ -40,6 +41,7 @@ function buildService(
     {} as XpService,
     {} as UsersService,
     { get: vi.fn() } as unknown as ConfigService,
+    {} as MessageLinkPreviewStore,
   );
 }
 

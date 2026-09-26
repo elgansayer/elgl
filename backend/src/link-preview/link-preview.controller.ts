@@ -12,6 +12,7 @@ import {
   ApiQuery,
   ApiOkResponse,
   ApiBadRequestResponse,
+  ApiServiceUnavailableResponse,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewService } from './link-preview.service';
@@ -28,7 +29,7 @@ export class LinkPreviewController {
   @ApiOperation({
     summary: 'Fetch an OpenGraph link preview',
     description:
-      'Scrapes OpenGraph metadata (title, description, image, site name) from the supplied URL. Responses are cached in Redis for one hour and the scraper rejects private, loopback and link-local addresses to prevent SSRF.',
+      'Scrapes OpenGraph metadata (title, description, image, site name) from the supplied URL. Responses are cached in Redis for one hour and failures for five minutes. The scraper rejects private, loopback and link-local addresses, including redirect targets, to prevent SSRF, and bounds every scrape by size and time.',
   })
   @ApiQuery({
     name: 'url',
@@ -53,10 +54,15 @@ export class LinkPreviewController {
   })
   @ApiBadRequestResponse({
     description:
-      'The url query parameter is missing, malformed, uses a disallowed protocol or port, or the page could not be fetched.',
+      'The url query parameter is missing, repeated, malformed, uses a disallowed protocol or port, or the page could not be fetched.',
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'The server is already running the maximum number of page scrapes. Retry shortly.',
   })
   async getPreview(@Query('url') url: string): Promise<LinkPreview | null> {
-    if (!url) {
+    // A repeated ?url=a&url=b parameter arrives as an array, not a string.
+    if (typeof url !== 'string' || url.length === 0) {
       throw new BadRequestException('Missing url query parameter');
     }
     return this.linkPreviewService.getPreview(url);

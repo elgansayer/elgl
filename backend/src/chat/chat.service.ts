@@ -13,6 +13,8 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
+import { MessageLinkPreviewStore } from '../link-preview/message-link-preview.store';
+import { extractFirstHttpUrl } from '../link-preview/link-preview-url';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
@@ -46,6 +48,13 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+/**
+ * How long sending or editing a message waits for a link preview. A slow link
+ * must not hold up delivery: after this the message goes out as plain text and
+ * the scrape carries on so its result is cached for the next request.
+ */
+const CHAT_LINK_PREVIEW_WAIT_MS = 3_000;
+
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
   deleted_for_user_ids?: string[] | null;
@@ -75,6 +84,7 @@ export class ChatService {
     private readonly xpService: XpService,
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
+    private readonly linkPreviewStore: MessageLinkPreviewStore,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -423,17 +433,14 @@ export class ChatService {
     // Award XP for sending a message
     void this.xpService.awardXpForActivity(senderId, 'send_message');
 
-    // ---------- Link preview scraping ----------
-    let linkPreview: LinkPreview | null = null;
-    try {
-      if (dto.message_type === 'text' && dto.text_content) {
-        const urlMatch = dto.text_content.match(/https?:\/\/[^\s]+/);
-        if (urlMatch) {
-          linkPreview = await this.linkPreviewService.getPreview(urlMatch[0]);
-        }
-      }
-    } catch {
-      // ignore any error; just continue without preview
+    // ---------- Link preview enrichment ----------
+    const linkPreview = await this.resolveLinkPreview(
+      dto.message_type,
+      dto.text_content,
+    );
+    if (linkPreview) {
+      // Kept so the card is still there when the room is reopened later.
+      await this.linkPreviewStore.save(savedMessage.id, linkPreview);
     }
 
     // ---------- Auto‑generate explanation for correction if missing ----------
@@ -549,6 +556,46 @@ export class ChatService {
     return messageForPublish;
   }
 
+  /**
+   * Looks up the preview for the first link in a text message. Enrichment is
+   * best effort: a slow, blocked, broken or over-capacity link yields no card
+   * and never delays or fails the message. The scraper itself logs and counts
+   * why, so nothing is reported here.
+   */
+  private async resolveLinkPreview(
+    messageType: string,
+    text: string | null | undefined,
+  ): Promise<LinkPreview | null> {
+    if (messageType !== 'text' || !text) {
+      return null;
+    }
+    const url = extractFirstHttpUrl(text);
+    if (!url) {
+      return null;
+    }
+    try {
+      return await this.linkPreviewService.getPreview(url, {
+        maxWaitMs: CHAT_LINK_PREVIEW_WAIT_MS,
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  /** Adds the previews that were shown when each message was sent. */
+  private async withStoredLinkPreviews(
+    messages: ChatMessage[],
+  ): Promise<ChatMessage[]> {
+    const previews = await this.linkPreviewStore.load(messages);
+    if (previews.size === 0) {
+      return messages;
+    }
+    return messages.map((message) => {
+      const preview = previews.get(message.id);
+      return preview ? { ...message, link_preview: preview } : message;
+    });
+  }
+
   async getMessages(
     roomId: string,
     search?: string,
@@ -649,10 +696,10 @@ export class ChatService {
         }
         return true;
       });
-      return visibleMessages;
+      return this.withStoredLinkPreviews(visibleMessages);
     }
 
-    return messages;
+    return this.withStoredLinkPreviews(messages);
   }
 
   async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
@@ -1592,11 +1639,25 @@ export class ChatService {
       );
     }
 
+    // The edit may add, change or remove the link. Clients merge the published
+    // message into the one they hold, so link_preview is always sent explicitly:
+    // a null clears a card that no longer matches the text.
+    const linkPreview = await this.resolveLinkPreview('text', dto.text_content);
+    if (linkPreview) {
+      await this.linkPreviewStore.save(messageId, linkPreview);
+    } else if (extractFirstHttpUrl(asString(originalMsg.text_content) ?? '')) {
+      await this.linkPreviewStore.remove(messageId);
+    }
+    const editedMessage: ChatMessage = {
+      ...updatedMsg,
+      link_preview: linkPreview,
+    };
+
     await this.centrifugoService.publish(`chat:${roomId}`, {
-      message: updatedMsg,
+      message: editedMessage,
     });
 
-    return updatedMsg;
+    return editedMessage;
   }
 
   async deleteMessage(
@@ -1683,6 +1744,9 @@ export class ChatService {
         `Failed to delete message for everyone: ${deleteError.message}`,
       );
     }
+
+    // The derived preview goes with the message it belonged to.
+    await this.linkPreviewStore.remove(messageId);
 
     // Notify all clients in the room that the message was removed
     await this.centrifugoService.publish(`chat:${msg.room_id}`, {
@@ -1842,6 +1906,11 @@ export class ChatService {
 
     const forwardedMessages: ChatMessage[] = [];
 
+    // A forwarded copy carries the same text, so it keeps the original's card.
+    const originalPreview = (
+      await this.linkPreviewStore.load([originalMsg])
+    ).get(originalMsg.id);
+
     // Filter out the room the message is already in
     const targetRoomIds = [...new Set(roomIds)].filter(
       (id) => id !== originalMsg.room_id,
@@ -1932,7 +2001,11 @@ export class ChatService {
         continue; // Skip on insert failure
       }
 
-      const forwardedMsg = insertResponse.data as ChatMessage;
+      let forwardedMsg = insertResponse.data as ChatMessage;
+      if (originalPreview) {
+        await this.linkPreviewStore.save(forwardedMsg.id, originalPreview);
+        forwardedMsg = { ...forwardedMsg, link_preview: originalPreview };
+      }
 
       // Publish to Centrifugo channel for the target room
       await this.centrifugoService.publish(`chat:${targetRoomId}`, {

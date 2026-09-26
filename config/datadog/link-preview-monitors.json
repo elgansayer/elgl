@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the chat link preview (OpenGraph scraper). All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Link Preview] Scraper aimed at private addresses",
+      "type": "query alert",
+      "query": "sum(last_10m):sum:hellotalk_link_preview_requests_total{outcome:blocked}.as_count() > 20",
+      "message": "{{#is_alert}}\nThe link preview scraper refused more than 20 redirects or hostnames that point at private, loopback or link-local addresses in the last 10 minutes. This is the signature of server-side request forgery probing through chat links.\n\n**Current count:** {{value}}\n**Threshold:** 20\n\n**Actions:**\n1. Search the backend logs for `outcome=blocked` and note the `reason=` value and the host#fingerprint pairs (full URLs are never logged).\n2. Identify the sending accounts from the chat messages that contain those links and review them with Trust and Safety.\n3. Confirm the guards are still in place: redirect revalidation and the guarded DNS lookup in `safe-html-fetch.ts`.\n{{/is_alert}}\n\n{{#is_warning}}\nBlocked link preview targets are rising.\n{{/is_warning}}",
+      "tags": [
+        "service:hellotalk",
+        "team:chat",
+        "severity:critical"
+      ],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 20,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Link Preview] Scrape capacity reached",
+      "type": "query alert",
+      "query": "sum(last_5m):sum:hellotalk_link_preview_requests_total{outcome:busy}.as_count() > 0",
+      "message": "{{#is_alert}}\nThe link preview scraper refused requests because 20 origin scrapes were already running. Messages are still delivered but without link cards.\n\n**Refused in the last 5 minutes:** {{value}}\n\n**Actions:**\n1. Check `hellotalk_link_preview_inflight_fetches` and the fetch duration histogram for slow origins holding scrapes open.\n2. Look for a burst of messages with unique links from one account (abuse) in the chat logs.\n3. Each scrape is bounded to 8 seconds, so capacity should recover on its own.\n{{/is_alert}}",
+      "tags": [
+        "service:hellotalk",
+        "team:chat",
+        "severity:warning"
+      ],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Link Preview] Slow origin scrapes",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_link_preview_fetch_duration_seconds{*} > 4",
+      "message": "{{#is_alert}}\nThe average link preview origin scrape has taken longer than 4 seconds over the last 10 minutes. Chat only waits 3 seconds for a preview, so most links are being sent without a card.\n\n**Current value:** {{value}}s\n**Threshold:** 4s\n\n**Actions:**\n1. Check DNS resolution and outbound network health from the backend.\n2. Check whether a few slow origins dominate (logs: `outcome=timeout`).\n3. Scrapes are capped at 8 seconds, so values near that limit indicate widespread timeouts.\n{{/is_alert}}\n\n{{#is_warning}}\nLink preview scrape latency approaching threshold.\n{{/is_warning}}",
+      "tags": [
+        "service:hellotalk",
+        "team:chat",
+        "severity:warning"
+      ],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 4,
+          "warning": 3
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Link Preview] Per-message store errors",
+      "type": "query alert",
+      "query": "sum(last_10m):sum:hellotalk_link_preview_persistence_total{result:error}.as_count() > 50",
+      "message": "{{#is_alert}}\nThe per-message link preview store failed more than 50 times in the last 10 minutes. Chat delivery is unaffected, but link cards will be missing from chat history until Redis recovers.\n\n**Current count:** {{value}}\n\n**Actions:**\n1. Check Redis health and memory (`redis-cli ping`, `INFO memory`).\n2. Check the backend logs for `Message link-preview store` warnings.\n3. Stored cards are regenerable and expire after 30 days, so no data repair is needed once Redis is healthy.\n{{/is_alert}}",
+      "tags": [
+        "service:hellotalk",
+        "team:chat",
+        "severity:warning"
+      ],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 50,
+          "warning": 10
+        },
+        "timeout_h": 0
+      }
+    }
+  ]
+}

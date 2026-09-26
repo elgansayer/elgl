@@ -5,6 +5,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { LinkPreviewController } from './link-preview.controller';
 import { LinkPreviewModule } from './link-preview.module';
 import { LinkPreviewService } from './link-preview.service';
+import { MessageLinkPreviewStore } from './message-link-preview.store';
 
 type RedisProvider = {
   provide: string;
@@ -71,5 +72,19 @@ describe('LinkPreviewModule', () => {
     ) as unknown[];
 
     expect(exports).toContain(LinkPreviewService);
+  });
+
+  it('registers and exports the per-message store that keeps cards for chat history', () => {
+    const providers = Reflect.getMetadata(
+      MODULE_METADATA.PROVIDERS,
+      LinkPreviewModule,
+    ) as unknown[];
+    const exports = Reflect.getMetadata(
+      MODULE_METADATA.EXPORTS,
+      LinkPreviewModule,
+    ) as unknown[];
+
+    expect(providers).toContain(MessageLinkPreviewStore);
+    expect(exports).toContain(MessageLinkPreviewStore);
   });
 });

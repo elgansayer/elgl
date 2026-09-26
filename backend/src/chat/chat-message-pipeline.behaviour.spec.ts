@@ -104,6 +104,7 @@ describe('ChatService message persistence and realtime pipeline', () => {
       xpService as never,
       {} as never,
       {} as never,
+      { save: vi.fn(), remove: vi.fn(), load: vi.fn() } as never,
     );
 
     return {

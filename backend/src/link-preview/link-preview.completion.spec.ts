@@ -39,6 +39,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { of } from 'rxjs';
 import { LinkPreviewService } from './link-preview.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('LinkPreviewService completion boundaries', () => {
   let service: LinkPreviewService;
@@ -56,6 +57,14 @@ describe('LinkPreviewService completion boundaries', () => {
       providers: [
         LinkPreviewService,
         { provide: HttpService, useValue: httpService },
+        {
+          provide: MetricsService,
+          useValue: {
+            recordLinkPreviewRequest: vi.fn(),
+            observeLinkPreviewFetch: vi.fn(),
+            setLinkPreviewInflightFetches: vi.fn(),
+          },
+        },
         { provide: 'REDIS_CLIENT', useValue: redis },
       ],
     }).compile();
@@ -65,7 +74,7 @@ describe('LinkPreviewService completion boundaries', () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  it('returns null without caching when an HTML page exposes no preview metadata', async () => {
+  it('returns null without caching a preview when an HTML page exposes no preview metadata', async () => {
     httpService.get.mockReturnValue(
       of({
         data: '<html><head></head><body>Body only</body></html>',
@@ -78,10 +87,17 @@ describe('LinkPreviewService completion boundaries', () => {
     ).resolves.toBeNull();
 
     expect(httpService.get).toHaveBeenCalledTimes(1);
-    expect(redis.set).not.toHaveBeenCalled();
+    // Only a short-lived negative entry is written; no preview is ever cached.
+    expect(redis.set).toHaveBeenCalledTimes(1);
+    expect(redis.set).toHaveBeenCalledWith(
+      expect.stringContaining('link_preview:v2:negative:'),
+      JSON.stringify({ kind: 'empty' }),
+      'EX',
+      300,
+    );
   });
 
-  it('keeps every origin scrape bounded by timeout, redirects, and response size', async () => {
+  it('keeps every origin scrape bounded by timeout, deadline, redirects and proxy policy', async () => {
     httpService.get.mockReturnValue(
       of({
         data: '<html><head><title>Bounded fetch</title></head></html>',
@@ -94,10 +110,12 @@ describe('LinkPreviewService completion boundaries', () => {
     expect(httpService.get).toHaveBeenCalledWith(
       'https://example.com/',
       expect.objectContaining({
+        responseType: 'stream',
         timeout: 5_000,
         maxRedirects: 3,
-        maxContentLength: 5_000_000,
-        maxBodyLength: 5_000_000,
+        proxy: false,
+        signal: expect.any(AbortSignal),
+        beforeRedirect: expect.any(Function),
         httpAgent: expect.anything(),
         httpsAgent: expect.anything(),
       }),

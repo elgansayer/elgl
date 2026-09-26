@@ -451,4 +451,58 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
     });
   });
+
+  describe('Link preview metrics', () => {
+    it('should count requests by outcome with a bounded label', async () => {
+      service.recordLinkPreviewRequest('fetched');
+      service.recordLinkPreviewRequest('fetched');
+      service.recordLinkPreviewRequest('blocked');
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="fetched"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="blocked"} 1',
+      );
+    });
+
+    it('should observe origin scrape latency by outcome', async () => {
+      service.observeLinkPreviewFetch('timeout', 5.2);
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_count{outcome="timeout"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_bucket{le="8",outcome="timeout"} 1',
+      );
+    });
+
+    it('should expose the in-flight scrape gauge', async () => {
+      service.setLinkPreviewInflightFetches(3);
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain('hellotalk_link_preview_inflight_fetches 3');
+    });
+
+    it('should count store operations and ignore empty batches', async () => {
+      service.recordLinkPreviewPersistence('load', 'hit', 4);
+      service.recordLinkPreviewPersistence('load', 'miss', 0);
+      service.recordLinkPreviewPersistence('save', 'error');
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_link_preview_persistence_total{operation="load",result="hit"} 4',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_persistence_total{operation="save",result="error"} 1',
+      );
+      expect(metrics).not.toContain('operation="load",result="miss"');
+    });
+  });
 });

@@ -25,6 +25,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
+import { MessageLinkPreviewStore } from '../link-preview/message-link-preview.store';
 import { SystemMessageService } from './services/system-message.service';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
@@ -96,7 +97,15 @@ describe('ChatService', () => {
         {
           provide: LinkPreviewService,
           useValue: {
-            fetchPreview: vi.fn().mockResolvedValue({}),
+            getPreview: vi.fn().mockResolvedValue(null),
+          },
+        },
+        {
+          provide: MessageLinkPreviewStore,
+          useValue: {
+            save: vi.fn().mockResolvedValue(undefined),
+            remove: vi.fn().mockResolvedValue(undefined),
+            load: vi.fn().mockResolvedValue(new Map()),
           },
         },
         {

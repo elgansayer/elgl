@@ -7,6 +7,33 @@ import {
   Gauge,
 } from 'prom-client';
 
+/** How one link-preview request ended, as seen by the caller. */
+export const LINK_PREVIEW_REQUEST_OUTCOMES = [
+  'cache_hit',
+  'negative_hit',
+  'fetched',
+  'empty',
+  'invalid_url',
+  'blocked',
+  'not_html',
+  'timeout',
+  'upstream_error',
+  'network_error',
+  'busy',
+  'wait_timeout',
+] as const;
+export type LinkPreviewRequestOutcome =
+  (typeof LINK_PREVIEW_REQUEST_OUTCOMES)[number];
+
+/** How one origin scrape ended; cache hits and rejected input never reach the origin. */
+export type LinkPreviewFetchOutcome = Exclude<
+  LinkPreviewRequestOutcome,
+  'cache_hit' | 'negative_hit' | 'invalid_url' | 'busy' | 'wait_timeout'
+>;
+
+export type LinkPreviewPersistenceOperation = 'save' | 'load' | 'remove';
+export type LinkPreviewPersistenceResult = 'ok' | 'hit' | 'miss' | 'error';
+
 @Injectable()
 export class MetricsService {
   private readonly register: Registry;
@@ -95,6 +122,12 @@ export class MetricsService {
   readonly adminPendingReports: Gauge<string>;
   readonly adminActiveBlocks: Gauge<string>;
   readonly adminLoginHistoryRequests: Counter<string>;
+
+  // Link preview (OpenGraph scraper) metrics
+  readonly linkPreviewRequests: Counter<string>;
+  readonly linkPreviewFetchDuration: Histogram<string>;
+  readonly linkPreviewInflightFetches: Gauge<string>;
+  readonly linkPreviewPersistence: Counter<string>;
 
   constructor() {
     this.register = new Registry();
@@ -600,6 +633,36 @@ export class MetricsService {
       labelNames: ['result'],
       registers: [this.register],
     });
+
+    // --- Link preview metrics ---
+
+    this.linkPreviewRequests = new Counter({
+      name: 'hellotalk_link_preview_requests_total',
+      help: 'Total number of link preview requests by outcome as seen by the caller',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.linkPreviewFetchDuration = new Histogram({
+      name: 'hellotalk_link_preview_fetch_duration_seconds',
+      help: 'Duration of origin scrapes made for link previews by outcome',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 8, 12],
+    });
+
+    this.linkPreviewInflightFetches = new Gauge({
+      name: 'hellotalk_link_preview_inflight_fetches',
+      help: 'Number of origin scrapes currently in flight for link previews',
+      registers: [this.register],
+    });
+
+    this.linkPreviewPersistence = new Counter({
+      name: 'hellotalk_link_preview_persistence_total',
+      help: 'Total number of per-message link preview store operations by result',
+      labelNames: ['operation', 'result'],
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -999,6 +1062,33 @@ export class MetricsService {
       endpoint: 'video-classroom-join',
       error_type: errorType,
     });
+  }
+
+  // --- Link preview metric helpers ---
+
+  recordLinkPreviewRequest(outcome: LinkPreviewRequestOutcome): void {
+    this.linkPreviewRequests.inc({ outcome });
+  }
+
+  observeLinkPreviewFetch(
+    outcome: LinkPreviewFetchOutcome,
+    durationSeconds: number,
+  ): void {
+    this.linkPreviewFetchDuration.observe({ outcome }, durationSeconds);
+  }
+
+  setLinkPreviewInflightFetches(count: number): void {
+    this.linkPreviewInflightFetches.set(count);
+  }
+
+  recordLinkPreviewPersistence(
+    operation: LinkPreviewPersistenceOperation,
+    result: LinkPreviewPersistenceResult,
+    count: number = 1,
+  ): void {
+    if (count > 0) {
+      this.linkPreviewPersistence.inc({ operation, result }, count);
+    }
   }
 
   getRegister(): Registry {

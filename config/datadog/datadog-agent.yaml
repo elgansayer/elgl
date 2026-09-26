@@ -80,6 +80,11 @@ prometheus_scrape:
       - hellotalk_discovery_language_pair_requests_total: counter
       - hellotalk_discovery_location_search_requests_total: counter
       - hellotalk_discovery_error_rate: gauge
+      # Link preview (OpenGraph scraper) metrics (Datadog custom metrics)
+      - hellotalk_link_preview_requests_total: counter
+      - hellotalk_link_preview_fetch_duration_seconds: histogram
+      - hellotalk_link_preview_inflight_fetches: gauge
+      - hellotalk_link_preview_persistence_total: counter
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter

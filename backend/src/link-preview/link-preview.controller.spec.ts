@@ -1,4 +1,7 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewController } from './link-preview.controller';
@@ -31,6 +34,16 @@ describe('LinkPreviewController', () => {
     expect(mockGetPreview).not.toHaveBeenCalled();
   });
 
+  it('rejects a repeated url query parameter instead of scraping an array', async () => {
+    await expect(
+      controller.getPreview([
+        'https://a.example',
+        'https://b.example',
+      ] as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockGetPreview).not.toHaveBeenCalled();
+  });
+
   it('delegates to the service and returns the scraped preview', async () => {
     const preview = {
       url: 'https://example.com/post',
@@ -54,6 +67,14 @@ describe('LinkPreviewController', () => {
     await expect(
       controller.getPreview('https://example.com/empty'),
     ).resolves.toBeNull();
+  });
+
+  it('propagates a capacity refusal so clients can retry later', async () => {
+    mockGetPreview.mockRejectedValue(new ServiceUnavailableException());
+
+    await expect(
+      controller.getPreview('https://example.com/'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('propagates service errors to the caller', async () => {
