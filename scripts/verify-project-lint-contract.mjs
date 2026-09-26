@@ -4,11 +4,71 @@ import { fileURLToPath } from 'node:url';
 
 const REQUIRED_PROJECTS = ['backend', 'frontend'];
 const CLEAN_LINT_WORKFLOW = path.join('.github', 'workflows', 'clean-project-lint.yml');
+const LINT_CHECK_COMMAND = 'npm run lint:check';
+
+// Canonical CI must run each required project's non-mutating lint gate as a matrix entry of its own.
+const CI_LINT_GATES = [
+  { directory: 'backend', check: 'lint', message: 'CI must run backend npm run lint:check' },
+  {
+    directory: 'frontend',
+    check: 'static-analysis',
+    message: 'CI must run frontend npm run lint:check as part of static analysis',
+  },
+];
 
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function readScalar(raw) {
+  const quoted = raw.match(/^\s*(["'])(.*?)\1(?:\s+#.*)?\s*$/);
+  return quoted ? quoted[2] : raw.replace(/\s+#.*$/, '').trim();
+}
+
+// Reads block-style `- key: value` list entries without a YAML dependency, because the guard runs
+// before any install. Each field is attributed to the entry that declares it, so another project's
+// entry (for example admin-portal, which also runs lint:check) cannot satisfy this project's
+// requirement. Flow-style or multi-line scalars are not read, which fails closed.
+function readListEntries(workflow) {
+  const entries = [];
+  let entry;
+  let fieldIndent = 0;
+
+  for (const line of workflow.split(/\r?\n/)) {
+    if (line.trim() === '' || /^\s*#/.test(line)) {
+      continue;
+    }
+
+    const item = line.match(/^(\s*)-\s+([\w-]+):(.*)$/);
+    if (item) {
+      entry = { [item[2]]: readScalar(item[3]) };
+      fieldIndent = item[1].length + 2;
+      entries.push(entry);
+      continue;
+    }
+
+    const indent = line.length - line.trimStart().length;
+    if (indent < fieldIndent) {
+      entry = undefined;
+      fieldIndent = 0;
+      continue;
+    }
+
+    const field = entry && indent === fieldIndent ? line.match(/^\s*([\w-]+):(.*)$/) : null;
+    if (field) {
+      entry[field[1]] = readScalar(field[2]);
+    }
+  }
+
+  return entries;
+}
+
+// `npm run lint:check` must be a whole `&&` step, so look-alike scripts such as
+// `npm run lint:check:frontend` and tolerated failures such as `|| true` do not count.
+function runsLintCheck(command) {
+  return command.split('&&').some((step) => step.trim() === LINT_CHECK_COMMAND);
 }
 
 export function verifyProjectLintContract(rootDir) {
@@ -37,16 +97,18 @@ export function verifyProjectLintContract(rootDir) {
     );
   }
 
-  assert(
-    /directory:\s*backend[\s\S]*?check:\s*lint[\s\S]*?command:\s*npm run lint:check/.test(ci),
-    'CI must run backend npm run lint:check',
-  );
-  assert(
-    /directory:\s*frontend[\s\S]*?check:\s*static-analysis[\s\S]*?command:[^\n]*npm run lint:check/.test(
-      ci,
-    ),
-    'CI must run frontend npm run lint:check as part of static analysis',
-  );
+  const ciEntries = readListEntries(ci);
+  for (const gate of CI_LINT_GATES) {
+    assert(
+      ciEntries.some(
+        (entry) =>
+          entry.directory === gate.directory &&
+          entry.check === gate.check &&
+          runsLintCheck(entry.command ?? ''),
+      ),
+      gate.message,
+    );
+  }
 
   assert(
     /project:\s*\[\s*backend\s*,\s*frontend\s*\]/.test(cleanLint),

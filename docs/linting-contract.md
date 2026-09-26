@@ -9,6 +9,12 @@ The backend and main Angular frontend both expose `npm run lint`. Historically t
 
 This closes the gap where CI could report a successful lint command after silently repairing source in the ephemeral runner.
 
+## What clean means
+
+Clean means zero ESLint errors and zero file changes. It does not mean zero warnings: neither project passes `--max-warnings`, and both keep some rules at `warn` while existing code is migrated, for example the backend `no-unsafe-*` rules in `backend/eslint.config.mjs` and the frontend production `as` assertion ban in `frontend/eslint.config.js`. Warnings appear in the lint output but do not fail `lint:check` or `npm run lint`. Promoting a rule from `warn` to `error` is a separate, deliberate change once its existing violations are migrated.
+
+`admin-portal` exposes only the non-mutating `lint:check`, which canonical CI runs as `admin-portal / lint`. It has no auto-fixing `lint` command, so it sits outside the clean-tree workflow below.
+
 ## CI behavior
 
 `.github/workflows/clean-project-lint.yml` runs independently for `backend` and `frontend` on pull requests, merge queues, and pushes to `main` or `develop`.
@@ -29,19 +35,22 @@ The canonical `.github/workflows/ci.yml` continues running `lint:check`. Keeping
 `npm run check:lint-contract` verifies that:
 
 - backend and frontend keep both `lint` and non-mutating `lint:check` scripts;
-- canonical CI continues to run each project's `lint:check`;
+- canonical CI runs each project's `lint:check` as its own matrix entry, `backend / lint` and `frontend / static-analysis`;
 - the clean-lint workflow covers both projects;
 - the clean-lint workflow runs `npm run lint` from the matrix project;
 - the post-lint working-tree assertion remains project-scoped and failure-producing; and
 - lint/clean-tree failures are not weakened with `continue-on-error` or `|| true`.
 
-The guard has Node-native regression tests so workflow drift fails before a misleading green lint gate can be merged.
+The CI check reads the `directory`, `check` and `command` fields of each matrix entry together, so a `lint:check` in another project's entry, such as `admin-portal / lint`, cannot satisfy the backend or frontend requirement. `npm run lint:check` must be a whole `&&` step of the entry's command: a look-alike such as `npm run lint:check:frontend` or a tolerated failure such as `|| true` does not count. The reader understands block-style, single-line `directory`, `check` and `command` values only and needs no YAML dependency, because the guard job installs nothing. Any other shape (flow-style entries, `>-` or `|` command scalars) fails closed with the same error, so change the guard in the same pull request as such a workflow change.
+
+The guard has Node-native regression tests, including a fixture that mirrors the canonical matrix with its `admin-portal / lint` entry, so workflow drift fails before a misleading green lint gate can be merged.
 
 ## Local verification
 
 From the repository root, contributors can run the read-only checks with:
 
 ```bash
+npm run check:lint-contract
 npm run lint:check
 ```
 

@@ -14,12 +14,34 @@ function writeFixture(rootDir, project, lintCheck, lint = 'eslint src --fix') {
   );
 }
 
-function writeCi(rootDir, frontendCommand = 'npm run check:control-flow && npm run lint:check') {
+// Mirrors the canonical CI application-checks matrix, including the admin-portal entry that also
+// runs `npm run lint:check`. That entry must never satisfy the backend or frontend requirement.
+function ciEntries(frontendCommand = 'npm run check:control-flow && npm run lint:check') {
+  return [
+    { directory: 'backend', check: 'lint', command: 'npm run lint:check' },
+    { directory: 'backend', check: 'build', command: 'npm run build' },
+    { directory: 'frontend', check: 'static-analysis', command: frontendCommand },
+    { directory: 'frontend', check: 'build', command: 'npm run build' },
+    { directory: 'admin-portal', check: 'lint', command: 'npm run lint:check' },
+  ];
+}
+
+function writeCiText(rootDir, text) {
   const workflowDir = path.join(rootDir, '.github', 'workflows');
   fs.mkdirSync(workflowDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(workflowDir, 'ci.yml'),
-    `matrix:\n  include:\n    - directory: backend\n      check: lint\n      command: npm run lint:check\n    - directory: frontend\n      check: static-analysis\n      command: ${frontendCommand}\n`,
+  fs.writeFileSync(path.join(workflowDir, 'ci.yml'), text);
+}
+
+function writeCi(rootDir, entries = ciEntries()) {
+  const include = entries
+    .map(
+      ({ directory, check, command }) =>
+        `          - directory: ${directory}\n            check: ${check}\n            command: ${command}\n`,
+    )
+    .join('');
+  writeCiText(
+    rootDir,
+    `jobs:\n  application-checks:\n    strategy:\n      matrix:\n        include:\n${include}    steps:\n      - name: Checkout code\n`,
   );
 }
 
@@ -91,11 +113,118 @@ test('rejects a mutating lint:check command', () => {
 
 test('rejects CI drift that stops running frontend lint:check', () => {
   withFixture((rootDir) => {
-    writeCi(rootDir, 'npm run check:control-flow');
+    writeCi(rootDir, ciEntries('npm run check:control-flow'));
     assert.throws(
       () => verifyProjectLintContract(rootDir),
       /CI must run frontend npm run lint:check/,
     );
+  });
+});
+
+test('rejects CI that drops backend lint while admin-portal still runs lint:check', () => {
+  withFixture((rootDir) => {
+    writeCi(
+      rootDir,
+      ciEntries().filter((entry) => !(entry.directory === 'backend' && entry.check === 'lint')),
+    );
+    assert.throws(
+      () => verifyProjectLintContract(rootDir),
+      /CI must run backend npm run lint:check/,
+    );
+  });
+});
+
+test('rejects CI that only attaches backend lint:check to a different check', () => {
+  withFixture((rootDir) => {
+    writeCi(
+      rootDir,
+      ciEntries().map((entry) =>
+        entry.directory === 'backend' && entry.check === 'lint'
+          ? { ...entry, check: 'build' }
+          : entry,
+      ),
+    );
+    assert.throws(
+      () => verifyProjectLintContract(rootDir),
+      /CI must run backend npm run lint:check/,
+    );
+  });
+});
+
+test('rejects CI that drops frontend static analysis while admin-portal still runs lint:check', () => {
+  withFixture((rootDir) => {
+    writeCi(
+      rootDir,
+      ciEntries().filter(
+        (entry) => !(entry.directory === 'frontend' && entry.check === 'static-analysis'),
+      ),
+    );
+    assert.throws(
+      () => verifyProjectLintContract(rootDir),
+      /CI must run frontend npm run lint:check/,
+    );
+  });
+});
+
+test('rejects a look-alike script name in place of lint:check', () => {
+  withFixture((rootDir) => {
+    writeCi(rootDir, ciEntries('npm run check:control-flow && npm run lint:check:frontend'));
+    assert.throws(
+      () => verifyProjectLintContract(rootDir),
+      /CI must run frontend npm run lint:check/,
+    );
+  });
+});
+
+test('rejects a tolerated lint:check that cannot fail the CI entry', () => {
+  withFixture((rootDir) => {
+    writeCi(rootDir, ciEntries('npm run check:control-flow && npm run lint:check || true'));
+    assert.throws(
+      () => verifyProjectLintContract(rootDir),
+      /CI must run frontend npm run lint:check/,
+    );
+  });
+});
+
+test('does not attribute fields of a later step to a matrix entry', () => {
+  withFixture((rootDir) => {
+    writeCiText(
+      rootDir,
+      [
+        'jobs:',
+        '  application-checks:',
+        '    strategy:',
+        '      matrix:',
+        '        include:',
+        '          - directory: backend',
+        '            check: lint',
+        '          - directory: frontend',
+        '            check: static-analysis',
+        '            command: npm run lint:check',
+        '    steps:',
+        '      - name: Run lint',
+        '        command: npm run lint:check',
+        '',
+      ].join('\n'),
+    );
+    assert.throws(
+      () => verifyProjectLintContract(rootDir),
+      /CI must run backend npm run lint:check/,
+    );
+  });
+});
+
+test('accepts lint:check in any position of a quoted, commented matrix command', () => {
+  withFixture((rootDir) => {
+    writeCi(rootDir, [
+      { directory: 'backend', check: 'lint', command: "'npm run lint:check'" },
+      {
+        directory: 'frontend',
+        check: 'static-analysis',
+        command: 'npm run lint:check && npm run check:control-flow # required gate',
+      },
+    ]);
+    assert.deepEqual(verifyProjectLintContract(rootDir).projects, ['backend', 'frontend']);
   });
 });
 
