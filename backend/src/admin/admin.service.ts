@@ -198,8 +198,11 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateLoginHistoryCache(userId);
+    // ⚡ Bolt Optimization: Group sequential cache invalidations into a single Promise.all batch to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateLoginHistoryCache(userId),
+    ]);
 
     return data;
   }
@@ -283,9 +286,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateBlocksListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt Optimization: Group sequential cache invalidations into a single Promise.all batch to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateBlocksListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
@@ -312,9 +318,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateReportsListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt Optimization: Group sequential cache invalidations into a single Promise.all batch to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateReportsListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
