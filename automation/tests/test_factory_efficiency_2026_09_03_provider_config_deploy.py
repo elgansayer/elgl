@@ -61,7 +61,7 @@ def test_provider_config_rollback_reloads_both_services(tmp_path: Path) -> None:
     functions = _function_range(
         updater,
         "validate_agents_config() {",
-        "\ntrap finish_update EXIT",
+        "\ntrap restore_services_on_failure EXIT",
     )
 
     config = tmp_path / "agents.json"
@@ -116,7 +116,7 @@ def test_failed_provider_config_rollback_refuses_service_restart(tmp_path: Path)
     functions = _function_range(
         updater,
         "validate_agents_config() {",
-        "\ntrap finish_update EXIT",
+        "\ntrap restore_services_on_failure EXIT",
     )
     config = tmp_path / "agents.json"
     config.write_text("new-config", encoding="utf-8")
@@ -157,14 +157,9 @@ def test_neutral_repo_factory_updater_has_autonomous_bootstrap_path() -> None:
     maintenance = _read("scripts/maintain-factory-host-storage.sh")
     unit = _read("config/systemd/repo-factory-update.service")
 
-    assert "/bin/bash /opt/repo-factory/repo-factory-update.sh" in unit
+    assert "ExecStart=/bin/bash /opt/repo-factory/repo-factory-update.sh" in unit
     assert '"$REPO_RUNTIME_ROOT/repo-factory-update.sh" 0755' in updater
     assert "FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1" in updater
     assert "bootstrap_repo_factory_updater" in maintenance
     assert "FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1" in maintenance
     assert 'install -o root -g root -m 0755 "$legacy" "$neutral"' in maintenance
-    assert "refs/remotes/origin/main" in maintenance
-    assert 'cat-file commit "$head"' in maintenance
-    assert 'cat-file blob "$updater_blob"' in maintenance
-    assert "git hash-object -t commit --stdin" in maintenance
-    assert 'actual_blob=$(git hash-object "$temporary")' in maintenance

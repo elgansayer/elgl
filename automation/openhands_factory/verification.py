@@ -18,9 +18,11 @@ class VerificationCommand:
     arguments: tuple[str, ...]
     directory: Path
     timeout: int = 1800
-    # Memory-heavy frontend commands and fixed-port browser commands share one
-    # host-wide slot. Three concurrent Angular builds can exceed the Factory
-    # cgroup's memory high-water mark even though each build is healthy alone.
+    # True only for commands that bind a fixed host port (frontend-e2e's dev
+    # server on 127.0.0.1:4200) and so cannot run concurrently with another
+    # instance of themselves. Everything else - including backend-test:e2e,
+    # which talks to its NestJS app in-process via supertest on an ephemeral
+    # port - is safe under full worker parallelism.
     exclusive: bool = False
     workspace: Path | None = None
 
@@ -32,32 +34,30 @@ repository=$2
 state_dir=$3
 log_dir=$4
 service_home=$5
-cypress_cache=$6
-sandbox_root=$7
-workdir=$8
-shift 8
+workdir=$6
+shift 6
 
 /usr/bin/mount --make-rprivate /
-/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
-staging=$sandbox_root/factory-verification
-/usr/bin/mkdir -p "$staging/workspace"
-/usr/bin/mount --bind "$workspace" "$staging/workspace"
+/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs /mnt
+/usr/bin/mkdir -p /mnt/factory-verification/workspace
+/usr/bin/mount --bind "$workspace" /mnt/factory-verification/workspace
 
 same_repository=false
 if [ "$repository" = "$workspace" ]; then
   same_repository=true
 else
-  /usr/bin/mkdir -p "$staging/repository"
-  /usr/bin/mount --bind "$repository" "$staging/repository"
-  /usr/bin/mount -o remount,bind,ro "$staging/repository"
+  /usr/bin/mkdir -p /mnt/factory-verification/repository
+  /usr/bin/mount --bind "$repository" /mnt/factory-verification/repository
+  /usr/bin/mount -o remount,bind,ro /mnt/factory-verification/repository
 fi
 
+cypress_cache=$service_home/.cache/Cypress
 has_cypress_cache=false
 if [ -d "$cypress_cache" ]; then
   has_cypress_cache=true
-  /usr/bin/mkdir -p "$staging/cypress"
-  /usr/bin/mount --bind "$cypress_cache" "$staging/cypress"
-  /usr/bin/mount -o remount,bind,ro "$staging/cypress"
+  /usr/bin/mkdir -p /mnt/factory-verification/cypress
+  /usr/bin/mount --bind "$cypress_cache" /mnt/factory-verification/cypress
+  /usr/bin/mount -o remount,bind,ro /mnt/factory-verification/cypress
 fi
 
 # uv resolves each worktree as its own project and needs its dependencies
@@ -69,22 +69,16 @@ uv_cache=$service_home/.cache/uv
 has_uv_cache=false
 if [ -d "$uv_cache" ]; then
   has_uv_cache=true
-  /usr/bin/mkdir -p "$staging/uv-cache"
-  /usr/bin/mount --bind "$uv_cache" "$staging/uv-cache"
+  /usr/bin/mkdir -p /mnt/factory-verification/uv-cache
+  /usr/bin/mount --bind "$uv_cache" /mnt/factory-verification/uv-cache
 fi
 
-for masked_root in /mnt /srv /media; do
-  if [ "$masked_root" != "$sandbox_root" ] && [ -d "$masked_root" ]; then
-    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
-  fi
-done
 if [ -d "$state_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$state_dir"
 fi
 if [ -d "$log_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$log_dir"
 fi
-/usr/bin/mkdir -p /run/user
 /usr/bin/mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run/user
 /usr/bin/mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 if [ -d /var/tmp ]; then
@@ -99,30 +93,18 @@ if [ -d /opt/hellotalk-factory ]; then
 fi
 
 /usr/bin/mkdir -p "$workspace" "$repository" /tmp/home /tmp/npm-cache /tmp/uv-cache
-/usr/bin/mount --bind "$staging/workspace" "$workspace"
+/usr/bin/mount --bind /mnt/factory-verification/workspace "$workspace"
 if [ "$same_repository" = false ]; then
-  /usr/bin/mount --bind "$staging/repository" "$repository"
+  /usr/bin/mount --bind /mnt/factory-verification/repository "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
-# Vite bundles TypeScript configuration through node_modules/.vite-temp even
-# during a read-only test run. Worktrees deliberately symlink their dependencies
-# to the trusted repository cache, which is remounted read-only above. Overlay only
-# this disposable cache directory with sandbox-local tmpfs; dependencies and the
-# rest of the trusted repository remain read-only.
-for dependency_path in node_modules frontend/node_modules backend/node_modules \
-  e2e/node_modules admin-portal/node_modules; do
-  writable_vite_cache="$repository/$dependency_path/.vite-temp"
-  if [ -d "$writable_vite_cache" ]; then
-    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$writable_vite_cache"
-  fi
-done
 if [ "$has_cypress_cache" = true ]; then
   /usr/bin/mkdir -p /tmp/cypress-cache
-  /usr/bin/mount --bind "$staging/cypress" /tmp/cypress-cache
+  /usr/bin/mount --bind /mnt/factory-verification/cypress /tmp/cypress-cache
   /usr/bin/mount -o remount,bind,ro /tmp/cypress-cache
 fi
 if [ "$has_uv_cache" = true ]; then
-  /usr/bin/mount --bind "$staging/uv-cache" /tmp/uv-cache
+  /usr/bin/mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache
 fi
 
 /usr/sbin/ip link set lo up
@@ -182,37 +164,6 @@ def _sandbox_path(value: Path, *, name: str) -> str:
     return str(resolved)
 
 
-def _verification_sandbox_root(*sources: Path) -> Path:
-    """Choose a staging root that does not hide a verification source."""
-
-    resolved_sources = tuple(source.resolve() for source in sources)
-    for candidate in (Path("/srv"), Path("/media"), Path("/run")):
-        if not any(
-            source == candidate or source.is_relative_to(candidate) for source in resolved_sources
-        ):
-            return candidate
-    raise VerificationFailed("No safe verification staging root is available")
-
-
-def _prepare_vite_cache_mountpoints(repository: Path) -> None:
-    """Create safe host mountpoints for Vite's sandbox-local transient cache."""
-
-    for relative in (
-        Path("node_modules"),
-        Path("frontend/node_modules"),
-        Path("backend/node_modules"),
-        Path("e2e/node_modules"),
-        Path("admin-portal/node_modules"),
-    ):
-        dependency_dir = repository / relative
-        if not dependency_dir.is_dir():
-            continue
-        cache_dir = dependency_dir / ".vite-temp"
-        if cache_dir.is_symlink():
-            raise VerificationFailed(f"Refusing symlinked Vite cache mountpoint: {cache_dir}")
-        cache_dir.mkdir(exist_ok=True)
-
-
 def run_isolated_verification_process(
     arguments: tuple[str, ...],
     cwd: Path,
@@ -230,24 +181,7 @@ def run_isolated_verification_process(
     state_dir = Path(os.environ.get("FACTORY_STATE_DIR", "/var/lib/hellotalk-factory"))
     log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
-    _prepare_vite_cache_mountpoints(repository)
     service_home = state_dir / "home"
-    # Dependency deployment installs Cypress as the service user with HOME set
-    # to its real login home. The isolated state home is intentionally separate
-    # and may retain an older binary after package-lock updates. Bind the same
-    # deployment-owned cache that `npm exec -- cypress install` refreshes.
-    cypress_cache = Path(
-        os.environ.get(
-            "FACTORY_CYPRESS_CACHE_DIR",
-            str(Path.home() / ".cache" / "Cypress"),
-        )
-    )
-    sandbox_root = _verification_sandbox_root(
-        resolved_workspace,
-        repository,
-        service_home,
-        cypress_cache,
-    )
     # Resolving a virtual environment's Python executable follows its symlink to
     # the system interpreter and loses the environment's bin directory. sys.prefix
     # remains the owning environment and therefore exposes uv inside the sandbox.
@@ -258,7 +192,6 @@ def run_isolated_verification_process(
         "GIT_OPTIONAL_LOCKS": "0",
         "HOME": "/tmp/home",
         "LANG": os.environ.get("LANG", "C.UTF-8"),
-        "MYPY_CACHE_DIR": "/tmp/mypy-cache",
         "NO_COLOR": "1",
         "NPM_CONFIG_CACHE": "/tmp/npm-cache",
         "PATH": (
@@ -266,8 +199,6 @@ def run_isolated_verification_process(
             "/usr/bin:/usr/sbin:/bin:/sbin"
         ),
         "TERM": "dumb",
-        "PYTEST_ADDOPTS": "-o cache_dir=/tmp/pytest-cache",
-        "RUFF_CACHE_DIR": "/tmp/ruff-cache",
         "UV_CACHE_DIR": "/tmp/uv-cache",
         # The host updater owns dependency synchronisation. Verification mounts
         # /opt read-only and must execute against that prepared environment rather
@@ -296,8 +227,6 @@ def run_isolated_verification_process(
         _sandbox_path(state_dir, name="state"),
         _sandbox_path(log_dir, name="log"),
         _sandbox_path(service_home, name="home"),
-        _sandbox_path(cypress_cache, name="Cypress cache"),
-        str(sandbox_root),
         _sandbox_path(resolved_cwd, name="working directory"),
         *arguments,
     )
@@ -391,10 +320,8 @@ def commands_for(
     # verifying nothing.
     touches_automation = _touches(changed_paths, "automation")
     touches_frontend = _touches(changed_paths, "frontend")
-    touches_frontend_directly = touches_frontend
     touches_backend = _touches(changed_paths, "backend")
     touches_admin = _touches(changed_paths, "admin-portal")
-    touches_playwright = _touches(changed_paths, "e2e")
     if not (touches_automation or touches_frontend or touches_backend or touches_admin):
         touches_automation = touches_frontend = touches_backend = touches_admin = True
     commands = [
@@ -482,10 +409,7 @@ def commands_for(
                 ),
                 VerificationCommand(
                     "factory-tests",
-                    # Use the worktree as Python's import root. The pytest console
-                    # script lives in the shared runtime venv and would otherwise
-                    # test the installed Factory package instead of this PR's code.
-                    ("uv", "run", "--frozen", "python", "-m", "pytest"),
+                    ("uv", "run", "--frozen", "pytest"),
                     repository / "automation",
                 ),
             ]
@@ -501,22 +425,10 @@ def commands_for(
         ):
             commands.append(
                 VerificationCommand(
-                    f"frontend-{script}",
-                    ("npm", "run", script),
-                    repository / "frontend",
-                    exclusive=script in {"lint:check", "build", "test"},
+                    f"frontend-{script}", ("npm", "run", script), repository / "frontend"
                 )
             )
-    if touches_frontend_directly:
-        changed_cypress_specs = sorted(
-            str(path.relative_to("frontend"))
-            for path in changed_paths
-            if len(path.parts) >= 4
-            and path.parts[:3] == ("frontend", "cypress", "e2e")
-            and path.suffix in {".js", ".ts"}
-            and (repository / path).is_file()
-        )
-        cypress_specs = changed_cypress_specs or ["cypress/e2e/cypress-setup.cy.ts"]
+    if any(path.parts and path.parts[0] in {"frontend", "e2e"} for path in changed_paths):
         commands.append(
             VerificationCommand(
                 "frontend-e2e",
@@ -539,20 +451,10 @@ def commands_for(
                     'if [ "$attempt" = 180 ]; then '
                     "echo 'dev server did not become ready within 180s:' >&2; "
                     "tail -n 50 /tmp/factory-angular-e2e.log >&2; exit 1; fi; "
-                    'done; npm run e2e -- --spec "$1"',
-                    "factory-frontend-e2e",
-                    ",".join(cypress_specs),
+                    "done; npm run e2e",
                 ),
                 repository / "frontend",
                 exclusive=True,
-            )
-        )
-    if touches_playwright:
-        commands.append(
-            VerificationCommand(
-                "playwright-discovery",
-                ("npm", "test", "--", "--list"),
-                repository / "e2e",
             )
         )
     if touches_backend:

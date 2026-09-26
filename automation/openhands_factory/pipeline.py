@@ -25,7 +25,6 @@ from openhands_factory.exceptions import (
 )
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestMatch, PullRequestStatus
-from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.jobs import JobStore
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
@@ -46,7 +45,6 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
-CI_POLL_INTERVAL = timedelta(minutes=1)
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -62,13 +60,6 @@ CODE_MUTATING_AGENT_PHASES = {
     "quality-repair",
     "ci-repair",
 }
-VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
-    "the cypress binary is missing",
-    "we expected the binary to be installed here",
-    "no space left on device",
-    "failed with exit 137",
-    "failed with exit 143",
-)
 
 # A path in one of these categories can never introduce the vulnerability
 # classes security.md's checklist scans for (hardcoded secrets, webhook/
@@ -115,7 +106,6 @@ class FactoryPipeline:
         github: GitHubClient | None = None,
         conversations: ConversationRunner | None = None,
         verification_slots: Semaphore | None = None,
-        host_resource_slots: HostResourceGate | None = None,
         agent_router: AgentRouter | None = None,
     ) -> None:
         self.config = config
@@ -202,7 +192,6 @@ class FactoryPipeline:
             self.router = agent_router
             self.labels_ready = False
             self.verification_slots = verification_slots
-            self.host_resource_slots = host_resource_slots
             return
 
         claude = config.agents.providers["claude"]
@@ -322,12 +311,10 @@ class FactoryPipeline:
             skip_busy_providers=config.agents.routing.skip_busy_providers,
             same_provider_retries=config.agents.routing.same_provider_retries,
             metrics_store=MetricsStore(config.state_dir / "metrics.json"),
-            host_resource_slots=host_resource_slots,
         )
         self.labels_ready = False
         self.active_label_reconciliation_pending = True
         self.verification_slots = verification_slots
-        self.host_resource_slots = host_resource_slots
 
     def _workflow(
         self,
@@ -342,8 +329,6 @@ class FactoryPipeline:
             self.config.base_branch,
             external_branch=external_branch,
             github_token=self.config.github_token.get_secret_value(),
-            worktree_root=self.config.worktree_dir,
-            recovery_root=self.config.recovery_dir,
         )
 
     def refresh(self, protected_task_ids: set[str] | None = None) -> dict[str, Job]:
@@ -505,13 +490,10 @@ class FactoryPipeline:
                 return None
             self._copy_claim_metadata(job, claim)
             try:
-                # The selected cooldown is due. Clear it before advancing so a
-                # polling transition can explicitly schedule its next read without
-                # inheriting stale backoff from the previous attempt.
-                job.next_attempt_at = None
                 self._advance(job, lease_owner)
                 job.attempts = 0
                 job.last_error = None
+                job.next_attempt_at = None
             except ProviderCapacityUnavailable as error:
                 job.last_error = str(error)[-2000:]
                 retry = error.retry_after_seconds or self.config.provider_cooldown_seconds
@@ -1032,13 +1014,27 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     raise FactoryError("Review repair limit exceeded")
                 self._mark_latest_review_as_mutating(job)
+                verified_paths = self._verify(workflow)
+                workflow.stage_all()
+                subject = self._subject(job)
+                workflow.commit(f"fix: address review for {subject} {job.task.identifier}")
+                if job.branch is None:
+                    raise FactoryError("Job branch is missing")
+                workflow.push(job.branch)
+                job.head_sha = workflow.head_sha()
+                job.latest_verified_sha = job.head_sha
+                job.changed_path_fingerprint = changed_path_fingerprint(
+                    str(path) for path in verified_paths
+                )
+                bound = self.tasks.record_verification(
+                    job.task.identifier,
+                    lease_owner,
+                    job.head_sha,
+                    job.changed_path_fingerprint,
+                )
+                self._copy_claim_metadata(job, bound)
                 job.repair_attempts += 1
-                # Keep the review repair in the worktree and let the ordinary
-                # VERIFYING state own verification, commit and push. If a
-                # transient tool or cache failure occurs, the durable state then
-                # retries verification instead of paying for another review and
-                # layering more edits onto the same uncommitted repair.
-                job.state = JobState.VERIFYING
+                job.state = JobState.REVIEWING
                 return
             failed_criteria = [
                 f"Acceptance criterion failed: {criterion.get('criterion')}"
@@ -1104,18 +1100,11 @@ class FactoryPipeline:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner)
             elif status.merge_state_status == "BEHIND":
                 self._update_pull_request_branch(job, status)
-            elif status.failed_checks:
-                # A pending status can coexist with a terminal failure. In
-                # particular, the Factory's own review context stays pending while
-                # a CI repair is queued. Terminal evidence must win or the job
-                # waits forever on the status that only the repair can complete.
-                job.state = JobState.REPAIRING
             elif (
                 status.checks_pending
                 or status.mergeable == "UNKNOWN"
                 or status.merge_state_status in {"UNKNOWN", "BLOCKED", "HAS_HOOKS", "DRAFT"}
             ):
-                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
                 return
             elif (
                 status.checks_passed
@@ -1150,13 +1139,12 @@ class FactoryPipeline:
             if job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner)
                 return
-            if not status.failed_checks and (
+            if (
                 status.checks_pending
                 or (status.checks_passed and status.mergeable == "MERGEABLE")
                 or status.mergeable == "UNKNOWN"
             ):
                 job.state = JobState.CI_PENDING
-                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
                 return
             failed_checks = "\n".join(f"- {name}" for name in sorted(status.failed_checks))
             evidence = failed_checks or "- No terminal failed check name was reported by GitHub."
@@ -1345,54 +1333,6 @@ class FactoryPipeline:
     ) -> None:
         """Attach issue work to an existing canonical PR instead of creating a sibling."""
 
-        existing_owner = next(
-            (
-                candidate
-                for candidate in self.jobs.load().values()
-                if candidate.task.identifier != job.task.identifier
-                and candidate.task.source == "github-pull-request"
-                and (
-                    candidate.pull_request == match.number
-                    or candidate.task.identifier == str(match.number)
-                )
-                and candidate.state not in TERMINAL_STATES
-            ),
-            None,
-        )
-        if existing_owner is not None:
-            # The pull-request intake already owns this branch and its isolated
-            # worktree. Treat the issue as an attached sibling instead of trying to
-            # check out the same local branch twice. The PR job remains responsible
-            # for verification, repair, and merge; its issue-closing reference is
-            # preserved by the existing PR body.
-            job.branch = match.branch
-            job.pull_request = match.number
-            job.head_sha = match.head_sha or existing_owner.head_sha
-            bound = self.tasks.bind_pull_request(
-                job.task.identifier,
-                lease_owner,
-                match.number,
-                match.branch,
-                predecessor_pull_request=job.predecessor_pull_request,
-            )
-            self._copy_claim_metadata(job, bound)
-            job.canonical_task_id = existing_owner.task.identifier
-            self.tasks.complete(job.task.identifier, lease_owner)
-            self.github.add_comment(
-                int(job.task.identifier),
-                (
-                    "OpenHands Factory attached this issue to the existing canonical pull "
-                    f"request #{match.number}. Its active pull-request job already owns the "
-                    "branch and will continue verification, repair, and merge."
-                ),
-            )
-            self.github.remove_issue_labels(
-                int(job.task.identifier),
-                ("factory-active", "swarm-active"),
-            )
-            job.state = JobState.DONE
-            return
-
         self._prepare_pull_request_for_review(
             job,
             worktree,
@@ -1442,14 +1382,6 @@ class FactoryPipeline:
             detail="Factory pull request verification in progress",
         )
         self.github.add_comment(job.pull_request, comment)
-        status = self._status(job)
-        if status.merge_state_status == "BEHIND":
-            # Verify the merge candidate, not a stale head. Otherwise old pull
-            # requests miss fixes already on main and get sent through unnecessary
-            # AI repair for failures the base branch has already resolved.
-            self._update_pull_request_branch(job, status)
-            job.state = JobState.CI_PENDING
-            return
         verified_paths = self._verify_or_schedule_quality_repair(
             job,
             self._workflow(worktree),
@@ -1604,10 +1536,12 @@ class FactoryPipeline:
         if not changed:
             raise FactoryError("No changed paths were found")
         commands = commands_for(workflow.repository, changed, self.config.repository_profile)
-        # Memory-heavy Angular commands and fixed-port browser commands are
-        # serialized across workers. The remaining checks can run at full worker
-        # parallelism. Running shared checks first means cheap failures are judged
-        # before spending minutes in the host-wide verification slot.
+        # Only commands that bind a fixed host port (frontend-e2e's dev server)
+        # need to be serialized across workers; everything else - lint, build,
+        # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
+        # port) - is safe to run at full worker parallelism. Running the shared
+        # commands first also means a cheap, fast-failing check (lint, a broken
+        # build) is judged before spending minutes on the exclusive one.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
         run_verification(shared)
@@ -1617,11 +1551,7 @@ class FactoryPipeline:
             run_verification(exclusive)
             return changed
         with self.verification_slots:
-            if self.host_resource_slots is None:
-                run_verification(exclusive)
-            else:
-                with self.host_resource_slots.exclusive():
-                    run_verification(exclusive)
+            run_verification(exclusive)
         return changed
 
     def _verify_or_schedule_quality_repair(
@@ -1633,18 +1563,9 @@ class FactoryPipeline:
         try:
             changed = self._verify(workflow)
         except VerificationFailed as error:
-            detail = str(error)
-            if any(
-                marker in detail.lower() for marker in VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS
-            ):
-                # Host/cache/resource failures cannot be corrected by editing the
-                # pull request. Preserve the current pipeline state so the durable
-                # retry policy backs off and retries the same verification without
-                # spending an agent call or introducing unrelated code churn.
-                raise
             if job.quality_repairs >= 2:
                 raise
-            evidence = detail[-1800:]
+            evidence = str(error)[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
                 f"Factory safety controls intact:\n{evidence}"

@@ -127,11 +127,11 @@ rotation. Persisted failure classes and deterministic jittered backoff remain au
 
 ### New-issue admission cadence
 
-Production admits up to four newly discovered GitHub issues per hour through:
+Production admits one newly discovered GitHub issue per hour through:
 
 ```text
 FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
-FACTORY_NEW_ISSUES_PER_INTERVAL=4
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
 ```
 
 This is a durable admission gate, not the daemon polling interval. The admission record survives daemon restarts
@@ -139,7 +139,7 @@ and prevents startup bursts. It applies only while an issue is in `DISCOVERED`; 
 verification, quality repair, PR creation, independent review, CI repair, merge polling, and incoming pull-request
 review continue whenever worker capacity is available. Setting the interval to `0` restores unlimited historical
 admission behaviour. Do not use `FACTORY_COOLDOWN_SECONDS=3600` for this purpose: that value controls source and
-health refresh cadence and would not reliably enforce bounded issue admission.
+health refresh cadence and would not reliably enforce one newly admitted issue per hour.
 
 All `jobs.json` read-modify-write operations use a cross-process lock, so daemon, doctor, watchdog, and operator
 commands cannot overwrite sibling transitions. Provider provenance is retained as the latest 500 attempts per

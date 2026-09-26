@@ -30,7 +30,7 @@ RUNTIME_MAINTENANCE="$RUNTIME_ROOT/scripts/maintain-factory-host-storage.sh"
 AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}
 AGENTS_CONFIG_SOURCE=config/factory/agents.production.json
 RESTART_GRACE_SECONDS=${FACTORY_UPDATE_RESTART_GRACE_SECONDS:-60}
-ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-7500}
+ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-300}
 GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}
 MAINTENANCE_ONLY=false
 update_completed=false
@@ -38,7 +38,6 @@ services_stopped=false
 secondary_was_active=false
 agents_config_changed=false
 agents_config_backup=
-controls_paused=false
 
 case "${1:-}" in
   '') ;;
@@ -111,71 +110,7 @@ restore_services_on_failure() {
     fi
   fi
 }
-
-set_pause_file() {
-  local heartbeat=$1 paused=$2
-  local control factory_uid factory_gid
-  control="$(dirname -- "$heartbeat")/control.json"
-  factory_uid=$(id -u "$FACTORY_USER") || return 1
-  factory_gid=$(id -g "$FACTORY_USER") || return 1
-  python3 - "$control" "$paused" "$factory_uid" "$factory_gid" <<'PY'
-import json
-import os
-import sys
-from pathlib import Path
-
-path = Path(sys.argv[1])
-paused = sys.argv[2] == "true"
-uid = int(sys.argv[3])
-gid = int(sys.argv[4])
-path.parent.mkdir(parents=True, exist_ok=True)
-temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-try:
-    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-        json.dump({"paused": paused}, handle)
-        handle.write("\n")
-        handle.flush()
-        os.fsync(handle.fileno())
-        os.fchown(handle.fileno(), uid, gid)
-    os.replace(temporary, path)
-finally:
-    temporary.unlink(missing_ok=True)
-PY
-}
-
-pause_factories() {
-  set_pause_file "$HEARTBEAT" true || return 1
-  controls_paused=true
-  if [ -n "$SECONDARY_HEARTBEAT" ]; then
-    if ! set_pause_file "$SECONDARY_HEARTBEAT" true; then
-      set_pause_file "$HEARTBEAT" false || true
-      controls_paused=false
-      return 1
-    fi
-  fi
-}
-
-resume_factories() {
-  local failed=false
-  if [ "$controls_paused" != true ]; then
-    return 0
-  fi
-  set_pause_file "$HEARTBEAT" false || failed=true
-  if [ -n "$SECONDARY_HEARTBEAT" ]; then
-    set_pause_file "$SECONDARY_HEARTBEAT" false || failed=true
-  fi
-  [ "$failed" = false ] || return 1
-  controls_paused=false
-}
-
-finish_update() {
-  restore_services_on_failure || true
-  if ! resume_factories; then
-    log 'ERROR: could not resume Factory scheduling during updater cleanup'
-  fi
-}
-trap finish_update EXIT
+trap restore_services_on_failure EXIT
 
 factory_git_read() {
   runuser -u "$FACTORY_USER" -- env \
@@ -346,36 +281,6 @@ install_runtime_bundle() {
   record_runtime_commit "$commit" || return 1
 }
 
-install_service_configuration() {
-  local commit=$1
-  verify_commit_identity "$commit" || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/systemd/repo-factory.slice \
-    /etc/systemd/system/repo-factory.slice 0644 || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/systemd/repo-factory@.service \
-    /etc/systemd/system/repo-factory@.service 0644 || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/systemd/repo-factory-health@.service \
-    /etc/systemd/system/repo-factory-health@.service 0644 || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/systemd/repo-factory-health@.timer \
-    /etc/systemd/system/repo-factory-health@.timer 0644 || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/systemd/repo-factory-update.service \
-    /etc/systemd/system/repo-factory-update.service 0644 || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/systemd/repo-factory-update.timer \
-    /etc/systemd/system/repo-factory-update.timer 0644 || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/factory/instances/hellotalk.env \
-    /etc/repo-factory/instances/hellotalk.env 0644 || return 1
-  install_runtime_file_from_commit \
-    "$commit" config/factory/instances/workout-agent.env \
-    /etc/repo-factory/instances/workout-agent.env 0644 || return 1
-  systemctl daemon-reload
-}
-
 reconcile_agents_config_from_commits() {
   local base_commit=$1
   local desired_commit=$2
@@ -491,6 +396,18 @@ all_factories_idle() {
   fi
 }
 
+log "Waiting up to ${ACTIVE_JOB_WAIT_SECONDS}s for factory to be idle"
+waited=0
+while ! all_factories_idle; do
+  if [ "$waited" -ge "$ACTIVE_JOB_WAIT_SECONDS" ]; then
+    log "Active jobs still running after ${ACTIVE_JOB_WAIT_SECONDS}s - skipping update, will retry tomorrow"
+    exit 0
+  fi
+  sleep 15
+  waited=$((waited + 15))
+done
+log 'Factory is idle'
+
 log 'Fetching origin/main'
 timeout "${GIT_TIMEOUT}s" \
   runuser -u "$FACTORY_USER" -- env \
@@ -510,8 +427,6 @@ if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
 fi
 
 if [ "$local_sha" = "$remote_sha" ] && [ "$config_is_current" = true ]; then
-  log 'Refreshing verified Factory service units and instance policy'
-  install_service_configuration "$local_sha"
   log "Already up to date at ${local_sha:0:12} with valid provider config - no restart needed"
   exit 0
 fi
@@ -534,20 +449,6 @@ verify_commit_identity "$remote_sha" || {
   log 'ERROR: origin/main identity could not be verified'
   exit 1
 }
-
-log 'Pausing new Factory scheduling while active jobs drain'
-pause_factories
-log "Waiting up to ${ACTIVE_JOB_WAIT_SECONDS}s for active jobs to drain"
-waited=0
-while ! all_factories_idle; do
-  if [ "$waited" -ge "$ACTIVE_JOB_WAIT_SECONDS" ]; then
-    log "Active jobs did not drain after ${ACTIVE_JOB_WAIT_SECONDS}s - resuming scheduling and deferring update"
-    exit 0
-  fi
-  sleep 15
-  waited=$((waited + 15))
-done
-log 'Factory is drained and ready to update'
 
 log 'Stopping factory service'
 systemctl stop "$SERVICE" || true
@@ -582,33 +483,17 @@ fi
 log 'Reinstalling factory Python package'
 # Ensure dev can write the venv before uv runs as dev. Running uv as root with
 # HOME=/home/dev previously created unreadable root-owned cache entries there.
-factory_venv_real=$(readlink -f -- "$FACTORY_VENV")
-case "$factory_venv_real" in
-  /opt/hellotalk-factory/venv-*) ;;
-  *)
-    log "ERROR: factory venv resolved outside the versioned runtime: $factory_venv_real"
-    exit 1
-    ;;
-esac
-chown -R "$FACTORY_USER:$FACTORY_USER" "$factory_venv_real"
+chown -R dev:dev "$FACTORY_VENV"
 runuser -u "$FACTORY_USER" -- env \
   HOME="$FACTORY_HOME" VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
-    --reinstall-package repo-factory \
     --project "$REPOSITORY/automation"
-if ! test -x "$FACTORY_VENV/bin/repo-factory"; then
-  log 'ERROR: package refresh did not install the repo-factory executable'
-  exit 1
-fi
 runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
   "$FACTORY_VENV/bin/uv" cache prune || true
 
 log 'Reconciling repository provider policy while preserving host overrides'
 reconcile_agents_config_from_commits "$local_sha" "$pulled_sha"
-
-log 'Refreshing verified Factory service units and instance policy'
-install_service_configuration "$pulled_sha"
 
 log 'Rebuilding the shared Factory worker image'
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 \
@@ -635,7 +520,6 @@ if [ "$secondary_was_active" = true ]; then
   systemctl reset-failed "$SECONDARY_SERVICE" || true
   systemctl start "$SECONDARY_SERVICE"
 fi
-resume_factories
 
 sleep "$RESTART_GRACE_SECONDS"
 
