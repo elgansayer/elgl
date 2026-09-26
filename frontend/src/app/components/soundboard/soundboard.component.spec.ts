@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SoundboardComponent } from './soundboard.component';
 import { SoundboardService } from '../../services/soundboard.service';
-import { CentrifugoService, CentrifugoEvent } from '../../services/centrifugo.service';
+import { CentrifugeService, CentrifugeEvent } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
@@ -26,7 +26,7 @@ describe('SoundboardComponent', () => {
   let playSoundMock: ReturnType<typeof vi.fn>;
   let hapticTapFn: ReturnType<typeof vi.fn>;
   let currentUserSignal: ReturnType<typeof signal<UserInfo | null>>;
-  let eventsSignal: ReturnType<typeof signal<CentrifugoEvent[]>>;
+  let eventsSignal: ReturnType<typeof signal<CentrifugeEvent[]>>;
   const audioElements: AudioStubRecord[] = [];
 
   beforeEach(async () => {
@@ -52,7 +52,7 @@ describe('SoundboardComponent', () => {
     playSoundMock = vi.fn().mockResolvedValue({ success: true });
     hapticTapFn = vi.fn();
     currentUserSignal = signal<UserInfo | null>(null);
-    eventsSignal = signal<CentrifugoEvent[]>([]);
+    eventsSignal = signal<CentrifugeEvent[]>([]);
 
     await TestBed.configureTestingModule({
       imports: [SoundboardComponent],
@@ -61,7 +61,7 @@ describe('SoundboardComponent', () => {
           provide: SoundboardService,
           useValue: { getSounds: getSoundsMock, playSound: playSoundMock },
         },
-        { provide: CentrifugoService, useValue: { events: eventsSignal } },
+        { provide: CentrifugeService, useValue: { events: eventsSignal } },
         { provide: AuthService, useValue: { currentUser: currentUserSignal } },
         { provide: HapticFeedbackService, useValue: { tap: hapticTapFn } },
       ],
@@ -106,9 +106,7 @@ describe('SoundboardComponent', () => {
     await initialise();
 
     expect(getSoundsMock).toHaveBeenCalledTimes(1);
-    expect(component.sounds()).toEqual([
-      { id: 'applause', name: 'Applause', icon: '👏' },
-    ]);
+    expect(component.sounds()).toEqual([{ id: 'applause', name: 'Applause', icon: '👏' }]);
     expect(component.loadError()).toBe(false);
   });
 

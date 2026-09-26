@@ -10,12 +10,9 @@ import {
 } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
-import {
-  SoundItem,
-  SoundboardService,
-} from '../../services/soundboard.service';
+import { SoundItem, SoundboardService } from '../../services/soundboard.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { getBundledSoundboardClip } from '../../services/soundboard-clips';
 
@@ -88,7 +85,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export class SoundboardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly soundboardService = inject(SoundboardService);
-  private readonly centrifugoService = inject(CentrifugoService);
+  private readonly centrifugoService = inject(CentrifugeService);
   private readonly authService = inject(AuthService);
   private readonly hapticFeedback = inject(HapticFeedbackService);
 
@@ -134,9 +131,7 @@ export class SoundboardComponent {
       if (latest.data['type'] !== 'soundboard_play') return;
 
       const soundId =
-        typeof latest.data['sound_id'] === 'string'
-          ? latest.data['sound_id'].trim()
-          : '';
+        typeof latest.data['sound_id'] === 'string' ? latest.data['sound_id'].trim() : '';
       const clip = getBundledSoundboardClip(soundId);
       if (!clip) return;
 
