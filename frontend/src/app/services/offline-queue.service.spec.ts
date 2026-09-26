@@ -1,150 +1,110 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthService } from './auth.service';
+import type { ChatMessage } from './chat.service';
 import { OfflineQueueService } from './offline-queue.service';
-import { ChatMessage } from './chat.service';
-
-function createMockMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
-  return {
-    id: 'msg-1',
-    room_id: 'room-1',
-    sender_id: 'user-1',
-    message_type: 'text',
-    text_content: 'Hello',
-    is_read: false,
-    created_at: new Date().toISOString(),
-    ...overrides,
-  };
-}
 
 describe('OfflineQueueService', () => {
   let service: OfflineQueueService;
-  let mockStore: Map<string, ChatMessage>;
+  let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
+  let originalIndexedDB: IDBFactory | undefined;
 
-  function createSyncRequest(result?: unknown) {
-    // Fire onsuccess synchronously once it's set (using a MutationObserver-like pattern with defineProperty)
-    const req = {
-      result: result ?? null,
-      error: null as DOMException | null,
-      _onsuccess: null as (() => void) | null,
-    };
-    Object.defineProperty(req, 'onsuccess', {
-      get() { return this._onsuccess; },
-      set(fn: () => void) {
-        this._onsuccess = fn;
-        // Fire synchronously so the IDB promise resolves immediately
-        fn();
-      },
-    });
-    return req;
-  }
+  const message = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
+    id: '4d83362d-829e-4a68-b7bd-941076fb71f3',
+    room_id: 'room-1',
+    sender_id: 'user-a',
+    message_type: 'text',
+    text_content: 'queued text',
+    is_read: false,
+    created_at: '2026-08-27T04:00:00.000Z',
+    ...overrides,
+  });
 
   beforeEach(() => {
-    mockStore = new Map<string, ChatMessage>();
-
-    vi.stubGlobal('indexedDB', {
-      open: () => {
-        const req = createSyncRequest();
-        // The mock DB object
-        req.result = {
-          objectStoreNames: { contains: () => true },
-          transaction: () => ({
-            objectStore: () => ({
-              put: (msg: ChatMessage) => {
-                mockStore.set(msg.id, msg);
-                return createSyncRequest();
-              },
-              getAll: () => {
-                const r = createSyncRequest();
-                r.result = Array.from(mockStore.values());
-                return r;
-              },
-              delete: (id: string) => {
-                mockStore.delete(id);
-                return createSyncRequest();
-              },
-              clear: () => {
-                mockStore.clear();
-                return createSyncRequest();
-              },
-            }),
-          }),
-        };
-        return req;
-      },
+    originalIndexedDB = window.indexedDB;
+    Object.defineProperty(window, 'indexedDB', {
+      configurable: true,
+      value: undefined,
     });
 
-    TestBed.configureTestingModule({});
+    currentUser = signal<{ id: string } | null>(null);
+    TestBed.configureTestingModule({
+      providers: [
+        OfflineQueueService,
+        {
+          provide: AuthService,
+          useValue: { currentUser },
+        },
+      ],
+    });
     service = TestBed.inject(OfflineQueueService);
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    Object.defineProperty(window, 'indexedDB', {
+      configurable: true,
+      value: originalIndexedDB,
+    });
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
+  it('does not expose queued content while signed out', async () => {
+    await expect(service.getQueuedMessages()).resolves.toEqual([]);
   });
 
-  it('should have zero queued count after initialisation', () => {
-    expect(service.queuedCount()).toBe(0);
+  it('fails closed instead of pretending a message was queued without a session', async () => {
+    await expect(service.enqueueMessage(message())).rejects.toThrow(
+      'Sign in before queueing an offline message',
+    );
   });
 
-  it('should enqueue a message and update count', async () => {
-    const msg = createMockMessage();
-    await service.enqueueMessage(msg);
-    expect(mockStore.has('msg-1')).toBe(true);
-    expect(service.queuedCount()).toBe(1);
+  it('fails closed when IndexedDB is unavailable so callers can retain the draft', async () => {
+    currentUser.set({ id: 'user-a' });
+    TestBed.flushEffects();
+
+    await expect(service.enqueueMessage(message())).rejects.toThrow(
+      'Offline message storage is unavailable',
+    );
   });
 
-  it('should return queued messages', async () => {
-    const msg1 = createMockMessage({ id: 'msg-1' });
-    const msg2 = createMockMessage({ id: 'msg-2', text_content: 'World' });
-    await service.enqueueMessage(msg1);
-    await service.enqueueMessage(msg2);
+  it('rejects a queued message owned by a different account', () => {
+    const validator = (
+      service as unknown as {
+        assertQueueableMessage(value: ChatMessage, ownerId: string): void;
+      }
+    ).assertQueueableMessage.bind(service);
 
-    const messages = await service.getQueuedMessages();
-    expect(messages).toHaveLength(2);
+    expect(() => validator(message({ sender_id: 'user-b' }), 'user-a')).toThrow(
+      'Offline message does not belong to the authenticated account',
+    );
   });
 
-  it('should remove a message and decrement count', async () => {
-    const msg = createMockMessage();
-    await service.enqueueMessage(msg);
-    expect(service.queuedCount()).toBe(1);
+  it('rejects malformed identifiers and creation timestamps before persistence', () => {
+    const validator = (
+      service as unknown as {
+        assertQueueableMessage(value: ChatMessage, ownerId: string): void;
+      }
+    ).assertQueueableMessage.bind(service);
 
-    await service.removeMessage('msg-1');
-    expect(mockStore.has('msg-1')).toBe(false);
-    expect(service.queuedCount()).toBe(0);
+    expect(() => validator(message({ id: '' }), 'user-a')).toThrow(
+      'Offline message is missing required identifiers',
+    );
+    expect(() => validator(message({ room_id: '  ' }), 'user-a')).toThrow(
+      'Offline message is missing required identifiers',
+    );
+    expect(() => validator(message({ created_at: 'not-a-date' }), 'user-a')).toThrow(
+      'Offline message has an invalid creation timestamp',
+    );
   });
 
-  it('should clear all queued messages', async () => {
-    await service.enqueueMessage(createMockMessage({ id: 'msg-1' }));
-    await service.enqueueMessage(createMockMessage({ id: 'msg-2' }));
-    expect(service.queuedCount()).toBe(2);
+  it('accepts a valid message belonging to the authenticated owner', () => {
+    const validator = (
+      service as unknown as {
+        assertQueueableMessage(value: ChatMessage, ownerId: string): void;
+      }
+    ).assertQueueableMessage.bind(service);
 
-    await service.clearQueue();
-    const messages = await service.getQueuedMessages();
-    expect(messages).toHaveLength(0);
-    expect(service.queuedCount()).toBe(0);
-  });
-
-  it('should return empty array when IndexedDB is unavailable', async () => {
-    vi.stubGlobal('indexedDB', undefined);
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
-    const noDBService = TestBed.inject(OfflineQueueService);
-
-    const messages = await noDBService.getQueuedMessages();
-    expect(messages).toEqual([]);
-  });
-
-  it('should not throw when enqueuing without IndexedDB', async () => {
-    vi.stubGlobal('indexedDB', undefined);
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
-    const noDBService = TestBed.inject(OfflineQueueService);
-
-    await expect(noDBService.enqueueMessage(createMockMessage())).resolves.toBeUndefined();
-    expect(noDBService.queuedCount()).toBe(0);
+    expect(() => validator(message(), 'user-a')).not.toThrow();
   });
 });
