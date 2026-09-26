@@ -34,6 +34,34 @@ const followingMoment = {
   },
 };
 
+// The API returns For You Moments already ranked, so the client must render them in the
+// order received rather than re-sorting by engagement or recency.
+const forYouMoments = [
+  {
+    ...baseMoment,
+    id: 'moment-for-you-first',
+    text_content: 'Ranked first',
+    likes_count: 0,
+    hashtags: ['日本語'],
+    author: {
+      id: 'partner-3',
+      display_name: 'Ranked First Partner',
+      avatar_url: avatarDataUrl,
+    },
+  },
+  {
+    ...baseMoment,
+    id: 'moment-for-you-second',
+    text_content: 'Ranked second',
+    likes_count: 500,
+    author: {
+      id: 'partner-4',
+      display_name: 'Ranked Second Partner',
+      avatar_url: avatarDataUrl,
+    },
+  },
+];
+
 describe('Moments Flow (Mocked)', () => {
   beforeEach(() => {
     // The app shell loads shared safety/economy state before feature routes render.
@@ -58,9 +86,13 @@ describe('Moments Flow (Mocked)', () => {
 
     cy.intercept('GET', '**/api/moments/feed*', (req) => {
       const filter = new URL(req.url).searchParams.get('filter');
+      const feeds: Record<string, unknown[]> = {
+        Following: [followingMoment],
+        'For You': forYouMoments,
+      };
       req.reply({
         statusCode: 200,
-        body: filter === 'Following' ? [followingMoment] : [baseMoment],
+        body: feeds[filter ?? ''] ?? [baseMoment],
       });
     }).as('getMomentsFeed');
 
@@ -128,6 +160,21 @@ describe('Moments Flow (Mocked)', () => {
       .then(($tokens) => {
         expect(renderedTokenText($tokens)).to.equal(normaliseText(followingMoment.text_content));
       });
+    cy.contains('Aiko Test').should('not.exist');
+  });
+
+  it('requests the For You filter and renders the ranked order from the API', () => {
+    cy.visit('/moments');
+    cy.wait('@getMomentsFeed');
+
+    cy.get('button[role="radio"][aria-label="For You"]').click();
+    cy.wait('@getMomentsFeed').then(({ request }) => {
+      expect(new URL(request.url).searchParams.get('filter')).to.equal('For You');
+    });
+
+    cy.get('article').should('have.length', 2);
+    cy.get('article').eq(0).contains('h3', 'Ranked First Partner').should('be.visible');
+    cy.get('article').eq(1).contains('h3', 'Ranked Second Partner').should('be.visible');
     cy.contains('Aiko Test').should('not.exist');
   });
 

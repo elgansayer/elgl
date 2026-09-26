@@ -1,5 +1,10 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import { MomentsService } from './moments.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -9,6 +14,13 @@ import { SafetyService } from '../safety/safety.service';
 import { XpService } from '../xp/xp.service';
 import { QuestsService } from '../quests/quests.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { MetricsService } from '../metrics/metrics.service';
+import {
+  FOR_YOU_CANDIDATE_POOL_LIMIT,
+  FOR_YOU_FOLLOWED_AUTHOR_LIMIT,
+  FOR_YOU_IN_NETWORK_SOURCE_LIMIT,
+  FOR_YOU_RECENT_SOURCE_LIMIT,
+} from './moments-for-you.constants';
 
 // Deterministic stand-in for the real mock-data module, which assigns
 // languages via Math.random() and made fallback-feed assertions flaky.
@@ -47,8 +59,19 @@ describe('MomentsService', () => {
   let mockSupabaseClient: any;
   let mockRedisClient: any;
   let mockQueryBuilder: any;
+  let metricsService: {
+    observeMomentsForYouCandidates: Mock;
+    observeMomentsForYouRanking: Mock;
+    recordMomentsForYouDegraded: Mock;
+  };
 
   beforeEach(async () => {
+    metricsService = {
+      observeMomentsForYouCandidates: vi.fn(),
+      observeMomentsForYouRanking: vi.fn(),
+      recordMomentsForYouDegraded: vi.fn(),
+    };
+
     mockQueryBuilder = {
       insert: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
@@ -125,6 +148,10 @@ describe('MomentsService', () => {
           useValue: {
             generateUploadUrl: vi.fn(),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: metricsService,
         },
       ],
     }).compile();
@@ -950,6 +977,422 @@ describe('MomentsService', () => {
           !m.target_language || m.target_language.toLowerCase() === 'ja',
         ).toBe(true),
       );
+    });
+  });
+
+  describe('getFeed For You candidate retrieval (#1668)', () => {
+    interface SourceResult {
+      data: any[] | null;
+      error: any;
+    }
+
+    interface BuilderState {
+      inCalls: Array<[string, unknown[]]>;
+      eqCalls: Array<[string, unknown]>;
+      orderCalls: Array<[string, unknown]>;
+      limitCalls: number[];
+    }
+
+    interface Wiring {
+      recent?: SourceResult;
+      byId?: SourceResult;
+      byAuthor?: SourceResult;
+      follows?: SourceResult;
+      likes?: SourceResult;
+    }
+
+    const ok = (data: any[]): SourceResult => ({ data, error: null });
+    const failed = (): SourceResult => ({
+      data: null,
+      error: { message: 'provider detail must never be logged' },
+    });
+
+    const row = (
+      id: string,
+      userId: string,
+      overrides: Record<string, unknown> = {},
+    ) => ({
+      id,
+      user_id: userId,
+      text_content: `Moment ${id}`,
+      media_type: 'none',
+      target_language: null,
+      is_pinned: false,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: '2026-08-25T10:00:00.000Z',
+      ...overrides,
+    });
+
+    /** Thenable query builder that records its chain and resolves on await. */
+    function makeBuilder(resolve: (state: BuilderState) => SourceResult) {
+      const state: BuilderState = {
+        inCalls: [],
+        eqCalls: [],
+        orderCalls: [],
+        limitCalls: [],
+      };
+      const builder: any = {
+        state,
+        select: vi.fn(() => builder),
+        eq: vi.fn((column: string, value: unknown) => {
+          state.eqCalls.push([column, value]);
+          return builder;
+        }),
+        in: vi.fn((column: string, values: unknown[]) => {
+          state.inCalls.push([column, values]);
+          return builder;
+        }),
+        order: vi.fn((column: string, options: unknown) => {
+          state.orderCalls.push([column, options]);
+          return builder;
+        }),
+        limit: vi.fn((count: number) => {
+          state.limitCalls.push(count);
+          return builder;
+        }),
+        then: (onFulfilled: (value: SourceResult) => unknown) =>
+          onFulfilled(resolve(state)),
+      };
+      return builder;
+    }
+
+    function wire(wiring: Wiring = {}) {
+      const momentsBuilders: any[] = [];
+      const followsBuilders: any[] = [];
+
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          const builder = makeBuilder((state) => {
+            const column = state.inCalls[0]?.[0];
+            if (column === 'id') return wiring.byId ?? ok([]);
+            if (column === 'user_id') return wiring.byAuthor ?? ok([]);
+            return wiring.recent ?? ok([]);
+          });
+          momentsBuilders.push(builder);
+          return builder;
+        }
+        if (table === 'user_follows') {
+          const builder = makeBuilder(() => wiring.follows ?? ok([]));
+          followsBuilders.push(builder);
+          return builder;
+        }
+        if (table === 'users') {
+          return makeBuilder((state) =>
+            ok(
+              ((state.inCalls[0]?.[1] ?? []) as string[]).map((id) => ({
+                id,
+                display_name: `User ${id}`,
+              })),
+            ),
+          );
+        }
+        if (table === 'moment_likes') {
+          return makeBuilder(() => wiring.likes ?? ok([]));
+        }
+        return mockQueryBuilder;
+      });
+
+      return { momentsBuilders, followsBuilders };
+    }
+
+    const ids = (moments: Array<{ id: string }>) => moments.map((m) => m.id);
+
+    it('merges in-network Moments ahead of recent ones, deduplicating and dropping the viewer own Moments', async () => {
+      mockRedisClient.lrange.mockResolvedValue(['n-1', 'n-2', 'own-1']);
+      wire({
+        byId: ok([
+          row('n-1', 'followed-1'),
+          row('n-2', 'followed-2'),
+          row('own-1', 'user-1'),
+        ]),
+        recent: ok([
+          row('r-1', 'other-1'),
+          row('n-1', 'followed-1'),
+          row('own-2', 'user-1'),
+          row('r-2', 'other-2'),
+        ]),
+        likes: ok([{ moment_id: 'n-2' }]),
+      });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(ids(result)).toEqual(['n-1', 'n-2', 'r-1', 'r-2']);
+      expect(result[0].author?.display_name).toBe('User followed-1');
+      expect(result.find((m) => m.id === 'n-2')?.is_liked_by_me).toBe(true);
+      expect(mockRedisClient.lrange).toHaveBeenCalledWith(
+        'timeline_queue:user-1',
+        0,
+        FOR_YOU_IN_NETWORK_SOURCE_LIMIT - 1,
+      );
+    });
+
+    it('reads the newest Moments network-wide and leaves ordering to the ranker', async () => {
+      const { momentsBuilders } = wire({
+        recent: ok([
+          row('newest', 'author-a', {
+            likes_count: 0,
+            created_at: '2026-08-25T11:00:00.000Z',
+          }),
+          row('popular-but-older', 'author-b', {
+            likes_count: 500,
+            comments_count: 100,
+            created_at: '2026-08-24T11:00:00.000Z',
+          }),
+        ]),
+      });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      // The legacy engagement pre-sort would have put the popular Moment first.
+      expect(ids(result)).toEqual(['newest', 'popular-but-older']);
+      const recentQuery = momentsBuilders.find(
+        (builder) => builder.state.inCalls.length === 0,
+      );
+      expect(recentQuery.state.orderCalls).toEqual([
+        ['created_at', { ascending: false }],
+      ]);
+      expect(recentQuery.state.limitCalls).toEqual([
+        FOR_YOU_RECENT_SOURCE_LIMIT,
+      ]);
+    });
+
+    it('applies visibility filters before bounding so filtered rows never crowd out eligible ones', async () => {
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'blocked-author',
+      ]);
+      const blocked = Array.from({ length: 60 }, (_, index) =>
+        row(`blocked-${index}`, 'blocked-author', {
+          likes_count: 1000 - index,
+        }),
+      );
+      const eligible = Array.from({ length: 40 }, (_, index) =>
+        row(`eligible-${index}`, `author-${index}`),
+      );
+      wire({ recent: ok([...blocked, ...eligible]) });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(result).toHaveLength(40);
+      expect(result.every((m) => m.id.startsWith('eligible-'))).toBe(true);
+    });
+
+    it('caps the merged pool at the ranker pool limit while keeping every in-network Moment', async () => {
+      const inNetworkIds = Array.from(
+        { length: FOR_YOU_IN_NETWORK_SOURCE_LIMIT },
+        (_, index) => `n-${index}`,
+      );
+      mockRedisClient.lrange.mockResolvedValue(inNetworkIds);
+      wire({
+        byId: ok(inNetworkIds.map((id, i) => row(id, `followed-${i}`))),
+        recent: ok(
+          Array.from({ length: FOR_YOU_RECENT_SOURCE_LIMIT }, (_, index) =>
+            row(`r-${index}`, `other-${index}`),
+          ),
+        ),
+      });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(result).toHaveLength(FOR_YOU_CANDIDATE_POOL_LIMIT);
+      expect(ids(result.slice(0, FOR_YOU_IN_NETWORK_SOURCE_LIMIT))).toEqual(
+        inNetworkIds,
+      );
+    });
+
+    it('resolves the in-network source from a bounded follow lookup when the Redis timeline is cold', async () => {
+      mockRedisClient.lrange.mockResolvedValue([]);
+      const { momentsBuilders, followsBuilders } = wire({
+        follows: ok([
+          { following_id: 'followed-1' },
+          { following_id: 'followed-2' },
+        ]),
+        byAuthor: ok([row('n-1', 'followed-1'), row('n-2', 'followed-2')]),
+        recent: ok([row('r-1', 'other-1')]),
+      });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(ids(result)).toEqual(['n-1', 'n-2', 'r-1']);
+      expect(followsBuilders).toHaveLength(1);
+      expect(followsBuilders[0].state.eqCalls).toEqual([
+        ['follower_id', 'user-1'],
+      ]);
+      expect(followsBuilders[0].state.limitCalls).toEqual([
+        FOR_YOU_FOLLOWED_AUTHOR_LIMIT,
+      ]);
+      const byAuthor = momentsBuilders.find(
+        (builder) => builder.state.inCalls[0]?.[0] === 'user_id',
+      );
+      expect(byAuthor.state.inCalls[0][1]).toEqual([
+        'followed-1',
+        'followed-2',
+      ]);
+      expect(byAuthor.state.limitCalls).toEqual([
+        FOR_YOU_IN_NETWORK_SOURCE_LIMIT,
+      ]);
+    });
+
+    it('skips the in-network Moments query when the viewer follows nobody', async () => {
+      mockRedisClient.lrange.mockResolvedValue([]);
+      const { momentsBuilders } = wire({
+        follows: ok([]),
+        recent: ok([row('r-1', 'other-1')]),
+      });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(ids(result)).toEqual(['r-1']);
+      expect(momentsBuilders).toHaveLength(1);
+    });
+
+    it('applies block, story, question and targeted-language rules to both sources', async () => {
+      vi.spyOn(usersService, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+        display_name: 'Learner',
+        avatar_url: null,
+        native_languages: ['ja'],
+      } as any);
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'blocked-author',
+      ]);
+      mockRedisClient.lrange.mockResolvedValue([
+        'n-ja',
+        'n-fr',
+        'n-blocked',
+        'n-story',
+        'n-question',
+      ]);
+      wire({
+        byId: ok([
+          row('n-ja', 'followed-1', { target_language: 'ja' }),
+          row('n-fr', 'followed-2', { target_language: 'fr' }),
+          row('n-blocked', 'blocked-author', { target_language: 'ja' }),
+          row('n-story', 'followed-3', {
+            target_language: 'ja',
+            is_ephemeral: true,
+          }),
+          row('n-question', 'followed-4', {
+            target_language: 'ja',
+            post_type: 'question',
+          }),
+        ]),
+        recent: ok([
+          row('r-ja', 'other-1', { target_language: 'JA' }),
+          row('r-de', 'other-2', { target_language: 'de' }),
+          row('r-open', 'other-3', { target_language: null }),
+        ]),
+      });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(ids(result)).toEqual(['n-ja', 'r-ja', 'r-open']);
+    });
+
+    it('records candidate volume for each source without degradation', async () => {
+      mockRedisClient.lrange.mockResolvedValue(['n-1', 'n-2']);
+      wire({
+        byId: ok([row('n-1', 'followed-1'), row('n-2', 'followed-2')]),
+        recent: ok([
+          row('r-1', 'other-1'),
+          row('r-2', 'other-2'),
+          row('r-3', 'other-3'),
+        ]),
+      });
+
+      await service.getFeed('user-1', 'For You');
+
+      expect(
+        metricsService.observeMomentsForYouCandidates,
+      ).toHaveBeenCalledWith('recent_source', 3);
+      expect(
+        metricsService.observeMomentsForYouCandidates,
+      ).toHaveBeenCalledWith('in_network_source', 2);
+      expect(metricsService.recordMomentsForYouDegraded).not.toHaveBeenCalled();
+    });
+
+    it('degrades to the recent source when the Redis timeline fails, without logging details', async () => {
+      const warn = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      mockRedisClient.lrange.mockRejectedValue(
+        new Error('redis://secret-host refused the connection'),
+      );
+      wire({ recent: ok([row('r-1', 'other-1')]) });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(ids(result)).toEqual(['r-1']);
+      expect(metricsService.recordMomentsForYouDegraded).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(metricsService.recordMomentsForYouDegraded).toHaveBeenCalledWith(
+        'in_network_source_unavailable',
+      );
+      expect(warn).toHaveBeenCalledWith(
+        'moments_for_you_in_network_source_unavailable',
+      );
+      const logged = JSON.stringify(warn.mock.calls);
+      expect(logged).not.toContain('secret-host');
+      expect(logged).not.toContain('user-1');
+      warn.mockRestore();
+    });
+
+    it('degrades to the recent source when the in-network query returns a provider error', async () => {
+      mockRedisClient.lrange.mockResolvedValue(['n-1']);
+      wire({ byId: failed(), recent: ok([row('r-1', 'other-1')]) });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(ids(result)).toEqual(['r-1']);
+      expect(metricsService.recordMomentsForYouDegraded).toHaveBeenCalledWith(
+        'in_network_source_unavailable',
+      );
+    });
+
+    it('degrades to the in-network source when the recent source fails', async () => {
+      mockRedisClient.lrange.mockResolvedValue(['n-1']);
+      wire({
+        byId: ok([row('n-1', 'followed-1')]),
+        recent: failed(),
+      });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(ids(result)).toEqual(['n-1']);
+      expect(metricsService.recordMomentsForYouDegraded).toHaveBeenCalledWith(
+        'recent_source_unavailable',
+      );
+    });
+
+    it('returns an honest empty feed when every For You source fails', async () => {
+      mockRedisClient.lrange.mockRejectedValue(new Error('down'));
+      wire({ recent: failed() });
+
+      const result = await service.getFeed('user-1', 'For You');
+
+      expect(result).toEqual([]);
+      expect(metricsService.recordMomentsForYouDegraded).toHaveBeenCalledWith(
+        'recent_source_unavailable',
+      );
+      expect(metricsService.recordMomentsForYouDegraded).toHaveBeenCalledWith(
+        'in_network_source_unavailable',
+      );
+    });
+
+    it('does not read For You sources or record For You metrics for other filters', async () => {
+      const { momentsBuilders } = wire({
+        recent: ok([row('m-1', 'author-1')]),
+      });
+
+      const result = await service.getFeed('user-1', 'All');
+
+      expect(ids(result)).toEqual(['m-1']);
+      expect(momentsBuilders[0].state.limitCalls).toEqual([50]);
+      expect(mockRedisClient.lrange).not.toHaveBeenCalled();
+      expect(
+        metricsService.observeMomentsForYouCandidates,
+      ).not.toHaveBeenCalled();
     });
   });
 

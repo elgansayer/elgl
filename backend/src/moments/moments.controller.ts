@@ -76,18 +76,15 @@ export class MomentsController {
       targetLanguage ?? undefined,
     );
 
+    if (activeFilter === 'For You') {
+      return await this.momentsRankingService.rankForYou(user.id, feed);
+    }
+
     const productionFeed = feed.filter(
       (moment) =>
         !moment.id.startsWith('mock-moment-') &&
         (activeFilter !== 'Following' || moment.user_id !== user.id),
     );
-
-    if (activeFilter === 'For You') {
-      return await this.momentsRankingService.rankForYou(
-        user.id,
-        productionFeed,
-      );
-    }
 
     return productionFeed;
   }

@@ -23,7 +23,7 @@ describe('MomentsController feed filters', () => {
     rankingService = {
       rankForYou: vi
         .fn()
-        .mockImplementation(async (_userId, moments) => moments),
+        .mockImplementation((_userId, moments) => Promise.resolve(moments)),
     };
 
     controller = new MomentsController(
@@ -108,9 +108,8 @@ describe('MomentsController feed filters', () => {
     expect(result).toEqual([{ id: 'followed-moment', user_id: 'author-2' }]);
   });
 
-  it('routes only production For You candidates through the personalized ranker', async () => {
+  it('routes the service-owned For You candidate set through the personalised ranker', async () => {
     momentsService.getFeed.mockResolvedValue([
-      { id: 'mock-moment-1', user_id: 'fake-1' },
       { id: 'own-moment', user_id: 'viewer-1' },
       { id: 'real-moment', user_id: 'author-2' },
     ]);

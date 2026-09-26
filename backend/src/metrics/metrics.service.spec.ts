@@ -390,6 +390,66 @@ describe('MetricsService', () => {
     });
   });
 
+  describe('Moments For You metrics', () => {
+    it('records ranking duration separately for each outcome', async () => {
+      service.observeMomentsForYouRanking('ranked', 0.04);
+      service.observeMomentsForYouRanking('ranked', 0.06);
+      service.observeMomentsForYouRanking('degraded', 0.2);
+      service.observeMomentsForYouRanking('empty', 0.001);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="ranked"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="degraded"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="empty"} 1',
+      );
+    });
+
+    it('records candidate volume for every pipeline stage', async () => {
+      service.observeMomentsForYouCandidates('recent_source', 100);
+      service.observeMomentsForYouCandidates('in_network_source', 12);
+      service.observeMomentsForYouCandidates('pool', 87);
+      service.observeMomentsForYouCandidates('served', 50);
+
+      const metrics = await service.getMetrics();
+      for (const stage of [
+        'recent_source',
+        'in_network_source',
+        'pool',
+        'served',
+      ]) {
+        expect(metrics).toContain(
+          `hellotalk_moments_for_you_candidates_count{stage="${stage}"} 1`,
+        );
+      }
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_candidates_sum{stage="recent_source"} 100',
+      );
+    });
+
+    it('counts degraded requests by reason without user-specific labels', async () => {
+      service.recordMomentsForYouDegraded('viewer_context_unavailable');
+      service.recordMomentsForYouDegraded('viewer_context_unavailable');
+      service.recordMomentsForYouDegraded('recent_source_unavailable');
+      service.recordMomentsForYouDegraded('in_network_source_unavailable');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_degraded_total{reason="viewer_context_unavailable"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_degraded_total{reason="recent_source_unavailable"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_degraded_total{reason="in_network_source_unavailable"} 1',
+      );
+    });
+  });
+
   describe('Escrow metrics', () => {
     it('should record escrow created', () => {
       expect(() => service.recordEscrowCreated(100)).not.toThrow();

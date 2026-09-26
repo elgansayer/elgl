@@ -48,6 +48,8 @@ export interface MomentRecord {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  /** Normalised hashtags derived from text_content. Only present on For You responses. */
+  hashtags?: string[];
   author?: {
     id: string;
     display_name?: string;

@@ -1,14 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MomentRecord } from './interfaces/moment.interface';
+import {
+  FOR_YOU_CANDIDATE_POOL_LIMIT,
+  FOR_YOU_RESULT_LIMIT,
+} from './moments-for-you.constants';
 
-const MAX_CANDIDATES = 50;
 const MAX_RECENT_LIKES = 100;
 const MAX_FOLLOWS = 500;
 const MAX_HASHTAGS_PER_MOMENT = 10;
 const RECENCY_HALF_LIFE_HOURS = 48;
 const AUTHOR_DIVERSITY_DECAY = 0.55;
 const AUTHOR_DIVERSITY_FLOOR = 0.35;
+
+// A tag starts with a letter, digit or underscore and continues with letters,
+// combining marks (Indic vowel signs, Arabic harakat, Hebrew niqqud), digits,
+// underscores and the zero-width non-joiner that Persian tags rely on.
+// Excluding \p{M} would truncate #हिन्दी to its first letter.
+const HASHTAG_PATTERN = /#([\p{L}\p{N}_][\p{L}\p{M}\p{N}_\u200c]{0,49})/gu;
+const TRAILING_ZWNJ_PATTERN = /\u200c+$/u;
 
 interface FollowRow {
   following_id: string;
@@ -41,24 +52,38 @@ export interface ForYouRankingContext {
  * scoring. ELGL keeps its existing Moments retrieval and safety boundaries, then
  * applies the same architecture with signals that are actually available here.
  * We deliberately do not treat raw likes/comments as X model probabilities.
+ *
+ * The ranker scores up to FOR_YOU_CANDIDATE_POOL_LIMIT candidates and returns
+ * the best FOR_YOU_RESULT_LIMIT, so the ranking (not the retrieval order)
+ * decides which Moments are served.
  */
 @Injectable()
 export class MomentsRankingService {
   private readonly logger = new Logger(MomentsRankingService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   async rankForYou(
     userId: string,
     candidates: MomentRecord[],
   ): Promise<MomentRecord[]> {
-    const boundedCandidates = this.prepareCandidates(userId, candidates);
-    if (boundedCandidates.length === 0) return [];
+    const startedAt = performance.now();
+    const pool = this.prepareCandidates(userId, candidates);
+    this.metricsService.observeMomentsForYouCandidates('pool', pool.length);
+
+    if (pool.length === 0) {
+      this.finishRanking('empty', 0, startedAt);
+      return [];
+    }
 
     let context: ForYouRankingContext = {
       followedAuthorIds: new Set<string>(),
       interestedHashtags: new Set<string>(),
     };
+    let degraded = false;
 
     try {
       context = await this.loadViewerContext(userId);
@@ -66,10 +91,20 @@ export class MomentsRankingService {
       // Personalisation is an ordering enhancement, not an availability boundary.
       // Keep the feed usable with deterministic public signals and never log IDs,
       // Moment text, provider errors, or other private viewer context.
+      degraded = true;
       this.logger.warn('moments_for_you_context_unavailable');
+      this.metricsService.recordMomentsForYouDegraded(
+        'viewer_context_unavailable',
+      );
     }
 
-    return this.rankCandidates(boundedCandidates, context);
+    const ranked = this.rankCandidates(pool, context);
+    this.finishRanking(
+      degraded ? 'degraded' : 'ranked',
+      ranked.length,
+      startedAt,
+    );
+    return ranked;
   }
 
   rankCandidates(
@@ -78,7 +113,7 @@ export class MomentsRankingService {
     nowMs = Date.now(),
   ): MomentRecord[] {
     const scored: ScoredMoment[] = candidates
-      .slice(0, MAX_CANDIDATES)
+      .slice(0, FOR_YOU_CANDIDATE_POOL_LIMIT)
       .map((moment) => {
         const createdAtMs = this.parseCreatedAt(moment.created_at, nowMs);
         const ageHours = Math.max(0, (nowMs - createdAtMs) / 3_600_000);
@@ -117,7 +152,9 @@ export class MomentsRankingService {
         };
       });
 
-    return this.applyAuthorDiversity(scored).map(({ moment }) => moment);
+    return this.applyAuthorDiversity(scored, FOR_YOU_RESULT_LIMIT).map(
+      ({ moment }) => moment,
+    );
   }
 
   extractHashtags(text?: string | null): string[] {
@@ -126,10 +163,11 @@ export class MomentsRankingService {
     const tags: string[] = [];
     const seen = new Set<string>();
     const normalisedText = text.normalize('NFKC');
-    const hashtagPattern = /#([\p{L}\p{N}_]{1,50})/gu;
 
-    for (const match of normalisedText.matchAll(hashtagPattern)) {
-      const tag = match[1]?.toLocaleLowerCase();
+    for (const match of normalisedText.matchAll(HASHTAG_PATTERN)) {
+      const tag = match[1]
+        ?.replace(TRAILING_ZWNJ_PATTERN, '')
+        .toLocaleLowerCase();
       if (!tag || seen.has(tag)) continue;
       seen.add(tag);
       tags.push(tag);
@@ -151,7 +189,6 @@ export class MomentsRankingService {
         !candidate?.id ||
         !candidate.user_id ||
         candidate.user_id === userId ||
-        candidate.id.startsWith('mock-moment-') ||
         seen.has(candidate.id)
       ) {
         continue;
@@ -162,10 +199,22 @@ export class MomentsRankingService {
         ...candidate,
         hashtags: this.extractHashtags(candidate.text_content),
       });
-      if (prepared.length >= MAX_CANDIDATES) break;
+      if (prepared.length >= FOR_YOU_CANDIDATE_POOL_LIMIT) break;
     }
 
     return prepared;
+  }
+
+  private finishRanking(
+    outcome: 'ranked' | 'degraded' | 'empty',
+    servedCount: number,
+    startedAt: number,
+  ): void {
+    this.metricsService.observeMomentsForYouCandidates('served', servedCount);
+    this.metricsService.observeMomentsForYouRanking(
+      outcome,
+      (performance.now() - startedAt) / 1000,
+    );
   }
 
   private async loadViewerContext(
@@ -228,12 +277,15 @@ export class MomentsRankingService {
     return { followedAuthorIds, interestedHashtags };
   }
 
-  private applyAuthorDiversity(scored: ScoredMoment[]): ScoredMoment[] {
+  private applyAuthorDiversity(
+    scored: ScoredMoment[],
+    limit: number,
+  ): ScoredMoment[] {
     const remaining = [...scored];
     const selected: ScoredMoment[] = [];
     const authorCounts = new Map<string, number>();
 
-    while (remaining.length > 0) {
+    while (remaining.length > 0 && selected.length < limit) {
       let bestIndex = 0;
       let bestAdjustedScore = Number.NEGATIVE_INFINITY;
 
