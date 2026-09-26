@@ -401,6 +401,29 @@
       .btn-grade.known {
         background: rgb(var(--success));
       }
+      .review-complete {
+        margin-top: 16px;
+        padding: 16px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-800));
+        text-align: center;
+      }
+      .review-complete p {
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .review-complete button {
+        width: 100%;
+        padding: 8px 14px;
+        border: none;
+        border-radius: 999px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-family: inherit;
+        font-weight: 600;
+      }
 
       /* ---- Milestones (milestone.component.ts) ---- */
       .milestone-progress-row {
@@ -878,6 +901,10 @@
                 <button class="btn-grade good">Good</button>
                 <button class="btn-grade known">Known</button>
               </div>
+              <div class="review-complete">
+                <p>📚 No review cards are due right now.</p>
+                <button>Practise in AI conversation</button>
+              </div>
             </section>
 
             <!-- Milestones (milestone.component.ts) -->
@@ -1058,10 +1085,11 @@ Sorry I'm late, the traffic was absolutely abysmal today.</textarea>
       section mirrors <code>vocabulary-dashboard.component.ts</code>'s flip-card review flow (front
       and back shown stacked here in lieu of the real 3D flip transition) with its three semantic
       grade buttons - again in danger, good in warning, known in success, matching the component's
-      own colour choices. The milestones section mirrors <code>milestone.component.ts</code>'s
-      progress bar plus completed/incomplete list rows (create form omitted for brevity). The
-      suggestions card mirrors <code>suggest-flashcards.component.ts</code>'s textarea plus
-      add-to-deck row list, styled through its <code>app-card</code>/<code>app-textarea</code>/
+      own colour choices. Its completion state offers a primary path into AI conversation practice.
+      The milestones section mirrors <code>milestone.component.ts</code>'s progress bar plus
+      completed/incomplete list rows (create form omitted for brevity). The suggestions card mirrors
+      <code>suggest-flashcards.component.ts</code>'s textarea plus add-to-deck row list, styled
+      through its <code>app-card</code>/<code>app-textarea</code>/
       <code>app-button-primary</code> primitives. The study buddy rows mirror
       <code>study-buddy.component.ts</code>'s incoming-request and potential-match lists including
       the accept/decline and request/sent button states. The pronunciation card mirrors
