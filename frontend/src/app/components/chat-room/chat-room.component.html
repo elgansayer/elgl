@@ -579,6 +579,7 @@
         </hlm-autocomplete-search>
         <app-button-primary
           (clicked)="sendTextMessage()"
+          [disabled]="isCheckingGrammar()"
           data-testid="send-button"
           customClass="ps-5 pe-5 pt-3 pb-3 text-sm"
         >

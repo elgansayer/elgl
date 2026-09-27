@@ -45,6 +45,20 @@ describe('AI grammar checker pre-send product contract', () => {
     );
   });
 
+  it('keeps GrammarCheckService as the only implementation behind the route', () => {
+    // A second, unrouted implementation once lived in NlpService and returned a
+    // fabricated "text appears correct" success when its provider was missing.
+    expect(source('backend/src/nlp/nlp.service.ts')).not.toContain(
+      'async grammarCheck(',
+    );
+    expect(source('backend/src/nlp/nlp.module.ts')).toContain(
+      'GrammarCheckService',
+    );
+    expect(source('backend/src/common/logger/logger.module.ts')).toContain(
+      "'GrammarCheckService'",
+    );
+  });
+
   it('validates grammar-check text and BCP 47-style language input', () => {
     const valid = plainToInstance(GrammarCheckDto, {
       text: '  I went to school yesterday.  ',
@@ -79,6 +93,9 @@ describe('AI grammar checker pre-send product contract', () => {
     expect(grammarIndex).toBeGreaterThanOrEqual(0);
     expect(sendIndex).toBeGreaterThan(grammarIndex);
     expect(sendMethod).toContain('this.isCheckingGrammar.set(true)');
+    expect(sendMethod).toContain(
+      'isGrammarReviewed(this.grammarReview(), text)',
+    );
 
     const regression = source(
       'frontend/src/app/components/chat-room/chat-room.grammar-check.spec.ts',
@@ -104,8 +121,15 @@ describe('AI grammar checker pre-send product contract', () => {
 
     expect(grammarIndex).toBeGreaterThanOrEqual(0);
     expect(publishIndex).toBeGreaterThan(grammarIndex);
-    expect(submitMethod).toContain('if (text)');
+    expect(submitMethod).toContain(
+      'if (text && !isGrammarReviewed(this.grammarReview(), text))',
+    );
     expect(submitMethod).toContain('this.saveMomentDraft()');
+    // The composer only closes once the Moment is published, so a suggestion
+    // or a failed publish stays in view for review and retry.
+    expect(
+      submitMethod.indexOf('this.showComposeForm.set(false)'),
+    ).toBeGreaterThan(publishIndex);
 
     const regression = source(
       'frontend/src/app/components/moments-feed/moments-feed.grammar-check.spec.ts',
@@ -118,6 +142,9 @@ describe('AI grammar checker pre-send product contract', () => {
     );
     expect(regression).toContain(
       'keeps the existing media-only publish path free of unnecessary grammar calls',
+    );
+    expect(regression).toContain(
+      'keeps the composer open so the suggestion can be read and edited',
     );
   });
 });

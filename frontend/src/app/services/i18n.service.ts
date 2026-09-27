@@ -912,6 +912,8 @@ export class I18nService {
     'chatRoom.userIdRemovePlaceholder': 'User ID to Remove',
     'chatRoom.removeMemberBtn': 'Remove Member',
     'chatRoom.adminBtn': 'Admin',
+    'grammarReview.suggestionApplied':
+      'Suggestion applied. {{explanation}} Send again to use it, or edit it first.',
     'wordDef.lingqTitle': 'LingQ Interactive Reader',
     'wordDef.translationLabel': 'Translation',
     'wordDef.dictionaryLabel': 'Dictionary definition',

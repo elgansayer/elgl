@@ -15,4 +15,13 @@ describe('SharedLoggerModule', () => {
       ]),
     );
   });
+
+  it('exports the contextual logger used by the pre-send grammar checker', () => {
+    const exports = Reflect.getMetadata(
+      'exports',
+      SharedLoggerModule,
+    ) as unknown[];
+
+    expect(exports).toContain(getLoggerToken('GrammarCheckService'));
+  });
 });

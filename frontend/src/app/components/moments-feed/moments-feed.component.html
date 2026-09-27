@@ -144,9 +144,8 @@
         <button
           hlmBtn
           [disabled]="isCreating() || (!newText().trim() && newMediaUrls().length === 0)"
-          (click)="submitMoment(); showComposeForm.set(false)"
+          (click)="submitMoment()"
           class="bg-primary text-on-fill font-bold text-xs px-4 py-1.5 rounded-full shadow-lg hover:bg-primary/90 disabled:opacity-50 transition-opacity"
-          [attr.aria-label]="'moments.postingBtn' | t"
         >
           {{ isCreating() ? ('moments.postingBtn' | t) : ('moments.postBtn' | t) }}
         </button>

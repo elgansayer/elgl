@@ -183,6 +183,43 @@ describe('ChatRoomComponent (threaded replies)', () => {
     expect(component.replyingTo()).toBeNull();
   });
 
+  it('disables the Send control while the pre-send grammar check is running', () => {
+    const sendButton = (): HTMLButtonElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="send-button"] button');
+
+    fixture.detectChanges();
+    expect(sendButton()?.disabled).toBe(false);
+
+    component.isCheckingGrammar.set(true);
+    fixture.detectChanges();
+    expect(sendButton()?.disabled).toBe(true);
+
+    component.isCheckingGrammar.set(false);
+    fixture.detectChanges();
+    expect(sendButton()?.disabled).toBe(false);
+  });
+
+  it('shows the suggested wording in the rendered composer input once the check returns', async () => {
+    vi.mocked(TestBed.inject(VocabularyStore).checkGrammar).mockResolvedValueOnce({
+      original: 'I go to school yesterday.',
+      corrected: 'I went to school yesterday.',
+      explanation: 'Use the past tense.',
+      errors_found: 1,
+    });
+    const input = (): HTMLInputElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="chat-message-input"]');
+    component.textInput = 'I go to school yesterday.';
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(input()?.value).toBe('I go to school yesterday.');
+
+    await component.sendTextMessage();
+    await fixture.whenStable();
+
+    expect(input()?.value).toBe('I went to school yesterday.');
+    expect(mockChatService.sendMessage).not.toHaveBeenCalled();
+  });
+
   it('scrollToMessage scrolls to and briefly highlights the target message', () => {
     vi.useFakeTimers();
     const el = document.createElement('div');

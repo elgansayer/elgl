@@ -10,13 +10,11 @@ import { ConfigService } from '@nestjs/config';
 import { Language } from 'node-nlp';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
-import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
 import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import {
-  GrammarCheckResult,
   PronunciationScoreResult,
   TranslationResult,
   TranslateUiResult,
@@ -210,112 +208,6 @@ export class NlpService {
       transliteration: cleanWord,
       definition: `Word: "${cleanWord}" (translation service temporarily unavailable)`,
       pronunciation_url: fallbackPronunciation,
-    };
-  }
-
-  async grammarCheck(
-    userId: string,
-    isVip: boolean,
-    dto: GrammarCheckDto,
-  ): Promise<GrammarCheckResult> {
-    await this.checkRateLimit(userId, isVip);
-    const orig = dto.text.trim();
-
-    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
-
-    if (azureKey) {
-      try {
-        // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints
-        // First, detect the language
-        const detectRes = await NlpService.fetchWithTimeout(
-          'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
-          {
-            method: 'POST',
-            headers: {
-              'Ocp-Apim-Subscription-Key': azureKey,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify([{ Text: orig }]),
-          },
-        );
-
-        if (detectRes.ok) {
-          const detectData = (await detectRes.json()) as unknown as Array<{
-            language: string;
-          }>;
-          const detectedLang = detectData?.[0]?.language || 'en';
-
-          // Use Azure's dictionary lookup for grammar correction (works best for common languages)
-          const dictRes = await NlpService.fetchWithTimeout(
-            `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
-            {
-              method: 'POST',
-              headers: {
-                'Ocp-Apim-Subscription-Key': azureKey,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify([{ Text: orig }]),
-            },
-          );
-
-          if (dictRes.ok) {
-            const dictData = (await dictRes.json()) as unknown as Array<{
-              displayTarget?: string;
-            }>;
-            const correctedText = dictData?.[0]?.displayTarget || orig;
-            const errorsFound = orig === correctedText ? 0 : 1;
-
-            // Generate explanation using Azure's translation
-            let explanation = '';
-            try {
-              const explainRes = await NlpService.fetchWithTimeout(
-                `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Ocp-Apim-Subscription-Key': azureKey,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify([
-                    {
-                      Text: `Grammar correction: "${orig}" → "${correctedText}"`,
-                    },
-                  ]),
-                },
-              );
-              if (explainRes.ok) {
-                const explainData = (await explainRes.json()) as Array<{
-                  translations: Array<{ text: string }>;
-                }>;
-                explanation =
-                  explainData[0]?.translations[0]?.text ||
-                  'Corrected via Azure AI';
-              }
-            } catch {
-              explanation = 'Corrected via Azure AI';
-            }
-
-            return {
-              original: orig,
-              corrected: correctedText,
-              explanation,
-              errors_found: errorsFound,
-            };
-          }
-        }
-        // Azure API returned non-ok, fall through to fallback
-      } catch {
-        // Azure fetch failed (network error, timeout), fall through to fallback
-      }
-    }
-
-    // Graceful degradation: local NLP.js-based grammar check fallback
-    return {
-      original: orig,
-      corrected: orig,
-      explanation:
-        'Grammar checking service is temporarily unavailable. Your text appears correct.',
-      errors_found: 0,
     };
   }
 
@@ -875,8 +767,9 @@ export class NlpService {
     let explanation = '';
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
 
-    // Obtain grammar‑style correction via Azure (mirrors the way
-    // grammarCheck works but does not count a second API call)
+    // Obtain a grammar-style correction via Azure without counting a second
+    // API call. The pre-send POST /nlp/grammar-check route does not use this
+    // path: it is served by GrammarCheckService through the LLM provider.
     if (azureKey) {
       const detectRes = await NlpService.fetchWithTimeout(
         'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',

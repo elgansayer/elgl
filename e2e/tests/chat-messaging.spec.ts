@@ -159,4 +159,66 @@ test.describe('HelloTalk Chat Messaging E2E', () => {
     await expect(page.locator('[data-testid="chat-message"]').filter({ hasText: text })).toBeVisible();
     await expect(messageInput).toHaveValue('');
   });
+
+  test('applies a grammar suggestion to the composer and sends it on the second submit', async ({
+    page,
+  }) => {
+    const original = 'I go to school yesterday.';
+    const suggestion = 'I went to school yesterday.';
+    let grammarChecks = 0;
+    const sentPayloads: unknown[] = [];
+
+    await page.route('**/api/nlp/grammar-check', async (route) => {
+      grammarChecks += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          original,
+          corrected: suggestion,
+          explanation: 'Use the past tense.',
+          errors_found: 1,
+        }),
+      });
+    });
+
+    await page.route('**/api/chat/messages', async (route) => {
+      const requestBody = route.request().postDataJSON() as { text_content?: string };
+      sentPayloads.push(requestBody);
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'message_sent',
+          room_id: roomId,
+          sender_id: 'mock-user-123',
+          message_type: 'text',
+          text_content: requestBody.text_content,
+          is_read: false,
+          delivery_status: 'sent',
+          created_at: '2026-08-25T12:01:00.000Z',
+        }),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+
+    const messageInput = page.locator('[data-testid="chat-message-input"]');
+    await expect(messageInput).toBeVisible();
+    await messageInput.fill(original);
+    await messageInput.press('Enter');
+
+    // The suggestion replaces the draft and nothing is sent until the learner confirms it.
+    await expect(messageInput).toHaveValue(suggestion);
+    expect(sentPayloads).toHaveLength(0);
+
+    await messageInput.press('Enter');
+    await expect
+      .poll(() => sentPayloads)
+      .toEqual([expect.objectContaining({ text_content: suggestion })]);
+    await expect(messageInput).toHaveValue('');
+
+    // Accepting the reviewed suggestion does not spend a second grammar check.
+    expect(grammarChecks).toBe(1);
+  });
 });

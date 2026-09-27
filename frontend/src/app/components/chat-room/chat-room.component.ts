@@ -1,7 +1,16 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast, showErrorToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  inject,
+  signal,
+  computed,
+  OnDestroy,
+  input,
+  effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -12,6 +21,12 @@ import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
 import { TypingIndicatorComponent } from '../primitives/typing-indicator/typing-indicator.component';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import {
+  GRAMMAR_REVIEW_TOAST_MS,
+  GrammarReview,
+  isGrammarReviewed,
+  toGrammarReview,
+} from '../../services/grammar-review';
 import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
@@ -83,6 +98,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   id = input.required<string>();
 
@@ -91,6 +107,7 @@ export class ChatRoomComponent implements OnDestroy {
       const roomId = this.id();
       if (this.roomId && this.roomId !== roomId) {
         this.saveChatDrafts();
+        this.grammarReview.set(null);
       }
       this.roomId = roomId;
       void this.initializeRoom();
@@ -100,6 +117,8 @@ export class ChatRoomComponent implements OnDestroy {
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly isCheckingGrammar = signal<boolean>(false);
+  /** The most recent suggestion shown for the composer text; resubmitting it sends without another check. */
+  readonly grammarReview = signal<GrammarReview | null>(null);
   readonly isTyping = signal<boolean>(false);
   readonly showDoodleModal = signal<boolean>(false);
   readonly showVoiceModal = signal<boolean>(false);
@@ -472,21 +491,36 @@ export class ChatRoomComponent implements OnDestroy {
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
 
-    this.isCheckingGrammar.set(true);
-    try {
-      const grammar = await this.vocabStore.checkGrammar(
-        text,
-        this.partnerLanguage() ?? undefined,
-      );
-      const corrected = grammar.corrected.trim();
-      if (grammar.errors_found > 0 && corrected && corrected !== text) {
-        this.textInput = corrected;
-        this.saveChatDrafts();
-        showToast(grammar.explanation);
-        return;
+    if (!isGrammarReviewed(this.grammarReview(), text)) {
+      this.isCheckingGrammar.set(true);
+      try {
+        const grammar = await this.vocabStore.checkGrammar(
+          text,
+          this.partnerLanguage() ?? undefined,
+        );
+        // The learner kept typing while the check ran: their newer wording wins,
+        // so neither apply the suggestion nor send the superseded text.
+        if (this.textInput.trim() !== text) return;
+        const review = toGrammarReview(text, grammar);
+        if (review) {
+          this.grammarReview.set(review);
+          this.textInput = review.suggestion;
+          // textInput is a plain field and this runs after an await in a zoneless
+          // component, so flag the view or the composer keeps showing the old text.
+          this.changeDetector.markForCheck();
+          this.saveChatDrafts();
+          showToast(
+            this.i18n.translate('grammarReview.suggestionApplied', {
+              explanation: grammar.explanation,
+            }),
+            'info',
+            GRAMMAR_REVIEW_TOAST_MS,
+          );
+          return;
+        }
+      } finally {
+        this.isCheckingGrammar.set(false);
       }
-    } finally {
-      this.isCheckingGrammar.set(false);
     }
 
     try {
@@ -498,6 +532,7 @@ export class ChatRoomComponent implements OnDestroy {
       });
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.replyingTo.set(null);
+      this.grammarReview.set(null);
       this.textInput = '';
       this.clearChatDrafts();
     } catch (e) {

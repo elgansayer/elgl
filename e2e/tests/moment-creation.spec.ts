@@ -2,6 +2,28 @@ import { test, expect, type Page } from '@playwright/test';
 
 const createdAt = '2026-08-25T12:00:00.000Z';
 
+interface MomentRequestBody {
+  text_content?: string;
+  media_type?: 'none' | 'images' | 'audio';
+  target_language?: string;
+}
+
+function createdMomentResponse(requestBody: MomentRequestBody) {
+  return {
+    id: 'moment_e2e_created',
+    user_id: 'mock-user-123',
+    text_content: requestBody.text_content,
+    media_urls: [],
+    media_type: requestBody.media_type ?? 'none',
+    target_language: requestBody.target_language ?? 'en',
+    is_pinned: false,
+    likes_count: 0,
+    comments_count: 0,
+    created_at: createdAt,
+    author: { id: 'mock-user-123', display_name: 'E2E Learner', avatar_url: null },
+  };
+}
+
 async function installMomentsApi(page: Page): Promise<void> {
   await page.route('**/api/moments/feed**', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -70,27 +92,10 @@ test.describe('HelloTalk Moment Creation E2E', () => {
 
     await page.route('**/api/moments', async (route) => {
       momentPayload = route.request().postDataJSON();
-      const requestBody = momentPayload as {
-        text_content?: string;
-        media_type?: 'none' | 'images' | 'audio';
-        target_language?: string;
-      };
       await route.fulfill({
         status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({
-          id: 'moment_e2e_created',
-          user_id: 'mock-user-123',
-          text_content: requestBody.text_content,
-          media_urls: [],
-          media_type: requestBody.media_type ?? 'none',
-          target_language: requestBody.target_language ?? 'en',
-          is_pinned: false,
-          likes_count: 0,
-          comments_count: 0,
-          created_at: createdAt,
-          author: { id: 'mock-user-123', display_name: 'E2E Learner', avatar_url: null },
-        }),
+        body: JSON.stringify(createdMomentResponse(momentPayload as MomentRequestBody)),
       });
     });
 
@@ -116,27 +121,93 @@ test.describe('HelloTalk Moment Creation E2E', () => {
   });
 
   test('retains a failed Moment draft so the user can retry without retyping', async ({ page }) => {
+    let publishAttempts = 0;
+    let retriedPayload: unknown;
     await page.route('**/api/moments', async (route) => {
+      publishAttempts += 1;
+      if (publishAttempts === 1) {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Temporarily unavailable' }),
+        });
+        return;
+      }
+      retriedPayload = route.request().postDataJSON();
       await route.fulfill({
-        status: 503,
+        status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({ message: 'Temporarily unavailable' }),
+        body: JSON.stringify(createdMomentResponse(retriedPayload as MomentRequestBody)),
       });
     });
 
     await page.goto('/moments');
 
-    const { composeButton, composer, textarea } = await openComposer(page);
+    const { composer, textarea } = await openComposer(page);
     const text = 'Retry-safe draft text';
     await textarea.fill(text);
 
     const failedResponse = page.waitForResponse(
-      (response) => response.url().endsWith('/api/moments') && response.request().method() === 'POST',
+      (response) =>
+        response.url().endsWith('/api/moments') && response.request().method() === 'POST',
     );
     await composer.locator('button').last().click();
     await failedResponse;
 
-    await composeButton.click();
-    await expect(page.locator('section').first().locator('textarea')).toHaveValue(text);
+    // The composer stays open with the draft, so the author can retry immediately.
+    await expect(textarea).toHaveValue(text);
+
+    await composer.locator('button').last().click();
+    await expect.poll(() => retriedPayload).toMatchObject({ text_content: text });
+  });
+
+  test('shows a grammar suggestion in the open composer and publishes it on the second submit', async ({
+    page,
+  }) => {
+    const original = 'I go to school yesterday.';
+    const suggestion = 'I went to school yesterday.';
+    let grammarChecks = 0;
+    const publishedPayloads: unknown[] = [];
+
+    await page.route('**/api/nlp/grammar-check', async (route) => {
+      grammarChecks += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          original,
+          corrected: suggestion,
+          explanation: 'Use the past tense.',
+          errors_found: 1,
+        }),
+      });
+    });
+    await page.route('**/api/moments', async (route) => {
+      const payload = route.request().postDataJSON();
+      publishedPayloads.push(payload);
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(createdMomentResponse(payload as MomentRequestBody)),
+      });
+    });
+
+    await page.goto('/moments');
+
+    const { composer, textarea } = await openComposer(page);
+    await textarea.fill(original);
+    await composer.locator('button').last().click();
+
+    // The composer stays open and now holds the suggestion; nothing is published yet.
+    await expect(textarea).toHaveValue(suggestion);
+    expect(publishedPayloads).toHaveLength(0);
+
+    await composer.locator('button').last().click();
+    await expect
+      .poll(() => publishedPayloads)
+      .toEqual([expect.objectContaining({ text_content: suggestion })]);
+
+    // Accepting the reviewed suggestion does not spend a second grammar check.
+    expect(grammarChecks).toBe(1);
   });
 });

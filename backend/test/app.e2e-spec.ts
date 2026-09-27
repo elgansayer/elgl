@@ -16,7 +16,6 @@ type MockNlpService = {
   detectLanguage: Mock;
   checkRateLimit: Mock;
   translate: Mock;
-  grammarCheck: Mock;
   explainGrammar: Mock;
   pronunciationScore: Mock;
   simplify: Mock;
@@ -163,12 +162,6 @@ describe('HelloTalk API E2E Integration Suite', () => {
         transliteration: '',
         definition: '',
         pronunciation_url: '',
-      }),
-      grammarCheck: vi.fn().mockResolvedValue({
-        original: 'hello',
-        corrected: 'hello',
-        explanation: 'mocked',
-        errors_found: 0,
       }),
       explainGrammar: vi.fn().mockResolvedValue({
         original: 'hello',

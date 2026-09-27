@@ -27,6 +27,23 @@ describe('ToastComponent', () => {
     expect(toastElements().length).toBe(0);
   });
 
+  it('should expose a persistent polite live region so screen readers announce new toasts', () => {
+    const region: HTMLElement = fixture.nativeElement.querySelector('[role="status"]');
+
+    // The region exists before any toast so the first announcement is not missed.
+    expect(region).not.toBeNull();
+    expect(region.getAttribute('aria-live')).toBe('polite');
+    expect(region.getAttribute('aria-atomic')).toBe('false');
+  });
+
+  it('should render toasts inside the live region', () => {
+    toastsSignal.set([{ id: 1, message: 'Suggestion applied', type: 'info' }]);
+    fixture.detectChanges();
+
+    const region: HTMLElement = fixture.nativeElement.querySelector('[role="status"]');
+    expect(region.textContent?.trim()).toBe('Suggestion applied');
+  });
+
   it('should render an info toast using the surface/text-primary tokens', () => {
     toastsSignal.set([{ id: 1, message: 'Saved', type: 'info' }]);
     fixture.detectChanges();
