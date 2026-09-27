@@ -6,6 +6,7 @@ import { showToast } from '../../services/toast.service';
 import { I18nService } from '../../services/i18n.service';
 import { ChatService } from '../../services/chat.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideLanguages } from '@ng-icons/lucide';
 
@@ -72,6 +73,9 @@ interface DiffSegment {
         <button hlmBtn variant="outline" size="sm" class="text-xs" (click)="createFlashcard()">
           ➕ {{ 'correction.createFlashcard' | t }}
         </button>
+        <button hlmBtn variant="outline" size="sm" class="text-xs" (click)="saveAsExample()">
+          🔖 {{ 'correction.saveAsExample' | t }}
+        </button>
       </div>
     }
   `,
@@ -86,6 +90,7 @@ export class VisualDiffComponent {
   private i18n = inject(I18nService);
   private chatService = inject(ChatService);
   private translationCache = inject(TranslationCacheService);
+  private vocabStore = inject(VocabularyStore);
 
   readonly isTranslating = signal(false);
   readonly translatedExplanation = signal<string | null>(null);
@@ -136,6 +141,25 @@ export class VisualDiffComponent {
       showToast(this.i18n.translate('correction.flashcardCreatedAlert') || 'Flashcard created');
     } catch (err) {
       console.error('Error creating flashcard', err);
+      showToast(this.i18n.translate('error.general') || 'Error');
+    }
+  }
+
+  async saveAsExample() {
+    try {
+      const wordToken = this.corrected().substring(0, 200);
+      const translation = this.original().substring(0, 500);
+      const originalContext = this.explanation() ? this.explanation()!.substring(0, 1000) : undefined;
+
+      await this.vocabStore.saveWord({
+        word_token: wordToken,
+        translation: translation,
+        original_context: originalContext,
+        definition: 'Saved correction as example',
+      });
+      showToast(this.i18n.translate('correction.exampleCreatedAlert') || 'Example saved');
+    } catch (err) {
+      console.error('Error saving example', err);
       showToast(this.i18n.translate('error.general') || 'Error');
     }
   }
