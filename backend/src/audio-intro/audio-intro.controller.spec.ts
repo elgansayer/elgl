@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AudioIntroController } from './audio-intro.controller';
+import { ForbiddenException } from '@nestjs/common';
+import { User } from '@supabase/supabase-js';
 import { AudioIntroService } from './audio-intro.service';
 import { UpdateAudioIntroDto } from './dto/update-audio-intro.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -51,19 +53,43 @@ describe('AudioIntroController', () => {
   });
 
   describe('updateAudioIntro', () => {
-    it('should call the service with the given user id and audio url', async () => {
+    it('should call the service when user id matches', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
+      const user = { id: 'user-1' } as User;
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const result = await controller.updateAudioIntro('user-1', dto);
+      const result = await controller.updateAudioIntro('user-1', dto, user);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
         'user-1',
         dto.audio_url,
       );
       expect(result).toBeUndefined();
+    });
+
+    it('should throw ForbiddenException when user id does not match', async () => {
+      const dto: UpdateAudioIntroDto = {
+        audio_url: 'https://example.com/audio.mp3',
+      };
+      const user = { id: 'user-2' } as User;
+
+      await expect(
+        controller.updateAudioIntro('user-1', dto, user),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockService.updateAudioIntro).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when user is null', async () => {
+      const dto: UpdateAudioIntroDto = {
+        audio_url: 'https://example.com/audio.mp3',
+      };
+
+      await expect(
+        controller.updateAudioIntro('user-1', dto, null),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockService.updateAudioIntro).not.toHaveBeenCalled();
     });
   });
 
