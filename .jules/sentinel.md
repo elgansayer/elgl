@@ -83,3 +83,8 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-09-13 - Basic Auth Timing Attack Vulnerability in Node.js
+
+**Vulnerability:** The basic authentication check in `factory-dashboard/src/server.js` was implemented using standard string inequality `!==` to compare passwords, making the server vulnerable to timing attacks where attackers could measure validation time to guess the length and characters of the password.
+**Learning:** Basic string comparison operators short-circuit, causing the comparison time to vary based on how many characters match. This is a well-known vulnerability for authentication paths.
+**Prevention:** Always use `crypto.timingSafeEqual(userBuf, expectedUserBuf)` from the native `crypto` module when validating passwords, tokens, or hashes to ensure a constant time comparison.
