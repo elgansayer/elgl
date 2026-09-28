@@ -869,9 +869,6 @@ class GitHubClient:
             )
         )
 
-    def reopen_pull_request(self, pull_request: int) -> None:
-        self._run(("gh", "pr", "reopen", str(pull_request), "--repo", self.repository))
-
     def supersede_pull_request(
         self,
         pull_request: int,

@@ -404,11 +404,12 @@ def test_remove_worktree_rejects_path_outside_factory_root(tmp_path: Path) -> No
 def test_remove_worktree_can_force_retirement_after_archive(tmp_path: Path) -> None:
     repository = tmp_path / "state" / "repository"
     repository.mkdir(parents=True)
-    workflow = GitWorkflow(repository, "main", Runner([ProcessResult(0, "", "")]))
+    runner = Runner([ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
 
     workflow.remove_worktree(tmp_path / "state" / "worktrees" / "issue-12", force=True)
 
-    assert "--force" in workflow.runner.calls[0]
+    assert "--force" in runner.calls[0]
 
 
 def test_remove_worktree_accepts_configured_root_outside_repository_parent(
@@ -417,16 +418,17 @@ def test_remove_worktree_accepts_configured_root_outside_repository_parent(
     repository = tmp_path / "control" / "repository"
     repository.mkdir(parents=True)
     worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    runner = Runner([ProcessResult(0, "", "")])
     workflow = GitWorkflow(
         repository,
         "main",
-        Runner([ProcessResult(0, "", "")]),
+        runner,
         worktree_root=worktree_root,
     )
 
     workflow.remove_worktree(worktree_root / "issue-12", force=True)
 
-    assert workflow.runner.calls[0][-1] == str(worktree_root / "issue-12")
+    assert runner.calls[0][-1] == str(worktree_root / "issue-12")
 
 
 def test_remove_worktree_rejects_path_outside_configured_root(tmp_path: Path) -> None:

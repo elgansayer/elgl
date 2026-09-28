@@ -46,7 +46,6 @@ class GitHub:
         self.inventory: list[PullRequestRecord] = []
         self.created_pull_requests: list[tuple[str, str, str]] = []
         self.updated_pull_requests: list[tuple[int, str, str]] = []
-        self.reopened_pull_requests: list[int] = []
         self.superseded_pull_requests: list[tuple[int, int | None, str]] = []
         self.equivalent_pull_requests: list[PullRequestMatch] = []
 
@@ -157,9 +156,6 @@ class GitHub:
 
     def mark_ready(self, pull_request: int) -> None:
         return None
-
-    def reopen_pull_request(self, pull_request: int) -> None:
-        self.reopened_pull_requests.append(pull_request)
 
     def request_review(self, pull_request: int) -> None:
         return None

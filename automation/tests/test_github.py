@@ -23,7 +23,7 @@ class Runner:
         return self.results.pop(0)
 
 
-def encoded_api_items(items: list[object]) -> str:
+def encoded_api_items(items: Sequence[object]) -> str:
     return "\n".join(
         base64.b64encode(json.dumps(item).encode("utf-8")).decode("ascii") for item in items
     )
