@@ -134,7 +134,7 @@ Intentional version divergence needs an owner, reason and compatibility test.
 | `ngx-lottie` | `^22.0.0` | No verified indexed source consumer; duplicates direct Lottie integration | **REMOVE CANDIDATE** | #7469 and #7478. Remove after production build, config and dynamic-import proof. |
 | `ngx-joyride` | `^2.5.0` | Product tours in several feature services | **REPLACE / REMOVE** | #7470. Migrate to one typed tour platform and renderer decision. |
 | `ngx-skeleton-loader` | `^13.0.0` | Narrow profile skeleton use | **REPLACE / REMOVE** | #7479. Replace with shared Relay/Spartan loading primitives. |
-| `tw-animate-css` | `^1.4.0` | Tailwind animation utilities used by UI primitives | **KEEP / REVIEW** | #7457/#7469. Retain only for approved tokenized native CSS motion; inventory actual classes. |
+| `tw-animate-css` | `^1.4.0` | Tailwind animation utilities used by UI primitives | **KEEP / REVIEW** | #7457/#7469. Retain only for approved tokenised native CSS motion; inventory actual classes. |
 
 ### Internationalisation
 

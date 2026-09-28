@@ -274,7 +274,7 @@ A lazy chunk must behave exactly like an eagerly available screen once loaded.
 ### Theme parity
 
 - use Relay semantic tokens;
-- do not hardcode product colors inside lazy feature templates;
+- do not hardcode product colours inside lazy feature templates;
 - do not create separate dark-theme route components;
 - preserve the user's dynamic primary accent by consuming the `primary` token;
 - ensure loading and error states also use semantic tokens.

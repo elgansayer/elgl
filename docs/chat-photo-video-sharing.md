@@ -62,7 +62,7 @@ The repository's Cloudflare-native media architecture currently exposes compatib
 - The picker uses a labelled native file control and a labelled HD checkbox.
 - Upload and send failures use `role="alert"`; retry state remains keyboard reachable.
 - Image previews and received images have text alternatives; received video uses native keyboard-accessible controls.
-- The dialog is modal-labelled and the controls do not rely on color alone to communicate quality or failure.
+- The dialog is modal-labelled and the controls do not rely on colour alone to communicate quality or failure.
 
 ## Failure behavior
 
