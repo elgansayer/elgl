@@ -60,6 +60,7 @@ LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 CI_POLL_INTERVAL = timedelta(minutes=1)
 CONFLICTING_MERGE_STATES = {"DIRTY"}
+MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -1041,10 +1042,11 @@ class FactoryPipeline:
                 return
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
-                if job.quality_repairs >= 2:
+                if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                     raise FactoryError(f"Quality gate blocked: {findings[0].code}")
                 job.state = JobState.QUALITY_REPAIRING
                 return
+            job.quality_repairs = 0
             workflow.stage_all()
             workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
@@ -1082,7 +1084,7 @@ class FactoryPipeline:
             if not findings and not job.review_findings:
                 job.state = JobState.VERIFYING
                 return
-            if job.quality_repairs >= 2:
+            if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 raise FactoryError("Quality repair limit exceeded")
 
             quality_finding_text = "\n".join(
@@ -1273,6 +1275,8 @@ class FactoryPipeline:
                     "GitHub already reports the reviewed pull request as merged.",
                 )
                 job.state = JobState.MERGED
+            elif self._recover_closed_pull_request(job, status):
+                return
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.merge_state_status == "BEHIND":
@@ -1328,6 +1332,8 @@ class FactoryPipeline:
             if status.state == "MERGED":
                 job.state = JobState.MERGED
                 return
+            if self._recover_closed_pull_request(job, status):
+                return
             if job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
                 return
@@ -1380,6 +1386,7 @@ class FactoryPipeline:
                     require_repository_change=True,
                 )
             verified_paths = self._verify(workflow)
+            job.quality_repairs = 0
             workflow.stage_all()
             commit_subject = (
                 "fix: resolve base conflicts for"
@@ -1437,6 +1444,8 @@ class FactoryPipeline:
                     "GitHub confirmed that the reviewed pull request was merged.",
                 )
                 job.state = JobState.MERGED
+            elif self._recover_closed_pull_request(job, status):
+                return
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.merge_state_status == "BEHIND":
@@ -1782,6 +1791,8 @@ class FactoryPipeline:
         if status.state == "MERGED":
             job.state = JobState.MERGED
             return True
+        if self._recover_closed_pull_request(job, status):
+            return True
         needs_base_refresh = status.merge_state_status == "BEHIND"
         needs_conflict_repair = (
             status.mergeable == "CONFLICTING"
@@ -1791,6 +1802,20 @@ class FactoryPipeline:
             return False
 
         self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
+        return True
+
+    def _recover_closed_pull_request(self, job: Job, status: PullRequestStatus) -> bool:
+        """Recover Factory-owned work without reopening external contributors' PRs."""
+
+        if status.state != "CLOSED":
+            return False
+        if job.task.source == "github-pull-request":
+            job.state = JobState.DONE
+            return True
+        if job.pull_request is None:
+            raise FactoryError("Closed pull request recovery is missing its pull request number")
+        self.github.reopen_pull_request(job.pull_request)
+        job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
         return True
 
     def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> None:

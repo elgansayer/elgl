@@ -912,6 +912,20 @@ class GitHubClient:
             )
         )
 
+    def reopen_pull_request(self, pull_request: int) -> None:
+        """Reopen a Factory-owned PR whose issue is still active."""
+
+        self._run(
+            (
+                "gh",
+                "pr",
+                "reopen",
+                str(pull_request),
+                "--repo",
+                self.repository,
+            )
+        )
+
     def update_pull_request_branch(self, pull_request: int, expected_head_sha: str) -> None:
         """Ask GitHub to merge the current base into an inspected PR head.
 
