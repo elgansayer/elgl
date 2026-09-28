@@ -120,10 +120,10 @@ def admission_slots_while_respecting_wip(
 ) -> int | None:
     """Zero out new-issue admission while a configured PR WIP limit is exceeded.
 
-    Already-admitted jobs (implementation in progress, open PRs advancing through
-    review/CI/merge) still drain normally; only brand-new issue intake stops so the
-    queue cannot keep growing while GitHub Actions and reviewer capacity are already
-    saturated. Callers gate Architect dispatch on the same ``wip_paused`` flag.
+    Workers already active finish normally. Queued issue-only work waits while open
+    PRs advance through review, repair, CI and merge, so the queue cannot keep growing
+    or consume the host while reviewer capacity is saturated. Callers gate Architect
+    dispatch and queued issue selection on the same ``wip_paused`` flag.
     """
 
     return 0 if wip_paused else interval_slots
@@ -168,6 +168,7 @@ def select_batch(
     new_issue_slots: int | None = None,
     review_first: bool = True,
     review_lane_max_concurrent: int = 1,
+    review_only: bool = False,
 ) -> list[Job]:
     if limit <= 0:
         return []
@@ -179,6 +180,7 @@ def select_batch(
         if job.task.identifier not in excluded
         and job.state.value not in {"done", "quarantined"}
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
+        and (not review_only or is_review_lane_job(job))
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
 
@@ -227,6 +229,7 @@ def selection_diagnostics(
     excluded_task_ids: set[str],
     now: datetime,
     review_lane_max_concurrent: int,
+    review_only: bool = False,
 ) -> dict[str, object]:
     """Expose bounded scheduler inputs without task bodies or credentials."""
 
@@ -236,6 +239,7 @@ def selection_diagnostics(
         if job.task.identifier not in excluded_task_ids
         and job.state.value not in {"done", "quarantined"}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
+        and (not review_only or is_review_lane_job(job))
     ]
     active_review_count = sum(
         1
@@ -266,6 +270,7 @@ def select_batch_failsafe(
     now: datetime,
     new_issue_slots: int | None,
     review_lane_max_concurrent: int,
+    review_only: bool = False,
 ) -> list[Job]:
     """Guarantee progress if the primary selector violates its runnable invariant."""
 
@@ -275,6 +280,7 @@ def select_batch_failsafe(
         if job.task.identifier not in excluded_task_ids
         and job.state not in {JobState.DONE, JobState.QUARANTINED}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
+        and (not review_only or is_review_lane_job(job))
     ]
     active_reviews = sum(
         1
@@ -792,12 +798,14 @@ class FactoryDaemon:
                         new_issue_slots=new_issue_slots,
                         review_first=self.config.review_lane_first,
                         review_lane_max_concurrent=self.config.review_lane_max_concurrent,
+                        review_only=wip_paused,
                     )
                     diagnostic = selection_diagnostics(
                         jobs,
                         active_task_ids,
                         scheduler_time,
                         self.config.review_lane_max_concurrent,
+                        review_only=wip_paused,
                     )
                     if not selected_jobs and diagnostic["candidate_count"]:
                         LOGGER.error(
@@ -811,12 +819,14 @@ class FactoryDaemon:
                             scheduler_time,
                             new_issue_slots,
                             self.config.review_lane_max_concurrent,
+                            review_only=wip_paused,
                         )
                     self.scheduler_snapshot.update(
                         {
                             "last_selected_jobs": [job.task.identifier for job in selected_jobs],
                             "last_selection_at": scheduler_time.isoformat(),
                             "new_issue_slots": new_issue_slots,
+                            "review_only": wip_paused,
                             "selection_input_count": sum(
                                 1
                                 for job in jobs.values()
