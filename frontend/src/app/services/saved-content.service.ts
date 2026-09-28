@@ -65,9 +65,10 @@ export class SavedContentService {
     return new Promise<void>((resolve, reject) => {
       const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
-      for (const item of items) {
-        store.put(item);
-      }
+
+      // ⚡ Bolt Optimization: Replaced sequential IDB puts with concurrent map iteration
+      items.map(item => store.put(item));
+
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });

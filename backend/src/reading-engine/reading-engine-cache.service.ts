@@ -245,9 +245,14 @@ export class ReadingEngineCacheService {
       ReadingEngineCacheNamespace.TRANSLATION,
       ReadingEngineCacheNamespace.SESSION,
     ];
-    for (const ns of prefixes) {
-      await this.deletePattern(this.buildUserPattern(ns, payload.userId));
-    }
+
+    // ⚡ Bolt Optimization: Resolved cache deletions concurrently to eliminate sequential blocking delay
+    await Promise.all(
+      prefixes.map((ns) =>
+        this.deletePattern(this.buildUserPattern(ns, payload.userId)),
+      ),
+    );
+
     this.logger.log(
       { userId: payload.userId },
       'Bulk-invalidated all reading-engine caches for user (user_data_cleared)',
