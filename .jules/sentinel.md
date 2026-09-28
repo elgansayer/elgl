@@ -83,3 +83,7 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-09-15 - Hardcoded Test Secrets allowed in Production
+**Vulnerability:** The application was allowing insecure placeholder/test credentials (e.g. 'test-centrifugo-api-key', 'test-centrifugo-secret') to be successfully loaded and used in production environments.
+**Learning:** Checking for the presence of a secret (`!secret`) is insufficient if the configuration system falls back to default test credentials when environment variables are omitted or misconfigured.
+**Prevention:** Always implement explicit fail-fast validations that check the configured secrets against known insecure default/placeholder strings, especially in production environments, to prevent the system from booting into a vulnerable state.

@@ -111,6 +111,37 @@ describe('CentrifugoService', () => {
       expect(configService.get).toHaveBeenCalledWith('CENTRIFUGO_SECRET');
     });
 
+    it.each([
+      ['CENTRIFUGO_API_KEY', undefined],
+      ['CENTRIFUGO_API_KEY', 'test-centrifugo-api-key'],
+      ['CENTRIFUGO_SECRET', undefined],
+      ['CENTRIFUGO_SECRET', 'test-centrifugo-secret'],
+    ])(
+      'rejects insecure production %s before connecting to Redis',
+      async (key, value) => {
+        vi.mocked(configService.get).mockImplementation((name: string) => {
+          if (name === 'NODE_ENV') return 'production';
+          if (name === key) return value;
+          if (name === 'CENTRIFUGO_API_KEY') return 'production-api-key';
+          if (name === 'CENTRIFUGO_SECRET') return 'production-token-secret';
+          return undefined;
+        });
+        mockRedis.connect.mockClear();
+        await expect(service.onModuleInit()).rejects.toThrow(key);
+        expect(mockRedis.connect).not.toHaveBeenCalled();
+      },
+    );
+
+    it('accepts independently configured production credentials', async () => {
+      vi.mocked(configService.get).mockImplementation((name: string) => {
+        if (name === 'NODE_ENV') return 'production';
+        if (name === 'CENTRIFUGO_API_KEY') return 'production-api-key';
+        if (name === 'CENTRIFUGO_SECRET') return 'production-token-secret';
+        return undefined;
+      });
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+    });
+
     it('should connect to Redis and load Lua script', () => {
       expect(mockRedis.connect).toHaveBeenCalled();
       expect(mockRedis.script).toHaveBeenCalledWith('LOAD', expect.any(String));
