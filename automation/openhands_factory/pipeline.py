@@ -48,6 +48,7 @@ LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 CI_POLL_INTERVAL = timedelta(minutes=1)
 CONFLICTING_MERGE_STATES = {"DIRTY"}
+MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -878,10 +879,11 @@ class FactoryPipeline:
                 return
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
-                if job.quality_repairs >= 2:
+                if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                     raise FactoryError(f"Quality gate blocked: {findings[0].code}")
                 job.state = JobState.QUALITY_REPAIRING
                 return
+            job.quality_repairs = 0
             workflow.stage_all()
             workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
@@ -919,7 +921,7 @@ class FactoryPipeline:
             if not findings and not job.review_findings:
                 job.state = JobState.VERIFYING
                 return
-            if job.quality_repairs >= 2:
+            if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 raise FactoryError("Quality repair limit exceeded")
 
             quality_finding_text = "\n".join(
@@ -1212,6 +1214,7 @@ class FactoryPipeline:
                     require_repository_change=True,
                 )
             verified_paths = self._verify(workflow)
+            job.quality_repairs = 0
             workflow.stage_all()
             commit_subject = (
                 "fix: resolve base conflicts for"

@@ -2012,6 +2012,10 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert failed.state is JobState.QUALITY_REPAIRING
     assert failed.attempts == 0
     assert "backend-test failed" in failed.review_findings[0]
+    # This is a consecutive budget, not a lifetime cap. Persisted jobs that
+    # exhausted the old two-repair ceiling must remain autonomously repairable.
+    failed.quality_repairs = 2
+    pipeline.jobs.save({"42": failed})
 
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
     fingerprints = iter(("before-repair", "after-repair"))
@@ -2025,8 +2029,19 @@ def test_local_verification_failure_routes_into_quality_repair(
 
     assert repaired is not None
     assert repaired.state is JobState.VERIFYING
-    assert repaired.quality_repairs == 1
+    assert repaired.quality_repairs == 3
     assert repaired.provider_history[-1]["phase"] == "quality-repair"
+
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: None)
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "verified-head")
+
+    verified = pipeline.run_job("42")
+
+    assert verified is not None
+    assert verified.state is JobState.PR_DRAFT
+    assert verified.quality_repairs == 0
 
 
 def test_verification_infrastructure_failure_retries_without_agent_repair(
