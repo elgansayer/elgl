@@ -42,7 +42,7 @@ Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL.
 
 ## 4. Autonomous Execution Protocol
 
-- **Verification & Test Visiting:** before checking off any `TODO.md` task or completing code changes, run `npm run lint` and `npm test` (`npm test -- --watch=false` on frontend) and confirm no TypeScript compiler errors or failing tests. Whenever modifying or adding feature code, visit, review, and update/add the corresponding unit tests (`*.spec.ts`) and E2E tests (`*.e2e-spec.ts`).
+- **Verification & Test Visiting:** before checking off any task or completing code changes, run `npm run lint` and `npm test` (`npm test -- --watch=false` on frontend) and confirm no TypeScript compiler errors or failing tests. Whenever modifying or adding feature code, visit, review, and update/add the corresponding unit tests (`*.spec.ts`) and E2E tests (`*.e2e-spec.ts`).
 - **API First:** Angular never connects to the database directly - every data request routes through the NestJS REST API or Centrifugo WebSockets.
 - **A failing build must not reach `main`.** Every PR passes the full verification suite before merge; fix build errors and failing tests within the PR branch itself rather than opening a follow-up "fix" PR.
   - Mechanically enforced: verification workflows run `npm run build && npm test` for backend and frontend. If verification fails, fix the code and re-verify within the same PR. Only green builds merge.
@@ -52,6 +52,7 @@ Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL.
   - Before wiring a component/service to something outside the file being edited (a new npm package, NestJS provider, module import, API endpoint), confirm it actually exists and is registered: is the package in `package.json` and installed? Is the service in its module's `providers`/`imports`? Is the backend route actually mapped (`app.setGlobalPrefix` plus matching frontend `environment.apiUrl`)? Assuming these are wired up because surrounding code implies they should be is exactly how half-finished features have broken this project's build repeatedly.
   - Never introduce a duplicate/orphaned implementation of the same file (a component with both an inline `template:` and an unused sibling `.html`, or two files exporting the same feature under different paths). Search first if a file you're about to create plausibly already exists.
 - **Check for existing or overlapping work before starting any task.** Read GitHub issues and skim recent `git log` for the area you're touching. The issue importer's fuzzy-duplicate check only compares task titles, not implementation state - if a task describes something already implemented (even partially, even under a different name), extend or fix that implementation instead of shipping a second, competing one.
+- **Always resolve autonomously; never leave work waiting on a human decision.** A quarantined task (repeated identical failure, see `_publish_quarantine`) is a bounded, self-recovering circuit breaker, not an escalation - it never carries a `needs-human` label, and no PR or issue should sit indefinitely for a person to triage. When a task, review, or CI failure presents a choice, take the best-evidenced action yourself (fix it, merge it, close it with a documented reason, or requeue it) instead of pausing for approval. This applies to autonomous agents operating this repository, not to genuine platform-safety or credential boundaries, which still require the repository owner.
 
 ## 5. Frontend/Angular Work
 
@@ -89,5 +90,5 @@ conventions from scratch:
 - **Never Hardcode Anything:** never hardcode data, coin balances, usernames, languages, or UI strings in frontend or backend services, except inside dedicated mock data generators (`mock-data.ts`) or i18n dictionaries. Every piece of dynamic state flows from a backend service, state store, or translation pipe.
 - **Competitive UX Research:** when building features or UX flows, study relevant patterns from leading language-learning, social, communication, conferencing, and collaboration products. Adopt useful ideas only when they fit the Relay design system, accessibility requirements, product goals, and legal/licensing constraints - never copy proprietary assets or duplicate another product's visual identity.
 
-Known issues, audit findings, and completion status live in `TODO.md` and the GitHub issue backlog, not here -
+Known issues, audit findings, and completion status live in the GitHub issue backlog, not here -
 this file is guidelines, not a changelog.

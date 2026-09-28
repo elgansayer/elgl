@@ -122,12 +122,62 @@ describe('ConversationAnalysisLauncherComponent', () => {
     expect(premiumAi.runConversationAnalysis).toHaveBeenNthCalledWith(2, roomId, requestId);
   });
 
+  it('retains the same idempotency key while the original request is still processing', async () => {
+    premiumAi.runConversationAnalysis
+      .mockRejectedValueOnce(new HttpErrorResponse({ status: 409, statusText: 'Conflict' }))
+      .mockResolvedValueOnce(completedResult());
+    const component = createComponent();
+    events.next(new NavigationEnd(1, `/chat/${roomId}`, `/chat/${roomId}`));
+    await Promise.resolve();
+
+    await component.runAnalysis();
+    await component.runAnalysis();
+
+    expect(premiumAi.createIdempotencyKey).toHaveBeenCalledTimes(1);
+    expect(premiumAi.runConversationAnalysis).toHaveBeenNthCalledWith(2, roomId, requestId);
+  });
+
+  it('retains the same idempotency key when refund reconciliation is ambiguous', async () => {
+    premiumAi.runConversationAnalysis
+      .mockRejectedValueOnce(
+        new HttpErrorResponse({ status: 500, statusText: 'Reconciliation required' }),
+      )
+      .mockResolvedValueOnce(completedResult());
+    const component = createComponent();
+    events.next(new NavigationEnd(1, `/chat/${roomId}`, `/chat/${roomId}`));
+    await Promise.resolve();
+
+    await component.runAnalysis();
+    await component.runAnalysis();
+
+    expect(premiumAi.createIdempotencyKey).toHaveBeenCalledTimes(1);
+    expect(premiumAi.runConversationAnalysis).toHaveBeenNthCalledWith(2, roomId, requestId);
+  });
+
   it('uses a new key after a known refunded server failure', async () => {
     premiumAi.createIdempotencyKey
       .mockReturnValueOnce(requestId)
       .mockReturnValueOnce(nextRequestId);
     premiumAi.runConversationAnalysis
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 503, statusText: 'Unavailable' }))
+      .mockResolvedValueOnce(completedResult());
+    const component = createComponent();
+    events.next(new NavigationEnd(1, `/chat/${roomId}`, `/chat/${roomId}`));
+    await Promise.resolve();
+
+    await component.runAnalysis();
+    await component.runAnalysis();
+
+    expect(premiumAi.runConversationAnalysis).toHaveBeenNthCalledWith(1, roomId, requestId);
+    expect(premiumAi.runConversationAnalysis).toHaveBeenNthCalledWith(2, roomId, nextRequestId);
+  });
+
+  it('uses a new key after the backend confirms a stale run was refunded', async () => {
+    premiumAi.createIdempotencyKey
+      .mockReturnValueOnce(requestId)
+      .mockReturnValueOnce(nextRequestId);
+    premiumAi.runConversationAnalysis
+      .mockRejectedValueOnce(new HttpErrorResponse({ status: 410, statusText: 'Gone' }))
       .mockResolvedValueOnce(completedResult());
     const component = createComponent();
     events.next(new NavigationEnd(1, `/chat/${roomId}`, `/chat/${roomId}`));

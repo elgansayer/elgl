@@ -31,7 +31,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             ) | t
           }}
         </p>
-        <a class="w-full sm:w-auto" hlmBtn size="touch" routerLink="/dashboard">
+        <a class="w-full sm:w-auto" hlmBtn size="touch" routerLink="/coin-economy">
           {{ 'coinsSuccess.dashboardBtn' | t }}
         </a>
       </div>
