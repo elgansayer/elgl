@@ -46,7 +46,11 @@
           "configurations": {
             "production": {
               "optimization": {
-                "fonts": false
+                "scripts": true,
+                "styles": true,
+                "fonts": {
+                  "inline": false
+                }
               },
               "budgets": [
                 {

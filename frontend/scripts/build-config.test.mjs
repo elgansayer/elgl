@@ -9,5 +9,5 @@ test('production builds do not require remote font downloads', async () => {
   const production =
     angularConfig.projects.frontend.architect.build.configurations.production;
 
-  assert.equal(production.optimization.fonts, false);
+  assert.equal(production.optimization.fonts.inline, false);
 });
