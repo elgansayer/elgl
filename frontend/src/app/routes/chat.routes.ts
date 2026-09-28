@@ -9,7 +9,7 @@ export const chatRoutes: Routes = [
   {
     path: 'chat/:id',
     loadComponent: () =>
-      import('../components/chat-room/chat-room.component').then((m) => m.ChatRoomComponent),
+      import('../pages/chat/chat-room-page.component').then((m) => m.ChatRoomPageComponent),
   },
   {
     path: 'chat-settings',
@@ -18,8 +18,11 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'groups',
-    redirectTo: 'community/groups',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('../components/groups-discovery/groups-discovery.component').then(
+        (m) => m.GroupsDiscoveryComponent,
+      ),
+    title: 'Groups Discovery - HelloTalk',
   },
   {
     path: 'groups/create',

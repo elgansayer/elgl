@@ -55,6 +55,10 @@ overwrites a sibling worker transition.
 - Provider health probes run in disposable empty workspaces instead of the writable canonical checkout.
 - Persisted provider and task leases are generation-aware, duration-bounded, and reject malformed timestamps.
 - Task leases and every `jobs.json` read-modify-write path are locked across processes.
+- Worker-distinct task claims are acquired before branch or agent work, renewed at bounded transitions, released
+  with an owner compare-and-swap, and retain one canonical branch and PR after worker release.
+- Open and recently closed PRs are reconciled before branch creation. Equivalent sibling dispatches attach or skip
+  instead of creating another implementation branch. See [TASK-OWNERSHIP.md](TASK-OWNERSHIP.md).
 - Per-job provider provenance retains the latest 500 attempts, bounding durable state growth.
 - Provider credential artefacts, high-confidence tokens, and private keys fail the pre-push quality gate.
 - Persistent GitHub CLI and Git credential stores are forbidden in the service home; GitHub access is injected
@@ -85,8 +89,8 @@ Review excludes every provider that may have mutated the current worktree. Same-
 when no alternative can run and is recorded as a diversity fallback. `.factory-review.json` is removed before
 each attempt and validated before success. Every PR-backed AI phase, refresh, and base update removes review
 labels and marks the current SHA-scoped status `PENDING` before work starts. A changed review head is marked
-pending before verification. An otherwise reviewed head that falls behind `main` is updated through GitHub with
-an expected-head guard, then returns to local verification and independent review.
+pending before verification. Any newly discovered or previously reviewed head that falls behind `main` is updated
+through GitHub with an expected-head guard before local verification, then returns to independent review.
 
 Autonomous merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present
 and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human

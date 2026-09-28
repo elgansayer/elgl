@@ -7,7 +7,7 @@ import pytest
 from openhands_factory import cli
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.cli import _config
-from openhands_factory.config import FactoryConfig
+from openhands_factory.config import AgentsConfig, FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
 RETIRED_SYSTEMD_UNITS = {
@@ -218,8 +218,8 @@ def test_deployment_installs_bounded_host_storage_policy() -> None:
     assert "SystemMaxUse=512M" in journal_policy
     assert "SystemKeepFree=5G" in journal_policy
     assert "MaxRetentionSec=14day" in journal_policy
-    assert "docker image prune" in maintenance
-    assert "docker builder prune" in maintenance
+    assert '"$docker" image prune' in maintenance
+    assert '"$docker" builder prune' in maintenance
     assert "docker system prune" not in maintenance
     assert "docker volume prune" not in maintenance
     assert "docker container prune" not in maintenance
@@ -423,14 +423,20 @@ def test_default_repository_is_production_clone() -> None:
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
     assert config.recovery_retention_hours == 72
+    assert config.stall_alert_minutes == 20
     assert config.max_parallel_jobs == 5
     assert config.max_open_pull_requests == 40
     assert config.max_queued_ci == 12
     assert config.pull_request_history_limit == 2000
     assert config.lane_wip_limits == {"architect": 1, "dependency": 12, "factory": 8}
     assert config.component_wip_limits["automation"] == 4
+    assert config.review_lane_max_concurrent == 2
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
+    assert config.repository_profile == "hellotalk"
+    assert config.prompt_dir == config.repository / "automation" / "prompts"
+    assert config.system_prompt_path == config.prompt_dir / "system.md"
+    assert config.provider_capacity_dir == config.state_dir
     assert config.require_trusted_intake is False
     assert config.trusted_github_actors == frozenset({"elgansayer"})
     assert config.control_github_actors == frozenset({"elgansayer"})
@@ -438,6 +444,32 @@ def test_default_repository_is_production_clone() -> None:
     assert config.agents.providers["openhands"].enabled is True
     assert config.agents.providers["claude"].enabled is False
     assert config.agents.routing.implementation[0] == "claude"
+
+
+def test_repository_profile_paths_and_shared_capacity_are_configurable(tmp_path: Path) -> None:
+    repository = tmp_path / "workout-agent"
+    prompt_dir = tmp_path / "trusted-prompts"
+    configured = FactoryConfig.from_environment(
+        environment(
+            FACTORY_REPOSITORY=str(repository),
+            FACTORY_STATE_DIR=str(tmp_path / "state"),
+            FACTORY_REPOSITORY_PROFILE="workout-agent",
+            FACTORY_PROMPT_DIR=str(prompt_dir),
+            FACTORY_SYSTEM_PROMPT_PATH=str(prompt_dir / "workout-agent-system.md"),
+            FACTORY_PROVIDER_CAPACITY_DIR=str(tmp_path / "shared"),
+            GITHUB_REPOSITORY="elgansayer/workout-agent",
+        )
+    )
+
+    assert configured.repository_profile == "workout-agent"
+    assert configured.prompt_dir == prompt_dir
+    assert configured.system_prompt_path == prompt_dir / "workout-agent-system.md"
+    assert configured.provider_capacity_dir == tmp_path / "shared"
+
+
+def test_unknown_repository_profile_is_rejected() -> None:
+    with pytest.raises(ConfigurationError, match="repository_profile"):
+        FactoryConfig.from_environment(environment(FACTORY_REPOSITORY_PROFILE="unknown"))
 
 
 def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
@@ -490,7 +522,9 @@ def test_production_agent_configuration_loads() -> None:
 
     assert factory_config.agents.routing_enabled
     assert factory_config.agents.providers["claude"].enabled
-    assert factory_config.agents.providers["claude"].model == "fable"
+    assert factory_config.agents.providers["claude"].model == "sonnet"
+    assert factory_config.agents.providers["claude"].phase_models["general_action"] == "haiku"
+    assert factory_config.agents.providers["claude"].phase_models["code_review"] == "sonnet"
     assert factory_config.agents.providers["claude"].credential_paths == [
         ".claude",
         ".claude.json",
@@ -503,37 +537,56 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
     assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
     assert factory_config.agents.providers["opencode"].model == "opencode-go/deepseek-v4-flash"
-    assert factory_config.agents.providers["opencode"].enabled
+    assert not factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
         ".config/opencode",
         ".local/share/opencode",
     ]
     assert factory_config.agents.providers["openhands"].emergency_only
     assert not factory_config.agents.providers["openhands"].enabled
-    assert factory_config.agents.providers["pi"].enabled
+    assert not factory_config.agents.providers["pi"].enabled
     assert factory_config.agents.providers["pi"].model == "github-copilot/claude-sonnet-5"
     assert factory_config.agents.providers["pi"].credential_paths == [".pi"]
     assert factory_config.agents.routing.implementation == [
+        "google",
         "claude",
         "codex",
-        "google",
-        "opencode",
-        "pi",
     ]
     assert factory_config.agents.routing.code_review == [
-        "codex",
         "claude",
         "google",
-        "opencode",
-        "pi",
+        "codex",
     ]
     assert factory_config.agents.routing.general_action == [
-        "opencode",
         "google",
-        "codex",
         "claude",
-        "pi",
+        "codex",
     ]
+
+
+def test_legacy_fable_configuration_migrates_to_subscription_backed_models() -> None:
+    agents = AgentsConfig.model_validate(
+        {
+            "providers": {
+                "claude": {
+                    "enabled": True,
+                    "model": "fable",
+                    "phase_models": {
+                        "implementation": "sonnet",
+                        "code_review": "haiku",
+                        "general_action": "fable",
+                    },
+                }
+            }
+        }
+    )
+
+    assert agents.providers["claude"].model == "sonnet"
+    assert agents.providers["claude"].phase_models == {
+        "implementation": "sonnet",
+        "code_review": "sonnet",
+        "general_action": "haiku",
+    }
 
 
 @pytest.mark.parametrize(
@@ -764,3 +817,71 @@ def test_pull_request_wip_limits_are_configurable_and_validated() -> None:
         FactoryConfig.from_environment(environment(FACTORY_COMPONENT_WIP_LIMITS="missing-limit"))
     with pytest.raises(ConfigurationError, match="history limit"):
         FactoryConfig.from_environment(environment(FACTORY_PULL_REQUEST_HISTORY_LIMIT="10001"))
+
+
+def test_stall_alert_threshold_must_be_positive() -> None:
+    with pytest.raises(ConfigurationError, match="stall alert threshold must be positive"):
+        FactoryConfig.from_environment(environment(FACTORY_STALL_ALERT_MINUTES="0"))
+
+
+def test_repo_factory_service_is_instance_scoped_and_resource_bounded() -> None:
+    root = Path(__file__).parents[2]
+    unit = (root / "config/systemd/repo-factory@.service").read_text(encoding="utf-8")
+    slice_unit = (root / "config/systemd/repo-factory.slice").read_text(encoding="utf-8")
+
+    assert "EnvironmentFile=/etc/repo-factory/instances/%i.env" in unit
+    assert "WorkingDirectory=/var/lib/repo-factory/%i/repository" in unit
+    assert "Slice=repo-factory.slice" in unit
+    assert "ExecStart=/opt/hellotalk-factory/venv/bin/repo-factory daemon" in unit
+    assert "MemoryMax=7G" in slice_unit
+
+
+def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> None:
+    root = Path(__file__).parents[2]
+    profile = (root / "config/factory/instances/workout-agent.env").read_text(encoding="utf-8")
+
+    assert "FACTORY_REPOSITORY_PROFILE=workout-agent" in profile
+    assert "FACTORY_MAX_PARALLEL_JOBS=1" in profile
+    assert "FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600" in profile
+    assert "FACTORY_REQUIRE_READY_LABEL=true" in profile
+    assert "FACTORY_PROVIDER_CAPACITY_DIR=/var/lib/repo-factory/shared" in profile
+    assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
+
+
+def test_hellotalk_instance_uses_two_review_lanes() -> None:
+    root = Path(__file__).parents[2]
+    profile = (root / "config/factory/instances/hellotalk.env").read_text(encoding="utf-8")
+
+    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=2" in profile
+    assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in profile
+    assert "FACTORY_AGENT_ROUTES_PER_INTERVAL=48" in profile
+    assert "FACTORY_REVIEWS_PER_INTERVAL=36" in profile
+
+
+def test_instance_installer_preserves_legacy_rollback_path() -> None:
+    installer = (Path(__file__).parents[2] / "scripts/install-repo-factory-instance.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "SECONDARY_MOUNT=/mnt/HC_Volume_106574422" in installer
+    assert "--reference-if-able" in installer
+    assert "hellotalk-factory-update.timer" in installer
+    assert "repo-factory-update.timer" in installer
+    assert "localhost/repo-factory-worker:current" in installer
+    assert "--migrate-hellotalk requires --instance hellotalk and --activate" in installer
+    assert "rm -rf" not in installer
+
+
+def test_repo_factory_update_coordinates_both_instances() -> None:
+    root = Path(__file__).parents[2]
+    script = (root / "config/systemd/hellotalk-factory-update.sh").read_text(encoding="utf-8")
+    unit = (root / "config/systemd/repo-factory-update.service").read_text(encoding="utf-8")
+
+    assert "all_factories_idle" in script
+    assert "restore_services_on_failure" in script
+    assert "localhost/repo-factory-worker:current" in script
+    assert "REPO_FACTORY_SECONDARY_SERVICE=repo-factory@workout-agent.service" in unit
+    assert "Conflicts=" not in unit
+    assert "/usr/bin/flock --wait 120 /run/lock/repo-factory-update.lock" in unit
+    health_unit = (root / "config/systemd/repo-factory-health@.service").read_text(encoding="utf-8")
+    assert "/usr/bin/flock --shared --nonblock" in health_unit
