@@ -113,6 +113,22 @@ _REVIEW_STATE_ORDER = {
 }
 
 
+def admission_slots_while_respecting_wip(
+    interval_slots: int | None,
+    *,
+    wip_paused: bool,
+) -> int | None:
+    """Zero out new-issue admission while a configured PR WIP limit is exceeded.
+
+    Workers already active finish normally. Queued issue-only work waits while open
+    PRs advance through review, repair, CI and merge, so the queue cannot keep growing
+    or consume the host while reviewer capacity is saturated. Callers gate Architect
+    dispatch and queued issue selection on the same ``wip_paused`` flag.
+    """
+
+    return 0 if wip_paused else interval_slots
+
+
 def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
     """Prioritise merge proximity while rotating equally eligible PRs fairly."""
 
@@ -152,6 +168,7 @@ def select_batch(
     new_issue_slots: int | None = None,
     review_first: bool = True,
     review_lane_max_concurrent: int = 1,
+    review_only: bool = False,
 ) -> list[Job]:
     if limit <= 0:
         return []
@@ -163,6 +180,7 @@ def select_batch(
         if job.task.identifier not in excluded
         and job.state.value not in {"done", "quarantined"}
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
+        and (not review_only or is_review_lane_job(job))
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
 
@@ -211,6 +229,7 @@ def selection_diagnostics(
     excluded_task_ids: set[str],
     now: datetime,
     review_lane_max_concurrent: int,
+    review_only: bool = False,
 ) -> dict[str, object]:
     """Expose bounded scheduler inputs without task bodies or credentials."""
 
@@ -220,6 +239,7 @@ def selection_diagnostics(
         if job.task.identifier not in excluded_task_ids
         and job.state.value not in {"done", "quarantined"}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
+        and (not review_only or is_review_lane_job(job))
     ]
     active_review_count = sum(
         1
@@ -243,6 +263,21 @@ def selection_diagnostics(
     }
 
 
+def should_use_failsafe(
+    selected_jobs: list[Job],
+    diagnostic: Mapping[str, object],
+    *,
+    review_only: bool,
+) -> bool:
+    """Return whether an empty primary selection indicates a real scheduler stall."""
+
+    candidate_count = diagnostic.get("candidate_count")
+    review_capacity = diagnostic.get("review_capacity")
+    if not isinstance(candidate_count, int) or candidate_count <= 0 or selected_jobs:
+        return False
+    return not (review_only and isinstance(review_capacity, int) and review_capacity <= 0)
+
+
 def select_batch_failsafe(
     jobs: dict[str, Job],
     limit: int,
@@ -250,6 +285,7 @@ def select_batch_failsafe(
     now: datetime,
     new_issue_slots: int | None,
     review_lane_max_concurrent: int,
+    review_only: bool = False,
 ) -> list[Job]:
     """Guarantee progress if the primary selector violates its runnable invariant."""
 
@@ -259,6 +295,7 @@ def select_batch_failsafe(
         if job.task.identifier not in excluded_task_ids
         and job.state not in {JobState.DONE, JobState.QUARANTINED}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
+        and (not review_only or is_review_lane_job(job))
     ]
     active_reviews = sum(
         1
@@ -658,6 +695,7 @@ class FactoryDaemon:
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
+                wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                 review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
                 worker_capacity = self.config.max_parallel_jobs - len(active)
                 available_host_slots = self.host_resource_slots.available_shared_slots()
@@ -758,8 +796,15 @@ class FactoryDaemon:
                     # Schedule only from that committed view, not from an intermediate
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
+                    # A refresh recalculates PR WIP from GitHub. Use that current
+                    # result for this same scheduling pass instead of admitting one
+                    # extra issue from the empty startup snapshot.
+                    wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                     scheduler_time = datetime.now(UTC)
-                    new_issue_slots = self.issue_admission.available_slots(scheduler_time)
+                    new_issue_slots = admission_slots_while_respecting_wip(
+                        self.issue_admission.available_slots(scheduler_time),
+                        wip_paused=wip_paused,
+                    )
                     selected_jobs = select_batch(
                         jobs,
                         capacity,
@@ -768,14 +813,20 @@ class FactoryDaemon:
                         new_issue_slots=new_issue_slots,
                         review_first=self.config.review_lane_first,
                         review_lane_max_concurrent=self.config.review_lane_max_concurrent,
+                        review_only=wip_paused,
                     )
                     diagnostic = selection_diagnostics(
                         jobs,
                         active_task_ids,
                         scheduler_time,
                         self.config.review_lane_max_concurrent,
+                        review_only=wip_paused,
                     )
-                    if not selected_jobs and diagnostic["candidate_count"]:
+                    if should_use_failsafe(
+                        selected_jobs,
+                        diagnostic,
+                        review_only=wip_paused,
+                    ):
                         LOGGER.error(
                             "Primary scheduler returned no jobs for a runnable queue; "
                             "using deterministic failsafe selection"
@@ -787,12 +838,14 @@ class FactoryDaemon:
                             scheduler_time,
                             new_issue_slots,
                             self.config.review_lane_max_concurrent,
+                            review_only=wip_paused,
                         )
                     self.scheduler_snapshot.update(
                         {
                             "last_selected_jobs": [job.task.identifier for job in selected_jobs],
                             "last_selection_at": scheduler_time.isoformat(),
                             "new_issue_slots": new_issue_slots,
+                            "review_only": wip_paused,
                             "selection_input_count": sum(
                                 1
                                 for job in jobs.values()
@@ -887,6 +940,7 @@ class FactoryDaemon:
                             architect_retry_not_before is None
                             or datetime.now(UTC) >= architect_retry_not_before
                         )
+                        and not wip_paused
                         and self.pipeline.architect_due()
                         and not review_lane_busy
                         and available_host_slots > 0
