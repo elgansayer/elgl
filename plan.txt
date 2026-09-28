@@ -1,0 +1,6 @@
+1. Use `replace_with_git_merge_diff` to modify `frontend/src/app/components/chat-message/chat-message.component.ts`. Include the exact literal SEARCH and REPLACE blocks to add `ChangeDetectionStrategy` to the imports, set `changeDetection: ChangeDetectionStrategy.OnPush` in the `@Component` decorator, and refactor `isOwnMessage` into a computed signal.
+2. Run `git diff` using `run_in_bash_session` to verify that the edits were applied correctly to `frontend/src/app/components/chat-message/chat-message.component.ts`.
+3. Run the specific component test using `run_in_bash_session` with the command `cd frontend && npm run test -- --include src/app/components/chat-message/chat-message.component.spec.ts`.
+4. Run the full test suites using `run_in_bash_session` with `cd frontend && npm run test` and `cd backend && npm run test` to check for regressions.
+5. Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+6. Create PR with title "⚡ Bolt: [performance improvement]" and required description.

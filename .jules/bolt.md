@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-17 - [Angular Change Detection and Computed Signals]
+**Learning:** For frequently rendered components like chat messages, relying on default change detection and template-bound methods causes continuous re-evaluation of those methods on every detection cycle, impacting performance significantly.
+**Action:** Always set `ChangeDetectionStrategy.OnPush` on heavily instantiated UI components (like list items or chat bubbles) and convert template-bound methods to `computed` signals to leverage caching and avoid unnecessary work during Angular change detection.

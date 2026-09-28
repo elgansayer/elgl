@@ -1,0 +1,6 @@
+⚡ Bolt: [performance improvement]
+
+💡 What: Changed the `ChatMessageComponent` to use `ChangeDetectionStrategy.OnPush` and refactored the template-bound `isOwnMessage()` method into a computed signal.
+🎯 Why: `ChatMessageComponent` is heavily instantiated in lists. Previously, the default change detection combined with a template-bound method meant `isOwnMessage()` was needlessly re-evaluated on every change detection cycle, potentially degrading scroll and render performance in chat rooms.
+📊 Impact: Reduces unnecessary re-renders and function evaluations for every message bubble in a chat view, improving UI thread responsiveness.
+🔬 Measurement: Verify by rendering a large chat history; the Angular DevTools profiler should show fewer change detection cycles triggering on `app-chat-message`, and reduced time spent evaluating template functions.
