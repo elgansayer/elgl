@@ -195,7 +195,10 @@ export class DiscoveryService {
 
         const correctionRatio = candidate.correction_ratio ?? 0;
         // Normalise average rating to 0-1 (1-5 scale)
-        const avgRatingNorm = (ratings.averageScore - 1) / 4;
+        const avgRatingNorm =
+          Number.isFinite(ratings.averageScore) && ratings.averageScore > 0
+            ? Math.min(1, Math.max(0, (ratings.averageScore - 1) / 4))
+            : 0;
         // Log-scale the ratings count so it doesn't dominate
         const ratingsCountLog =
           ratings.totalRatings > 0
@@ -455,6 +458,12 @@ export class DiscoveryService {
       if (profile.mock_city) {
         query.city = profile.mock_city;
       }
+    }
+
+    // Serious Learner mode must be resolved before the standard Supabase query
+    // is constructed so every discovery path applies the same thresholds.
+    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
+      query.serious_learner_only = true;
     }
 
     let queryBuilder = supabase

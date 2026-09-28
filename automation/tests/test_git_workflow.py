@@ -37,6 +37,25 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     assert (worktree / "admin-portal/node_modules").is_symlink()
 
 
+def test_prepare_worktree_resolves_dependency_links_from_repository_alias(
+    tmp_path: Path,
+) -> None:
+    real_repository = tmp_path / "source" / "repository"
+    real_repository.mkdir(parents=True)
+    (real_repository / "frontend/node_modules").mkdir(parents=True)
+    repository = tmp_path / "configured-repository"
+    repository.symlink_to(real_repository, target_is_directory=True)
+    worktree = tmp_path / "worktrees" / "issue-12"
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.prepare_worktree(worktree, "12", "Fix build")
+
+    dependency_link = worktree / "frontend/node_modules"
+    assert dependency_link.is_symlink()
+    assert dependency_link.readlink() == (real_repository / "frontend/node_modules").resolve()
+
+
 def test_prepare_worktree_retries_a_transient_lock_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -203,6 +222,39 @@ def test_prepare_worktree_reclaims_stale_local_branch(tmp_path: Path) -> None:
     assert ("git", "branch", "-D", branch) in runner.calls
 
 
+def test_prepare_claimed_worktree_reuses_canonical_branch_and_initial_base(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    worktree = tmp_path / "worktrees" / "issue-12"
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(1, "", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.prepare_claimed_worktree(
+        worktree,
+        "factory/12-canonical",
+        "initial-base-sha",
+    )
+
+    assert runner.calls[0] == ("git", "fetch", "origin", "main")
+    assert runner.calls[2] == (
+        "git",
+        "worktree",
+        "add",
+        "-b",
+        "factory/12-canonical",
+        str(worktree),
+        "initial-base-sha",
+    )
+
+
 def test_prepare_pull_request_worktree_checks_out_the_existing_branch(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -222,6 +274,68 @@ def test_prepare_pull_request_worktree_checks_out_the_existing_branch(tmp_path: 
         str(worktree),
         "origin/bolt/optimize-quests",
     )
+
+
+@pytest.mark.parametrize(("returncode", "expected"), [(0, True), (1, False)])
+def test_contains_current_base_uses_latest_remote_base(
+    tmp_path: Path,
+    returncode: int,
+    expected: bool,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(returncode, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    assert workflow.contains_current_base() is expected
+    assert runner.calls == [
+        ("git", "fetch", "origin", "main"),
+        ("git", "merge-base", "--is-ancestor", "origin/main", "HEAD"),
+    ]
+
+
+def test_merge_base_for_repair_leaves_conflicts_for_the_repair_agent(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(1, "", "CONFLICT (content): merge conflict"),
+            ProcessResult(0, "src/conflicted.ts\n", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    conflicted = workflow.merge_base_for_repair()
+
+    assert conflicted is True
+    assert runner.calls == [
+        ("git", "diff", "--name-only", "--diff-filter=U"),
+        ("git", "fetch", "origin", "main"),
+        ("git", "merge", "--no-commit", "--no-ff", "origin/main"),
+        ("git", "diff", "--name-only", "--diff-filter=U"),
+    ]
+
+
+def test_merge_base_for_repair_accepts_a_clean_uncommitted_merge(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "Automatic merge went well", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    assert workflow.merge_base_for_repair() is False
 
 
 def test_push_allows_the_external_branch_a_pull_request_review_job_is_assigned(
@@ -320,6 +434,38 @@ def test_remove_worktree_can_force_retirement_after_archive(tmp_path: Path) -> N
     assert "--force" in workflow.runner.calls[0]
 
 
+def test_remove_worktree_accepts_configured_root_outside_repository_parent(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([ProcessResult(0, "", "")]),
+        worktree_root=worktree_root,
+    )
+
+    workflow.remove_worktree(worktree_root / "issue-12", force=True)
+
+    assert workflow.runner.calls[0][-1] == str(worktree_root / "issue-12")
+
+
+def test_remove_worktree_rejects_path_outside_configured_root(tmp_path: Path) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([]),
+        worktree_root=tmp_path / "mounted-volume" / "worktrees",
+    )
+
+    with pytest.raises(RepositorySafetyError):
+        workflow.remove_worktree(tmp_path / "mounted-volume" / "other" / "issue-12")
+
+
 def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     repository = tmp_path / "state" / "repository"
     repository.mkdir(parents=True)
@@ -334,3 +480,80 @@ def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     assert archived == recovery
     assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
     assert (recovery / "RECOVERY.txt").is_file()
+
+
+def test_archive_worktree_accepts_configured_roots_outside_repository_parent(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    worktree = worktree_root / "issue-12"
+    worktree.mkdir(parents=True)
+    (worktree / "changed.ts").write_text("uncommitted", encoding="utf-8")
+    recovery_root = tmp_path / "mounted-volume" / "recovery"
+    recovery = recovery_root / "issue-12-archive"
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([]),
+        worktree_root=worktree_root,
+        recovery_root=recovery_root,
+    )
+
+    workflow.archive_worktree(worktree, recovery)
+
+    assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
+
+
+def test_archive_worktree_rejects_path_outside_configured_recovery_root(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "control" / "repository"
+    repository.mkdir(parents=True)
+    worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    worktree = worktree_root / "issue-12"
+    worktree.mkdir(parents=True)
+    workflow = GitWorkflow(
+        repository,
+        "main",
+        Runner([]),
+        worktree_root=worktree_root,
+        recovery_root=tmp_path / "mounted-volume" / "recovery",
+    )
+
+    with pytest.raises(RepositorySafetyError, match="recovery root"):
+        workflow.archive_worktree(
+            worktree,
+            tmp_path / "mounted-volume" / "other" / "issue-12-archive",
+        )
+
+
+def test_archive_worktree_excludes_regenerable_build_artifacts(tmp_path: Path) -> None:
+    # None of these are ever hand-edited - all regenerable via npm/uv install
+    # or a build - and copying them in full turned a ~63 MB archive into a
+    # 2+ GB one, exhausting the disk-space reserve that gates scheduling.
+    repository = tmp_path / "state" / "repository"
+    repository.mkdir(parents=True)
+    worktree = tmp_path / "state" / "worktrees" / "issue-12"
+    (worktree / "frontend" / "node_modules" / "some-pkg").mkdir(parents=True)
+    (worktree / "frontend" / "node_modules" / "some-pkg" / "index.js").write_text(
+        "module.exports = {}", encoding="utf-8"
+    )
+    (worktree / "frontend" / "dist").mkdir(parents=True)
+    (worktree / "frontend" / "dist" / "bundle.js").write_text("built output", encoding="utf-8")
+    (worktree / "frontend" / "src").mkdir(parents=True)
+    (worktree / "frontend" / "src" / "app.ts").write_text("uncommitted source", encoding="utf-8")
+    (worktree / "automation" / "__pycache__").mkdir(parents=True)
+    (worktree / "automation" / "__pycache__" / "mod.pyc").write_text("bytecode", encoding="utf-8")
+    recovery = tmp_path / "state" / "recovery" / "issue-12-archive"
+    workflow = GitWorkflow(repository, "main", Runner([]))
+
+    workflow.archive_worktree(worktree, recovery)
+
+    assert not (recovery / "frontend" / "node_modules").exists()
+    assert not (recovery / "frontend" / "dist").exists()
+    assert not (recovery / "automation" / "__pycache__").exists()
+    assert (recovery / "frontend" / "src" / "app.ts").read_text(
+        encoding="utf-8"
+    ) == "uncommitted source"

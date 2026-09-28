@@ -13,18 +13,24 @@ interface DailyTipResponse {
   selector: 'app-daily-learning-tip',
   imports: [TranslatePipe, AppCardComponent],
   template: `
-    <app-card variant="default" padding="md" customClass="space-y-2">
-      <h2 class="text-sm uppercase tracking-wider text-text-muted font-medium">
+    <app-card
+      variant="default"
+      padding="md"
+      customClass="space-y-2 min-w-0 motion-reduce:transition-none"
+      [attr.aria-label]="'home.dailyTip.title' | t"
+      [attr.aria-busy]="tipResource.isLoading() ? 'true' : null"
+    >
+      <h2 class="text-sm uppercase tracking-wider text-text-muted font-medium break-words">
         {{ 'home.dailyTip.title' | t }}
       </h2>
       @if (tipResource.isLoading()) {
-        <p class="text-sm text-text-muted">{{ 'home.dailyTip.loading' | t }}</p>
+        <p class="text-sm text-text-muted break-words">{{ 'home.dailyTip.loading' | t }}</p>
       } @else {
-        <p class="text-base text-text-primary">{{ tip() }}</p>
+        <p class="text-base text-text-primary break-words [overflow-wrap:anywhere]">{{ tip() }}</p>
       }
     </app-card>
   `,
-  styles: [':host { display: block; }'],
+  styles: [':host { display: block; min-width: 0; }'],
 })
 export class DailyLearningTipComponent {
   private readonly authService = inject(AuthService);

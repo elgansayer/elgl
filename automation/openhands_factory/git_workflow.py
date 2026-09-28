@@ -88,9 +88,13 @@ class GitWorkflow:
         *,
         external_branch: str | None = None,
         github_token: str | None = None,
+        worktree_root: Path | None = None,
+        recovery_root: Path | None = None,
     ) -> None:
         self.repository = repository
         self.base_branch = base_branch
+        self.worktree_root = (worktree_root or repository.parent).resolve()
+        self.recovery_root = (recovery_root or repository.parent).resolve()
         self.runner: ProcessRunner
         if runner is None and github_token is not None:
             self.runner = partial(
@@ -115,6 +119,28 @@ class GitWorkflow:
         self._add_worktree(worktree, branch, f"origin/{self.base_branch}")
         return branch
 
+    def prepare_claimed_worktree(
+        self,
+        worktree: Path,
+        branch: str,
+        initial_base_sha: str | None,
+    ) -> None:
+        """Rebuild a crash-recovered branch from its durable canonical identity."""
+
+        ensure_push_target(branch, self.base_branch)
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        self._add_worktree(
+            worktree,
+            branch,
+            initial_base_sha or f"origin/{self.base_branch}",
+        )
+
     def prepare_pull_request_worktree(self, worktree: Path, branch: str) -> None:
         """Check out an existing pull request branch for independent review.
 
@@ -129,6 +155,66 @@ class GitWorkflow:
         if fetch.returncode != 0:
             raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
         self._add_worktree(worktree, branch, f"origin/{branch}")
+
+    def contains_current_base(self) -> bool:
+        """Return whether this head already contains the latest remote base."""
+
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        ancestor = self.runner(
+            (
+                "git",
+                "merge-base",
+                "--is-ancestor",
+                f"origin/{self.base_branch}",
+                "HEAD",
+            ),
+            self.repository,
+        )
+        if ancestor.returncode not in {0, 1}:
+            raise RepositorySafetyError(
+                f"Could not compare pull request with base branch: {ancestor.stderr}"
+            )
+        return ancestor.returncode == 0
+
+    def merge_base_for_repair(self) -> bool:
+        """Merge the current base into a PR worktree and report conflicts.
+
+        GitHub cannot update a branch whose merge is conflicting. Leaving the
+        conflict materialised in the isolated worktree gives the repair agent
+        exact files and markers to resolve instead of asking it to infer the
+        conflict from a status string.
+        """
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect merge conflicts: {unresolved.stderr}")
+        if unresolved.stdout.strip():
+            return True
+
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        merge = self.runner(
+            ("git", "merge", "--no-commit", "--no-ff", f"origin/{self.base_branch}"),
+            self.repository,
+        )
+        if merge.returncode == 0:
+            return False
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode == 0 and unresolved.stdout.strip():
+            return True
+        raise RepositorySafetyError(f"Could not merge base branch: {merge.stderr}")
 
     def _add_worktree(self, worktree: Path, branch: str, start_point: str) -> None:
         if worktree.exists():
@@ -156,12 +242,16 @@ class GitWorkflow:
             Path("backend/node_modules"),
             Path("e2e/node_modules"),
             Path("admin-portal/node_modules"),
+            Path(".venv"),
         ):
             source = self.repository / relative
             destination = worktree / relative
             if source.is_dir() and not destination.exists():
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                os.symlink(source, destination, target_is_directory=True)
+                # The configured repository may itself be a symlink. Verification
+                # exposes its resolved path inside the isolated mount namespace,
+                # so dependency links must target that same reachable identity.
+                os.symlink(source.resolve(), destination, target_is_directory=True)
 
     def create_branch(self, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
@@ -287,9 +377,10 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
 
     def remove_worktree(self, worktree: Path, *, force: bool = False) -> None:
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to remove a worktree outside the factory root")
         arguments = ["git", "worktree", "remove"]
         if force:
@@ -301,17 +392,42 @@ class GitWorkflow:
 
     def archive_worktree(self, worktree: Path, recovery_root: Path) -> Path:
         """Copy a dirty worktree before it is retired during durable recovery."""
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
         resolved_recovery = recovery_root.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to archive a worktree outside the factory root")
+        if resolved_recovery == self.recovery_root or not resolved_recovery.is_relative_to(
+            self.recovery_root
+        ):
+            raise RepositorySafetyError("Refusing to archive outside the factory recovery root")
         if resolved_recovery == resolved_worktree or resolved_recovery.is_relative_to(
             resolved_worktree
         ):
             raise RepositorySafetyError("Recovery directory cannot be inside the worktree")
         resolved_recovery.mkdir(parents=True, exist_ok=False)
-        shutil.copytree(resolved_worktree, resolved_recovery, symlinks=True, dirs_exist_ok=True)
+        # The point of this archive is to not lose hand-edited uncommitted
+        # work - none of these directories are ever hand-edited, all are
+        # regenerable (npm/uv install, a build), and copying them in full
+        # is what turned a ~63 MB archive into a 2+ GB one, exhausting the
+        # disk-space reserve that gates Factory scheduling.
+        shutil.copytree(
+            resolved_worktree,
+            resolved_recovery,
+            symlinks=True,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(
+                "node_modules",
+                "dist",
+                ".angular",
+                ".venv",
+                "__pycache__",
+                ".mypy_cache",
+                ".pytest_cache",
+                ".ruff_cache",
+            ),
+        )
         (resolved_recovery / "RECOVERY.txt").write_text(
             "This is a preserved OpenHands worktree archive. The original Git worktree "
             "registration was removed after the daemon could no longer safely retire it.\n"
