@@ -243,6 +243,26 @@ def test_a_frontend_only_change_skips_the_other_workspaces(tmp_path: Path) -> No
     assert "factory-tests" not in names
 
 
+def test_mixed_workspace_targeted_commands_only_receive_local_paths(tmp_path: Path) -> None:
+    paths = {
+        Path("frontend/src/app/app.ts"),
+        Path("backend/src/app.service.ts"),
+        Path("admin-portal/src/app/app.ts"),
+    }
+    for path in paths:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    commands = commands_for(tmp_path, paths)
+
+    frontend_lint = next(command for command in commands if command.name == "frontend-lint:check")
+    backend_lint = next(command for command in commands if command.name == "backend-lint:check")
+    admin_lint = next(command for command in commands if command.name == "admin-lint:check")
+    assert frontend_lint.arguments[-1] == "src/app/app.ts"
+    assert backend_lint.arguments[-1] == "src/app.service.ts"
+    assert admin_lint.arguments[-1] == "src/app/app.ts"
+
+
 def test_an_automation_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
     commands = commands_for(tmp_path, {Path("automation/openhands_factory/pipeline.py")})
     names = {command.name for command in commands}
