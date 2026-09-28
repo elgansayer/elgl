@@ -54,9 +54,7 @@ export class SafetyCacheInvalidationService {
    *    matching keys using SCAN to avoid blocking the Redis event loop.
    *  - For exact keys (e.g. `partner_of_week_ids`), delete directly.
    *  - For prefix-only patterns (e.g. `recommendations:daily:`),
-   *    scan using KEYS (the Redis instance is small enough that this is
-   *    safe for pattern-only prefixes; SCAN does not support glob-style
-   *    matching natively).
+   *    scan using SCAN to avoid blocking the Redis event loop.
    */
   async invalidateTrustAndSafetyCaches(): Promise<void> {
     const redis = this.getRedis();
@@ -66,12 +64,12 @@ export class SafetyCacheInvalidationService {
       for (const pattern of SAFETY_AFFECTED_CACHE_PATTERNS) {
         if (pattern.endsWith(':*')) {
           // Suffixed glob pattern – use SCAN for safety on larger key spaces
-          const prefix = pattern.slice(0, -2);
+          const prefix = pattern.slice(0, -1);
           const deleted = await this.deleteByScan(redis, prefix);
           totalDeleted += deleted;
         } else if (pattern.endsWith(':')) {
-          // Prefix pattern – use KEYS (acceptable for small-to-medium instances)
-          const deleted = await this.deleteByPattern(redis, `${pattern}*`);
+          // Prefix pattern – use SCAN to avoid blocking the event loop
+          const deleted = await this.deleteByScan(redis, pattern);
           totalDeleted += deleted;
         } else {
           // Exact single key
@@ -189,16 +187,5 @@ export class SafetyCacheInvalidationService {
       }
     } while (cursor !== '0');
     return deleted;
-  }
-
-  private async deleteByPattern(
-    redis: Redis,
-    pattern: string,
-  ): Promise<number> {
-    const keys = await redis.keys(pattern);
-    if (keys.length === 0) {
-      return 0;
-    }
-    return redis.del(...keys);
   }
 }
