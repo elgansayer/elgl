@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -132,5 +134,22 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(function ({ addUtilities }) {
+      addUtilities({
+        '.pt-safe': {
+          paddingTop: 'env(safe-area-inset-top)',
+        },
+        '.pb-safe': {
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        },
+        '.pl-safe': {
+          paddingLeft: 'env(safe-area-inset-left)',
+        },
+        '.pr-safe': {
+          paddingRight: 'env(safe-area-inset-right)',
+        },
+      });
+    }),
+  ],
 };
