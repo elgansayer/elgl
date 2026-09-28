@@ -1,6 +1,6 @@
 # Product empty-state illustrations
 
-Issue: #1071
+Issues: #1071, #1421
 
 ## Scope
 
@@ -56,7 +56,7 @@ Run:
 npm run check:empty-state-illustrations
 ```
 
-The root `npm run verify` command also runs this contract alongside the existing frontend build, tests, accessibility/design governance and repository checks.
+The root `npm run verify` command also runs this contract alongside the existing frontend build, tests, accessibility/design governance and repository checks. The dedicated `Empty State Illustrations Contract` GitHub Actions workflow runs the same check whenever an illustration, its empty-state integration, the verifier, or this contract documentation changes, and also runs for merge-queue validation.
 
 Manual review should cover the three empty states at narrow/mobile and desktop widths in both light and dark app themes, including 200 percent browser zoom. The illustration must never replace or obscure the translated title, description or primary action.
 

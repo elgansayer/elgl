@@ -95,10 +95,7 @@ export class ModerationService {
     }
   }
 
-  async approveItem(
-    itemId: string,
-    type: string,
-  ): Promise<ModerationActionResponse> {
+  async approveItem(itemId: string, type: string): Promise<ModerationActionResponse> {
     try {
       return await withRetry(() =>
         firstValueFrom(
@@ -166,12 +163,9 @@ export class ModerationService {
     try {
       return await withRetry(() =>
         firstValueFrom(
-          this.http.get<UserAnalysisResult>(
-            `${this.baseUrl}/analyse/${userId}`,
-            {
-              headers: this.getHeaders(),
-            },
-          ),
+          this.http.get<UserAnalysisResult>(`${this.baseUrl}/analyse/${userId}`, {
+            headers: this.getHeaders(),
+          }),
         ),
       );
     } catch {

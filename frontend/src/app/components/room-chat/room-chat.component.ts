@@ -4,10 +4,11 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
+import { SoundboardComponent } from '../soundboard/soundboard.component';
 
 @Component({
   selector: 'app-room-chat',
-  imports: [HlmInput, HlmButton, CommonModule, FormsModule],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule, SoundboardComponent],
   template: `
     <div
       class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
@@ -35,6 +36,14 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
           }}
         </button>
       </div>
+
+      @if (store.currentRoom(); as room) {
+        <app-soundboard
+          [roomId]="room.id"
+          [hostUserId]="room.host_id"
+          [coHostUserId]="room.co_host_id ?? ''"
+        />
+      }
 
       <div class="flex-1 p-4 overflow-y-auto space-y-2 text-xs">
         @if (activeTab() === 'chat') {
