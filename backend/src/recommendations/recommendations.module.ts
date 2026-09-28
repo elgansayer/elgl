@@ -14,12 +14,7 @@ import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.m
   // them here keeps RecommendationsModule's runtime dependencies explicit. This
   // is especially important for the scheduled daily recommendation job, which is
   // instantiated outside an HTTP request lifecycle.
-  imports: [
-    SharedLoggerModule,
-    SupabaseModule,
-    MetricsModule,
-    LearnerKnowledgeModule,
-  ],
+  imports: [SharedLoggerModule, SupabaseModule, MetricsModule, LearnerKnowledgeModule],
   controllers: [RecommendationsController],
   providers: [
     RecommendationsService,

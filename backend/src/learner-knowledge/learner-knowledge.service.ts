@@ -88,7 +88,9 @@ export class LearnerKnowledgeService {
       this.flashcardsService
         .getFlashcards(userId, undefined, 20)
         .catch(() => []),
-      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
+      this.hobbyTagsService
+        .getUserVocabulary(userId, language)
+        .catch(() => []),
       this.assessmentsService.getQuestions(language).catch(() => []), // Placeholder
       this.lessonsService.listLessons().catch(() => []), // Placeholder
       this.momentsService
