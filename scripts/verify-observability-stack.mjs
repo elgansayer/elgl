@@ -38,7 +38,9 @@ export function validateObservabilityConfig({
     errors.push('Grafana admin password must not fall back to the default "admin" password');
   }
   if (!compose.includes('GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?')) {
-    errors.push('Grafana admin password must be supplied explicitly through GRAFANA_ADMIN_PASSWORD');
+    errors.push(
+      'Grafana admin password must be supplied explicitly through GRAFANA_ADMIN_PASSWORD',
+    );
   }
 
   const requiredScrapes = [
