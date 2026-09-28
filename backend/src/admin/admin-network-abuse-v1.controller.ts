@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
@@ -59,6 +60,7 @@ export class AdminNetworkAbuseV1Controller {
   ) {}
 
   @Post('reputation')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.read')
   @ApiOperation({
     summary: 'Inspect coarse, privacy-minimized network reputation signals',
@@ -92,6 +94,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Post('impact')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.read')
   @ApiOperation({
     summary: 'Preview the observed impact of a proposed CIDR block',
@@ -202,6 +205,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Post('rate-limits/inspect')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.read')
   @ApiOperation({
     summary: 'Inspect the active emergency throttle for a network request',
@@ -234,6 +238,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Post('blocks')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   @ApiOperation({ summary: 'Create a temporary scoped network block' })
   async createBlock(
@@ -268,6 +273,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Delete('blocks/:id')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   async revokeBlock(
     @Param('id') id: string,
@@ -297,6 +303,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Post('rate-limits')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   @ApiOperation({
     summary: 'Create a temporary stricter network rate limit',
@@ -338,6 +345,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Delete('rate-limits/:id')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   async revokeRateLimit(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -367,6 +375,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Post('allowlist')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   async createAllowlist(
     @Body() input: CreateAdminNetworkAllowlistDto,
@@ -398,6 +407,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Delete('allowlist/:id')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   async revokeAllowlist(
     @Param('id') id: string,
