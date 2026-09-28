@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-28 - [Batch Independent Redis Operations]
+**Learning:** Sequential `await` calls for independent cache operations (e.g., clearing multiple Redis cache keys in admin controllers) create additive network latency that delays API responses.
+**Action:** Identify sequences of independent asynchronous cache or database operations and batch them using `Promise.all` to resolve them concurrently, significantly reducing overall latency.
