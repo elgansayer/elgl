@@ -27,11 +27,7 @@ export class StripeService {
     const env = this.configService.get<string>('NODE_ENV') || 'development';
 
     if (env === 'production') {
-      if (
-        !secretKey ||
-        secretKey === 'sk_test_123' ||
-        secretKey === 'sk_test'
-      ) {
+      if (!secretKey || /^sk_test(?:_|$)/i.test(secretKey.trim())) {
         throw new Error(
           'STRIPE_SECRET_KEY must be configured securely in production',
         );
