@@ -47,12 +47,10 @@
             "production": {
               "optimization": {
                 "scripts": true,
-                "styles": {
-                  "minify": true,
-                  "inlineCritical": true,
-                  "removeSpecialComments": true
-                },
-                "fonts": false
+                "styles": true,
+                "fonts": {
+                  "inline": false
+                }
               },
               "budgets": [
                 {

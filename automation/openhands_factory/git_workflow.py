@@ -88,9 +88,13 @@ class GitWorkflow:
         *,
         external_branch: str | None = None,
         github_token: str | None = None,
+        worktree_root: Path | None = None,
+        recovery_root: Path | None = None,
     ) -> None:
         self.repository = repository
         self.base_branch = base_branch
+        self.worktree_root = (worktree_root or repository.parent).resolve()
+        self.recovery_root = (recovery_root or repository.parent).resolve()
         self.runner: ProcessRunner
         if runner is None and github_token is not None:
             self.runner = partial(
@@ -152,6 +156,40 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
         self._add_worktree(worktree, branch, f"origin/{branch}")
 
+    def merge_base_for_repair(self) -> bool:
+        """Merge the current base into a PR worktree and report conflicts.
+
+        GitHub cannot update a branch whose merge is conflicting. Leaving the
+        conflict materialised in the isolated worktree gives the repair agent
+        exact files and markers to resolve instead of asking it to infer the
+        conflict from a status string.
+        """
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect merge conflicts: {unresolved.stderr}")
+        if unresolved.stdout.strip():
+            return True
+
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        merge = self.runner(
+            ("git", "merge", "--no-commit", "--no-ff", f"origin/{self.base_branch}"),
+            self.repository,
+        )
+        if merge.returncode == 0:
+            return False
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode == 0 and unresolved.stdout.strip():
+            return True
+        raise RepositorySafetyError(f"Could not merge base branch: {merge.stderr}")
+
     def _add_worktree(self, worktree: Path, branch: str, start_point: str) -> None:
         if worktree.exists():
             raise RepositorySafetyError(f"Task worktree already exists: {worktree}")
@@ -184,7 +222,10 @@ class GitWorkflow:
             destination = worktree / relative
             if source.is_dir() and not destination.exists():
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                os.symlink(source, destination, target_is_directory=True)
+                # The configured repository may itself be a symlink. Verification
+                # exposes its resolved path inside the isolated mount namespace,
+                # so dependency links must target that same reachable identity.
+                os.symlink(source.resolve(), destination, target_is_directory=True)
 
     def create_branch(self, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
@@ -310,9 +351,10 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
 
     def remove_worktree(self, worktree: Path, *, force: bool = False) -> None:
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to remove a worktree outside the factory root")
         arguments = ["git", "worktree", "remove"]
         if force:
@@ -324,11 +366,16 @@ class GitWorkflow:
 
     def archive_worktree(self, worktree: Path, recovery_root: Path) -> Path:
         """Copy a dirty worktree before it is retired during durable recovery."""
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
         resolved_recovery = recovery_root.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to archive a worktree outside the factory root")
+        if resolved_recovery == self.recovery_root or not resolved_recovery.is_relative_to(
+            self.recovery_root
+        ):
+            raise RepositorySafetyError("Refusing to archive outside the factory recovery root")
         if resolved_recovery == resolved_worktree or resolved_recovery.is_relative_to(
             resolved_worktree
         ):
