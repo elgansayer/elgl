@@ -169,6 +169,24 @@ def test_select_batch_preserves_issue_progress_when_host_has_only_two_slots() ->
     assert [item.task.identifier for item in selected] == ["7347", "10"]
 
 
+def test_select_batch_uses_only_pull_request_work_while_wip_is_saturated() -> None:
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "11": job("11", 0, JobState.VERIFYING),
+        "594": factory_pull_request_job("594", JobState.QUALITY_REPAIRING),
+        "7347": pull_request_job("7347", priority=0),
+    }
+
+    selected = select_batch(
+        jobs,
+        3,
+        review_lane_max_concurrent=2,
+        review_only=True,
+    )
+
+    assert [item.task.identifier for item in selected] == ["7347", "594"]
+
+
 def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
     jobs = {
         "10": job("10", 5),
@@ -319,6 +337,18 @@ def test_failsafe_selector_prioritises_merge_queued_review() -> None:
     }
 
     selected = select_batch_failsafe(jobs, 1, set(), now, 1, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
+
+
+def test_failsafe_selector_does_not_dispatch_issue_work_in_review_only_mode() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "7348": pull_request_job("7348", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch_failsafe(jobs, 2, set(), now, 0, 2, review_only=True)
 
     assert [item.task.identifier for item in selected] == ["7348"]
 
