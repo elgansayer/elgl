@@ -775,6 +775,10 @@ class FactoryDaemon:
                     # Schedule only from that committed view, not from an intermediate
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
+                    # A refresh recalculates PR WIP from GitHub. Use that current
+                    # result for this same scheduling pass instead of admitting one
+                    # extra issue from the empty startup snapshot.
+                    wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                     scheduler_time = datetime.now(UTC)
                     new_issue_slots = admission_slots_while_respecting_wip(
                         self.issue_admission.available_slots(scheduler_time),
