@@ -467,7 +467,7 @@ describe.skip('DiscoveryComponent', () => {
     expect(slider).toBeFalsy();
 
     // The VIP upsell links should exist (at least one for distance or gender)
-    const vipLinks = fixture.nativeElement.querySelectorAll('a[routerLink="/vip"]');
+    const vipLinks = fixture.nativeElement.querySelectorAll('a[routerLink="/subscription"]');
     expect(vipLinks.length).toBeGreaterThanOrEqual(1);
   });
 
