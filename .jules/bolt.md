@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-11 - [Start Independent User Statistics Queries Together]
+**Learning:** Awaiting the user lookup before starting four independent statistics queries added one avoidable network-latency interval to successful requests.
+**Action:** Start the five independent queries in one `Promise.all`. This preserves the query count while removing the separate user-lookup wait from the successful request's critical path.
