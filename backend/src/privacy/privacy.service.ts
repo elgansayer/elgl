@@ -20,6 +20,7 @@ const ARCHIVE_PAGE_SIZE = 500;
 const MAX_ROWS_PER_DATASET = 50_000;
 const DEFAULT_RETENTION_DAYS = 7;
 const DEFAULT_SIGNED_URL_SECONDS = 300;
+const ARCHIVE_CLEANUP_CONCURRENCY = 10;
 
 type ArchiveStatus = 'processing' | 'ready' | 'failed' | 'expired';
 
@@ -218,31 +219,54 @@ export class PrivacyService {
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
     let purged = 0;
-    for (const row of rows) {
-      if (row.object_key) {
-        const { error: removeError } = await supabase.storage
-          .from(ARCHIVE_BUCKET)
-          .remove([row.object_key]);
-        if (removeError) {
-          this.logger.error('gdpr_archive_cleanup_object_failed');
-          continue;
-        }
-      }
+    let failed = 0;
 
-      const { error: updateError } = await supabase
-        .from('archive_requests')
-        .update({
-          status: 'expired',
-          object_key: null,
-          archive_url: null,
-          updated_at: new Date().toISOString(),
-        } as never)
-        .eq('id', row.id);
-      if (!updateError) purged += 1;
+    for (
+      let offset = 0;
+      offset < rows.length;
+      offset += ARCHIVE_CLEANUP_CONCURRENCY
+    ) {
+      const chunk = rows.slice(offset, offset + ARCHIVE_CLEANUP_CONCURRENCY);
+      const results = await Promise.allSettled(
+        chunk.map(async (row) => {
+          if (row.object_key) {
+            const { error: removeError } = await supabase.storage
+              .from(ARCHIVE_BUCKET)
+              .remove([row.object_key]);
+            if (removeError) {
+              this.logger.error('gdpr_archive_cleanup_object_failed');
+              throw new Error('remove_failed');
+            }
+          }
+
+          const { error: updateError } = await supabase
+            .from('archive_requests')
+            .update({
+              status: 'expired',
+              object_key: null,
+              archive_url: null,
+              updated_at: new Date().toISOString(),
+            } as never)
+            .eq('id', row.id);
+
+          if (updateError) {
+            throw new Error('update_failed');
+          }
+        }),
+      );
+
+      purged += results.filter(
+        (result) => result.status === 'fulfilled',
+      ).length;
+      failed += results.filter((result) => result.status === 'rejected').length;
     }
 
-    if (purged > 0)
+    if (failed > 0) {
+      this.logger.error(`gdpr_archive_cleanup_items_failed count=${failed}`);
+    }
+    if (purged > 0) {
       this.logger.log(`gdpr_archive_cleanup_complete count=${purged}`);
+    }
     return purged;
   }
 

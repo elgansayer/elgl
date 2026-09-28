@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-08 - [Batch Archive Cleanup Queries with Promise.allSettled]
+
+**Learning:** Sequential awaits in GDPR archive cleanup add storage and database latency, while unbounded fan-out can overload Supabase and amplify provider failures.
+**Action:** Process archive cleanup in bounded `Promise.allSettled` chunks. Preserve partial progress and report only privacy-safe aggregate failure counts.
