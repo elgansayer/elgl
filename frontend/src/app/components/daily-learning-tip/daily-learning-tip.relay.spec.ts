@@ -69,7 +69,14 @@ describe('DailyLearningTipComponent Relay contract', () => {
     expect(classes).toContain('pe-4');
     expect(classes).toContain('pt-4');
     expect(classes).toContain('pb-4');
-    expect(classes).not.toMatch(/\b(?:w|max-w|min-w|h|max-h|min-h)-/);
+    // min-w-0/min-h-0 are flex/grid shrink-to-fit resets, not host sizing
+    // impositions - they never set an actual width/height - so they're
+    // allowed while any other w-/h-/max-*/min-* sizing class stays banned.
+    const sizingClasses = classes
+      .split(/\s+/)
+      .filter((token) => /^(?:w|max-w|h|max-h|min-w|min-h)-/.test(token))
+      .filter((token) => token !== 'min-w-0' && token !== 'min-h-0');
+    expect(sizingClasses).toEqual([]);
     expect(classes).not.toMatch(/\b(?:ml|mr|pl|pr)-/);
   });
 

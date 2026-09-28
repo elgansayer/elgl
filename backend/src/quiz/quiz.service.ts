@@ -65,22 +65,26 @@ const CEFR_THRESHOLDS = [
   {
     cefr: 'B1',
     minPercentage: 40,
-    description: 'Intermediate - You can deal with most travel and familiar topics.',
+    description:
+      'Intermediate - You can deal with most travel and familiar topics.',
   },
   {
     cefr: 'B2',
     minPercentage: 60,
-    description: 'Upper Intermediate - You can interact with a degree of fluency.',
+    description:
+      'Upper Intermediate - You can interact with a degree of fluency.',
   },
   {
     cefr: 'C1',
     minPercentage: 80,
-    description: 'Advanced - You can express yourself fluently and spontaneously.',
+    description:
+      'Advanced - You can express yourself fluently and spontaneously.',
   },
   {
     cefr: 'C2',
     minPercentage: 90,
-    description: 'Proficient - You have mastered the language to a near-native level.',
+    description:
+      'Proficient - You have mastered the language to a near-native level.',
   },
 ] as const;
 
@@ -116,7 +120,9 @@ export class QuizService {
   ): Promise<QuizResults> {
     const answerEntries = Object.entries(submission.answers ?? {});
     if (answerEntries.length === 0 || answerEntries.length > 30) {
-      throw new BadRequestException('A complete diagnostic answer set is required');
+      throw new BadRequestException(
+        'A complete diagnostic answer set is required',
+      );
     }
 
     const questions = await this.loadQuestions(submission.targetLanguage);
@@ -157,7 +163,9 @@ export class QuizService {
       answerIds.length !== questions.length ||
       answerIds.some((id) => !questionIds.has(id))
     ) {
-      throw new BadRequestException('Every diagnostic question must be answered once');
+      throw new BadRequestException(
+        'Every diagnostic question must be answered once',
+      );
     }
 
     let score = 0;
@@ -181,7 +189,9 @@ export class QuizService {
         throw new BadRequestException('A diagnostic answer is invalid');
       }
 
-      const questionMax = Math.max(...question.options.map((option) => option.points));
+      const questionMax = Math.max(
+        ...question.options.map((option) => option.points),
+      );
       score += selected.points;
       maxScore += questionMax;
 
@@ -192,9 +202,11 @@ export class QuizService {
     }
 
     const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-    const threshold = [...CEFR_THRESHOLDS]
-      .reverse()
-      .find((entry) => percentage >= entry.minPercentage) ?? CEFR_THRESHOLDS[0];
+    const threshold =
+      [...CEFR_THRESHOLDS]
+        .reverse()
+        .find((entry) => percentage >= entry.minPercentage) ??
+      CEFR_THRESHOLDS[0];
 
     const skillBreakdown: QuizResults['skillBreakdown'] = {};
     for (const [skill, values] of Object.entries(skillScores)) {
@@ -219,9 +231,14 @@ export class QuizService {
     };
   }
 
-  private async loadQuestions(language: string): Promise<InternalQuizQuestion[]> {
+  private async loadQuestions(
+    language: string,
+  ): Promise<InternalQuizQuestion[]> {
     const requested = await this.fetchRows(language);
-    const rows = requested.length > 0 || language === 'en' ? requested : await this.fetchRows('en');
+    const rows =
+      requested.length > 0 || language === 'en'
+        ? requested
+        : await this.fetchRows('en');
 
     if (rows.length === 0) return [];
 
@@ -240,7 +257,9 @@ export class QuizService {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('assessment_questions' as never)
-      .select('id, question_text, language, options, skill_area, category, difficulty_level')
+      .select(
+        'id, question_text, language, options, skill_area, category, difficulty_level',
+      )
       .eq('language', language)
       .order('difficulty_level', { ascending: true })
       .limit(20);
@@ -252,7 +271,7 @@ export class QuizService {
       );
     }
 
-    return Array.isArray(data) ? (data as AssessmentRow[]) : [];
+    return Array.isArray(data) ? data : [];
   }
 
   private mapRow(row: AssessmentRow): InternalQuizQuestion | null {

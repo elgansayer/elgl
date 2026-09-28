@@ -106,7 +106,10 @@ describe('QuestsService', () => {
   });
 
   it('fails closed with a stable error when quests cannot be loaded', async () => {
-    rpc.mockResolvedValue({ data: null, error: { message: 'database detail' } });
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'database detail' },
+    });
 
     await expect(service.getQuests('user-1')).rejects.toThrow(
       InternalServerErrorException,
@@ -140,7 +143,10 @@ describe('QuestsService', () => {
   });
 
   it('surfaces an atomic progress failure without retrying or awarding locally', async () => {
-    rpc.mockResolvedValue({ data: null, error: { message: 'transaction failed' } });
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'transaction failed' },
+    });
 
     await expect(
       service.incrementProgress('user-1', 'post_moment', 1),

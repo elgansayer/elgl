@@ -5,28 +5,45 @@ import { Centrifuge, Subscription } from 'centrifuge';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
-/** Maximum number of reconnection attempts before giving up */
+/** Maximum number of terminal/initial reconnection attempts before giving up. */
 const MAX_RECONNECT_ATTEMPTS = 8;
-/** Base delay in milliseconds for exponential backoff */
+/** Base delay in milliseconds for exponential backoff. */
 const BASE_RECONNECT_DELAY_MS = 500;
-/** Maximum delay cap in milliseconds */
+/** Maximum delay cap in milliseconds. */
 const MAX_RECONNECT_DELAY_MS = 30_000;
+
+type ConnectionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'reconnecting'
+  | 'connected'
+  | 'rate-limited'
+  | 'error';
+
+interface TokenRequest {
+  accessToken: string;
+  promise: Promise<string>;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class CentrifugeService {
-  private http = inject(HttpClient);
-  private authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
-  private subscriptions = new Map<string, Subscription>();
-  private subscriptionHandlers = new Map<string, (data: unknown) => void>();
+  private readonly subscriptions = new Map<string, Subscription>();
+  private readonly subscriptionHandlers = new Map<string, (data: unknown) => void>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private intentionallyDisconnected = false;
+  private connectPromise: Promise<void> | null = null;
+  private tokenRequest: TokenRequest | null = null;
+  private clientGeneration = 0;
+  private hasConnectedOnce = false;
 
   readonly isConnected = signal<boolean>(false);
-  readonly connectionStatus = signal<string>('disconnected');
+  readonly connectionStatus = signal<ConnectionStatus>('disconnected');
 
   /**
    * Calculates exponential backoff delay with jitter.
@@ -48,7 +65,7 @@ export class CentrifugeService {
   private getRetryAfterMs(response: HttpResponseBase, fallbackMs: number): number {
     const raw = response.headers.get('Retry-After');
     if (!raw) return fallbackMs;
-    const seconds = parseInt(raw, 10);
+    const seconds = Number.parseInt(raw, 10);
     if (Number.isFinite(seconds) && seconds > 0) {
       return Math.min(seconds * 1000, MAX_RECONNECT_DELAY_MS);
     }
@@ -56,12 +73,12 @@ export class CentrifugeService {
   }
 
   private scheduleReconnect(overrideDelayMs?: number): void {
-    if (this.intentionallyDisconnected) {
+    if (this.intentionallyDisconnected || this.reconnectTimer) {
       return;
     }
 
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      this.connectionStatus.set('error: max reconnection attempts reached');
+      this.connectionStatus.set('error');
       console.error('Max Centrifugo reconnection attempts reached. Giving up.');
       return;
     }
@@ -69,11 +86,7 @@ export class CentrifugeService {
     const delay = overrideDelayMs ?? this.calculateBackoffDelay();
     this.reconnectAttempts += 1;
 
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-    }
-
-    // Exception allowed by AGENTS.md Section 5.3:
+    // Exception allowed by frontend/AGENTS.md's Lifecycle Hook Bans note:
     // `setTimeout` is permitted for imperative third-party library integration
     // (Centrifugo reconnection backoff is a non-reactive real-time concern).
     this.reconnectTimer = setTimeout(() => {
@@ -113,7 +126,74 @@ export class CentrifugeService {
     }
   }
 
+  /**
+   * Mint a short-lived connection token using the current Supabase access token.
+   * Requests for the same access token are deduplicated, but an account/session
+   * change always starts a new request so a stale credential cannot cross users.
+   */
+  private async fetchConnectionToken(): Promise<string> {
+    const accessToken = this.authService.getAccessToken();
+    if (!accessToken) {
+      throw new Error('Centrifugo authentication is unavailable.');
+    }
+
+    if (this.tokenRequest?.accessToken === accessToken) {
+      return this.tokenRequest.promise;
+    }
+
+    const promise = firstValueFrom(
+      this.http.post<{ token: string }>(
+        `${environment.apiUrl}/chat/token`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          observe: 'response',
+        },
+      ),
+    ).then((response) => {
+      const token = response?.body?.token?.trim();
+      if (!token) {
+        throw new Error('Centrifugo token endpoint returned no token.');
+      }
+      return token;
+    });
+
+    const request: TokenRequest = { accessToken, promise };
+    this.tokenRequest = request;
+
+    try {
+      return await promise;
+    } finally {
+      if (this.tokenRequest === request) {
+        this.tokenRequest = null;
+      }
+    }
+  }
+
+  /**
+   * Keep client construction isolated so the transport lifecycle can be tested
+   * independently from the third-party WebSocket implementation.
+   */
+  private createClient(initialToken: string): Centrifuge {
+    return new Centrifuge(environment.centrifugoUrl, {
+      token: initialToken,
+      // Centrifugo calls this whenever the short-lived connection token needs
+      // refreshing, including after long-lived tabs reconnect.
+      getToken: () => this.fetchConnectionToken(),
+    });
+  }
+
   async connect(): Promise<void> {
+    if (!this.authService.getAccessToken()) {
+      if (this.centrifuge || this.connectPromise) {
+        this.disconnect();
+      } else {
+        this.isConnected.set(false);
+        this.connectionStatus.set('disconnected');
+      }
+      return;
+    }
+
     if (
       this.centrifuge &&
       (this.centrifuge.state === 'connected' || this.centrifuge.state === 'connecting')
@@ -121,55 +201,58 @@ export class CentrifugeService {
       return;
     }
 
-    const accessToken = this.authService.getAccessToken();
-    if (!accessToken) {
-      this.isConnected.set(false);
-      this.connectionStatus.set('disconnected');
-      return;
+    if (this.connectPromise) {
+      return this.connectPromise;
     }
 
     this.intentionallyDisconnected = false;
-    this.connectionStatus.set('connecting');
-    try {
-      const tokenResponse = await firstValueFrom(
-        this.http.post<{ token: string }>(
-          `${environment.apiUrl}/chat/token`,
-          {},
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            observe: 'response',
-          },
-        ),
-      );
+    this.connectionStatus.set(this.hasConnectedOnce ? 'reconnecting' : 'connecting');
+    const generation = ++this.clientGeneration;
 
-      if (!tokenResponse?.body?.token) {
-        this.isConnected.set(false);
-        this.connectionStatus.set('error: rate limited or missing token');
-        this.scheduleReconnect();
+    const promise = this.initialiseClient(generation);
+    this.connectPromise = promise;
+    try {
+      await promise;
+    } finally {
+      if (this.connectPromise === promise) {
+        this.connectPromise = null;
+      }
+    }
+  }
+
+  private async initialiseClient(generation: number): Promise<void> {
+    try {
+      const token = await this.fetchConnectionToken();
+      if (this.intentionallyDisconnected || generation !== this.clientGeneration) {
         return;
       }
 
       const previousClient = this.centrifuge;
-      const client = new Centrifuge(environment.centrifugoUrl, {
-        token: tokenResponse.body.token,
-      });
+      const client = this.createClient(token);
       this.centrifuge = client;
+
+      client.on('connecting', () => {
+        if (this.centrifuge !== client) return;
+        this.isConnected.set(false);
+        this.connectionStatus.set(this.hasConnectedOnce ? 'reconnecting' : 'connecting');
+      });
 
       client.on('connected', () => {
         if (this.centrifuge !== client) return;
         this.reconnectAttempts = 0;
+        this.hasConnectedOnce = true;
         this.isConnected.set(true);
         this.connectionStatus.set('connected');
       });
 
-      client.on('disconnected', (ctx) => {
+      client.on('disconnected', () => {
         if (this.centrifuge !== client) return;
         this.isConnected.set(false);
         this.connectionStatus.set('disconnected');
-        if (
-          !this.intentionallyDisconnected &&
-          (!ctx?.reason || ctx.reason === 'connect error' || ctx.reason === 'disconnect')
-        ) {
+
+        // Centrifuge handles transient reconnects internally. A `disconnected`
+        // event is terminal, so create a fresh client only for that state.
+        if (!this.intentionallyDisconnected) {
           this.scheduleReconnect();
         }
       });
@@ -177,16 +260,21 @@ export class CentrifugeService {
       client.on('error', () => {
         if (this.centrifuge !== client) return;
         console.error('Centrifugo connection error.');
-        this.connectionStatus.set('error');
+        this.isConnected.set(false);
+        this.connectionStatus.set(client.state === 'connecting' ? 'reconnecting' : 'error');
       });
 
       this.restoreSubscriptions();
       previousClient?.disconnect();
       client.connect();
     } catch (error) {
+      if (this.intentionallyDisconnected || generation !== this.clientGeneration) {
+        return;
+      }
+
       this.isConnected.set(false);
       if (error instanceof HttpErrorResponse && error.status === 429) {
-        this.connectionStatus.set('error: rate limited');
+        this.connectionStatus.set('rate-limited');
         const retryMs = this.getRetryAfterMs(error, this.calculateBackoffDelay());
         this.scheduleReconnect(retryMs);
       } else {
@@ -240,11 +328,13 @@ export class CentrifugeService {
 
   disconnect(): void {
     this.intentionallyDisconnected = true;
+    this.clientGeneration += 1;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
     this.reconnectAttempts = 0;
+    this.hasConnectedOnce = false;
 
     const client = this.centrifuge;
     this.centrifuge = null;

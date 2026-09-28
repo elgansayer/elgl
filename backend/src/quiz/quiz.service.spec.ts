@@ -1,4 +1,7 @@
-import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Mock } from 'vitest';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -53,9 +56,11 @@ describe('QuizService', () => {
           select: vi.fn().mockReturnValue({
             eq: vi.fn((_column: string, language: string) => ({
               order: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue(
-                  questionResults.get(language) ?? { data: [], error: null },
-                ),
+                limit: vi
+                  .fn()
+                  .mockResolvedValue(
+                    questionResults.get(language) ?? { data: [], error: null },
+                  ),
               }),
             })),
           }),
@@ -92,7 +97,10 @@ describe('QuizService', () => {
   });
 
   it('fails closed when question storage is unavailable', async () => {
-    questionResults.set('en', { data: null, error: { message: 'secret db detail' } });
+    questionResults.set('en', {
+      data: null,
+      error: { message: 'secret db detail' },
+    });
     await expect(service.getQuestions('en')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );

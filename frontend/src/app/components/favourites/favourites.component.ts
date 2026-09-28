@@ -33,10 +33,13 @@ export class FavouritesComponent implements OnDestroy {
 
   readonly favourites = signal<FavouriteRecord[]>([]);
   readonly isLoading = signal<boolean>(true);
+  readonly loadError = signal<boolean>(false);
+  readonly deleteError = signal<boolean>(false);
   readonly activeTab = signal<FavouritesTab>('all');
   readonly audioPlayingId = signal<string | null>(null);
   readonly pendingDeleteIds = signal<ReadonlySet<string>>(new Set<string>());
   private audioElement: HTMLAudioElement | null = null;
+  private loadGeneration = 0;
 
   readonly tabs: TabDefinition[] = [
     { id: 'all', labelKey: 'favourites.tabAll', icon: '\u2B50' },
@@ -86,22 +89,30 @@ export class FavouritesComponent implements OnDestroy {
   });
 
   constructor() {
-    this.loadFavourites();
+    void this.loadFavourites();
   }
 
   ngOnDestroy(): void {
+    this.loadGeneration++;
     this.stopAudio();
   }
 
   async loadFavourites(): Promise<void> {
+    const generation = ++this.loadGeneration;
     this.isLoading.set(true);
+    this.loadError.set(false);
+
     try {
       const data = await this.chatService.getFavourites();
+      if (generation !== this.loadGeneration) return;
       this.favourites.set(data);
-    } catch (e) {
-      console.error('Failed to load favourites:', e);
+    } catch {
+      if (generation !== this.loadGeneration) return;
+      this.loadError.set(true);
     } finally {
-      this.isLoading.set(false);
+      if (generation === this.loadGeneration) {
+        this.isLoading.set(false);
+      }
     }
   }
 
@@ -116,6 +127,7 @@ export class FavouritesComponent implements OnDestroy {
   async deleteFavourite(fav: FavouriteRecord): Promise<void> {
     if (this.isDeletingFavourite(fav.id)) return;
 
+    this.deleteError.set(false);
     this.pendingDeleteIds.update((ids) => {
       const next = new Set(ids);
       next.add(fav.id);
@@ -128,8 +140,8 @@ export class FavouritesComponent implements OnDestroy {
         this.stopAudio();
       }
       this.favourites.update((list) => list.filter((f) => f.id !== fav.id));
-    } catch (e) {
-      console.error('Failed to delete favourite:', e);
+    } catch {
+      this.deleteError.set(true);
     } finally {
       this.pendingDeleteIds.update((ids) => {
         const next = new Set(ids);

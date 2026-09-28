@@ -48,27 +48,45 @@ describe('WordOfTheDayService', () => {
   });
 
   it('returns the same word for the whole UTC day', () => {
-    const morning = service.getWordForDate('es', new Date('2026-08-22T00:00:01.000Z'));
-    const evening = service.getWordForDate('es', new Date('2026-08-22T23:59:59.000Z'));
+    const morning = service.getWordForDate(
+      'es',
+      new Date('2026-08-22T00:00:01.000Z'),
+    );
+    const evening = service.getWordForDate(
+      'es',
+      new Date('2026-08-22T23:59:59.000Z'),
+    );
 
     expect(evening).toEqual(morning);
   });
 
   it('rotates to a different word on the next UTC day', () => {
-    const first = service.getWordForDate('fr', new Date('2026-08-22T12:00:00.000Z'));
-    const next = service.getWordForDate('fr', new Date('2026-08-23T12:00:00.000Z'));
+    const first = service.getWordForDate(
+      'fr',
+      new Date('2026-08-22T12:00:00.000Z'),
+    );
+    const next = service.getWordForDate(
+      'fr',
+      new Date('2026-08-23T12:00:00.000Z'),
+    );
 
     expect(next.word).not.toBe(first.word);
     expect(next.date).toBe('2026-08-23');
   });
 
   it('normalises locale-style language codes', () => {
-    const result = service.getWordForDate('JA-JP', new Date('2026-08-22T12:00:00.000Z'));
+    const result = service.getWordForDate(
+      'JA-JP',
+      new Date('2026-08-22T12:00:00.000Z'),
+    );
     expect(result.languageCode).toBe('ja');
   });
 
   it('falls back to English for unsupported language catalogues', () => {
-    const result = service.getWordForDate('sv', new Date('2026-08-22T12:00:00.000Z'));
+    const result = service.getWordForDate(
+      'sv',
+      new Date('2026-08-22T12:00:00.000Z'),
+    );
     expect(result.languageCode).toBe('en');
     expect(result.language).toBe('English');
   });
