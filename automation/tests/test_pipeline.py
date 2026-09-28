@@ -1046,6 +1046,53 @@ def test_conflicting_pull_request_enters_repair_before_pending_checks(
     assert result.state is JobState.REPAIRING
 
 
+def test_verifying_pull_request_rechecks_conflict_without_a_new_head(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "CONFLICTING",
+            "",
+            "reviewed-head",
+            False,
+            True,
+            merge_state_status="DIRTY",
+        )
+    ]
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    job = Job(
+        task=Task("77", "Resolve persisted conflict", "Body", "github-pull-request", 10),
+        state=JobState.VERIFYING,
+        branch="fix/conflict",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_pull_request_worktree",
+        lambda workflow, path, branch: path.mkdir(parents=True, exist_ok=True),
+    )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "reviewed-head")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: pytest.fail("conflicting head must not be verified"),
+    )
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.REPAIRING
+
+
 def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
