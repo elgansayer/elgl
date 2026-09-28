@@ -1,15 +1,25 @@
 import { Module } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
+import { GrammarCheckService } from './grammar-check.service';
+import { GrammarExplanationService } from './grammar-explanation.service';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
 import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
 import { TranslationRouterService } from './translation-router.service';
+import { PronunciationScoringService } from './pronunciation-scoring.service';
 
 @Module({
   imports: [UsersModule, LlmProxyModule],
   controllers: [NlpController],
-  providers: [NlpService, NlpRateLimiterGuard, TranslationRouterService],
+  providers: [
+    NlpService,
+    GrammarCheckService,
+    GrammarExplanationService,
+    PronunciationScoringService,
+    NlpRateLimiterGuard,
+    TranslationRouterService,
+  ],
   exports: [NlpService, TranslationRouterService],
 })
 export class NlpModule {}
