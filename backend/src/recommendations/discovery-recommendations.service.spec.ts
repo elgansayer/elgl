@@ -17,6 +17,10 @@ function candidate(id: string, overrides: Partial<Candidate> = {}): Candidate {
     is_serious_learner: false,
     study_streak_days: 0,
     last_active_at: '2026-08-21T09:00:00Z',
+    correction_ratio: 0,
+    proficiency_level: 'B1',
+    country: 'FR',
+    learning_goals: null,
     ...overrides,
   };
 }
@@ -25,6 +29,9 @@ describe('rankDiscoveryRecommendations', () => {
   const current = {
     nativeLanguages: ['en'],
     targetLanguages: ['ja'],
+    proficiencyLevel: 'B1',
+    country: 'FR',
+    learningGoals: ['fluency'],
   };
 
   it('ranks reciprocal language, mutual interests and recent activity together', () => {
@@ -49,9 +56,9 @@ describe('rankDiscoveryRecommendations', () => {
     ]);
     expect(result[0].recommendation_reasons).toEqual(
       expect.arrayContaining([
-        'language_exchange',
-        'shared_interests',
-        'active_recently',
+        'complementary_languages',
+        'interests',
+        'response_behaviour',
       ]),
     );
     expect(result[0]).not.toHaveProperty('last_active_at');
@@ -75,8 +82,8 @@ describe('rankDiscoveryRecommendations', () => {
     ]);
     const hidden = result.find((item) => item.id === 'hidden-active');
     const visible = result.find((item) => item.id === 'visible-active');
-    expect(hidden?.recommendation_reasons).not.toContain('active_recently');
-    expect(visible?.recommendation_reasons).toContain('active_recently');
+    expect(hidden?.recommendation_reasons).not.toContain('response_behaviour');
+    expect(visible?.recommendation_reasons).toContain('response_behaviour');
   });
 
   it('filters hidden, deleted, deletion-pending and incomplete profiles', () => {
@@ -119,7 +126,7 @@ describe('rankDiscoveryRecommendations', () => {
 
   it('keeps sparse but complete profiles when a mutual-interest signal exists', () => {
     const result = rankDiscoveryRecommendations(
-      { nativeLanguages: ['en'], targetLanguages: ['fr'] },
+      { nativeLanguages: ['en'], targetLanguages: ['fr'], learningGoals: [], country: 'FR', proficiencyLevel: 'B1' },
       [
         candidate('shared-only', {
           native_languages: ['ja'],
@@ -132,6 +139,6 @@ describe('rankDiscoveryRecommendations', () => {
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0].recommendation_reasons).toEqual(['shared_interests']);
+    expect(result[0].recommendation_reasons).toEqual(['interests', 'proficiency', 'timezone_overlap']);
   });
 });
