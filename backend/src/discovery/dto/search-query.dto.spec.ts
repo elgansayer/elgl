@@ -102,8 +102,8 @@ describe('SearchQueryDto', () => {
       expect(errors[0].property).toBe('radius_metres');
     });
 
-    it('should reject radius above 20000000', async () => {
-      const errors = await validateDto({ radius_metres: 20000001 });
+    it('should reject radius above 250000', async () => {
+      const errors = await validateDto({ radius_metres: 250001 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('radius_metres');
     });
