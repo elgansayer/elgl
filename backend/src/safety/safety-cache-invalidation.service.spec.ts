@@ -101,19 +101,23 @@ describe('SafetyCacheInvalidationService', () => {
     });
 
     it('should handle delete for prefix patterns', async () => {
-      mockRedis.keys.mockResolvedValue([
-        'admin:login-history:user-1',
-        'admin:login-history:user-2',
-      ]);
+      // Create a mock implementation that returns results specifically for the login history pattern
+      mockRedis.scan.mockImplementation((cursor: string, matchKey: string, pattern: string) => {
+        if (pattern === 'admin:login-history:*' && cursor === '0') {
+          return Promise.resolve(['0', ['admin:login-history:user-1', 'admin:login-history:user-2']]);
+        }
+        return Promise.resolve(['0', []]);
+      });
+
       mockRedis.del
         .mockResolvedValueOnce(0) // partner_of_week_ids
-        .mockResolvedValueOnce(0) // scan for admin:users:list:
-        .mockResolvedValueOnce(0) // scan for admin:blocks:list:
+        .mockResolvedValueOnce(0) // del for scan (admin:users:list:) -> no op because no keys
+        .mockResolvedValueOnce(0) // del for scan (admin:blocks:list:) -> no op because no keys
         .mockResolvedValueOnce(2); // del for login-history keys
 
       await service.invalidateTrustAndSafetyCaches();
 
-      expect(mockRedis.keys).toHaveBeenCalledWith('admin:login-history:*');
+      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:login-history:*', 'COUNT', 500);
       expect(mockRedis.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
         'admin:login-history:user-2',
@@ -159,8 +163,10 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      // 2 iterations for admin:users:list:* + 1 iteration for admin:blocks:list:*
-      expect(mockRedis.scan).toHaveBeenCalledTimes(3);
+      // 2 iterations for admin:users:list:* + 1 iteration for each other suffixed pattern (admin:blocks:list:*, etc)
+      // and 1 iteration for each prefix pattern (admin:login-history:*, daily_recommendations:*, recommendations:daily:*)
+      // 1 (users iter 1) + 1 (users iter 2) + 1 (blocks) + 1 (login-history) + 1 (daily_rec) + 1 (rec_daily) = 6
+      expect(mockRedis.scan).toHaveBeenCalledTimes(6);
     });
   });
 
