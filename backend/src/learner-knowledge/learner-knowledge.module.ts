@@ -5,6 +5,8 @@ import { HobbyTagsModule } from '../hobby-tags/hobby-tags.module';
 import { AssessmentsModule } from '../assessments/assessments.module';
 import { LessonsModule } from '../lessons/lessons.module';
 import { MomentsModule } from '../moments/moments.module';
+import { UsersModule } from '../users/users.module';
+import { StudyStreakModule } from '../study-streak/study-streak.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { MomentsModule } from '../moments/moments.module';
     AssessmentsModule,
     LessonsModule,
     MomentsModule,
+    UsersModule,
+    StudyStreakModule,
   ],
   providers: [LearnerKnowledgeService],
   exports: [LearnerKnowledgeService],

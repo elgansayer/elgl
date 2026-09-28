@@ -36,9 +36,6 @@ export class NlpRequestError extends Error {
   }
 }
 
-const MAX_SIMPLIFY_SOURCE_LENGTH = 4000;
-const MAX_SIMPLIFY_RESULT_LENGTH = 8000;
-
 @Injectable({ providedIn: 'root' })
 export class NlpService {
   private readonly authService = inject(AuthService);
@@ -84,12 +81,6 @@ export class NlpService {
     if (!text) {
       throw new NlpRequestError('empty', 'Text to simplify is required.');
     }
-    if (text.length > MAX_SIMPLIFY_SOURCE_LENGTH) {
-      throw new NlpRequestError(
-        'request',
-        `Text to simplify must be ${MAX_SIMPLIFY_SOURCE_LENGTH} characters or fewer.`,
-      );
-    }
 
     const token = this.requireAccessToken();
     const response = await fetch(`${environment.apiUrl}/nlp/simplify`, {
@@ -107,14 +98,9 @@ export class NlpService {
       throw new NlpRequestError('empty', 'No simplified text was returned.');
     }
 
-    const simplified = payload.simplified.trim();
-    if (payload.original.trim() !== text || simplified.length > MAX_SIMPLIFY_RESULT_LENGTH) {
-      throw new NlpRequestError('request', 'Invalid simplification response.');
-    }
-
     return {
-      original: payload.original.trim(),
-      simplified,
+      original: payload.original,
+      simplified: payload.simplified.trim(),
     };
   }
 

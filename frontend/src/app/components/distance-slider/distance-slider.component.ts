@@ -1,28 +1,38 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, effect } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-distance-slider',
-  imports: [TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <label class="flex w-full flex-col">
-      <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">
+    <div class="flex flex-col w-full">
+      <label
+        class="text-xs font-semibold text-text-secondary whitespace-nowrap"
+        for="distance-range-slider"
+      >
         {{ 'discovery.radiusLabel' | t: { radius: currentDistanceKm() } }}
-      </span>
-      <span class="relative h-8">
+      </label>
+      <div class="relative h-8">
         <input
+          id="distance-range-slider"
           type="range"
-          [min]="effectiveMinKm()"
-          [max]="effectiveMaxKm()"
+          [min]="minKm()"
+          [max]="maxKm()"
           [value]="currentDistanceKm()"
           [disabled]="disabled()"
           (input)="onChange($event)"
           step="1"
           class="w-full h-8 appearance-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           [style.accent-color]="'var(--color-primary)'"
+          aria-valuemin="{{ minKm() }}"
+          aria-valuemax="{{ maxKm() }}"
+          aria-valuenow="{{ currentDistanceKm() }}"
+          aria-valuetext="{{ currentDistanceKm() }} km"
         />
-      </span>
-    </label>
+      </div>
+    </div>
   `,
   styles: [
     `
@@ -76,30 +86,20 @@ export class DistanceSliderComponent {
   distanceChanged = output<number>();
 
   readonly currentDistanceKm = signal(50);
-  readonly effectiveMinKm = computed(() => Math.min(this.minKm(), this.maxKm()));
-  readonly effectiveMaxKm = computed(() => Math.max(this.minKm(), this.maxKm()));
 
   constructor() {
     effect(() => {
       const initial = this.initialDistanceKm();
-      const value = initial ?? this.currentDistanceKm();
-      this.currentDistanceKm.set(this.clamp(value));
+      if (initial !== undefined) this.currentDistanceKm.set(initial);
     });
   }
 
   protected onChange(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
-
-    const clamped = this.clamp(Number(target.value));
+    const value = Number(target.value);
+    const clamped = Math.max(this.minKm(), Math.min(value, this.maxKm()));
     this.currentDistanceKm.set(clamped);
     this.distanceChanged.emit(clamped);
-  }
-
-  private clamp(value: number): number {
-    const min = this.effectiveMinKm();
-    const max = this.effectiveMaxKm();
-    const finiteValue = Number.isFinite(value) ? value : min;
-    return Math.max(min, Math.min(finiteValue, max));
   }
 }

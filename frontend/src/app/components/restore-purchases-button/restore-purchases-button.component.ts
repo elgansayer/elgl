@@ -1,9 +1,6 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, inject } from '@angular/core';
 
-import {
-  RestorePurchasesService,
-  RestoreResult,
-} from '../../services/restore-purchases.service';
+import { RestorePurchasesService } from '../../services/restore-purchases.service';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -16,8 +13,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
       [size]="'sm'"
       (clicked)="onRestore()"
       [customClass]="'w-full justify-center text-xs'"
-      [ariaLabel]="'restore_purchases' | t"
-      [attr.aria-busy]="restoreService.isRestoring()"
     >
       @if (restoreService.isRestoring()) {
         <span class="flex items-center gap-2">
@@ -26,7 +21,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            aria-hidden="true"
           >
             <circle
               class="opacity-25"
@@ -48,22 +42,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
         {{ 'restore_purchases' | t }}
       }
     </app-button-secondary>
-
-    @if (restoreService.lastRestoreResult(); as result) {
-      <p class="sr-only" role="status" aria-live="polite">{{ result.message }}</p>
-    }
   `,
 })
 export class RestorePurchasesButtonComponent {
   readonly restoreService = inject(RestorePurchasesService);
-  readonly restored = output<RestoreResult>();
 
   async onRestore(): Promise<void> {
-    if (this.restoreService.isRestoring()) return;
-
-    const result = await this.restoreService.restorePurchases();
-    if (result.success) {
-      this.restored.emit(result);
-    }
+    await this.restoreService.restorePurchases();
   }
 }

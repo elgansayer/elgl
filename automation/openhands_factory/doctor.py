@@ -973,18 +973,10 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
             )
         )
     checks.extend(disk_space_checks(config))
-    scripts = (
-        (
-            config.repository / "tools/check_openhands_control_plane.py",
-            config.repository / "tools/test_openhands_control_plane.py",
-        )
-        if config.repository_profile == "workout-agent"
-        else (
-            config.repository / "scripts/verify-constitution.mjs",
-            config.repository / "scripts/check-conflict-markers.mjs",
-        )
-    )
-    for script in scripts:
+    for script in (
+        config.repository / "scripts/verify-constitution.mjs",
+        config.repository / "scripts/check-conflict-markers.mjs",
+    ):
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
     checks.append(leaked_port_environment_check())
     checks.append(daemon_health_check(config))
@@ -1002,17 +994,12 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
                 checks.append(Check("opencode-go-api", True, config.opencode_model))
             except (RuntimeError, ValueError) as error:
                 checks.append(Check("opencode-go-api", False, str(error)))
-    systemd_unit = (
-        config.prompt_dir.parents[1] / "config/systemd/repo-factory@.service"
-        if config.repository_profile == "workout-agent"
-        else config.repository / "config/systemd/hellotalk-factory.service"
-    )
     try:
         systemd = subprocess.run(
             (
                 "systemd-analyze",
                 "verify",
-                str(systemd_unit),
+                str(config.repository / "config/systemd/hellotalk-factory.service"),
             ),
             capture_output=True,
             text=True,

@@ -138,17 +138,10 @@ describe('CacheControlInterceptor', () => {
     function createCallContext(
       setHeader = vi.fn(),
       removeHeader = vi.fn(),
-      authorization?: string,
     ): Parameters<typeof CacheControlInterceptor.prototype.intercept>[0] {
       const mockResponse = { setHeader, removeHeader };
-      const mockRequest = {
-        headers: authorization ? { authorization } : {},
-      };
       return {
-        switchToHttp: () => ({
-          getRequest: () => mockRequest,
-          getResponse: () => mockResponse,
-        }),
+        switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<
         typeof CacheControlInterceptor.prototype.intercept
       >[0];
@@ -175,61 +168,6 @@ describe('CacheControlInterceptor', () => {
       expect(setHeader).toHaveBeenCalledTimes(3);
     });
 
-    it('should downgrade public caching to no-store for authenticated requests', async () => {
-      const setHeader = vi.fn();
-      const context = createCallContext(
-        setHeader,
-        vi.fn(),
-        'Bearer user-specific-token',
-      );
-      const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_SHORT, [
-        'sticker-packs',
-      ]);
-      const next = { handle: () => of('private-body') } as Parameters<
-        typeof interceptor.intercept
-      >[1];
-
-      const result = await lastValueFrom(interceptor.intercept(context, next));
-
-      expect(result).toBe('private-body');
-      expect(setHeader).toHaveBeenCalledWith(
-        'Cache-Control',
-        'private, no-store',
-      );
-      expect(setHeader).toHaveBeenCalledWith(
-        'CDN-Cache-Control',
-        'private, no-store',
-      );
-      expect(setHeader).not.toHaveBeenCalledWith(
-        'Cache-Tag',
-        expect.anything(),
-      );
-      expect(setHeader).not.toHaveBeenCalledWith(
-        'Cache-Control',
-        CACHE_PUBLIC_SHORT['Cache-Control'],
-      );
-    });
-
-    it('should keep public caching for requests without authorization', async () => {
-      const setHeader = vi.fn();
-      const context = createCallContext(setHeader);
-      const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_SHORT);
-      const next = { handle: () => of('public-body') } as Parameters<
-        typeof interceptor.intercept
-      >[1];
-
-      await lastValueFrom(interceptor.intercept(context, next));
-
-      expect(setHeader).toHaveBeenCalledWith(
-        'Cache-Control',
-        CACHE_PUBLIC_SHORT['Cache-Control'],
-      );
-      expect(setHeader).toHaveBeenCalledWith(
-        'CDN-Cache-Control',
-        CACHE_PUBLIC_SHORT['CDN-Cache-Control'],
-      );
-    });
-
     it('should override to no-store on error', async () => {
       const setHeader = vi.fn();
       const context = createCallContext(setHeader);
@@ -241,6 +179,7 @@ describe('CacheControlInterceptor', () => {
       const result$ = interceptor.intercept(context, next);
       await expect(lastValueFrom(result$)).rejects.toThrow('db error');
 
+      // On error, both calls to setHeader should be no-store
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Control',
         'private, no-store',

@@ -12,7 +12,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from threading import Semaphore, Thread
+from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
@@ -21,23 +21,19 @@ from openhands_factory.agents.router import AgentRouter
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
-from openhands_factory.doctor import disk_space_checks, no_pr_progress_check
-from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
+from openhands_factory.doctor import disk_space_checks
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
     FactoryGeneration,
     activate_generation,
     assert_generation_current,
 )
-from openhands_factory.host_diagnostics import gather_diagnostics
-from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import IssueAdmissionGate
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
-from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
-from openhands_factory.worktree_cache import prune_inactive_worktree_caches
 
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
@@ -80,12 +76,6 @@ def is_review_lane_job(job: Job) -> bool:
     )
 
 
-def review_lane_is_busy(jobs: Mapping[str, Job], task_ids: set[str]) -> bool:
-    """Keep background architecture work from competing with active PR throughput."""
-
-    return any(task_id in task_ids and is_review_lane_job(job) for task_id, job in jobs.items())
-
-
 def is_new_github_issue(job: Job) -> bool:
     """Return whether the job is entering the Factory from issue discovery."""
 
@@ -99,45 +89,12 @@ def is_new_github_issue(job: Job) -> bool:
 _REVIEW_STATE_ORDER = {
     JobState.MERGE_QUEUED: 0,
     JobState.READY_TO_MERGE: 1,
-    # A locally verified head waiting for independent review is one transition
-    # closer to merge than a head still running verification. Rank both durable
-    # continuations and other actionable work ahead of passive CI polling. With a
-    # large backlog, polling every pending head first can otherwise delay a known
-    # conflict repair for many minutes on every scheduler cycle.
-    JobState.REVIEWING: 2,
-    JobState.VERIFYING: 3,
+    JobState.CI_PENDING: 2,
+    JobState.REVIEWING: 3,
     JobState.QUALITY_REPAIRING: 4,
     JobState.REPAIRING: 5,
-    JobState.CI_PENDING: 6,
-    JobState.PR_DRAFT: 7,
+    JobState.PR_DRAFT: 6,
 }
-
-
-def admission_slots_while_respecting_wip(
-    interval_slots: int | None,
-    *,
-    wip_paused: bool,
-) -> int | None:
-    """Zero out new-issue admission while a configured PR WIP limit is exceeded.
-
-    Workers already active finish normally. Queued issue-only work waits while open
-    PRs advance through review, repair, CI and merge, so the queue cannot keep growing
-    or consume the host while reviewer capacity is saturated. Callers gate Architect
-    dispatch and queued issue selection on the same ``wip_paused`` flag.
-    """
-
-    return 0 if wip_paused else interval_slots
-
-
-def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
-    """Prioritise merge proximity while rotating equally eligible PRs fairly."""
-
-    return (
-        job.task.priority,
-        _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
-        job.updated_at,
-        int(job.task.identifier),
-    )
 
 
 def select_issue_admitted(
@@ -168,7 +125,6 @@ def select_batch(
     new_issue_slots: int | None = None,
     review_first: bool = True,
     review_lane_max_concurrent: int = 1,
-    review_only: bool = False,
 ) -> list[Job]:
     if limit <= 0:
         return []
@@ -180,7 +136,6 @@ def select_batch(
         if job.task.identifier not in excluded
         and job.state.value not in {"done", "quarantined"}
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
-        and (not review_only or is_review_lane_job(job))
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
 
@@ -192,19 +147,12 @@ def select_batch(
     remaining = [item for item in candidates if not is_review_lane_job(item)]
     review_ready = sorted(
         (item for item in candidates if is_review_lane_job(item)),
-        key=_review_sort_key,
+        key=lambda item: (
+            item.task.priority,
+            _REVIEW_STATE_ORDER.get(item.state, len(_REVIEW_STATE_ORDER)),
+            int(item.task.identifier),
+        ),
     )[:review_capacity]
-
-    # Two shared host slots are deliberate on the 8 GiB production host. When
-    # both are filled from a large PR backlog, issue implementation otherwise
-    # starves indefinitely. Preserve one slot for eligible non-review work while
-    # still using both review lanes whenever no issue or repair can advance.
-    issue_candidate_available = any(
-        not is_new_github_issue(item) or new_issue_slots is None or new_issue_slots > 0
-        for item in remaining
-    )
-    if review_first and limit > 1 and issue_candidate_available:
-        review_ready = review_ready[: limit - 1]
 
     if not review_ready:
         return select_issue_admitted(remaining, limit, new_issue_slots)
@@ -224,125 +172,27 @@ def select_batch(
     return selected
 
 
-def selection_diagnostics(
-    jobs: dict[str, Job],
-    excluded_task_ids: set[str],
-    now: datetime,
-    review_lane_max_concurrent: int,
-    review_only: bool = False,
-) -> dict[str, object]:
-    """Expose bounded scheduler inputs without task bodies or credentials."""
-
-    candidates = [
-        job
-        for job in jobs.values()
-        if job.task.identifier not in excluded_task_ids
-        and job.state.value not in {"done", "quarantined"}
-        and (job.next_attempt_at is None or job.next_attempt_at <= now)
-        and (not review_only or is_review_lane_job(job))
-    ]
-    active_review_count = sum(
-        1
-        for job in jobs.values()
-        if job.task.identifier in excluded_task_ids and is_review_lane_job(job)
-    )
-    review_capacity = max(0, review_lane_max_concurrent - active_review_count)
-    return {
-        "candidate_jobs": [job.task.identifier for job in candidates[:25]],
-        "candidate_count": len(candidates),
-        "excluded_jobs": sorted(excluded_task_ids, key=int)[:25],
-        "active_review_count": active_review_count,
-        "review_capacity": review_capacity,
-        "review_jobs": [
-            job.task.identifier
-            for job in sorted(
-                (candidate for candidate in candidates if is_review_lane_job(candidate)),
-                key=_review_sort_key,
-            )[:25]
-        ],
-    }
-
-
-def should_use_failsafe(
-    selected_jobs: list[Job],
-    diagnostic: Mapping[str, object],
-    *,
-    review_only: bool,
-) -> bool:
-    """Return whether an empty primary selection indicates a real scheduler stall."""
-
-    candidate_count = diagnostic.get("candidate_count")
-    review_capacity = diagnostic.get("review_capacity")
-    if not isinstance(candidate_count, int) or candidate_count <= 0 or selected_jobs:
-        return False
-    return not (review_only and isinstance(review_capacity, int) and review_capacity <= 0)
-
-
-def select_batch_failsafe(
-    jobs: dict[str, Job],
-    limit: int,
-    excluded_task_ids: set[str],
-    now: datetime,
-    new_issue_slots: int | None,
-    review_lane_max_concurrent: int,
-    review_only: bool = False,
-) -> list[Job]:
-    """Guarantee progress if the primary selector violates its runnable invariant."""
-
-    eligible = [
-        job
-        for job in jobs.values()
-        if job.task.identifier not in excluded_task_ids
-        and job.state not in {JobState.DONE, JobState.QUARANTINED}
-        and (job.next_attempt_at is None or job.next_attempt_at <= now)
-        and (not review_only or is_review_lane_job(job))
-    ]
-    active_reviews = sum(
-        1
-        for job in jobs.values()
-        if job.task.identifier in excluded_task_ids and is_review_lane_job(job)
-    )
-    review_slots = max(0, review_lane_max_concurrent - active_reviews)
-    reviews = sorted(
-        (job for job in eligible if is_review_lane_job(job)),
-        key=_review_sort_key,
-    )[: min(limit, review_slots)]
-    remaining = [job for job in eligible if not is_review_lane_job(job)]
-    remaining.sort(key=lambda job: (job.task.priority, int(job.task.identifier)))
-    issue_candidate_available = any(
-        not is_new_github_issue(job) or new_issue_slots is None or new_issue_slots > 0
-        for job in remaining
-    )
-    if limit > 1 and issue_candidate_available:
-        reviews = reviews[: limit - 1]
-    return [
-        *reviews,
-        *select_issue_admitted(remaining, limit - len(reviews), new_issue_slots),
-    ]
-
-
 def refresh_jobs(
     pipeline: FactoryPipeline,
     protected_task_ids: set[str],
-    _started_at: float,
+    now: float,
     cooldown_seconds: int,
 ) -> tuple[dict[str, Job], float]:
     """Refresh GitHub work without turning a control-plane outage into a crash."""
 
     try:
-        jobs = pipeline.refresh(protected_task_ids)
-        return jobs, time.monotonic() + cooldown_seconds
+        return pipeline.refresh(protected_task_ids), now + cooldown_seconds
     except FactoryError as error:
         LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
-        return pipeline.jobs.load(), time.monotonic() + max(cooldown_seconds, 30)
+        return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
 
 
-def await_future_with_heartbeat[T](
-    future: Future[T],
+def await_refresh(
+    future: Future[tuple[dict[str, Job], float]],
     publish_heartbeat: Callable[[], None],
     heartbeat_seconds: float = 10.0,
-) -> T:
-    """Keep daemon liveness current while a control-plane operation blocks."""
+) -> tuple[dict[str, Job], float]:
+    """Keep daemon liveness current while control-plane reconciliation blocks."""
 
     while True:
         try:
@@ -353,64 +203,6 @@ def await_future_with_heartbeat[T](
                 # misreport that failure as an ordinary heartbeat interval.
                 return future.result()
             publish_heartbeat()
-
-
-def await_refresh(
-    future: Future[tuple[dict[str, Job], float]],
-    publish_heartbeat: Callable[[], None],
-    heartbeat_seconds: float = 10.0,
-) -> tuple[dict[str, Job], float]:
-    """Keep compatibility for callers awaiting GitHub reconciliation."""
-
-    return await_future_with_heartbeat(future, publish_heartbeat, heartbeat_seconds)
-
-
-def consume_completed_architect_future(
-    future: Future[None] | None,
-) -> tuple[Future[None] | None, Exception | None]:
-    """Consume one completed architect result exactly once."""
-
-    if future is None or not future.done():
-        return future, None
-    try:
-        future.result()
-    except Exception as error:
-        return None, error
-    return None, None
-
-
-def stall_alert_decision(
-    *,
-    storage_blocked: bool,
-    no_pr_progress_warning: bool,
-    no_pr_progress_detail: str,
-    stall_since: datetime | None,
-    now: datetime,
-    stall_alert_minutes: float,
-    already_dispatched: bool,
-) -> tuple[datetime | None, str | None]:
-    """Pure decision: is this a stall, how long has it run, should it alert now.
-
-    Returns (updated_stall_since, alert_reason). alert_reason is non-None only
-    once the stall has persisted at least stall_alert_minutes and no alert has
-    already been dispatched for this continuous episode (already_dispatched) -
-    the caller tracks that flag and must reset it once stall_since comes back
-    None, so a later, distinct episode can alert again.
-    """
-    stalled = storage_blocked or no_pr_progress_warning
-    if not stalled:
-        return None, None
-    since = stall_since or now
-    elapsed_minutes = (now - since).total_seconds() / 60
-    if elapsed_minutes < stall_alert_minutes or already_dispatched:
-        return since, None
-    reasons = []
-    if storage_blocked:
-        reasons.append("storage reserve blocked")
-    if no_pr_progress_warning:
-        reasons.append(no_pr_progress_detail)
-    reason = f"Scheduling has been stalled for {elapsed_minutes:.0f} minutes: " + "; ".join(reasons)
-    return since, reason
 
 
 def queue_snapshot(
@@ -486,31 +278,11 @@ class FactoryDaemon:
         self.stopping = False
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
-        # Two lightweight agent sessions may run together. The fair exclusive side
-        # prevents either session from overlapping an authoritative frontend gate.
-        self.host_resource_slots = HostResourceGate(
-            config.provider_capacity_dir / "host-resource-gate.json",
-            2,
-            lease_seconds=config.max_task_minutes * 60 + 300,
-        )
-        self.verification_slots = Semaphore(1)
-        self.pipeline = FactoryPipeline(
-            config,
-            verification_slots=self.verification_slots,
-            host_resource_slots=self.host_resource_slots,
-        )
+        self.pipeline = FactoryPipeline(config)
         self.issue_admission = self._issue_admission_gate(config)
+        self.verification_slots = Semaphore(1)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
-        self._next_worktree_cache_prune_at = 0.0
-        self.stall_since: datetime | None = None
-        self.stall_investigation_dispatched = False
-        self.scheduler_snapshot: dict[str, object] = {
-            "max_parallel_jobs": config.max_parallel_jobs,
-            "capacity": config.max_parallel_jobs,
-            "last_selected_jobs": [],
-            "last_selection_at": None,
-        }
 
     @staticmethod
     def _issue_admission_gate(config: FactoryConfig) -> IssueAdmissionGate:
@@ -538,22 +310,9 @@ class FactoryDaemon:
     def paused(self) -> bool:
         return bool(read_json(self.control_path, {"paused": False}).get("paused", False))
 
-    def _storage_ready(self, active_task_ids: set[str] | None = None) -> bool:
+    def _storage_ready(self) -> bool:
         failed = [check for check in disk_space_checks(self.config) if not check.passed]
         blocked = bool(failed)
-        now = time.monotonic()
-        if blocked and now >= getattr(self, "_next_worktree_cache_prune_at", 0.0):
-            self._next_worktree_cache_prune_at = now + self.config.cooldown_seconds
-            reserve = int(self.config.minimum_free_disk_gib * 1024**3)
-            pruned = prune_inactive_worktree_caches(
-                self.config.worktree_dir,
-                active_task_ids or set(),
-                minimum_free_bytes=reserve,
-                target_free_bytes=reserve + 1024**3,
-            )
-            if pruned:
-                failed = [check for check in disk_space_checks(self.config) if not check.passed]
-                blocked = bool(failed)
         if blocked and not self.storage_blocked:
             LOGGER.warning(
                 "Factory scheduling paused by storage reserve: %s",
@@ -563,42 +322,6 @@ class FactoryDaemon:
             LOGGER.info("Factory storage reserve recovered; scheduling can resume")
         self.storage_blocked = blocked
         return not blocked
-
-    def _check_stall(self) -> None:
-        """Notice a stall that has persisted past stall_alert_minutes and
-        dispatch a best-effort Telegram alert plus AI investigation.
-
-        Two independent signals, either sufficient on its own: storage_blocked
-        (this daemon's own scheduling gate) and no_pr_progress_check (whether
-        any job with an open PR has moved in max_no_pr_hours) - the latter
-        catches stall causes this daemon has no specific detector for. Neither
-        signal was previously evaluated proactively; both were only checkable
-        on demand via `hellotalk-factory doctor`, so a real stall produced no
-        notification until an operator happened to look.
-        """
-        no_pr_progress = no_pr_progress_check(self.config)
-        self.stall_since, reason = stall_alert_decision(
-            storage_blocked=self.storage_blocked,
-            no_pr_progress_warning=no_pr_progress.warning,
-            no_pr_progress_detail=no_pr_progress.detail,
-            stall_since=self.stall_since,
-            now=datetime.now(UTC),
-            stall_alert_minutes=self.config.stall_alert_minutes,
-            already_dispatched=self.stall_investigation_dispatched,
-        )
-        if self.stall_since is None:
-            self.stall_investigation_dispatched = False
-        if reason is None:
-            return
-        self.stall_investigation_dispatched = True
-        LOGGER.warning("factory.stall_detected reason=%s", reason)
-        diagnostics = gather_diagnostics(self.config.state_dir)
-        Thread(
-            target=self.pipeline.run_stall_investigation,
-            args=(reason, diagnostics),
-            daemon=True,
-            name="factory-stall-investigation",
-        ).start()
 
     def _activate_generation(self) -> None:
         from openhands_factory.agents.process import AgentProcessRunner
@@ -665,9 +388,7 @@ class FactoryDaemon:
         active: dict[Future[Job | None], str] = {}
         active_started_at: dict[str, str] = {}
         next_refresh_at = 0.0
-        next_prune_at = 0.0
         architect_future: Future[None] | None = None
-        architect_retry_not_before: datetime | None = None
         # Publish liveness before the first provider probe and GitHub refresh.
         # A large queue can make that first scheduling cycle slower than the
         # watchdog interval, but the daemon already owns its generation here.
@@ -695,54 +416,12 @@ class FactoryDaemon:
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
-                wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
-                review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
-                worker_capacity = self.config.max_parallel_jobs - len(active)
-                available_host_slots = self.host_resource_slots.available_shared_slots()
-                capacity = min(worker_capacity, available_host_slots)
-                # storage_ready and everything in this block must run
-                # unconditionally, before the scheduling gate below and
-                # regardless of pause/capacity state: pruning is what's
-                # supposed to correct a low-disk state, and the stall check
-                # is what's supposed to notice when it or anything else
-                # hasn't. Gating either behind storage_ready/scheduling (as
-                # an earlier version of the pruning fix did) deadlocks -
-                # once blocked, nothing ever runs to notice or unblock it.
-                storage_ready = self._storage_ready(active_task_ids)
-                paused = self.paused()
-                self.scheduler_snapshot.update(
-                    {
-                        "max_parallel_jobs": self.config.max_parallel_jobs,
-                        "capacity": capacity,
-                        "worker_capacity": worker_capacity,
-                        "available_host_slots": available_host_slots,
-                        "paused": paused,
-                        "storage_ready": storage_ready,
-                        "review_lane_max_concurrent": (self.config.review_lane_max_concurrent),
-                    }
-                )
-                prune_now = time.monotonic()
-                if prune_now >= next_prune_at:
-                    next_prune_at = prune_now + self.config.cooldown_seconds
-                    pruned = prune_recovery_archives(
-                        self.config.recovery_dir,
-                        timedelta(hours=self.config.recovery_retention_hours),
-                    )
-                    if pruned:
-                        LOGGER.info(
-                            "Pruned %d recovery archive(s) older than %sh",
-                            len(pruned),
-                            self.config.recovery_retention_hours,
-                        )
-                    self._check_stall()
-                if not paused and storage_ready and capacity > 0:
+                capacity = self.config.max_parallel_jobs - len(active)
+                storage_ready = self._storage_ready()
+                if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
-                        health_future = control.submit(self.pipeline.router.health_snapshot)
-                        health = await_future_with_heartbeat(
-                            health_future,
-                            lambda: self._write_daemon_state("running", active, active_started_at),
-                        )
+                        health = self.pipeline.router.health_snapshot()
                         self.provider_health = dict(health)
                         LOGGER.info(
                             "Factory provider health: %s",
@@ -792,20 +471,9 @@ class FactoryDaemon:
                             jobs = self.pipeline.jobs.load()
                     else:
                         jobs = self.pipeline.jobs.load()
-                    # Reconciliation commits several state transitions before returning.
-                    # Schedule only from that committed view, not from an intermediate
-                    # mapping held across a slow GitHub refresh.
-                    jobs = self.pipeline.jobs.load()
-                    # A refresh recalculates PR WIP from GitHub. Use that current
-                    # result for this same scheduling pass instead of admitting one
-                    # extra issue from the empty startup snapshot.
-                    wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                     scheduler_time = datetime.now(UTC)
-                    new_issue_slots = admission_slots_while_respecting_wip(
-                        self.issue_admission.available_slots(scheduler_time),
-                        wip_paused=wip_paused,
-                    )
-                    selected_jobs = select_batch(
+                    new_issue_slots = self.issue_admission.available_slots(scheduler_time)
+                    for job in select_batch(
                         jobs,
                         capacity,
                         active_task_ids,
@@ -813,66 +481,7 @@ class FactoryDaemon:
                         new_issue_slots=new_issue_slots,
                         review_first=self.config.review_lane_first,
                         review_lane_max_concurrent=self.config.review_lane_max_concurrent,
-                        review_only=wip_paused,
-                    )
-                    diagnostic = selection_diagnostics(
-                        jobs,
-                        active_task_ids,
-                        scheduler_time,
-                        self.config.review_lane_max_concurrent,
-                        review_only=wip_paused,
-                    )
-                    if should_use_failsafe(
-                        selected_jobs,
-                        diagnostic,
-                        review_only=wip_paused,
                     ):
-                        LOGGER.error(
-                            "Primary scheduler returned no jobs for a runnable queue; "
-                            "using deterministic failsafe selection"
-                        )
-                        selected_jobs = select_batch_failsafe(
-                            jobs,
-                            capacity,
-                            active_task_ids,
-                            scheduler_time,
-                            new_issue_slots,
-                            self.config.review_lane_max_concurrent,
-                            review_only=wip_paused,
-                        )
-                    self.scheduler_snapshot.update(
-                        {
-                            "last_selected_jobs": [job.task.identifier for job in selected_jobs],
-                            "last_selection_at": scheduler_time.isoformat(),
-                            "new_issue_slots": new_issue_slots,
-                            "review_only": wip_paused,
-                            "selection_input_count": sum(
-                                1
-                                for job in jobs.values()
-                                if job.state not in {JobState.DONE, JobState.QUARANTINED}
-                            ),
-                            "selection_input": [
-                                {
-                                    "task_id": job.task.identifier,
-                                    "state": job.state.value,
-                                    "source": job.task.source,
-                                    "pull_request": job.pull_request,
-                                    "next_attempt_at": (
-                                        job.next_attempt_at.isoformat()
-                                        if job.next_attempt_at is not None
-                                        else None
-                                    ),
-                                }
-                                for job in jobs.values()
-                                if job.state not in {JobState.DONE, JobState.QUARANTINED}
-                            ][:25],
-                            "selection_diagnostics": diagnostic,
-                        }
-                    )
-                    review_lane_busy = review_lane_busy or any(
-                        is_review_lane_job(job) for job in selected_jobs
-                    )
-                    for job in selected_jobs:
                         self._assert_owner()
                         if is_new_github_issue(job) and not self.issue_admission.admit(
                             job.task.identifier, scheduler_time
@@ -885,7 +494,6 @@ class FactoryDaemon:
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
-                            host_resource_slots=self.host_resource_slots,
                             agent_router=self.pipeline.router,
                         )
                         review_priority = is_review_lane_job(job)
@@ -911,46 +519,21 @@ class FactoryDaemon:
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
                         LOGGER.info("Scheduled task %s", job.task.identifier)
-                if not paused and storage_ready:
-                    architect_future, architect_error = consume_completed_architect_future(
-                        architect_future
-                    )
-                    if architect_error is not None:
-                        if isinstance(architect_error, ProviderCapacityUnavailable):
-                            retry = (
-                                architect_error.retry_after_seconds
-                                or self.config.provider_cooldown_seconds
-                            )
-                            architect_retry_not_before = datetime.now(UTC) + timedelta(
-                                seconds=max(retry, 1)
-                            )
-                            LOGGER.warning("Architect cycle deferred: %s", architect_error)
-                        else:
-                            LOGGER.error(
-                                "Architect cycle crashed",
-                                exc_info=(
-                                    type(architect_error),
-                                    architect_error,
-                                    architect_error.__traceback__,
-                                ),
-                            )
-                    if (
-                        architect_future is None
-                        and (
-                            architect_retry_not_before is None
-                            or datetime.now(UTC) >= architect_retry_not_before
-                        )
-                        and not wip_paused
-                        and self.pipeline.architect_due()
-                        and not review_lane_busy
-                        and available_host_slots > 0
-                    ):
+                if (
+                    not self.paused()
+                    and storage_ready
+                    and (architect_future is None or architect_future.done())
+                ):
+                    if architect_future is not None:
+                        try:
+                            architect_future.result()
+                        except Exception:
+                            LOGGER.exception("Architect cycle crashed")
+                    if self.pipeline.architect_due():
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(
                             self.config,
-                            verification_slots=self.verification_slots,
-                            host_resource_slots=self.host_resource_slots,
                             agent_router=self.pipeline.router,
                         )
                         architect_future = architect.submit(architect_worker.run_architect_cycle)
@@ -987,7 +570,6 @@ class FactoryDaemon:
                 "storage_blocked": self.storage_blocked,
                 "active_jobs": sorted(active_task_ids, key=int),
                 "active_started_at": active_started_at or {},
-                "scheduler": getattr(self, "scheduler_snapshot", {}),
                 "issue_admission": self.issue_admission.snapshot(),
                 "queue": queue_snapshot(jobs, active_task_ids),
                 "providers": provider_status_snapshot(self.provider_health),

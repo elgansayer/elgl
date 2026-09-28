@@ -33,14 +33,13 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 ## Interactive Learning & AI Tools
 
-- Architectural Enhancements for Language Learning Synergy (integrate Pronunciation/AI with Flashcards and Reading Engine)
 - unlock premium one-off AI services
 - 50/50 language exchange timers
 - verb conjugation trainer
 - partial credit scoring
 - daily AI usage rate limiting
 - strict LLM prompt injection protection
-
+- Architectural Enhancements for Language Learning Synergy (integrate Pronunciation/AI with Flashcards and Reading Engine)
 
 ## Monetisation & Premium Features
 
@@ -65,7 +64,3 @@ _Organized by complete user outcomes rather than individual technical chores._
 ## Communities UI Improvements
 
 - Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling)
-
-## Visual Diff Component Improvements
-
-- Stabilize Visual Diff Component (Replace naive diff with Myers, optimize segmenter, fix translation mapping, add focus visibility)

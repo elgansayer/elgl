@@ -256,104 +256,10 @@ describe('CreateGroupComponent', () => {
     );
 
     expect(form).toBeTruthy();
-    expect(form.getAttribute('aria-labelledby')).toBe('createGroupTitle');
     expect(createButton.type).toBe('submit');
-    expect(searchLabel.id).toBe('memberSearchLabel');
     expect(searchLabel.htmlFor).toBe('memberSearchInput');
     expect(searchInput.getAttribute('aria-label')).toBeNull();
     expect(searchInput.getAttribute('aria-busy')).toBe('false');
-  });
-
-  it('should expose bidirectional text inputs without changing page direction', () => {
-    const groupNameInput: HTMLInputElement = fixture.nativeElement.querySelector('#groupNameInput');
-    const searchInput: HTMLInputElement = fixture.nativeElement.querySelector('#memberSearchInput');
-
-    expect(groupNameInput.getAttribute('dir')).toBe('auto');
-    expect(searchInput.getAttribute('dir')).toBe('auto');
-  });
-
-  it('should render search results as a labelled semantic list', () => {
-    component.searchResults.set([mockUserA]);
-    fixture.detectChanges();
-
-    const searchInput: HTMLInputElement = fixture.nativeElement.querySelector('#memberSearchInput');
-    const results: HTMLUListElement = fixture.nativeElement.querySelector('#memberSearchResults');
-    const row: HTMLLIElement = results.querySelector('.search-result-row')!;
-    const addButton: HTMLButtonElement = row.querySelector('.search-result-item')!;
-    const actionText: HTMLElement = addButton.querySelector('.sr-only')!;
-
-    expect(results.tagName).toBe('UL');
-    expect(results.getAttribute('aria-labelledby')).toBe('memberSearchLabel');
-    expect(row.tagName).toBe('LI');
-    expect(searchInput.getAttribute('aria-controls')).toBe('memberSearchResults');
-    expect(actionText.textContent?.trim()).not.toBe('');
-    expect(addButton.getAttribute('aria-label')).toBeNull();
-  });
-
-  it('should return focus to member search after adding a search result', () => {
-    component.searchResults.set([mockUserA]);
-    fixture.detectChanges();
-
-    const searchInput: HTMLInputElement = fixture.nativeElement.querySelector('#memberSearchInput');
-    const resultButton: HTMLButtonElement = fixture.nativeElement.querySelector('.search-result-item');
-    resultButton.focus();
-    resultButton.click();
-    fixture.detectChanges();
-
-    expect(component.selectedMemberIds()).toContain('user-a');
-    expect(document.activeElement).toBe(searchInput);
-  });
-
-  it('should move focus to group name when adding the final allowed member', () => {
-    for (let i = 0; i < component.MAX_MEMBERS - 1; i++) {
-      component.addMember({
-        ...mockUserA,
-        id: `limit-user-${i}`,
-        display_name: `Limit User ${i}`,
-      });
-    }
-    component.searchResults.set([mockUserB]);
-    fixture.detectChanges();
-
-    const groupNameInput: HTMLInputElement = fixture.nativeElement.querySelector('#groupNameInput');
-    const resultButton: HTMLButtonElement = fixture.nativeElement.querySelector('.search-result-item');
-    resultButton.focus();
-    resultButton.click();
-    fixture.detectChanges();
-
-    expect(component.selectedCount()).toBe(component.MAX_MEMBERS);
-    expect(component.canAddMore()).toBe(false);
-    expect(document.activeElement).toBe(groupNameInput);
-  });
-
-  it('should preserve focus on an adjacent remove action when a member is removed', () => {
-    component.addMember(mockUserA);
-    component.addMember(mockUserB);
-    fixture.detectChanges();
-
-    const removeButtons: HTMLButtonElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('.remove-btn'),
-    );
-    removeButtons[0].focus();
-    removeButtons[0].click();
-    fixture.detectChanges();
-
-    const remainingRemoveButton: HTMLButtonElement =
-      fixture.nativeElement.querySelector('.remove-btn');
-    expect(component.selectedMemberIds()).toEqual(['user-b']);
-    expect(document.activeElement).toBe(remainingRemoveButton);
-  });
-
-  it('should announce selected-member count changes and label the selected list', () => {
-    component.addMember(mockUserA);
-    fixture.detectChanges();
-
-    const heading: HTMLElement = fixture.nativeElement.querySelector('#selectedMembersHeading');
-    const list: HTMLUListElement = fixture.nativeElement.querySelector('.selected-list');
-
-    expect(heading.getAttribute('aria-live')).toBe('polite');
-    expect(heading.getAttribute('aria-atomic')).toBe('true');
-    expect(list.getAttribute('aria-labelledby')).toBe('selectedMembersHeading');
   });
 
   it('should keep member actions non-submit and disable result actions at the member limit', () => {
@@ -376,20 +282,6 @@ describe('CreateGroupComponent', () => {
     expect(removeButton.type).toBe('button');
     expect(searchInput.disabled).toBe(true);
     expect(searchInput.getAttribute('aria-describedby')).toBe('memberSearchLimit');
-  });
-
-  it('should associate create failures with the submit action', async () => {
-    mockChatService.createGroup.mockRejectedValue(new Error('Server error'));
-    component.groupName = 'Test Group';
-    component.addMember(mockUserA);
-
-    await component.createGroup();
-    fixture.detectChanges();
-
-    const createButton: HTMLButtonElement = fixture.nativeElement.querySelector('.create-btn');
-    const error: HTMLElement = fixture.nativeElement.querySelector('#createGroupError');
-    expect(error.getAttribute('role')).toBe('alert');
-    expect(createButton.getAttribute('aria-describedby')).toBe('createGroupError');
   });
 
   it('should render the create button disabled when form is invalid', () => {

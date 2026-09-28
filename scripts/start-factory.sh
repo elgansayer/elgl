@@ -78,9 +78,7 @@ rm -f /etc/systemd/system/hellotalk-meta-agent.service
 systemd-analyze verify \
   /etc/systemd/system/hellotalk-factory.service \
   /etc/systemd/system/hellotalk-factory-health.service \
-  /etc/systemd/system/hellotalk-factory-health.timer \
-  /etc/systemd/system/hellotalk-factory-update.service \
-  /etc/systemd/system/hellotalk-factory-update.timer
+  /etc/systemd/system/hellotalk-factory-health.timer
 systemctl daemon-reload
 
 if [ ! -x "$FACTORY_CLI" ]; then
@@ -91,8 +89,7 @@ fi
 # Start recovery supervision before running diagnostics. Doctor includes the
 # daemon heartbeat, so running it first would make a stopped daemon block the
 # very start/recovery path intended to bring it back.
-systemctl enable --now "$FACTORY_SERVICE" "$FACTORY_HEALTH_TIMER" \
-  hellotalk-factory-update.timer
+systemctl enable --now "$FACTORY_SERVICE" "$FACTORY_HEALTH_TIMER"
 sleep 2
 runuser -u "$FACTORY_USER" --preserve-environment -- "$FACTORY_CLI" doctor --online
 systemctl --no-pager --full status "$FACTORY_SERVICE"
