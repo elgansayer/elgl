@@ -5,6 +5,7 @@ import {
   getMockFixtureDiagnostics,
   resolveMockFixtureSeed,
 } from './mock/deterministic-fixtures';
+import { assertMockFixtureIntegrity } from './mock/fixture-integrity';
 
 const LINKED_ACCOUNT_FIXTURES = [
   {
@@ -137,11 +138,31 @@ export function buildMockUsers(seed = resolveMockFixtureSeed()) {
 }
 
 export function buildMockFixtureSnapshot(seed = resolveMockFixtureSeed()) {
-  return {
+  const snapshot = {
     diagnostics: getMockFixtureDiagnostics(seed),
     linkedAccounts: LINKED_ACCOUNT_FIXTURES.map((fixture) => ({ ...fixture })),
     users: buildMockUsers(seed),
   };
+
+  assertMockFixtureIntegrity([
+    {
+      name: 'users',
+      records: snapshot.users,
+    },
+    {
+      name: 'linkedAccounts',
+      idField: null,
+      records: snapshot.linkedAccounts,
+      references: [
+        {
+          field: 'user_id',
+          targetCollection: 'users',
+        },
+      ],
+    },
+  ]);
+
+  return snapshot;
 }
 
 const fixturesEnabled = isMockBackendEnabled();
