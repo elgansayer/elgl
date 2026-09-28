@@ -20,6 +20,7 @@ from openhands_factory.daemon import (
     select_batch,
     select_batch_failsafe,
     selection_diagnostics,
+    should_use_failsafe,
     stall_alert_decision,
 )
 from openhands_factory.exceptions import FactoryError
@@ -169,6 +170,24 @@ def test_select_batch_preserves_issue_progress_when_host_has_only_two_slots() ->
     assert [item.task.identifier for item in selected] == ["7347", "10"]
 
 
+def test_select_batch_uses_only_pull_request_work_while_wip_is_saturated() -> None:
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "11": job("11", 0, JobState.VERIFYING),
+        "594": factory_pull_request_job("594", JobState.QUALITY_REPAIRING),
+        "7347": pull_request_job("7347", priority=0),
+    }
+
+    selected = select_batch(
+        jobs,
+        3,
+        review_lane_max_concurrent=2,
+        review_only=True,
+    )
+
+    assert [item.task.identifier for item in selected] == ["7347", "594"]
+
+
 def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
     jobs = {
         "10": job("10", 5),
@@ -310,6 +329,14 @@ def test_selection_diagnostics_explains_review_capacity() -> None:
     }
 
 
+def test_failsafe_stays_idle_when_review_only_lane_is_full() -> None:
+    diagnostic = {"candidate_count": 451, "review_capacity": 0}
+
+    assert not should_use_failsafe([], diagnostic, review_only=True)
+    assert should_use_failsafe([], diagnostic, review_only=False)
+    assert not should_use_failsafe([pull_request_job("7348")], diagnostic, review_only=True)
+
+
 def test_failsafe_selector_prioritises_merge_queued_review() -> None:
     now = datetime(2026, 1, 1, tzinfo=UTC)
     jobs = {
@@ -319,6 +346,18 @@ def test_failsafe_selector_prioritises_merge_queued_review() -> None:
     }
 
     selected = select_batch_failsafe(jobs, 1, set(), now, 1, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
+
+
+def test_failsafe_selector_does_not_dispatch_issue_work_in_review_only_mode() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "7348": pull_request_job("7348", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch_failsafe(jobs, 2, set(), now, 0, 2, review_only=True)
 
     assert [item.task.identifier for item in selected] == ["7348"]
 
@@ -744,6 +783,32 @@ def test_loop_pauses_new_issue_and_architect_dispatch_when_pr_wip_exceeded(
         admit_calls=admit_calls,
         architect_calls=architect_calls,
     )
+
+    assert daemon._loop() == 0
+
+    assert admit_calls == []
+    assert architect_calls == []
+
+
+def test_loop_uses_wip_capacity_recalculated_by_current_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admit_calls: list[tuple[str, object]] = []
+    architect_calls: list[bool] = []
+    discovered = job("1", priority=5)
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=False,
+        discovered_job=discovered,
+        admit_calls=admit_calls,
+        architect_calls=architect_calls,
+    )
+
+    def refresh_and_pause(*_args: object) -> tuple[dict[str, Job], float]:
+        daemon.pipeline.pull_request_capacity.pause_new_dispatch = True
+        return {"1": discovered}, 3600.0
+
+    monkeypatch.setattr("openhands_factory.daemon.refresh_jobs", refresh_and_pause)
 
     assert daemon._loop() == 0
 
