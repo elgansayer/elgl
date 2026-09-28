@@ -8,11 +8,16 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 
 const GUIDANCE = {
-  'positive-tabindex': 'Use DOM order, native focus order, or an approved Spartan composite instead of positive tabindex values.',
-  'a11y-clickable': 'Use a native button/link or an approved Relay/Spartan primitive instead of adding new appA11yClickable call sites.',
-  'deprecated-key-api': 'Use KeyboardEvent.key (for example Enter, Escape, or ArrowDown) instead of keyCode/which.',
-  'synthetic-button-keyboard': 'Replace the synthetic role=button + Enter/Space state machine with a native button/link or approved Spartan primitive.',
-  'feature-roving-tabindex': 'Move standard roving-tabindex behavior into the approved Spartan composite primitive.',
+  'positive-tabindex':
+    'Use DOM order, native focus order, or an approved Spartan composite instead of positive tabindex values.',
+  'a11y-clickable':
+    'Use a native button/link or an approved Relay/Spartan primitive instead of adding new appA11yClickable call sites.',
+  'deprecated-key-api':
+    'Use KeyboardEvent.key (for example Enter, Escape, or ArrowDown) instead of keyCode/which.',
+  'synthetic-button-keyboard':
+    'Replace the synthetic role=button + Enter/Space state machine with a native button/link or approved Spartan primitive.',
+  'feature-roving-tabindex':
+    'Move standard roving-tabindex behavior into the approved Spartan composite primitive.',
 };
 
 function lineNumber(source, index) {
@@ -36,12 +41,7 @@ export function scanKeyboardInteractionSource(source) {
       /\btabindex\s*=\s*["'](?:[1-9]\d*)["']/gi,
       GUIDANCE['positive-tabindex'],
     ),
-    ...collectRegex(
-      source,
-      'a11y-clickable',
-      /\bappA11yClickable\b/g,
-      GUIDANCE['a11y-clickable'],
-    ),
+    ...collectRegex(source, 'a11y-clickable', /\bappA11yClickable\b/g, GUIDANCE['a11y-clickable']),
     ...collectRegex(
       source,
       'deprecated-key-api',
@@ -87,7 +87,8 @@ export function scanKeyboardInteractionSource(source) {
       rule: 'ime-review',
       line: lineNumber(source, match.index ?? 0),
       excerpt: match[0].replace(/\s+/g, ' ').trim().slice(0, 180),
-      message: 'Review Enter handling for IME safety; the invoked handler must ignore KeyboardEvent.isComposing.',
+      message:
+        'Review Enter handling for IME safety; the invoked handler must ignore KeyboardEvent.isComposing.',
     });
   }
 
@@ -150,12 +151,14 @@ export function compareKeyboardFindings(beforeSource, currentSource) {
   return {
     violations: current.violations.filter(
       (finding, index, all) =>
-        index >= (beforeViolations.get(finding.rule) ?? 0) +
+        index >=
+        (beforeViolations.get(finding.rule) ?? 0) +
           all.slice(0, index).filter((candidate) => candidate.rule !== finding.rule).length,
     ),
     warnings: current.warnings.filter(
       (finding, index, all) =>
-        index >= (beforeWarnings.get(finding.rule) ?? 0) +
+        index >=
+        (beforeWarnings.get(finding.rule) ?? 0) +
           all.slice(0, index).filter((candidate) => candidate.rule !== finding.rule).length,
     ),
   };
@@ -224,7 +227,9 @@ function main() {
       console.error(`- ${failure.path}:${failure.line} [${failure.rule}] ${failure.message}`);
       console.error(`  ${failure.excerpt}`);
     }
-    console.error('\nSee docs/keyboard-interaction-standards.md and docs/keyboard-interaction-verification.md.');
+    console.error(
+      '\nSee docs/keyboard-interaction-standards.md and docs/keyboard-interaction-verification.md.',
+    );
     process.exitCode = 1;
     return;
   }

@@ -15,7 +15,9 @@ test('rejects positive tabindex while allowing normal sequential focus', () => {
 });
 
 test('rejects new appA11yClickable compatibility call sites', () => {
-  assert.deepEqual(violationRules('<article appA11yClickable>Profile</article>'), ['a11y-clickable']);
+  assert.deepEqual(violationRules('<article appA11yClickable>Profile</article>'), [
+    'a11y-clickable',
+  ]);
 });
 
 test('rejects deprecated numeric keyboard APIs', () => {
