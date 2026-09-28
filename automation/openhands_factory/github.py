@@ -6,20 +6,32 @@ import base64
 import binascii
 import json
 import os
+import re
 import time
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal, Protocol
 
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.failure_attribution import failed_check_names
-from openhands_factory.models import Task
+from openhands_factory.models import (
+    Task,
+    changed_path_fingerprint,
+    logical_task_key,
+    supersession_references,
+)
+from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ProcessResult, run_process
 
 REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
 _PENDING_CHECK_STATES = frozenset({"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "EXPECTED"})
 _ALLOWED_TERMINAL_CONCLUSIONS = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
+_CLOSING_REFERENCE = re.compile(
+    r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+"
+    r"(?:https://github\.com/[^\s/]+/[^\s/]+/issues/)?#?(\d+)\b"
+)
 _GITHUB_ENVIRONMENT_ALLOWLIST = {
     "GH_CONFIG_DIR",
     "HOME",
@@ -53,6 +65,7 @@ class PullRequestStatus:
     checks_pending: bool
     failed_checks: frozenset[str] = frozenset()
     merge_state_status: str = "CLEAN"
+    workflow_run_ids: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -61,6 +74,38 @@ class IssueComment:
     author: str
     body: str
     created_at: str
+
+
+@dataclass(frozen=True)
+class PullRequestMatch:
+    """A same-repository PR with evidence tying it to one logical task."""
+
+    number: int
+    title: str
+    body: str
+    branch: str
+    head_sha: str
+    state: str
+    closed_at: datetime | None
+    labels: frozenset[str]
+    changed_paths: frozenset[str]
+    reasons: frozenset[str]
+
+    @property
+    def has_strong_identity(self) -> bool:
+        return bool(
+            self.reasons.intersection(
+                {"branch-metadata", "issue-link", "logical-title", "supersession-link"}
+            )
+        )
+
+    @property
+    def is_open_canonical(self) -> bool:
+        return (
+            self.state == "OPEN"
+            and self.has_strong_identity
+            and not self.labels.intersection({"duplicate", "factory-skip", "superseded"})
+        )
 
 
 def issue_priority(labels: set[str]) -> int:
@@ -300,6 +345,185 @@ class GitHubClient:
             )
         return tasks
 
+    def list_pull_requests(self, limit: int = 10_000) -> list[PullRequestRecord]:
+        """Return open and historical PR identity needed by the convergence owner."""
+
+        output = self._run(
+            (
+                "gh",
+                "pr",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "all",
+                "--limit",
+                str(limit),
+                "--json",
+                "number,title,body,state,isDraft,headRefName,headRefOid,baseRefName,"
+                "isCrossRepository,labels,files,createdAt,updatedAt,closedAt,mergedAt,"
+                "mergeStateStatus,statusCheckRollup",
+            )
+        )
+        payload = json.loads(output)
+        if not isinstance(payload, list):
+            raise FactoryError("GitHub pull-request inventory is not a list")
+        records: list[PullRequestRecord] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                raise FactoryError("GitHub pull-request inventory contains a malformed entry")
+            try:
+                records.append(PullRequestRecord.from_payload(item))
+            except (TypeError, ValueError) as error:
+                raise FactoryError(
+                    "GitHub pull-request inventory contains invalid identity"
+                ) from error
+        return records
+
+    def find_equivalent_pull_requests(
+        self,
+        task: Task,
+        *,
+        known_branch: str | None = None,
+        known_path_fingerprint: str | None = None,
+        now: datetime | None = None,
+        recent_days: int = 30,
+        limit: int = 10_000,
+    ) -> list[PullRequestMatch]:
+        """Search every open and recently closed PR before branch creation.
+
+        Matching evidence stays deterministic and inspectable. Direct issue links,
+        logical-title identity, exact branch metadata, changed-path fingerprints and
+        explicit predecessor/successor links are independent signals. Same-repository
+        and trusted-intake checks run before a candidate can become canonical.
+        """
+
+        current = now or datetime.now(UTC)
+        cutoff = current - timedelta(days=recent_days)
+        json_fields = (
+            "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
+            "isCrossRepository,labels,author"
+        )
+        if known_path_fingerprint is not None:
+            json_fields += ",files"
+        output = self._run(
+            (
+                "gh",
+                "pr",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "all",
+                "--limit",
+                str(limit),
+                "--json",
+                json_fields,
+            )
+        )
+        matches: list[PullRequestMatch] = []
+        task_supersession_links = supersession_references(task.body)
+        for item in json.loads(output):
+            if not isinstance(item, dict) or item.get("isCrossRepository") is True:
+                continue
+            if str(item.get("baseRefName") or "") != self.base_branch:
+                continue
+            branch = str(item.get("headRefName") or "")
+            if not branch:
+                continue
+            labels = frozenset(
+                str(label.get("name"))
+                for label in item.get("labels", [])
+                if isinstance(label, dict) and label.get("name")
+            )
+            if not self._intake_is_trusted(item, set(labels)):
+                continue
+            state = str(item.get("state") or "").upper()
+            closed_at = self._pull_request_closed_at(item)
+            if state != "OPEN" and (closed_at is None or closed_at < cutoff):
+                continue
+
+            number = int(item["number"])
+            title = str(item.get("title") or "")
+            body = str(item.get("body") or "")
+            closing_issues = set(_CLOSING_REFERENCE.findall(body))
+            paths = frozenset(
+                str(file.get("path"))
+                for file in item.get("files", [])
+                if isinstance(file, dict) and file.get("path")
+            )
+            reasons: set[str] = set()
+            if task.identifier in closing_issues:
+                reasons.add("issue-link")
+            if logical_task_key(title, body) == task.logical_key:
+                reasons.add("logical-title")
+            if known_branch == branch or self._branch_mentions_task(branch, task.identifier):
+                reasons.add("branch-metadata")
+            candidate_fingerprint = changed_path_fingerprint(paths)
+            if (
+                known_path_fingerprint is not None
+                and candidate_fingerprint == known_path_fingerprint
+            ):
+                reasons.add("changed-path-fingerprint")
+            if str(number) in task_supersession_links or task.identifier in supersession_references(
+                body
+            ):
+                reasons.add("supersession-link")
+            if not reasons:
+                continue
+            matches.append(
+                PullRequestMatch(
+                    number=number,
+                    title=title,
+                    body=body,
+                    branch=branch,
+                    head_sha=str(item.get("headRefOid") or ""),
+                    state=state,
+                    closed_at=closed_at,
+                    labels=labels,
+                    changed_paths=paths,
+                    reasons=frozenset(reasons),
+                )
+            )
+        evidence_strength = {
+            "supersession-link": 5,
+            "issue-link": 4,
+            "branch-metadata": 3,
+            "logical-title": 2,
+            "changed-path-fingerprint": 1,
+        }
+
+        def rank(match: PullRequestMatch) -> tuple[int, int, int]:
+            if match.is_open_canonical:
+                state_rank = 0
+            elif match.state == "MERGED":
+                state_rank = 1
+            elif match.state == "CLOSED":
+                state_rank = 2
+            else:
+                state_rank = 3
+            strongest = max(evidence_strength[reason] for reason in match.reasons)
+            return (state_rank, -strongest, match.number)
+
+        return sorted(matches, key=rank)
+
+    @staticmethod
+    def _pull_request_closed_at(item: dict[str, object]) -> datetime | None:
+        value = item.get("closedAt") or item.get("mergedAt")
+        if not isinstance(value, str) or not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return None
+        return parsed.astimezone(UTC)
+
+    @staticmethod
+    def _branch_mentions_task(branch: str, task_id: str) -> bool:
+        return re.search(rf"(?<!\d){re.escape(task_id)}(?!\d)", branch) is not None
+
     def list_all_open_issue_titles(self, limit: int = 10_000) -> set[str]:
         """List every admitted open issue title for duplicate checking.
 
@@ -450,11 +674,14 @@ class GitHubClient:
             "factory-active": "0052cc",
             "factory-review": "5319e7",
             "factory-reviewed": "0e8a16",
+            "factory-stack-blocked": "fbca04",
             "factory-quarantined": "b60205",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
             "factory-status": "0969da",
+            "superseded": "6e7781",
+            "duplicate": "cfd3d7",
         }
         for name, colour in labels.items():
             self._run(
@@ -626,12 +853,70 @@ class GitHubClient:
         except ValueError as error:
             raise FactoryError(f"Could not parse pull request URL: {url}") from error
 
+    def update_pull_request(self, pull_request: int, *, title: str, body: str) -> None:
+        self._run(
+            (
+                "gh",
+                "pr",
+                "edit",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--title",
+                title,
+                "--body",
+                body,
+            )
+        )
+
+    def supersede_pull_request(
+        self,
+        pull_request: int,
+        *,
+        canonical: int | None,
+        reason: str,
+    ) -> None:
+        """Close and delete one non-canonical PR branch before replacement proceeds."""
+
+        self.add_issue_labels(pull_request, ("superseded", "duplicate"))
+        canonical_text = f" Canonical pull request: #{canonical}." if canonical is not None else ""
+        self.add_comment(
+            pull_request,
+            f"Factory convergence closed this non-canonical pull request: {reason}."
+            f"{canonical_text}",
+        )
+        self._run(
+            (
+                "gh",
+                "pr",
+                "close",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--delete-branch",
+            )
+        )
+
     def mark_ready(self, pull_request: int) -> None:
         self._run(
             (
                 "gh",
                 "pr",
                 "ready",
+                str(pull_request),
+                "--repo",
+                self.repository,
+            )
+        )
+
+    def reopen_pull_request(self, pull_request: int) -> None:
+        """Reopen a Factory-owned PR whose issue is still active."""
+
+        self._run(
+            (
+                "gh",
+                "pr",
+                "reopen",
                 str(pull_request),
                 "--repo",
                 self.repository,
@@ -654,6 +939,24 @@ class GitHubClient:
                 f"repos/{self.repository}/pulls/{pull_request}/update-branch",
                 "-f",
                 f"expected_head_sha={expected_head_sha}",
+            )
+        )
+
+    def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
+        """Squash-merge only the exact reviewed head without bypassing GitHub rules."""
+
+        self._run(
+            (
+                "gh",
+                "pr",
+                "merge",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--squash",
+                "--delete-branch",
+                "--match-head-commit",
+                expected_head_sha,
             )
         )
 
@@ -778,4 +1081,5 @@ class GitHubClient:
             checks_pending=pending or human_review_blocked,
             failed_checks=failed_checks,
             merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN").upper(),
+            workflow_run_ids=PullRequestRecord.from_payload(item).workflow_run_ids,
         )

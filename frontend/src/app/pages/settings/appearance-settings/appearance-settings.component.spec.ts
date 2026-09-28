@@ -7,9 +7,9 @@ import { I18nService } from '../../../services/i18n.service';
 import { FontScaleService } from '../../../services/font-scale.service';
 import { ThemeService } from '../../../services/theme.service';
 import { UserService } from '../../../services/user.service';
+import { ChatSettingsService } from '../../../services/chat-settings.service';
 import { TranslatePipe } from '../../../services/translate.pipe';
 
-// A minimal stub pipe so we do not depend on the real I18nService translation dictionary
 @Pipe({ name: 't', standalone: true })
 class MockTranslatePipe implements PipeTransform {
   transform(key: string, _params?: Record<string, unknown>): string {
@@ -24,9 +24,15 @@ describe('AppearanceSettingsComponent', () => {
   let themeServiceMock: Partial<ThemeService>;
   let fontScaleServiceMock: Partial<FontScaleService>;
   let userServiceMock: Partial<UserService>;
+  let chatSettingsServiceMock: Partial<ChatSettingsService>;
   let locationMock: Partial<Location>;
+  const textSizePreference = signal<'small' | 'normal' | 'large'>('normal');
+  const chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
 
   beforeEach(async () => {
+    textSizePreference.set('normal');
+    chatTextSize.set('medium');
+
     i18nServiceMock = {
       currentLang: signal('en-GB'),
       translate: vi.fn((key: string) => key),
@@ -41,13 +47,20 @@ describe('AppearanceSettingsComponent', () => {
       currentTheme: signal<'light' | 'dark' | 'system'>('system'),
       setTheme: vi.fn(),
       setPrimaryAccentColor: vi.fn(),
+      resetPrimaryAccentColor: vi.fn(),
       primaryAccentColor: signal('#4f46e5'),
       loadFromProfile: vi.fn(),
     };
 
     fontScaleServiceMock = {
       scaleFactor: signal(1.0),
+      textSizePreference,
+      chatTextSize,
       setScale: vi.fn(),
+      setTextSizePreference: vi.fn((value: 'small' | 'normal' | 'large') =>
+        textSizePreference.set(value),
+      ),
+      setChatTextSize: vi.fn((value: 'small' | 'medium' | 'large') => chatTextSize.set(value)),
       min: 0.8,
       max: 1.5,
       step: 0.05,
@@ -75,6 +88,12 @@ describe('AppearanceSettingsComponent', () => {
       updateMyProfile: vi.fn().mockResolvedValue({}),
     };
 
+    chatSettingsServiceMock = {
+      textSize: signal<'small' | 'medium' | 'large'>('medium'),
+      loadSettings: vi.fn().mockResolvedValue(true),
+      updateSetting: vi.fn().mockResolvedValue(true),
+    };
+
     locationMock = {
       back: vi.fn(),
     };
@@ -86,11 +105,12 @@ describe('AppearanceSettingsComponent', () => {
         { provide: ThemeService, useValue: themeServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
         { provide: UserService, useValue: userServiceMock },
+        { provide: ChatSettingsService, useValue: chatSettingsServiceMock },
         { provide: Location, useValue: locationMock },
       ],
     })
       .overrideComponent(AppearanceSettingsComponent, {
-        remove: { imports: [TranslatePipe, FontScaleService] },
+        remove: { imports: [TranslatePipe] },
         add: { imports: [MockTranslatePipe] },
       })
       .compileComponents();
@@ -110,10 +130,34 @@ describe('AppearanceSettingsComponent', () => {
     expect(themeServiceMock.setTheme).toHaveBeenCalledWith('dark');
   });
 
+  it('should expose all supported theme choices', () => {
+    expect(component.themeOptions).toEqual(['light', 'dark', 'system']);
+  });
+
   it('should render font scale percent label', () => {
     fontScaleServiceMock.scaleFactor?.set(1.1);
     fixture.detectChanges();
     expect(component.fontScalePercentLabel()).toBe('110%');
+  });
+
+  it('should set the app text size independently', () => {
+    component.setTextSize('large');
+    expect(fontScaleServiceMock.setTextSizePreference).toHaveBeenCalledWith('large');
+    expect(component.currentTextSize()).toBe('large');
+    expect(component.currentChatTextSize()).toBe('medium');
+  });
+
+  it('should set the chat text size independently', () => {
+    component.setChatTextSize('small');
+    expect(fontScaleServiceMock.setChatTextSize).toHaveBeenCalledWith('small');
+    expect(component.currentChatTextSize()).toBe('small');
+    expect(component.currentTextSize()).toBe('normal');
+  });
+
+  it('should synchronise a server chat text preference without changing app text size', () => {
+    expect(chatSettingsServiceMock.loadSettings).toHaveBeenCalledOnce();
+    expect(fontScaleServiceMock.setChatTextSize).toHaveBeenCalledWith('medium');
+    expect(component.currentTextSize()).toBe('normal');
   });
 
   it('should navigate back', () => {
@@ -143,21 +187,55 @@ describe('AppearanceSettingsComponent', () => {
     expect(component.primaryAccentColor()).toBe('#4f46e5');
   });
 
-  it('should update theme service accent colour when profile loads', async () => {
-    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#4f46e5');
+  it('should load the profile accent through the theme service entitlement boundary', () => {
+    expect(themeServiceMock.loadFromProfile).toHaveBeenCalledWith({
+      primary_accent_color: '#4f46e5',
+    });
   });
 
-  it('should update theme service accent colour on save', async () => {
+  it('should persist chat text size and update the accent on VIP save', async () => {
+    component.setChatTextSize('large');
     component.primaryAccentColor.set('#e11d48');
+
     await component.saveSettings();
+
+    expect(userServiceMock.updateMyProfile).toHaveBeenCalledWith({
+      primary_accent_color: '#e11d48',
+    });
+    expect(chatSettingsServiceMock.updateSetting).toHaveBeenCalledWith('textSize', 'large');
     expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#e11d48');
+    expect(component.successMessage()).toBe('settings.saved');
+  });
+
+  it('should not resubmit or apply a stored accent after VIP entitlement is lost', async () => {
+    component.isVip.set(false);
+    component.primaryAccentColor.set('#e11d48');
+
+    await component.saveSettings();
+
+    expect(userServiceMock.updateMyProfile).toHaveBeenCalledWith({});
+    expect(chatSettingsServiceMock.updateSetting).toHaveBeenCalledWith('textSize', 'medium');
+    expect(themeServiceMock.setPrimaryAccentColor).not.toHaveBeenCalledWith('#e11d48');
+    expect(themeServiceMock.resetPrimaryAccentColor).toHaveBeenCalledOnce();
+  });
+
+  it('should restore the server chat size and expose a retryable error when persistence fails', async () => {
+    component.setChatTextSize('large');
+    chatSettingsServiceMock.textSize?.set('medium');
+    vi.mocked(chatSettingsServiceMock.updateSetting!).mockResolvedValueOnce(false);
+
+    await component.saveSettings();
+
+    expect(fontScaleServiceMock.setChatTextSize).toHaveBeenLastCalledWith('medium');
+    expect(component.currentChatTextSize()).toBe('medium');
+    expect(component.errorMessage()).toBe('Failed to save settings');
+    expect(component.successMessage()).toBe('');
   });
 
   it('should set custom colour from color input when VIP', () => {
     component.isVip.set(true);
     const input = document.createElement('input');
     input.value = '#ff6b6b';
-    Object.defineProperty(input, 'value', { value: '#ff6b6b' });
     const event = { target: input } as unknown as Event;
     component.onCustomColorChange(event);
     expect(component.primaryAccentColor()).toBe('#ff6b6b');
@@ -167,7 +245,6 @@ describe('AppearanceSettingsComponent', () => {
     component.isVip.set(true);
     const input = document.createElement('input');
     input.value = '#c0ffee';
-    Object.defineProperty(input, 'value', { value: '#c0ffee' });
     const event = { target: input } as unknown as Event;
     component.onCustomColorChange(event);
     expect(component.primaryAccentColor()).toBe('#c0ffee');
@@ -178,7 +255,6 @@ describe('AppearanceSettingsComponent', () => {
     component.primaryAccentColor.set('#4f46e5');
     const input = document.createElement('input');
     input.value = '#badbad';
-    Object.defineProperty(input, 'value', { value: '#badbad' });
     const event = { target: input } as unknown as Event;
     component.onCustomColorChange(event);
     expect(component.primaryAccentColor()).toBe('#4f46e5');

@@ -25,6 +25,16 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
       </app-pill>
     </div>
 
+    @if (!isOnline()) {
+      <div
+        class="mx-4 mb-4 rounded-sheet border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-text-primary"
+        role="status"
+        aria-live="polite"
+      >
+        {{ 'economy.offlinePurchaseUnavailable' | t }}
+      </div>
+    }
+
     <!-- Category filters -->
     <div class="px-4 pb-4 overflow-x-auto">
       <div class="flex gap-2" role="group" [attr.aria-label]="'sticker.filterLabel' | t">
@@ -128,7 +138,9 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                   hlmBtn
                   type="button"
                   class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-vip to-accent py-2 text-sm font-semibold text-on-fill transition-all disabled:opacity-50"
-                  [disabled]="userCoins() < pack.cost_coins || purchasingId() === pack.id"
+                  [disabled]="
+                    userCoins() < pack.cost_coins || purchasingId() !== null || !isOnline()
+                  "
                   (click)="purchasePack(pack)"
                   [attr.aria-label]="
                     'stickerStore.purchaseAria' | t: { name: pack.name, cost: pack.cost_coins }
@@ -158,6 +170,7 @@ export class StickerStoreComponent {
 
   readonly isLoading = signal<boolean>(true);
   readonly purchasingId = signal<string | null>(null);
+  readonly isOnline = this.economyStore.isOnline;
 
   private packsResource = resource<StickerPack[], void>({
     loader: async () => {
@@ -171,7 +184,10 @@ export class StickerStoreComponent {
     },
   });
 
-  readonly packs = computed(() => this.packsResource.value() ?? this.economyStore.stickerPacks());
+  readonly packs = computed(() => {
+    this.packsResource.value();
+    return this.economyStore.stickerPacks();
+  });
 
   readonly userCoins = computed(() => this.economyStore.coinsBalance());
 
@@ -248,7 +264,7 @@ export class StickerStoreComponent {
   }
 
   async purchasePack(pack: StickerPack): Promise<void> {
-    if (pack.owned) return;
+    if (pack.owned || !this.isOnline() || this.purchasingId() !== null) return;
     this.purchasingId.set(pack.id);
     try {
       await this.economyStore.unlockStickerPack(pack.id);
