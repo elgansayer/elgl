@@ -56,6 +56,21 @@ def test_issue_admission_gate_survives_daemon_restart(tmp_path: Path) -> None:
     assert snapshot["next_available_at"] == (started + timedelta(hours=1)).isoformat()
 
 
+def test_future_issue_admission_is_clamped_to_current_clock(tmp_path: Path) -> None:
+    state_path = tmp_path / "issue-admissions.json"
+    current = datetime(2026, 8, 17, 10, 0, tzinfo=UTC)
+    future = current + timedelta(days=1)
+    skewed = IssueAdmissionGate(state_path, interval_seconds=3600, max_admissions=1)
+    assert skewed.admit("100", future)
+
+    corrected = IssueAdmissionGate(state_path, interval_seconds=3600, max_admissions=1)
+
+    assert corrected.available_slots(current) == 0
+    snapshot = corrected.snapshot(current)
+    assert snapshot["next_available_at"] == (current + timedelta(hours=1)).isoformat()
+    assert corrected.available_slots(current + timedelta(hours=1)) == 1
+
+
 def test_disabled_issue_admission_gate_preserves_historical_unlimited_mode(
     tmp_path: Path,
 ) -> None:
@@ -105,11 +120,11 @@ def test_factory_config_reads_hourly_issue_admission_policy() -> None:
     assert config.new_issues_per_interval == 1
 
 
-def test_production_templates_and_host_repair_keep_hourly_issue_admission() -> None:
+def test_production_templates_and_host_repair_keep_bounded_issue_admission() -> None:
     repository_root = Path(__file__).parents[2]
     template = (repository_root / "config/systemd/factory.env.example").read_text(encoding="utf-8")
     repair = (repository_root / "scripts/repair-factory-host.sh").read_text(encoding="utf-8")
 
     for content in (template, repair):
         assert "FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600" in content
-        assert "FACTORY_NEW_ISSUES_PER_INTERVAL=1" in content
+        assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in content

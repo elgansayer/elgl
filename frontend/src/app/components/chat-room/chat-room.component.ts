@@ -31,6 +31,8 @@ import {
   GroupParticipant,
 } from '../group-participant-drawer/group-participant-drawer.component';
 import { ChatSearchComponent } from '../chat-search/chat-search.component';
+import { ChatMediaShareComponent } from '../chat-media-share/chat-media-share.component';
+import { ChatMediaMessageComponent } from '../chat-media-message/chat-media-message.component';
 import { DraftService } from '../../services/draft.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppInputComponent } from '../primitives/input/input.component';
@@ -59,6 +61,8 @@ import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
     LinkPreviewCardComponent,
     GroupParticipantDrawerComponent,
     ChatSearchComponent,
+    ChatMediaShareComponent,
+    ChatMediaMessageComponent,
     AppCardComponent,
     AppInputComponent,
     AppButtonPrimaryComponent,

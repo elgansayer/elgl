@@ -79,9 +79,9 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
       { handler: getMyProfile },
     );
 
-    await expect(firstValueFrom(interceptor.intercept(context, next))).resolves.toBe(
-      'ok',
-    );
+    await expect(
+      firstValueFrom(interceptor.intercept(context, next)),
+    ).resolves.toBe('ok');
     expect(client.from).not.toHaveBeenCalled();
     expect(next.handle).toHaveBeenCalledOnce();
   });
@@ -186,10 +186,7 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
     const next = createNext({ id: 'user-1', target_languages: ['ja'] });
 
     await firstValueFrom(
-      interceptor.intercept(
-        createContext({ target_languages: ['ja'] }),
-        next,
-      ),
+      interceptor.intercept(createContext({ target_languages: ['ja'] }), next),
     );
 
     expect(client.from).toHaveBeenCalledTimes(1);
@@ -206,10 +203,7 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
 
     await expect(
       firstValueFrom(
-        interceptor.intercept(
-          createContext({ bio_text: 'New bio' }),
-          next,
-        ),
+        interceptor.intercept(createContext({ bio_text: 'New bio' }), next),
       ),
     ).rejects.toThrow(InternalServerErrorException);
   });

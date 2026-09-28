@@ -20,7 +20,10 @@ test('rejects observability services outside the compose services block', () => 
 });
 
 test('rejects publicly exposed observability admin ports', () => {
-  const compose = valid.compose.replace('127.0.0.1:3001:3000', '3001:3000');
+  const compose = valid.compose.replace(
+    '127.0.0.1:${GRAFANA_PORT:-3001}:3000',
+    '${GRAFANA_PORT:-3001}:3000',
+  );
   assert.match(
     validateObservabilityConfig({ ...valid, compose }).join('\n'),
     /Grafana UI must bind to loopback only/,
@@ -29,12 +32,27 @@ test('rejects publicly exposed observability admin ports', () => {
 
 test('rejects an insecure Grafana default password', () => {
   const compose = valid.compose.replace(
-    '${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}',
+    '${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in production}',
     '${GRAFANA_ADMIN_PASSWORD:-admin}',
   );
   const errors = validateObservabilityConfig({ ...valid, compose }).join('\n');
   assert.match(errors, /must not fall back to the default/);
   assert.match(errors, /must be supplied explicitly/);
+});
+
+test('rejects the obsolete Centrifugo metrics port', () => {
+  const compose = valid.compose.replace(
+    `    volumes:
+      - ./config/centrifugo:/centrifugo`,
+    `    expose:
+      - '8001'
+    volumes:
+      - ./config/centrifugo:/centrifugo`,
+  );
+  assert.match(
+    validateObservabilityConfig({ ...valid, compose }).join('\n'),
+    /obsolete metrics port 8001 must not be exposed/,
+  );
 });
 
 test('rejects missing Centrifugo metrics configuration', () => {

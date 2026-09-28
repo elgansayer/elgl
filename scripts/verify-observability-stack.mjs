@@ -25,14 +25,14 @@ export function validateObservabilityConfig({
     }
   }
 
-  if (!compose.includes("'127.0.0.1:9090:9090'")) {
-    errors.push('Prometheus UI must bind to loopback only (127.0.0.1:9090:9090)');
+  if (!compose.includes("'127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'")) {
+    errors.push('Prometheus UI must bind to loopback only');
   }
-  if (!compose.includes("'127.0.0.1:3001:3000'")) {
-    errors.push('Grafana UI must bind to loopback only (127.0.0.1:3001:3000)');
+  if (!compose.includes("'127.0.0.1:${GRAFANA_PORT:-3001}:3000'")) {
+    errors.push('Grafana UI must bind to loopback only');
   }
-  if (/^\s*-\s*['\"]?8001:8001['\"]?\s*$/m.test(compose)) {
-    errors.push('Centrifugo metrics port 8001 must not be published to the host');
+  if (/^\s*-\s*['"]?8001(?::8001)?['"]?\s*$/m.test(compose)) {
+    errors.push('Centrifugo obsolete metrics port 8001 must not be exposed');
   }
   if (compose.includes('GRAFANA_ADMIN_PASSWORD:-admin')) {
     errors.push('Grafana admin password must not fall back to the default "admin" password');
@@ -90,7 +90,7 @@ export function loadObservabilityConfig(root = ROOT) {
   return {
     compose: read('docker-compose.prod.yml'),
     prometheus: read('prometheus/prometheus.yml'),
-    grafanaDatasource: read('grafana/datasources/prometheus.yml'),
+    grafanaDatasource: read('grafana/datasources/datasources.yml'),
     grafanaDashboardProvider: read('grafana/provisioning/dashboards/dashboards.yml'),
     centrifugo: read('config/centrifugo/config.json'),
   };

@@ -29,12 +29,14 @@ Disabled, unhealthy, cooling down, unsupported, and busy providers are skipped. 
 checks also require every configured phase model to appear in the authenticated account catalogue. Emergency
 providers are always placed after healthy non-emergency providers. `skip_busy_providers=true` lets lower-priority
 subscriptions start instead of waiting for the preferred provider's slot.
+Weekly architecture analysis runs only when no pull-request review is active or newly scheduled, so background
+planning cannot take an agent slot from the merge queue.
 
-## Model policy as of 2026-08-17
+## Model policy as of 2026-09-22
 
 | Provider     | Coding default        | Reasoning and review override                                                                                               | Policy                                                                                                                                                       |
 | ------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code  | `fable`               | `fable`                                                                                                                     | Current most capable generally available Claude coding model and stable CLI alias                                                                            |
+| Claude Code  | `sonnet`               | `opus` for planning and architecture, `sonnet` for implementation and merge-critical review, `haiku` for bounded repair/general actions | Verified Claude Pro subscription aliases. Sonnet reliably emits structured independent-review reports; `fable` requires separately purchased usage credits |
 | Codex CLI    | `gpt-5.6-sol`         | `gpt-5.6-sol`, `max` effort                                                                                                 | Current OpenAI flagship for complex production and coding work                                                                                               |
 | Google agent | `gemini-3.1-pro-high` | same, `high` effort                                                                                                         | Strongest Google-native Pro reasoning tier exposed by the verified Antigravity catalogue                                                                     |
 | OpenCode Go  | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
@@ -42,7 +44,6 @@ subscriptions start instead of waiting for the preferred provider's slot.
 
 Primary references:
 
-- [Claude Fable 5 availability](https://platform.claude.com/docs/en/about-claude/models/introducing-claude-fable-5-and-claude-mythos-5)
 - [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference)
 - [OpenAI model catalogue](https://developers.openai.com/api/docs/models)
 - [OpenAI GPT-5.6 model guidance](https://developers.openai.com/api/docs/guides/latest-model)
@@ -163,11 +164,24 @@ generation's capacity. Persisted leases with missing or timezone-naive timestamp
 or expiry beyond the longest configured attempt window are discarded. Task leases apply the same bounded-duration
 rule, and their mutations use a cross-process file lock so operator reconciliation cannot race the daemon.
 
-The daemon admits at most one pull-request review lane and submits it before issue work. While that PR worker is
-active, `AgentRouter` subtracts one slot from the limit offered to non-review jobs on every provider. The PR job
-retains the full configured limit. This reservation does not cancel an existing provider process, but it prevents
-new issue phases from repeatedly taking a newly freed slot before the required review can acquire it. The
-reservation is released by the worker future on success, failure, cancellation, or shutdown drain.
+The daemon admits up to `FACTORY_REVIEW_LANE_MAX_CONCURRENT` pull-request review lanes and submits them before
+issue work. HelloTalk currently uses two lanes; smaller repositories can retain one. While a PR worker is active,
+`AgentRouter` reserves provider capacity for review work. This reservation does not cancel an existing provider
+process, but it prevents new issue phases from repeatedly taking a newly freed slot before required review can
+acquire it. The reservation is released by the worker future on success, failure, cancellation, or shutdown drain.
+
+Two lightweight provider sessions may run concurrently. A durable, fair shared/exclusive host-resource gate in
+the common capacity directory admits those sessions as readers and memory-heavy frontend lint, build, unit-test,
+and browser commands as an atomic writer. Once verification is waiting, new provider sessions cannot overtake it.
+The file-backed lease coordinates every repository daemon on the host and recovers dead daemon owners by PID and
+bounded expiry. This prevents an agent-triggered Angular build from overlapping authoritative frontend
+verification, while inexpensive repository checks remain parallel. Issue, pull-request, and weekly architecture
+work all share the same gate and verification lock.
+
+The scheduler caps new worker selection to the gate's currently available reader slots. A reserved writer or two
+active readers therefore suppresses doomed worker dispatch instead of cycling unrelated backlog items through
+identical host-capacity deferrals. Existing workers and the daemon heartbeat continue normally while admission is
+closed.
 
 `jobs.json` read-modify-write operations also use a cross-process lock. Provider history is bounded to the latest
 500 entries per job on append and deserialisation, preserving useful provenance without unbounded state growth.

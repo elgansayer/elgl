@@ -60,30 +60,83 @@
       (keydown)="onCarouselKeydown($event)"
     >
       @for (recommendation of recommendations(); track recommendation.id) {
-        <a
-          class="recommended-card"
-          [routerLink]="['/profile', recommendation.id]"
-          [attr.aria-label]="'View profile for ' + recommendation.display_name"
-        >
-          <div class="recommended-avatar" aria-hidden="true">
-            @if (recommendation.avatar_url) {
-              <img [src]="recommendation.avatar_url" alt="" loading="lazy" />
-            } @else {
-              <span>{{ recommendation.display_name.slice(0, 1).toUpperCase() }}</span>
-            }
-          </div>
-          <div class="recommended-card-body">
-            <div class="recommended-name-row">
-              <h3>{{ recommendation.display_name }}</h3>
-              <span class="recommended-language">{{ languageSummary(recommendation) }}</span>
-            </div>
-            <ul class="recommended-reasons">
-              @for (reason of recommendation.recommendation_reasons.slice(0, 3); track reason) {
-                <li>{{ reasonLabel(reason, recommendation) }}</li>
+        <article class="recommended-card">
+          <a
+            class="recommended-profile-link"
+            [routerLink]="['/profile', recommendation.id]"
+            [attr.aria-label]="'View profile for ' + recommendation.display_name"
+          >
+            <div class="recommended-avatar" aria-hidden="true">
+              @if (recommendation.avatar_url) {
+                <img [src]="recommendation.avatar_url" alt="" loading="lazy" />
+              } @else {
+                <span>{{ recommendation.display_name.slice(0, 1).toUpperCase() }}</span>
               }
-            </ul>
+            </div>
+            <div class="recommended-card-body">
+              <div class="recommended-name-row">
+                <h3>{{ recommendation.display_name }}</h3>
+                <span class="recommended-language">{{ languageSummary(recommendation) }}</span>
+              </div>
+              <ul class="recommended-reasons">
+                @for (reason of recommendation.recommendation_reasons.slice(0, 3); track reason) {
+                  <li>{{ reasonLabel(reason, recommendation) }}</li>
+                }
+              </ul>
+            </div>
+          </a>
+
+          <div class="recommended-quick-actions">
+            <button
+              hlmBtn
+              size="touch"
+              type="button"
+              class="recommended-action"
+              [disabled]="isActionPending(recommendation.id, 'message')"
+              [attr.aria-busy]="isActionPending(recommendation.id, 'message') ? 'true' : null"
+              [attr.aria-describedby]="
+                hasActionError(recommendation.id)
+                  ? 'recommended-action-error-' + recommendation.id
+                  : null
+              "
+              (click)="sendMessage(recommendation.id)"
+            >
+              {{ 'chat.sendMessage' | t }}
+            </button>
+            <button
+              hlmBtn
+              size="touch"
+              type="button"
+              class="recommended-action"
+              [disabled]="
+                isFollowing(recommendation.id) || isActionPending(recommendation.id, 'follow')
+              "
+              [attr.aria-busy]="isActionPending(recommendation.id, 'follow') ? 'true' : null"
+              [attr.aria-pressed]="isFollowing(recommendation.id)"
+              [attr.aria-describedby]="
+                hasActionError(recommendation.id)
+                  ? 'recommended-action-error-' + recommendation.id
+                  : null
+              "
+              (click)="followUser(recommendation.id)"
+            >
+              {{
+                (isFollowing(recommendation.id) ? 'userProfile.following' : 'userProfile.follow')
+                  | t
+              }}
+            </button>
           </div>
-        </a>
+
+          @if (hasActionError(recommendation.id)) {
+            <p
+              [id]="'recommended-action-error-' + recommendation.id"
+              class="recommended-action-error"
+              role="alert"
+            >
+              {{ 'common.error_generic' | t }}
+            </p>
+          }
+        </article>
       }
     </div>
     <div class="recommended-footer">

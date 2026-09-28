@@ -15,6 +15,8 @@ For an authenticated user's discovery request:
 
 The implementation deliberately reads VIP entitlement and spoof values from the authenticated profile supplied by the backend controller/service boundary. The client cannot gain spoofing behavior merely by sending an `is_vip` flag or arbitrary spoof fields in the discovery query.
 
+Profile updates validate both physical and mock coordinate values before they can be persisted: latitude is bounded to -90..90 and longitude to -180..180. This prevents a VIP profile from storing a syntactically numeric but geographically invalid origin that would later reach the PostGIS discovery path.
+
 ## Privacy and safety
 
 Location spoofing changes only the origin used by discovery. Existing discovery safety boundaries remain in force, including:
@@ -39,12 +41,13 @@ No new persistence, background job, cache, or retention store is introduced by t
 Regression coverage lives in:
 
 - `backend/src/discovery/discovery.service.postgis.spec.ts` for the existing PostGIS request contract and VIP coordinate override;
-- `backend/src/discovery/discovery.service.vip-location.spec.ts` for mock-only discovery, real-coordinate override, non-VIP isolation, malformed values, and country/city behavior.
+- `backend/src/discovery/discovery.service.vip-location.spec.ts` for mock-only discovery, real-coordinate override, non-VIP isolation, malformed values, and country/city behavior;
+- `backend/src/users/dto/update-profile.coordinates.spec.ts` for physical and spoofed coordinate boundary validation at the profile-update API boundary.
 
 Repository CI remains authoritative for backend tests, lint, build, E2E and database/governance gates.
 
 ## Rollout and rollback
 
-There is no database migration or API response-shape change. Deploy as a normal backend change.
+There is no database migration or API response-shape change. Deploy as a normal backend change. Existing valid stored coordinates remain compatible; future out-of-range profile updates are rejected by request validation.
 
-Rollback is a normal revert of the contract-test/documentation completion change. The runtime location-spoofing path already exists on `main`; removing that behavior separately would be a product change and should be coordinated with clients that expose VIP location controls.
+Rollback is a normal application revert of the validation change. The runtime location-spoofing path already exists on `main`; removing that behavior separately would be a product change and should be coordinated with clients that expose VIP location controls.

@@ -18,7 +18,9 @@ const baseSchema = readFileSync(
 
 describe('003_chat_and_favourites migration contract', () => {
   it('stores chat room, sender, content and delivery metadata', () => {
-    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS public\.chat_messages/i);
+    expect(migration).toMatch(
+      /CREATE TABLE IF NOT EXISTS public\.chat_messages/i,
+    );
     expect(migration).toMatch(/room_id\s+TEXT\s+NOT NULL/i);
     expect(migration).toMatch(
       /sender_id\s+UUID\s+NOT NULL\s+REFERENCES public\.users\(id\)\s+ON DELETE CASCADE/i,
@@ -63,11 +65,15 @@ describe('003_chat_and_favourites migration contract', () => {
   });
 
   it('protects chat inserts and favourite access with owner-scoped RLS', () => {
-    expect(rls).toMatch(/ALTER TABLE public\.chat_messages ENABLE ROW LEVEL SECURITY/i);
+    expect(rls).toMatch(
+      /ALTER TABLE public\.chat_messages ENABLE ROW LEVEL SECURITY/i,
+    );
     expect(rls).toMatch(
       /chat_messages_insert_own[\s\S]*?WITH CHECK \(auth\.uid\(\) = sender_id\)/i,
     );
-    expect(rls).toMatch(/ALTER TABLE public\.favourites ENABLE ROW LEVEL SECURITY/i);
+    expect(rls).toMatch(
+      /ALTER TABLE public\.favourites ENABLE ROW LEVEL SECURITY/i,
+    );
     expect(rls).toMatch(
       /favourites_select_own[\s\S]*?USING \(auth\.uid\(\) = user_id\)/i,
     );

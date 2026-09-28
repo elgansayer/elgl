@@ -4,6 +4,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
 import { GrammarCheckService } from './grammar-check.service';
+import { GrammarExplanationService } from './grammar-explanation.service';
+import { PronunciationScoringService } from './pronunciation-scoring.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
@@ -12,6 +14,7 @@ describe('NlpController', () => {
   let controller: NlpController;
   let nlpService: NlpService;
   let grammarCheckService: GrammarCheckService;
+  let pronunciationScoringService: PronunciationScoringService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -25,13 +28,24 @@ describe('NlpController', () => {
             translate: vi.fn(),
             translateUi: vi.fn(),
             checkRateLimit: vi.fn(),
-            pronunciationScore: vi.fn(),
           },
         },
         {
           provide: GrammarCheckService,
           useValue: {
             check: vi.fn(),
+          },
+        },
+        {
+          provide: GrammarExplanationService,
+          useValue: {
+            explain: vi.fn(),
+          },
+        },
+        {
+          provide: PronunciationScoringService,
+          useValue: {
+            score: vi.fn(),
           },
         },
         {
@@ -53,6 +67,9 @@ describe('NlpController', () => {
     controller = module.get<NlpController>(NlpController);
     nlpService = module.get<NlpService>(NlpService);
     grammarCheckService = module.get<GrammarCheckService>(GrammarCheckService);
+    pronunciationScoringService = module.get<PronunciationScoringService>(
+      PronunciationScoringService,
+    );
     usersService = module.get<UsersService>(UsersService);
   });
 
@@ -151,10 +168,7 @@ describe('NlpController', () => {
       );
 
       expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith(
-        'user-1',
-        false,
-      );
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', false);
       expect(grammarCheckService.check).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
     });
@@ -168,15 +182,11 @@ describe('NlpController', () => {
         errors_found: 0,
       });
 
-      await controller.grammarCheck(
-        { id: 'vip-user' } as any,
-        { text: 'Fine.' },
-      );
+      await controller.grammarCheck({ id: 'vip-user' } as any, {
+        text: 'Fine.',
+      });
 
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith(
-        'vip-user',
-        true,
-      );
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('vip-user', true);
     });
   });
 
@@ -184,27 +194,42 @@ describe('NlpController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.pronunciationScore(null, {} as any);
       expect(result).toBeNull();
-      expect(nlpService.pronunciationScore).not.toHaveBeenCalled();
+      expect(nlpService.checkRateLimit).not.toHaveBeenCalled();
+      expect(pronunciationScoringService.score).not.toHaveBeenCalled();
     });
 
-    it('should call service pronunciationScore when user is provided', async () => {
-      const dto: any = { target_text: 'Hello' };
-      const profile: any = { id: 'user-1', is_vip: true };
+    it('should enforce the daily AI quota before calling the pronunciation provider', async () => {
+      const dto: any = {
+        target_text: 'Hello',
+        audio_url: 'https://media.example.com/hello.wav',
+        language: 'en-US',
+      };
       const response: any = { overall_score: 95 };
-
-      (usersService.getProfile as Mock).mockResolvedValue(profile);
-      (nlpService.pronunciationScore as Mock).mockResolvedValue(response);
+      (usersService.getProfile as Mock).mockResolvedValue({ is_vip: false });
+      (nlpService.checkRateLimit as Mock).mockResolvedValue(undefined);
+      (pronunciationScoringService.score as Mock).mockResolvedValue(response);
 
       const result = await controller.pronunciationScore(
         { id: 'user-1' } as any,
         dto,
       );
-      expect(nlpService.pronunciationScore).toHaveBeenCalledWith(
-        'user-1',
-        true,
-        dto,
-      );
+
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', false);
+      expect(pronunciationScoringService.score).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
+    });
+
+    it('does not call Azure when the daily quota rejects the request', async () => {
+      (usersService.getProfile as Mock).mockResolvedValue({ is_vip: false });
+      (nlpService.checkRateLimit as Mock).mockRejectedValue(new Error('limit'));
+
+      await expect(
+        controller.pronunciationScore({ id: 'user-1' } as any, {
+          target_text: 'Hello',
+          audio_url: 'https://media.example.com/hello.wav',
+        }),
+      ).rejects.toThrow('limit');
+      expect(pronunciationScoringService.score).not.toHaveBeenCalled();
     });
   });
 });

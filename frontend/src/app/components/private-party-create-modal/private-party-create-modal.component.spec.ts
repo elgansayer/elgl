@@ -9,7 +9,9 @@ describe('PrivatePartyCreateModalComponent', () => {
   let component: PrivatePartyCreateModalComponent;
   let fixture: ComponentFixture<PrivatePartyCreateModalComponent>;
   let userServiceMock: { getFollowing: ReturnType<typeof vi.fn> };
-  let authServiceMock: { currentUser: ReturnType<typeof signal<{ id: string; is_vip?: boolean } | null>> };
+  let authServiceMock: {
+    currentUser: ReturnType<typeof signal<{ id: string; is_vip?: boolean } | null>>;
+  };
   let i18nServiceMock: ReturnType<typeof createI18nMock>;
 
   function createI18nMock() {
@@ -60,6 +62,7 @@ describe('PrivatePartyCreateModalComponent', () => {
     await fixture.whenStable();
     expect(userServiceMock.getFollowing).toHaveBeenCalledWith('user-1', 50, 0);
     expect(component.friends().length).toBe(2);
+    expect(component.friendsLoadError()).toBe(false);
   });
 
   it('should toggle friend selection', () => {
@@ -70,25 +73,36 @@ describe('PrivatePartyCreateModalComponent', () => {
     expect(component.selectedFriendIds()).not.toContain('friend-1');
   });
 
-  it('should be invalid without title', () => {
+  it('should be invalid without title', async () => {
+    await fixture.whenStable();
     component.title.set('');
     component.selectedFriendIds.set(['friend-1']);
     expect(component.isValid()).toBe(false);
   });
 
-  it('should be invalid without selected friends', () => {
+  it('should be invalid without selected friends', async () => {
+    await fixture.whenStable();
     component.title.set('Test Party');
     component.selectedFriendIds.set([]);
     expect(component.isValid()).toBe(false);
   });
 
-  it('should be valid with title and at least one friend', () => {
+  it('should be valid with title and at least one loaded friend', async () => {
+    await fixture.whenStable();
     component.title.set('Test Party');
     component.selectedFriendIds.set(['friend-1']);
     expect(component.isValid()).toBe(true);
   });
 
-  it('should emit created event on submit', () => {
+  it('should reject selected ids that are not in the loaded following list', async () => {
+    await fixture.whenStable();
+    component.title.set('Test Party');
+    component.selectedFriendIds.set(['unknown-user']);
+    expect(component.isValid()).toBe(false);
+  });
+
+  it('should emit created event on submit', async () => {
+    await fixture.whenStable();
     const emitted: unknown[] = [];
     component.created.subscribe((payload) => emitted.push(payload));
 
@@ -108,14 +122,52 @@ describe('PrivatePartyCreateModalComponent', () => {
     });
   });
 
+  it('should surface friend loading failures and recover on retry', async () => {
+    await fixture.whenStable();
+    component.title.set('Private Study Group');
+    component.selectedFriendIds.set(['friend-1']);
+    userServiceMock.getFollowing.mockRejectedValueOnce(new Error('temporarily unavailable'));
+
+    await component.retryFriends();
+
+    expect(component.friendsLoadError()).toBe(true);
+    expect(component.friends()).toEqual([]);
+    expect(component.selectedFriendIds()).toEqual([]);
+    expect(component.isValid()).toBe(false);
+
+    userServiceMock.getFollowing.mockResolvedValueOnce({
+      data: [{ id: 'friend-3', display_name: 'Friend Three' }],
+      total: 1,
+    });
+    await component.retryFriends();
+
+    expect(component.friendsLoadError()).toBe(false);
+    expect(component.friends()).toEqual([{ id: 'friend-3', display_name: 'Friend Three' }]);
+  });
+
+  it('should remove stale selections after the following list refreshes', async () => {
+    await fixture.whenStable();
+    component.selectedFriendIds.set(['friend-1', 'friend-2']);
+    userServiceMock.getFollowing.mockResolvedValueOnce({
+      data: [{ id: 'friend-1', display_name: 'Friend One' }],
+      total: 1,
+    });
+
+    await component.retryFriends();
+
+    expect(component.selectedFriendIds()).toEqual(['friend-1']);
+  });
+
   it('should reset form on close', () => {
     component.title.set('Test');
     component.selectedFriendIds.set(['friend-1']);
+    component.friendsLoadError.set(true);
     component.closeModal();
 
     expect(component.title()).toBe('');
     expect(component.selectedFriendIds()).toEqual([]);
     expect(component.friendSearchQuery()).toBe('');
+    expect(component.friendsLoadError()).toBe(false);
   });
 
   it('should filter friends by search query', () => {
