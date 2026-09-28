@@ -9,6 +9,7 @@ import pytest
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
 from openhands_factory.daemon import (
     FactoryDaemon,
+    admission_slots_while_respecting_wip,
     await_future_with_heartbeat,
     await_refresh,
     consume_completed_architect_future,
@@ -19,6 +20,7 @@ from openhands_factory.daemon import (
     select_batch,
     select_batch_failsafe,
     selection_diagnostics,
+    should_use_failsafe,
     stall_alert_decision,
 )
 from openhands_factory.exceptions import FactoryError
@@ -168,6 +170,24 @@ def test_select_batch_preserves_issue_progress_when_host_has_only_two_slots() ->
     assert [item.task.identifier for item in selected] == ["7347", "10"]
 
 
+def test_select_batch_uses_only_pull_request_work_while_wip_is_saturated() -> None:
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "11": job("11", 0, JobState.VERIFYING),
+        "594": factory_pull_request_job("594", JobState.QUALITY_REPAIRING),
+        "7347": pull_request_job("7347", priority=0),
+    }
+
+    selected = select_batch(
+        jobs,
+        3,
+        review_lane_max_concurrent=2,
+        review_only=True,
+    )
+
+    assert [item.task.identifier for item in selected] == ["7347", "594"]
+
+
 def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
     jobs = {
         "10": job("10", 5),
@@ -309,6 +329,14 @@ def test_selection_diagnostics_explains_review_capacity() -> None:
     }
 
 
+def test_failsafe_stays_idle_when_review_only_lane_is_full() -> None:
+    diagnostic = {"candidate_count": 451, "review_capacity": 0}
+
+    assert not should_use_failsafe([], diagnostic, review_only=True)
+    assert should_use_failsafe([], diagnostic, review_only=False)
+    assert not should_use_failsafe([pull_request_job("7348")], diagnostic, review_only=True)
+
+
 def test_failsafe_selector_prioritises_merge_queued_review() -> None:
     now = datetime(2026, 1, 1, tzinfo=UTC)
     jobs = {
@@ -318,6 +346,18 @@ def test_failsafe_selector_prioritises_merge_queued_review() -> None:
     }
 
     selected = select_batch_failsafe(jobs, 1, set(), now, 1, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
+
+
+def test_failsafe_selector_does_not_dispatch_issue_work_in_review_only_mode() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "7348": pull_request_job("7348", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch_failsafe(jobs, 2, set(), now, 0, 2, review_only=True)
 
     assert [item.task.identifier for item in selected] == ["7348"]
 
@@ -640,6 +680,159 @@ def test_storage_reserve_blocks_and_recovers_scheduling(
 
     assert daemon._storage_ready()
     assert not daemon.storage_blocked
+
+
+def test_admission_slots_while_respecting_wip_zeroes_only_when_paused() -> None:
+    assert admission_slots_while_respecting_wip(5, wip_paused=False) == 5
+    assert admission_slots_while_respecting_wip(5, wip_paused=True) == 0
+    assert admission_slots_while_respecting_wip(None, wip_paused=False) is None
+    assert admission_slots_while_respecting_wip(None, wip_paused=True) == 0
+
+
+def _build_wip_gated_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    pause_new_dispatch: bool,
+    discovered_job: Job,
+    admit_calls: list[tuple[str, object]],
+    architect_calls: list[bool],
+) -> FactoryDaemon:
+    """Build a FactoryDaemon that can run one real `_loop` iteration cheaply.
+
+    Every GitHub/filesystem/provider dependency the loop body touches is stubbed so
+    only the PR-WIP gating decision under test is real. `issue_admission.admit` and
+    `pipeline.architect_due` always return False/only record calls, so neither branch
+    ever reaches the heavyweight `FactoryPipeline`/`ThreadPoolExecutor` submission path
+    regardless of whether admission was attempted.
+    """
+
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace(  # type: ignore[assignment]
+        max_parallel_jobs=1,
+        cooldown_seconds=0,
+        quarantine_recovery_minutes=5,
+        max_task_minutes=30,
+        recovery_dir=Path("/tmp/factory-wip-gate-test-recovery"),
+        recovery_retention_hours=1,
+        review_lane_first=True,
+        review_lane_max_concurrent=1,
+    )
+    daemon.stopping = False
+    daemon.storage_blocked = False
+    daemon.scheduler_snapshot = {}
+    daemon.host_resource_slots = SimpleNamespace(available_shared_slots=lambda: 1)
+    daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
+        router=SimpleNamespace(health_snapshot=lambda: {}),
+        jobs=SimpleNamespace(
+            recover_abandoned_attempts=lambda *a, **k: [],
+            load=lambda: {discovered_job.task.identifier: discovered_job},
+        ),
+        pull_request_capacity=SimpleNamespace(pause_new_dispatch=pause_new_dispatch),
+        architect_due=lambda: architect_calls.append(True) or False,
+    )
+
+    def fake_admit(identifier: str, now: object) -> bool:
+        admit_calls.append((identifier, now))
+        return False
+
+    daemon.issue_admission = SimpleNamespace(available_slots=lambda now: 5, admit=fake_admit)  # type: ignore[assignment]
+
+    monkeypatch.setattr(daemon, "_assert_owner", lambda: None)
+    monkeypatch.setattr(daemon, "_storage_ready", lambda active_task_ids: True)
+    monkeypatch.setattr(daemon, "_check_stall", lambda: None)
+    monkeypatch.setattr(daemon, "paused", lambda: False)
+    monkeypatch.setattr("openhands_factory.daemon.disk_space_checks", lambda config: [])
+    monkeypatch.setattr(
+        "openhands_factory.daemon.recover_due_quarantines",
+        lambda jobs, recovery_delay: [],
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.refresh_jobs",
+        lambda pipeline, active, now, cooldown: ({"1": discovered_job}, now + 3600),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.prune_recovery_archives",
+        lambda recovery_dir, retention: [],
+    )
+
+    writes: list[str] = []
+
+    def record_state(
+        status: str,
+        active: object,
+        active_started_at: object | None = None,
+    ) -> None:
+        writes.append(status)
+        # Let exactly one full loop iteration run: stop only from its trailing write.
+        if status == "running" and len(writes) >= 2:
+            daemon.stopping = True
+
+    monkeypatch.setattr(daemon, "_write_daemon_state", record_state)
+    return daemon
+
+
+def test_loop_pauses_new_issue_and_architect_dispatch_when_pr_wip_exceeded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admit_calls: list[tuple[str, object]] = []
+    architect_calls: list[bool] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=True,
+        discovered_job=job("1", priority=5),
+        admit_calls=admit_calls,
+        architect_calls=architect_calls,
+    )
+
+    assert daemon._loop() == 0
+
+    assert admit_calls == []
+    assert architect_calls == []
+
+
+def test_loop_uses_wip_capacity_recalculated_by_current_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admit_calls: list[tuple[str, object]] = []
+    architect_calls: list[bool] = []
+    discovered = job("1", priority=5)
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=False,
+        discovered_job=discovered,
+        admit_calls=admit_calls,
+        architect_calls=architect_calls,
+    )
+
+    def refresh_and_pause(*_args: object) -> tuple[dict[str, Job], float]:
+        daemon.pipeline.pull_request_capacity.pause_new_dispatch = True
+        return {"1": discovered}, 3600.0
+
+    monkeypatch.setattr("openhands_factory.daemon.refresh_jobs", refresh_and_pause)
+
+    assert daemon._loop() == 0
+
+    assert admit_calls == []
+    assert architect_calls == []
+
+
+def test_loop_admits_new_issues_and_runs_architect_when_pr_wip_has_capacity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admit_calls: list[tuple[str, object]] = []
+    architect_calls: list[bool] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=False,
+        discovered_job=job("1", priority=5),
+        admit_calls=admit_calls,
+        architect_calls=architect_calls,
+    )
+
+    assert daemon._loop() == 0
+
+    assert [identifier for identifier, _now in admit_calls] == ["1"]
+    assert architect_calls == [True]
 
 
 def test_stall_alert_decision_no_stall_returns_no_alert() -> None:
