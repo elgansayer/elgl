@@ -1,9 +1,11 @@
 import {
-  IsString,
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
   IsArray,
-  ArrayNotEmpty,
-  MinLength,
+  IsString,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -20,8 +22,11 @@ export class CreatePollDto {
   question!: string;
 
   @ApiProperty({
-    description: 'Array of poll options (each max 100 characters)',
+    description: 'Two to six unique poll options (each 1-100 characters)',
     type: [String],
+    minItems: 2,
+    maxItems: 6,
+    uniqueItems: true,
     example: [
       'Travel experiences',
       'Food and culture',
@@ -29,8 +34,11 @@ export class CreatePollDto {
     ],
   })
   @IsArray()
-  @ArrayNotEmpty()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(6)
+  @ArrayUnique((option: string) => option.trim().toLocaleLowerCase())
   @IsString({ each: true })
+  @MinLength(1, { each: true })
   @MaxLength(100, { each: true })
   options!: string[];
 }
