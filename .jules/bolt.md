@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-23 - [Bound Promise.all when batching API requests]
+**Learning:** Replacing sequential `await` loops with unconstrained `Promise.all` mapping can cause race conditions or exceed request rate limits (e.g., Supabase storage removals and database updates inside `purgeExpiredArchives`).
+**Action:** When migrating sequential operations to concurrent mapping, enforce concurrency bounds (e.g. `chunkSize = 10`) and process the chunks in a loop before awaiting the next chunk.

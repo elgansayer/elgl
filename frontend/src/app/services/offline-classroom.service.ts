@@ -141,9 +141,11 @@ export class OfflineClassroomService {
     const tx = this.db!.transaction(STORE_LISTINGS, 'readwrite');
     const store = tx.objectStore(STORE_LISTINGS);
     store.clear();
+
     for (const listing of listings) {
       store.put(listing);
     }
+
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => {
         this.saveLastSyncTimestamp().catch(() => undefined);
