@@ -28,6 +28,7 @@ class GitHub:
         self.pending_reviews: list[str] = []
         self.removed_labels: list[tuple[int, tuple[str, ...]]] = []
         self.updated_branches: list[tuple[int, str]] = []
+        self.reopened_pull_requests: list[int] = []
         self.comments: list[tuple[int, str]] = []
         self.tasks = [Task("42", "Fix build", "Broken build", "github-issue", 0)]
         self.pull_requests: list[Task] = []
@@ -122,6 +123,9 @@ class GitHub:
 
     def mark_ready(self, pull_request: int) -> None:
         return None
+
+    def reopen_pull_request(self, pull_request: int) -> None:
+        self.reopened_pull_requests.append(pull_request)
 
     def request_review(self, pull_request: int) -> None:
         return None
@@ -1091,6 +1095,51 @@ def test_verifying_pull_request_rechecks_conflict_without_a_new_head(
 
     assert result is not None
     assert result.state is JobState.REPAIRING
+
+
+def test_verifying_factory_issue_reopens_its_closed_pull_request(tmp_path: Path) -> None:
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "CLOSED", False, "UNKNOWN", "", "reviewed-head", False, False)
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = Job(
+        task=Task("77", "Resume factory work", "Body", "github-issue", 10),
+        state=JobState.VERIFYING,
+        branch="factory/77-resume",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    pipeline.jobs.save({"77": job})
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.VERIFYING
+    assert result.next_attempt_at is not None
+    assert github.reopened_pull_requests == [77]
+
+
+def test_verifying_external_closed_pull_request_finishes_without_reopening(tmp_path: Path) -> None:
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "CLOSED", False, "UNKNOWN", "", "reviewed-head", False, False)
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = Job(
+        task=Task("77", "Respect closure", "Body", "github-pull-request", 10),
+        state=JobState.VERIFYING,
+        branch="contributor/closed",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    pipeline.jobs.save({"77": job})
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.DONE
+    assert github.reopened_pull_requests == []
 
 
 def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
