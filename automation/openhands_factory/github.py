@@ -346,32 +346,111 @@ class GitHubClient:
         return tasks
 
     def list_pull_requests(self, limit: int = 10_000) -> list[PullRequestRecord]:
-        """Return open and historical PR identity needed by the convergence owner."""
+        """Return bounded PR identity without one oversized GraphQL request.
 
-        output = self._run(
-            (
-                "gh",
-                "pr",
-                "list",
-                "--repo",
-                self.repository,
-                "--state",
-                "all",
-                "--limit",
-                str(limit),
-                "--json",
-                "number,title,body,state,isDraft,headRefName,headRefOid,baseRefName,"
-                "isCrossRepository,labels,files,createdAt,updatedAt,closedAt,mergedAt,"
-                "mergeStateStatus,statusCheckRollup",
+        GitHub returns HTTP 502 for this repository when nested file and check
+        fields are requested across its full history. Page the authoritative
+        identity through REST, then best-effort enrich only the newest 50 PRs
+        with the nested GraphQL fields used by detailed metrics.
+        """
+
+        if limit <= 0:
+            return []
+        payload: list[object] = []
+        for page in range(1, (limit + 99) // 100 + 1):
+            output = self._run(
+                (
+                    "gh",
+                    "api",
+                    "--method",
+                    "GET",
+                    f"repos/{self.repository}/pulls",
+                    "-f",
+                    "state=all",
+                    "-f",
+                    "per_page=100",
+                    "-f",
+                    f"page={page}",
+                )
             )
-        )
-        payload = json.loads(output)
-        if not isinstance(payload, list):
-            raise FactoryError("GitHub pull-request inventory is not a list")
+            page_payload = json.loads(output)
+            if not isinstance(page_payload, list):
+                raise FactoryError("GitHub pull-request inventory is not a list")
+            payload.extend(page_payload)
+            if len(page_payload) < 100:
+                break
+        payload = payload[:limit]
+
+        rich_by_number: dict[int, object] = {}
+        rich_limit = min(limit, len(payload), 50)
+        if rich_limit:
+            rich = self._invoke(
+                (
+                    "gh",
+                    "pr",
+                    "list",
+                    "--repo",
+                    self.repository,
+                    "--state",
+                    "all",
+                    "--limit",
+                    str(rich_limit),
+                    "--json",
+                    "number,title,body,state,isDraft,headRefName,headRefOid,baseRefName,"
+                    "isCrossRepository,labels,files,createdAt,updatedAt,closedAt,mergedAt,"
+                    "mergeStateStatus,statusCheckRollup",
+                ),
+                120,
+            )
+            if rich.returncode == 0:
+                try:
+                    rich_payload = json.loads(rich.stdout)
+                except json.JSONDecodeError:
+                    rich_payload = None
+                if isinstance(rich_payload, list):
+                    rich_by_number = {
+                        number: item
+                        for item in rich_payload
+                        if isinstance(item, dict)
+                        and isinstance((number := item.get("number")), int)
+                        and not isinstance(number, bool)
+                    }
+
         records: list[PullRequestRecord] = []
         for item in payload:
             if not isinstance(item, dict):
                 raise FactoryError("GitHub pull-request inventory contains a malformed entry")
+            number = item.get("number")
+            if isinstance(number, int) and not isinstance(number, bool):
+                rich_item = rich_by_number.get(number)
+                if isinstance(rich_item, dict):
+                    item = rich_item
+                else:
+                    head = item.get("head")
+                    base = item.get("base")
+                    head_mapping = head if isinstance(head, dict) else {}
+                    base_mapping = base if isinstance(base, dict) else {}
+                    head_repository = head_mapping.get("repo")
+                    repository_mapping = (
+                        head_repository if isinstance(head_repository, dict) else {}
+                    )
+                    merged_at = item.get("merged_at")
+                    item = {
+                        "number": number,
+                        "title": item.get("title"),
+                        "body": item.get("body"),
+                        "state": "MERGED" if isinstance(merged_at, str) else item.get("state"),
+                        "isDraft": item.get("draft") is True,
+                        "headRefName": head_mapping.get("ref"),
+                        "headRefOid": head_mapping.get("sha"),
+                        "baseRefName": base_mapping.get("ref"),
+                        "isCrossRepository": repository_mapping.get("full_name") != self.repository,
+                        "labels": item.get("labels"),
+                        "createdAt": item.get("created_at"),
+                        "updatedAt": item.get("updated_at"),
+                        "closedAt": item.get("closed_at"),
+                        "mergedAt": merged_at,
+                    }
             try:
                 records.append(PullRequestRecord.from_payload(item))
             except (TypeError, ValueError) as error:
