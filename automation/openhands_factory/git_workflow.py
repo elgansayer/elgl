@@ -156,6 +156,40 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
         self._add_worktree(worktree, branch, f"origin/{branch}")
 
+    def merge_base_for_repair(self) -> bool:
+        """Merge the current base into a PR worktree and report conflicts.
+
+        GitHub cannot update a branch whose merge is conflicting. Leaving the
+        conflict materialised in the isolated worktree gives the repair agent
+        exact files and markers to resolve instead of asking it to infer the
+        conflict from a status string.
+        """
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect merge conflicts: {unresolved.stderr}")
+        if unresolved.stdout.strip():
+            return True
+
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        merge = self.runner(
+            ("git", "merge", "--no-commit", "--no-ff", f"origin/{self.base_branch}"),
+            self.repository,
+        )
+        if merge.returncode == 0:
+            return False
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode == 0 and unresolved.stdout.strip():
+            return True
+        raise RepositorySafetyError(f"Could not merge base branch: {merge.stderr}")
+
     def _add_worktree(self, worktree: Path, branch: str, start_point: str) -> None:
         if worktree.exists():
             raise RepositorySafetyError(f"Task worktree already exists: {worktree}")

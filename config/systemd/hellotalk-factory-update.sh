@@ -500,6 +500,15 @@ timeout "${GIT_TIMEOUT}s" \
 
 local_sha=$(factory_git_read rev-parse HEAD)
 remote_sha=$(factory_git_read rev-parse origin/main)
+verify_commit_identity "$local_sha" || {
+  log 'ERROR: current checkout identity could not be verified'
+  exit 1
+}
+# Bootstrap service-unit fixes before waiting for running jobs. A stale updater
+# unit can otherwise conflict with the two-minute health timers and be terminated
+# repeatedly before it ever reaches the post-pull installation step.
+log 'Refreshing verified current service units before drain'
+install_service_configuration "$local_sha"
 config_is_current=false
 config_path=$(canonical_agents_config_path "$AGENTS_CONFIG" 2>/dev/null || true)
 if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
@@ -510,8 +519,6 @@ if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
 fi
 
 if [ "$local_sha" = "$remote_sha" ] && [ "$config_is_current" = true ]; then
-  log 'Refreshing verified Factory service units and instance policy'
-  install_service_configuration "$local_sha"
   log "Already up to date at ${local_sha:0:12} with valid provider config - no restart needed"
   exit 0
 fi
@@ -526,10 +533,6 @@ else
     exit 1
   fi
 fi
-verify_commit_identity "$local_sha" || {
-  log 'ERROR: current checkout identity could not be verified'
-  exit 1
-}
 verify_commit_identity "$remote_sha" || {
   log 'ERROR: origin/main identity could not be verified'
   exit 1

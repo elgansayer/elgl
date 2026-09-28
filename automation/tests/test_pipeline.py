@@ -1013,6 +1013,39 @@ def test_pending_ci_poll_is_rate_limited(tmp_path: Path) -> None:
     assert before + timedelta(seconds=55) <= result.next_attempt_at
 
 
+def test_conflicting_pull_request_enters_repair_before_pending_checks(
+    tmp_path: Path,
+) -> None:
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "CONFLICTING",
+            "",
+            "reviewed-head",
+            False,
+            True,
+            merge_state_status="DIRTY",
+        )
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = Job(
+        task=Task("77", "Resolve conflict", "Body", "github-pull-request", 10),
+        state=JobState.CI_PENDING,
+        branch="fix/conflict",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    pipeline.jobs.save({"77": job})
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.REPAIRING
+
+
 def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
@@ -1119,6 +1152,62 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert len(agent_calls) == 1
     assert result.state is JobState.REVIEWING
     assert "repair CI" in committed[0]
+
+
+def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "CONFLICTING",
+            "",
+            "reviewed-head",
+            False,
+            True,
+            merge_state_status="DIRTY",
+        )
+    ]
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "merge_base_for_repair", lambda workflow: True)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda worktree: pytest.fail("conflict repair must not run mechanical formatters first"),
+    )
+    fingerprints = iter(("with-conflict-markers", "resolved-conflicts"))
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    committed: list[str] = []
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: committed.append(message))
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "resolved-head")
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert result.state is JobState.REVIEWING
+    assert len(prompts) == 1
+    assert "Resolve every unmerged path" in prompts[0]
+    assert "resolve base conflicts" in committed[0]
 
 
 @pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])

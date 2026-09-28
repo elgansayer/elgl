@@ -203,6 +203,41 @@ class ConservativeAgentRouter(AgentRouter):
         if not self.conservative_enabled:
             return candidates, health
 
+        # Static policy is the safe starting order, but a 24/7 service must learn
+        # when that order no longer reflects the providers that actually finish
+        # work. Rank providers with enough phase-specific evidence by a smoothed
+        # completion rate. Unmeasured providers keep a neutral exploration score.
+        # This also makes a hot-deployed runtime self-correct while a root-owned
+        # production policy file is waiting for the next successful updater run.
+        if self.metrics_store is not None:
+            totals: dict[str, tuple[int, int]] = {}
+            snapshot = self.metrics_store.snapshot()
+            records = snapshot.get("providers", [])
+            if isinstance(records, list):
+                for record in records:
+                    if not isinstance(record, dict) or record.get("phase") != phase.value:
+                        continue
+                    provider = record.get("provider")
+                    calls = record.get("calls")
+                    successes = record.get("successes")
+                    if (
+                        not isinstance(provider, str)
+                        or not isinstance(calls, int)
+                        or not isinstance(successes, int)
+                    ):
+                        continue
+                    prior_calls, prior_successes = totals.get(provider, (0, 0))
+                    totals[provider] = (prior_calls + calls, prior_successes + successes)
+            configured_order = {name: index for index, name in enumerate(candidates)}
+
+            def observed_score(name: str) -> float:
+                calls, successes = totals.get(name, (0, 0))
+                if calls < 5:
+                    return 0.5
+                return (successes + 2) / (calls + 4)
+
+            candidates.sort(key=lambda name: (-observed_score(name), configured_order[name]))
+
         # Preserve independent review when possible before applying the provider
         # budget. Without this reorder, capping a route could retain the original
         # implementation provider and accidentally discard an independent reviewer.
