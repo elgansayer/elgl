@@ -1,18 +1,28 @@
-import { GoneException } from '@nestjs/common';
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import type { User } from '@supabase/supabase-js';
 import { LinkedAccountsController } from './linked-accounts.controller';
 import { LinkedAccountsService } from './linked-accounts.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('LinkedAccountsController', () => {
   let controller: LinkedAccountsController;
-  let service: { getLinkedAccounts: ReturnType<typeof vi.fn> };
+  let service: {
+    getLinkedAccounts: vi.Mock;
+    linkAccount: vi.Mock;
+    unlinkAccount: vi.Mock;
+  };
 
-  const user = { id: 'user-1' } as User;
+  const mockRequest = (userId = 'user-1') =>
+    ({
+      user: { id: userId },
+    }) as any;
 
   beforeEach(async () => {
-    service = { getLinkedAccounts: vi.fn() };
+    service = {
+      getLinkedAccounts: vi.fn(),
+      linkAccount: vi.fn(),
+      unlinkAccount: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LinkedAccountsController],
@@ -25,19 +35,57 @@ describe('LinkedAccountsController', () => {
     controller = module.get<LinkedAccountsController>(LinkedAccountsController);
   });
 
-  it('returns authoritative linked accounts for the authenticated user', async () => {
-    const expected = [{ provider: 'google', active: true }];
-    service.getLinkedAccounts.mockResolvedValue(expected);
+  describe('getLinkedAccounts', () => {
+    it('should return linked accounts for the authenticated user', async () => {
+      const expected = [{ provider: 'google', active: true }];
+      service.getLinkedAccounts.mockResolvedValue(expected);
 
-    await expect(controller.getLinkedAccounts(user)).resolves.toEqual(expected);
-    expect(service.getLinkedAccounts).toHaveBeenCalledWith('user-1');
+      const result = await controller.getLinkedAccounts(mockRequest());
+      expect(result).toEqual(expected);
+      expect(service.getLinkedAccounts).toHaveBeenCalledWith('user-1');
+    });
   });
 
-  it('fails closed for the legacy server-side link mutation endpoint', () => {
-    expect(() => controller.linkAccount()).toThrow(GoneException);
+  describe('linkAccount', () => {
+    it('should link an account for the authenticated user', async () => {
+      service.linkAccount.mockResolvedValue(undefined);
+
+      const result = await controller.linkAccount(mockRequest(), {
+        provider: 'google',
+        name: 'test@gmail.com',
+      });
+      expect(result).toEqual({ success: true });
+      expect(service.linkAccount).toHaveBeenCalledWith(
+        'user-1',
+        'google',
+        'test@gmail.com',
+      );
+    });
+
+    it('should link without a name', async () => {
+      service.linkAccount.mockResolvedValue(undefined);
+
+      const result = await controller.linkAccount(mockRequest(), {
+        provider: 'facebook',
+      });
+      expect(result).toEqual({ success: true });
+      expect(service.linkAccount).toHaveBeenCalledWith(
+        'user-1',
+        'facebook',
+        undefined,
+      );
+    });
   });
 
-  it('fails closed for the legacy server-side unlink mutation endpoint', () => {
-    expect(() => controller.unlinkAccount()).toThrow(GoneException);
+  describe('unlinkAccount', () => {
+    it('should unlink an account for the authenticated user', async () => {
+      service.unlinkAccount.mockResolvedValue(undefined);
+
+      const result = await controller.unlinkAccount(mockRequest(), {
+        provider: 'google',
+      });
+      expect(result).toEqual({ success: true });
+      expect(service.unlinkAccount).toHaveBeenCalledWith('user-1', 'google');
+    });
   });
 });

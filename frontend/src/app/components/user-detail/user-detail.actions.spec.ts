@@ -1,15 +1,12 @@
+import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import { AuthService } from '../../services/auth.service';
-import { DirectConversationService } from '../../services/direct-conversation.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
-import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
@@ -39,9 +36,8 @@ describe('UserDetailComponent external profile actions', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
   let getUserProfile: ReturnType<typeof vi.fn>;
-  let follow: ReturnType<typeof vi.fn>;
-  let unfollow: ReturnType<typeof vi.fn>;
-  let openOrCreate: ReturnType<typeof vi.fn>;
+  let followUser: ReturnType<typeof vi.fn>;
+  let unfollowUser: ReturnType<typeof vi.fn>;
 
   async function render(profile: UserProfile): Promise<void> {
     getUserProfile.mockResolvedValue(profile);
@@ -53,9 +49,8 @@ describe('UserDetailComponent external profile actions', () => {
 
   beforeEach(async () => {
     getUserProfile = vi.fn();
-    follow = vi.fn().mockResolvedValue(undefined);
-    unfollow = vi.fn().mockResolvedValue(undefined);
-    openOrCreate = vi.fn().mockResolvedValue('room-123');
+    followUser = vi.fn().mockResolvedValue(undefined);
+    unfollowUser = vi.fn().mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [UserDetailComponent],
@@ -64,23 +59,13 @@ describe('UserDetailComponent external profile actions', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         {
-          provide: AuthService,
-          useValue: { currentUser: signal({ id: 'current-user' }) },
-        },
-        {
           provide: UserService,
           useValue: {
             getUserProfile,
+            followUser,
+            unfollowUser,
             likeProfile: vi.fn().mockResolvedValue(undefined),
           },
-        },
-        {
-          provide: DirectConversationService,
-          useValue: { openOrCreate },
-        },
-        {
-          provide: ProfileRelationshipService,
-          useValue: { follow, unfollow },
         },
         {
           provide: DiscoveryService,
@@ -109,17 +94,15 @@ describe('UserDetailComponent external profile actions', () => {
   it('renders direct Send Message and Follow actions for an external profile', async () => {
     await render(makeProfile());
 
-    const buttons = Array.from(
-      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    );
-    const chatButton = buttons.find(
-      (button) => button.textContent?.trim() === 'chatList.tapToChat',
-    );
+    const chatLink = fixture.nativeElement.querySelector(
+      'a[href="/chat/partner-1"]',
+    ) as HTMLAnchorElement | null;
     const followButton = fixture.nativeElement.querySelector(
       'button[aria-label="userProfile.follow"]',
     ) as HTMLButtonElement | null;
 
-    expect(chatButton).toBeDefined();
+    expect(chatLink).not.toBeNull();
+    expect(chatLink?.textContent?.trim()).toBe('chatList.tapToChat');
     expect(followButton).not.toBeNull();
     expect(followButton?.textContent?.trim()).toBe('userProfile.follow');
   });
@@ -130,9 +113,9 @@ describe('UserDetailComponent external profile actions', () => {
     await component.toggleFollow();
     fixture.detectChanges();
 
-    expect(follow).toHaveBeenCalledTimes(1);
-    expect(follow).toHaveBeenCalledWith('partner-1');
-    expect(unfollow).not.toHaveBeenCalled();
+    expect(followUser).toHaveBeenCalledTimes(1);
+    expect(followUser).toHaveBeenCalledWith('partner-1');
+    expect(unfollowUser).not.toHaveBeenCalled();
     expect(component.isFollowing()).toBe(true);
 
     const followButton = fixture.nativeElement.querySelector(
@@ -147,20 +130,22 @@ describe('UserDetailComponent external profile actions', () => {
     await component.toggleFollow();
     fixture.detectChanges();
 
-    expect(unfollow).toHaveBeenCalledTimes(1);
-    expect(unfollow).toHaveBeenCalledWith('partner-1');
-    expect(follow).not.toHaveBeenCalled();
+    expect(unfollowUser).toHaveBeenCalledTimes(1);
+    expect(unfollowUser).toHaveBeenCalledWith('partner-1');
+    expect(followUser).not.toHaveBeenCalled();
     expect(component.isFollowing()).toBe(false);
   });
 
   it('rolls back the follow state when the follow request fails', async () => {
-    follow.mockRejectedValue(new Error('network unavailable'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    followUser.mockRejectedValue(new Error('network unavailable'));
     await render(makeProfile({ is_followed_by_me: false }));
 
     await component.toggleFollow();
     fixture.detectChanges();
 
     expect(component.isFollowing()).toBe(false);
-    expect(component.followErrorKey()).toBe('common.error_generic');
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });

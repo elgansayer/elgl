@@ -132,4 +132,17 @@ export const learningRoutes: Routes = [
       import('../ai-conversation/ai-conversation.component').then((m) => m.AiConversationComponent),
     title: 'AI Conversation - HelloTalk',
   },
+  {
+    path: 'language',
+    redirectTo: 'settings/language',
+    pathMatch: 'full',
+  },
+  {
+    path: 'settings/language',
+    loadComponent: () =>
+      import('../pages/language-settings/language-settings.component').then(
+        (m) => m.LanguageSettingsComponent,
+      ),
+    title: 'Language Settings - HelloTalk',
+  },
 ];

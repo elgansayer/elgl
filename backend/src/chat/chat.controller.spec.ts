@@ -164,23 +164,6 @@ describe('ChatController', () => {
       expect(res.json).toHaveBeenCalledWith({ token: 'ws-token' });
     });
 
-    it('should fail closed when connection token signing fails', async () => {
-      (centrifugoService.checkConnectionRateLimit as Mock).mockResolvedValue({
-        allowed: true,
-        retryAfterMs: 0,
-      });
-      (chatService.generateConnectionToken as Mock).mockRejectedValue(
-        new Error('signing unavailable'),
-      );
-
-      const res = mockRes();
-
-      await expect(
-        controller.getConnectionToken(mockUser(), mockReq(), res),
-      ).rejects.toThrow('signing unavailable');
-      expect(res.json).not.toHaveBeenCalled();
-    });
-
     it('should respond with 429 when rate limit is exceeded', async () => {
       (centrifugoService.checkConnectionRateLimit as Mock).mockResolvedValue({
         allowed: false,

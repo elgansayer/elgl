@@ -68,23 +68,12 @@ export class PremiumAiController {
   @ApiResponse({ status: 403, description: 'Caller is not a room member.' })
   @ApiResponse({
     status: 409,
-    description:
-      'The same idempotency key is still processing; retry with the same key.',
-  })
-  @ApiResponse({
-    status: 410,
-    description:
-      'The idempotency key belongs to a refunded/failed request or cannot be reused for this conversation; a new purchase must use a fresh key.',
-  })
-  @ApiResponse({
-    status: 500,
-    description:
-      'Refund/persistence reconciliation is ambiguous; retry with the same idempotency key before starting another purchase.',
+    description: 'The same request is already processing or was refunded.',
   })
   @ApiResponse({
     status: 503,
     description:
-      'AI provider or persistence temporarily unavailable; any charged coins were refunded before this response.',
+      'AI provider or persistence temporarily unavailable; charged coins are refunded.',
   })
   async conversationAnalysis(
     @CurrentUser() user: User | null,

@@ -69,6 +69,7 @@ import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { LanguageIslandsModule } from './language-islands/language-islands.module';
+import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
@@ -160,6 +161,7 @@ import { LivekitModule } from './livekit/livekit.module';
     LessonsModule,
     LinkPreviewModule,
     ResourceLibraryModule,
+    NotificationPreferencesModule,
     ModerationModule,
     WordOfTheDayModule,
     SpamDetectionModule,

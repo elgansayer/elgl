@@ -4,10 +4,9 @@ import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { MetricsModule } from '../metrics/metrics.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
-import { AtomicEconomyController } from './atomic-economy.controller';
+import { EconomyController } from './economy.controller';
 import { PremiumAiController } from './premium-ai.controller';
 import { EconomyService } from './economy.service';
-import { AtomicEconomyService } from './atomic-economy.service';
 import { PremiumAiService } from './premium-ai.service';
 import { PremiumAiReconciliationService } from './premium-ai-reconciliation.service';
 import { CoinEconomyHealthService } from './coin-economy-health.service';
@@ -16,9 +15,9 @@ import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
 
 @Module({
   imports: [UsersModule, ChatModule, HttpModule, MetricsModule, LlmProxyModule],
-  controllers: [AtomicEconomyController, PremiumAiController],
+  controllers: [EconomyController, PremiumAiController],
   providers: [
-    { provide: EconomyService, useClass: AtomicEconomyService },
+    EconomyService,
     PremiumAiService,
     PremiumAiReconciliationService,
     CoinEconomyHealthService,

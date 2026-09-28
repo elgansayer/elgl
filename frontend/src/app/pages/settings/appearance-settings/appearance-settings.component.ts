@@ -71,18 +71,12 @@ export class AppearanceSettingsComponent {
       try {
         const profile = await this.userService.getMyProfile();
         if (profile) {
-          const isVip = Boolean(profile.is_vip);
-          this.isVip.set(isVip);
-
-          // Custom accents are a VIP entitlement. A user who previously had
-          // VIP may still have a stored preference after downgrading, but the
-          // UI must not apply or resubmit that preference while the entitlement
-          // is inactive.
-          const accent = isVip ? (profile.primary_accent_color ?? null) : null;
+          this.isVip.set(Boolean(profile.is_vip));
+          const accent = profile.primary_accent_color ?? null;
           this.primaryAccentColor.set(accent);
-          this.themeService.loadFromProfile({
-            primary_accent_color: accent ?? undefined,
-          });
+          if (accent) {
+            this.themeService.setPrimaryAccentColor(accent);
+          }
         }
         return profile;
       } catch {
@@ -124,15 +118,11 @@ export class AppearanceSettingsComponent {
     this.isSaving.set(true);
 
     try {
-      const accent = this.isVip() ? this.primaryAccentColor() : null;
+      const accent = this.primaryAccentColor();
       const chatTextSize = this.currentChatTextSize();
-      if (this.isVip()) {
-        await this.userService.updateMyProfile({
-          primary_accent_color: accent ?? undefined,
-        });
-      } else {
-        await this.userService.updateMyProfile({});
-      }
+      await this.userService.updateMyProfile({
+        primary_accent_color: accent ?? undefined,
+      });
 
       const chatSaved = await this.chatSettingsService.updateSetting('textSize', chatTextSize);
       if (!chatSaved) {
@@ -142,8 +132,6 @@ export class AppearanceSettingsComponent {
 
       if (accent) {
         this.themeService.setPrimaryAccentColor(accent);
-      } else {
-        this.themeService.resetPrimaryAccentColor();
       }
       this.successMessage.set('settings.saved');
     } catch {
