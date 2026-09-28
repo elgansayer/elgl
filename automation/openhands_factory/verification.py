@@ -499,7 +499,10 @@ def commands_for(
         frontend_typescript = sorted(
             str(path.relative_to("frontend"))
             for path in changed_paths
-            if path.suffix == ".ts" and (repository / path).is_file()
+            if path.parts
+            and path.parts[0] == "frontend"
+            and path.suffix == ".ts"
+            and (repository / path).is_file()
         )
         if frontend_typescript:
             commands.append(
@@ -582,7 +585,10 @@ def commands_for(
         backend_typescript = sorted(
             str(path.relative_to("backend"))
             for path in changed_paths
-            if path.suffix == ".ts" and (repository / path).is_file()
+            if path.parts
+            and path.parts[0] == "backend"
+            and path.suffix == ".ts"
+            and (repository / path).is_file()
         )
         if backend_typescript:
             commands.append(
@@ -637,7 +643,10 @@ def commands_for(
         admin_typescript = sorted(
             str(path.relative_to("admin-portal"))
             for path in changed_paths
-            if path.suffix == ".ts" and (repository / path).is_file()
+            if path.parts
+            and path.parts[0] == "admin-portal"
+            and path.suffix == ".ts"
+            and (repository / path).is_file()
         )
         if admin_typescript:
             commands.append(
