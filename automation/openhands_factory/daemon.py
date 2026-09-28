@@ -263,6 +263,21 @@ def selection_diagnostics(
     }
 
 
+def should_use_failsafe(
+    selected_jobs: list[Job],
+    diagnostic: Mapping[str, object],
+    *,
+    review_only: bool,
+) -> bool:
+    """Return whether an empty primary selection indicates a real scheduler stall."""
+
+    candidate_count = diagnostic.get("candidate_count")
+    review_capacity = diagnostic.get("review_capacity")
+    if not isinstance(candidate_count, int) or candidate_count <= 0 or selected_jobs:
+        return False
+    return not (review_only and isinstance(review_capacity, int) and review_capacity <= 0)
+
+
 def select_batch_failsafe(
     jobs: dict[str, Job],
     limit: int,
@@ -807,7 +822,11 @@ class FactoryDaemon:
                         self.config.review_lane_max_concurrent,
                         review_only=wip_paused,
                     )
-                    if not selected_jobs and diagnostic["candidate_count"]:
+                    if should_use_failsafe(
+                        selected_jobs,
+                        diagnostic,
+                        review_only=wip_paused,
+                    ):
                         LOGGER.error(
                             "Primary scheduler returned no jobs for a runnable queue; "
                             "using deterministic failsafe selection"
