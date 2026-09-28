@@ -8,7 +8,11 @@ export type RecommendationReason =
   | 'language_exchange'
   | 'shared_interests'
   | 'active_recently'
-  | 'study_streak';
+  | 'study_streak'
+  | 'proficiency_match'
+  | 'availability_match'
+  | 'high_correction_ratio'
+  | 'learning_goal_match';
 
 export interface DiscoveryRecommendation {
   id: string;
