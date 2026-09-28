@@ -1,8 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '../../environments/environment';
@@ -29,11 +26,7 @@ describe('ModerationService', () => {
     localStorage.setItem('auth_token', 'mock-token');
 
     TestBed.configureTestingModule({
-      providers: [
-        ModerationService,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [ModerationService, provideHttpClient(), provideHttpClientTesting()],
     });
 
     service = TestBed.inject(ModerationService);
@@ -121,10 +114,7 @@ describe('ModerationService', () => {
     const promise = service.getItems('moment');
 
     const req = httpMock.expectOne(`${baseUrl}/items?type=moment`);
-    req.flush(
-      { message: 'Forbidden' },
-      { status: 403, statusText: 'Forbidden' },
-    );
+    req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
     const items = await promise;
     expect(items).toEqual([]);
@@ -144,11 +134,7 @@ describe('ModerationService', () => {
   });
 
   it('posts a reject action with a reason when provided', async () => {
-    const promise = service.rejectItem(
-      'item-1',
-      'profile',
-      'Inappropriate content',
-    );
+    const promise = service.rejectItem('item-1', 'profile', 'Inappropriate content');
 
     const req = httpMock.expectOne(`${baseUrl}/reject`);
     expect(req.request.method).toBe('POST');
@@ -175,11 +161,7 @@ describe('ModerationService', () => {
   });
 
   it('posts a user report with a description when provided', async () => {
-    const promise = service.reportUser(
-      'user-9',
-      'spam',
-      'Repeated spam messages',
-    );
+    const promise = service.reportUser('user-9', 'spam', 'Repeated spam messages');
 
     const req = httpMock.expectOne(`${baseUrl}/report`);
     expect(req.request.method).toBe('POST');
@@ -198,10 +180,7 @@ describe('ModerationService', () => {
     const promise = service.approveItem('item-1', 'moment');
 
     const req = httpMock.expectOne(`${baseUrl}/approve`);
-    req.flush(
-      { message: 'Server error' },
-      { status: 500, statusText: 'Server Error' },
-    );
+    req.flush({ message: 'Server error' }, { status: 500, statusText: 'Server Error' });
 
     const result = await promise;
     expect(result.success).toBe(false);
