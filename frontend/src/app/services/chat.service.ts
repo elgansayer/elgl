@@ -9,6 +9,10 @@ import { HapticFeedbackService } from './haptic-feedback.service';
 import { ChatCacheService } from './chat-cache.service';
 import { Router } from '@angular/router';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export interface CorrectionPayload {
   original: string;
   corrected: string;
@@ -423,6 +427,31 @@ export class ChatService {
     }
 
     return messages;
+  }
+
+  async getUnreadCount(): Promise<number> {
+    if (!this.authService.getAccessToken()) {
+      return 0;
+    }
+
+    const response = await firstValueFrom(
+      this.http.get<unknown>(`${this.baseUrl}/unread-count`, {
+        headers: this.getHeaders(),
+      }),
+    );
+
+    if (!isRecord(response)) {
+      throw new Error('Invalid unread count response');
+    }
+    const unreadCount = response['unreadCount'];
+    if (
+      typeof unreadCount !== 'number' ||
+      !Number.isSafeInteger(unreadCount) ||
+      unreadCount < 0
+    ) {
+      throw new Error('Invalid unread count response');
+    }
+    return unreadCount;
   }
 
   async getRooms(): Promise<ChatRoom[]> {

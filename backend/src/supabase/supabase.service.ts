@@ -2190,6 +2190,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      count_chat_unread: {
+        Args: { p_user_id: string };
+        Returns: number | string;
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;

@@ -303,6 +303,26 @@ describe('ChatService', () => {
     });
   });
 
+  describe('getUnreadCount', () => {
+    it('should fetch and validate the unread count', async () => {
+      const promise = service.getUnreadCount();
+
+      const req = httpMock.expectOne(`${baseUrl}/unread-count`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      req.flush({ unreadCount: 7 });
+
+      await expect(promise).resolves.toBe(7);
+    });
+
+    it('should reject an invalid unread count response', async () => {
+      const promise = service.getUnreadCount();
+      httpMock.expectOne(`${baseUrl}/unread-count`).flush({ unreadCount: -1 });
+
+      await expect(promise).rejects.toThrow('Invalid unread count response');
+    });
+  });
+
   describe('rooms', () => {
     it('should fetch chat rooms', async () => {
       const promise = service.getRooms();
