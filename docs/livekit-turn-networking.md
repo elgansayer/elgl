@@ -18,13 +18,13 @@ The default deployment terminates TURN TLS inside LiveKit (`external_tls: false`
 
 The Compose deployment exposes only the ports used by its LiveKit configuration:
 
-| Transport | Port | Purpose |
-| --- | ---: | --- |
-| TCP | 7880 | LiveKit signal/API endpoint; normally placed behind the application ingress |
-| TCP | 7881 | WebRTC ICE over TCP fallback |
-| UDP | 58000-58100 | Direct WebRTC media range |
-| UDP | 3478 | TURN/UDP fallback |
-| TCP | 443 | TURN/TLS fallback for restrictive networks |
+| Transport |        Port | Purpose                                                                     |
+| --------- | ----------: | --------------------------------------------------------------------------- |
+| TCP       |        7880 | LiveKit signal/API endpoint; normally placed behind the application ingress |
+| TCP       |        7881 | WebRTC ICE over TCP fallback                                                |
+| UDP       | 58000-58100 | Direct WebRTC media range                                                   |
+| UDP       |        3478 | TURN/UDP fallback                                                           |
+| TCP       |         443 | TURN/TLS fallback for restrictive networks                                  |
 
 The old `50000-60000/udp` host exposure did not match the configured `58000-58100` LiveKit media range and unnecessarily opened almost 10,000 ports. It is now narrowed to the actual configured range.
 

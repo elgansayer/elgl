@@ -30,9 +30,7 @@ test('rejects deployments that lose the corporate-network TLS fallback', () => {
   });
 
   assert.ok(
-    errors.some(
-      (error) => error.includes('docker-compose.yml') && error.includes('443:443'),
-    ),
+    errors.some((error) => error.includes('docker-compose.yml') && error.includes('443:443')),
   );
 });
 

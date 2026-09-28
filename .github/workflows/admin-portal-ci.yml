@@ -99,7 +99,9 @@ jobs:
         run: npm ci --legacy-peer-deps
       - name: Lint admin backend
         working-directory: backend
-        run: npm run lint:check -- src/admin
+        # Keep this focused workflow independent from unrelated backend lint debt.
+        # The repository-wide CI remains authoritative for the full backend tree.
+        run: npx eslint "src/admin/**/*.ts"
 
   backend-admin-test:
     name: admin-backend / test

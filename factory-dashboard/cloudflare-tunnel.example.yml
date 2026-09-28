@@ -1,0 +1,36 @@
+# Cloudflare Tunnel config for factory.elgansayer.com
+#
+# Prerequisite: you need a cloudflared tunnel already created.
+#
+# If you haven't created one yet:
+#   cloudflared tunnel create factory-dashboard
+#
+# Then add the following ingress rules to your tunnel config.
+# Typically located at: ~/.cloudflared/config.yml
+# or /etc/cloudflared/config.yml
+#
+# ---- Merge these ingress rules into your existing tunnel config ----
+
+tunnel: <your-tunnel-id-here>
+credentials-file: /home/dev/.cloudflared/<your-tunnel-id>.json
+
+ingress:
+  # Factory dashboard - routes factory.elgansayer.com to the local container
+  - hostname: factory.elgansayer.com
+    service: http://localhost:3100
+
+  # Catch-all (required by cloudflared)
+  - service: http_status:404
+
+# ---- DNS ----
+# Add a CNAME in Cloudflare DNS:
+#   factory.elgansayer.com -> <tunnel-id>.cfargotunnel.com
+#
+# Or use: cloudflared tunnel route dns <tunnel-name> factory.elgansayer.com
+
+# ---- Notes ----
+# - The dashboard listens on 127.0.0.1:3100 only (not exposed to internet directly)
+# - Cloudflare tunnel terminates TLS and proxies to localhost:3100
+# - HTTP Basic Auth is enforced at the app layer (server.js)
+# - Cloudflare Access can optionally be added as a second auth layer
+#   (Cloudflare Zero Trust > Access > Applications)
