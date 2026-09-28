@@ -276,6 +276,29 @@ def test_prepare_pull_request_worktree_checks_out_the_existing_branch(tmp_path: 
     )
 
 
+@pytest.mark.parametrize(("returncode", "expected"), [(0, True), (1, False)])
+def test_contains_current_base_uses_latest_remote_base(
+    tmp_path: Path,
+    returncode: int,
+    expected: bool,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(returncode, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    assert workflow.contains_current_base() is expected
+    assert runner.calls == [
+        ("git", "fetch", "origin", "main"),
+        ("git", "merge-base", "--is-ancestor", "origin/main", "HEAD"),
+    ]
+
+
 def test_merge_base_for_repair_leaves_conflicts_for_the_repair_agent(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
