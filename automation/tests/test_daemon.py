@@ -751,6 +751,32 @@ def test_loop_pauses_new_issue_and_architect_dispatch_when_pr_wip_exceeded(
     assert architect_calls == []
 
 
+def test_loop_uses_wip_capacity_recalculated_by_current_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admit_calls: list[tuple[str, object]] = []
+    architect_calls: list[bool] = []
+    discovered = job("1", priority=5)
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=False,
+        discovered_job=discovered,
+        admit_calls=admit_calls,
+        architect_calls=architect_calls,
+    )
+
+    def refresh_and_pause(*_args: object) -> tuple[dict[str, Job], float]:
+        daemon.pipeline.pull_request_capacity.pause_new_dispatch = True
+        return {"1": discovered}, 3600.0
+
+    monkeypatch.setattr("openhands_factory.daemon.refresh_jobs", refresh_and_pause)
+
+    assert daemon._loop() == 0
+
+    assert admit_calls == []
+    assert architect_calls == []
+
+
 def test_loop_admits_new_issues_and_runs_architect_when_pr_wip_has_capacity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
