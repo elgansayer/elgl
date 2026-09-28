@@ -1,4 +1,4 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 
 export interface TypingUser {
@@ -9,6 +9,8 @@ export interface TypingUser {
 
 @Component({
   selector: 'app-typing-indicator',
+  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     @if (visible()) {
