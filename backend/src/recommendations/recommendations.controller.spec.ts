@@ -5,13 +5,13 @@ import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
-import { DiscoveryRecommendationsService } from './discovery-recommendations.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
 
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
 vi.mock('./sanitise-recommendations.helper', () => ({
   sanitiseRecommendationsData: <T>(value: T): T => value,
 }));
@@ -22,30 +22,31 @@ describe('RecommendationsController', () => {
     getRecommendations: Mock;
     getDailyRecommendations: Mock;
   };
-  let mockDiscoveryService: { getForDiscovery: Mock };
 
   beforeEach(async () => {
     mockService = {
       getRecommendations: vi.fn(),
       getDailyRecommendations: vi.fn(),
     };
-    mockDiscoveryService = { getForDiscovery: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RecommendationsController],
       providers: [
-        { provide: RecommendationsService, useValue: mockService },
         {
-          provide: DiscoveryRecommendationsService,
-          useValue: mockDiscoveryService,
+          provide: RecommendationsService,
+          useValue: mockService,
         },
         {
           provide: MatchmakingCrashReportService,
-          useValue: { reportCrash: vi.fn().mockResolvedValue({}) },
+          useValue: {
+            reportCrash: vi.fn().mockResolvedValue({}),
+          },
         },
         {
           provide: CircuitBreakerService,
-          useValue: { isAvailable: vi.fn().mockReturnValue(true) },
+          useValue: {
+            isAvailable: vi.fn().mockReturnValue(true),
+          },
         },
         MatchmakingExceptionFilter,
       ],
@@ -67,32 +68,6 @@ describe('RecommendationsController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
-  });
-
-  describe('GET /recommendations/discovery', () => {
-    it('returns the authenticated user recommendation set', async () => {
-      const recommendations = [
-        {
-          id: 'partner-1',
-          display_name: 'Partner',
-          avatar_url: null,
-          native_languages: ['ja'],
-          target_languages: ['en'],
-          shared_interest_count: 2,
-          recommendation_reasons: ['language_exchange', 'shared_interests'],
-        },
-      ];
-      mockDiscoveryService.getForDiscovery.mockResolvedValue(recommendations);
-
-      const result = await controller.getDiscoveryRecommendations({
-        user: { id: 'user-123' },
-      });
-
-      expect(result).toEqual(recommendations);
-      expect(mockDiscoveryService.getForDiscovery).toHaveBeenCalledWith(
-        'user-123',
-      );
-    });
   });
 
   describe('GET /recommendations/for-you', () => {

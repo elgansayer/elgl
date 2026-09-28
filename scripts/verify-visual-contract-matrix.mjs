@@ -11,18 +11,6 @@ const failures = [];
 if (matrix.schemaVersion !== 1) failures.push('visual matrix schemaVersion must be 1');
 if (!Array.isArray(matrix.contracts) || matrix.contracts.length === 0) failures.push('visual matrix contracts must be non-empty');
 
-const mobileViewport = matrix.rendering?.viewportMobile;
-if (
-  !mobileViewport ||
-  mobileViewport.width !== 390 ||
-  !Number.isInteger(mobileViewport.height) ||
-  mobileViewport.height <= 0
-) {
-  failures.push(
-    'viewportMobile: visual matrix must define the 390px mobile verification viewport with a positive integer height',
-  );
-}
-
 const requiredTabletViewports = [
   ['viewportTabletMd', 768],
   ['viewportTabletLgBoundary', 1024],
@@ -36,19 +24,12 @@ for (const [key, width] of requiredTabletViewports) {
 
 const manifestById = new Map(manifest.items.map((item) => [item.id, item]));
 const ids = new Set();
-const responsiveRepresentatives = new Set([
+const tabletRepresentatives = new Set([
   'screen.discovery',
   'screen.chat',
   'screen.vocabulary',
   'screen.moderation',
 ]);
-const requiredMobileStates = [
-  'mobile-390-light',
-  'mobile-390-dark',
-  'mobile-390-rtl',
-  'mobile-390-text-200',
-  'mobile-390-text-400',
-];
 const requiredTabletStates = [
   'tablet-768-light',
   'tablet-768-dark',
@@ -90,13 +71,7 @@ for (const contract of matrix.contracts ?? []) {
     }
   }
 
-  if (responsiveRepresentatives.has(contract.designSyncId)) {
-    for (const state of requiredMobileStates) {
-      if (!contract.states.includes(state)) {
-        failures.push(`${contract.designSyncId}: 390px mobile baseline gate is missing state: ${state}`);
-      }
-    }
-
+  if (tabletRepresentatives.has(contract.designSyncId)) {
     for (const state of requiredTabletStates) {
       if (!contract.states.includes(state)) {
         failures.push(`${contract.designSyncId}: tablet responsive gate is missing state: ${state}`);

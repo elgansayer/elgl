@@ -3,13 +3,8 @@ name: Factory format evidence
 on:
   pull_request:
     branches: [main]
-    # This evidence job only copies, formats, diffs and uploads daemon.py. The
-    # canonical Factory CI already runs Ruff format across all automation Python,
-    # so starting a Python/uv runner for unrelated Factory modules cannot produce
-    # additional evidence. Keep this specialised artifact only when its actual
-    # input or the workflow itself changes.
     paths:
-      - 'automation/openhands_factory/daemon.py'
+      - 'automation/**/*.py'
       - '.github/workflows/factory-format-evidence.yml'
 
 permissions:

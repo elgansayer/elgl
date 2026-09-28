@@ -1,7 +1,7 @@
 <app-discovery-error-boundary
   [context]="errorBoundaryContext()"
   [showReportButton]="true"
-  (retry)="retrySearch()"
+  (retry)="searchPartners()"
 >
   <div class="app-screen bg-surface-500">
     <!-- Offline Indicator Banner -->
@@ -333,34 +333,7 @@
         }"
         (retry)="retrySearch()"
       >
-        @if (selectedFilter() === 'nearby' && nearbyLocationStatus() === 'requesting') {
-          <section
-            class="content-state-enter px-4 py-16 text-center text-text-secondary"
-            role="status"
-            aria-live="polite"
-            aria-busy="true"
-          >
-            <span aria-hidden="true" class="block text-3xl mb-3">📍</span>
-            <p class="font-semibold">{{ 'discovery.filterNearMe' | t }}</p>
-            <p class="mt-1 text-sm">{{ 'common.loading' | t }}</p>
-          </section>
-        } @else if (nearbyLocationNeedsAction()) {
-          <section aria-live="assertive" class="content-state-enter" role="alert">
-            <app-empty-state
-              icon="📍"
-              [title]="'discovery.filterNearMe' | t"
-              [description]="
-                nearbyLocationStatus() === 'offline'
-                  ? ('discovery.offlineBanner' | t)
-                  : ('common.error_generic' | t)
-              "
-              [actionLabel]="'common.retry' | t"
-              (actionClicked)="requestNearbyLocation()"
-              [customClass]="'py-16'"
-            >
-            </app-empty-state>
-          </section>
-        } @else if (isLoading()) {
+        @if (isLoading()) {
           <section aria-live="polite" aria-busy="true" role="status" class="content-state-enter">
             <span class="sr-only">{{ 'discovery.loadingPartners' | t }}</span>
             <div
@@ -379,7 +352,7 @@
               [title]="'discovery.searchErrorTitle' | t"
               [description]="'discovery.searchErrorDescription' | t"
               [actionLabel]="'discovery.searchErrorAction' | t"
-              (actionClicked)="retrySearch()"
+              (actionClicked)="searchPartners()"
               [customClass]="'py-16'"
             >
             </app-empty-state>

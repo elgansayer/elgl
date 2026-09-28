@@ -1,11 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const backendHealthUrl = process.env.E2E_BACKEND_HEALTH_URL ?? 'http://127.0.0.1:3000/api/health';
-const frontendUrl = 'http://127.0.0.1:4200';
-const frontendWebServerCommand = process.env.CI
-  ? 'node ./backend-readiness.mjs && cd ../frontend && npm run build && npm run start -- --host 127.0.0.1'
-  : 'node ./backend-readiness.mjs && cd ../frontend && npm run start -- --host 127.0.0.1';
-
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -14,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: frontendUrl,
+    baseURL: 'http://localhost:4200',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -57,16 +51,13 @@ export default defineConfig({
   webServer: [
     {
       command: 'cd ../backend && npm run build && node dist/main',
-      url: backendHealthUrl,
+      url: 'http://localhost:3000/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 180000,
     },
     {
-      // Playwright launches array entries concurrently. Gate Angular on NestJS
-      // readiness so SSR HttpClient requests cannot race the backend boot and
-      // flood QA output with undici AggregateError/ECONNREFUSED failures.
-      command: frontendWebServerCommand,
-      url: frontendUrl,
+      command: 'cd ../frontend && npm run start',
+      url: 'http://localhost:4200',
       reuseExistingServer: !process.env.CI,
       timeout: 300000,
     },

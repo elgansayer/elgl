@@ -358,21 +358,25 @@ export class ChatService {
         // This should never happen because we already checked the length above.
         throw new Error('Unable to determine receiver');
       }
-      // ⚡ Bolt Optimization: Group independent database lookups with a single concurrent Promise.all batch fetch to mitigate additive network latency.
-      const [receiverBlockedIds, senderBlockedIds] = await Promise.all([
-        this.safetyService.getBlockedAndBlockerIds(receiverId),
-        this.safetyService.getBlockedAndBlockerIds(senderId),
-      ]);
       // Check if the receiver has blocked the sender
+      const receiverBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(receiverId);
       if (receiverBlockedIds.includes(senderId)) {
         throw new Error('You cannot send messages to this user.');
       }
       // Check if the sender has blocked the receiver
+      const senderBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(senderId);
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send messages to this user.');
       }
 
       // Enforce receiver's message filters for initial messages only
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
+    }
+
+    // Check message filters for initial (first) message in a room
+    if (receiverId) {
       await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
@@ -384,6 +388,11 @@ export class ChatService {
           'Your message appears to be a duplicate or spam content.',
         );
       }
+    }
+
+    // Enforce receiver's message filters for initial messages
+    if (receiverId) {
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
     const insertResponse = await supabase
@@ -1086,14 +1095,13 @@ export class ChatService {
         : undefined;
 
     if (receiverId) {
-      // ⚡ Bolt Optimization: Group independent database lookups with a single concurrent Promise.all batch fetch to mitigate additive network latency.
-      const [receiverBlockedIds, senderBlockedIds] = await Promise.all([
-        this.safetyService.getBlockedAndBlockerIds(receiverId),
-        this.safetyService.getBlockedAndBlockerIds(senderId),
-      ]);
+      const receiverBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(receiverId);
       if (receiverBlockedIds.includes(senderId)) {
         throw new Error('You cannot send contact to this user.');
       }
+      const senderBlockedIds =
+        await this.safetyService.getBlockedAndBlockerIds(senderId);
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send contact to this user.');
       }

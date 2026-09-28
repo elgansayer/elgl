@@ -98,9 +98,7 @@ environments. The deployed Factory tree is read-only there too.
 
 See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md), [AGENT-ROUTING.md](AGENT-ROUTING.md),
 [SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), [MANUAL-MERGE.md](MANUAL-MERGE.md),
-[PR-MERGE-LIFECYCLE.md](PR-MERGE-LIFECYCLE.md),
-[PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md), [CONTROL-PANEL.md](CONTROL-PANEL.md), and
-[HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
+[CONTROL-PANEL.md](CONTROL-PANEL.md), and [HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
 
 ## Durable lifecycle
 
@@ -129,11 +127,11 @@ rotation. Persisted failure classes and deterministic jittered backoff remain au
 
 ### New-issue admission cadence
 
-Production admits up to four newly discovered GitHub issues per hour through:
+Production admits one newly discovered GitHub issue per hour through:
 
 ```text
 FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
-FACTORY_NEW_ISSUES_PER_INTERVAL=4
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
 ```
 
 This is a durable admission gate, not the daemon polling interval. The admission record survives daemon restarts
@@ -141,21 +139,11 @@ and prevents startup bursts. It applies only while an issue is in `DISCOVERED`; 
 verification, quality repair, PR creation, independent review, CI repair, merge polling, and incoming pull-request
 review continue whenever worker capacity is available. Setting the interval to `0` restores unlimited historical
 admission behaviour. Do not use `FACTORY_COOLDOWN_SECONDS=3600` for this purpose: that value controls source and
-health refresh cadence and would not reliably enforce bounded issue admission.
+health refresh cadence and would not reliably enforce one newly admitted issue per hour.
 
 All `jobs.json` read-modify-write operations use a cross-process lock, so daemon, doctor, watchdog, and operator
 commands cannot overwrite sibling transitions. Provider provenance is retained as the latest 500 attempts per
 job, preventing one difficult task from growing durable state without bound.
-
-### Pull-request convergence and WIP limits
-
-A single locked owner decides whether a task branch opens a new pull request, updates an existing one in place, or
-adopts an already-merged equivalent; duplicate and superseded pull requests are detected and closed automatically.
-New-issue admission and the weekly Architect cycle pause whenever configured open-PR, queued-CI, lane, or component
-WIP limits are exceeded, and resume automatically once the next refresh shows capacity again. A pull request that
-declares an explicit `Depends-On` stack parent stays a draft, withheld from independent review, until that parent
-merges. See [PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md) for the full contract and the metrics exposed
-through `hellotalk-factory metrics`.
 
 Durable execution states abandoned by a dead worker are recovered through the same timeout retry policy. Live
 futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated as abandoned work.
@@ -347,9 +335,7 @@ sudo scripts/maintain-factory-host-storage.sh
   concurrent worker transitions.
 - Isolated verification takes its tool path from the running Factory virtual environment's `sys.prefix`. This
   keeps the pinned `uv` executable available after privilege reduction without exposing host or provider paths.
-- `metrics` prints provider, model, phase, and typed failure outcomes without transcripts or credentials, plus a
-  `pull_requests` section with current WIP capacity and convergence/replay/CI-churn summary ratios (see
-  [PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md)).
+- `metrics` prints provider, model, phase, and typed failure outcomes without transcripts or credentials.
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact
   pause, resume, status, or restart comments from the separate `FACTORY_CONTROL_GITHUB_ACTORS` allowlist.

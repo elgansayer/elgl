@@ -1,3 +1,3 @@
-"""Repository-neutral autonomous development Factory."""
+"""HelloTalk OpenHands factory."""
 
 __version__ = "0.1.0"
