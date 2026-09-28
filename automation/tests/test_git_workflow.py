@@ -276,6 +276,68 @@ def test_prepare_pull_request_worktree_checks_out_the_existing_branch(tmp_path: 
     )
 
 
+@pytest.mark.parametrize(("returncode", "expected"), [(0, True), (1, False)])
+def test_contains_current_base_uses_latest_remote_base(
+    tmp_path: Path,
+    returncode: int,
+    expected: bool,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(returncode, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    assert workflow.contains_current_base() is expected
+    assert runner.calls == [
+        ("git", "fetch", "origin", "main"),
+        ("git", "merge-base", "--is-ancestor", "origin/main", "HEAD"),
+    ]
+
+
+def test_merge_base_for_repair_leaves_conflicts_for_the_repair_agent(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(1, "", "CONFLICT (content): merge conflict"),
+            ProcessResult(0, "src/conflicted.ts\n", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    conflicted = workflow.merge_base_for_repair()
+
+    assert conflicted is True
+    assert runner.calls == [
+        ("git", "diff", "--name-only", "--diff-filter=U"),
+        ("git", "fetch", "origin", "main"),
+        ("git", "merge", "--no-commit", "--no-ff", "origin/main"),
+        ("git", "diff", "--name-only", "--diff-filter=U"),
+    ]
+
+
+def test_merge_base_for_repair_accepts_a_clean_uncommitted_merge(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "Automatic merge went well", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    assert workflow.merge_base_for_repair() is False
+
+
 def test_push_allows_the_external_branch_a_pull_request_review_job_is_assigned(
     tmp_path: Path,
 ) -> None:
@@ -365,11 +427,12 @@ def test_remove_worktree_rejects_path_outside_factory_root(tmp_path: Path) -> No
 def test_remove_worktree_can_force_retirement_after_archive(tmp_path: Path) -> None:
     repository = tmp_path / "state" / "repository"
     repository.mkdir(parents=True)
-    workflow = GitWorkflow(repository, "main", Runner([ProcessResult(0, "", "")]))
+    runner = Runner([ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
 
     workflow.remove_worktree(tmp_path / "state" / "worktrees" / "issue-12", force=True)
 
-    assert "--force" in workflow.runner.calls[0]
+    assert "--force" in runner.calls[0]
 
 
 def test_remove_worktree_accepts_configured_root_outside_repository_parent(
@@ -378,16 +441,17 @@ def test_remove_worktree_accepts_configured_root_outside_repository_parent(
     repository = tmp_path / "control" / "repository"
     repository.mkdir(parents=True)
     worktree_root = tmp_path / "mounted-volume" / "worktrees"
+    runner = Runner([ProcessResult(0, "", "")])
     workflow = GitWorkflow(
         repository,
         "main",
-        Runner([ProcessResult(0, "", "")]),
+        runner,
         worktree_root=worktree_root,
     )
 
     workflow.remove_worktree(worktree_root / "issue-12", force=True)
 
-    assert workflow.runner.calls[0][-1] == str(worktree_root / "issue-12")
+    assert runner.calls[0][-1] == str(worktree_root / "issue-12")
 
 
 def test_remove_worktree_rejects_path_outside_configured_root(tmp_path: Path) -> None:
@@ -418,6 +482,116 @@ def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     assert archived == recovery
     assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
     assert (recovery / "RECOVERY.txt").is_file()
+
+
+def test_committed_change_fingerprint_uses_resulting_blobs_and_deletion_markers(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "automation/changed.py\nautomation/deleted.py\n", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "blob-changed\n", ""),
+            ProcessResult(1, "", "missing path"),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    fingerprint = workflow.committed_change_fingerprint()
+
+    assert len(fingerprint) == 64
+    assert runner.calls[-2:] == [
+        ("git", "rev-parse", "HEAD:automation/changed.py"),
+        ("git", "rev-parse", "HEAD:automation/deleted.py"),
+    ]
+
+
+def test_sync_remote_branch_is_bound_to_the_inspected_factory_head(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-existing"
+    runner = Runner(
+        [
+            ProcessResult(0, f"old-head\trefs/heads/{branch}\n", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.sync_remote_branch(branch, "old-head")
+
+    assert runner.calls[-1] == (
+        "git",
+        "push",
+        f"--force-with-lease=refs/heads/{branch}:old-head",
+        "origin",
+        f"HEAD:refs/heads/{branch}",
+    )
+
+
+def test_sync_remote_branch_refuses_a_head_that_moved_after_inspection(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-existing"
+    runner = Runner([ProcessResult(0, f"new-head\trefs/heads/{branch}\n", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    with pytest.raises(RepositorySafetyError, match="moved after"):
+        workflow.sync_remote_branch(branch, "old-head")
+
+    assert not any(call[:2] == ("git", "push") for call in runner.calls)
+
+
+def test_sync_remote_branch_can_restore_a_deleted_factory_branch_with_empty_lease(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-existing"
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.sync_remote_branch(branch, "old-head")
+
+    assert f"--force-with-lease=refs/heads/{branch}:" in runner.calls[-1]
+
+
+def test_delete_remote_branch_requires_the_exact_duplicate_tip(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-replay"
+    runner = Runner(
+        [
+            ProcessResult(0, f"replay-head\trefs/heads/{branch}\n", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.delete_remote_branch(branch, "replay-head")
+
+    assert runner.calls[-1] == (
+        "git",
+        "push",
+        f"--force-with-lease=refs/heads/{branch}:replay-head",
+        "origin",
+        f":refs/heads/{branch}",
+    )
+
+
+def test_delete_remote_branch_is_idempotent_when_branch_is_already_absent(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner([ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.delete_remote_branch("factory/42-replay", "replay-head")
+
+    assert not any(call[:2] == ("git", "push") for call in runner.calls)
 
 
 def test_archive_worktree_accepts_configured_roots_outside_repository_parent(
