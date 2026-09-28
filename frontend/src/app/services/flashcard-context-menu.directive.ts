@@ -3,11 +3,6 @@ import { Directive, ElementRef, OnDestroy, inject, input, output } from '@angula
 const LONG_PRESS_MS = 650;
 const LONG_PRESS_MOVE_TOLERANCE_PX = 12;
 
-/** Mirrors CreateFlashcardDto.word_token so invalid selections never reach the API. */
-export const FLASHCARD_SELECTION_MAX_LENGTH = 200;
-/** Mirrors CreateFlashcardDto.original_context. */
-export const FLASHCARD_CONTEXT_MAX_LENGTH = 1000;
-
 export interface FlashcardSelectionRequest {
   text: string;
   context: string;
@@ -97,41 +92,13 @@ export class FlashcardContextMenuDirective implements OnDestroy {
     }
 
     const text = selection.toString().trim();
-    // Leave the native context menu untouched for selections the flashcard API
-    // cannot accept instead of opening an action that is guaranteed to fail.
-    if (!text || text.length > FLASHCARD_SELECTION_MAX_LENGTH) return null;
-
-    const rawContext = (this.selectionContext() ?? host.textContent ?? '').trim();
+    if (!text) return null;
 
     return {
       text,
-      context: this.boundContext(rawContext, text),
+      context: (this.selectionContext() ?? host.textContent ?? '').trim(),
       sourceLanguage: this.sourceLanguage()?.trim() || undefined,
     };
-  }
-
-  /**
-   * Preserve the selected phrase when possible while keeping persisted context
-   * inside the backend's 1,000-character contract.
-   */
-  private boundContext(context: string, selectedText: string): string {
-    if (context.length <= FLASHCARD_CONTEXT_MAX_LENGTH) return context;
-
-    const selectedIndex = context.indexOf(selectedText);
-    if (selectedIndex < 0) {
-      return context.slice(0, FLASHCARD_CONTEXT_MAX_LENGTH).trim();
-    }
-
-    const surroundingBudget = FLASHCARD_CONTEXT_MAX_LENGTH - selectedText.length;
-    let start = Math.max(0, selectedIndex - Math.floor(surroundingBudget / 2));
-    let end = start + FLASHCARD_CONTEXT_MAX_LENGTH;
-
-    if (end > context.length) {
-      end = context.length;
-      start = Math.max(0, end - FLASHCARD_CONTEXT_MAX_LENGTH);
-    }
-
-    return context.slice(start, end).trim();
   }
 
   private containsNode(host: HTMLElement, node: Node): boolean {

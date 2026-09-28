@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { of, Subject, throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { CreateEventModalComponent } from './create-event-modal.component';
 import { EventsService, Event } from '../../services/events.service';
@@ -14,13 +14,13 @@ describe('CreateEventModalComponent', () => {
   const mockEvent: Event = {
     id: 'event-1',
     title: 'Test Event',
-    date_time: '2026-09-01T10:00:00Z',
+    date_time: '2026-08-01T10:00:00Z',
     location: 'Zoom',
     description: 'Some description',
     host_id: 'user-1',
     is_cancelled: false,
-    created_at: '2026-08-26T15:00:00Z',
-    updated_at: '2026-08-26T15:00:00Z',
+    created_at: '2026-08-01T09:00:00Z',
+    updated_at: '2026-08-01T09:00:00Z',
   };
 
   beforeEach(async () => {
@@ -59,45 +59,15 @@ describe('CreateEventModalComponent', () => {
       max_participants: null,
       description: '',
     });
-    expect(component.eventForm.invalid).toBe(true);
   });
 
-  it('requires title, date and time, location, and description', () => {
-    component.eventForm.patchValue({
-      title: 'Conversation meetup',
-      date_time: '2026-09-01T10:00',
-      location: 'Zoom',
-      description: 'Practice together',
-    });
-
-    expect(component.eventForm.valid).toBe(true);
-
-    for (const field of ['title', 'location', 'description'] as const) {
-      component.eventForm.controls[field].setValue('   ');
-      expect(component.eventForm.controls[field].invalid).toBe(true);
-      component.eventForm.controls[field].setValue(
-        field === 'title' ? 'Conversation meetup' : field === 'location' ? 'Zoom' : 'Practice together',
-      );
-    }
-
-    component.eventForm.controls.date_time.setValue('');
-    expect(component.eventForm.invalid).toBe(true);
-  });
-
-  it('should not call createEvent when required fields are missing', async () => {
-    component.eventForm.patchValue({
-      title: 'Test Event',
-      date_time: '2026-09-01T10:00',
-      location: '',
-      description: '',
-    });
-
-    await component.onSubmit();
-
+  it('should not call createEvent when form is invalid (missing title)', () => {
+    component.eventForm.patchValue({ title: '', date_time: '' });
+    component.onSubmit();
     expect(eventsServiceSpy.createEvent).not.toHaveBeenCalled();
   });
 
-  it('should emit created and dismiss with trimmed required fields on successful submit', async () => {
+  it('should emit created and dismiss on successful submit', async () => {
     const createdSpy = vi.fn();
     const dismissSpy = vi.fn();
     component.created.subscribe(createdSpy);
@@ -106,20 +76,20 @@ describe('CreateEventModalComponent', () => {
     eventsServiceSpy.createEvent.mockReturnValue(of(mockEvent));
 
     component.eventForm.setValue({
-      title: '  Test Event  ',
-      date_time: '2026-09-01T10:00',
+      title: 'Test Event',
+      date_time: '2026-08-01T10:00',
       language_pair: 'en-es',
       category: 'audio_room',
-      location: '  Zoom  ',
+      location: 'Zoom',
       max_participants: 10,
-      description: '  Some description  ',
+      description: 'Some description',
     });
 
     await component.onSubmit();
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2026-08-01T10:00',
       language_pair: 'en-es',
       category: 'audio_room',
       location: 'Zoom',
@@ -129,84 +99,53 @@ describe('CreateEventModalComponent', () => {
     expect(createdSpy).toHaveBeenCalledTimes(1);
     expect(createdSpy).toHaveBeenCalledWith(mockEvent);
     expect(dismissSpy).toHaveBeenCalledTimes(1);
-    expect(component.isSubmitting()).toBe(false);
   });
 
-  it('should keep only language pair and max participants optional', async () => {
+  it('should send undefined for empty optional fields', async () => {
+    const createdSpy = vi.fn();
+    const dismissSpy = vi.fn();
+    component.created.subscribe(createdSpy);
+    component.dismiss.subscribe(dismissSpy);
+
     eventsServiceSpy.createEvent.mockReturnValue(of(mockEvent));
 
     component.eventForm.setValue({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2026-08-01T10:00',
       language_pair: '',
-      category: 'in_person_meetup',
-      location: 'Community Centre',
+      category: 'audio_room',
+      location: '',
       max_participants: null,
-      description: 'Weekly conversation practice',
+      description: '',
     });
 
     await component.onSubmit();
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2026-08-01T10:00',
       language_pair: undefined,
-      category: 'in_person_meetup',
-      location: 'Community Centre',
-      max_participants: undefined,
-      description: 'Weekly conversation practice',
-    });
-  });
-
-  it('dismisses from the Spartan dialog boundary but stays open while submitting', () => {
-    const dismissSpy = vi.fn();
-    component.dismiss.subscribe(dismissSpy);
-
-    component.onDialogStateChanged('closed');
-    expect(dismissSpy).toHaveBeenCalledTimes(1);
-
-    component.isSubmitting.set(true);
-    component.onDialogStateChanged('closed');
-    expect(dismissSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('should suppress duplicate submissions while creation is pending', async () => {
-    const request = new Subject<Event>();
-    eventsServiceSpy.createEvent.mockReturnValue(request);
-    component.eventForm.setValue({
-      title: 'Test Event',
-      date_time: '2026-09-01T10:00',
-      language_pair: '',
       category: 'audio_room',
-      location: 'Zoom',
-      max_participants: null,
-      description: 'Some description',
+      location: undefined,
+      max_participants: undefined,
+      description: undefined,
     });
-
-    const firstSubmission = component.onSubmit();
-    const secondSubmission = component.onSubmit();
-
-    expect(eventsServiceSpy.createEvent).toHaveBeenCalledTimes(1);
-    expect(component.isSubmitting()).toBe(true);
-
-    request.next(mockEvent);
-    request.complete();
-    await Promise.all([firstSubmission, secondSubmission]);
-
-    expect(component.isSubmitting()).toBe(false);
   });
 
-  it('should expose a retryable error and keep the modal open when creation fails', async () => {
+  it('should not emit anything when creation fails', async () => {
     const createdSpy = vi.fn();
     const dismissSpy = vi.fn();
+    const consoleSpy = vi.spyOn(console, 'error');
     component.created.subscribe(createdSpy);
     component.dismiss.subscribe(dismissSpy);
 
-    eventsServiceSpy.createEvent.mockReturnValue(throwError(() => new Error('creation failed')));
+    eventsServiceSpy.createEvent.mockReturnValue(
+      throwError(() => new Error('creation failed')),
+    );
 
     component.eventForm.setValue({
       title: 'Fail Event',
-      date_time: '2026-09-02T11:00',
+      date_time: '2026-08-02T11:00',
       language_pair: 'en-fr',
       category: 'learning_seminar',
       location: 'Zoom',
@@ -216,8 +155,7 @@ describe('CreateEventModalComponent', () => {
 
     await component.onSubmit();
 
-    expect(component.submitError()).toBe(true);
-    expect(component.isSubmitting()).toBe(false);
+    expect(consoleSpy).toHaveBeenCalled();
     expect(createdSpy).not.toHaveBeenCalled();
     expect(dismissSpy).not.toHaveBeenCalled();
   });

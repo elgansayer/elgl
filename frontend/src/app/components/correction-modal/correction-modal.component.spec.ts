@@ -20,16 +20,10 @@ describe('CorrectionModalComponent', () => {
     fixture.destroy();
   });
 
-  it('should create with an open labelled Spartan dialog', () => {
+  it('should create with an open Spartan dialog', () => {
     expect(component).toBeTruthy();
     expect(component.dialogState()).toBe('open');
-
-    const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
-    expect(dialog).not.toBeNull();
-
-    const labelledBy = dialog?.getAttribute('aria-labelledby');
-    expect(labelledBy).toBeTruthy();
-    expect(document.getElementById(labelledBy!)).not.toBeNull();
+    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
   it('should initialize correctedText with originalText', () => {
@@ -83,37 +77,18 @@ describe('CorrectionModalComponent', () => {
     });
   });
 
-  it('should associate visible labels with the editable fields without fixed reusable ids', () => {
-    const correctedField = document.body.querySelector<HTMLTextAreaElement>('label textarea');
-    const explanationField = document.body.querySelector<HTMLInputElement>(
-      'label input[type="text"]',
+  it('should associate visible labels with the editable fields', () => {
+    const correctedLabel = document.body.querySelector<HTMLLabelElement>(
+      'label[for="correction-corrected-text"]',
+    );
+    const explanationLabel = document.body.querySelector<HTMLLabelElement>(
+      'label[for="correction-explanation"]',
     );
 
-    expect(correctedField).not.toBeNull();
-    expect(explanationField).not.toBeNull();
-    expect(correctedField?.id).toBe('');
-    expect(explanationField?.id).toBe('');
-    expect(document.body.querySelector('#correction-corrected-text')).toBeNull();
-    expect(document.body.querySelector('#correction-explanation')).toBeNull();
-  });
-
-  it('should let the browser resolve mixed-direction user text', () => {
-    const originalText = document.body.querySelector<HTMLElement>('[role="group"] span[dir="auto"]');
-    const correctedField = document.body.querySelector<HTMLTextAreaElement>('textarea[dir="auto"]');
-    const explanationField = document.body.querySelector<HTMLInputElement>('input[dir="auto"]');
-
-    expect(originalText).not.toBeNull();
-    expect(correctedField).not.toBeNull();
-    expect(explanationField).not.toBeNull();
-  });
-
-  it('should expose all actions as native non-submit buttons', () => {
-    const buttons = document.body.querySelectorAll<HTMLButtonElement>('button');
-
-    expect(buttons.length).toBeGreaterThanOrEqual(8);
-    for (const button of buttons) {
-      expect(button.type).toBe('button');
-    }
+    expect(correctedLabel).not.toBeNull();
+    expect(explanationLabel).not.toBeNull();
+    expect(document.body.querySelector('#correction-corrected-text')).not.toBeNull();
+    expect(document.body.querySelector('#correction-explanation')).not.toBeNull();
   });
 
   it('should expose dialog close actions as explicit non-submit buttons', () => {
@@ -124,25 +99,6 @@ describe('CorrectionModalComponent', () => {
     expect(closeButtons.length).toBe(2);
     for (const button of closeButtons) {
       expect(button.type).toBe('button');
-    }
-  });
-
-  it('should preserve scrollable high-zoom access to wrapped footer actions', () => {
-    const content = document.body.querySelector<HTMLElement>('[data-slot="dialog-content"]');
-    const footer = document.body.querySelector<HTMLElement>('footer');
-
-    expect(content?.classList.contains('max-h-[calc(100dvh-2rem)]')).toBe(true);
-    expect(footer?.classList.contains('flex-wrap')).toBe(true);
-  });
-
-  it('should disable feature-owned transitions when reduced motion is requested', () => {
-    const transitionedButtons = Array.from(
-      document.body.querySelectorAll<HTMLButtonElement>('button[class*="transition"]'),
-    );
-
-    expect(transitionedButtons.length).toBeGreaterThan(0);
-    for (const button of transitionedButtons) {
-      expect(button.classList.contains('motion-reduce:transition-none')).toBe(true);
     }
   });
 

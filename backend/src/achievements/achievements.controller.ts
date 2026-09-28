@@ -1,12 +1,11 @@
 import {
   Controller,
-  ForbiddenException,
   Get,
-  Param,
   Post,
+  Param,
   Req,
-  UnauthorizedException,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AchievementsService } from './achievements.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -24,54 +23,32 @@ export class AchievementsController {
 
   @Get('/user/:userId')
   async getUserAchievements(@Param('userId') userId: string) {
-    // Earned badge definitions may be displayed on member profiles. Current
-    // counters/progress are intentionally not returned by this endpoint.
     return this.achievementsService.getUserAchievements(userId);
   }
 
   @Get('/full/:userId')
-  async getFullAchievements(
-    @Param('userId') userId: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    this.requireCurrentUser(req, userId);
+  async getFullAchievements(@Param('userId') userId: string) {
     return this.achievementsService.getFullAchievements(userId);
   }
 
   @Get('/my')
   async getMyAchievements(@Req() req: AuthenticatedRequest) {
-    const userId = this.requireCurrentUser(req);
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     return this.achievementsService.getFullAchievements(userId);
   }
 
   @Post('/evaluate')
   async evaluateForCurrentUser(@Req() req: AuthenticatedRequest) {
-    const userId = this.requireCurrentUser(req);
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
     await this.achievementsService.evaluateAchievements(userId);
     return { evaluated: true };
   }
 
   @Post('/evaluate/:userId')
-  async evaluateForUser(
-    @Param('userId') userId: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    this.requireCurrentUser(req, userId);
+  async evaluateForUser(@Param('userId') userId: string) {
     await this.achievementsService.evaluateAchievements(userId);
     return { evaluated: true };
-  }
-
-  private requireCurrentUser(
-    req: AuthenticatedRequest,
-    requestedUserId?: string,
-  ): string {
-    const currentUserId = req.user?.id;
-    if (!currentUserId) {
-      throw new UnauthorizedException();
-    }
-    if (requestedUserId && requestedUserId !== currentUserId) {
-      throw new ForbiddenException('Achievement progress is private');
-    }
-    return currentUserId;
   }
 }

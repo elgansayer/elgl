@@ -1,74 +1,69 @@
-<app-card customClass="mx-auto max-w-2xl p-4 shadow-lift sm:p-6">
-  <div
-    class="mb-4 flex min-w-0 items-start justify-between gap-3 border-b border-surface-100 pb-3"
-  >
-    <h3 class="app-section-title min-w-0 break-words" id="doodle-pad-title">
-      {{ 'doodle.title' | t }}
+<app-card customClass="p-6 max-w-2xl mx-auto shadow-lift">
+  <div class="flex items-center justify-between border-b border-surface-100 pb-3 mb-4">
+    <h3 class="app-section-title flex items-center gap-2">
+      <span>{{ 'doodle.title' | t }}</span>
     </h3>
     <button
       hlmBtn
       variant="ghost"
       size="icon-touch"
       type="button"
-      [attr.aria-label]="'doodle.cancelBtn' | t"
+      aria-label="Cancel doodle"
       (click)="cancel()"
-      class="shrink-0 text-xl font-bold text-text-muted hover:text-text-secondary"
+      class="text-text-muted hover:text-text-secondary font-bold text-xl"
     >
-      <span aria-hidden="true">✕</span>
+      ✕
     </button>
   </div>
 
-  <p class="sr-only" id="doodle-pad-instructions">
-    {{ 'doodle.title' | t }}. {{ 'doodle.colorLabel' | t }}. {{ 'doodle.brushLabel' | t }}.
-  </p>
-
   <div
-    class="flex justify-center overflow-hidden rounded-app border border-surface-100 bg-surface-300 p-1 sm:p-2"
+    class="border-2 border-surface-100 rounded-app overflow-hidden bg-surface-200 shadow-inner flex justify-center"
   >
     <canvas
       #canvas
-      role="img"
-      [attr.aria-label]="'doodle.title' | t"
-      aria-describedby="doodle-pad-instructions"
-      (pointerdown)="startDrawing($event)"
-      (pointermove)="draw($event)"
-      (pointerup)="stopDrawing($event)"
-      (pointercancel)="stopDrawing($event)"
-      (pointerleave)="stopDrawing($event)"
-      class="h-auto max-w-full cursor-crosshair rounded-app bg-surface-50"
+      (mousedown)="startDrawing($event)"
+      (mousemove)="draw($event)"
+      (mouseup)="stopDrawing()"
+      (mouseleave)="stopDrawing()"
+      (touchstart)="startDrawing($event)"
+      (touchmove)="draw($event)"
+      (touchend)="stopDrawing()"
+      class="cursor-crosshair max-w-full h-auto bg-surface-200"
     ></canvas>
   </div>
 
-  <div class="mt-4 grid gap-4 border-t border-surface-100 pt-4 sm:grid-cols-2">
-    <fieldset class="m-0 min-w-0 border-0 p-0">
-      <legend class="app-muted mb-2 font-bold uppercase tracking-wider">
+  <div
+    class="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-surface-100"
+  >
+    <fieldset class="m-0 flex items-center gap-2 border-0 p-0">
+      <legend class="app-muted me-2 font-bold uppercase tracking-wider">
         {{ 'doodle.colorLabel' | t }}
       </legend>
       <hlm-radio-group
         name="doodle-color"
-        class="flex flex-wrap items-center gap-2"
+        class="flex items-center gap-2"
         [value]="currentColor"
         (valueChange)="setColor($event)"
       >
         @for (color of colors; track color; let index = $index) {
           <label
             [class]="
-              'inline-flex size-11 cursor-pointer items-center justify-center rounded-pill border-2 bg-surface-200 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-surface-200 ' +
+              'inline-flex size-9 cursor-pointer items-center justify-center rounded-full border-2 transition-transform hover:scale-110 focus-within:ring-2 focus-within:ring-primary/50 ' +
               (currentColor === color
-                ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
-                : 'border-surface-100 hover:border-primary/50')
+                ? 'border-primary ring-2 ring-primary/40 scale-110'
+                : 'border-surface-100')
             "
           >
             <hlm-radio
               class="sr-only"
               [value]="color"
               [inputId]="'doodle-color-' + index"
-              [attr.aria-label]="('doodle.colorLabel' | t) + ' ' + (index + 1)"
+              [attr.aria-label]="'Select ' + color"
             >
               <hlm-radio-indicator indicator />
             </hlm-radio>
             <span
-              class="size-7 rounded-pill border border-surface-100"
+              class="size-7 rounded-full"
               [style.background-color]="color"
               aria-hidden="true"
             ></span>
@@ -77,30 +72,30 @@
       </hlm-radio-group>
     </fieldset>
 
-    <fieldset class="m-0 min-w-0 border-0 p-0">
-      <legend class="app-muted mb-2 font-bold uppercase tracking-wider">
+    <fieldset class="m-0 flex items-center gap-2 border-0 p-0">
+      <legend class="app-muted me-2 font-bold uppercase tracking-wider">
         {{ 'doodle.brushLabel' | t }}
       </legend>
       <hlm-radio-group
         name="doodle-brush-width"
-        class="flex flex-wrap items-center gap-2"
+        class="flex items-center gap-2"
         [value]="brushWidth.toString()"
         (valueChange)="setBrushWidthFromValue($event)"
       >
         @for (width of brushWidths; track width) {
           <label
             [class]="
-              'inline-flex min-h-11 cursor-pointer items-center rounded-app border px-3 py-2 text-xs font-bold focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-surface-200 ' +
+              'inline-flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 py-1 text-xs font-bold transition-all focus-within:ring-2 focus-within:ring-primary/50 ' +
               (brushWidth === width
-                ? 'border-primary bg-primary text-on-fill'
-                : 'border-surface-100 bg-surface-300 text-text-primary hover:bg-surface-100')
+                ? 'bg-primary text-on-fill shadow'
+                : 'bg-surface-100 text-text-primary hover:bg-surface-100')
             "
           >
             <hlm-radio
               class="sr-only"
               [value]="width.toString()"
               [inputId]="'doodle-brush-' + width"
-              [attr.aria-label]="('doodle.brushLabel' | t) + ' ' + width"
+              [attr.aria-label]="width + 'px stroke width'"
             >
               <hlm-radio-indicator indicator />
             </hlm-radio>
@@ -111,28 +106,28 @@
     </fieldset>
   </div>
 
-  <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex justify-between items-center mt-6">
     <app-button-secondary
       (clicked)="clearCanvas()"
       [ariaLabel]="'doodle.clearBtn' | t"
-      customClass="w-full border-danger/40 px-4 py-2 text-sm text-danger hover:bg-danger/10 sm:w-auto"
+      customClass="bg-danger/20 text-danger px-4 py-2 text-sm hover:bg-danger/30"
     >
       {{ 'doodle.clearBtn' | t }}
     </app-button-secondary>
 
-    <div class="grid w-full grid-cols-1 gap-3 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+    <div class="flex gap-3">
       <app-button-secondary
         (clicked)="cancel()"
         [ariaLabel]="'doodle.cancelBtn' | t"
-        customClass="w-full px-5 py-2 text-sm sm:w-auto"
+        customClass="px-5 py-2 text-sm"
       >
         {{ 'doodle.cancelBtn' | t }}
       </app-button-secondary>
       <app-button-primary
         (clicked)="save()"
-        customClass="w-full px-6 py-2 text-sm sm:w-auto"
+        customClass="px-6 py-2 text-sm flex items-center gap-2"
       >
-        {{ 'doodle.sendBtn' | t }}
+        <span>{{ 'doodle.sendBtn' | t }}</span>
       </app-button-primary>
     </div>
   </div>

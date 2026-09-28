@@ -1,0 +1,90 @@
+name: Relay loading platform patch
+
+on:
+  push:
+    branches:
+      - feat/relay-loading-state-primitives
+    paths:
+      - .github/workflows/relay-loading-platform-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/relay-loading-state-primitives
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Replace profile package import with the local compatibility boundary
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'frontend/src/app/components/profile/profile.component.ts';
+          let source = fs.readFileSync(file, 'utf8');
+          source = source.replace(
+            "import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';",
+            "import { NgxSkeletonLoaderCompatibilityComponent } from '../primitives/loading';",
+          );
+          source = source.replaceAll(
+            'NgxSkeletonLoaderModule',
+            'NgxSkeletonLoaderCompatibilityComponent',
+          );
+          if (source.includes("from 'ngx-skeleton-loader'")) {
+            throw new Error('Profile still imports ngx-skeleton-loader');
+          }
+          fs.writeFileSync(file, source);
+
+          const packagePath = 'package.json';
+          const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+          manifest.scripts['check:loading-platform'] =
+            'node scripts/verify-loading-platform.mjs';
+          if (!manifest.scripts.verify.includes('check:loading-platform')) {
+            const anchor = 'npm run check:content-security-boundaries &&';
+            if (!manifest.scripts.verify.includes(anchor)) {
+              throw new Error('Content-security verification anchor is missing');
+            }
+            manifest.scripts.verify = manifest.scripts.verify.replace(
+              anchor,
+              `${anchor} npm run check:loading-platform &&`,
+            );
+          }
+          fs.writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+
+      - name: Remove the third-party skeleton dependency
+        working-directory: frontend
+        run: npm uninstall ngx-skeleton-loader --save --legacy-peer-deps
+
+      - name: Format and verify frontend
+        run: |
+          cd frontend
+          npx prettier --write \
+            src/app/components/profile/profile.component.ts \
+            src/app/components/primitives/loading/*.ts
+          npm run lint:check
+          npm run build
+          npm test
+          cd ..
+          node scripts/verify-loading-platform.mjs
+          node scripts/verify-content-security-boundaries.mjs
+          node scripts/verify-no-runtime-fallbacks.mjs
+
+      - name: Commit loading-platform migration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package.json frontend/package.json frontend/package-lock.json frontend/src scripts/verify-loading-platform.mjs
+          git commit -m 'refactor(ui): replace skeleton package with Relay primitives'
+          git push origin HEAD:feat/relay-loading-state-primitives

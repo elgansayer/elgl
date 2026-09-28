@@ -83,13 +83,16 @@
     }
   </div>
 
-  <!-- Word definition modal -->
+  <!-- Word definition panel -->
   @if (selectedToken(); as sel) {
-    <app-word-definition-modal
-      [wordToken]="sel.token"
-      [contextSentence]="sel.context"
-      (closed)="selectedToken.set(null)"
-    >
-    </app-word-definition-modal>
+    <div class="pt-2 border-t border-surface-100">
+      <app-word-definition-modal
+        [wordToken]="sel.token"
+        [contextSentence]="sel.context"
+        [targetLanguage]="language()"
+        (closed)="selectedToken.set(null)"
+      >
+      </app-word-definition-modal>
+    </div>
   }
 </app-card>

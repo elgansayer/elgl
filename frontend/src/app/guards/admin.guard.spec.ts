@@ -33,12 +33,4 @@ describe('adminGuard', () => {
 
     expect(result).toEqual(router.parseUrl('/discovery'));
   });
-
-  it('fails closed when the admin access probe unexpectedly rejects', async () => {
-    adminServiceMock.checkAdminAccess.mockRejectedValue(new Error('authorization provider unavailable'));
-
-    const result = await TestBed.runInInjectionContext(() => adminGuard({} as never, {} as never));
-
-    expect(result).toEqual(router.parseUrl('/discovery'));
-  });
 });

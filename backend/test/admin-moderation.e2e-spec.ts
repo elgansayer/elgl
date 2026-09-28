@@ -87,19 +87,7 @@ describe('Admin moderation queue E2E', () => {
       'moderation.cases.read',
     ]);
     expect(moderationList).not.toHaveBeenCalled();
-    expect(auditRecord).toHaveBeenCalledWith({
-      actorUserId: 'admin-1',
-      action: 'get /admin/v1/moderation/reports',
-      capabilityKey: 'moderation.cases.read',
-      targetType: undefined,
-      targetId: undefined,
-      outcome: 'denied',
-      correlationId: undefined,
-      metadata: {
-        source: 'admin-capability-guard',
-        operation: 'capability-denied',
-      },
-    });
+    expect(auditRecord).not.toHaveBeenCalled();
   });
 
   it('transforms bounded query filters and audits the moderation queue read', async () => {

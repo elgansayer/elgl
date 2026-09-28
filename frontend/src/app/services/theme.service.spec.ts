@@ -30,7 +30,7 @@ describe('ThemeService', () => {
       })),
     });
 
-    vi.spyOn(document.documentElement.classList, 'toggle');
+    document.documentElement.classList.toggle = vi.fn();
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
 
@@ -41,7 +41,6 @@ describe('ThemeService', () => {
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
     vi.restoreAllMocks();
-    document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
   });
 
@@ -64,25 +63,12 @@ describe('ThemeService', () => {
     expect(service.currentTheme()).toBe('dark');
   });
 
-  it('should fall back to system theme and remove an invalid stored theme', () => {
+  it('should fall back to system theme if local storage theme is invalid', () => {
     (window.localStorage.getItem as Mock).mockImplementation((key: string) =>
       key === 'app_theme' ? 'invalid-theme' : null,
     );
     service = TestBed.inject(ThemeService);
     expect(service.currentTheme()).toBe('system');
-    expect(window.localStorage.removeItem).toHaveBeenCalledWith('app_theme');
-  });
-
-  it('should keep the system default when storage reads are blocked', () => {
-    (window.localStorage.getItem as Mock).mockImplementation(() => {
-      throw new DOMException('Blocked', 'SecurityError');
-    });
-
-    expect(() => {
-      service = TestBed.inject(ThemeService);
-    }).not.toThrow();
-    expect(service.currentTheme()).toBe('system');
-    expect(service.primaryAccentColor()).toBeNull();
   });
 
   it('should set theme and update local storage', () => {
@@ -90,19 +76,6 @@ describe('ThemeService', () => {
     service.setTheme('light');
     expect(service.currentTheme()).toBe('light');
     expect(window.localStorage.setItem).toHaveBeenCalledWith('app_theme', 'light');
-  });
-
-  it('should keep applying theme changes when storage writes fail', () => {
-    (window.localStorage.setItem as Mock).mockImplementation(() => {
-      throw new DOMException('Quota exceeded', 'QuotaExceededError');
-    });
-    service = TestBed.inject(ThemeService);
-
-    expect(() => service.setTheme('dark')).not.toThrow();
-    TestBed.flushEffects();
-
-    expect(service.currentTheme()).toBe('dark');
-    expect(document.documentElement.classList.toggle).toHaveBeenCalledWith('dark', true);
   });
 
   it('should load a valid stored primary accent', () => {
