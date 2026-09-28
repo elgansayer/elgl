@@ -35,6 +35,7 @@ describe('App routes', () => {
       'study-buddy',
       'events',
       'events/calendar',
+      'coin-economy',
     ];
     for (const p of expected) {
       expect(paths).toContain(p);
@@ -76,6 +77,22 @@ describe('App routes', () => {
     }
   });
 
+  it('should guard every admin feature route with the backend-backed adminGuard', () => {
+    const expectedAdminPaths = [
+      'admin',
+      'admin/lessons',
+      'admin/moderation',
+      'admin/blocks',
+      'admin/users',
+    ];
+
+    for (const path of expectedAdminPaths) {
+      const route = routes.find((candidate) => candidate.path === path);
+      expect(route, `missing route ${path}`).toBeDefined();
+      expect(route?.canActivate, `missing admin guard on ${path}`).toContain(adminGuard);
+    }
+  });
+
   it('should lazy-load milestones component route', () => {
     const milestones = routes.find((r) => r.path === 'milestones');
     expect(milestones).toBeDefined();
@@ -83,5 +100,13 @@ describe('App routes', () => {
       expect(milestones.loadComponent).toBeDefined();
       expect(typeof milestones.loadComponent).toBe('function');
     }
+  });
+
+  it('should keep the wildcard route last and redirect unknown paths safely', () => {
+    const wildcard = routes[routes.length - 1];
+
+    expect(wildcard?.path).toBe('**');
+    expect(wildcard?.redirectTo).toBe('ai-conversation');
+    expect(routes.some((route) => route.path === wildcard?.redirectTo)).toBe(true);
   });
 });

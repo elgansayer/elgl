@@ -17,25 +17,19 @@ export class CommentMentionNotificationListener {
 
   @OnEvent('moment.mention')
   async handleCommentMention(payload: MomentCommentEvent): Promise<void> {
-    // Use mentionedUserIds array if populated, otherwise fall back to momentAuthorId for backward compatibility.
-    // De-duplicate and bound recipients so repeated mentions cannot create duplicate notifications or unbounded fan-out.
-    const recipientIds = Array.from(
-      new Set(
-        (payload.mentionedUserIds?.length
-          ? payload.mentionedUserIds
-          : payload.momentAuthorId
-            ? [payload.momentAuthorId]
-            : []
-        ).filter(Boolean),
-      ),
-    ).slice(0, MAX_MENTION_RECIPIENTS);
+    const candidateRecipientIds = payload.mentionedUserIds?.length
+      ? payload.mentionedUserIds
+      : payload.momentAuthorId
+        ? [payload.momentAuthorId]
+        : [];
+
+    const recipientIds = Array.from(new Set(candidateRecipientIds))
+      .filter(
+        (recipientId) => recipientId && recipientId !== payload.commenterId,
+      )
+      .slice(0, MAX_MENTION_RECIPIENTS);
 
     for (const recipientId of recipientIds) {
-      // Guard against self-mentions (commenter mentioning themselves).
-      if (recipientId === payload.commenterId) {
-        continue;
-      }
-
       let shouldSend: boolean;
       try {
         shouldSend =

@@ -47,7 +47,7 @@ describe('CommentMentionNotificationListener', () => {
     expect(listener).toBeDefined();
   });
 
-  it('should create a notification when comment mentions a user via mentionedUserIds', async () => {
+  it('creates a notification for a mentioned user', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
@@ -72,23 +72,40 @@ describe('CommentMentionNotificationListener', () => {
     );
   });
 
-  it('should create notifications for multiple mentioned users', async () => {
-    const payload = new MomentCommentEvent(
-      'moment-1',
+  it('deduplicates recipients, skips self mentions, and caps fan-out', async () => {
+    const recipients = [
       'commenter-1',
-      'moment-author-1',
-      'Hey @alice and @bob check this out',
-      undefined,
-      undefined,
-      ['mentioned-user-1', 'mentioned-user-2'],
-    );
+      'mentioned-user-1',
+      'mentioned-user-1',
+      ...Array.from(
+        { length: 25 },
+        (_, index) => `mentioned-user-${index + 2}`,
+      ),
+    ];
 
-    await listener.handleCommentMention(payload);
+    await listener.handleCommentMention(
+      new MomentCommentEvent(
+        'moment-1',
+        'commenter-1',
+        'moment-author-1',
+        'hello',
+        undefined,
+        undefined,
+        recipients,
+      ),
+    );
 
     expect(
       notificationPreferencesService.shouldSendNotification,
-    ).toHaveBeenCalledTimes(2);
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    ).toHaveBeenCalledTimes(10);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(10);
+    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
+      'commenter-1',
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('should de-duplicate repeated recipients', async () => {
@@ -145,7 +162,7 @@ describe('CommentMentionNotificationListener', () => {
     expect(notificationsService.createNotification).toHaveBeenCalled();
   });
 
-  it('should skip notification when preferences disable push', async () => {
+  it('skips notification when preferences disable push', async () => {
     vi.spyOn(
       notificationPreferencesService,
       'shouldSendNotification',
@@ -237,7 +254,7 @@ describe('CommentMentionNotificationListener', () => {
     );
   });
 
-  it('should skip self-mention (commenter mentioning themselves)', async () => {
+  it('skips self mention', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',

@@ -1,17 +1,19 @@
 import {
-  Controller,
-  Post,
   Body,
-  UseGuards,
+  Controller,
   HttpCode,
   HttpStatus,
-  Req,
+  Post,
+  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-import { PrivacyService } from './privacy.service';
+import { Throttle } from '@nestjs/throttler';
+import type { User } from '@supabase/supabase-js';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { PrivacyService } from './privacy.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
-import type { Request } from 'express';
 
 @Controller('privacy')
 @UseGuards(SupabaseAuthGuard)
@@ -19,20 +21,32 @@ export class PrivacyController {
   constructor(private readonly privacyService: PrivacyService) {}
 
   @Post('request-archive')
-  @HttpCode(HttpStatus.ACCEPTED)
-  async requestArchive(@Body() dto: ArchiveRequestDto, @Req() req: Request) {
-    const userId = (req as any).user?.id ?? '';
-    await this.privacyService.requestArchive(userId, dto);
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } })
+  async requestArchive(
+    @Body() dto: ArchiveRequestDto,
+    @CurrentUser() user: User | null,
+  ) {
+    if (!user) throw new UnauthorizedException();
+    const archive = await this.privacyService.requestArchive(user.id, dto);
     return {
-      message: 'Archive requested. You will receive an email when ready.',
+      ...archive,
+      message:
+        archive.status === 'ready'
+          ? 'Archive ready for download.'
+          : 'Archive preparation is already in progress.',
     };
   }
 
   @Post('delete-account')
   @HttpCode(HttpStatus.ACCEPTED)
-  async deleteAccount(@Body() dto: DeleteAccountDto, @Req() req: Request) {
-    const userId = (req as any).user?.id ?? '';
-    await this.privacyService.deleteAccount(userId, dto);
+  @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } })
+  async deleteAccount(
+    @Body() dto: DeleteAccountDto,
+    @CurrentUser() user: User | null,
+  ) {
+    if (!user) throw new UnauthorizedException();
+    await this.privacyService.deleteAccount(user.id, dto);
     return {
       message: 'Account deletion initiated. You have 30 days to cancel.',
     };
@@ -40,9 +54,10 @@ export class PrivacyController {
 
   @Post('cancel-deletion')
   @HttpCode(HttpStatus.OK)
-  async cancelDeletion(@Req() req: Request) {
-    const userId = (req as any).user?.id ?? '';
-    await this.privacyService.cancelDeletion(userId);
+  @Throttle({ default: { limit: 10, ttl: 60 * 60 * 1000 } })
+  async cancelDeletion(@CurrentUser() user: User | null) {
+    if (!user) throw new UnauthorizedException();
+    await this.privacyService.cancelDeletion(user.id);
     return { message: 'Account deletion cancelled successfully.' };
   }
 }

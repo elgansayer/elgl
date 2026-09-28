@@ -124,6 +124,13 @@ describe('LinkPreviewService', () => {
     expect(httpService.get).not.toHaveBeenCalled();
   });
 
+  it('rejects canonical IPv4-mapped IPv6 loopback URLs', async () => {
+    await expect(
+      service.getPreview('http://[::ffff:7f00:1]/'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(httpService.get).not.toHaveBeenCalled();
+  });
+
   it('rejects SSRF attempts via cloud metadata IPs', async () => {
     await expect(
       service.getPreview('http://169.254.169.254/latest/meta-data/'),
@@ -175,10 +182,12 @@ describe('LinkPreviewService', () => {
     expect(expectedKey).not.toContain('super-secret');
   });
 
-  it('returns a cached preview without hitting the network', async () => {
+  it('returns a validated cached preview without hitting the network', async () => {
     const cached = {
       url: 'https://example.com/',
       title: 'Cached title',
+      description: '',
+      image: '',
       siteName: 'example.com',
     };
     redis.get.mockResolvedValue(JSON.stringify(cached));
@@ -187,6 +196,54 @@ describe('LinkPreviewService', () => {
 
     expect(result).toEqual(cached);
     expect(httpService.get).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes and bounds cached metadata before returning it', async () => {
+    redis.get.mockResolvedValue(
+      JSON.stringify({
+        url: 'https://example.com/',
+        title: `<b>${'t'.repeat(400)}</b>`,
+        description: 'd'.repeat(1_200),
+        image: 'javascript:alert(1)',
+        siteName: 's'.repeat(250),
+      }),
+    );
+
+    const result = await service.getPreview('https://example.com');
+
+    expect(result?.title).toBe('t'.repeat(300));
+    expect(result?.description).toBe('d'.repeat(1_000));
+    expect(result?.image).toBe('');
+    expect(result?.siteName).toBe('s'.repeat(200));
+    expect(httpService.get).not.toHaveBeenCalled();
+  });
+
+  it('ignores a cache entry bound to a different URL and fetches fresh metadata', async () => {
+    redis.get.mockResolvedValue(
+      JSON.stringify({
+        url: 'https://other.example/',
+        title: 'Wrong page',
+        description: '',
+        image: '',
+        siteName: 'other.example',
+      }),
+    );
+    mockHtmlResponse('<html><head><title>Fresh page</title></head></html>');
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.title).toBe('Fresh page');
+    expect(httpService.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores oversized cache entries before parsing and fetches fresh metadata', async () => {
+    redis.get.mockResolvedValue('x'.repeat(16_385));
+    mockHtmlResponse('<html><head><title>Fresh page</title></head></html>');
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.title).toBe('Fresh page');
+    expect(httpService.get).toHaveBeenCalledTimes(1);
   });
 
   it('continues when the cache read is unavailable', async () => {
@@ -229,6 +286,28 @@ describe('LinkPreviewService', () => {
     });
     expect(redis.set).toHaveBeenCalledWith(
       expect.stringMatching(/^link_preview:v2:[a-f0-9]{64}$/),
+      JSON.stringify(result),
+      'EX',
+      3_600,
+    );
+  });
+
+  it('bounds scraped metadata before caching or returning it', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="og:title" content="${'t'.repeat(400)}" />
+        <meta property="og:description" content="${'d'.repeat(1_200)}" />
+        <meta property="og:site_name" content="${'s'.repeat(250)}" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.title).toBe('t'.repeat(300));
+    expect(result?.description).toBe('d'.repeat(1_000));
+    expect(result?.siteName).toBe('s'.repeat(200));
+    expect(redis.set).toHaveBeenCalledWith(
+      expect.any(String),
       JSON.stringify(result),
       'EX',
       3_600,
