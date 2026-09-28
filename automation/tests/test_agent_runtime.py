@@ -35,6 +35,7 @@ from openhands_factory.exceptions import (
     FactoryError,
     ProviderCapacityUnavailable,
 )
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, ProviderName, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -547,6 +548,46 @@ def test_router_skips_cross_process_busy_provider(tmp_path: Path) -> None:
     assert second.calls == 1
     assert job.provider_failover_count == 1
     assert job.last_provider_failure == "first:busy"
+
+
+def test_router_holds_host_reader_for_provider_lifetime(tmp_path: Path) -> None:
+    provider_started = threading.Event()
+    provider_release = threading.Event()
+
+    class BlockingProvider(Provider):
+        def run(self, request: AgentRequest) -> AgentResult:
+            provider_started.set()
+            assert provider_release.wait(timeout=2)
+            return super().run(request)
+
+    gate_path = tmp_path / "host-resources.json"
+    gate = HostResourceGate(gate_path, 2)
+    other_daemon_gate = HostResourceGate(gate_path, 2)
+    agent_request, job = request(tmp_path)
+    router = AgentRouter([BlockingProvider("first")], host_resource_slots=gate)
+    result: list[AgentResult] = []
+    worker = threading.Thread(target=lambda: result.append(router.run(agent_request, job)))
+
+    worker.start()
+    assert provider_started.wait(timeout=1)
+    assert other_daemon_gate.acquire_shared("other:first")
+    assert other_daemon_gate.acquire_shared("other:blocked") is False
+
+    provider_release.set()
+    worker.join(timeout=1)
+    assert worker.is_alive() is False
+    assert result[0].success
+    assert other_daemon_gate.acquire_shared("other:after")
+
+
+def test_router_derives_host_gate_from_durable_provider_capacity(tmp_path: Path) -> None:
+    capacity = ProviderCapacityStore(tmp_path, max_lease_seconds=900)
+
+    router = AgentRouter([Provider("first")], capacity_store=capacity)
+
+    assert router.host_resource_slots is not None
+    assert router.host_resource_slots.path == tmp_path / "host-resource-gate.json"
+    assert router.host_resource_slots.lease_seconds == 900
 
 
 def test_router_reserves_provider_slot_for_pull_request_review(tmp_path: Path) -> None:
