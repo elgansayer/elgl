@@ -3,6 +3,7 @@ import { AudioIntroController } from './audio-intro.controller';
 import { AudioIntroService } from './audio-intro.service';
 import { UpdateAudioIntroDto } from './dto/update-audio-intro.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('AudioIntroController', () => {
   let controller: AudioIntroController;
@@ -55,15 +56,27 @@ describe('AudioIntroController', () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
+      const req = { user: { id: 'user-1' } };
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const result = await controller.updateAudioIntro('user-1', dto);
+      const result = await controller.updateAudioIntro('user-1', dto, req);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
         'user-1',
         dto.audio_url,
       );
       expect(result).toBeUndefined();
+    });
+
+    it('should throw ForbiddenException if user tries to update another user', async () => {
+      const dto: UpdateAudioIntroDto = {
+        audio_url: 'https://example.com/audio.mp3',
+      };
+      const req = { user: { id: 'user-2' } };
+
+      await expect(
+        controller.updateAudioIntro('user-1', dto, req),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
