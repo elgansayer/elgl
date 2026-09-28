@@ -3,8 +3,22 @@ name: Translation Cache Contract
 on:
   push:
     branches: [main, develop]
+    paths:
+      - 'frontend/src/app/services/translation-cache.service.ts'
+      - 'frontend/src/app/services/translation-cache.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.translation-corrections.spec.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/translation-cache-contract.test.mjs'
+      - '.github/workflows/translation-cache-contract.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'frontend/src/app/services/translation-cache.service.ts'
+      - 'frontend/src/app/services/translation-cache.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.translation-corrections.spec.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/translation-cache-contract.test.mjs'
+      - '.github/workflows/translation-cache-contract.yml'
   merge_group:
     types: [checks_requested]
 

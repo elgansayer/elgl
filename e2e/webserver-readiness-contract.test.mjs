@@ -4,7 +4,18 @@ import test from 'node:test';
 
 const configSource = readFileSync(new URL('./playwright.config.ts', import.meta.url), 'utf8');
 const readinessSource = readFileSync(new URL('./backend-readiness.mjs', import.meta.url), 'utf8');
+const frontendEnvironmentSource = readFileSync(
+  new URL('../frontend/src/environments/environment.ts', import.meta.url),
+  'utf8',
+);
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+
+function extractSingleQuotedValue(source, property) {
+  const escapedProperty = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = source.match(new RegExp(`${escapedProperty}\\s*[:=]\\s*'([^']+)'`));
+  assert.ok(match, `Expected ${property} to be a single-quoted URL literal`);
+  return match[1];
+}
 
 test('gates the Angular web server on backend readiness', () => {
   const readinessIndex = configSource.indexOf('node ./backend-readiness.mjs');
@@ -28,6 +39,20 @@ test('uses one configurable backend health target for Playwright and the readine
   assert.match(configSource, /url: backendHealthUrl/);
   assert.match(readinessSource, /process\.env\.E2E_BACKEND_HEALTH_URL/);
   assert.match(readinessSource, /http:\/\/127\.0\.0\.1:3000\/api\/health/);
+});
+
+test('keeps Angular SSR and the default readiness probe on the same IPv4 loopback origin', () => {
+  const apiUrl = new URL(extractSingleQuotedValue(frontendEnvironmentSource, 'apiUrl'));
+  const healthUrl = new URL(extractSingleQuotedValue(readinessSource, 'DEFAULT_HEALTH_URL'));
+
+  assert.equal(apiUrl.origin, healthUrl.origin, 'Angular and readiness must target one backend origin');
+  assert.equal(apiUrl.hostname, '127.0.0.1');
+  assert.equal(healthUrl.hostname, '127.0.0.1');
+  assert.equal(
+    frontendEnvironmentSource.includes("apiUrl: 'http://localhost:3000/api'"),
+    false,
+    'localhost can resolve to ::1 during Angular SSR and reintroduce ECONNREFUSED startup failures',
+  );
 });
 
 test('keeps readiness bounded and tolerant of transient connection refusal', () => {

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface GdprArchiveResponse {
   request_id: string;
@@ -12,14 +13,15 @@ export interface GdprArchiveResponse {
 
 @Injectable({ providedIn: 'root' })
 export class GdprService {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
+  private readonly apiBase = environment.apiUrl;
 
   async requestArchive(
     receiptId?: string,
     appStore?: string,
   ): Promise<GdprArchiveResponse> {
     return lastValueFrom(
-      this.http.post<GdprArchiveResponse>('/api/privacy/request-archive', {
+      this.http.post<GdprArchiveResponse>(`${this.apiBase}/privacy/request-archive`, {
         receipt_id: receiptId,
         app_store: appStore,
       }),
@@ -28,13 +30,13 @@ export class GdprService {
 
   async deleteAccount(confirmDelete: boolean): Promise<void> {
     await lastValueFrom(
-      this.http.post('/api/privacy/delete-account', {
+      this.http.post(`${this.apiBase}/privacy/delete-account`, {
         confirm_delete: confirmDelete,
       }),
     );
   }
 
   async cancelDeletion(): Promise<void> {
-    await lastValueFrom(this.http.post('/api/privacy/cancel-deletion', {}));
+    await lastValueFrom(this.http.post(`${this.apiBase}/privacy/cancel-deletion`, {}));
   }
 }

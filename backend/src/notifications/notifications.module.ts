@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { NotificationsInboxService } from './notifications-inbox.service';
+import { NotificationPreferencesController } from './notification-preferences.controller';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { ChatNotificationListener } from './listeners/chat-notification.listener';
 import { ChatMentionNotificationListener } from './listeners/chat-mention-notification.listener';
@@ -16,7 +17,7 @@ import { NotificationsController } from './notifications.controller';
 
 @Module({
   imports: [SupabaseModule],
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, NotificationPreferencesController],
   providers: [
     NotificationsService,
     NotificationsInboxService,

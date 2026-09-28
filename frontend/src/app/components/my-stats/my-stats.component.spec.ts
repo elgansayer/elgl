@@ -73,7 +73,7 @@ describe('MyStatsComponent', () => {
     fixture.detectChanges();
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:3000/api/stats/me',
+      'http://127.0.0.1:3000/api/stats/me',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer mock-access-token' },
