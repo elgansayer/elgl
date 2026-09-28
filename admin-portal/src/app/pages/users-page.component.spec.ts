@@ -97,8 +97,10 @@ describe('UsersPageComponent', () => {
     expect(component.totalPages()).toBe(3);
   });
 
-  it('renders a retryable search surface and clears stale results when the API fails', async () => {
-    search.mockReturnValue(throwError(() => new Error('User search unavailable')));
+  it('renders a privacy-safe retry action and clears stale results when the API fails', async () => {
+    search.mockReturnValue(
+      throwError(() => new Error('postgres://operator:secret@internal.example failed')),
+    );
     TestBed.configureTestingModule({
       imports: [UsersPageComponent],
       providers: [
@@ -115,12 +117,31 @@ describe('UsersPageComponent', () => {
     expect(component.total()).toBe(0);
     expect(component.loaded()).toBe(true);
     expect(component.busy()).toBe(false);
-    expect(component.error()).toBe('User search unavailable');
+    expect(component.error()).toBe('User search is temporarily unavailable. Try again.');
 
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('[role="alert"]')?.textContent).toContain(
-      'User search unavailable',
+      'User search is temporarily unavailable. Try again.',
     );
+    expect(element.textContent).not.toContain('operator:secret');
+    expect(element.querySelector('button')?.textContent).not.toBeNull();
     expect(element.querySelector('form[role="search"]')).not.toBeNull();
+  });
+
+  it('retries the current page and query after a transient failure', async () => {
+    await createComponent({ users: [user], total: 1, page: 1, pageSize: 20 });
+    component.query = 'Alice';
+    search.mockReturnValueOnce(throwError(() => new Error('unavailable')));
+    await component.searchUsers();
+
+    search.mockReturnValueOnce(
+      of({ users: [user], total: 1, page: 1, pageSize: 20 } satisfies AdminUserListResult),
+    );
+    component.retrySearch();
+    await fixture.whenStable();
+
+    expect(search).toHaveBeenLastCalledWith({ page: 1, pageSize: 20, search: 'Alice' });
+    expect(component.users()).toEqual([user]);
+    expect(component.error()).toBeNull();
   });
 });

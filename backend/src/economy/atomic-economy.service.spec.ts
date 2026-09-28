@@ -88,7 +88,7 @@ describe('AtomicEconomyService daily check-in', () => {
   });
 
   it('treats a repeated UTC-day claim as an idempotent no-op', async () => {
-    const { service, rpc, metrics } = buildService();
+    const { service, rpc, metrics, redisDel } = buildService();
     rpc.mockResolvedValue({
       data: [{ claimed: false, coins_rewarded: 0, new_balance: 91 }],
       error: null,
@@ -100,6 +100,7 @@ describe('AtomicEconomyService daily check-in', () => {
       new_balance: 91,
     });
     expect(metrics.recordDailyCheckInClaim).toHaveBeenCalledWith(false);
+    expect(redisDel).not.toHaveBeenCalled();
   });
 
   it('fails closed when the RPC is unavailable without fabricating a balance', async () => {

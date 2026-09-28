@@ -28,8 +28,12 @@ interface DailyCheckInRpcRow {
   new_balance: number;
 }
 
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
 function parseDailyCheckInRow(value: unknown): DailyCheckInRpcRow | null {
-  const candidate = Array.isArray(value)
+  const candidate = isUnknownArray(value)
     ? value.length === 1
       ? value[0]
       : null
@@ -135,7 +139,7 @@ export class AtomicEconomyService extends EconomyService {
         'daily_checkin',
         (Date.now() - startedAt) / 1000,
       );
-      this.invalidateUserEconomyCaches(userId);
+      if (result.claimed) this.invalidateUserEconomyCaches(userId);
 
       return result;
     } catch {
