@@ -90,25 +90,36 @@ export class OfflineReadingService {
   async cacheArticles(articles: CachedArticle[]): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
-    const store = db.transaction(STORE_ARTICLES, 'readwrite').objectStore(STORE_ARTICLES);
+    const tx = db.transaction(STORE_ARTICLES, 'readwrite');
+    const store = tx.objectStore(STORE_ARTICLES);
 
-    // ⚡ Bolt Optimization: Replace sequential awaits with Promise.all mapped concurrent operations
-    await Promise.all(
-      articles.map((article) => {
+    // ⚡ Bolt Optimization: Use synchronous store.put in a for...of loop and await transaction completion
+    // Promise.all(.map()) degrades IDB performance by allocating unnecessary IDBRequest objects.
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      for (const article of articles) {
         const cached: CachedArticle = { ...article, cachedAt: Date.now() };
-        return this.putInStore(store, cached as unknown as Record<string, unknown>);
-      }),
-    );
+        store.put(cached as unknown as Record<string, unknown>);
+      }
+    });
 
     // Evict old articles if exceeding max
     const allArticles = await this.getAllFromStore(db, STORE_ARTICLES);
     if (allArticles.length > MAX_CACHED_ARTICLES) {
       const sorted = (allArticles as CachedArticle[]).sort((a, b) => a.cachedAt - b.cachedAt);
       const toRemove = sorted.slice(0, sorted.length - MAX_CACHED_ARTICLES);
-      const evictStore = db.transaction(STORE_ARTICLES, 'readwrite').objectStore(STORE_ARTICLES);
-      await Promise.all(
-        toRemove.map((item) => this.deleteFromStore(evictStore, item.id)),
-      );
+      const evictTx = db.transaction(STORE_ARTICLES, 'readwrite');
+      const evictStore = evictTx.objectStore(STORE_ARTICLES);
+
+      // ⚡ Bolt Optimization: Use synchronous store.delete in a loop
+      await new Promise<void>((resolve, reject) => {
+        evictTx.oncomplete = () => resolve();
+        evictTx.onerror = () => reject(evictTx.error);
+        for (const item of toRemove) {
+          evictStore.delete(item.id);
+        }
+      });
     }
   }
 
