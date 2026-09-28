@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class AddFavouriteDto {
   @IsUUID()
@@ -7,5 +13,6 @@ export class AddFavouriteDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   note_text?: string;
 }

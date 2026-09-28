@@ -1,6 +1,8 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal } from '@angular/core';
+import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
+import { Component, inject, linkedSignal, resource, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -8,6 +10,15 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 import { SafetyService } from '../../../services/safety.service';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
+import {
+  isProfileVisibility,
+  ProfileVisibility,
+  ProfileVisibilityService,
+} from '../../../services/profile-visibility.service';
+import {
+  PresencePrivacyService,
+  PresencePrivacySettings,
+} from '../../../services/presence-privacy.service';
 
 interface HubNavItem {
   readonly icon: string;
@@ -16,15 +27,34 @@ interface HubNavItem {
   readonly route: string;
 }
 
+interface ProfileVisibilityOption {
+  readonly value: ProfileVisibility;
+  readonly labelKey: string;
+  readonly descriptionKey: string;
+}
+
+type PresencePrivacyKey = keyof PresencePrivacySettings;
+
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
+  imports: [
+    HlmCheckbox,
+    HlmInput,
+    HlmButton,
+    HlmRadio,
+    HlmRadioGroup,
+    FormsModule,
+    TranslatePipe,
+    RouterModule,
+  ],
   templateUrl: './privacy-settings.component.html',
 })
 export class PrivacySettingsComponent {
   private safetyService = inject(SafetyService);
   private blockedUsersService = inject(BlockedUsersService);
+  private profileVisibilityService = inject(ProfileVisibilityService);
+  private presencePrivacyService = inject(PresencePrivacyService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
@@ -32,9 +62,50 @@ export class PrivacySettingsComponent {
   readonly mutedWordInput = signal('');
   readonly blockedCount = signal(0);
   readonly successMessage = signal('');
+  readonly isVisibilitySaving = signal(false);
+  readonly visibilitySaveError = signal(false);
+  readonly visibilitySaveSuccess = signal(false);
+  readonly presencePrivacySaving = signal<PresencePrivacyKey | null>(null);
+  readonly presencePrivacySaveError = signal(false);
+  readonly presencePrivacySaveSuccess = signal(false);
 
   readonly mutedWords = this.safetyService.mutedWords;
   readonly blockedUsers = this.blockedUsersService.blockedUsers;
+
+  readonly profileVisibilityResource = resource({
+    loader: () => this.profileVisibilityService.getProfileVisibility(),
+  });
+  readonly profileVisibility = linkedSignal(
+    () => this.profileVisibilityResource.value() ?? 'everyone',
+  );
+
+  readonly presencePrivacyResource = resource({
+    loader: () => this.presencePrivacyService.getPresencePrivacy(),
+  });
+  readonly hideOnlineStatus = linkedSignal(
+    () => this.presencePrivacyResource.value()?.privacy_hide_online_status ?? false,
+  );
+  readonly hideVipStatus = linkedSignal(
+    () => this.presencePrivacyResource.value()?.privacy_hide_vip_status ?? false,
+  );
+
+  readonly profileVisibilityOptions: readonly ProfileVisibilityOption[] = [
+    {
+      value: 'everyone',
+      labelKey: 'privacy.profileVisibility.everyone',
+      descriptionKey: 'privacy.profileVisibility.everyoneDescription',
+    },
+    {
+      value: 'vips_only',
+      labelKey: 'privacy.profileVisibility.vipsOnly',
+      descriptionKey: 'privacy.profileVisibility.vipsOnlyDescription',
+    },
+    {
+      value: 'hidden',
+      labelKey: 'privacy.profileVisibility.hidden',
+      descriptionKey: 'privacy.profileVisibility.hiddenDescription',
+    },
+  ];
 
   readonly hubNavItems: HubNavItem[] = [
     {
@@ -71,6 +142,77 @@ export class PrivacySettingsComponent {
     this.blockedUsersService.loadBlockedUsers().then(() => {
       this.blockedCount.set(this.blockedUsers().length);
     });
+  }
+
+  async updateProfileVisibility(value: string): Promise<void> {
+    if (!isProfileVisibility(value) || this.isVisibilitySaving()) {
+      return;
+    }
+
+    const previous = this.profileVisibility();
+    if (value === previous) {
+      return;
+    }
+
+    this.profileVisibility.set(value);
+    this.isVisibilitySaving.set(true);
+    this.visibilitySaveError.set(false);
+    this.visibilitySaveSuccess.set(false);
+
+    try {
+      await this.profileVisibilityService.updateProfileVisibility(value);
+      this.visibilitySaveSuccess.set(true);
+    } catch {
+      this.profileVisibility.set(previous);
+      this.visibilitySaveError.set(true);
+    } finally {
+      this.isVisibilitySaving.set(false);
+    }
+  }
+
+  retryProfileVisibilityLoad(): void {
+    this.visibilitySaveError.set(false);
+    this.visibilitySaveSuccess.set(false);
+    this.profileVisibilityResource.reload();
+  }
+
+  async updatePresencePrivacy(key: PresencePrivacyKey, value: boolean): Promise<void> {
+    if (this.presencePrivacySaving()) {
+      return;
+    }
+
+    const target =
+      key === 'privacy_hide_online_status' ? this.hideOnlineStatus : this.hideVipStatus;
+    const previous = target();
+    if (value === previous) {
+      return;
+    }
+
+    target.set(value);
+    this.presencePrivacySaving.set(key);
+    this.presencePrivacySaveError.set(false);
+    this.presencePrivacySaveSuccess.set(false);
+
+    const update: Partial<PresencePrivacySettings> =
+      key === 'privacy_hide_online_status'
+        ? { privacy_hide_online_status: value }
+        : { privacy_hide_vip_status: value };
+
+    try {
+      await this.presencePrivacyService.updatePresencePrivacy(update);
+      this.presencePrivacySaveSuccess.set(true);
+    } catch {
+      target.set(previous);
+      this.presencePrivacySaveError.set(true);
+    } finally {
+      this.presencePrivacySaving.set(null);
+    }
+  }
+
+  retryPresencePrivacyLoad(): void {
+    this.presencePrivacySaveError.set(false);
+    this.presencePrivacySaveSuccess.set(false);
+    this.presencePrivacyResource.reload();
   }
 
   addMutedWord(): void {
