@@ -287,15 +287,16 @@ The user's role: Someone practising casual English.
   private getDefaultSystemPrompt(
     learnerKnowledge: LearnerKnowledgeProfile | null = null,
   ): string {
-    const targetLanguages = learnerKnowledge?.targetLanguages?.join(', ') || 'English';
-    const interests = learnerKnowledge?.interests?.join(', ') || 'various topics';
-    const level = learnerKnowledge?.overallProficiency?.level || 'beginner/intermediate';
+    const targetLanguages =
+      learnerKnowledge?.targetLanguages?.join(', ') || 'English';
+    const interests =
+      learnerKnowledge?.interests?.join(', ') || 'various topics';
+    const level =
+      learnerKnowledge?.overallProficiency?.level || 'beginner/intermediate';
 
     let flashcardContext = '';
     if (learnerKnowledge) {
-      const learningWords = Array.from(
-        learnerKnowledge.knowledgeItems.values(),
-      )
+      const learningWords = Array.from(learnerKnowledge.knowledgeItems.values())
         .filter((item) => item.status === 'learning' || item.status === 'new')
         .map((item) => item.id.replace('vocab:', ''))
         .join(', ');
@@ -320,7 +321,11 @@ The user's role: Someone practising casual English.
     }
 
     let streakContext = '';
-    if (learnerKnowledge && learnerKnowledge.studyStreak && learnerKnowledge.studyStreak > 3) {
+    if (
+      learnerKnowledge &&
+      learnerKnowledge.studyStreak &&
+      learnerKnowledge.studyStreak > 3
+    ) {
       streakContext = `\n- The user is on a ${learnerKnowledge.studyStreak}-day study streak! Acknowledge their dedication if appropriate.`;
     }
 
