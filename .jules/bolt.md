@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-28 - [Optimize Supabase Counts with HEAD Requests]
+**Learning:** Using `.select('count(*) as ...')` still forces Supabase/PostgREST to generate a response body wrapping the integer.
+**Action:** When only a row count is needed, always use `.select('id', { count: 'exact', head: true })` and read from `response.count` to avoid downloading the payload entirely.

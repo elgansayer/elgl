@@ -139,18 +139,20 @@ export class ProfileVisitsService {
 
   async getVisitCount(userId: string): Promise<number> {
     const supabase = this.supabaseService.getClient();
+
+    // ⚡ Bolt: Using `{ count: 'exact', head: true }` makes a HEAD request to Supabase,
+    // avoiding the overhead of downloading the entire row data payload over the network
+    // when we only need the total integer count of profile visits.
     const response = await supabase
       .from('profile_visits')
-      .select('count(*) as visit_count')
-      .eq('viewed_id', userId)
-      .single();
+      .select('id', { count: 'exact', head: true })
+      .eq('viewed_id', userId);
 
     if (response.error) {
       throw new Error(`Failed to fetch visit count: ${response.error.message}`);
     }
 
-    const data = response.data as unknown as { visit_count: number } | null;
-    return data?.visit_count ?? 0;
+    return response.count ?? 0;
   }
 
   async deleteVisit(visitId: string): Promise<Record<string, unknown>> {
