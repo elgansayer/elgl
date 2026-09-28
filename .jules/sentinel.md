@@ -83,3 +83,7 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2025-01-07 - Insecure Direct Object Reference (IDOR) in AudioIntroController
+**Vulnerability:** The PATCH `/audio-intro/:userId` endpoint allowed users to modify the audio intro of other users because it did not check if the authenticated user matched the requested `userId`.
+**Learning:** This vulnerability existed due to the assumption that since `SupabaseAuthGuard` is present, the request is secure. We need to explicitly check that the parameter ID and the authenticated user ID match when a request tries to mutate data associated with a specific user.
+**Prevention:** Always extract the user's ID via `@Req() req: { user: { id: string } }` (provided by `SupabaseAuthGuard`) and explicitly throw a `ForbiddenException` from `@nestjs/common` if it does not match the requested `userId`.
