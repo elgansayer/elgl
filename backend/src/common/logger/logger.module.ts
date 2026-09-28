@@ -7,6 +7,7 @@ import {
 
 const LOGGER_CONTEXTS = [
   'AdminService',
+  'AnkiExportService',
   'AudioRoomsController',
   'AppleNotificationController',
   'AppleNotificationService',
@@ -18,6 +19,7 @@ const LOGGER_CONTEXTS = [
   'DecksService',
   'DiscoveryCacheInvalidationService',
   'DiscoveryRateLimiterGuard',
+  'DiscoveryRecommendationsService',
   'DiscoveryService',
   'EconomyExceptionFilter',
   'EconomyRateLimiterGuard',
