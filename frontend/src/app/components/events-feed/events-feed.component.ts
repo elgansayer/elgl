@@ -13,6 +13,7 @@ import {
 } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 
 const PAGE_SIZE = 20;
 
@@ -27,10 +28,16 @@ const PAGE_SIZE = 20;
     DatePipe,
     AppSelectComponent,
     RouterLink,
+    CreateEventModalComponent,
   ],
   template: `
     <main class="mx-auto w-full max-w-5xl px-4 py-4 sm:px-6" aria-labelledby="events-feed-title">
-      <h1 id="events-feed-title" class="mb-4 text-2xl font-bold">{{ 'events.title' | t }}</h1>
+      <div class="mb-4 flex items-center justify-between gap-4">
+        <h1 id="events-feed-title" class="text-2xl font-bold">{{ 'events.title' | t }}</h1>
+        <button hlmBtn type="button" size="touch" (click)="openCreateModal()">
+          {{ 'events.createEvent' | t }}
+        </button>
+      </div>
 
       <div class="mb-4 flex flex-wrap items-center gap-2" aria-label="{{ 'events.title' | t }}">
         <hlm-radio-group
@@ -112,7 +119,9 @@ const PAGE_SIZE = 20;
                 {{ event.date_time | date: 'medium' }}
               </p>
               @if (event.category) {
-                <p class="text-xs text-text-secondary">{{ categoryLabelKey(event.category) | t }}</p>
+                <p class="text-xs text-text-secondary">
+                  {{ categoryLabelKey(event.category) | t }}
+                </p>
               }
               @if (event.location) {
                 <p class="break-words text-xs">{{ event.location }}</p>
@@ -155,6 +164,10 @@ const PAGE_SIZE = 20;
         }
       }
     </main>
+
+    @if (isCreateModalOpen()) {
+      <app-create-event-modal (created)="onEventCreated()" (dismiss)="closeCreateModal()" />
+    }
   `,
 })
 export class EventsFeedComponent implements OnInit {
@@ -172,6 +185,7 @@ export class EventsFeedComponent implements OnInit {
   readonly status = signal<'upcoming' | 'past'>('upcoming');
   readonly languagePair = signal<string | undefined>(undefined);
   readonly category = signal<EventCategory | undefined>(undefined);
+  readonly isCreateModalOpen = signal(false);
   private readonly page = signal(1);
 
   readonly languagePairOptions = computed(() => {
@@ -292,6 +306,19 @@ export class EventsFeedComponent implements OnInit {
     if (nextCategory === this.category()) return;
 
     this.category.set(nextCategory);
+    void this.loadEvents(true);
+  }
+
+  openCreateModal(): void {
+    this.isCreateModalOpen.set(true);
+  }
+
+  closeCreateModal(): void {
+    this.isCreateModalOpen.set(false);
+  }
+
+  onEventCreated(): void {
+    this.closeCreateModal();
     void this.loadEvents(true);
   }
 

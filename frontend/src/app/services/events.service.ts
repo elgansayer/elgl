@@ -72,7 +72,10 @@ export class EventsService {
     );
   }
 
-  updateGroupChat(chatId: string, dto: { name?: string; description?: string; members?: string[] }) {
+  updateGroupChat(
+    chatId: string,
+    dto: { name?: string; description?: string; members?: string[] },
+  ) {
     return this.http.patch<void>(`${environment.apiUrl}/group-chats/${chatId}`, dto);
   }
 

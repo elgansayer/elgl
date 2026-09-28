@@ -33,7 +33,9 @@ describe('EventsFeedComponent', () => {
     listEvents = vi.fn().mockReturnValue(of([]));
     getCategories = vi
       .fn()
-      .mockReturnValue(of(['audio_room', 'learning_seminar', 'in_person_meetup', 'cultural_exchange']));
+      .mockReturnValue(
+        of(['audio_room', 'learning_seminar', 'in_person_meetup', 'cultural_exchange']),
+      );
 
     await TestBed.configureTestingModule({
       imports: [EventsFeedComponent],
@@ -90,6 +92,30 @@ describe('EventsFeedComponent', () => {
     const link = fixture.nativeElement.querySelector('a[href="/events/detail-1"]');
     expect(link).not.toBeNull();
     expect(link.textContent).toContain('Event detail-1');
+  });
+
+  it('opens the create modal and refreshes the first page after creation', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    component.openCreateModal();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-create-event-modal')).not.toBeNull();
+
+    component.onEventCreated();
+    await settle();
+
+    expect(component.isCreateModalOpen()).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-create-event-modal')).toBeNull();
+    expect(listEvents).toHaveBeenCalledTimes(2);
+    expect(listEvents).toHaveBeenLastCalledWith({
+      status: 'upcoming',
+      language_pair: undefined,
+      category: undefined,
+      page: 1,
+      limit: 20,
+    });
   });
 
   it('does not reload when the already-selected status is chosen again', async () => {
