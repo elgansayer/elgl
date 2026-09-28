@@ -205,6 +205,17 @@ def test_select_batch_finishes_verification_before_ai_repair_retries() -> None:
     assert [item.task.identifier for item in selected] == ["7347", "7346"]
 
 
+def test_select_batch_finishes_final_review_before_older_verification() -> None:
+    jobs = {
+        "7346": pull_request_job("7346", state=JobState.VERIFYING),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7347"]
+
+
 def test_select_batch_advances_actionable_repair_before_passive_ci_polling() -> None:
     jobs = {
         "7346": pull_request_job("7346", state=JobState.CI_PENDING),
