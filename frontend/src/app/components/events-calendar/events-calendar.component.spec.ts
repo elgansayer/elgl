@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { NEVER, of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { EventsCalendarComponent } from './events-calendar.component';
 import { EventsService } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
@@ -50,16 +50,10 @@ describe('EventsCalendarComponent', () => {
     fixture = TestBed.createComponent(EventsCalendarComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('should request the authenticated upcoming-events collection', () => {
-    expect(mockEventsService.getMyEvents).toHaveBeenCalledWith('upcoming');
   });
 
   it('should render month label', () => {
@@ -127,72 +121,6 @@ describe('EventsCalendarComponent', () => {
       expect(typeof name).toBe('string');
       expect(name.length).toBeGreaterThan(0);
     }
-  });
-
-  it('should distinguish a pending load from a genuinely empty calendar', async () => {
-    mockEventsService.getMyEvents.mockReturnValue(NEVER);
-
-    component.retryEvents();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain(
-      'common.loading',
-    );
-    expect(fixture.nativeElement.querySelectorAll('button[aria-pressed]')).toHaveLength(0);
-    expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).not.toBeNull();
-  });
-
-  it('should expose an unavailable state instead of presenting a failed load as empty', async () => {
-    mockEventsService.getMyEvents.mockReturnValue(
-      throwError(() => new Error('events provider unavailable')),
-    );
-
-    component.retryEvents();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
-    expect(alert?.textContent).toContain('common.error_generic');
-    expect(alert?.querySelector('button')?.textContent).toContain('common.retry');
-    expect(fixture.nativeElement.querySelectorAll('button[aria-pressed]')).toHaveLength(0);
-  });
-
-  it('should retry a failed upcoming-events load and restore the calendar', async () => {
-    mockEventsService.getMyEvents.mockReturnValue(
-      throwError(() => new Error('events provider unavailable')),
-    );
-    component.retryEvents();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const month = component.monthStart();
-    const eventDate = new Date(month.getFullYear(), month.getMonth(), 15, 12, 0, 0);
-    mockEventsService.getMyEvents.mockReturnValue(
-      of([
-        {
-          id: 'event-1',
-          title: 'Conversation practice',
-          date_time: eventDate.toISOString(),
-          host_id: 'host-1',
-          is_cancelled: false,
-          created_at: eventDate.toISOString(),
-          updated_at: eventDate.toISOString(),
-        },
-      ]),
-    );
-
-    const retryButton = fixture.nativeElement.querySelector('[role="alert"] button') as
-      | HTMLButtonElement
-      | null;
-    expect(retryButton).not.toBeNull();
-    retryButton?.click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(mockEventsService.getMyEvents).toHaveBeenLastCalledWith('upcoming');
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('button[aria-pressed]').length).toBeGreaterThan(0);
-    expect(fixture.nativeElement.textContent).toContain('Conversation practice');
   });
 
   it('should use native buttons for selectable dates without hand-rolled button semantics', () => {

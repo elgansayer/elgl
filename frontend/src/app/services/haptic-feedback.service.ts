@@ -1,25 +1,15 @@
 import { Injectable } from '@angular/core';
 
 export type HapticIntensity = 'light' | 'medium' | 'heavy' | 'selection';
-export type FlashcardHapticGrade = 'again' | 'good' | 'known';
 
 const HAPTIC_ENABLED_STORAGE_KEY = 'app_vibration_enabled';
 
 function readStoredPreference(): boolean {
   if (typeof localStorage === 'undefined') return true;
 
-  try {
-    const stored = localStorage.getItem(HAPTIC_ENABLED_STORAGE_KEY);
-    if (stored === null) return true;
-
-    // Only an explicit opt-out disables vibration. Corrupt or legacy values
-    // retain the historical enabled default instead of silently disabling it.
-    return stored !== 'false';
-  } catch {
-    // Storage can be unavailable in privacy modes, SSR-like test contexts, or
-    // embedded browsers. Haptics are best-effort and must not block startup.
-    return true;
-  }
+  const stored = localStorage.getItem(HAPTIC_ENABLED_STORAGE_KEY);
+  if (stored === null) return true;
+  return stored === 'true';
 }
 
 @Injectable({
@@ -36,12 +26,7 @@ export class HapticFeedbackService {
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
     if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem(HAPTIC_ENABLED_STORAGE_KEY, String(enabled));
-      } catch {
-        // Preserve the in-memory preference when storage is unavailable. A
-        // haptic preference persistence failure must never block user actions.
-      }
+      localStorage.setItem(HAPTIC_ENABLED_STORAGE_KEY, String(enabled));
     }
   }
 
@@ -59,8 +44,8 @@ export class HapticFeedbackService {
       return;
     }
 
-    // Keep feedback semantically distinct: selection is a short double-pulse
-    // success cue while medium/light are progressively gentler.
+    // Keep grading feedback semantically distinct: selection is a short
+    // double-pulse success cue while medium/light are progressively gentler.
     const durationMap: Record<HapticIntensity, number | number[]> = {
       light: 10,
       medium: 20,
@@ -74,20 +59,6 @@ export class HapticFeedbackService {
     } catch {
       // Haptics are best-effort and must never prevent grading or other actions.
     }
-  }
-
-  /**
-   * Semantic flashcard grading feedback. Keeping the grade-to-pattern mapping
-   * here prevents individual review surfaces from drifting to different cues.
-   */
-  triggerFlashcardGrade(grade: FlashcardHapticGrade): void {
-    const patternByGrade: Record<FlashcardHapticGrade, HapticIntensity> = {
-      again: 'light',
-      good: 'medium',
-      known: 'selection',
-    };
-
-    this.trigger(patternByGrade[grade]);
   }
 
   /** Convenience for a strong tap (like sending a message) */

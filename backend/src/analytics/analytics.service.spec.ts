@@ -1,8 +1,8 @@
-import { Logger, ServiceUnavailableException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import type { Mock } from 'vitest';
-import { SupabaseService } from '../supabase/supabase.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { ClientErrorDto } from './dto/client-error.dto';
 
 describe('AnalyticsService', () => {
@@ -15,11 +15,13 @@ describe('AnalyticsService', () => {
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     insertBuilder = {
-      insert: vi.fn().mockResolvedValue({ error: null }),
+      insert: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
     };
+
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(insertBuilder),
     };
+
     mockSupabaseService = {
       getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
@@ -38,109 +40,93 @@ describe('AnalyticsService', () => {
     vi.restoreAllMocks();
   });
 
-  it('persists bounded operational crash telemetry', async () => {
-    const payload: ClientErrorDto = {
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('recordClientError', () => {
+    const validPayload: ClientErrorDto = {
       message: 'Test error message',
       name: 'TypeError',
       stack: 'Error: Test error\n    at foo (app.ts:10:5)',
-      url: 'https://example.com/page?access_token=private#fragment',
+      componentStack: undefined,
+      url: 'https://example.com/page',
       userAgent: 'Chrome/120',
-      metadata: {
-        category: 'global',
-        renderingError: true,
-        nestedPrivateData: { secret: 'must not persist' },
-      },
+      metadata: { userId: 'user-1' },
       stackFrames: [{ fileName: 'app.ts', lineNumber: 10, columnNumber: 5 }],
       timestamp: '2026-08-07T00:00:00.000Z',
     };
 
-    await service.recordClientError(payload);
+    it('inserts client error into supabase with full payload', async () => {
+      await service.recordClientError(validPayload);
 
-    expect(mockSupabaseClient.from).toHaveBeenCalledWith('client_errors');
-    expect(insertBuilder.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: 'Test error message',
-        name: 'TypeError',
-        stack: 'Error: Test error\n    at foo (app.ts:10:5)',
-        url: 'https://example.com/page',
-        user_agent: 'Chrome/120',
-        metadata: { category: 'global', renderingError: true },
-        stack_frames: [
-          expect.objectContaining({
-            fileName: 'app.ts',
-            lineNumber: 10,
-            columnNumber: 5,
-          }),
-        ],
-        client_timestamp: '2026-08-07T00:00:00.000Z',
-      }),
-    );
-  });
-
-  it('redacts secret-shaped values at the persistence boundary', async () => {
-    await service.recordClientError({
-      message: 'Bearer secret-value access_token=private-value',
-      stack: 'Error: eyJabcdefghijk.abcdefghijk.abcdefghijk',
-      metadata: { action: 'api_key=private-value' },
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('client_errors');
+      expect(insertBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Test error message',
+          name: 'TypeError',
+          stack: 'Error: Test error\n    at foo (app.ts:10:5)',
+          url: 'https://example.com/page',
+          user_agent: 'Chrome/120',
+          metadata: { userId: 'user-1' },
+          stack_frames: [
+            { fileName: 'app.ts', lineNumber: 10, columnNumber: 5 },
+          ],
+          client_timestamp: '2026-08-07T00:00:00.000Z',
+        }),
+      );
     });
 
-    expect(insertBuilder.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: 'Bearer [redacted] access_token=[redacted]',
-        stack: 'Error: [redacted-jwt]',
-        metadata: { action: 'api_key=[redacted]' },
-      }),
-    );
-  });
-
-  it('persists a minimal payload without inventing private context', async () => {
-    await service.recordClientError({ message: 'Minimal error' });
-
-    expect(insertBuilder.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
+    it('inserts client error with minimal payload (only message)', async () => {
+      const minimalPayload: ClientErrorDto = {
         message: 'Minimal error',
-        name: 'Error',
-        stack: null,
-        component_stack: null,
-        url: null,
-        user_agent: null,
-        metadata: null,
-        stack_frames: null,
-      }),
-    );
-  });
+      };
 
-  it('fails closed with a stable 503 when Supabase rejects the insert', async () => {
-    mockSupabaseClient.from.mockReturnValue({
-      insert: vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'private db detail' } }),
+      await service.recordClientError(minimalPayload);
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('client_errors');
+      expect(insertBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Minimal error',
+          name: 'Error',
+          stack: null,
+          component_stack: null,
+          url: null,
+          user_agent: null,
+          metadata: null,
+          stack_frames: null,
+        }),
+      );
     });
-    const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
-    await expect(
-      service.recordClientError({ message: 'Test error' }),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(warnSpy).toHaveBeenCalledWith('client_error_persist_failed');
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('private db detail'),
-    );
-  });
+    it('logs a warning when supabase insert returns an error', async () => {
+      const errorInsertBuilder = {
+        insert: vi.fn().mockResolvedValue({ error: { message: 'db error' } }),
+      };
+      mockSupabaseClient.from.mockReturnValue(errorInsertBuilder);
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
-  it('fails closed without leaking provider exception text', async () => {
-    mockSupabaseClient.from.mockReturnValue({
-      insert: vi
-        .fn()
-        .mockRejectedValue(new Error('connection string leaked here')),
+      await service.recordClientError(validPayload);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to log client error: db error'),
+      );
     });
-    const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
-    await expect(
-      service.recordClientError({ message: 'Test error' }),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(warnSpy).toHaveBeenCalledWith('client_error_persist_exception');
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('connection string leaked here'),
-    );
+    it('logs a warning when insertBuilder throws an exception', async () => {
+      const errorInsertBuilder = {
+        insert: vi.fn().mockRejectedValue(new Error('Connection refused')),
+      };
+      mockSupabaseClient.from.mockReturnValue(errorInsertBuilder);
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn');
+
+      await service.recordClientError(validPayload);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Exception while recording client error: Connection refused',
+        ),
+      );
+    });
   });
 });

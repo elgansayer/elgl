@@ -1,7 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-
-export type VipTier = 'consumer' | 'pro' | 'developer';
 
 export interface SubscriptionPlan {
   id: string;
@@ -126,7 +123,7 @@ export class SubscriptionPlansService {
         'Advanced visitor logs (who viewed your profile)',
         'See who has bookmarked you',
         'Nearby members visibility boost',
-        'Ad-free experience',
+        'Ad‑free experience',
         'Priority community support',
         'Mock your location anywhere (VIP)',
         'Up to 5 target languages',
@@ -135,13 +132,11 @@ export class SubscriptionPlansService {
         'Unlimited AI translations',
         'See who visited your profile',
         'Boosted visibility in Nearby',
-        'Fully ad-free',
+        'Fully ad‑free',
         'Up to 5 target languages',
       ],
     },
   ];
-
-  constructor(private readonly configService: ConfigService) {}
 
   getAllPlans(): SubscriptionPlan[] {
     return this.plans;
@@ -181,60 +176,24 @@ export class SubscriptionPlansService {
     }));
   }
 
-  /**
-   * Resolve any supported store product or internal plan id to the canonical
-   * entitlement value persisted in users.vip_tier. Keeping this value stable
-   * matters because authorization and product UI branch on consumer/pro/developer,
-   * while individual stores use different product identifiers.
-   */
-  getTierByProductId(productId: string): VipTier | null {
-    const configuredStripeProducts: Array<[string | undefined, VipTier]> = [
-      [this.configService.get<string>('STRIPE_MONTHLY_PRICE_ID'), 'consumer'],
-      [this.configService.get<string>('STRIPE_YEARLY_PRICE_ID'), 'consumer'],
-      [this.configService.get<string>('STRIPE_PRO_MONTHLY_PRICE_ID'), 'pro'],
-      [this.configService.get<string>('STRIPE_PRO_YEARLY_PRICE_ID'), 'pro'],
-      [
-        this.configService.get<string>('STRIPE_DEVELOPER_MONTHLY_PRICE_ID'),
-        'developer',
-      ],
-      [
-        this.configService.get<string>('STRIPE_DEVELOPER_YEARLY_PRICE_ID'),
-        'developer',
-      ],
-    ];
-
-    const configuredMatch = configuredStripeProducts.find(
-      ([configuredProductId]) =>
-        configuredProductId !== undefined && configuredProductId === productId,
-    );
-    if (configuredMatch) return configuredMatch[1];
-
+  getTierByProductId(productId: string): string | null {
     const plan = this.plans.find(
-      (candidate) =>
-        candidate.stripe_price_id === productId ||
-        candidate.stripe_price_id_yearly === productId ||
-        candidate.id === productId,
+      (p) =>
+        p.stripe_price_id === productId ||
+        p.stripe_price_id_yearly === productId ||
+        p.id === productId, // if apple product id is same as tier
     );
-    if (plan) return this.getCanonicalTierForPlanId(plan.id);
+    if (plan) return plan.id;
 
-    const productTierMap: Record<string, VipTier> = {
-      'com.hellotalk.vip.monthly': 'consumer',
-      'com.hellotalk.vip.yearly': 'consumer',
-      'com.hellotalk.consumer.monthly': 'consumer',
-      'com.hellotalk.consumer.yearly': 'consumer',
-      'com.hellotalk.pro.monthly': 'pro',
-      'com.hellotalk.pro.yearly': 'pro',
-      'com.hellotalk.developer.monthly': 'developer',
-      'com.hellotalk.developer.yearly': 'developer',
+    // Apple specific fallback mapping (as seen in PRODUCT_TIER_MAP)
+    const PRODUCT_TIER_MAP: Record<string, string> = {
+      'com.hellotalk.vip.monthly': 'consumer_8_ukp_10_usd',
+      'com.hellotalk.vip.yearly': 'consumer_8_ukp_10_usd',
+      'com.hellotalk.developer.monthly': 'developer_20_ukp_26_usd',
+      'com.hellotalk.developer.yearly': 'developer_20_ukp_26_usd',
+      'com.hellotalk.pro.monthly': 'pro_12_ukp_15_usd',
+      'com.hellotalk.pro.yearly': 'pro_12_ukp_15_usd',
     };
-
-    return productTierMap[productId] ?? null;
-  }
-
-  private getCanonicalTierForPlanId(planId: string): VipTier | null {
-    if (planId.startsWith('developer_')) return 'developer';
-    if (planId.startsWith('pro_')) return 'pro';
-    if (planId.startsWith('consumer_')) return 'consumer';
-    return null;
+    return PRODUCT_TIER_MAP[productId] || null;
   }
 }

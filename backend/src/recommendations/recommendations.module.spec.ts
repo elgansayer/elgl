@@ -1,8 +1,5 @@
-import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
 import { MetricsModule } from '../metrics/metrics.module';
-import { SafetyModule } from '../safety/safety.module';
 import { SupabaseModule } from '../supabase/supabase.module';
-import { DiscoveryRecommendationsService } from './discovery-recommendations.service';
 import { RecommendationsModule } from './recommendations.module';
 import { RecommendationsController } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';
@@ -22,32 +19,27 @@ describe('RecommendationsModule', () => {
     expect(controllersMetadata).toContain(RecommendationsController);
   });
 
-  it('should register both recommendation services in its providers metadata', () => {
+  it('should register RecommendationsService in its providers metadata', () => {
     const providersMetadata =
       (Reflect.getMetadata('providers', RecommendationsModule) as unknown[]) ??
       [];
 
     expect(providersMetadata).toContain(RecommendationsService);
-    expect(providersMetadata).toContain(DiscoveryRecommendationsService);
   });
 
-  it('should declare the data, metrics, safety and learner knowledge dependencies', () => {
+  it('should declare the data and metrics dependencies used by the daily cron job', () => {
     const importsMetadata =
-      (Reflect.getMetadata('imports', RecommendationsModule) as unknown[]) ??
-      [];
+      (Reflect.getMetadata('imports', RecommendationsModule) as unknown[]) ?? [];
 
     expect(importsMetadata).toContain(SupabaseModule);
     expect(importsMetadata).toContain(MetricsModule);
-    expect(importsMetadata).toContain(SafetyModule);
-    expect(importsMetadata).toContain(LearnerKnowledgeModule);
   });
 
-  it('should export both recommendation services', () => {
+  it('should export RecommendationsService', () => {
     const exportsMetadata =
       (Reflect.getMetadata('exports', RecommendationsModule) as unknown[]) ??
       [];
 
     expect(exportsMetadata).toContain(RecommendationsService);
-    expect(exportsMetadata).toContain(DiscoveryRecommendationsService);
   });
 });

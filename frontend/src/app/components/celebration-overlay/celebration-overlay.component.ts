@@ -6,7 +6,6 @@ import {
   viewChild,
   afterNextRender,
   effect,
-  Injector,
   OnDestroy,
   DestroyRef,
 } from '@angular/core';
@@ -40,7 +39,6 @@ export class CelebrationOverlayComponent implements OnDestroy {
 
   private readonly canvasRef = viewChild<HTMLCanvasElement>('confettiCanvas');
   private readonly destroyRef = inject(DestroyRef);
-  private readonly injector = inject(Injector);
 
   private readonly particles: Particle[] = [];
   private animationFrameId: number | null = null;
@@ -51,12 +49,9 @@ export class CelebrationOverlayComponent implements OnDestroy {
     effect(() => {
       if (this.visible() && !this.animationStarted) {
         this.animationStarted = true;
-        afterNextRender(
-          () => {
-            this.startAnimation();
-          },
-          { injector: this.injector },
-        );
+        afterNextRender(() => {
+          this.startAnimation();
+        });
         // Auto‑dismiss after 6 seconds
         this.finishTimeoutId = setTimeout(() => this.dismiss(), 6000);
       }

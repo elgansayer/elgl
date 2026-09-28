@@ -17,14 +17,8 @@ export class TransferService {
     const env = this.configService.get<string>('NODE_ENV') || 'development';
 
     if (env === 'production') {
-      if (
-        !secret ||
-        secret === 'device-transfer-secret-dev-only' ||
-        secret === 'test-transfer-secret'
-      ) {
-        throw new Error(
-          'TRANSFER_SECRET must be configured securely in production',
-        );
+      if (!secret || secret === 'device-transfer-secret-dev-only') {
+        throw new Error('TRANSFER_SECRET must be configured');
       }
     } else {
       if (!secret) {

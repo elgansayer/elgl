@@ -85,7 +85,6 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 | `provider_capacity.py`       | Generation-aware cross-process provider leases                                            |
 | `conversation_runner.py`     | OpenHands SDK compatibility transport and inner-provider attribution                      |
 | `jobs.py`, `retry_policy.py` | Backwards-compatible durable state and restart-stable retry authority                     |
-| `task_source.py`            | Logical task claims, worker CAS leases and canonical branch/PR provenance                |
 | `git_workflow.py`            | Worktree, branch, commit, push, and recovery archive safety                               |
 | `review_report.py`           | Authoritative `.factory-review.json` schema and acceptance validation                     |
 | `architect_report.py`        | Authoritative `.factory-architect.json` schema                                            |
@@ -99,11 +98,8 @@ last-known-good backup:
 
 - `jobs.json`: state, branch, PR, reviewed SHA, attempts, retry evidence, findings, and the latest 500 provider
   provenance entries per job;
-- `leases.json`: persistent logical claims plus expiring worker ownership, canonical branch/PR identity, base and
-  verified SHAs, predecessor/successor links, path and failure fingerprints;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
-- `host-resource-gate.json`: cross-daemon reader/writer leases for host-heavy work;
 - `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
 - `generation.json`: active daemon ownership UUID and schema version;
 - `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
@@ -117,19 +113,12 @@ Typed metric failure counters are an additive state expansion. New readers treat
 map as empty, while older readers ignore the added field, so mixed-version startup and rollback preserve the
 existing call, success, failure, quota, fallback, duration, and timeout counters.
 
-The host-resource gate lives in the common capacity directory shared by repository instances. Provider sessions
-hold bounded reader leases; memory-heavy frontend verification holds a writer lease. Writer priority, PID
-liveness checks, and bounded expiry prevent cross-repository build overlap without leaving a dead host lock.
-
 A restart never assumes a provider process is alive. The daemon stops admitting work, terminates registered CLI,
 OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
 stopped. Stale generation leases are ignored. Malformed, timezone-naive, future-acquired, and overlong provider or
 task leases are bounded or discarded rather than suppressing work indefinitely. Task-lease and `jobs.json`
 read-modify-write operations use cross-process locks. The watchdog recovers old execution states through the
 normal timeout class and deterministic retry policy while leaving live futures and polling-only states untouched.
-Released task leases retain canonical claim history. Before branch creation, Factory reconciles open and recently
-closed PRs using issue links, logical titles, branch metadata, changed paths and explicit supersession links. See
-[TASK-OWNERSHIP.md](TASK-OWNERSHIP.md).
 
 A repeated identical task-side failure opens a durable, recoverable quarantine after
 `FACTORY_MAX_CONSECUTIVE_FAILURES`. This bounded circuit stops deterministic bugs from retrying forever and adds
@@ -186,9 +175,8 @@ Review approval publishes `factory/independent-review` on the exact reviewed hea
 Before every PR-backed AI phase, refresh, or base update, the Factory removes review labels and republishes that
 status as `PENDING` on the current SHA. A crash or timeout therefore leaves the merge gate closed. If GitHub
 reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
-If GitHub reports a newly discovered or reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound
-to that exact head before local verification. The resulting head is then rebuilt, verified, and reviewed. Merge
-readiness requires all of the
+If GitHub reports the reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound to that exact head
+SHA. The resulting head is then rebuilt, verified, and reviewed again. Merge readiness requires all of the
 following:
 
 - the PR head equals the reviewed SHA;
