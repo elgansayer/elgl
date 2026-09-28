@@ -113,6 +113,22 @@ _REVIEW_STATE_ORDER = {
 }
 
 
+def admission_slots_while_respecting_wip(
+    interval_slots: int | None,
+    *,
+    wip_paused: bool,
+) -> int | None:
+    """Zero out new-issue admission while a configured PR WIP limit is exceeded.
+
+    Already-admitted jobs (implementation in progress, open PRs advancing through
+    review/CI/merge) still drain normally; only brand-new issue intake stops so the
+    queue cannot keep growing while GitHub Actions and reviewer capacity are already
+    saturated. Callers gate Architect dispatch on the same ``wip_paused`` flag.
+    """
+
+    return 0 if wip_paused else interval_slots
+
+
 def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
     """Prioritise merge proximity while rotating equally eligible PRs fairly."""
 
@@ -658,6 +674,7 @@ class FactoryDaemon:
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
+                wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                 review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
                 worker_capacity = self.config.max_parallel_jobs - len(active)
                 available_host_slots = self.host_resource_slots.available_shared_slots()
@@ -759,7 +776,10 @@ class FactoryDaemon:
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
                     scheduler_time = datetime.now(UTC)
-                    new_issue_slots = self.issue_admission.available_slots(scheduler_time)
+                    new_issue_slots = admission_slots_while_respecting_wip(
+                        self.issue_admission.available_slots(scheduler_time),
+                        wip_paused=wip_paused,
+                    )
                     selected_jobs = select_batch(
                         jobs,
                         capacity,
@@ -887,6 +907,7 @@ class FactoryDaemon:
                             architect_retry_not_before is None
                             or datetime.now(UTC) >= architect_retry_not_before
                         )
+                        and not wip_paused
                         and self.pipeline.architect_due()
                         and not review_lane_busy
                         and available_host_slots > 0
