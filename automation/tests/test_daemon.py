@@ -20,6 +20,7 @@ from openhands_factory.daemon import (
     select_batch,
     select_batch_failsafe,
     selection_diagnostics,
+    should_use_failsafe,
     stall_alert_decision,
 )
 from openhands_factory.exceptions import FactoryError
@@ -326,6 +327,14 @@ def test_selection_diagnostics_explains_review_capacity() -> None:
         "review_capacity": 1,
         "review_jobs": ["7348"],
     }
+
+
+def test_failsafe_stays_idle_when_review_only_lane_is_full() -> None:
+    diagnostic = {"candidate_count": 451, "review_capacity": 0}
+
+    assert not should_use_failsafe([], diagnostic, review_only=True)
+    assert should_use_failsafe([], diagnostic, review_only=False)
+    assert not should_use_failsafe([pull_request_job("7348")], diagnostic, review_only=True)
 
 
 def test_failsafe_selector_prioritises_merge_queued_review() -> None:
