@@ -1393,6 +1393,44 @@ def test_behind_pull_request_is_updated_at_the_inspected_head(
     assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
 
 
+def test_update_branch_conflict_routes_directly_to_repair(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = Job(
+        task=Task("77", "Repair base conflict", "Body", "github-pull-request", 10),
+        state=JobState.VERIFYING,
+        branch="fix/conflict",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "UNKNOWN",
+        "",
+        "reviewed-head",
+        True,
+        False,
+        merge_state_status="UNKNOWN",
+    )
+
+    def reject_update(pull_request: int, expected_head_sha: str) -> None:
+        del pull_request, expected_head_sha
+        raise FactoryError("gh: merge conflict between base and head (HTTP 422)")
+
+    monkeypatch.setattr(github, "update_pull_request_branch", reject_update)
+
+    updated = pipeline._update_pull_request_branch(job, status)
+
+    assert updated is False
+    assert job.state is JobState.REPAIRING
+    assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
+
+
 def test_review_report_is_removed_before_repository_change_detection(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
