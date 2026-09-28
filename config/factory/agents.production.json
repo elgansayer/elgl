@@ -7,7 +7,7 @@
       "auth_mode": "subscription",
       "transport": "cli",
       "max_concurrency": 2,
-      "model": "fable",
+      "model": "sonnet",
       "max_turns": 100,
       "credential_paths": [".claude", ".claude.json"],
       "runtime_paths": [".local/bin", ".local/share/claude", ".npm-global"],
@@ -17,9 +17,9 @@
         "security_review": "sonnet",
         "implementation": "sonnet",
         "quality_repair": "haiku",
-        "code_review": "haiku",
+        "code_review": "sonnet",
         "ci_repair": "haiku",
-        "general_action": "fable"
+        "general_action": "haiku"
       }
     },
     "codex": {
@@ -55,7 +55,7 @@
       }
     },
     "opencode": {
-      "enabled": true,
+      "enabled": false,
       "command": "opencode",
       "auth_mode": "subscription",
       "transport": "cli",
@@ -73,7 +73,7 @@
       "model": "gpt-5.6-sol"
     },
     "pi": {
-      "enabled": true,
+      "enabled": false,
       "command": "pi",
       "auth_mode": "subscription",
       "transport": "cli",
@@ -94,14 +94,14 @@
     }
   },
   "routing": {
-    "planning": ["claude", "codex", "google", "opencode", "pi"],
-    "architecture": ["claude", "codex", "google", "opencode", "pi"],
-    "implementation": ["claude", "codex", "google", "opencode", "pi"],
-    "security_review": ["claude", "codex", "google", "opencode", "pi"],
-    "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
-    "code_review": ["codex", "claude", "google", "opencode", "pi"],
-    "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
-    "general_action": ["opencode", "google", "codex", "claude", "pi"],
+    "planning": ["google", "claude", "codex"],
+    "architecture": ["google", "claude", "codex"],
+    "implementation": ["google", "claude", "codex"],
+    "security_review": ["google", "claude", "codex"],
+    "quality_repair": ["google", "codex", "claude"],
+    "code_review": ["claude", "google", "codex"],
+    "ci_repair": ["google", "claude", "codex"],
+    "general_action": ["google", "claude", "codex"],
     "skip_busy_providers": true,
     "same_provider_retries": 0
   },
