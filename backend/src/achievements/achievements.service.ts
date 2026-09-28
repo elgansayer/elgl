@@ -64,6 +64,12 @@ const MESSAGE_MILESTONES = MILESTONES.filter(
 const STREAK_MILESTONES = MILESTONES.filter(
   (milestone) => milestone.source === 'streak',
 );
+const MAX_MESSAGE_PROGRESS = Math.max(
+  ...MESSAGE_MILESTONES.map((milestone) => milestone.required),
+);
+const MAX_STREAK_PROGRESS = Math.max(
+  ...STREAK_MILESTONES.map((milestone) => milestone.required),
+);
 const UNAVAILABLE_MESSAGE = 'Achievements are temporarily unavailable';
 
 @Injectable()
@@ -247,17 +253,29 @@ export class AchievementsService implements OnModuleInit {
       return [];
     }
 
-    const [earnedRows, messageCount, streakDays] = await Promise.all([
-      this.getUserAchievements(userId),
-      this.getUserMessageCount(userId),
-      this.getStudyStreakDays(userId),
-    ]);
+    const earnedRows = await this.getUserAchievements(userId);
 
     const earnedCodes = new Set<string>();
     for (const row of earnedRows) {
       const code = row.achievements?.code;
       if (code) earnedCodes.add(code);
     }
+
+    const messageMilestonesComplete = MESSAGE_MILESTONES.every((milestone) =>
+      earnedCodes.has(milestone.code),
+    );
+    const streakMilestonesComplete = STREAK_MILESTONES.every((milestone) =>
+      earnedCodes.has(milestone.code),
+    );
+
+    const [messageCount, streakDays] = await Promise.all([
+      messageMilestonesComplete
+        ? Promise.resolve(MAX_MESSAGE_PROGRESS)
+        : this.getUserMessageCount(userId),
+      streakMilestonesComplete
+        ? Promise.resolve(MAX_STREAK_PROGRESS)
+        : this.getStudyStreakDays(userId),
+    ]);
 
     return definitions.map((definition) => {
       const milestone = MILESTONES.find(
