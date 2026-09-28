@@ -1270,7 +1270,8 @@ def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
     )
     pipeline.jobs.save({"77": job})
     monkeypatch.setattr(
-        "openhands_factory.pipeline.attempt_mechanical_repair", lambda worktree: None
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda worktree, changed_paths: None,
     )
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
@@ -1309,7 +1310,8 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     )
     pipeline.jobs.save({"77": job})
     monkeypatch.setattr(
-        "openhands_factory.pipeline.attempt_mechanical_repair", lambda worktree: None
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda worktree, changed_paths: None,
     )
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     fingerprints = iter(("before-repair", "after-repair"))

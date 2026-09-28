@@ -38,7 +38,13 @@ services:
       - cache
       - websocket
     healthcheck:
-      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/api/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          'require("http").get("http://localhost:3000/api/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})',
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -84,8 +90,6 @@ services:
       - CENTRIFUGO_API_KEY=${CENTRIFUGO_API_KEY}
     ports:
       - '8000:8000'
-    expose:
-      - '8001'
     volumes:
       - ./config/centrifugo:/centrifugo
     depends_on:

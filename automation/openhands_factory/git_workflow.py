@@ -269,12 +269,32 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Commit failed: {result.stderr}")
 
     def changed_paths(self) -> set[Path]:
-        result = self.runner(
-            ("git", "diff", "--name-only", f"origin/{self.base_branch}"), self.repository
+        remote_base = f"origin/{self.base_branch}"
+        merging = self.runner(("git", "rev-parse", "-q", "--verify", "MERGE_HEAD"), self.repository)
+        if merging.returncode not in {0, 1}:
+            raise RepositorySafetyError(f"Could not inspect merge state: {merging.stderr}")
+
+        # A two-dot diff against a newer base compares the two tip trees. On a
+        # long-running branch it therefore reports every unrelated file changed
+        # on main since the branch started, causing broad lint and test runs for
+        # work the task never touched. Use the merge-base delta for committed
+        # branch work and add local edits separately. During a conflict repair,
+        # the uncommitted merge result already contains the current base, so the
+        # direct base comparison remains the accurate task delta.
+        comparisons = (
+            [("git", "diff", "--name-only", remote_base)]
+            if merging.returncode == 0
+            else [
+                ("git", "diff", "--name-only", f"{remote_base}...HEAD"),
+                ("git", "diff", "--name-only", "HEAD"),
+            ]
         )
-        if result.returncode != 0:
-            raise RepositorySafetyError(f"Could not inspect changes: {result.stderr}")
-        paths = {Path(line) for line in result.stdout.splitlines() if line.strip()}
+        paths: set[Path] = set()
+        for arguments in comparisons:
+            result = self.runner(arguments, self.repository)
+            if result.returncode != 0:
+                raise RepositorySafetyError(f"Could not inspect changes: {result.stderr}")
+            paths.update(Path(line) for line in result.stdout.splitlines() if line.strip())
         # `git diff` never reports untracked files, only modifications to tracked
         # ones - but has_changes() (git status --porcelain) counts a new untracked
         # file as a change too. Without this, a task whose only output is a new
