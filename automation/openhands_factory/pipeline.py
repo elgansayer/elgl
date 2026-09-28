@@ -1374,7 +1374,7 @@ class FactoryPipeline:
                     "behaviours before verification."
                 )
             else:
-                attempt_mechanical_repair(worktree)
+                attempt_mechanical_repair(worktree, workflow.changed_paths())
             mechanically_repaired = not base_conflict and workflow.has_changes()
             if has_unmerged_paths or (not base_conflict and not mechanically_repaired):
                 self._run_agent(
