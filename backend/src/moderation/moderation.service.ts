@@ -323,13 +323,23 @@ export class ModerationService {
     userId: string,
   ): Promise<{ riskScore: number; flags: string[] }> {
     try {
-      const { data: userData, error: userError } = await this.supabase
-        .from('users')
-        .select(
-          'display_name, bio_text, target_languages, native_language, status_text, greeting_message, away_message',
-        )
-        .eq('id', userId)
-        .single();
+      // ⚡ Bolt Optimization: Batch independent Supabase queries with Promise.all to reduce network latency
+      const [{ data: userData, error: userError }, { data: moments }] =
+        await Promise.all([
+          this.supabase
+            .from('users')
+            .select(
+              'display_name, bio_text, target_languages, native_language, status_text, greeting_message, away_message',
+            )
+            .eq('id', userId)
+            .single(),
+          this.supabase
+            .from('moments')
+            .select('id, content_text')
+            .eq('author_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(20),
+        ]);
 
       if (userError || !userData) {
         this.logger.warn(userError, `User ${userId} not found for analysis`);
@@ -355,13 +365,6 @@ export class ModerationService {
         u.greeting_message ?? '',
         u.away_message ?? '',
       ].join(' ');
-
-      const { data: moments } = await this.supabase
-        .from('moments')
-        .select('id, content_text')
-        .eq('author_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20);
 
       const momentRows = (moments ?? []) as unknown[];
       const momentText = momentRows

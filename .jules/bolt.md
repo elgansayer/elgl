@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-20 - [Batch Supabase Queries with Promise.all in Moderation Service]
+**Learning:** Sequential database queries in `analyseUserForDatingBehaviour` create unnecessary N+1 latency, despite being independent queries on `users` and `moments`.
+**Action:** Always wrap independent database fetch operations in a single concurrent `Promise.all` batch array, especially when compiling composite data for analysis.
