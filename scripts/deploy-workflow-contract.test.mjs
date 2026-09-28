@@ -33,6 +33,7 @@ test('deploys only a successful CI-tested main commit', () => {
 
 test('builds immutable production API and Web images from the tested SHA', () => {
   assert.equal((deployWorkflow.match(/uses: docker\/build-push-action@/g) ?? []).length, 2);
+  assert.equal((deployWorkflow.match(/\n\s+pull: true/g) ?? []).length, 2);
 
   for (const [name, context] of [
     ['api', 'backend'],
@@ -47,6 +48,17 @@ test('builds immutable production API and Web images from the tested SHA', () =>
       new RegExp(`tags: ghcr\\.io\\/\\$\\{\\{ github\\.repository \\}\\}\\/${name}:\\$\\{\\{ github\\.event\\.workflow_run\\.head_sha \\}\\}`),
     );
   }
+});
+
+test('scans the exact image digests emitted by the production builds', () => {
+  assert.match(
+    deployWorkflow,
+    /image-ref: ghcr\.io\/\$\{\{ github\.repository \}\}\/api@\$\{\{ steps\.build-api\.outputs\.digest \}\}/,
+  );
+  assert.match(
+    deployWorkflow,
+    /image-ref: ghcr\.io\/\$\{\{ github\.repository \}\}\/web@\$\{\{ steps\.build-web\.outputs\.digest \}\}/,
+  );
 });
 
 test('promotes latest only after image scans and provenance attestations', () => {
