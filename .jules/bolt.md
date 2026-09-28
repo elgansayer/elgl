@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-18 - [Optimize Chat Component Rendering with OnPush and Object Identity Tracking]
+**Learning:** Changing ChangeDetectionStrategy to OnPush in data-heavy components like `ChatPageComponent`, combined with tracking `@for` loop items by their unique identifiers (e.g., `track msg.id` instead of object reference `track msg`), significantly reduces change detection and DOM recreation overhead when the local list of messages updates.
+**Action:** Use ChangeDetectionStrategy.OnPush for components that receive frequent reactive updates (e.g. chat messages), and always use unique IDs for list `@for` tracking.
