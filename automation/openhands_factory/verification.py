@@ -499,7 +499,10 @@ def commands_for(
         frontend_typescript = sorted(
             str(path.relative_to("frontend"))
             for path in changed_paths
-            if path.suffix == ".ts" and (repository / path).is_file()
+            if path.parts
+            and path.parts[0] == "frontend"
+            and path.suffix == ".ts"
+            and (repository / path).is_file()
         )
         if frontend_typescript:
             commands.append(
@@ -518,9 +521,10 @@ def commands_for(
                 exclusive=True,
             )
         )
-        if frontend_typescript:
+        frontend_unit_specs = [path for path in frontend_typescript if path.endswith(".spec.ts")]
+        if frontend_unit_specs:
             include_arguments = tuple(
-                argument for path in frontend_typescript for argument in ("--include", path)
+                argument for path in frontend_unit_specs for argument in ("--include", path)
             )
             commands.append(
                 VerificationCommand(
@@ -582,7 +586,10 @@ def commands_for(
         backend_typescript = sorted(
             str(path.relative_to("backend"))
             for path in changed_paths
-            if path.suffix == ".ts" and (repository / path).is_file()
+            if path.parts
+            and path.parts[0] == "backend"
+            and path.suffix == ".ts"
+            and (repository / path).is_file()
         )
         if backend_typescript:
             commands.append(
@@ -595,10 +602,12 @@ def commands_for(
         commands.append(
             VerificationCommand("backend-build", ("npm", "run", "build"), repository / "backend")
         )
-        backend_unit_inputs = [
-            path for path in backend_typescript if not path.endswith(".e2e-spec.ts")
+        backend_unit_specs = [
+            path
+            for path in backend_typescript
+            if path.endswith(".spec.ts") and not path.endswith(".e2e-spec.ts")
         ]
-        if backend_unit_inputs:
+        if backend_unit_specs:
             commands.append(
                 VerificationCommand(
                     "backend-test",
@@ -607,9 +616,8 @@ def commands_for(
                         "exec",
                         "--",
                         "vitest",
-                        "related",
-                        *backend_unit_inputs,
-                        "--run",
+                        "run",
+                        *backend_unit_specs,
                         "--passWithNoTests",
                     ),
                     repository / "backend",
@@ -637,7 +645,10 @@ def commands_for(
         admin_typescript = sorted(
             str(path.relative_to("admin-portal"))
             for path in changed_paths
-            if path.suffix == ".ts" and (repository / path).is_file()
+            if path.parts
+            and path.parts[0] == "admin-portal"
+            and path.suffix == ".ts"
+            and (repository / path).is_file()
         )
         if admin_typescript:
             commands.append(
@@ -650,9 +661,10 @@ def commands_for(
         commands.append(
             VerificationCommand("admin-build", ("npm", "run", "build"), repository / "admin-portal")
         )
-        if admin_typescript:
+        admin_unit_specs = [path for path in admin_typescript if path.endswith(".spec.ts")]
+        if admin_unit_specs:
             include_arguments = tuple(
-                argument for path in admin_typescript for argument in ("--include", path)
+                argument for path in admin_unit_specs for argument in ("--include", path)
             )
             commands.append(
                 VerificationCommand(

@@ -99,17 +99,34 @@ def is_new_github_issue(job: Job) -> bool:
 _REVIEW_STATE_ORDER = {
     JobState.MERGE_QUEUED: 0,
     JobState.READY_TO_MERGE: 1,
-    JobState.CI_PENDING: 2,
-    # A review that already produced a repair must finish deterministic local
-    # verification before it can return to independent review. Rank that durable
-    # continuation ahead of fresh reviews and AI-backed repair retries so verified
-    # work clears the queue instead of repeatedly losing its lane after a restart.
+    # A locally verified head waiting for independent review is one transition
+    # closer to merge than a head still running verification. Rank both durable
+    # continuations and other actionable work ahead of passive CI polling. With a
+    # large backlog, polling every pending head first can otherwise delay a known
+    # conflict repair for many minutes on every scheduler cycle.
+    JobState.REVIEWING: 2,
     JobState.VERIFYING: 3,
-    JobState.REVIEWING: 4,
-    JobState.QUALITY_REPAIRING: 5,
-    JobState.REPAIRING: 6,
+    JobState.QUALITY_REPAIRING: 4,
+    JobState.REPAIRING: 5,
+    JobState.CI_PENDING: 6,
     JobState.PR_DRAFT: 7,
 }
+
+
+def admission_slots_while_respecting_wip(
+    interval_slots: int | None,
+    *,
+    wip_paused: bool,
+) -> int | None:
+    """Zero out new-issue admission while a configured PR WIP limit is exceeded.
+
+    Already-admitted jobs (implementation in progress, open PRs advancing through
+    review/CI/merge) still drain normally; only brand-new issue intake stops so the
+    queue cannot keep growing while GitHub Actions and reviewer capacity are already
+    saturated. Callers gate Architect dispatch on the same ``wip_paused`` flag.
+    """
+
+    return 0 if wip_paused else interval_slots
 
 
 def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
@@ -657,6 +674,7 @@ class FactoryDaemon:
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
+                wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                 review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
                 worker_capacity = self.config.max_parallel_jobs - len(active)
                 available_host_slots = self.host_resource_slots.available_shared_slots()
@@ -758,7 +776,10 @@ class FactoryDaemon:
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
                     scheduler_time = datetime.now(UTC)
-                    new_issue_slots = self.issue_admission.available_slots(scheduler_time)
+                    new_issue_slots = admission_slots_while_respecting_wip(
+                        self.issue_admission.available_slots(scheduler_time),
+                        wip_paused=wip_paused,
+                    )
                     selected_jobs = select_batch(
                         jobs,
                         capacity,
@@ -886,6 +907,7 @@ class FactoryDaemon:
                             architect_retry_not_before is None
                             or datetime.now(UTC) >= architect_retry_not_before
                         )
+                        and not wip_paused
                         and self.pipeline.architect_due()
                         and not review_lane_busy
                         and available_host_slots > 0

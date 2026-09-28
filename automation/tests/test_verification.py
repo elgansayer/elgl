@@ -77,8 +77,58 @@ def test_memory_heavy_and_fixed_port_frontend_commands_are_exclusive(tmp_path: P
     assert exclusive == {
         "frontend-lint:check",
         "frontend-build",
-        "frontend-test",
     }
+
+
+def test_local_unit_tests_run_only_directly_changed_specs(tmp_path: Path) -> None:
+    paths = {
+        Path("frontend/src/app/app.ts"),
+        Path("frontend/src/app/app.spec.ts"),
+        Path("backend/src/app.service.ts"),
+        Path("backend/src/app.service.spec.ts"),
+        Path("admin-portal/src/app/app.ts"),
+        Path("admin-portal/src/app/app.spec.ts"),
+    }
+    for path in paths:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    commands = commands_for(tmp_path, paths)
+
+    frontend_test = next(command for command in commands if command.name == "frontend-test")
+    backend_test = next(command for command in commands if command.name == "backend-test")
+    admin_test = next(command for command in commands if command.name == "admin-test")
+    assert frontend_test.arguments[-2:] == ("--include", "src/app/app.spec.ts")
+    assert backend_test.arguments == (
+        "npm",
+        "exec",
+        "--",
+        "vitest",
+        "run",
+        "src/app.service.spec.ts",
+        "--passWithNoTests",
+    )
+    assert admin_test.arguments[-2:] == ("--include", "src/app/app.spec.ts")
+
+
+def test_production_only_changes_defer_full_unit_suites_to_required_ci(tmp_path: Path) -> None:
+    paths = {
+        Path("frontend/src/app/app.ts"),
+        Path("backend/src/app.service.ts"),
+        Path("admin-portal/src/app/app.ts"),
+    }
+    for path in paths:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    names = {command.name for command in commands_for(tmp_path, paths)}
+
+    assert "frontend-build" in names
+    assert "backend-build" in names
+    assert "admin-build" in names
+    assert "frontend-test" not in names
+    assert "backend-test" not in names
+    assert "admin-test" not in names
 
 
 def test_frontend_e2e_runs_only_changed_cypress_specs(tmp_path: Path) -> None:
@@ -241,6 +291,26 @@ def test_a_frontend_only_change_skips_the_other_workspaces(tmp_path: Path) -> No
     assert "backend-build" not in names
     assert "admin-build" not in names
     assert "factory-tests" not in names
+
+
+def test_mixed_workspace_targeted_commands_only_receive_local_paths(tmp_path: Path) -> None:
+    paths = {
+        Path("frontend/src/app/app.ts"),
+        Path("backend/src/app.service.ts"),
+        Path("admin-portal/src/app/app.ts"),
+    }
+    for path in paths:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    commands = commands_for(tmp_path, paths)
+
+    frontend_lint = next(command for command in commands if command.name == "frontend-lint:check")
+    backend_lint = next(command for command in commands if command.name == "backend-lint:check")
+    admin_lint = next(command for command in commands if command.name == "admin-lint:check")
+    assert frontend_lint.arguments[-1] == "src/app/app.ts"
+    assert backend_lint.arguments[-1] == "src/app.service.ts"
+    assert admin_lint.arguments[-1] == "src/app/app.ts"
 
 
 def test_an_automation_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
