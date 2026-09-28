@@ -88,13 +88,18 @@ export const socialRoutes: Routes = [
     pathMatch: 'full',
   },
   {
-    path: 'events',
+    path: 'community/events',
     loadComponent: () =>
       import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
     title: 'Events - HelloTalk',
   },
   {
-    path: 'events/calendar',
+    path: 'events',
+    redirectTo: 'community/events',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community/events/calendar',
     loadComponent: () =>
       import('../components/events-calendar/events-calendar.component').then(
         (m) => m.EventsCalendarComponent,
@@ -102,13 +107,18 @@ export const socialRoutes: Routes = [
     title: 'Event Calendar - HelloTalk',
   },
   {
+    path: 'events/calendar',
+    redirectTo: 'community/events/calendar',
+    pathMatch: 'full',
+  },
+  {
     path: 'language-parties',
-    redirectTo: 'community/language-parties',
+    redirectTo: 'community/events',
     pathMatch: 'full',
   },
   {
     path: 'language-islands',
-    redirectTo: 'community/language-islands',
+    redirectTo: 'community/events',
     pathMatch: 'full',
   },
   {

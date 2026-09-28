@@ -9,7 +9,7 @@ export const learningRoutes: Routes = [
       ),
   },
   {
-    path: 'decks',
+    path: 'vocabulary/decks',
     loadComponent: () =>
       import('../components/flashcard-deck/flashcard-deck.component').then(
         (m) => m.FlashcardDeckComponent,
@@ -17,7 +17,12 @@ export const learningRoutes: Routes = [
     title: 'Flashcard Decks - HelloTalk',
   },
   {
-    path: 'review',
+    path: 'decks',
+    redirectTo: 'vocabulary/decks',
+    pathMatch: 'full',
+  },
+  {
+    path: 'vocabulary/review',
     loadComponent: () =>
       import('../components/flashcard-review/flashcard-review.component').then(
         (m) => m.FlashcardReviewComponent,
@@ -25,7 +30,25 @@ export const learningRoutes: Routes = [
     title: 'Flashcard Review - HelloTalk',
   },
   {
+    path: 'review',
+    redirectTo: 'vocabulary/review',
+    pathMatch: 'full',
+  },
+  {
+    path: 'vocabulary/suggest-flashcards',
+    loadComponent: () =>
+      import('../components/suggest-flashcards/suggest-flashcards.component').then(
+        (m) => m.SuggestFlashcardsComponent,
+      ),
+    title: 'Suggest Flashcards - HelloTalk',
+  },
+  {
     path: 'suggest-flashcards',
+    redirectTo: 'vocabulary/suggest-flashcards',
+    pathMatch: 'full',
+  },
+  {
+    path: 'vocabulary/suggest-flashcards/:message',
     loadComponent: () =>
       import('../components/suggest-flashcards/suggest-flashcards.component').then(
         (m) => m.SuggestFlashcardsComponent,
@@ -34,11 +57,8 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'suggest-flashcards/:message',
-    loadComponent: () =>
-      import('../components/suggest-flashcards/suggest-flashcards.component').then(
-        (m) => m.SuggestFlashcardsComponent,
-      ),
-    title: 'Suggest Flashcards - HelloTalk',
+    redirectTo: ({ params }) => `vocabulary/suggest-flashcards/${params['message']}`,
+    pathMatch: 'full',
   },
   {
     path: 'diagnostic-quiz',
@@ -101,10 +121,15 @@ export const learningRoutes: Routes = [
     title: 'Study Streak - HelloTalk',
   },
   {
-    path: 'study-buddy',
+    path: 'discovery/study-buddy',
     loadComponent: () =>
       import('../components/study-buddy/study-buddy.component').then((m) => m.StudyBuddyComponent),
     title: 'Study Buddy Matching - HelloTalk',
+  },
+  {
+    path: 'study-buddy',
+    redirectTo: 'discovery/study-buddy',
+    pathMatch: 'full',
   },
   {
     path: 'ai-conversation',

@@ -8,11 +8,11 @@ describe('App routes', () => {
     expect(routes.length).toBeGreaterThan(0);
   });
 
-  it('should include the root redirect to ai-conversation', () => {
+  it('should include the root redirect to home', () => {
     const root = routes.find((r) => r.path === '');
     expect(root).toBeDefined();
     if (root) {
-      expect(root.redirectTo).toBe('ai-conversation');
+      expect(root.redirectTo).toBe('home');
       expect(root.pathMatch).toBe('full');
     }
   });
@@ -106,7 +106,7 @@ describe('App routes', () => {
     const wildcard = routes[routes.length - 1];
 
     expect(wildcard?.path).toBe('**');
-    expect(wildcard?.redirectTo).toBe('ai-conversation');
+    expect(wildcard?.redirectTo).toBe('home');
     expect(routes.some((route) => route.path === wildcard?.redirectTo)).toBe(true);
   });
 });
