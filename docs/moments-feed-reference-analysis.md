@@ -12,41 +12,41 @@ The corpus contains 49 PNG files representing 33 unique binary captures. Sixteen
 
 The Git blob identity was used to identify exact aliases. Rows with two filenames are one binary capture.
 
-| Canonical capture | Exact alias | Reference area |
-| --- | --- | --- |
-| `Screenshot_20260722_012546.png` | none | Feed shell / content hierarchy |
-| `Screenshot_20260722_012551.png` | none | Feed shell / content hierarchy |
-| `Screenshot_20260722_012559.png` | `Screenshot_20260722_012559-1.png` | Moment card state |
-| `Screenshot_20260722_012610.png` | `Screenshot_20260722_012610-1.png` | Media-rich Moment state |
-| `Screenshot_20260722_012615.png` | `Screenshot_20260722_012615-1.png` | Moment card state |
-| `Screenshot_20260722_012624.png` | none | Feed interaction state |
-| `Screenshot_20260722_012629.png` | none | Feed interaction state |
-| `Screenshot_20260722_012635.png` | `Screenshot_20260722_012635-1.png` | Moment card state |
-| `Screenshot_20260722_012646.png` | none | Feed interaction state |
-| `Screenshot_20260722_012657.png` | `Screenshot_20260722_012657-1.png` | Media-rich Moment state |
-| `Screenshot_20260722_012705.png` | none | Feed interaction state |
-| `Screenshot_20260722_012715.png` | `Screenshot_20260722_012715-1.png` | Moment card state |
-| `Screenshot_20260722_012729.png` | none | Feed interaction state |
-| `Screenshot_20260722_012747.png` | none | Media-rich Moment state |
+| Canonical capture                | Exact alias                        | Reference area                   |
+| -------------------------------- | ---------------------------------- | -------------------------------- |
+| `Screenshot_20260722_012546.png` | none                               | Feed shell / content hierarchy   |
+| `Screenshot_20260722_012551.png` | none                               | Feed shell / content hierarchy   |
+| `Screenshot_20260722_012559.png` | `Screenshot_20260722_012559-1.png` | Moment card state                |
+| `Screenshot_20260722_012610.png` | `Screenshot_20260722_012610-1.png` | Media-rich Moment state          |
+| `Screenshot_20260722_012615.png` | `Screenshot_20260722_012615-1.png` | Moment card state                |
+| `Screenshot_20260722_012624.png` | none                               | Feed interaction state           |
+| `Screenshot_20260722_012629.png` | none                               | Feed interaction state           |
+| `Screenshot_20260722_012635.png` | `Screenshot_20260722_012635-1.png` | Moment card state                |
+| `Screenshot_20260722_012646.png` | none                               | Feed interaction state           |
+| `Screenshot_20260722_012657.png` | `Screenshot_20260722_012657-1.png` | Media-rich Moment state          |
+| `Screenshot_20260722_012705.png` | none                               | Feed interaction state           |
+| `Screenshot_20260722_012715.png` | `Screenshot_20260722_012715-1.png` | Moment card state                |
+| `Screenshot_20260722_012729.png` | none                               | Feed interaction state           |
+| `Screenshot_20260722_012747.png` | none                               | Media-rich Moment state          |
 | `Screenshot_20260722_012803.png` | `Screenshot_20260722_012803-1.png` | Moment detail / discussion state |
 | `Screenshot_20260722_012815.png` | `Screenshot_20260722_012815-1.png` | Moment detail / discussion state |
 | `Screenshot_20260722_012835.png` | `Screenshot_20260722_012835-1.png` | Moment detail / discussion state |
-| `Screenshot_20260722_012844.png` | none | Feed interaction state |
-| `Screenshot_20260722_012851.png` | none | Media / discussion state |
+| `Screenshot_20260722_012844.png` | none                               | Feed interaction state           |
+| `Screenshot_20260722_012851.png` | none                               | Media / discussion state         |
 | `Screenshot_20260722_012859.png` | `Screenshot_20260722_012859-1.png` | Moment detail / discussion state |
-| `Screenshot_20260722_012906.png` | none | Moment detail / discussion state |
-| `Screenshot_20260722_012910.png` | none | Feed interaction state |
+| `Screenshot_20260722_012906.png` | none                               | Moment detail / discussion state |
+| `Screenshot_20260722_012910.png` | none                               | Feed interaction state           |
 | `Screenshot_20260722_012920.png` | `Screenshot_20260722_012920-1.png` | Moment detail / discussion state |
-| `Screenshot_20260722_012928.png` | none | Moment detail / discussion state |
-| `Screenshot_20260722_012941.png` | none | Media / discussion state |
-| `Screenshot_20260722_012946.png` | none | Feed interaction state |
+| `Screenshot_20260722_012928.png` | none                               | Moment detail / discussion state |
+| `Screenshot_20260722_012941.png` | none                               | Media / discussion state         |
+| `Screenshot_20260722_012946.png` | none                               | Feed interaction state           |
 | `Screenshot_20260722_012953.png` | `Screenshot_20260722_012953-1.png` | Moment detail / discussion state |
-| `Screenshot_20260722_013006.png` | none | Feed interaction state |
-| `Screenshot_20260722_013018.png` | none | Moment detail / discussion state |
+| `Screenshot_20260722_013006.png` | none                               | Feed interaction state           |
+| `Screenshot_20260722_013018.png` | none                               | Moment detail / discussion state |
 | `Screenshot_20260722_013023.png` | `Screenshot_20260722_013023-1.png` | Moment detail / discussion state |
 | `Screenshot_20260722_013034.png` | `Screenshot_20260722_013034-1.png` | Moment detail / discussion state |
 | `Screenshot_20260722_013040.png` | `Screenshot_20260722_013040-1.png` | Moment detail / discussion state |
-| `Screenshot_20260722_013055.png` | `Screenshot_20260722_013055-1.png` | Feed / terminal captured state |
+| `Screenshot_20260722_013055.png` | `Screenshot_20260722_013055-1.png` | Feed / terminal captured state   |
 
 ## Product findings
 
@@ -113,19 +113,19 @@ The reference material supports a lightweight content-switching mental model. EL
 
 ## Parity matrix
 
-| Reference behavior | ELGL implementation | Decision |
-| --- | --- | --- |
-| Author identity leads each content unit | Moments feed card header/profile route | Preserve |
-| Timestamp/context is visible before actions | Card metadata | Preserve, locale-aware |
-| Text and attached media read as one post | Moment body + image grid | Preserve |
-| Media can receive focused inspection | Existing lightbox flow | Preserve; no exact source-product chrome |
-| Reactions follow content | Like/comment/social-proof action row | Preserve |
-| Discussion expands around a parent Moment | Inline/detail discussion paths | Preserve |
-| Social proof can reveal the liker set | Liked By dialog | Preserve with access/block filtering |
-| Feed can be re-ordered/filtered | Popular/Latest/search toolbar | Preserve as one query surface |
-| User safety actions remain reachable | Shared report flow | Preserve; moderation is authoritative server-side |
-| Source-product colours, typography and exact geometry | Relay tokens + Spartan primitives | Intentionally diverge |
-| Source-product branding/trade dress | ELGL product identity | Do not copy |
+| Reference behavior                                    | ELGL implementation                    | Decision                                          |
+| ----------------------------------------------------- | -------------------------------------- | ------------------------------------------------- |
+| Author identity leads each content unit               | Moments feed card header/profile route | Preserve                                          |
+| Timestamp/context is visible before actions           | Card metadata                          | Preserve, locale-aware                            |
+| Text and attached media read as one post              | Moment body + image grid               | Preserve                                          |
+| Media can receive focused inspection                  | Existing lightbox flow                 | Preserve; no exact source-product chrome          |
+| Reactions follow content                              | Like/comment/social-proof action row   | Preserve                                          |
+| Discussion expands around a parent Moment             | Inline/detail discussion paths         | Preserve                                          |
+| Social proof can reveal the liker set                 | Liked By dialog                        | Preserve with access/block filtering              |
+| Feed can be re-ordered/filtered                       | Popular/Latest/search toolbar          | Preserve as one query surface                     |
+| User safety actions remain reachable                  | Shared report flow                     | Preserve; moderation is authoritative server-side |
+| Source-product colours, typography and exact geometry | Relay tokens + Spartan primitives      | Intentionally diverge                             |
+| Source-product branding/trade dress                   | ELGL product identity                  | Do not copy                                       |
 
 ## Accessibility and responsive contract
 

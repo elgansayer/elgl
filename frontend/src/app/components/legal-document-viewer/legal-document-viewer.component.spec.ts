@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LegalDocumentViewerComponent } from './legal-document-viewer.component';
@@ -7,20 +7,20 @@ import type { LegalSection } from '../../services/legal.service';
 @Component({
   template: `
     <app-legal-document-viewer
-      [title]="title"
-      [lastUpdated]="lastUpdated"
-      [sections]="sections"
+      [title]="title()"
+      [lastUpdated]="lastUpdated()"
+      [sections]="sections()"
     ></app-legal-document-viewer>
   `,
   imports: [LegalDocumentViewerComponent],
 })
 class TestHostComponent {
-  title = 'Test Document';
-  lastUpdated: Date | string = '2026-08-01';
-  sections: LegalSection[] = [
+  readonly title = signal('Test Document');
+  readonly lastUpdated = signal<Date | string>('2026-08-01');
+  readonly sections = signal<LegalSection[]>([
     { id: 'section-1', heading: '1. First Section', content: 'First section content.' },
     { id: 'section-2', heading: '2. Second Section', content: 'Second section content.' },
-  ];
+  ]);
 }
 
 describe('LegalDocumentViewerComponent', () => {
@@ -72,7 +72,7 @@ describe('LegalDocumentViewerComponent', () => {
   });
 
   it('supports Date inputs for lastUpdated', () => {
-    host.lastUpdated = new Date(Date.UTC(2026, 5, 15, 12));
+    host.lastUpdated.set(new Date(Date.UTC(2026, 5, 15, 12)));
     fixture.detectChanges();
 
     const time = viewerElement.querySelector('time');
@@ -81,7 +81,7 @@ describe('LegalDocumentViewerComponent', () => {
   });
 
   it('renders an accessible unavailable state when no sections are supplied', () => {
-    host.sections = [];
+    host.sections.set([]);
     fixture.detectChanges();
 
     expect(viewerElement.querySelectorAll('section').length).toBe(0);
@@ -90,13 +90,13 @@ describe('LegalDocumentViewerComponent', () => {
   });
 
   it('renders legal content as text instead of interpreting supplied markup', () => {
-    host.sections = [
+    host.sections.set([
       {
         id: 'safe-content',
         heading: '<strong>Heading</strong>',
         content: '<img src=x onerror=alert(1)>Visible text',
       },
-    ];
+    ]);
     fixture.detectChanges();
 
     const section = viewerElement.querySelector('#safe-content');
@@ -107,7 +107,7 @@ describe('LegalDocumentViewerComponent', () => {
   });
 
   it('falls back to text when an invalid date is supplied directly', () => {
-    host.lastUpdated = 'not-a-date';
+    host.lastUpdated.set('not-a-date');
     fixture.detectChanges();
 
     expect(viewerElement.querySelector('time')).toBeFalsy();

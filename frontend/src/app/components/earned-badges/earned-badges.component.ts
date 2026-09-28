@@ -1,30 +1,27 @@
 import { Component, computed, inject } from '@angular/core';
+import { AppPillComponent } from '../primitives/pill/pill.component';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-earned-badges',
-  imports: [TranslatePipe],
+  imports: [AppPillComponent, TranslatePipe],
   template: `
-    <div class="flex flex-wrap gap-2">
+    <div class="flex min-w-0 max-w-full flex-wrap items-center gap-2">
       @if (badges()?.isVip) {
-        <span
-          class="inline-flex items-center rounded-full bg-gradient-to-r from-vip to-accent px-3 py-1 text-xs font-semibold text-on-fill"
-        >
-          <span class="me-1">👑</span>
-          {{ 'badges.vip' | t }}
-        </span>
+        <app-pill colour="vip" size="sm">
+          <span aria-hidden="true" class="me-1 shrink-0">👑</span>
+          <span class="min-w-0 break-words">{{ 'badges.vip' | t }}</span>
+        </app-pill>
       }
       @if (badges()?.isSeriousLearner) {
-        <span
-          class="inline-flex items-center rounded-full bg-gradient-to-r from-secondary to-success px-3 py-1 text-xs font-semibold text-on-fill"
-        >
-          <span class="me-1">🎓</span>
-          {{ 'badges.seriousLearner' | t }}
-        </span>
+        <app-pill colour="primary" size="sm">
+          <span aria-hidden="true" class="me-1 shrink-0">🎓</span>
+          <span class="min-w-0 break-words">{{ 'badges.seriousLearner' | t }}</span>
+        </app-pill>
       }
       @if (!badges()?.isVip && !badges()?.isSeriousLearner) {
-        <span class="text-xs text-text-muted">
+        <span class="min-w-0 max-w-full break-words text-xs text-text-muted">
           {{ 'badges.none' | t }}
         </span>
       }

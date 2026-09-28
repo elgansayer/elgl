@@ -4,6 +4,7 @@ import { VideoCallsService } from './video-calls.service';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { VideoCallsCacheInvalidationService } from './video-calls-cache-invalidation.service';
 import { VideoCallsEncryptionService } from './video-calls-encryption.service';
+import { VideoCallsRateLimiterGuard } from './video-calls-rate-limiter.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { LivekitModule } from '../livekit/livekit.module';
 import { MetricsModule } from '../metrics/metrics.module';
@@ -16,6 +17,7 @@ import { MetricsModule } from '../metrics/metrics.module';
     VideoCallsDegradationService,
     VideoCallsCacheInvalidationService,
     VideoCallsEncryptionService,
+    VideoCallsRateLimiterGuard,
   ],
   exports: [
     VideoCallsService,
