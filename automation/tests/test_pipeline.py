@@ -812,6 +812,56 @@ def test_behind_pull_request_updates_base_before_local_verification(
     assert github.updated_branches == [(77, "old-head")]
 
 
+def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.tasks = []
+    github.pull_requests = [
+        Task(
+            "77",
+            "Refresh unknown base",
+            "Body",
+            "github-pull-request",
+            10,
+            pr_branch="fix/old",
+        )
+    ]
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "UNKNOWN",
+            "",
+            "old-head",
+            True,
+            False,
+            merge_state_status="UNKNOWN",
+        )
+    ]
+
+    def prepare_pr(workflow: GitWorkflow, worktree: Path, branch: str) -> None:
+        worktree.mkdir(parents=True)
+
+    monkeypatch.setattr(GitWorkflow, "prepare_pull_request_worktree", prepare_pr)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "old-head")
+    monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: False)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: pytest.fail("locally stale head must not be verified"),
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    pipeline.refresh()
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.CI_PENDING
+    assert github.updated_branches == [(77, "old-head")]
+
+
 def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1370,6 +1420,44 @@ def test_behind_pull_request_is_updated_at_the_inspected_head(
     assert result is not None
     assert result.state is initial_state
     assert github.updated_branches == [(77, "reviewed-head")]
+    assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
+
+
+def test_update_branch_conflict_routes_directly_to_repair(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = Job(
+        task=Task("77", "Repair base conflict", "Body", "github-pull-request", 10),
+        state=JobState.VERIFYING,
+        branch="fix/conflict",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "UNKNOWN",
+        "",
+        "reviewed-head",
+        True,
+        False,
+        merge_state_status="UNKNOWN",
+    )
+
+    def reject_update(pull_request: int, expected_head_sha: str) -> None:
+        del pull_request, expected_head_sha
+        raise FactoryError("gh: merge conflict between base and head (HTTP 422)")
+
+    monkeypatch.setattr(github, "update_pull_request_branch", reject_update)
+
+    updated = pipeline._update_pull_request_branch(job, status)
+
+    assert updated is False
+    assert job.state is JobState.REPAIRING
     assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
 
 
@@ -2123,6 +2211,7 @@ def test_local_verification_failure_routes_into_quality_repair(
         Task("42", "Repair local verification", "Body", "github-issue", 0),
         state=JobState.VERIFYING,
         branch="factory/42-repair-local-verification",
+        quality_repairs=2,
     )
     pipeline.jobs.save({"42": job})
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
@@ -2139,9 +2228,8 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert failed.state is JobState.QUALITY_REPAIRING
     assert failed.attempts == 0
     assert "backend-test failed" in failed.review_findings[0]
-    # This is a consecutive budget, not a lifetime cap. Persisted jobs that
-    # exhausted the old two-repair ceiling must remain autonomously repairable.
-    failed.quality_repairs = 2
+    # This is a consecutive budget, not the legacy two-repair ceiling. Persisted
+    # jobs that reached two repairs must remain autonomously repairable.
     pipeline.jobs.save({"42": failed})
 
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)

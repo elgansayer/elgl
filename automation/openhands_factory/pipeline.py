@@ -1655,12 +1655,16 @@ class FactoryPipeline:
         )
         self.github.add_comment(job.pull_request, comment)
         status = self._status(job)
-        if status.merge_state_status == "BEHIND":
+        local_base_is_stale = (
+            status.merge_state_status == "UNKNOWN"
+            and not self._workflow(worktree).contains_current_base()
+        )
+        if status.merge_state_status == "BEHIND" or local_base_is_stale:
             # Verify the merge candidate, not a stale head. Otherwise old pull
             # requests miss fixes already on main and get sent through unnecessary
             # AI repair for failures the base branch has already resolved.
-            self._update_pull_request_branch(job, status)
-            job.state = JobState.CI_PENDING
+            if self._update_pull_request_branch(job, status):
+                job.state = JobState.CI_PENDING
             return
         if (
             status.mergeable == "CONFLICTING"
@@ -1758,9 +1762,13 @@ class FactoryPipeline:
         )
         job.review_findings.clear()
         status = known_status or self._status(job)
-        if status.merge_state_status == "BEHIND":
-            self._update_pull_request_branch(job, status)
-            job.state = JobState.CI_PENDING
+        local_base_is_stale = (
+            status.merge_state_status == "UNKNOWN"
+            and not self._workflow(worktree).contains_current_base()
+        )
+        if status.merge_state_status == "BEHIND" or local_base_is_stale:
+            if self._update_pull_request_branch(job, status):
+                job.state = JobState.CI_PENDING
             return
         if (
             status.mergeable == "CONFLICTING"
@@ -1793,7 +1801,10 @@ class FactoryPipeline:
             return True
         if self._recover_closed_pull_request(job, status):
             return True
-        needs_base_refresh = status.merge_state_status == "BEHIND"
+        needs_base_refresh = status.merge_state_status == "BEHIND" or (
+            status.merge_state_status == "UNKNOWN"
+            and not self._workflow(worktree).contains_current_base()
+        )
         needs_conflict_repair = (
             status.mergeable == "CONFLICTING"
             or status.merge_state_status in CONFLICTING_MERGE_STATES
@@ -1818,7 +1829,7 @@ class FactoryPipeline:
         job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
         return True
 
-    def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> None:
+    def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> bool:
         """Refresh a behind head without weakening reviewed-SHA protection."""
 
         if job.pull_request is None:
@@ -1832,7 +1843,17 @@ class FactoryPipeline:
                 job.head_sha,
                 detail="Factory base branch update in progress",
             )
-        self.github.update_pull_request_branch(job.pull_request, status.head_sha)
+        try:
+            self.github.update_pull_request_branch(job.pull_request, status.head_sha)
+        except FactoryError as error:
+            if "merge conflict between base and head" not in str(error).lower():
+                raise
+            # GitHub often reports UNKNOWN until update-branch calculates the
+            # merge. Route its authoritative conflict result straight into the
+            # existing local conflict repair path instead of backing off first.
+            job.state = JobState.REPAIRING
+            return False
+        return True
 
     @staticmethod
     def _mark_latest_review_as_mutating(job: Job) -> None:
@@ -1910,7 +1931,7 @@ class FactoryPipeline:
                 # retry policy backs off and retries the same verification without
                 # spending an agent call or introducing unrelated code churn.
                 raise
-            if job.quality_repairs >= 2:
+            if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 raise
             evidence = detail[-1800:]
             job.review_findings = [

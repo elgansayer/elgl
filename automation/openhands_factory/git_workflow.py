@@ -156,6 +156,32 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
         self._add_worktree(worktree, branch, f"origin/{branch}")
 
+    def contains_current_base(self) -> bool:
+        """Return whether this head already contains the latest remote base."""
+
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        ancestor = self.runner(
+            (
+                "git",
+                "merge-base",
+                "--is-ancestor",
+                f"origin/{self.base_branch}",
+                "HEAD",
+            ),
+            self.repository,
+        )
+        if ancestor.returncode not in {0, 1}:
+            raise RepositorySafetyError(
+                f"Could not compare pull request with base branch: {ancestor.stderr}"
+            )
+        return ancestor.returncode == 0
+
     def merge_base_for_repair(self) -> bool:
         """Merge the current base into a PR worktree and report conflicts.
 
