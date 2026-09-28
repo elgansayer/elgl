@@ -57,7 +57,7 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
 
 
 def parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser(prog="hellotalk-factory")
+    result = argparse.ArgumentParser(prog="repo-factory")
     subcommands = result.add_subparsers(dest="command", required=True)
     doctor = subcommands.add_parser("doctor")
     doctor.add_argument("--online", action="store_true")
@@ -222,9 +222,9 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "daemon":
-            from openhands_factory.daemon import FactoryDaemon
+            from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
 
-            return FactoryDaemon(config).run()
+            return MainCiGatedFactoryDaemon(config).run()
         if args.command in {"pause", "resume"}:
             from openhands_factory.daemon import set_paused
 
@@ -239,7 +239,25 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "metrics":
-            print(json.dumps(MetricsStore(config.state_dir / "metrics.json").snapshot(), indent=2))
+            from openhands_factory.pr_metrics import PullRequestMetricsStore
+
+            provider_metrics = MetricsStore(config.state_dir / "metrics.json").snapshot()
+            pull_request_snapshot = PullRequestMetricsStore(
+                config.state_dir / "pull-request-metrics.json",
+                max_records=config.pull_request_history_limit,
+            ).snapshot()
+            print(
+                json.dumps(
+                    {
+                        **provider_metrics,
+                        "pull_requests": {
+                            "capacity": pull_request_snapshot.get("capacity", {}),
+                            "summary": pull_request_snapshot.get("summary", {}),
+                        },
+                    },
+                    indent=2,
+                )
+            )
             return 0
         if args.command == "dashboard":
             if args.action == "show":

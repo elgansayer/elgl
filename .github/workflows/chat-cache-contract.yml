@@ -1,0 +1,35 @@
+name: Chat Cache Contract
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/src/app/services/chat.service.ts'
+      - 'frontend/src/app/services/chat-cache.service.ts'
+      - 'frontend/src/app/services/chat-cache.service.spec.ts'
+      - 'scripts/chat-cache-contract.test.mjs'
+      - 'docs/chat-cache.md'
+      - '.github/workflows/chat-cache-contract.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/src/app/services/chat.service.ts'
+      - 'frontend/src/app/services/chat-cache.service.ts'
+      - 'frontend/src/app/services/chat-cache.service.spec.ts'
+      - 'scripts/chat-cache-contract.test.mjs'
+      - 'docs/chat-cache.md'
+      - '.github/workflows/chat-cache-contract.yml'
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  chat-cache-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify frontend chat cache contract
+        run: node --test scripts/chat-cache-contract.test.mjs
