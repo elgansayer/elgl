@@ -245,6 +245,9 @@
         line-height: 1.5;
         max-width: 240px;
       }
+      .content-card p + p {
+        margin-top: 12px;
+      }
       .content-card code {
         font-size: 11px;
         background: rgb(var(--surface-300));
@@ -386,6 +389,10 @@
           <p>
             Routed chat content renders here inside <code>&lt;router-outlet /&gt;</code>. The premium
             AI action is shell-mounted but appears only for a concrete chat room route.
+          </p>
+          <p>
+            Discovery also owns a dedicated spoken-introduction sub-route at
+            <code>/discovery/audio-intros</code>, rendered inside the same shell chrome.
           </p>
         </div>
       </div>

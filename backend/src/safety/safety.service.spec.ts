@@ -517,6 +517,74 @@ describe('SafetyService', () => {
       expect(result).toContain('blocked-1');
       expect(result).toContain('blocker-1');
     });
+
+    it('should fail closed when either direction of the block graph fails', async () => {
+      mockQueryBuilder.then = vi
+        .fn()
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [], error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: { message: 'database unavailable' } }),
+        );
+
+      await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+    });
+
+    it('should fail closed when either block query has an invalid response', async () => {
+      mockQueryBuilder.then = vi
+        .fn()
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [], error: null }),
+        );
+
+      await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+    });
+
+    it('should fail closed when either block query contains a malformed row', async () => {
+      mockQueryBuilder.then = vi
+        .fn()
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ blocked_id: 'blocked-1' }, {}], error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ blocker_id: 'blocker-1' }], error: null }),
+        );
+
+      await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+    });
+
+    it.each([
+      [{ blocked_id: '' }, { blocker_id: 'blocker-1' }],
+      [{ blocked_id: '   ' }, { blocker_id: 'blocker-1' }],
+      [{ blocked_id: 'blocked-1' }, { blocker_id: '' }],
+      [{ blocked_id: 'blocked-1' }, { blocker_id: ' padded ' }],
+    ])(
+      'should fail closed for blank or padded block IDs',
+      async (blockedRow, blockerRow) => {
+        mockQueryBuilder.then = vi
+          .fn()
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: [blockedRow], error: null }),
+          )
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: [blockerRow], error: null }),
+          );
+
+        await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+          'Failed to load complete block graph',
+        );
+      },
+    );
   });
 
   describe('getBlockedUserDetails', () => {

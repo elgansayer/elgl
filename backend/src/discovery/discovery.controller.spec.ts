@@ -6,6 +6,8 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
+import { DISCOVERY_CACHE_NO_STORE } from './cache.interceptor';
 
 vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
@@ -28,6 +30,7 @@ describe('DiscoveryController', () => {
               marker: { degraded: false, fallbackSource: 'none' as const },
             }),
             getAudioIntros: vi.fn().mockResolvedValue([]),
+            getPartnerOfWeekIds: vi.fn().mockResolvedValue([]),
           },
         },
         {
@@ -66,6 +69,42 @@ describe('DiscoveryController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  describe('privacy-safe cache partitioning', () => {
+    const cacheDirectiveFor = (
+      method:
+        | 'findPartners'
+        | 'findPartnersWithDegradation'
+        | 'getPartnerOfWeek'
+        | 'getAudioIntros'
+        | 'getRecentNativeSpeakers'
+        | 'getSpotlight'
+        | 'findByLanguagePair'
+        | 'searchByLocation',
+    ): Record<string, string> => {
+      const interceptors = Reflect.getMetadata(
+        INTERCEPTORS_METADATA,
+        DiscoveryController.prototype[method],
+      ) as Array<{ directive: Record<string, string> }>;
+      return interceptors[0].directive;
+    };
+
+    it.each([
+      'findPartners',
+      'findPartnersWithDegradation',
+      'getPartnerOfWeek',
+      'getAudioIntros',
+      'getRecentNativeSpeakers',
+      'getSpotlight',
+      'findByLanguagePair',
+      'searchByLocation',
+    ] as const)(
+      'does not HTTP-cache privacy-sensitive %s responses',
+      (method) => {
+        expect(cacheDirectiveFor(method)).toEqual(DISCOVERY_CACHE_NO_STORE);
+      },
+    );
   });
 
   describe('findPartners', () => {
@@ -146,6 +185,26 @@ describe('DiscoveryController', () => {
 
       expect(query.serious_learner_mode).toBeUndefined();
       expect(query.serious_learner_only).toBeUndefined();
+    });
+  });
+
+  describe('getPartnerOfWeek', () => {
+    it('returns no IDs without an authenticated viewer', async () => {
+      await expect(controller.getPartnerOfWeek(null)).resolves.toEqual([]);
+      expect(discoveryService.getPartnerOfWeekIds).not.toHaveBeenCalled();
+    });
+
+    it('passes the authenticated viewer to privacy revalidation', async () => {
+      (discoveryService.getPartnerOfWeekIds as Mock).mockResolvedValue([
+        'partner-1',
+      ]);
+
+      await expect(
+        controller.getPartnerOfWeek({ id: 'viewer-1' } as any),
+      ).resolves.toEqual(['partner-1']);
+      expect(discoveryService.getPartnerOfWeekIds).toHaveBeenCalledWith(
+        'viewer-1',
+      );
     });
   });
 
