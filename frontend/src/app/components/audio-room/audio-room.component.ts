@@ -36,6 +36,7 @@ import {
   buildStageViewModel,
   normaliseAudienceCount,
 } from './audio-room-view-model';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-audio-room',
@@ -69,8 +70,10 @@ export class AudioRoomComponent implements OnInit {
   readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly apiBase = environment.apiUrl;
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly isCreatingRoom = signal<boolean>(false);
   readonly showPrivatePartyModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
   readonly showTipModal = signal<boolean>(false);
@@ -137,7 +140,7 @@ export class AudioRoomComponent implements OnInit {
     try {
       const result = await firstValueFrom(
         this.httpClient.get<{ emojiId: string; name: string; animationUrl: string }[]>(
-          '/audio-rooms/exclusive-emojis',
+          `${this.apiBase}/audio-rooms/exclusive-emojis`,
         ),
       );
       this.exclusiveEmojis.set(result);
@@ -165,6 +168,9 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
+    if (this.isCreatingRoom()) return;
+
+    this.isCreatingRoom.set(true);
     try {
       const room = await this.store.createRoom(
         payload.title,
@@ -177,6 +183,8 @@ export class AudioRoomComponent implements OnInit {
     } catch (e) {
       console.error('Error creating live room:', e);
       showToast(this.i18n.translate('audioRoom.launchError'));
+    } finally {
+      this.isCreatingRoom.set(false);
     }
   }
 
@@ -264,7 +272,9 @@ export class AudioRoomComponent implements OnInit {
     const room = this.store.currentRoom();
     if (!room) return;
     try {
-      await firstValueFrom(this.httpClient.post(`/audio-rooms/${room.id}/reactions`, { emojiId }));
+      await firstValueFrom(
+        this.httpClient.post(`${this.apiBase}/audio-rooms/${room.id}/reactions`, { emojiId }),
+      );
       showToast(this.i18n.translate('audioRoom.reactionSent'));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : this.i18n.translate('common.error');
