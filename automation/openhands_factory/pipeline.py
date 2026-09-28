@@ -1610,7 +1610,12 @@ class FactoryPipeline:
         if status.state == "MERGED":
             job.state = JobState.MERGED
             return True
-        if job.head_sha == status.head_sha:
+        needs_base_refresh = status.merge_state_status == "BEHIND"
+        needs_conflict_repair = (
+            status.mergeable == "CONFLICTING"
+            or status.merge_state_status in CONFLICTING_MERGE_STATES
+        )
+        if job.head_sha == status.head_sha and not (needs_base_refresh or needs_conflict_repair):
             return False
 
         self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
