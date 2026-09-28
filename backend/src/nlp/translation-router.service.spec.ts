@@ -39,6 +39,7 @@ describe('TranslationRouterService', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -160,6 +161,37 @@ describe('TranslationRouterService', () => {
 
     expect(global.fetch).not.toHaveBeenCalled();
     expect(nlpService.checkRateLimit).toHaveBeenCalledOnce();
+  });
+
+  it('times out when a provider stalls while returning its response body', async () => {
+    vi.useFakeTimers();
+    configValues.AZURE_TRANSLATOR_KEY = undefined;
+    (global.fetch as Mock).mockImplementationOnce(
+      (_url: string, init: RequestInit) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            new Promise((_resolve, reject) => {
+              init.signal?.addEventListener('abort', () =>
+                reject(new DOMException('Aborted', 'AbortError')),
+              );
+            }),
+        }),
+    );
+
+    const translation = service.translate('user-1', false, {
+      text: 'Bonjour',
+      source_language: 'fr',
+      target_language: 'en',
+    });
+
+    const unavailable = expect(translation).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await unavailable;
   });
 
   it('transliterates an explicit Azure language and ISO 15924 script pair', async () => {

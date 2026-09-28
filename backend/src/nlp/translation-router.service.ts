@@ -23,6 +23,12 @@ interface ScriptPair {
   toScript: string;
 }
 
+interface ProviderResponse {
+  ok: boolean;
+  status: number;
+  payload?: unknown;
+}
+
 const DEFAULT_TRANSLITERATION_SCRIPTS: Record<string, ScriptPair> = {
   ar: { fromScript: 'Arab', toScript: 'Latn' },
   fa: { fromScript: 'Arab', toScript: 'Latn' },
@@ -141,7 +147,7 @@ export class TranslationRouterService {
       : 'https://api.deepl.com';
 
     try {
-      const response = await this.fetchProvider(`${host}/v2/translate`, {
+      const response = await this.fetchProviderJson(`${host}/v2/translate`, {
         method: 'POST',
         headers: {
           Authorization: `DeepL-Auth-Key ${apiKey}`,
@@ -160,8 +166,7 @@ export class TranslationRouterService {
         return null;
       }
 
-      const payload: unknown = await response.json();
-      const translation = this.readDeepLTranslation(payload);
+      const translation = this.readDeepLTranslation(response.payload);
       if (!translation) {
         this.logProviderFailure('deepl', 'translate', 'invalid-response');
       }
@@ -187,7 +192,7 @@ export class TranslationRouterService {
     });
 
     try {
-      const response = await this.fetchProvider(
+      const response = await this.fetchProviderJson(
         `${TranslationRouterService.AZURE_TRANSLATOR_BASE_URL}/translate?${query.toString()}`,
         {
           method: 'POST',
@@ -201,8 +206,7 @@ export class TranslationRouterService {
         return null;
       }
 
-      const payload: unknown = await response.json();
-      const translation = this.readAzureTranslation(payload);
+      const translation = this.readAzureTranslation(response.payload);
       if (!translation) {
         this.logProviderFailure('azure', 'translate', 'invalid-response');
       }
@@ -252,7 +256,7 @@ export class TranslationRouterService {
     });
 
     try {
-      const response = await this.fetchProvider(
+      const response = await this.fetchProviderJson(
         `${TranslationRouterService.AZURE_TRANSLATOR_BASE_URL}/transliterate?${query.toString()}`,
         {
           method: 'POST',
@@ -271,8 +275,9 @@ export class TranslationRouterService {
         return null;
       }
 
-      const payload: unknown = await response.json();
-      const transliteratedText = this.readAzureTransliteration(payload);
+      const transliteratedText = this.readAzureTransliteration(
+        response.payload,
+      );
       if (!transliteratedText) {
         this.logProviderFailure('azure', 'transliterate', 'invalid-response');
       }
@@ -284,10 +289,10 @@ export class TranslationRouterService {
     }
   }
 
-  private async fetchProvider(
+  private async fetchProviderJson(
     url: string,
     init: RequestInit,
-  ): Promise<Response> {
+  ): Promise<ProviderResponse> {
     const controller = new AbortController();
     const timeout = setTimeout(
       () => controller.abort(),
@@ -295,7 +300,12 @@ export class TranslationRouterService {
     );
 
     try {
-      return await fetch(url, { ...init, signal: controller.signal });
+      const response = await fetch(url, { ...init, signal: controller.signal });
+      return {
+        ok: response.ok,
+        status: response.status,
+        payload: response.ok ? await response.json() : undefined,
+      };
     } finally {
       clearTimeout(timeout);
     }
