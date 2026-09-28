@@ -276,6 +276,45 @@ def test_prepare_pull_request_worktree_checks_out_the_existing_branch(tmp_path: 
     )
 
 
+def test_merge_base_for_repair_leaves_conflicts_for_the_repair_agent(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(1, "", "CONFLICT (content): merge conflict"),
+            ProcessResult(0, "src/conflicted.ts\n", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    conflicted = workflow.merge_base_for_repair()
+
+    assert conflicted is True
+    assert runner.calls == [
+        ("git", "diff", "--name-only", "--diff-filter=U"),
+        ("git", "fetch", "origin", "main"),
+        ("git", "merge", "--no-commit", "--no-ff", "origin/main"),
+        ("git", "diff", "--name-only", "--diff-filter=U"),
+    ]
+
+
+def test_merge_base_for_repair_accepts_a_clean_uncommitted_merge(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "Automatic merge went well", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    assert workflow.merge_base_for_repair() is False
+
+
 def test_push_allows_the_external_branch_a_pull_request_review_job_is_assigned(
     tmp_path: Path,
 ) -> None:

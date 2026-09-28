@@ -41,6 +41,9 @@ def test_factory_updater_drains_continuously_busy_daemons_only_when_needed() -> 
     assert updater.index("log 'Fetching origin/main'") < updater.index(
         "log 'Pausing new Factory scheduling while active jobs drain'"
     )
+    assert updater.index("log 'Refreshing verified current service units before drain'") < (
+        updater.index("log 'Pausing new Factory scheduling while active jobs drain'")
+    )
     assert updater.index('systemctl start "$SECONDARY_SERVICE"') < updater.rindex(
         "resume_factories"
     )

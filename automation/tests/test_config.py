@@ -531,36 +531,30 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
     assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
     assert factory_config.agents.providers["opencode"].model == "opencode-go/deepseek-v4-flash"
-    assert factory_config.agents.providers["opencode"].enabled
+    assert not factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
         ".config/opencode",
         ".local/share/opencode",
     ]
     assert factory_config.agents.providers["openhands"].emergency_only
     assert not factory_config.agents.providers["openhands"].enabled
-    assert factory_config.agents.providers["pi"].enabled
+    assert not factory_config.agents.providers["pi"].enabled
     assert factory_config.agents.providers["pi"].model == "github-copilot/claude-sonnet-5"
     assert factory_config.agents.providers["pi"].credential_paths == [".pi"]
     assert factory_config.agents.routing.implementation == [
+        "google",
         "claude",
         "codex",
-        "google",
-        "opencode",
-        "pi",
     ]
     assert factory_config.agents.routing.code_review == [
         "claude",
         "google",
         "codex",
-        "opencode",
-        "pi",
     ]
     assert factory_config.agents.routing.general_action == [
-        "opencode",
         "google",
-        "codex",
         "claude",
-        "pi",
+        "codex",
     ]
 
 
