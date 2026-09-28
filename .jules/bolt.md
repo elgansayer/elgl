@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-16 - Prevent package-lock.json drift on minor edits
+**Learning:** Running `npm install` just to fetch tools like `ng` or `@angular/cli` on a minor UI change can catastrophically alter `package-lock.json` and strip critical build dependencies if the sandbox Node environment differs slightly from what generated the lock file.
+**Action:** When asked to make small component optimizations without explicitly modifying dependencies, do not run `npm install`. Use `npx` with precise tools, or if a global tool requires an updated node via `nvm`, do not subsequently run `npm install` on the whole project unless instructed, or ensure to `git restore package-lock.json` before committing.
