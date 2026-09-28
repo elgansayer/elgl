@@ -218,27 +218,35 @@ export class PrivacyService {
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
     let purged = 0;
-    for (const row of rows) {
-      if (row.object_key) {
-        const { error: removeError } = await supabase.storage
-          .from(ARCHIVE_BUCKET)
-          .remove([row.object_key]);
-        if (removeError) {
-          this.logger.error('gdpr_archive_cleanup_object_failed');
-          continue;
-        }
-      }
 
-      const { error: updateError } = await supabase
-        .from('archive_requests')
-        .update({
-          status: 'expired',
-          object_key: null,
-          archive_url: null,
-          updated_at: new Date().toISOString(),
-        } as never)
-        .eq('id', row.id);
-      if (!updateError) purged += 1;
+    // ⚡ Bolt Optimization: Batch database/storage requests to reduce N+1 latency
+    const chunkSize = 10;
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const chunk = rows.slice(i, i + chunkSize);
+      await Promise.allSettled(
+        chunk.map(async (row) => {
+          if (row.object_key) {
+            const { error: removeError } = await supabase.storage
+              .from(ARCHIVE_BUCKET)
+              .remove([row.object_key]);
+            if (removeError) {
+              this.logger.error('gdpr_archive_cleanup_object_failed');
+              return;
+            }
+          }
+
+          const { error: updateError } = await supabase
+            .from('archive_requests')
+            .update({
+              status: 'expired',
+              object_key: null,
+              archive_url: null,
+              updated_at: new Date().toISOString(),
+            } as never)
+            .eq('id', row.id);
+          if (!updateError) purged += 1;
+        }),
+      );
     }
 
     if (purged > 0)
