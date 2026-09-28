@@ -1074,6 +1074,26 @@ def test_transient_github_failure_is_retried(
 def test_pull_request_inventory_includes_historical_identity_and_ci_runs(
     tmp_path: Path,
 ) -> None:
+    rest_payload = [
+        {
+            "number": 42,
+            "title": "Fixes #7: Bound churn",
+            "body": "Factory-Task-Key: explicit:bound-churn",
+            "state": "closed",
+            "draft": False,
+            "head": {
+                "ref": "factory/7-bound-churn",
+                "sha": "abc123",
+                "repo": {"full_name": "owner/repo"},
+            },
+            "base": {"ref": "main"},
+            "labels": [{"name": "factory-reviewed"}],
+            "created_at": "2026-08-20T00:00:00Z",
+            "updated_at": "2026-08-21T00:00:00Z",
+            "closed_at": "2026-08-21T00:00:00Z",
+            "merged_at": "2026-08-21T00:00:00Z",
+        }
+    ]
     payload = [
         {
             "number": 42,
@@ -1103,7 +1123,12 @@ def test_pull_request_inventory_includes_historical_identity_and_ci_runs(
             ],
         }
     ]
-    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps(rest_payload), ""),
+            ProcessResult(0, json.dumps(payload), ""),
+        ]
+    )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     records = client.list_pull_requests()
@@ -1113,12 +1138,56 @@ def test_pull_request_inventory_includes_historical_identity_and_ci_runs(
     assert records[0].is_merged
     assert records[0].files == ("automation/x.py",)
     assert records[0].workflow_run_ids == frozenset({"123"})
-    assert "--state" in runner.calls[0] and "all" in runner.calls[0]
-    assert "files" in runner.calls[0][-1]
+    assert runner.calls[0][:4] == ("gh", "api", "--method", "GET")
+    assert "state=all" in runner.calls[0]
+    assert "files" in runner.calls[1][-1]
+
+
+def test_pull_request_inventory_survives_optional_graphql_failure(tmp_path: Path) -> None:
+    payload = [
+        {
+            "number": 42,
+            "title": "Fixes #7: Bound churn",
+            "body": "Factory-Task-Key: explicit:bound-churn",
+            "state": "closed",
+            "draft": False,
+            "head": {
+                "ref": "factory/7-bound-churn",
+                "sha": "abc123",
+                "repo": {"full_name": "owner/repo"},
+            },
+            "base": {"ref": "main"},
+            "labels": [{"name": "factory-reviewed"}],
+            "created_at": "2026-08-20T00:00:00Z",
+            "updated_at": "2026-08-21T00:00:00Z",
+            "closed_at": "2026-08-21T00:00:00Z",
+            "merged_at": "2026-08-21T00:00:00Z",
+        }
+    ]
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps(payload), ""),
+            ProcessResult(1, "", "HTTP 502: Bad Gateway"),
+        ]
+    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    records = client.list_pull_requests()
+
+    assert len(records) == 1
+    assert records[0].number == 42
+    assert records[0].is_merged
+    assert records[0].head_ref == "factory/7-bound-churn"
+    assert records[0].files == ()
 
 
 def test_pull_request_inventory_fails_closed_on_malformed_identity(tmp_path: Path) -> None:
-    runner = Runner([ProcessResult(0, json.dumps([{"title": "missing number"}]), "")])
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps([{"title": "missing number"}]), ""),
+            ProcessResult(1, "", "HTTP 502: Bad Gateway"),
+        ]
+    )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     with pytest.raises(FactoryError, match="invalid identity"):
