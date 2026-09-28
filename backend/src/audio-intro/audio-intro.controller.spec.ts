@@ -1,3 +1,4 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AudioIntroController } from './audio-intro.controller';
 import { AudioIntroService } from './audio-intro.service';
@@ -57,13 +58,25 @@ describe('AudioIntroController', () => {
       };
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const result = await controller.updateAudioIntro('user-1', dto);
+      const user = { id: 'user-1' } as any;
+      const result = await controller.updateAudioIntro(user, 'user-1', dto);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
         'user-1',
         dto.audio_url,
       );
       expect(result).toBeUndefined();
+    });
+
+    it('should throw UnauthorizedException if user does not match', async () => {
+      const dto: UpdateAudioIntroDto = {
+        audio_url: 'https://example.com/audio.mp3',
+      };
+      const user = { id: 'user-2' } as any;
+
+      await expect(
+        controller.updateAudioIntro(user, 'user-1', dto)
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
