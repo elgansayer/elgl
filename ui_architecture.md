@@ -63,7 +63,7 @@ The Angular router is the executable authority for exact current route names and
 
 ### Relay public primitives
 
-Feature code should consume approved Relay primitives and semantic tokens rather than a historical catalogue of custom `app-*` components. The current public API and migration status are defined by `DESIGN.md`, `frontend/src/app/components/relay/`, the generated/owned Helm layer under `frontend/src/app/components/ui/`, and the Spartan migration backlog.
+Feature code should consume approved Relay primitives and semantic tokens rather than a historical catalogue of custom `app-*` components. The current public API and migration status are defined by `DESIGN.md`, `frontend/src/app/components/primitives/`, the generated/owned Helm layer under `frontend/src/app/components/ui/`, and the Spartan migration backlog.
 
 Typical capability families include:
 
