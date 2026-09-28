@@ -31,7 +31,11 @@ export class ProfileVisitsInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       mergeMap(async (response: unknown) => {
-        await this.profileVisitsService.recordVisit(visitorId, viewedId);
+        try {
+          await this.profileVisitsService.recordVisit(visitorId, viewedId);
+        } catch {
+          // Visit tracking must not make an otherwise successful profile read fail.
+        }
         return response;
       }),
     );

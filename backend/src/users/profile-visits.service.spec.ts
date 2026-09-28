@@ -79,6 +79,18 @@ describe('ProfileVisitsService', () => {
     expect(visitsQuery.insert).not.toHaveBeenCalled();
   });
 
+  it('fails closed when visitor privacy state is malformed', async () => {
+    privacyQuery.maybeSingle.mockResolvedValue({
+      data: { incognito_visits: null },
+      error: null,
+    });
+
+    await expect(service.recordVisit('viewer-1', 'profile-1')).resolves.toBe(
+      false,
+    );
+    expect(visitsQuery.insert).not.toHaveBeenCalled();
+  });
+
   it('keeps profile reads usable when visit persistence fails', async () => {
     visitsQuery.insert.mockResolvedValue({
       error: { message: 'insert failed' },

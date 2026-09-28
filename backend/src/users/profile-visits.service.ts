@@ -87,7 +87,15 @@ export class ProfileVisitsService {
         return false;
       }
 
-      if (privacyData['incognito_visits'] === true) return false;
+      const incognitoVisits = privacyData['incognito_visits'];
+      if (incognitoVisits !== false) {
+        if (incognitoVisits !== true) {
+          this.logger.warn(
+            'Skipping profile visit because visitor privacy state is unavailable',
+          );
+        }
+        return false;
+      }
 
       const { error } = await supabase.from('profile_visits').insert({
         visitor_id: visitorId,

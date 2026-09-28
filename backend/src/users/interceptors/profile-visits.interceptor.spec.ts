@@ -76,4 +76,15 @@ describe('ProfileVisitsInterceptor', () => {
     ).rejects.toThrow('profile unavailable');
     expect(recordVisit).not.toHaveBeenCalled();
   });
+
+  it('keeps successful profile reads usable when visit tracking rejects', async () => {
+    recordVisit.mockRejectedValue(new Error('visit persistence unavailable'));
+    const next = { handle: () => of({ id: 'profile-1' }) } as CallHandler;
+
+    await expect(
+      firstValueFrom(
+        interceptor.intercept(createContext('getUserProfile'), next),
+      ),
+    ).resolves.toEqual({ id: 'profile-1' });
+  });
 });
