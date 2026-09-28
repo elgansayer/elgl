@@ -99,15 +99,16 @@ def is_new_github_issue(job: Job) -> bool:
 _REVIEW_STATE_ORDER = {
     JobState.MERGE_QUEUED: 0,
     JobState.READY_TO_MERGE: 1,
-    JobState.CI_PENDING: 2,
     # A review that already produced a repair must finish deterministic local
     # verification before it can return to independent review. Rank that durable
-    # continuation ahead of fresh reviews and AI-backed repair retries so verified
-    # work clears the queue instead of repeatedly losing its lane after a restart.
-    JobState.VERIFYING: 3,
-    JobState.REVIEWING: 4,
-    JobState.QUALITY_REPAIRING: 5,
-    JobState.REPAIRING: 6,
+    # continuation and other actionable work ahead of passive CI polling. With a
+    # large backlog, polling every pending head first can otherwise delay a known
+    # conflict repair for many minutes on every scheduler cycle.
+    JobState.VERIFYING: 2,
+    JobState.REVIEWING: 3,
+    JobState.QUALITY_REPAIRING: 4,
+    JobState.REPAIRING: 5,
+    JobState.CI_PENDING: 6,
     JobState.PR_DRAFT: 7,
 }
 
