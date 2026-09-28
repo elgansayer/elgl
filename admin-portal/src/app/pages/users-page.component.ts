@@ -36,7 +36,12 @@ import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
       </form>
 
       @if (error()) {
-        <p role="alert" class="status-message">{{ error() }}</p>
+        <div class="status-message error-state" role="alert">
+          <p>{{ error() }}</p>
+          <button type="button" (click)="retrySearch()" [disabled]="busy()">
+            {{ busy() ? 'Retrying…' : 'Retry search' }}
+          </button>
+        </div>
       }
 
       @if (!error() && loaded()) {
@@ -106,6 +111,8 @@ import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
     .search-row { display: flex; gap: .75rem; align-items: stretch; }
     .search-row input { flex: 1 1 20rem; min-width: 0; }
     .status-message { margin-block: 1rem; }
+    .error-state { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+    .error-state p { margin: 0; }
     .results { display: grid; gap: 1rem; margin-top: 1rem; }
     .user-card { border: 1px solid currentColor; border-radius: .75rem; padding: 1rem; overflow-wrap: anywhere; }
     .user-card h3 { margin: 0; }
@@ -122,6 +129,7 @@ import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
 })
 export class UsersPageComponent {
   private readonly usersService = inject(AdminUsersService);
+  private requestGeneration = 0;
   readonly pageSize = 20;
   query = '';
   readonly users = signal<AdminUserSummary[]>([]);
@@ -141,6 +149,7 @@ export class UsersPageComponent {
 
   async searchUsers(resetPage = false): Promise<void> {
     if (resetPage) this.page.set(1);
+    const requestGeneration = ++this.requestGeneration;
     this.busy.set(true);
     this.error.set(null);
     try {
@@ -151,18 +160,27 @@ export class UsersPageComponent {
           search: this.query,
         }),
       );
+      if (requestGeneration !== this.requestGeneration) return;
       this.users.set(result.users);
       this.total.set(result.total);
       this.page.set(result.page);
       this.loaded.set(true);
-    } catch (error) {
+    } catch {
+      if (requestGeneration !== this.requestGeneration) return;
       this.users.set([]);
       this.total.set(0);
       this.loaded.set(true);
-      this.error.set(error instanceof Error ? error.message : 'User search failed');
+      this.error.set('User search is temporarily unavailable. Try again.');
     } finally {
-      this.busy.set(false);
+      if (requestGeneration === this.requestGeneration) {
+        this.busy.set(false);
+      }
     }
+  }
+
+  retrySearch(): void {
+    if (this.busy()) return;
+    void this.searchUsers();
   }
 
   previousPage(): void {

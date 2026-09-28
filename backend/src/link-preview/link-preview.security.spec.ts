@@ -94,6 +94,13 @@ describe('LinkPreviewService security boundaries', () => {
       requestConfig.beforeRedirect?.({
         protocol: 'https:',
         hostname: 'example.com',
+        port: { value: '443' },
+      }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      requestConfig.beforeRedirect?.({
+        protocol: 'https:',
+        hostname: 'example.com',
         port: '443',
         auth: 'user:secret',
       }),

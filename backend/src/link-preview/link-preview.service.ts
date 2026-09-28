@@ -26,6 +26,7 @@ const MAX_URL_LENGTH = 2_048;
 const MAX_TITLE_LENGTH = 300;
 const MAX_DESCRIPTION_LENGTH = 1_000;
 const MAX_SITE_NAME_LENGTH = 200;
+const MAX_CACHE_ENTRY_BYTES = 16_384;
 const CACHE_TTL_SECONDS = 3_600;
 const CACHE_PREFIX = 'link_preview:v2';
 
@@ -95,11 +96,11 @@ export class LinkPreviewService {
     try {
       const cached = await this.redis.get(cacheKey);
       if (cached) {
-        try {
-          return JSON.parse(cached) as LinkPreview;
-        } catch {
-          this.logger.warn(`Invalid link-preview cache entry (${descriptor})`);
+        const cachedPreview = this.parseCachedPreview(cached, normalizedUrl);
+        if (cachedPreview) {
+          return cachedPreview;
         }
+        this.logger.warn(`Invalid link-preview cache entry (${descriptor})`);
       }
     } catch {
       // A cache outage must not turn a best-effort preview into a chat failure.
@@ -206,12 +207,19 @@ export class LinkPreviewService {
         hostname.includes(':') && !hostname.startsWith('[')
           ? `[${hostname}]`
           : hostname;
+      const rawPort = options.port;
+      if (
+        rawPort !== undefined &&
+        rawPort !== null &&
+        typeof rawPort !== 'string' &&
+        typeof rawPort !== 'number'
+      ) {
+        throw new BadRequestException('Invalid redirect target');
+      }
       const port =
-        options.port === undefined ||
-        options.port === null ||
-        options.port === ''
+        rawPort === undefined || rawPort === null || rawPort === ''
           ? ''
-          : `:${String(options.port)}`;
+          : ':' + rawPort;
       authority = `${normalizedHostname}${port}`;
     }
 
@@ -318,6 +326,64 @@ export class LinkPreviewService {
     } catch {
       return '';
     }
+  }
+
+  private parseCachedPreview(
+    cached: string,
+    requestedUrl: string,
+  ): LinkPreview | null {
+    if (Buffer.byteLength(cached, 'utf8') > MAX_CACHE_ENTRY_BYTES) {
+      return null;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(cached) as unknown;
+    } catch {
+      return null;
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const candidate = parsed as Record<string, unknown>;
+    if (candidate['url'] !== requestedUrl) {
+      return null;
+    }
+
+    const title = this.sanitizeMetaContent(
+      typeof candidate['title'] === 'string' ? candidate['title'] : '',
+      MAX_TITLE_LENGTH,
+    );
+    const description = this.sanitizeMetaContent(
+      typeof candidate['description'] === 'string'
+        ? candidate['description']
+        : '',
+      MAX_DESCRIPTION_LENGTH,
+    );
+    const image = this.sanitizeImageUrl(
+      typeof candidate['image'] === 'string' ? candidate['image'] : '',
+      requestedUrl,
+    );
+    const siteName = this.sanitizeMetaContent(
+      typeof candidate['siteName'] === 'string' && candidate['siteName']
+        ? candidate['siteName']
+        : new URL(requestedUrl).hostname,
+      MAX_SITE_NAME_LENGTH,
+    );
+
+    if (!title && !description && !image) {
+      return null;
+    }
+
+    return {
+      url: requestedUrl,
+      title,
+      description,
+      image,
+      siteName,
+    };
   }
 
   private isUnsafeLiteralHost(hostname: string): boolean {

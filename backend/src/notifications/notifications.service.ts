@@ -21,6 +21,8 @@ export interface LegacyNotificationPreferences {
   updatedAt: string;
 }
 
+export type PushDispatchResult = 'sent' | 'suppressed' | 'retry';
+
 type UpdatePreferencesInput = Partial<
   Omit<LegacyNotificationPreferences, 'userId' | 'updatedAt'>
 > &
@@ -103,9 +105,11 @@ export class NotificationsService {
       data?: Record<string, string>;
       category?: 'direct_messages' | 'groups' | 'likes' | 'voice_rooms';
     },
-  ): Promise<void> {
+  ): Promise<PushDispatchResult> {
     try {
-      // Respect per‑category push toggle and badge toggle
+      // Respect per-category push toggle and badge toggle. Suppression is a
+      // terminal outcome for callers such as event reminders: retrying a user
+      // preference every minute would be both wasteful and surprising.
       let pushEnabled = true;
       let badgeEnabled = true;
       if (payload.category) {
@@ -120,7 +124,7 @@ export class NotificationsService {
         console.log(
           `Push disabled for category '${payload.category}' for user ${userId}, skipping`,
         );
-        return;
+        return 'suppressed';
       }
 
       const supabase = this.supabaseService.getClient();
@@ -129,16 +133,22 @@ export class NotificationsService {
         .select('fcm_token')
         .eq('user_id', userId);
 
-      if (error || !tokens || tokens.length === 0) {
+      if (error) {
+        console.warn(`Could not load push tokens for user ${userId}`);
+        return 'retry';
+      }
+      if (!tokens || tokens.length === 0) {
         console.warn(`No push tokens found for user ${userId}`);
-        return;
+        return 'suppressed';
       }
 
       const fcmTokens = tokens.map((t: { fcm_token: string }) => t.fcm_token);
       const badgeCount = badgeEnabled ? 1 : 0;
-      await this.sendFcmBatch(fcmTokens, payload, badgeCount);
+      const sent = await this.sendFcmBatch(fcmTokens, payload, badgeCount);
+      return sent ? 'sent' : 'retry';
     } catch (err) {
       console.error(`Failed to send push notification to user ${userId}:`, err);
+      return 'retry';
     }
   }
 
@@ -151,13 +161,13 @@ export class NotificationsService {
       data?: Record<string, string>;
     },
     badgeCount?: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
     let firebaseAdmin: FirebaseAdmin;
     try {
       firebaseAdmin = await import('firebase-admin');
     } catch {
       console.warn('firebase-admin not installed, skipping push notification');
-      return;
+      return false;
     }
 
     if (!firebaseAdmin.apps.length) {
@@ -174,11 +184,11 @@ export class NotificationsService {
           console.warn(
             'Invalid FIREBASE_SERVICE_ACCOUNT config, skipping push',
           );
-          return;
+          return false;
         }
       } else {
         console.warn('Firebase not configured, skipping push notification');
-        return;
+        return false;
       }
     }
 
@@ -238,8 +248,11 @@ export class NotificationsService {
             .in('fcm_token', invalidTokens);
         }
       }
+
+      return response.successCount > 0;
     } catch (err) {
       console.error('FCM batch send failed:', err);
+      return false;
     }
   }
 
@@ -296,7 +309,7 @@ export class NotificationsService {
         system: message || 'You have a new system alert',
       };
 
-      // Determine notification category for push‑toggle check
+      // Determine notification category for push-toggle check
       let pushCategory:
         'direct_messages' | 'groups' | 'likes' | 'voice_rooms' | undefined;
       switch (type) {

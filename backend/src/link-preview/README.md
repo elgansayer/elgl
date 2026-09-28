@@ -9,7 +9,8 @@ app can render rich link cards inside chat messages and other surfaces.
 
 The HTTP endpoint is authenticated with `SupabaseAuthGuard` and is limited to
 30 requests per minute by the NestJS throttler. Internal backend callers such
-as `ChatService` continue to call `LinkPreviewService` directly.
+as `ChatService` continue to call `LinkPreviewService` directly, so normal chat
+delivery does not make an extra HTTP request.
 
 Returns a `LinkPreview` object:
 
@@ -64,6 +65,10 @@ returns `null`.
 URL found in a text message and stores the result on the published
 `ChatMessage.link_preview` field. The Angular `LinkPreviewCardComponent` then
 renders that typed metadata as ordinary text and safe link/image attributes.
+Unsafe destination/image URLs are suppressed in the component as a final
+browser-side defence. If a remote preview image fails to load, only the image
+is removed; the text/link card remains usable and a later replacement image can
+render normally.
 
 Preview scraping is best effort for chat delivery. A cache outage does not
 prevent a fresh scrape, while invalid/unreachable external URLs follow the
@@ -92,8 +97,10 @@ existing service error contract.
   handling and network error handling.
 - `link-preview.security.spec.ts`: redirect revalidation, metadata bounds and
   overlong image metadata.
-- `link-preview.controller.spec.ts`: authentication metadata, query parameter
-  validation and service delegation.
+- `link-preview.controller.spec.ts`: authenticated endpoint ownership, query
+  parameter validation and service delegation.
+- `link-preview-card.component.spec.ts`: safe external-link rendering, unsafe
+  URL suppression and broken/replacement image behaviour.
 
 ## Rollout and rollback
 
