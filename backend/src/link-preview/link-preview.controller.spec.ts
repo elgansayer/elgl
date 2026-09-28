@@ -18,7 +18,10 @@ describe('LinkPreviewController', () => {
           useValue: { getPreview: mockGetPreview },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .compile();
 
     controller = moduleRef.get<LinkPreviewController>(LinkPreviewController);
   });
