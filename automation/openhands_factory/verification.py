@@ -385,18 +385,15 @@ def commands_for(
     # changed backend/ has no way to affect frontend's or automation's own
     # suite, so re-running them every retry was pure waste. The cross-cutting
     # governance checks (constitution, design-sync, migration-delta, etc.)
-    # stay unconditional; they inspect the whole tree by design. If a diff
-    # touches none of the four workspaces below - a root-level or workflow
-    # file, say - fall back to running everything rather than silently
-    # verifying nothing.
+    # stay unconditional; they inspect the whole tree by design. GitHub's
+    # required CI remains the full-suite merge gate. This local pass is a fast
+    # preflight, so workspace lint and tests are narrowed to changed files.
     touches_automation = _touches(changed_paths, "automation")
     touches_frontend = _touches(changed_paths, "frontend")
     touches_frontend_directly = touches_frontend
     touches_backend = _touches(changed_paths, "backend")
     touches_admin = _touches(changed_paths, "admin-portal")
     touches_playwright = _touches(changed_paths, "e2e")
-    if not (touches_automation or touches_frontend or touches_backend or touches_admin):
-        touches_automation = touches_frontend = touches_backend = touches_admin = True
     commands = [
         VerificationCommand("constitution", ("npm", "run", "check:constitution"), repository),
         VerificationCommand(
@@ -491,20 +488,46 @@ def commands_for(
             ]
         )
     if touches_frontend:
-        for script in (
-            "check:control-flow",
-            "check:template-bindings",
-            "check:rtl-logical",
-            "lint:check",
-            "build",
-            "test",
-        ):
+        for script in ("check:control-flow", "check:template-bindings", "check:rtl-logical"):
             commands.append(
                 VerificationCommand(
                     f"frontend-{script}",
                     ("npm", "run", script),
                     repository / "frontend",
-                    exclusive=script in {"lint:check", "build", "test"},
+                )
+            )
+        frontend_typescript = sorted(
+            str(path.relative_to("frontend"))
+            for path in changed_paths
+            if path.suffix == ".ts" and (repository / path).is_file()
+        )
+        if frontend_typescript:
+            commands.append(
+                VerificationCommand(
+                    "frontend-lint:check",
+                    ("npm", "exec", "--", "eslint", *frontend_typescript),
+                    repository / "frontend",
+                    exclusive=True,
+                )
+            )
+        commands.append(
+            VerificationCommand(
+                "frontend-build",
+                ("npm", "run", "build"),
+                repository / "frontend",
+                exclusive=True,
+            )
+        )
+        if frontend_typescript:
+            include_arguments = tuple(
+                argument for path in frontend_typescript for argument in ("--include", path)
+            )
+            commands.append(
+                VerificationCommand(
+                    "frontend-test",
+                    ("npm", "test", "--", "--watch=false", *include_arguments),
+                    repository / "frontend",
+                    exclusive=True,
                 )
             )
     if touches_frontend_directly:
@@ -516,37 +539,37 @@ def commands_for(
             and path.suffix in {".js", ".ts"}
             and (repository / path).is_file()
         )
-        cypress_specs = changed_cypress_specs or ["cypress/e2e/cypress-setup.cy.ts"]
-        commands.append(
-            VerificationCommand(
-                "frontend-e2e",
-                (
-                    "bash",
-                    "-lc",
-                    "npm start -- --host 127.0.0.1 >/tmp/factory-angular-e2e.log 2>&1 & "
-                    "server_pid=$!; trap 'kill \"$server_pid\" 2>/dev/null || true' EXIT; "
-                    # 180s, not 60s: a cold Angular compile can genuinely take longer
-                    # than a minute under load. Poll the process itself too, so a
-                    # server that crashes immediately fails fast with its own log
-                    # output instead of silently exhausting the full wait and then
-                    # failing a second time, confusingly, inside npm run e2e against
-                    # a server that was never coming up.
-                    "for attempt in $(seq 1 180); do "
-                    'if ! kill -0 "$server_pid" 2>/dev/null; then '
-                    "echo 'dev server exited before becoming ready:' >&2; "
-                    "tail -n 50 /tmp/factory-angular-e2e.log >&2; exit 1; fi; "
-                    "curl -fsS http://127.0.0.1:4200 >/dev/null 2>&1 && break; sleep 1; "
-                    'if [ "$attempt" = 180 ]; then '
-                    "echo 'dev server did not become ready within 180s:' >&2; "
-                    "tail -n 50 /tmp/factory-angular-e2e.log >&2; exit 1; fi; "
-                    'done; npm run e2e -- --spec "$1"',
-                    "factory-frontend-e2e",
-                    ",".join(cypress_specs),
-                ),
-                repository / "frontend",
-                exclusive=True,
+        if changed_cypress_specs:
+            commands.append(
+                VerificationCommand(
+                    "frontend-e2e",
+                    (
+                        "bash",
+                        "-lc",
+                        "npm start -- --host 127.0.0.1 >/tmp/factory-angular-e2e.log 2>&1 & "
+                        "server_pid=$!; trap 'kill \"$server_pid\" 2>/dev/null || true' EXIT; "
+                        # 180s, not 60s: a cold Angular compile can genuinely take longer
+                        # than a minute under load. Poll the process itself too, so a
+                        # server that crashes immediately fails fast with its own log
+                        # output instead of silently exhausting the full wait and then
+                        # failing a second time, confusingly, inside npm run e2e against
+                        # a server that was never coming up.
+                        "for attempt in $(seq 1 180); do "
+                        'if ! kill -0 "$server_pid" 2>/dev/null; then '
+                        "echo 'dev server exited before becoming ready:' >&2; "
+                        "tail -n 50 /tmp/factory-angular-e2e.log >&2; exit 1; fi; "
+                        "curl -fsS http://127.0.0.1:4200 >/dev/null 2>&1 && break; sleep 1; "
+                        'if [ "$attempt" = 180 ]; then '
+                        "echo 'dev server did not become ready within 180s:' >&2; "
+                        "tail -n 50 /tmp/factory-angular-e2e.log >&2; exit 1; fi; "
+                        'done; npm run e2e -- --spec "$1"',
+                        "factory-frontend-e2e",
+                        ",".join(changed_cypress_specs),
+                    ),
+                    repository / "frontend",
+                    exclusive=True,
+                )
             )
-        )
     if touches_playwright:
         commands.append(
             VerificationCommand(
@@ -556,18 +579,85 @@ def commands_for(
             )
         )
     if touches_backend:
-        for script in ("lint:check", "build", "test", "test:e2e"):
+        backend_typescript = sorted(
+            str(path.relative_to("backend"))
+            for path in changed_paths
+            if path.suffix == ".ts" and (repository / path).is_file()
+        )
+        if backend_typescript:
             commands.append(
                 VerificationCommand(
-                    f"backend-{script}", ("npm", "run", script), repository / "backend"
+                    "backend-lint:check",
+                    ("npm", "exec", "--", "eslint", *backend_typescript),
+                    repository / "backend",
+                )
+            )
+        commands.append(
+            VerificationCommand("backend-build", ("npm", "run", "build"), repository / "backend")
+        )
+        backend_unit_inputs = [
+            path for path in backend_typescript if not path.endswith(".e2e-spec.ts")
+        ]
+        if backend_unit_inputs:
+            commands.append(
+                VerificationCommand(
+                    "backend-test",
+                    (
+                        "npm",
+                        "exec",
+                        "--",
+                        "vitest",
+                        "related",
+                        *backend_unit_inputs,
+                        "--run",
+                        "--passWithNoTests",
+                    ),
+                    repository / "backend",
+                )
+            )
+        backend_e2e_specs = [path for path in backend_typescript if path.endswith(".e2e-spec.ts")]
+        if backend_e2e_specs:
+            commands.append(
+                VerificationCommand(
+                    "backend-test:e2e",
+                    (
+                        "npm",
+                        "exec",
+                        "--",
+                        "vitest",
+                        "run",
+                        "--config",
+                        "vitest.e2e.config.mts",
+                        *backend_e2e_specs,
+                    ),
+                    repository / "backend",
                 )
             )
     if touches_admin:
-        for script in ("lint:check", "build", "test"):
+        admin_typescript = sorted(
+            str(path.relative_to("admin-portal"))
+            for path in changed_paths
+            if path.suffix == ".ts" and (repository / path).is_file()
+        )
+        if admin_typescript:
             commands.append(
                 VerificationCommand(
-                    f"admin-{script}",
-                    ("npm", "run", script),
+                    "admin-lint:check",
+                    ("npm", "exec", "--", "eslint", *admin_typescript),
+                    repository / "admin-portal",
+                )
+            )
+        commands.append(
+            VerificationCommand("admin-build", ("npm", "run", "build"), repository / "admin-portal")
+        )
+        if admin_typescript:
+            include_arguments = tuple(
+                argument for path in admin_typescript for argument in ("--include", path)
+            )
+            commands.append(
+                VerificationCommand(
+                    "admin-test",
+                    ("npm", "test", "--", "--watch=false", *include_arguments),
                     repository / "admin-portal",
                 )
             )

@@ -47,6 +47,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 CI_POLL_INTERVAL = timedelta(minutes=1)
+CONFLICTING_MERGE_STATES = {"DIRTY"}
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -1101,9 +1102,17 @@ class FactoryPipeline:
                 )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner)
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.merge_state_status == "BEHIND":
                 self._update_pull_request_branch(job, status)
+            elif (
+                status.mergeable == "CONFLICTING"
+                or status.merge_state_status in CONFLICTING_MERGE_STATES
+            ):
+                # A conflicting PR can still report pending checks, especially
+                # when CI never starts for an unmergeable head. Conflict evidence
+                # must win or the same PR is polled forever without repair.
+                job.state = JobState.REPAIRING
             elif status.failed_checks:
                 # A pending status can coexist with a terminal failure. In
                 # particular, the Factory's own review context stays pending while
@@ -1148,12 +1157,20 @@ class FactoryPipeline:
                 job.state = JobState.MERGED
                 return
             if job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner)
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
                 return
-            if not status.failed_checks and (
-                status.checks_pending
-                or (status.checks_passed and status.mergeable == "MERGEABLE")
-                or status.mergeable == "UNKNOWN"
+            base_conflict = (
+                status.mergeable == "CONFLICTING"
+                or status.merge_state_status in CONFLICTING_MERGE_STATES
+            )
+            if (
+                not base_conflict
+                and not status.failed_checks
+                and (
+                    status.checks_pending
+                    or (status.checks_passed and status.mergeable == "MERGEABLE")
+                    or status.mergeable == "UNKNOWN"
+                )
             ):
                 job.state = JobState.CI_PENDING
                 job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
@@ -1163,15 +1180,25 @@ class FactoryPipeline:
             repair_context = (
                 "GitHub evidence for the current reviewed head:\n\n"
                 f"Failed checks:\n{evidence}\n"
-                f"Mergeability: {status.mergeable}"
+                f"Mergeability: {status.mergeable}\n"
+                f"Merge state: {status.merge_state_status or 'not reported'}"
             )
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM
             # call if the worktree is still unchanged afterwards.
-            attempt_mechanical_repair(worktree)
-            mechanically_repaired = workflow.has_changes()
-            if not mechanically_repaired:
+            has_unmerged_paths = False
+            if base_conflict:
+                has_unmerged_paths = workflow.merge_base_for_repair()
+                repair_context += (
+                    "\nThe current base branch has been merged into this isolated "
+                    "worktree. Resolve every unmerged path and preserve both intended "
+                    "behaviours before verification."
+                )
+            else:
+                attempt_mechanical_repair(worktree)
+            mechanically_repaired = not base_conflict and workflow.has_changes()
+            if has_unmerged_paths or (not base_conflict and not mechanically_repaired):
                 self._run_agent(
                     job,
                     worktree,
@@ -1183,9 +1210,13 @@ class FactoryPipeline:
             verified_paths = self._verify(workflow)
             workflow.stage_all()
             commit_subject = (
-                "fix: apply automatic formatting for"
-                if mechanically_repaired
-                else "fix: repair CI for"
+                "fix: resolve base conflicts for"
+                if base_conflict
+                else (
+                    "fix: apply automatic formatting for"
+                    if mechanically_repaired
+                    else "fix: repair CI for"
+                )
             )
             workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
@@ -1235,7 +1266,7 @@ class FactoryPipeline:
                 )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner)
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.merge_state_status == "BEHIND":
                 self._update_pull_request_branch(job, status)
             elif (
@@ -1267,7 +1298,7 @@ class FactoryPipeline:
                     )
                     job.state = JobState.MERGED
                 elif confirmed.head_sha != job.head_sha:
-                    self._refresh_pull_request_for_review(job, worktree, lease_owner)
+                    self._refresh_pull_request_for_review(job, worktree, lease_owner, confirmed)
             return
 
         if job.state is JobState.MERGED:
@@ -1450,6 +1481,12 @@ class FactoryPipeline:
             self._update_pull_request_branch(job, status)
             job.state = JobState.CI_PENDING
             return
+        if (
+            status.mergeable == "CONFLICTING"
+            or status.merge_state_status in CONFLICTING_MERGE_STATES
+        ):
+            job.state = JobState.REPAIRING
+            return
         verified_paths = self._verify_or_schedule_quality_repair(
             job,
             self._workflow(worktree),
@@ -1502,6 +1539,7 @@ class FactoryPipeline:
         job: Job,
         worktree: Path,
         lease_owner: str,
+        known_status: PullRequestStatus | None = None,
     ) -> None:
         """Invalidate stale review provenance and rebuild at the current remote head."""
         if job.pull_request is None:
@@ -1538,6 +1576,17 @@ class FactoryPipeline:
             detail="Factory pull request refresh in progress",
         )
         job.review_findings.clear()
+        status = known_status or self._status(job)
+        if status.merge_state_status == "BEHIND":
+            self._update_pull_request_branch(job, status)
+            job.state = JobState.CI_PENDING
+            return
+        if (
+            status.mergeable == "CONFLICTING"
+            or status.merge_state_status in CONFLICTING_MERGE_STATES
+        ):
+            job.state = JobState.REPAIRING
+            return
         verified_paths = self._verify_or_schedule_quality_repair(
             job,
             self._workflow(worktree),
@@ -1564,7 +1613,7 @@ class FactoryPipeline:
         if job.head_sha == status.head_sha:
             return False
 
-        self._refresh_pull_request_for_review(job, worktree, lease_owner)
+        self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
         return True
 
     def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> None:

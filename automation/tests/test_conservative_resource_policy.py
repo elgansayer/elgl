@@ -19,6 +19,7 @@ from openhands_factory.agents.conservative import ConservativeAgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import ReviewAdmissionGate
+from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
 
@@ -119,6 +120,41 @@ def test_conservative_router_limits_one_phase_to_primary_plus_one_fallback(
     assert first.calls == 1
     assert second.calls == 1
     assert third.calls == 0
+
+
+def test_conservative_router_prefers_observed_phase_completions(tmp_path: Path) -> None:
+    providers = [Provider("first"), Provider("second"), Provider("third")]
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    for index in range(10):
+        metrics.record(
+            "first",
+            "model",
+            phase=AgentPhase.IMPLEMENTATION.value,
+            successful=index == 0,
+        )
+        metrics.record(
+            "second",
+            "model",
+            phase=AgentPhase.IMPLEMENTATION.value,
+            successful=index < 8,
+        )
+        metrics.record(
+            "third",
+            "model",
+            phase=AgentPhase.IMPLEMENTATION.value,
+            successful=index < 4,
+        )
+    router = ConservativeAgentRouter(
+        providers,
+        policy=OrderedPolicy(["first", "third", "second"]),
+        metrics_store=metrics,
+        enabled=True,
+    )
+    job = Job(Task("42", "Issue", "Body", "github-issue", 0))
+
+    candidates, _ = router._candidate_names(AgentPhase.IMPLEMENTATION, job)
+
+    assert candidates == ["second", "third"]
 
 
 def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Path) -> None:
