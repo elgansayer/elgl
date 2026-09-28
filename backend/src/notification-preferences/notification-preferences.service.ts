@@ -2,13 +2,44 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
+export interface CategoryPreference {
+  push?: boolean;
+  email?: boolean;
+  in_app?: boolean;
+  badges?: boolean;
+}
+
+export interface NotificationPreferencesRecord {
+  id?: string;
+  user_id: string;
+  new_message?: CategoryPreference;
+  call_invite?: CategoryPreference;
+  moment_like?: CategoryPreference;
+  moment_comment?: CategoryPreference;
+  correction?: CategoryPreference;
+  gift?: CategoryPreference;
+  profile_view?: CategoryPreference;
+  study_reminder?: CategoryPreference;
+  friend_request?: CategoryPreference;
+  audio_room_invite?: CategoryPreference;
+  new_follower?: CategoryPreference;
+  quiet_hours_start?: string | null;
+  quiet_hours_end?: string | null;
+  do_not_disturb?: boolean;
+  customToneUrl?: string | null;
+  vibrationPattern?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
 @Injectable()
 export class NotificationPreferencesService {
   private readonly table = 'notification_preferences';
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getPreferences(userId: string): Promise<any> {
+  async getPreferences(userId: string): Promise<NotificationPreferencesRecord> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
@@ -28,11 +59,13 @@ export class NotificationPreferencesService {
   async updatePreferences(
     userId: string,
     dto: UpdateNotificationPreferencesDto,
-  ): Promise<any> {
+  ): Promise<NotificationPreferencesRecord> {
     return this.upsertPreferences(userId, dto);
   }
 
-  async resetToDefaults(userId: string): Promise<any> {
+  async resetToDefaults(
+    userId: string,
+  ): Promise<NotificationPreferencesRecord> {
     const defaults = this.getDefaultPreferences(userId);
     return this.upsertPreferences(userId, defaults);
   }
@@ -40,7 +73,7 @@ export class NotificationPreferencesService {
   private async upsertPreferences(
     userId: string,
     changes: object,
-  ): Promise<any> {
+  ): Promise<NotificationPreferencesRecord> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)

@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 
+interface UserInterestRow {
+  interest?: { name?: string | null } | null;
+}
+
 @Injectable()
 export class ConversationStarterService {
   constructor(
@@ -47,17 +51,23 @@ export class ConversationStarterService {
       .eq('user_id', partnerId);
 
     let interests: string[] = [];
-    if (!interestsError && interestsData && interestsData.length > 0) {
+    if (
+      !interestsError &&
+      Array.isArray(interestsData) &&
+      interestsData.length > 0
+    ) {
       interests = interestsData
-        .map((row: any) => row.interest?.name)
-        .filter((name: string | null | undefined): name is string => !!name);
+        .map((row) => (row as UserInterestRow)?.interest?.name)
+        .filter((name: string | null | undefined): name is string =>
+          Boolean(name),
+        );
     }
 
     const interestsStr =
       interests.length > 0 ? `- Interests: ${interests.join(', ')}` : '';
 
     const promptLines: string[] = [
-      'You are a friendly language‑exchange assistant. Based on the following user profile, generate exactly three short, natural conversation‑starter questions (one per line). The questions should help a language‑exchange partner begin a chat.',
+      'You are a friendly language-exchange assistant. Based on the following user profile, generate exactly three short, natural conversation-starter questions (one per line). The questions should help a language-exchange partner begin a chat.',
       `- Name: ${displayName}`,
       `- Native language: ${nativeLang}`,
       `- Target languages: ${targetLangs}`,
@@ -96,7 +106,7 @@ export class ConversationStarterService {
       );
       if (bio) {
         fallbackQuestions.push(
-          `I saw your bio says "${bio.slice(0, 50)}" – that sounds interesting!`,
+          `I saw your bio says "${bio.slice(0, 50)}" - that sounds interesting!`,
         );
       } else {
         fallbackQuestions.push('What do you enjoy doing in your free time?');
