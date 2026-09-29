@@ -1,8 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const backendHealthUrl =
-  process.env.E2E_BACKEND_HEALTH_URL ?? 'http://127.0.0.1:3000/api/health';
+const backendHealthUrl = process.env.E2E_BACKEND_HEALTH_URL ?? 'http://127.0.0.1:3000/api/health';
 const frontendUrl = 'http://127.0.0.1:4200';
+const frontendWebServerCommand = process.env.CI
+  ? 'node ./backend-readiness.mjs && cd ../frontend && npm run build && npm run start -- --host 127.0.0.1'
+  : 'node ./backend-readiness.mjs && cd ../frontend && npm run start -- --host 127.0.0.1';
 
 export default defineConfig({
   testDir: './tests',
@@ -63,8 +65,7 @@ export default defineConfig({
       // Playwright launches array entries concurrently. Gate Angular on NestJS
       // readiness so SSR HttpClient requests cannot race the backend boot and
       // flood QA output with undici AggregateError/ECONNREFUSED failures.
-      command:
-        'node ./backend-readiness.mjs && cd ../frontend && npm run start -- --host 127.0.0.1',
+      command: frontendWebServerCommand,
       url: frontendUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 300000,
