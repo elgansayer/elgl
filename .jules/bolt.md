@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2024-09-27 - [Optimize Lifetime Counts by using exact count]
+**Learning:** Using `.select('id')` to fetch full rows over the network just to determine their length creates N+1 latency, wastes memory, and causes bottleneck for operations aggregating multiple queries, like fetching stats.
+**Action:** When determining the length of rows, use `.select('*', { count: 'exact', head: true })` instead and extract `count` from the response. This asks Supabase for only the headers and row count instead of transferring any body data.
