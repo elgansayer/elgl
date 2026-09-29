@@ -712,11 +712,11 @@ describe('MonetisationService', () => {
             status: 'active',
             metadata: { userId: 'user-1' },
             cancel_at_period_end: false,
-            current_period_end: 1893456000,
             customer: 'cus_1',
             items: {
               data: [
                 {
+                  current_period_end: 1893456000,
                   price: {
                     unit_amount: 800,
                     currency: 'gbp',
