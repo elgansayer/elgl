@@ -19,13 +19,7 @@ services:
       - cache
       - websocket
     healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          'require("http").get("http://localhost:3000/api/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})',
-        ]
+      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/api/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -88,26 +82,19 @@ services:
     restart: always
     command: --config /livekit/config.yaml
     environment:
-      - 'LIVEKIT_KEYS=${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}: ${LIVEKIT_SECRET:?LIVEKIT_SECRET is required}'
-      - 'LIVEKIT_TURN_ENABLED=true'
-      - 'LIVEKIT_TURN_DOMAIN=${LIVEKIT_TURN_DOMAIN:?LIVEKIT_TURN_DOMAIN is required}'
-      - 'LIVEKIT_TURN_TLS_PORT=443'
-      - 'LIVEKIT_TURN_UDP_PORT=3478'
-      - 'LIVEKIT_TURN_EXTERNAL_TLS=false'
-      - 'LIVEKIT_TURN_CERT_FILE=/run/secrets/livekit_turn_cert'
-      - 'LIVEKIT_TURN_KEY_FILE=/run/secrets/livekit_turn_key'
-      - 'LIVEKIT_RTC_STUN_SERVERS=${LIVEKIT_RTC_STUN_SERVERS:-stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302}'
+      - LIVEKIT_TURN_ENABLED=true
+      - LIVEKIT_TURN_DOMAIN=${LIVEKIT_TURN_DOMAIN:-turn.example.com}
+      - LIVEKIT_TURN_TLS_PORT=5349
+      - LIVEKIT_TURN_UDP_PORT=3478
+      - LIVEKIT_RTC_STUN_SERVERS=stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
     ports:
       - '7880:7880'
       - '7881:7881'
       - '3478:3478/udp'
-      - '443:443'
-      - '58000-58100:58000-58100/udp'
+      - '5349:5349'
+      - '50000-60000:50000-60000/udp'
     volumes:
-      - ./config/livekit:/livekit:ro
-    secrets:
-      - livekit_turn_cert
-      - livekit_turn_key
+      - ./config/livekit:/livekit
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:7880/']
       interval: 30s
@@ -121,7 +108,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/consoles'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     ports:
@@ -166,9 +153,3 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
-
-secrets:
-  livekit_turn_cert:
-    file: ${LIVEKIT_TURN_CERT_FILE:?LIVEKIT_TURN_CERT_FILE is required}
-  livekit_turn_key:
-    file: ${LIVEKIT_TURN_KEY_FILE:?LIVEKIT_TURN_KEY_FILE is required}
