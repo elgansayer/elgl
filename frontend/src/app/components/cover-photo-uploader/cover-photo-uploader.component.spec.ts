@@ -100,6 +100,9 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.selectedFile()).toBeNull();
     expect(component.imageSource()).toBeNull();
     expect(component.uploadError()).toBe(true);
+
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Error');
   });
 
   it('rejects empty and oversized source files before reading them into memory', () => {

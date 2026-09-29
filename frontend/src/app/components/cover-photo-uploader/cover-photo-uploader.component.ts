@@ -115,16 +115,16 @@ const MAX_COVER_IMAGE_BYTES = 25 * 1024 * 1024;
             {{ 'common.cancel' | t }}
           </button>
         </div>
-
-        <div class="mt-2 min-h-5 text-sm" aria-live="polite" aria-atomic="true">
-          @if (isUploading()) {
-            <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
-          }
-          @if (uploadError()) {
-            <p role="alert" class="text-danger">{{ 'common.error' | t }}</p>
-          }
-        </div>
       }
+
+      <div class="mt-2 min-h-5 text-sm" aria-live="polite" aria-atomic="true">
+        @if (isUploading()) {
+          <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
+        }
+        @if (uploadError()) {
+          <p role="alert" class="text-danger">{{ 'common.error' | t }}</p>
+        }
+      </div>
 
       @if (isCropping() && selectedFile()) {
         <app-cover-photo-cropper
