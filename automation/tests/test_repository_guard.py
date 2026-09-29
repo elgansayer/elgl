@@ -19,6 +19,14 @@ from openhands_factory.repository_guard import (
 
 def _process_alive(pid: int) -> bool:
     try:
+        status_path = Path(f"/proc/{pid}/status")
+        if status_path.exists():
+            for line in status_path.read_text().splitlines():
+                if line.startswith("State:"):
+                    return line.split()[1] != "Z"
+    except OSError:
+        pass
+    try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False

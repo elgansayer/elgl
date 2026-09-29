@@ -1,0 +1,36 @@
+name: Keyboard Interaction Contract
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  keyboard-interaction-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      KEYBOARD_INTERACTION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify keyboard interaction migration contract
+        run: npm run check:keyboard-interaction-contract
+
+      - name: Verify focus presentation in light and dark themes
+        run: npm run check:focus-ring-contract
+
+      - name: Verify RTL logical layout contract
+        run: npm run check:rtl-logical-contract

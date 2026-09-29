@@ -92,7 +92,7 @@ describe('CoinsCancelComponent', () => {
     const backLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
 
     expect(backLink).toBeTruthy();
-    expect(backLink.getAttribute('href')).toBe('/dashboard');
+    expect(backLink.getAttribute('href')).toBe('/coin-economy');
     expect(backLink.getAttribute('size')).toBe('touch');
     expect(backLink.hasAttribute('role')).toBe(false);
     expect(backLink.hasAttribute('tabindex')).toBe(false);

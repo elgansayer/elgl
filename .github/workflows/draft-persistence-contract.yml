@@ -3,8 +3,22 @@ name: Draft Persistence Contract
 on:
   push:
     branches: [main, develop]
+    paths:
+      - 'frontend/src/app/services/draft.service.ts'
+      - 'frontend/src/app/services/draft.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.component.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/draft-persistence-contract.test.mjs'
+      - '.github/workflows/draft-persistence-contract.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'frontend/src/app/services/draft.service.ts'
+      - 'frontend/src/app/services/draft.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.component.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/draft-persistence-contract.test.mjs'
+      - '.github/workflows/draft-persistence-contract.yml'
   merge_group:
     types: [checks_requested]
 
