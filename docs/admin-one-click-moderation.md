@@ -8,9 +8,9 @@ The Admin Users screen exposes two direct moderation actions for each loaded use
 
 `POST /admin/users/:id/warn` creates an authoritative open `admin_warning` report. `POST /admin/users/:id/ban` creates the existing admin-to-user block record used by the current moderation model. Both endpoints are protected by `SupabaseAuthGuard`, `AdminGuard`, and the `moderation.cases.manage` capability, use private no-store responses, and are throttled to five requests per minute.
 
-This issue does not introduce a second moderation persistence model or client-side mock success path. The existing backend remains authoritative.
+This issue does not introduce an alternative moderation persistence model or optimistic client-only success path. The existing backend remains authoritative.
 
-## Failure and retry behavior
+## Failure and retry behaviour
 
 The UI keeps the action pending until the request settles and releases the pending state in `finally`, so a failed request can be retried. Failures are sent through the existing crash-report/error-handler path rather than being represented as success. Offline actions remain disabled.
 
@@ -20,7 +20,7 @@ The backend records success/failure metrics. A successful warning invalidates us
 
 The browser never supplies an administrator identity. The authenticated request principal is passed to the service by the controller, while the target ID comes from the protected route. Both mutation endpoints require `moderation.cases.manage` in addition to the repository's normal admin guard.
 
-No privileged mutation is available through an offline/mock fallback. Moderation responses are marked private/no-store and rate limited to reduce accidental or abusive repeated actions.
+No privileged mutation is available through an offline fallback or bypass. Moderation responses are marked private/no-store and rate limited to reduce accidental or abusive repeated actions.
 
 ## Accessibility
 
@@ -34,4 +34,4 @@ The repository's normal frontend unit suite, backend unit/lint/build/E2E suite, 
 
 ## Rollback
 
-This change adds regression coverage and documentation around the already-shipped moderation path; it does not change schema or API response shapes. Rollback is a normal revert of the contract/documentation commit. Do not replace the protected backend mutations with client-side mock moderation state.
+This change adds regression coverage and documentation around the already-shipped moderation path; it does not change schema or API response shapes. Rollback is a normal revert of the contract/documentation commit. The protected backend mutations remain the authoritative moderation state.
