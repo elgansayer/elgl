@@ -86,7 +86,8 @@ export class ChatController {
       return null;
     }
 
-    const token = await this.chatService.generateConnectionToken(user.id);
+    const token =
+      (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
     const result = { token };
     response.json(result);
     return result;

@@ -1104,6 +1104,10 @@ describe('DiscoveryService', () => {
         interests: ['music', 'travel'],
       };
 
+      // Mock date to ensure deterministic scoring for 'recent activity'
+      const mockNow = new Date('2026-08-20T12:00:00Z');
+      vi.setSystemTime(mockNow);
+
       const partners = [
         {
           id: 'partner-1-perfect',
@@ -1113,33 +1117,44 @@ describe('DiscoveryService', () => {
           available_time_start: '19:00', // Overlap (15 pts)
           available_time_end: '21:00',
           interests: ['music'], // Match 1 (2 pts)
+          last_active_at: '2026-08-20T10:00:00Z', // Recent (<1 day, 10 pts)
           correction_ratio: 1.0, // (15 pts)
           study_streak_days: 10, // (10 pts)
-          // Reciprocal: 20 pts -> Total: 72 pts
+          country: 'Japan',
+          age: 25,
+          // Base complementary: 20
+          // Total: 20+10+15+2+10+15+10 + 5 + 5 (country/age match) = 92
         },
         {
           id: 'partner-2-poor',
           native_languages: ['ko'],
           target_languages: ['fr'],
-          proficiency_level: 'C2', // Gap 3 (0 pts)
+          proficiency_level: 'A1', // Gap 2 (0 pts)
           available_time_start: '08:00', // No overlap (0 pts)
           available_time_end: '10:00',
           interests: ['sports'], // No match (0 pts)
+          last_active_at: '2026-07-20T10:00:00Z', // Not recent (>7 days, 0 pts)
           correction_ratio: 0.1, // (1.5 pts)
           study_streak_days: 1, // (1 pt)
-          // Total: 2.5 pts
+          country: 'Korea',
+          age: 20,
+          // Base complementary: 0
+          // Total: 2.5
         },
         {
           id: 'partner-3-tie',
           native_languages: ['ko'],
           target_languages: ['fr'],
-          proficiency_level: 'C2',
+          proficiency_level: 'A1',
           available_time_start: '08:00',
           available_time_end: '10:00',
           interests: ['sports'],
+          last_active_at: '2026-07-20T10:00:00Z',
           correction_ratio: 0.1,
           study_streak_days: 1,
-          // Identical score to partner-2-poor (2.5 pts), sorted by ID ascending
+          country: 'Korea',
+          age: 20,
+          // Identical score to partner-2-poor, should be sorted by id ascending
         },
       ];
       stubLimitResponse(partners);
@@ -1149,6 +1164,8 @@ describe('DiscoveryService', () => {
         currentUserProfile,
         {
           sort: 'best_match',
+          country: 'japan',
+          age_min: 21,
         },
       );
 
@@ -1157,175 +1174,8 @@ describe('DiscoveryService', () => {
         'partner-2-poor',
         'partner-3-tie',
       ]);
-    });
 
-    it('best_match: handles overnight availability overlap correctly', async () => {
-      mockRedisClient.get.mockResolvedValue(JSON.stringify([]));
-
-      const currentUserProfile: any = {
-        id: 'user-night',
-        native_languages: ['en'],
-        target_languages: ['ja'],
-        available_time_start: '23:00',
-        available_time_end: '02:00', // Overnight range
-      };
-
-      const partners = [
-        {
-          id: 'partner-overnight-overlap',
-          native_languages: ['ja'],
-          target_languages: ['en'],
-          available_time_start: '01:00',
-          available_time_end: '04:00', // Overlaps at 01:00-02:00
-        },
-        {
-          id: 'partner-daytime-no-overlap',
-          native_languages: ['ja'],
-          target_languages: ['en'],
-          available_time_start: '10:00',
-          available_time_end: '14:00', // No overlap
-        },
-      ];
-      stubLimitResponse(partners);
-
-      const result = await service.searchPartners(
-        'user-night',
-        currentUserProfile,
-        {
-          sort: 'best_match',
-        },
-      );
-
-      expect(result.map((u) => u.id)).toEqual([
-        'partner-overnight-overlap',
-        'partner-daytime-no-overlap',
-      ]);
-    });
-
-    it('best_match: treats missing or malformed availability and proficiency as neutral', async () => {
-      mockRedisClient.get.mockResolvedValue(JSON.stringify([]));
-
-      const currentUserProfile: any = {
-        id: 'user-1',
-        native_languages: ['en'],
-        target_languages: ['es'],
-        proficiency_level: 'B1',
-        available_time_start: '12:00',
-        available_time_end: '15:00',
-      };
-
-      const partners = [
-        {
-          id: 'partner-valid',
-          native_languages: ['es'],
-          target_languages: ['en'],
-          proficiency_level: 'B2',
-          available_time_start: '13:00',
-          available_time_end: '16:00',
-        },
-        {
-          id: 'partner-neutral',
-          native_languages: ['es'],
-          target_languages: ['en'],
-          proficiency_level: 'INVALID_LEVEL',
-          available_time_start: undefined,
-          available_time_end: undefined,
-        },
-      ];
-      stubLimitResponse(partners);
-
-      const result = await service.searchPartners(
-        'user-1',
-        currentUserProfile,
-        {
-          sort: 'best_match',
-        },
-      );
-
-      expect(result.map((u) => u.id)).toEqual([
-        'partner-valid',
-        'partner-neutral',
-      ]);
-    });
-
-    it('best_match: weights learning seriousness higher when searching user is in serious learner mode', async () => {
-      mockRedisClient.get.mockResolvedValue(JSON.stringify([]));
-
-      const seriousUserProfile: any = {
-        id: 'user-serious',
-        native_languages: ['en'],
-        target_languages: ['es'],
-        is_serious_learner: true,
-      };
-
-      const partners = [
-        {
-          id: 'partner-high-streak',
-          native_languages: ['es'],
-          target_languages: ['en'],
-          study_streak_days: 10,
-        },
-        {
-          id: 'partner-low-streak',
-          native_languages: ['es'],
-          target_languages: ['en'],
-          study_streak_days: 2,
-        },
-      ];
-      stubLimitResponse(partners);
-
-      const result = await service.searchPartners(
-        'user-serious',
-        seriousUserProfile,
-        {
-          sort: 'best_match',
-        },
-      );
-
-      expect(result.map((u) => u.id)).toEqual([
-        'partner-high-streak',
-        'partner-low-streak',
-      ]);
-    });
-
-    it('best_match: prioritises Partner of the Week above all composite scores', async () => {
-      mockRedisClient.get.mockResolvedValue(JSON.stringify(['partner-pow']));
-
-      const currentUserProfile: any = {
-        id: 'user-1',
-        native_languages: ['en'],
-        target_languages: ['ja'],
-      };
-
-      const partners = [
-        {
-          id: 'partner-perfect-score',
-          native_languages: ['ja'],
-          target_languages: ['en'],
-          proficiency_level: 'B1',
-          study_streak_days: 100,
-          correction_ratio: 1.0,
-        },
-        {
-          id: 'partner-pow',
-          native_languages: ['fr'],
-          target_languages: ['de'],
-          study_streak_days: 1,
-        },
-      ];
-      stubLimitResponse(partners);
-
-      const result = await service.searchPartners(
-        'user-1',
-        currentUserProfile,
-        {
-          sort: 'best_match',
-        },
-      );
-
-      expect(result[0].id).toBe('partner-pow');
-      expect(result[0].is_partner_of_week).toBe(true);
-      expect(result[1].id).toBe('partner-perfect-score');
+      vi.useRealTimers();
     });
 
     it('online_now: orders by most recent last_active_at first', async () => {

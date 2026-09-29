@@ -14,8 +14,7 @@ describe('TimelineWorker', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
-      gt: vi.fn().mockReturnThis(),
-      limit: vi.fn(),
+      range: vi.fn(),
     };
 
     mockSupabaseClient = {
@@ -60,7 +59,7 @@ describe('TimelineWorker', () => {
 
   describe('fanOutMoment', () => {
     it('fans out with retry-safe RPUSH transactions and bounded queues', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: [
           { follower_id: 'follower-1' },
           { follower_id: 'follower-1' },
@@ -83,8 +82,7 @@ describe('TimelineWorker', () => {
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('follower_id', {
         ascending: true,
       });
-      expect(mockQueryBuilder.gt).not.toHaveBeenCalled();
-      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(500);
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 499);
 
       expect(mockRedisClient.multi).toHaveBeenCalledTimes(1);
       expect(mockTransaction.lrem).toHaveBeenCalledTimes(3);
@@ -121,7 +119,7 @@ describe('TimelineWorker', () => {
     });
 
     it('queues the author when there are no followers', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+      mockQueryBuilder.range.mockResolvedValue({ data: [], error: null });
 
       await worker.fanOutMoment('moment-100', 'author-1');
 
@@ -133,7 +131,7 @@ describe('TimelineWorker', () => {
     });
 
     it('treats null follower data as a successful empty result', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({ data: null, error: null });
+      mockQueryBuilder.range.mockResolvedValue({ data: null, error: null });
 
       await worker.fanOutMoment('moment-100', 'author-1');
 
@@ -143,11 +141,11 @@ describe('TimelineWorker', () => {
       );
     });
 
-    it('uses a follower-id cursor for large follower sets', async () => {
+    it('paginates large follower sets instead of relying on an unbounded query', async () => {
       const firstPage = Array.from({ length: 500 }, (_, index) => ({
         follower_id: `follower-${String(index).padStart(3, '0')}`,
       }));
-      mockQueryBuilder.limit
+      mockQueryBuilder.range
         .mockResolvedValueOnce({ data: firstPage, error: null })
         .mockResolvedValueOnce({
           data: [{ follower_id: 'follower-500' }],
@@ -156,59 +154,20 @@ describe('TimelineWorker', () => {
 
       await worker.fanOutMoment('moment-100', 'author-1');
 
-      expect(mockQueryBuilder.limit).toHaveBeenCalledTimes(2);
-      expect(mockQueryBuilder.limit).toHaveBeenNthCalledWith(1, 500);
-      expect(mockQueryBuilder.limit).toHaveBeenNthCalledWith(2, 500);
-      expect(mockQueryBuilder.gt).toHaveBeenCalledTimes(1);
-      expect(mockQueryBuilder.gt).toHaveBeenCalledWith(
-        'follower_id',
-        'follower-499',
-      );
+      expect(mockQueryBuilder.range).toHaveBeenNthCalledWith(1, 0, 499);
+      expect(mockQueryBuilder.range).toHaveBeenNthCalledWith(2, 500, 999);
       expect(mockRedisClient.multi).toHaveBeenCalledTimes(2);
       expect(mockTransaction.rpush).toHaveBeenCalledTimes(502);
     });
 
-    it('fails safely instead of looping when a full page does not advance its cursor', async () => {
-      const repeatedPage = Array.from({ length: 500 }, () => ({
-        follower_id: 'follower-499',
-      }));
-      const firstPage = Array.from({ length: 500 }, (_, index) => ({
-        follower_id: `follower-${String(index).padStart(3, '0')}`,
-      }));
-      mockQueryBuilder.limit
-        .mockResolvedValueOnce({ data: firstPage, error: null })
-        .mockResolvedValueOnce({ data: repeatedPage, error: null });
-      const errorSpy = vi
-        .spyOn((worker as any).logger, 'error')
-        .mockImplementation(() => {});
-
-      await worker.fanOutMoment('moment-secret', 'author-secret');
-
-      expect(mockQueryBuilder.limit).toHaveBeenCalledTimes(2);
-      expect(mockQueryBuilder.gt).toHaveBeenCalledWith(
-        'follower_id',
-        'follower-499',
-      );
-      expect(errorSpy).toHaveBeenCalledWith(
-        'Timeline fan-out failed (TimelinePaginationError).',
-      );
-      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
-        'moment-secret',
-      );
-      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
-        'author-secret',
-      );
-      errorSpy.mockRestore();
-    });
-
     it('retries a failed follower lookup once before succeeding', async () => {
-      mockQueryBuilder.limit
+      mockQueryBuilder.range
         .mockResolvedValueOnce({ data: null, error: { message: 'temporary' } })
         .mockResolvedValueOnce({ data: [], error: null });
 
       await worker.fanOutMoment('moment-100', 'author-1');
 
-      expect(mockQueryBuilder.limit).toHaveBeenCalledTimes(2);
+      expect(mockQueryBuilder.range).toHaveBeenCalledTimes(2);
       expect(mockTransaction.rpush).toHaveBeenCalledWith(
         'timeline_queue:author-1',
         'moment-100',
@@ -216,7 +175,7 @@ describe('TimelineWorker', () => {
     });
 
     it('retries a failed Redis transaction without creating a second logical entry', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+      mockQueryBuilder.range.mockResolvedValue({ data: [], error: null });
       mockTransaction.exec
         .mockResolvedValueOnce([[new Error('temporary'), null]])
         .mockResolvedValueOnce([]);
@@ -230,7 +189,7 @@ describe('TimelineWorker', () => {
     });
 
     it('logs only a sanitized failure classification after follower lookup failure', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'database host and credentials' },
       });
@@ -240,11 +199,9 @@ describe('TimelineWorker', () => {
 
       await worker.fanOutMoment('moment-secret', 'author-secret');
 
-      expect(mockQueryBuilder.limit).toHaveBeenCalledTimes(2);
+      expect(mockQueryBuilder.range).toHaveBeenCalledTimes(2);
       expect(mockRedisClient.multi).not.toHaveBeenCalled();
-      expect(errorSpy).toHaveBeenCalledWith(
-        'Timeline fan-out failed (TimelineFollowerLookupError).',
-      );
+      expect(errorSpy).toHaveBeenCalledWith('Timeline fan-out failed (Error).');
       expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
         'moment-secret',
       );
@@ -256,7 +213,7 @@ describe('TimelineWorker', () => {
     });
 
     it('does not expose Redis provider details when both transaction attempts fail', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+      mockQueryBuilder.range.mockResolvedValue({ data: [], error: null });
       mockTransaction.exec.mockRejectedValue(
         new Error('redis://user:secret@private-host'),
       );
@@ -267,9 +224,7 @@ describe('TimelineWorker', () => {
       await worker.fanOutMoment('moment-secret', 'author-secret');
 
       expect(mockTransaction.exec).toHaveBeenCalledTimes(2);
-      expect(errorSpy).toHaveBeenCalledWith(
-        'Timeline fan-out failed (TimelineQueueWriteError).',
-      );
+      expect(errorSpy).toHaveBeenCalledWith('Timeline fan-out failed (Error).');
       expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
         'private-host',
       );

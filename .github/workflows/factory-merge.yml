@@ -1,17 +1,11 @@
 name: Factory Merge Gate
 
 on:
-  workflow_run:
-    # Healthy-path merging is daemon-owned. When a merge lands while the daemon is
-    # unavailable, a successful canonical main CI run is the earliest safe event
-    # that can advance the next reviewed PR without waiting for a polling window.
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
   schedule:
-    # Event-driven recovery handles ordinary main progress. Keep a sparse schedule
-    # only as a missed-event / daemon-downtime backstop.
-    - cron: '16 */6 * * *'
+    # The daemon owns normal exact-head merges. This workflow is only a recovery
+    # fallback for daemon downtime, so a ten-minute poll created runner churn
+    # without improving healthy-path merge latency.
+    - cron: '16 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -27,13 +21,6 @@ concurrency:
 
 jobs:
   merge:
-    # workflow_run can represent pull-request or merge-queue CI as well as main
-    # pushes. Only a successful push on main is authoritative recovery evidence.
-    if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
