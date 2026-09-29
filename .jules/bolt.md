@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-29 - [Batch Redis Invalidations using Promise.all]
+**Learning:** Sequential `await` calls on independent backend operations, such as calling `this.deletePattern()` iteratively inside a `for...of` loop in a NestJS event handler (like `handleUserDataCleared`), cause additive N+1 network latency against Redis.
+**Action:** Replace `for...of` loops performing sequential independent network calls with `.map()` and `Promise.all()` to fire the operations concurrently. This reduces total waiting time to roughly the longest single operation instead of the sum.
