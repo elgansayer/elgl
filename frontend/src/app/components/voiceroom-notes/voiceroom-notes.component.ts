@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { environment } from '../../../environments/environment';
 
 interface VoiceRoomNote {
@@ -28,7 +28,7 @@ interface VoiceRoomNote {
 export class VoiceroomNotesComponent {
   private readonly http = inject(HttpClient);
   private readonly i18n = inject(I18nService);
-  private readonly centrifugo = inject(CentrifugoService);
+  private readonly centrifugo = inject(CentrifugeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly apiBase = environment.apiUrl;
   private subscribedRoomId?: string;

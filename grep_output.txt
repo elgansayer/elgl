@@ -1,0 +1,29 @@
+frontend/src/app/services/centrifugo.service.ts:22:export class CentrifugoService {
+frontend/src/app/services/location.service.ts:4:import { CentrifugoService } from './centrifugo.service';
+frontend/src/app/services/location.service.ts:21:  private centrifugoService = inject(CentrifugoService);
+frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:6:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:16:  let mockCentrifugoService: ReturnType<typeof createCentrifugoMock>;
+frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:51:    mockCentrifugoService = createCentrifugoMock();
+frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:69:        { provide: CentrifugoService, useValue: mockCentrifugoService },
+frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:96:    const subscribeCallback = mockCentrifugoService.subscribe.mock.calls[0]?.[1];
+frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:128:    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+frontend/src/app/components/incoming-call/incoming-call.component.spec.ts:156:    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+frontend/src/app/components/incoming-call/incoming-call.component.ts:7:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/components/incoming-call/incoming-call.component.ts:140:  private centrifugoService = inject(CentrifugoService);
+frontend/src/app/components/live-chat-overlay/live-chat-overlay.component.spec.ts:4:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/components/live-chat-overlay/live-chat-overlay.component.spec.ts:36:        { provide: CentrifugoService, useValue: mockCentrifugo },
+frontend/src/app/components/live-chat-overlay/live-chat-overlay.component.ts:13:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/components/live-chat-overlay/live-chat-overlay.component.ts:98:  centrifugo = inject(CentrifugoService);
+frontend/src/app/components/voiceroom-notes/voiceroom-notes.component.ts:9:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/components/voiceroom-notes/voiceroom-notes.component.ts:31:  private readonly centrifugo = inject(CentrifugoService);
+frontend/src/app/components/voiceroom-notes/voiceroom-notes.component.spec.ts:9:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/components/voiceroom-notes/voiceroom-notes.component.spec.ts:29:class MockCentrifugoService {
+frontend/src/app/components/voiceroom-notes/voiceroom-notes.component.spec.ts:55:        { provide: CentrifugoService, useClass: MockCentrifugoService },
+frontend/src/app/components/soundboard/soundboard.component.ts:13:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/components/soundboard/soundboard.component.ts:91:  private readonly centrifugoService = inject(CentrifugoService);
+frontend/src/app/components/soundboard/soundboard.component.spec.ts:7:import { CentrifugoService, CentrifugoEvent } from '../../services/centrifugo.service';
+frontend/src/app/components/soundboard/soundboard.component.spec.ts:64:        { provide: CentrifugoService, useValue: { events: eventsSignal } },
+frontend/src/app/pages/chat/chat-page.component.spec.ts:10:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/pages/chat/chat-page.component.spec.ts:90:        { provide: CentrifugoService, useValue: centrifugoServiceMock },
+frontend/src/app/pages/chat/chat-page.component.ts:8:import { CentrifugoService } from '../../services/centrifugo.service';
+frontend/src/app/pages/chat/chat-page.component.ts:528:  private centrifugoService = inject(CentrifugoService);

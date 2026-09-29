@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 import { ChatPageComponent } from './chat-page.component';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -87,7 +87,7 @@ describe('ChatPageComponent', () => {
       providers: [
         { provide: ChatService, useValue: chatServiceMock },
         { provide: AuthService, useValue: authServiceMock },
-        { provide: CentrifugoService, useValue: centrifugoServiceMock },
+        { provide: CentrifugeService, useValue: centrifugoServiceMock },
         { provide: AiConversationService, useValue: aiConversationServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
       ],

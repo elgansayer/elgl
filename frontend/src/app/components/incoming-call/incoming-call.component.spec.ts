@@ -3,7 +3,7 @@ import { IncomingCallComponent } from './incoming-call.component';
 import { I18nService } from '../../services/i18n.service';
 import { UserService } from '../../services/user.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { LivekitService } from '../../services/livekit.service';
 import { SafetyService } from '../../services/safety.service';
@@ -13,7 +13,7 @@ import { vi } from 'vitest';
 describe('IncomingCallComponent', () => {
   let component: IncomingCallComponent;
   let fixture: ComponentFixture<IncomingCallComponent>;
-  let mockCentrifugoService: ReturnType<typeof createCentrifugoMock>;
+  let mockCentrifugeService: ReturnType<typeof createCentrifugoMock>;
   let mockAuthService: ReturnType<typeof createAuthMock>;
   let mockLivekitService: ReturnType<typeof createLivekitMock>;
   let mockSafetyService: ReturnType<typeof createSafetyMock>;
@@ -48,7 +48,7 @@ describe('IncomingCallComponent', () => {
   }
 
   beforeEach(async () => {
-    mockCentrifugoService = createCentrifugoMock();
+    mockCentrifugeService = createCentrifugoMock();
     mockAuthService = createAuthMock();
     mockLivekitService = createLivekitMock();
     mockSafetyService = createSafetyMock();
@@ -66,7 +66,7 @@ describe('IncomingCallComponent', () => {
       imports: [IncomingCallComponent],
       providers: [
         I18nService,
-        { provide: CentrifugoService, useValue: mockCentrifugoService },
+        { provide: CentrifugeService, useValue: mockCentrifugeService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: LivekitService, useValue: mockLivekitService },
         { provide: SafetyService, useValue: mockSafetyService },
@@ -93,7 +93,7 @@ describe('IncomingCallComponent', () => {
       isVideo: false,
     };
 
-    const subscribeCallback = mockCentrifugoService.subscribe.mock.calls[0]?.[1];
+    const subscribeCallback = mockCentrifugeService.subscribe.mock.calls[0]?.[1];
     if (subscribeCallback) {
       subscribeCallback({ type: 'incoming_call', callInfo });
     }
@@ -125,7 +125,7 @@ describe('IncomingCallComponent', () => {
       false,
       undefined,
     );
-    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+    expect(mockCentrifugeService.publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_accepted',
       data: {
         userId: 'test-user-123',
@@ -153,7 +153,7 @@ describe('IncomingCallComponent', () => {
 
     expect(component.showCallModal()).toBe(false);
     expect(emitSpy).toHaveBeenCalledWith(callInfo);
-    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+    expect(mockCentrifugeService.publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_rejected',
       data: {
         userId: 'test-user-123',
