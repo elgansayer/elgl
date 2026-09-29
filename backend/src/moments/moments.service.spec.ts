@@ -687,19 +687,19 @@ describe('MomentsService', () => {
           return {
             select: vi
               .fn()
-              .mockResolvedValue({ data: [{ id: '1' }, { id: '2' }] }),
+              .mockResolvedValue({ count: 2 }),
           };
         }
         if (table === 'moment_comments') {
           return {
             select: vi.fn().mockReturnValue({
-              not: vi.fn().mockResolvedValue({ data: [{ id: 'c-1' }] }),
+              not: vi.fn().mockResolvedValue({ count: 1 }),
             }),
           };
         }
         if (table === 'translations') {
           return {
-            select: vi.fn().mockResolvedValue({ data: [{ id: 't-1' }] }),
+            select: vi.fn().mockResolvedValue({ count: 1 }),
           };
         }
         return mockQueryBuilder;
@@ -716,18 +716,18 @@ describe('MomentsService', () => {
           return {
             select: vi
               .fn()
-              .mockResolvedValue({ data: null, error: { message: 'boom' } }),
+              .mockResolvedValue({ count: null, error: { message: 'boom' } }),
           };
         }
         if (table === 'moment_comments') {
           return {
             select: vi.fn().mockReturnValue({
-              not: vi.fn().mockResolvedValue({ data: [] }),
+              not: vi.fn().mockResolvedValue({ count: 0 }),
             }),
           };
         }
         if (table === 'translations') {
-          return { select: vi.fn().mockResolvedValue({ data: [] }) };
+          return { select: vi.fn().mockResolvedValue({ count: 0 }) };
         }
         return mockQueryBuilder;
       });
