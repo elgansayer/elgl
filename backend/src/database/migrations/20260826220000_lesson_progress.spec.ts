@@ -5,6 +5,10 @@ const MIGRATION_PATH = resolve(
   __dirname,
   '../../../../supabase/migrations/20260826220000_lesson_progress.sql',
 );
+const CLEAN_REPLAY_COMPAT_PATH = resolve(
+  __dirname,
+  '../../../../supabase/clean-replay-compat-schema.mjs',
+);
 
 function loadMigration(): string {
   return readFileSync(MIGRATION_PATH, 'utf-8');
@@ -26,6 +30,16 @@ describe('lesson progress migration (#617)', () => {
       /lesson_id uuid NOT NULL REFERENCES public\.lessons\(id\) ON DELETE CASCADE/,
     );
     expect(sql).toMatch(/PRIMARY KEY \(user_id, lesson_id\)/);
+  });
+
+  it('materialises the out-of-corpus lessons dependency during clean replay', () => {
+    const compatibility = readFileSync(CLEAN_REPLAY_COMPAT_PATH, 'utf-8');
+
+    expect(compatibility).toMatch(
+      /beforeSourceFile: '20260826220000_lesson_progress\.sql'/,
+    );
+    expect(compatibility).toMatch(/CREATE TABLE IF NOT EXISTS public\.lessons/);
+    expect(compatibility).toMatch(/id UUID PRIMARY KEY/);
   });
 
   it('bounds resume positions and indexes recent progress reads', () => {

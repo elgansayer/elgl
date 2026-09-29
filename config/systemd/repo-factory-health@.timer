@@ -1,0 +1,11 @@
+[Unit]
+Description=Continuously verify and recover Repository Factory instance %i
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Persistent=true
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

@@ -35,6 +35,7 @@ describe('App routes', () => {
       'study-buddy',
       'events',
       'events/calendar',
+      'coin-economy',
     ];
     for (const p of expected) {
       expect(paths).toContain(p);
@@ -99,5 +100,13 @@ describe('App routes', () => {
       expect(milestones.loadComponent).toBeDefined();
       expect(typeof milestones.loadComponent).toBe('function');
     }
+  });
+
+  it('should keep the wildcard route last and redirect unknown paths safely', () => {
+    const wildcard = routes[routes.length - 1];
+
+    expect(wildcard?.path).toBe('**');
+    expect(wildcard?.redirectTo).toBe('ai-conversation');
+    expect(routes.some((route) => route.path === wildcard?.redirectTo)).toBe(true);
   });
 });
