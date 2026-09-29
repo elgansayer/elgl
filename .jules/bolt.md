@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-24 - [Optimize User Profile Counters via Promise.all]
+**Learning:** Sequential Supabase count queries for `followers` and `following` introduce significant N+1 latency in user profile lookups.
+**Action:** Always fetch independent user stat aggregations concurrently via `Promise.all` in NestJS service methods.
