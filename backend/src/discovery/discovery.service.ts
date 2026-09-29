@@ -1062,115 +1062,151 @@ export class DiscoveryService {
     return sanitiseDiscoveryData(results);
   }
 
+  private hasTimeOverlap(
+    start1: string,
+    end1: string,
+    start2: string,
+    end2: string,
+  ): boolean {
+    const parseTimeToMinutes = (t: string): number => {
+      const match = /^(\d{1,2}):(\d{2})/.exec(t.trim());
+      if (!match) return -1;
+      const hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return -1;
+      return hours * 60 + minutes;
+    };
+
+    const s1 = parseTimeToMinutes(start1);
+    const e1 = parseTimeToMinutes(end1);
+    const s2 = parseTimeToMinutes(start2);
+    const e2 = parseTimeToMinutes(end2);
+
+    if (s1 < 0 || e1 < 0 || s2 < 0 || e2 < 0) return false;
+
+    const isOvernight1 = s1 > e1;
+    const isOvernight2 = s2 > e2;
+
+    if (isOvernight1 && isOvernight2) {
+      return true;
+    }
+    if (isOvernight1) {
+      return s2 <= e1 || e2 >= s1;
+    }
+    if (isOvernight2) {
+      return s1 <= e2 || e1 >= s2;
+    }
+    return s1 <= e2 && s2 <= e1;
+  }
+
   private getCompositeScore(
     u: DiscoveryUser,
     c: UserProfile,
     query: SearchQueryDto,
   ): number {
     let score = 0;
-    const uNat = u.native_languages || [];
-    const uTar = u.target_languages || [];
-    const cNat = c.native_languages || [];
-    const cTar = c.target_languages || [];
 
-    // 1. Complementary Languages (max 20 points)
-    const isComplementary =
-      uNat.some((l) => cTar.includes(l)) && uTar.some((l) => cNat.includes(l));
-    if (isComplementary) score += 20;
+    // 1. Language Compatibility (reciprocal = 20 points, one-way = 10 points)
+    const uNat = (u.native_languages || []).map((l) => l.trim().toLowerCase());
+    const uTar = (u.target_languages || []).map((l) => l.trim().toLowerCase());
+    const cNat = (c.native_languages || []).map((l) => l.trim().toLowerCase());
+    const cTar = (c.target_languages || []).map((l) => l.trim().toLowerCase());
 
-    // 2. Proficiency Level Gap (max 10 points)
-    const profOrder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const uSpeaksForC = uNat.some((l) => cTar.includes(l));
+    const cSpeaksForU = cNat.some((l) => uTar.includes(l));
+
+    if (uSpeaksForC && cSpeaksForU) {
+      score += 20;
+    } else if (uSpeaksForC || cSpeaksForU) {
+      score += 10;
+    }
+
+    // 2. Validated CEFR Proficiency Proximity (max 10 points)
+    const validCefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
     if (u.proficiency_level && c.proficiency_level) {
-      const uIndex = profOrder.indexOf(u.proficiency_level);
-      const cIndex = profOrder.indexOf(c.proficiency_level);
+      const uLevel = u.proficiency_level.trim().toUpperCase();
+      const cLevel = c.proficiency_level.trim().toUpperCase();
+      const uIndex = validCefrLevels.indexOf(uLevel);
+      const cIndex = validCefrLevels.indexOf(cLevel);
       if (uIndex !== -1 && cIndex !== -1) {
         const gap = Math.abs(uIndex - cIndex);
-        if (
-          gap <= 1 ||
-          (u.proficiency_level === 'C2' && c.proficiency_level === 'A1') ||
-          (u.proficiency_level === 'A1' && c.proficiency_level === 'C2')
-        ) {
+        if (gap <= 1) {
           score += 10;
+        } else if (gap === 2) {
+          score += 5;
         }
       }
     }
 
-    // 3. Timezone / Active Hours Overlap (max 15 points)
-    const cAvailStart = c.available_time_start;
-    const cAvailEnd = c.available_time_end;
+    // 3. Exact Availability Overlap, including overnight ranges (max 15 points)
     if (
       u.available_time_start &&
       u.available_time_end &&
-      cAvailStart &&
-      cAvailEnd
+      c.available_time_start &&
+      c.available_time_end
     ) {
-      // Handle overnight overlaps correctly
-      const overlap =
-        (u.available_time_start <= cAvailEnd &&
-          u.available_time_end >= cAvailStart) ||
-        (u.available_time_end < u.available_time_start &&
-          (u.available_time_start <= cAvailEnd ||
-            u.available_time_end >= cAvailStart)) ||
-        (cAvailEnd < cAvailStart &&
-          (cAvailStart <= u.available_time_end ||
-            cAvailEnd >= u.available_time_start));
-      if (overlap) {
+      if (
+        this.hasTimeOverlap(
+          u.available_time_start,
+          u.available_time_end,
+          c.available_time_start,
+          c.available_time_end,
+        )
+      ) {
         score += 15;
       }
-    } else {
-      // Default missing availability to zero overlap as requested
     }
 
-    // 4. Interests (max 10 points)
-    if (u.interests && c.interests) {
-      const common = u.interests.filter((i) => c.interests?.includes(i));
-      score += Math.min(10, common.length * 2);
+    // 4. Case-insensitive Shared Interests (max 10 points, 2 pts per common interest)
+    if (u.interests?.length && c.interests?.length) {
+      const uInterests = new Set(
+        u.interests.map((i) => i.trim().toLowerCase()).filter(Boolean),
+      );
+      const cInterests = new Set(
+        c.interests.map((i) => i.trim().toLowerCase()).filter(Boolean),
+      );
+      let commonCount = 0;
+      for (const item of uInterests) {
+        if (cInterests.has(item)) {
+          commonCount++;
+        }
+      }
+      score += Math.min(10, commonCount * 2);
     }
 
-    // 5. Response Behaviour (max 10 points)
-    // In our domain model, we substitute recent activity as a signal.
-    // We deterministically calculate from an assumed baseline if tests don't provide a mocked clock
-    if (u.last_active_at) {
-      // Deterministic baseline
-      const now = new Date();
-      const daysSinceActive =
-        (now.getTime() - new Date(u.last_active_at).getTime()) /
-        (1000 * 3600 * 24);
-      // NOTE: We do not score negatively if time is in the future. We simply check if it's within 1 or 7 days in the past.
-      if (daysSinceActive >= 0 && daysSinceActive <= 1) score += 10;
-      else if (daysSinceActive >= 0 && daysSinceActive <= 7) score += 5;
-    }
-
-    // 6. Correction Behaviour (max 15 points)
-    if (u.correction_ratio) {
-      score += Math.min(15, u.correction_ratio * 15);
-    }
-
-    // 7. Learning Seriousness (max 10 points)
-    if (u.study_streak_days) {
-      score += Math.min(10, u.study_streak_days); // 1 point per day up to 10
-    }
-
-    // 8. Conversation Compatibility (max 10 points)
-    // Assume country/age match provides baseline compatibility if explicitly filtered,
-    // avoiding using the current user's direct query filters to prevent double counting
-    // For conversation compatibility, evaluate if the matched partner's profile explicitly specifies the current user's country or age band
-    // As `interests` was already counted, we could potentially rely on generic shared features
+    // 5. Bounded Correction Behaviour (max 15 points)
     if (
-      u.country &&
-      c.country &&
-      u.country.toLowerCase() === c.country.toLowerCase()
+      typeof u.correction_ratio === 'number' &&
+      !Number.isNaN(u.correction_ratio) &&
+      u.correction_ratio > 0
     ) {
-      score += 5;
+      const clampedRatio = Math.max(0, Math.min(1, u.correction_ratio));
+      score += clampedRatio * 15;
     }
 
-    // Evaluate if age is within a 5-year complementary band
-    if (u.age && c.age && Math.abs(u.age - c.age) <= 5) {
-      score += 5;
+    // 6. Learning Seriousness (weighted to the searching user's mode)
+    const isSearchingUserSerious = Boolean(
+      c.is_serious_learner ||
+      query.serious_learner_mode ||
+      query.serious_learner_only,
+    );
+    if (
+      typeof u.study_streak_days === 'number' &&
+      !Number.isNaN(u.study_streak_days) &&
+      u.study_streak_days > 0
+    ) {
+      const baseStreak = Math.min(10, u.study_streak_days);
+      if (isSearchingUserSerious) {
+        score += Math.min(15, Math.round(baseStreak * 1.5));
+      } else {
+        score += baseStreak;
+      }
     }
 
-    // Partner of week boost (override all)
-    if (u.is_partner_of_week) score += 1000;
+    // 7. Partner of the Week priority boost
+    if (u.is_partner_of_week) {
+      score += 1000;
+    }
 
     return score;
   }
@@ -1297,7 +1333,7 @@ export class DiscoveryService {
       result = result.filter((u) => u.availability_evening === true);
     }
 
-    // Exact availability time overlap filtering (Tandem‑style)
+    // Exact availability time overlap filtering (Tandem-style)
     if (query.available_time_start && query.available_time_end) {
       const qStart = query.available_time_start; // HH:mm
       const qEnd = query.available_time_end;
@@ -1306,11 +1342,10 @@ export class DiscoveryService {
         const uStart: string | undefined = u.available_time_start;
         const uEnd: string | undefined = u.available_time_end;
         if (!uStart || !uEnd) {
-          // user has no exact times set – treat as always available
+          // user has no exact times set - treat as always available
           return true;
         }
-        // Overlap test: start1 <= end2 && start2 <= end1
-        return uStart <= qEnd && uEnd >= qStart;
+        return this.hasTimeOverlap(uStart, uEnd, qStart, qEnd);
       });
     }
 
