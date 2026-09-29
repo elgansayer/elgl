@@ -18,6 +18,8 @@ services:
     environment:
       - PORT=3100
       - GH_TOKEN=${GH_TOKEN}
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:?DASHBOARD_PASSWORD must be set}
       - HELLOTALK_STATE_DIR=/factory-state/hellotalk
       - HELLOTALK_GH_REPO=elgansayer/elgl
       - WORKOUT_AGENT_STATE_DIR=/factory-state/workout-agent

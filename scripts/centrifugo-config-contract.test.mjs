@@ -39,14 +39,8 @@ for (const path of composeFiles) {
     const compose = read(path);
     assert.match(compose, /REDIS_URL=redis:\/\/cache:6379/);
     assert.match(compose, /CENTRIFUGO_URL=http:\/\/websocket:8000/);
-    assert.match(
-      compose,
-      /CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=\$\{CENTRIFUGO_SECRET(?::[^}]*)?\}/,
-    );
-    assert.match(
-      compose,
-      /CENTRIFUGO_API_KEY=\$\{CENTRIFUGO_API_KEY(?::[^}]*)?\}/,
-    );
+    assert.match(compose, /CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=\$\{CENTRIFUGO_SECRET(?::[^}]*)?\}/);
+    assert.match(compose, /CENTRIFUGO_API_KEY=\$\{CENTRIFUGO_API_KEY(?::[^}]*)?\}/);
     assert.match(compose, /image: redis:7-alpine/);
     assert.match(compose, /image: centrifugo\/centrifugo:v5/);
   });
@@ -75,6 +69,15 @@ for (const path of productionComposeFiles) {
   });
 }
 
+test('production requires an explicit Centrifugo browser origin allowlist', () => {
+  const compose = read('docker-compose.prod.yml');
+  assert.match(
+    compose,
+    /CENTRIFUGO_ALLOWED_ORIGINS=\$\{CENTRIFUGO_ALLOWED_ORIGINS:\?CENTRIFUGO_ALLOWED_ORIGINS must be set in production\}/,
+  );
+  assert.doesNotMatch(compose, /CENTRIFUGO_ALLOWED_ORIGINS=\$\{CENTRIFUGO_ALLOWED_ORIGINS:-\*\}/);
+});
+
 test('example environment declares the backend/Centrifugo shared credentials', () => {
   const env = read('.env.example');
   assert.match(env, /^CENTRIFUGO_API_KEY=/m);
@@ -83,5 +86,5 @@ test('example environment declares the backend/Centrifugo shared credentials', (
 
 test('Prometheus scrapes the Centrifugo internal metrics endpoint', () => {
   const prometheus = read('prometheus/prometheus.yml');
-  assert.match(prometheus, /targets: \['websocket:8001'\]/);
+  assert.match(prometheus, /targets: \['websocket:8000'\]/);
 });
