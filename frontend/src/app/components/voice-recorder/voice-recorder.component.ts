@@ -5,6 +5,7 @@ import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 import { MediaService } from '../../services/media.service';
+import { I18nService } from '../../services/i18n.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
@@ -23,6 +24,7 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 })
 export class VoiceRecorderComponent implements OnDestroy {
   private mediaService = inject(MediaService);
+  private i18n = inject(I18nService);
 
   audioUploaded = output<string>();
   cancelled = output<void>();
@@ -90,7 +92,7 @@ export class VoiceRecorderComponent implements OnDestroy {
       // Do not leak the local object URL or fabricate a successful remote upload.
       // Keeping the blob and preview intact lets the user retry the real upload safely.
       console.error('Failed to upload voice note.');
-      showErrorToast('Voice note upload failed. Your recording is still available to retry.');
+      showErrorToast(this.i18n.translate('voiceRecorder.uploadError'));
     } finally {
       this.isUploading.set(false);
     }

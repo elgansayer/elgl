@@ -6,6 +6,7 @@ import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 import { MediaService } from '../../services/media.service';
+import { I18nService } from '../../services/i18n.service';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -16,6 +17,9 @@ class MockTranslatePipe implements PipeTransform {
 
 class MockMediaService {
   uploadVoiceNote = vi.fn().mockResolvedValue({ url: 'https://media.url/voice.ogg' });
+}
+class MockI18nService {
+  translate = vi.fn((key: string) => `t:${key}`);
 }
 
 class MockedMediaRecorder {
@@ -40,6 +44,7 @@ describe('VoiceRecorderComponent', () => {
   let stopTrack: ReturnType<typeof vi.fn>;
   let mediaService: MockMediaService;
 
+  let i18n: MockI18nService;
   beforeEach(async () => {
     stopTrack = vi.fn();
     const streamMock = {
@@ -61,7 +66,10 @@ describe('VoiceRecorderComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [VoiceRecorderComponent],
-      providers: [{ provide: MediaService, useClass: MockMediaService }],
+      providers: [
+        { provide: MediaService, useClass: MockMediaService },
+        { provide: I18nService, useClass: MockI18nService },
+      ],
     })
       .overrideComponent(VoiceRecorderComponent, {
         set: {
@@ -79,6 +87,7 @@ describe('VoiceRecorderComponent', () => {
     component = fixture.componentInstance;
     mediaService = TestBed.inject(MediaService) as unknown as MockMediaService;
     fixture.detectChanges();
+    i18n = TestBed.inject(I18nService) as unknown as MockI18nService;
   });
 
   it('should create', () => {
@@ -152,6 +161,7 @@ describe('VoiceRecorderComponent', () => {
       expect(component.isUploading()).toBe(false);
       expect(errorSpy).toHaveBeenCalledWith('Failed to upload voice note.');
 
+      expect(i18n.translate).toHaveBeenCalledWith('voiceRecorder.uploadError');
       mediaService.uploadVoiceNote.mockResolvedValueOnce({ url: 'https://media.url/retry.ogg' });
       await component.uploadAndSend();
 

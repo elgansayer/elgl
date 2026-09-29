@@ -1554,6 +1554,8 @@ export class I18nService {
     'voiceRecorder.stopBtn': '⏹️ Stop recording',
     'voiceRecorder.sendBtn': '📤 Send voice note',
     'voiceRecorder.uploadingBtn': '⏳ Uploading to Cloudflare R2...',
+    'voiceRecorder.uploadError':
+      'Voice note upload failed. Your recording is still available to retry.',
 
     // Audio Player
     'audioPlayer.groupLabel': 'Audio player',
