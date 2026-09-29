@@ -1,0 +1,16 @@
+{
+  "name": "factory-dashboard",
+  "version": "1.0.0",
+  "description": "Factory status dashboard for elgansayer projects",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {}
+}

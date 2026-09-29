@@ -4,6 +4,10 @@ import { VideoCallsController } from './video-calls.controller';
 import { VideoCallsService } from './video-calls.service';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  VIDEO_CALLS_RATE_LIMIT_KEY,
+  VideoCallsRateLimiterGuard,
+} from './video-calls-rate-limiter.guard';
 
 describe('VideoCallsController', () => {
   let controller: VideoCallsController;
@@ -37,9 +41,15 @@ describe('VideoCallsController', () => {
           provide: VideoCallsDegradationService,
           useValue: mockDegradationService,
         },
+        {
+          provide: VideoCallsRateLimiterGuard,
+          useValue: { canActivate: vi.fn().mockReturnValue(true) },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(VideoCallsRateLimiterGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
@@ -53,6 +63,38 @@ describe('VideoCallsController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('should attach authentication and video-call rate-limit guards', () => {
+    const guards = Reflect.getMetadata(
+      '__guards__',
+      VideoCallsController,
+    ) as unknown[];
+
+    expect(guards).toEqual(
+      expect.arrayContaining([SupabaseAuthGuard, VideoCallsRateLimiterGuard]),
+    );
+  });
+
+  it('should rate-limit call mutations while leaving health unmetered', () => {
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.startCall,
+      ),
+    ).toEqual({ maxRequests: 3, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.acceptCall,
+      ),
+    ).toEqual({ maxRequests: 10, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.health,
+      ),
+    ).toBeUndefined();
   });
 
   describe('startCall', () => {
