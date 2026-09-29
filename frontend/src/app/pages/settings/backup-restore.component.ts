@@ -109,6 +109,7 @@ export class BackupRestoreComponent {
   private readonly http = inject(HttpClient);
   private readonly backupService = inject(ChatBackupService);
   private readonly i18n = inject(I18nService);
+  private readonly apiBase = environment.apiUrl ?? '/api';
 
   readonly selectedRoom = signal('');
   readonly importFile = signal<File | null>(null);
@@ -117,9 +118,7 @@ export class BackupRestoreComponent {
   readonly roomsResource = resource({
     loader: async (): Promise<BackupRoom[]> => {
       try {
-        const rooms = await firstValueFrom(
-          this.http.get<unknown>(`${environment.apiUrl}/chat/rooms`),
-        );
+        const rooms = await firstValueFrom(this.http.get<unknown>(`${environment.apiUrl}/chat/rooms`));
         if (isBackupRoomArray(rooms)) {
           return rooms;
         }
