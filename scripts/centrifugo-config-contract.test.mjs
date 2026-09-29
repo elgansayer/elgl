@@ -65,5 +65,5 @@ test('example environment declares the backend/Centrifugo shared credentials', (
 
 test('Prometheus scrapes the Centrifugo internal metrics endpoint', () => {
   const prometheus = read('prometheus/prometheus.yml');
-  assert.match(prometheus, /targets: \['websocket:8001'\]/);
+  assert.match(prometheus, /targets: \['websocket:8000'\]/);
 });

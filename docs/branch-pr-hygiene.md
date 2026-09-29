@@ -1,32 +1,41 @@
 # Branch and pull request hygiene
 
-Every remote branch that contains commits not reachable from `main` should have an open pull request unless it is intentionally exempted by repository policy.
-
-## Why
-
-A pushed branch is not a pull request. GitHub does not automatically create a PR when an agent, workflow, or developer pushes a branch. Without a repository-wide reconciliation step, completed agent work can become invisible to normal review, CI, and merge queues.
+An unmerged remote branch is not, by itself, work owed a pull request. A branch may be abandoned, superseded by
+later work on a different branch, or intentionally exempted; manufacturing a PR for it manufactures review and CI
+churn without a corresponding change worth reviewing. This document previously required every branch ahead of
+`main` to have an open PR; that requirement produced exactly this churn and has been removed, see
+[PR-CONVERGENCE-AND-WIP.md](factory/PR-CONVERGENCE-AND-WIP.md) for the incident this policy replaced.
 
 ## Enforcement
 
-`.github/workflows/branch-pr-hygiene.yml` enforces the invariant in two ways:
-
-- on every push to a non-`main` branch, it checks whether the branch is ahead of `main` and opens a draft PR if no open PR exists;
-- every six hours, it scans all repository branches and repairs any orphan branch missed by an individual producer.
-
-Branches with no commits ahead of `main` are intentionally ignored because GitHub cannot create a meaningful pull request for them.
+`.github/workflows/branch-pr-hygiene.yml` is read-only and runs on a six-hour schedule (`workflow_dispatch` for
+manual runs). It audits every repository branch with the canonical Factory classifier
+(`automation/openhands_factory/branch_hygiene.py`) and uploads the classification as a machine-readable artifact.
+It holds only `contents: read` and `pull-requests: read` permissions: it cannot open, modify, reopen, close, or
+merge a pull request, and it cannot delete a branch. There is no push-triggered PR creation.
 
 ## Producer contract
 
-Coding agents and automation should still create their own pull requests immediately. The hygiene workflow is a safety net, not the primary PR creation path. Producers should:
+Coding agents and automation create or update a pull request only once there is a real reviewable diff, after
+checking for an equivalent open, closed, or merged PR (by branch name, issue number, task key, or touched-file
+fingerprint). Producers should:
 
 1. create a purpose-specific branch from current `main`;
 2. make and test one coherent change;
-3. push the branch;
-4. create a PR immediately;
+3. deduplicate against existing open/closed/merged PRs before opening a new one;
+4. push the branch and create or update the PR in place;
 5. record the PR number in their job state;
-6. stop creating replacement branches when a PR can instead be updated or rebased;
-7. delete the branch after merge.
+6. stop creating replacement branches when a PR can instead be updated or rebased - `main` advancing is not, on
+   its own, a reason to open a new PR;
+7. when a replacement is genuinely unavoidable, close the superseded PR atomically as part of the same operation;
+8. delete the branch after merge.
+
+For Factory automation, a single locked convergence owner
+(`automation/openhands_factory/pr_convergence.py`) makes the create/reuse/reopen/supersede decision so no other
+lane (Architect, resolver, reviewer, branch-hygiene) opens a competing PR for the same task; see
+[PR-CONVERGENCE-AND-WIP.md](factory/PR-CONVERGENCE-AND-WIP.md).
 
 ## Follow-up maintenance
 
-Periodically review branches that are already merged, superseded by newer branches, or associated only with closed PRs. Prefer deleting those stale refs rather than keeping historical implementation branches indefinitely.
+Periodically review branches that are already merged, superseded by newer branches, or associated only with closed
+PRs. Prefer deleting those stale refs rather than keeping historical implementation branches indefinitely.
