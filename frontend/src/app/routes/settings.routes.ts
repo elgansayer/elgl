@@ -2,17 +2,23 @@ import { Routes } from '@angular/router';
 
 export const settingsRoutes: Routes = [
   {
-    path: 'settings/chat',
-    loadComponent: () =>
-      import('../pages/chat-settings/chat-settings.component').then(
-        (m) => m.ChatSettingsComponent,
-      ),
-    title: 'Chat Settings - HelloTalk',
-  },
-  {
     path: 'settings',
     loadComponent: () =>
       import('../components/settings/settings.component').then((m) => m.SettingsComponent),
+  },
+  {
+    path: 'settings/chat',
+    loadComponent: () =>
+      import('../pages/chat-settings/chat-settings.component').then((m) => m.ChatSettingsComponent),
+    title: 'Chat Settings - HelloTalk',
+  },
+  {
+    path: 'settings/blocks',
+    loadComponent: () =>
+      import('../pages/block-management/block-management.component').then(
+        (m) => m.BlockManagementComponent,
+      ),
+    title: 'Block Management - HelloTalk',
   },
   {
     path: 'settings/account',
@@ -50,38 +56,12 @@ export const settingsRoutes: Routes = [
     title: 'Appearance - HelloTalk',
   },
   {
-    path: 'language',
-    redirectTo: 'settings/language',
-    pathMatch: 'full',
-  },
-  {
-    path: 'settings/language',
-    loadComponent: () =>
-      import('../pages/language-settings/language-settings.component').then(
-        (m) => m.LanguageSettingsComponent,
-      ),
-    title: 'Language Settings - HelloTalk',
-  },
-  {
     path: 'settings/privacy',
     loadComponent: () =>
       import('../pages/settings/privacy-settings/privacy-settings.component').then(
         (m) => m.PrivacySettingsComponent,
       ),
     title: 'Privacy Settings - HelloTalk',
-  },
-  {
-    path: 'blocks',
-    redirectTo: 'settings/blocks',
-    pathMatch: 'full',
-  },
-  {
-    path: 'settings/blocks',
-    loadComponent: () =>
-      import('../pages/block-management/block-management.component').then(
-        (m) => m.BlockManagementComponent,
-      ),
-    title: 'Blocked Users - HelloTalk',
   },
   {
     path: 'settings/backup-restore',
@@ -110,11 +90,6 @@ export const settingsRoutes: Routes = [
   },
   {
     path: 'device-transfer',
-    redirectTo: 'settings/device-transfer',
-    pathMatch: 'full',
-  },
-  {
-    path: 'settings/device-transfer',
     loadComponent: () =>
       import('../components/device-transfer/device-transfer.component').then(
         (m) => m.DeviceTransferComponent,
@@ -123,21 +98,11 @@ export const settingsRoutes: Routes = [
   },
   {
     path: 'gdpr',
-    redirectTo: 'settings/gdpr',
-    pathMatch: 'full',
-  },
-  {
-    path: 'settings/gdpr',
     loadComponent: () => import('../components/gdpr/gdpr.component').then((m) => m.GdprComponent),
     title: 'Personal Data - HelloTalk',
   },
   {
     path: 'account/deletion',
-    redirectTo: 'settings/account/deletion',
-    pathMatch: 'full',
-  },
-  {
-    path: 'settings/account/deletion',
     loadComponent: () =>
       import('../components/account-deletion/account-deletion.component').then(
         (m) => m.AccountDeletionComponent,
@@ -146,11 +111,6 @@ export const settingsRoutes: Routes = [
   },
   {
     path: 'version',
-    redirectTo: 'settings/version',
-    pathMatch: 'full',
-  },
-  {
-    path: 'settings/version',
     loadComponent: () =>
       import('../components/version-check/version-check.component').then(
         (m) => m.VersionCheckComponent,

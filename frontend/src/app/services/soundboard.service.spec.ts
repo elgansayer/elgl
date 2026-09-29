@@ -1,139 +1,158 @@
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthService } from './auth.service';
-import { SoundboardService } from './soundboard.service';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+} from 'vitest';
+import {
+  SoundboardService,
+  SoundboardListResponse,
+  PlaySoundResponse,
+} from './soundboard.service';
 
 describe('SoundboardService', () => {
   let service: SoundboardService;
   const mockFetch = vi.fn();
-  const getAccessToken = vi.fn();
 
   beforeEach(() => {
     vi.stubGlobal('fetch', mockFetch);
-    getAccessToken.mockReturnValue('access-token');
-    TestBed.configureTestingModule({
-      providers: [
-        SoundboardService,
-        { provide: AuthService, useValue: { getAccessToken } },
-      ],
-    });
+    TestBed.configureTestingModule({});
     service = TestBed.inject(SoundboardService);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     mockFetch.mockReset();
-    getAccessToken.mockReset();
   });
 
-  it('authenticates catalogue requests and drops untrusted remote media fields', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  describe('getSounds', () => {
+    it('should call GET /api/audio-rooms/soundboard/list and return the response', async () => {
+      const soundList: SoundboardListResponse = {
         sounds: [
           {
-            id: 'applause',
+            id: '1',
             name: 'Applause',
+            url: 'https://example.com/applause.mp3',
             icon: '👏',
-            url: 'https://attacker.example/track.mp3',
-          },
-          {
-            id: 'unknown',
-            name: 'Unknown',
-            icon: '!',
-            url: 'https://attacker.example/unknown.mp3',
           },
         ],
-      }),
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        statusText: 'OK',
+        json: async () => soundList,
+      });
+
+      const result = await service.getSounds();
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith('/api/audio-rooms/soundboard/list', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(result).toEqual(soundList);
     });
 
-    await expect(service.getSounds()).resolves.toEqual({
-      sounds: [{ id: 'applause', name: 'Applause', icon: '👏' }],
-    });
-    expect(mockFetch).toHaveBeenCalledWith('/api/audio-rooms/soundboard/list', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer access-token',
-      },
-    });
-  });
+    it('should throw an error when the request fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Internal Server Error',
+      });
 
-  it('uses bundled metadata when server labels are malformed or oversized', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        sounds: [
-          { id: 'laugh', name: 'x'.repeat(81), icon: 'x'.repeat(17) },
-          { id: 'laugh', name: 'Duplicate', icon: 'D' },
-        ],
-      }),
+      await expect(service.getSounds()).rejects.toThrow(
+        'Failed to load sounds: Internal Server Error',
+      );
     });
 
-    await expect(service.getSounds()).resolves.toEqual({
-      sounds: [{ id: 'laugh', name: 'Laughter', icon: '😂' }],
-    });
-  });
+    it('should return an empty list when the API returns no sounds', async () => {
+      const emptyList: SoundboardListResponse = { sounds: [] };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        statusText: 'OK',
+        json: async () => emptyList,
+      });
 
-  it('fails closed without an authenticated session', async () => {
-    getAccessToken.mockReturnValue(null);
+      const result = await service.getSounds();
 
-    await expect(service.getSounds()).rejects.toThrow('Authentication required');
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it('rejects malformed catalogue responses', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ sounds: 'bad' }) });
-
-    await expect(service.getSounds()).rejects.toThrow('Invalid soundboard response');
-  });
-
-  it('does not expose arbitrary backend response bodies on request failure', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'private upstream details',
+      expect(result).toEqual(emptyList);
     });
 
-    await expect(service.getSounds()).rejects.toThrow('Soundboard request failed');
-  });
+    it('should throw an error when the network request rejects', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network Error'));
 
-  it('posts an authenticated, validated play request', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
-
-    await expect(service.playSound(' room-123 ', 'applause')).resolves.toEqual({
-      success: true,
-    });
-    expect(mockFetch).toHaveBeenCalledWith('/api/audio-rooms/soundboard/play', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer access-token',
-      },
-      body: JSON.stringify({ room_id: 'room-123', sound_id: 'applause' }),
+      await expect(service.getSounds()).rejects.toThrow('Network Error');
     });
   });
 
-  it('rejects unknown sound IDs before network I/O', async () => {
-    await expect(service.playSound('room-123', 'https://evil.example/a.mp3')).rejects.toThrow(
-      'Invalid soundboard sound',
-    );
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
+  describe('playSound', () => {
+    it('should POST the room and sound ids and return the response', async () => {
+      const playResult: PlaySoundResponse = {
+        success: true,
+        soundUrl: 'https://example.com/applause.mp3',
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        statusText: 'OK',
+        json: async () => playResult,
+      });
 
-  it('rejects empty and overlong room IDs before network I/O', async () => {
-    await expect(service.playSound('   ', 'gong')).rejects.toThrow('Invalid soundboard room');
-    await expect(service.playSound('r'.repeat(129), 'gong')).rejects.toThrow(
-      'Invalid soundboard room',
-    );
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
+      const result = await service.playSound('room-123', 'sound-456');
 
-  it('requires an explicit successful server acknowledgement', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: false }) });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/audio-rooms/soundboard/play',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            room_id: 'room-123',
+            sound_id: 'sound-456',
+          }),
+        },
+      );
+      expect(result).toEqual(playResult);
+    });
 
-    await expect(service.playSound('room-123', 'gong')).rejects.toThrow(
-      'Invalid soundboard response',
-    );
+    it('should throw an error when the request fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Bad Request',
+      });
+
+      await expect(
+        service.playSound('room-123', 'sound-456'),
+      ).rejects.toThrow('Failed to play sound: Bad Request');
+    });
+
+    it('should return the response when success is false', async () => {
+      const playResult: PlaySoundResponse = {
+        success: false,
+        soundUrl: null,
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        statusText: 'OK',
+        json: async () => playResult,
+      });
+
+      const result = await service.playSound('room-123', 'sound-456');
+
+      expect(result).toEqual(playResult);
+    });
+
+    it('should throw an error when the network request rejects', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network Error'));
+
+      await expect(
+        service.playSound('room-123', 'sound-456'),
+      ).rejects.toThrow('Network Error');
+    });
   });
 });

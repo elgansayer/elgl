@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-  GoneException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -206,11 +205,6 @@ export class PremiumAiService {
           'You do not have access to this conversation.',
         );
       }
-      if (message.includes('idempotency subject mismatch')) {
-        throw new GoneException(
-          'This request key cannot be reused. Start a new request to try again.',
-        );
-      }
       this.logger.warn(
         `Premium AI charge failed (${startError.code ?? 'unknown'})`,
       );
@@ -315,10 +309,7 @@ export class PremiumAiService {
       );
     }
 
-    // Failed runs have already been refunded by the database. A 410 response
-    // distinguishes this definitive outcome from an in-flight 409 so clients
-    // can safely discard the old idempotency key and create a new request.
-    throw new GoneException(
+    throw new ConflictException(
       'The previous attempt was refunded. Start a new request to try again.',
     );
   }
@@ -386,14 +377,14 @@ export class PremiumAiService {
     runId: string,
     errorCode: string,
   ): Promise<void> {
-    const { data, error } = await this.rpc('fail_premium_ai_service', {
+    const { error } = await this.rpc('fail_premium_ai_service', {
       p_user_id: userId,
       p_run_id: runId,
       p_error_code: errorCode,
     });
-    if (error || data !== true) {
+    if (error) {
       this.logger.error(
-        `Premium AI refund reconciliation failed (${error?.code ?? 'not-refunded'})`,
+        `Premium AI refund reconciliation failed (${error.code ?? 'unknown'})`,
       );
       throw new InternalServerErrorException(
         'The report failed and the coin refund requires reconciliation.',

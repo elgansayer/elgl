@@ -1,4 +1,3 @@
-import { DOCUMENT } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -16,17 +15,15 @@ const complexScriptFixtures = [
 
 describe('Devanagari and complex-script rendering contract', () => {
   let service: I18nService;
-  let testDocument: Document;
 
   beforeEach(() => {
     localStorage.clear();
-    testDocument = document.implementation.createHTMLDocument();
+    document.documentElement.classList.remove('dark');
 
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: DOCUMENT, useValue: testDocument },
         {
           provide: AuthService,
           useValue: { getAccessToken: vi.fn().mockResolvedValue('test-token') },
@@ -37,9 +34,9 @@ describe('Devanagari and complex-script rendering contract', () => {
   });
 
   afterEach(() => {
-    testDocument.documentElement.lang = 'en-GB';
-    testDocument.documentElement.dir = 'ltr';
-    testDocument.documentElement.classList.remove('dark');
+    document.documentElement.lang = 'en-GB';
+    document.documentElement.dir = 'ltr';
+    document.documentElement.classList.remove('dark');
     localStorage.clear();
   });
 
@@ -47,17 +44,17 @@ describe('Devanagari and complex-script rendering contract', () => {
     ['light', false],
     ['dark', true],
   ])('keeps Hindi language semantics and LTR direction intact in %s mode', async (_mode, darkMode) => {
-    testDocument.documentElement.classList.toggle('dark', darkMode);
+    document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('hellotalk_dict_hi', JSON.stringify({}));
 
-    const languageChange = service.setLanguage('hi');
-    expect(testDocument.documentElement.classList.contains('dark')).toBe(darkMode);
-    await languageChange;
+    await service.setLanguage('hi');
 
     expect(service.currentLang()).toBe('hi');
     expect(service.direction()).toBe('ltr');
-    expect(testDocument.documentElement.lang).toBe('hi');
-    expect(testDocument.documentElement.dir).toBe('ltr');
+    expect(document.documentElement.lang).toBe('hi');
+    expect(document.documentElement.dir).toBe('ltr');
+    expect(document.documentElement.classList.contains('dark')).toBe(darkMode);
+
     const hindi = service.availableLanguages.find((language) => language.code === 'hi');
     expect(hindi).toMatchObject({ nativeName: 'हिन्दी', isRtl: false });
   });

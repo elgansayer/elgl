@@ -108,29 +108,12 @@ legacy comma-separated value (silently drops the whole declaration). */
 
   html,
   body {
-    @apply antialiased text-text-primary bg-surface-500 m-0 p-0 w-full font-sans;
-    height: 100dvh;
-    overscroll-behavior-y: none;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    -webkit-touch-callout: none;
-    padding-top: env(safe-area-inset-top);
-    padding-inline-start: env(safe-area-inset-left);
-    padding-inline-end: env(safe-area-inset-right);
+    @apply antialiased text-text-primary bg-surface-500 m-0 p-0 h-full w-full font-sans;
   }
 
-  input, textarea, [contenteditable="true"] {
-    @apply select-text;
-    -webkit-user-select: text;
-    user-select: text;
-  }
-
-  /* Support RTL mirroring natively, including physical viewport safe areas. */
-  html[dir='rtl'],
-  html[dir='rtl'] body {
+  /* Support RTL mirroring natively */
+  html[dir='rtl'] {
     text-align: start;
-    padding-inline-start: env(safe-area-inset-right);
-    padding-inline-end: env(safe-area-inset-left);
   }
 
   /* Global keyboard focus-visible ring for all interactive elements */

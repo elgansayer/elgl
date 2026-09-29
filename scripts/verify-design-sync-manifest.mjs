@@ -4,11 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const defaultManifestPath = resolve(root, 'design-sync.manifest.json');
-const manifestPath = process.env.DESIGN_SYNC_MANIFEST_PATH
-  ? resolve(process.env.DESIGN_SYNC_MANIFEST_PATH)
-  : defaultManifestPath;
-const schemaPath = resolve(root, 'docs/design-sync-manifest.schema.json');
+const manifestPath = resolve(root, 'design-sync.manifest.json');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
 const failures = [];
@@ -30,7 +26,6 @@ function validateRepoRelativePath(label, path) {
   return true;
 }
 
-if (!existsSync(schemaPath)) failures.push('versioned schema does not exist: docs/design-sync-manifest.schema.json');
 if (manifest.schemaVersion !== 1) failures.push('schemaVersion must be 1');
 if (!manifest.project?.name) failures.push('project.name is required');
 if (!manifest.project?.projectId) failures.push('project.projectId is required');
@@ -43,7 +38,6 @@ if (!Array.isArray(manifest.items) || manifest.items.length === 0) {
 
 const ids = new Set();
 const designPaths = new Set();
-const previewPaths = new Set();
 let reconciledItems = 0;
 
 for (const [index, item] of (manifest.items ?? []).entries()) {
@@ -74,8 +68,6 @@ for (const [index, item] of (manifest.items ?? []).entries()) {
       if (validateRepoRelativePath(`${label}.previewPaths`, path) && !existsSync(resolve(root, path))) {
         failures.push(`${label}: preview path does not exist: ${path}`);
       }
-      if (previewPaths.has(path)) failures.push(`${label}: duplicate previewPath ${path}`);
-      else previewPaths.add(path);
     }
   }
 

@@ -10,6 +10,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'decks',
+    redirectTo: 'flashcards/decks',
+    pathMatch: 'full',
+  },
+  {
+    path: 'flashcards/decks',
     loadComponent: () =>
       import('../components/flashcard-deck/flashcard-deck.component').then(
         (m) => m.FlashcardDeckComponent,
@@ -18,6 +23,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'review',
+    redirectTo: 'flashcards/review',
+    pathMatch: 'full',
+  },
+  {
+    path: 'flashcards/review',
     loadComponent: () =>
       import('../components/flashcard-review/flashcard-review.component').then(
         (m) => m.FlashcardReviewComponent,
@@ -26,6 +36,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'suggest-flashcards',
+    redirectTo: 'flashcards/suggest',
+    pathMatch: 'full',
+  },
+  {
+    path: 'flashcards/suggest',
     loadComponent: () =>
       import('../components/suggest-flashcards/suggest-flashcards.component').then(
         (m) => m.SuggestFlashcardsComponent,
@@ -34,6 +49,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'suggest-flashcards/:message',
+    redirectTo: 'flashcards/suggest/:message',
+    pathMatch: 'full',
+  },
+  {
+    path: 'flashcards/suggest/:message',
     loadComponent: () =>
       import('../components/suggest-flashcards/suggest-flashcards.component').then(
         (m) => m.SuggestFlashcardsComponent,
@@ -111,5 +131,18 @@ export const learningRoutes: Routes = [
     loadComponent: () =>
       import('../ai-conversation/ai-conversation.component').then((m) => m.AiConversationComponent),
     title: 'AI Conversation - HelloTalk',
+  },
+  {
+    path: 'language',
+    redirectTo: 'settings/language',
+    pathMatch: 'full',
+  },
+  {
+    path: 'settings/language',
+    loadComponent: () =>
+      import('../pages/language-settings/language-settings.component').then(
+        (m) => m.LanguageSettingsComponent,
+      ),
+    title: 'Language Settings - HelloTalk',
   },
 ];

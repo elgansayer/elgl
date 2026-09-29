@@ -61,17 +61,15 @@ describe('FontScaleSliderComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should use the native range primitive for the documented 80-150 percent contract', () => {
+  it('should render the documented 80-150 percent range', () => {
     const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="range"]');
 
     expect(input).toBeTruthy();
     expect(input.min).toBe('0.8');
     expect(input.max).toBe('1.5');
     expect(input.step).toBe('0.05');
-    expect(input.getAttribute('role')).toBeNull();
-    expect(input.getAttribute('aria-valuemin')).toBeNull();
-    expect(input.getAttribute('aria-valuemax')).toBeNull();
-    expect(input.getAttribute('aria-valuenow')).toBeNull();
+    expect(input.getAttribute('aria-valuemin')).toBe('0.8');
+    expect(input.getAttribute('aria-valuemax')).toBe('1.5');
   });
 
   it('should render a range input reflecting the current scale factor', () => {
@@ -80,41 +78,33 @@ describe('FontScaleSliderComponent', () => {
     expect(input.value).toBe('1');
   });
 
-  it('should call setScale with the native numeric value when the range changes', () => {
+  it('should call setScale with 150 percent when the slider reaches its maximum', () => {
     const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="range"]');
     input.value = '1.5';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
 
     expect(setScaleSpy).toHaveBeenCalledWith(1.5);
+    expect(input.getAttribute('aria-valuenow')).toBe('1.5');
     expect(input.getAttribute('aria-valuetext')).toBe('150%');
   });
 
   it('should display the scale factor as a percentage label', () => {
-    const value: HTMLElement = fixture.nativeElement.querySelector('div > span');
-    expect(value.textContent?.trim()).toBe('100%');
+    const span: HTMLElement = fixture.nativeElement.querySelector('span');
+    expect(span.textContent?.trim()).toBe('100%');
   });
 
   it('should update the percentage label when the scale factor changes', () => {
     scaleFactor.set(1.3);
     fixture.detectChanges();
 
-    const value: HTMLElement = fixture.nativeElement.querySelector('div > span');
-    expect(value.textContent?.trim()).toBe('130%');
+    const span: HTMLElement = fixture.nativeElement.querySelector('span');
+    expect(span.textContent?.trim()).toBe('130%');
   });
 
-  it('should use an implicit native label instead of a fixed global id', () => {
+  it('should associate the label with the slider via a for/id pair for accessibility', () => {
     const label: HTMLLabelElement = fixture.nativeElement.querySelector('label');
     const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="range"]');
-    const wrapper: HTMLElement = fixture.nativeElement.querySelector('div');
-
-    expect(label.contains(input)).toBe(true);
-    expect(input.id).toBe('');
-    expect(wrapper.getAttribute('role')).toBeNull();
-  });
-
-  it('should keep the percentage value available to assistive technology', () => {
-    const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="range"]');
-    expect(input.getAttribute('aria-valuetext')).toBe('100%');
+    expect(label.htmlFor).toBe(input.id);
   });
 });

@@ -22,7 +22,6 @@ import { AnswerLanguageQuestionDto } from './dto/answer-language-question.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
-import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService, MomentLikeUser } from './moments.service';
 
 const MOMENT_FEED_FILTERS = [
@@ -40,7 +39,6 @@ export class MomentsController {
     private readonly momentsService: MomentsService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
-    private readonly momentsRankingService: MomentsRankingService,
   ) {}
 
   @Post()
@@ -76,20 +74,11 @@ export class MomentsController {
       targetLanguage ?? undefined,
     );
 
-    const productionFeed = feed.filter(
+    return feed.filter(
       (moment) =>
         !moment.id.startsWith('mock-moment-') &&
         (activeFilter !== 'Following' || moment.user_id !== user.id),
     );
-
-    if (activeFilter === 'For You') {
-      return await this.momentsRankingService.rankForYou(
-        user.id,
-        productionFeed,
-      );
-    }
-
-    return productionFeed;
   }
 
   private parseFeedFilter(filter?: string): MomentFeedFilter {

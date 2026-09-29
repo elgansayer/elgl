@@ -44,16 +44,15 @@ import { I18nService } from '../../services/i18n.service';
               class="w-full"
               (click)="requestArchive()"
               [disabled]="loading()"
-              [attr.aria-busy]="loading()"
               [attr.aria-label]="'gdpr.requestArchiveBtn' | t"
             >
               {{ loading() ? ('common.loading' | t) : ('gdpr.requestArchiveBtn' | t) }}
             </button>
             @if (archiveSuccess()) {
-              <p class="text-xs text-success" role="status">{{ 'gdpr.archiveSuccess' | t }}</p>
+              <p class="text-xs text-success">{{ 'gdpr.archiveSuccess' | t }}</p>
             }
             @if (archiveError()) {
-              <p class="text-xs text-danger" role="alert">{{ archiveError() }}</p>
+              <p class="text-xs text-danger">{{ archiveError() }}</p>
             }
           </div>
         </section>
@@ -82,16 +81,15 @@ import { I18nService } from '../../services/i18n.service';
               class="w-full"
               (click)="deleteAccount()"
               [disabled]="!confirmDelete() || deleting()"
-              [attr.aria-busy]="deleting()"
               [attr.aria-label]="'gdpr.deleteAccountBtn' | t"
             >
               {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
             </button>
             @if (deleteSuccess()) {
-              <p class="text-xs text-success" role="status">{{ 'gdpr.deleteSuccess' | t }}</p>
+              <p class="text-xs text-success">{{ 'gdpr.deleteSuccess' | t }}</p>
             }
             @if (deleteError()) {
-              <p class="text-xs text-danger" role="alert">{{ deleteError() }}</p>
+              <p class="text-xs text-danger">{{ deleteError() }}</p>
             }
           </div>
         </section>
@@ -111,16 +109,15 @@ import { I18nService } from '../../services/i18n.service';
                 class="w-full border-warning/30 text-warning"
                 (click)="cancelDeletion()"
                 [disabled]="cancelling()"
-                [attr.aria-busy]="cancelling()"
                 [attr.aria-label]="'gdpr.cancelDeletionBtn' | t"
               >
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}
               </button>
               @if (cancelSuccess()) {
-                <p class="text-xs text-success" role="status">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
+                <p class="text-xs text-success">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
               }
               @if (cancelError()) {
-                <p class="text-xs text-danger" role="alert">{{ cancelError() }}</p>
+                <p class="text-xs text-danger">{{ cancelError() }}</p>
               }
             </div>
           </section>
@@ -152,16 +149,11 @@ export class GdprComponent {
   }
 
   async requestArchive(): Promise<void> {
-    if (this.loading()) return;
     this.loading.set(true);
     this.archiveSuccess.set(false);
     this.archiveError.set('');
     try {
-      const archive = await this.gdprService.requestArchive();
-      if (archive.status === 'ready') {
-        if (!archive.download_url) throw new Error('Missing archive URL');
-        this.downloadArchive(archive.download_url);
-      }
+      await this.gdprService.requestArchive();
       this.archiveSuccess.set(true);
     } catch {
       this.archiveError.set(this.i18n.translate('common.loadError'));
@@ -171,7 +163,7 @@ export class GdprComponent {
   }
 
   async deleteAccount(): Promise<void> {
-    if (!this.confirmDelete() || this.deleting()) return;
+    if (!this.confirmDelete()) return;
     this.deleting.set(true);
     this.deleteSuccess.set(false);
     this.deleteError.set('');
@@ -187,7 +179,6 @@ export class GdprComponent {
   }
 
   async cancelDeletion(): Promise<void> {
-    if (this.cancelling()) return;
     this.cancelling.set(true);
     this.cancelSuccess.set(false);
     this.cancelError.set('');
@@ -200,21 +191,5 @@ export class GdprComponent {
     } finally {
       this.cancelling.set(false);
     }
-  }
-
-  private downloadArchive(rawUrl: string): void {
-    const url = new URL(rawUrl, window.location.origin);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-      throw new Error('Unsupported archive URL');
-    }
-
-    const anchor = document.createElement('a');
-    anchor.href = url.href;
-    anchor.download = 'elgl-personal-data.json';
-    anchor.rel = 'noopener noreferrer';
-    anchor.style.display = 'none';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
   }
 }

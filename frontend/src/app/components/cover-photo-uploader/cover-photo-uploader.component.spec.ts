@@ -80,9 +80,10 @@ describe('CoverPhotoUploaderComponent', () => {
     });
 
     component.onFileSelected({ target: fileInput } as unknown as Event);
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(component.selectedFile()).toBe(file);
-    await vi.waitFor(() => expect(component.imageSource()).toContain('data:image/jpeg'));
+    expect(component.imageSource()).toContain('data:image/jpeg');
     expect(component.isCropping()).toBe(false);
     expect(component.croppedBlob()).toBeNull();
   });
