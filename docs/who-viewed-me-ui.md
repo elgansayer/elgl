@@ -9,7 +9,14 @@ This document describes the production boundary for the Angular `VisitorLogsComp
 - VIP learners see visitor identity only when the backend returns `is_blurred: false`.
 - A server-masked row also triggers the upgrade prompt even if the separately loaded profile entitlement is stale. This keeps mixed-version deployments fail-safe.
 - Visitor loading has distinct loading, unavailable/retry, empty and populated states. Failure to load the learner profile does not hide an otherwise valid visitor collection.
-- The collection remains bounded to the backend contract of 50 rows.
+- The collection remains bounded to the backend contract of 50 rows, ordered newest first.
+
+## HTTP privacy and abuse boundary
+
+- Both visit recording and visitor-log reads remain protected by `SupabaseAuthGuard` and are bounded to 30 requests per minute per throttler identity.
+- `GET /profile-visits/my-visitors` returns `Cache-Control: private, no-store` so visitor identity data is not retained by shared or browser HTTP caches.
+- The backend remains the source of truth for VIP masking. The browser must never reconstruct visitor identity from entitlement state or cached profile data.
+- The visit collection remains intentionally bounded rather than exposing an unbounded profile-history scan.
 
 ## Privacy and untrusted response handling
 
@@ -41,12 +48,15 @@ Automated coverage checks:
 - malformed/unbounded collection handling;
 - visitor-provider failure and retry;
 - profile-provider partial failure;
-- masked-row filtering and dynamic accessible labels.
+- masked-row filtering and dynamic accessible labels;
+- authenticated and throttled profile-visit HTTP routes;
+- private, non-cacheable visitor-log responses;
+- newest-first, 50-row backend collection bound.
 
 Repository CI remains authoritative for the full Angular unit/static-analysis/build and UI-governance suites.
 
 ## Rollout and rollback
 
-This is a frontend-only hardening change. It requires no schema migration, API deployment ordering or data backfill and is safe with current and older profile-visit response shapes.
+This hardening change requires no schema migration, API deployment ordering or data backfill and is safe with current and older profile-visit response shapes.
 
-Rollback is a normal application revert. Do not reintroduce rendering or storage of identity fields from `is_blurred: true` rows as part of a rollback; the server-side masking contract remains the privacy boundary regardless of UI version.
+Rollback is a normal application revert. Do not reintroduce cacheable visitor-log responses or rendering/storage of identity fields from `is_blurred: true` rows as part of a rollback; the server-side masking contract remains the privacy boundary regardless of UI version.
