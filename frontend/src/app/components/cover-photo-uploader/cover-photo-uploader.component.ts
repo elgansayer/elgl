@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-cropper.component';
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MAX_COVER_IMAGE_BYTES = 25 * 1024 * 1024;
 
 @Component({
   selector: 'app-cover-photo-uploader',
@@ -114,16 +115,16 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
             {{ 'common.cancel' | t }}
           </button>
         </div>
-
-        <div class="mt-2 min-h-5 text-sm" aria-live="polite" aria-atomic="true">
-          @if (isUploading()) {
-            <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
-          }
-          @if (uploadError()) {
-            <p role="alert" class="text-danger">{{ 'common.error' | t }}</p>
-          }
-        </div>
       }
+
+      <div class="mt-2 min-h-5 text-sm" aria-live="polite" aria-atomic="true">
+        @if (isUploading()) {
+          <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
+        }
+        @if (uploadError()) {
+          <p role="alert" class="text-danger">{{ 'common.error' | t }}</p>
+        }
+      </div>
 
       @if (isCropping() && selectedFile()) {
         <app-cover-photo-cropper
@@ -156,7 +157,18 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
     if (!(input instanceof HTMLInputElement) || !input.files?.length) return;
 
     const file = input.files[0];
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) return;
+    if (
+      !ALLOWED_IMAGE_TYPES.has(file.type) ||
+      file.size === 0 ||
+      file.size > MAX_COVER_IMAGE_BYTES
+    ) {
+      this.selectedFile.set(null);
+      this.imageSource.set(null);
+      this.isCropping.set(false);
+      this.clearCroppedPreview();
+      this.uploadError.set(true);
+      return;
+    }
 
     this.selectedFile.set(file);
     this.isCropping.set(false);
@@ -188,7 +200,12 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
   }
 
   onCropSaved(blob: Blob): void {
-    if (!blob.size || !ALLOWED_IMAGE_TYPES.has(blob.type)) {
+    if (
+      !blob.size ||
+      blob.size > MAX_COVER_IMAGE_BYTES ||
+      !ALLOWED_IMAGE_TYPES.has(blob.type)
+    ) {
+      this.clearCroppedPreview();
       this.uploadError.set(true);
       return;
     }
