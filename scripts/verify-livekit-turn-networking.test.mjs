@@ -22,6 +22,18 @@ test('rejects API credentials committed to the LiveKit YAML', () => {
   assert.ok(errors.some((error) => error.includes('known development credential')));
 });
 
+test('rejects tracked development credentials in environment examples', () => {
+  const files = loadLiveKitTurnNetworkingFiles();
+  const errors = verifyLiveKitTurnNetworking({
+    ...files,
+    rootEnvExample: `${files.rootEnvExample}\nLIVEKIT_API_KEY=devkey\n`,
+    backendEnvExample: `${files.backendEnvExample}\nLIVEKIT_SECRET=secret\n`,
+  });
+
+  assert.ok(errors.some((error) => error.includes('.env.example contains the tracked')));
+  assert.ok(errors.some((error) => error.includes('backend/.env.example contains a tracked')));
+});
+
 test('rejects deployments that lose the corporate-network TLS fallback', () => {
   const files = loadLiveKitTurnNetworkingFiles();
   const errors = verifyLiveKitTurnNetworking({

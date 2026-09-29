@@ -95,6 +95,12 @@ export function verifyLiveKitTurnNetworking({
     requireText(errors, label, envExample, 'LIVEKIT_TURN_KEY_FILE=');
     forbidText(errors, label, envExample, 'LIVEKIT_TURN_USERNAME=');
     forbidText(errors, label, envExample, 'LIVEKIT_TURN_PASSWORD=');
+    if (/^LIVEKIT_API_KEY=devkey$/m.test(envExample)) {
+      errors.push(`${label} contains the tracked LiveKit development API key`);
+    }
+    if (/^LIVEKIT_SECRET=(?:secret|secret-livekit-api-secret-change-in-prod)$/m.test(envExample)) {
+      errors.push(`${label} contains a tracked LiveKit development secret`);
+    }
   }
 
   requireText(errors, 'prometheus/prometheus.yml', prometheusConfig, "job_name: 'livekit'");
