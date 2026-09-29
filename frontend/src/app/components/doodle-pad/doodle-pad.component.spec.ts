@@ -129,6 +129,7 @@ describe('DoodlePadComponent', () => {
     expect(canvasEl.getAttribute('role')).toBe('img');
     expect(canvasEl.getAttribute('aria-label')).toBe('t:doodle.title');
     expect(canvasEl.getAttribute('aria-describedby')).toBe('doodle-pad-instructions');
+    expect(canvasEl.classList.contains('touch-none')).toBe(true);
 
     const close = fixture.nativeElement.querySelector(
       'button[aria-label="t:doodle.cancelBtn"]',
@@ -149,6 +150,37 @@ describe('DoodlePadComponent', () => {
     expect(brushGroup).toBeTruthy();
     expect(colorGroup.querySelectorAll('hlm-radio').length).toBe(6);
     expect(brushGroup.querySelectorAll('hlm-radio').length).toBe(4);
+  });
+
+  it('keeps selection controls at the 44px touch baseline and wrap-safe at high zoom', () => {
+    const colorLabels = Array.from(
+      fixture.nativeElement.querySelectorAll('hlm-radio-group[name="doodle-color"] label'),
+    ) as HTMLLabelElement[];
+    const brushLabels = Array.from(
+      fixture.nativeElement.querySelectorAll('hlm-radio-group[name="doodle-brush-width"] label'),
+    ) as HTMLLabelElement[];
+    const selectionToolbar = fixture.nativeElement.querySelector('fieldset')?.parentElement;
+
+    expect(colorLabels).toHaveLength(6);
+    expect(brushLabels).toHaveLength(4);
+    for (const label of colorLabels) {
+      expect(label.classList.contains('size-11')).toBe(true);
+      expect(label.classList.contains('size-10')).toBe(false);
+    }
+    for (const label of brushLabels) {
+      expect(label.classList.contains('min-h-11')).toBe(true);
+      expect(label.classList.contains('min-w-11')).toBe(true);
+      expect(label.classList.contains('min-h-10')).toBe(false);
+    }
+    expect(selectionToolbar?.classList.contains('grid')).toBe(true);
+  });
+
+  it('avoids physical direction utilities in RTL-compatible layout', () => {
+    const html = fixture.nativeElement.innerHTML as string;
+
+    expect(html).not.toMatch(/\b(?:ms|me|ps|pe)?-?left-/);
+    expect(html).not.toMatch(/\b(?:ms|me|ps|pe)?-?right-/);
+    expect(html).not.toMatch(/\b(?:ml|mr|pl|pr)-/);
   });
 
   it('uses Relay semantic surfaces and mobile-first wrapping for product chrome', () => {
