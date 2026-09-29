@@ -245,9 +245,12 @@ export class ReadingEngineCacheService {
       ReadingEngineCacheNamespace.TRANSLATION,
       ReadingEngineCacheNamespace.SESSION,
     ];
-    for (const ns of prefixes) {
-      await this.deletePattern(this.buildUserPattern(ns, payload.userId));
-    }
+    // Batch delete namespace patterns concurrently to prevent N+1 latency roundtrips to Redis.
+    await Promise.all(
+      prefixes.map((ns) =>
+        this.deletePattern(this.buildUserPattern(ns, payload.userId)),
+      ),
+    );
     this.logger.log(
       { userId: payload.userId },
       'Bulk-invalidated all reading-engine caches for user (user_data_cleared)',
