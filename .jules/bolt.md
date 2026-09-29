@@ -134,3 +134,8 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+
+## 2026-08-22 - [Optimize daily tip generation via Bounded Concurrency]
+
+**Learning:** In the backend `daily-tip.service.ts`, the cron job generating daily tips sequentially awaited LLM API proxy calls (`await this.llmProxyService.proxyMessage()`) in a `for...of` loop over all users. This creates severe and compounding network latency bottlenecks during batch notifications.
+**Action:** Replaced sequential API requests with a bounded concurrent approach using `Promise.allSettled` over small chunks (e.g. 10 users). This mitigates N sequential API calls into concurrent batches without overwhelming upstream services or violating rate limits, while preserving fail-safe execution.
