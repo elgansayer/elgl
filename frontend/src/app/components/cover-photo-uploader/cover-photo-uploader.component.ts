@@ -205,6 +205,7 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
       blob.size > MAX_COVER_IMAGE_BYTES ||
       !ALLOWED_IMAGE_TYPES.has(blob.type)
     ) {
+      this.clearCroppedPreview();
       this.uploadError.set(true);
       return;
     }

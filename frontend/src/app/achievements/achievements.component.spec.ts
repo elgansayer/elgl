@@ -36,7 +36,7 @@ describe('AchievementsComponent', () => {
 
   it('should create', () => {
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/achievements/full/user-123').flush([]);
+    httpTesting.expectOne('http://127.0.0.1:3000/api/achievements/full/user-123').flush([]);
   });
 
   it('should show a loading state while fetching achievements', () => {
@@ -44,12 +44,12 @@ describe('AchievementsComponent', () => {
     expect(component.achievementsResource.isLoading()).toBe(true);
     const status = fixture.nativeElement.querySelector('[role="status"]');
     expect(status).toBeTruthy();
-    httpTesting.expectOne('http://localhost:3000/api/achievements/full/user-123').flush([]);
+    httpTesting.expectOne('http://127.0.0.1:3000/api/achievements/full/user-123').flush([]);
   });
 
   it('should render earned and locked achievements when the API responds', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/achievements/full/user-123');
+    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/achievements/full/user-123');
     const mockAchievements: FullAchievementDto[] = [
       {
         code: 'first_message',
@@ -84,7 +84,7 @@ describe('AchievementsComponent', () => {
 
   it('should show an empty state when no achievements are defined', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/achievements/full/user-123');
+    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/achievements/full/user-123');
     req.flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -94,7 +94,7 @@ describe('AchievementsComponent', () => {
 
   it('should show an error state when the API fails', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://localhost:3000/api/achievements/full/user-123');
+    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/achievements/full/user-123');
     req.error(new ErrorEvent('Network error'));
     await fixture.whenStable();
     fixture.detectChanges();
@@ -125,6 +125,6 @@ describe('AchievementsComponent', () => {
       }),
     ).toBe(0);
     fixture.detectChanges();
-    httpTesting.expectOne('http://localhost:3000/api/achievements/full/user-123').flush([]);
+    httpTesting.expectOne('http://127.0.0.1:3000/api/achievements/full/user-123').flush([]);
   });
 });

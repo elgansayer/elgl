@@ -80,10 +80,9 @@ describe('CoverPhotoUploaderComponent', () => {
     });
 
     component.onFileSelected({ target: fileInput } as unknown as Event);
-    await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(component.selectedFile()).toBe(file);
-    expect(component.imageSource()).toContain('data:image/jpeg');
+    await vi.waitFor(() => expect(component.imageSource()).toContain('data:image/jpeg'));
     expect(component.isCropping()).toBe(false);
     expect(component.croppedBlob()).toBeNull();
   });
@@ -168,6 +167,19 @@ describe('CoverPhotoUploaderComponent', () => {
     }
 
     expect(createObjectUrl).not.toHaveBeenCalled();
+  });
+
+  it('clears a previous valid crop when a replacement crop is invalid', async () => {
+    component.onCropSaved(new Blob(['cropped'], { type: 'image/webp' }));
+
+    component.onCropSaved(new Blob([], { type: 'image/webp' }));
+    await component.uploadCropped();
+
+    expect(component.croppedBlob()).toBeNull();
+    expect(component.croppedPreviewUrl()).toBeNull();
+    expect(component.uploadError()).toBe(true);
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:cover-preview');
+    httpMock.expectNone((request) => request.url.includes('/media/cover/'));
   });
 
   it('keeps upload disabled until a valid crop result exists', () => {
