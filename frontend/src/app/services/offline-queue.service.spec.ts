@@ -22,7 +22,7 @@ describe('OfflineQueueService', () => {
   });
 
   beforeEach(() => {
-    originalIndexedDB = window.indexedDB;
+    originalIndexedDB = globalThis.indexedDB;
     Object.defineProperty(window, 'indexedDB', {
       configurable: true,
       value: undefined,
