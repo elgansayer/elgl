@@ -97,7 +97,7 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
 
   it('rejects more than one target language for a persisted non-VIP user', async () => {
     const entitlementQuery = createQuery({
-      data: { is_vip: false },
+      data: { is_vip: false, vip_tier: null },
       error: null,
     });
     client.from.mockReturnValueOnce(entitlementQuery);
@@ -112,7 +112,7 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
       ),
     ).rejects.toThrow(BadRequestException);
 
-    expect(entitlementQuery.select).toHaveBeenCalledWith('is_vip');
+    expect(entitlementQuery.select).toHaveBeenCalledWith('is_vip,vip_tier');
     expect(entitlementQuery.eq).toHaveBeenCalledWith('id', 'user-1');
     expect(next.handle).not.toHaveBeenCalled();
   });
@@ -134,9 +134,9 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
     expect(next.handle).not.toHaveBeenCalled();
   });
 
-  it('allows a verified VIP to persist up to three target languages', async () => {
+  it('allows a verified consumer VIP to persist up to three target languages', async () => {
     const entitlementQuery = createQuery({
-      data: { is_vip: true },
+      data: { is_vip: true, vip_tier: 'consumer' },
       error: null,
     });
     const persistenceQuery = createQuery({
@@ -176,6 +176,64 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
     );
     expect(next.handle).toHaveBeenCalledOnce();
   });
+
+  it('rejects a fourth target language for consumer VIP', async () => {
+    client.from.mockReturnValueOnce(
+      createQuery({
+        data: { is_vip: true, vip_tier: 'consumer' },
+        error: null,
+      }),
+    );
+    const next = createNext();
+
+    await expect(
+      firstValueFrom(
+        interceptor.intercept(
+          createContext({ target_languages: ['ja', 'fr', 'es', 'de'] }),
+          next,
+        ),
+      ),
+    ).rejects.toThrow(
+      'A maximum of 3 target languages can be studied simultaneously on your current tier.',
+    );
+    expect(next.handle).not.toHaveBeenCalled();
+  });
+
+  it.each(['pro', 'developer'])(
+    'allows %s tier to persist up to five target languages',
+    async (vipTier) => {
+      const targetLanguages = ['ja', 'fr', 'es', 'de', 'it'];
+      const entitlementQuery = createQuery({
+        data: { is_vip: true, vip_tier: vipTier },
+        error: null,
+      });
+      const persistenceQuery = createQuery({
+        data: { target_languages: targetLanguages },
+        error: null,
+      });
+      client.from
+        .mockReturnValueOnce(entitlementQuery)
+        .mockReturnValueOnce(persistenceQuery);
+      const next = createNext({
+        id: 'user-1',
+        target_languages: targetLanguages,
+      });
+
+      await expect(
+        firstValueFrom(
+          interceptor.intercept(
+            createContext({ target_languages: targetLanguages }),
+            next,
+          ),
+        ),
+      ).resolves.toEqual({
+        id: 'user-1',
+        target_languages: targetLanguages,
+      });
+
+      expect(next.handle).toHaveBeenCalledOnce();
+    },
+  );
 
   it('does not require a VIP lookup for the free one-language allowance', async () => {
     const persistenceQuery = createQuery({

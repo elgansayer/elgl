@@ -1,9 +1,9 @@
-import { describe, beforeEach, afterEach, it, expect } from 'vitest';
-import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { ModerationService, ModerationItem } from './moderation.service';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '../../environments/environment';
+import { ModerationItem, ModerationService } from './moderation.service';
 
 describe('ModerationService', () => {
   let service: ModerationService;
@@ -55,13 +55,13 @@ describe('ModerationService', () => {
   });
 
   it('sends the status query param when a status filter is provided', async () => {
-    const promise = service.getItems('moment', 'pending');
+    const promise = service.getItems('moment', ' pending ');
 
     const req = httpMock.expectOne(
-      (r) =>
-        r.url === `${baseUrl}/items` &&
-        r.params.get('type') === 'moment' &&
-        r.params.get('status') === 'pending',
+      (request) =>
+        request.url === `${baseUrl}/items` &&
+        request.params.get('type') === 'moment' &&
+        request.params.get('status') === 'pending',
     );
     expect(req.request.method).toBe('GET');
     req.flush([{ ...mockItem, type: 'moment' }]);
@@ -75,15 +75,29 @@ describe('ModerationService', () => {
     const promise = service.getItems('profile');
 
     const req = httpMock.expectOne(
-      (r) =>
-        r.url === `${baseUrl}/items` &&
-        r.params.get('type') === 'profile' &&
-        r.params.get('status') === null,
+      (request) =>
+        request.url === `${baseUrl}/items` &&
+        request.params.get('type') === 'profile' &&
+        request.params.get('status') === null,
     );
     req.flush([]);
 
     const items = await promise;
     expect(items).toEqual([]);
+  });
+
+  it('omits a whitespace-only status filter', async () => {
+    const promise = service.getItems('moment', '   ');
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url === `${baseUrl}/items` &&
+        request.params.get('type') === 'moment' &&
+        request.params.has('status') === false,
+    );
+    req.flush([]);
+
+    await expect(promise).resolves.toEqual([]);
   });
 
   it('falls back to an empty list on network error', async () => {
