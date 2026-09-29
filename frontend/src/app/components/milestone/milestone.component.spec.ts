@@ -11,6 +11,20 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: unknown) => void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('MilestoneComponent', () => {
   let component: MilestoneComponent;
   let fixture: ComponentFixture<MilestoneComponent>;
@@ -134,12 +148,89 @@ describe('MilestoneComponent', () => {
     expect(component.newDescription()).toBe('');
   });
 
+  it('prevents duplicate create submissions while a request is pending', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const request = deferred<Milestone>();
+    serviceMock.createMilestone.mockReturnValue(request.promise);
+    component.newTitle.set('New goal');
+
+    const first = component.addMilestone(new Event('submit'));
+    const duplicate = component.addMilestone(new Event('submit'));
+
+    expect(serviceMock.createMilestone).toHaveBeenCalledTimes(1);
+    expect(component.creating()).toBe(true);
+
+    request.resolve({ id: '2', title: 'New goal', completed: false });
+    await Promise.all([first, duplicate]);
+
+    expect(component.creating()).toBe(false);
+  });
+
+  it('preserves the form and exposes a translated alert after create failure', async () => {
+    const element = await renderLoadedState();
+    serviceMock.createMilestone.mockRejectedValue(new Error('network unavailable'));
+    component.newTitle.set('Keep this goal');
+    component.newDescription.set('Retry details');
+
+    await component.addMilestone(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(component.newTitle()).toBe('Keep this goal');
+    expect(component.newDescription()).toBe('Retry details');
+    expect(component.creating()).toBe(false);
+    expect(component.mutationError()).toBe(true);
+    expect(element.querySelector<HTMLElement>('[role="alert"]')?.textContent).toContain('common.error');
+  });
+
   it('marks a milestone as completed', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
     await component.complete('1');
     expect(serviceMock.markCompleted).toHaveBeenCalledWith('1');
+  });
+
+  it('prevents overlapping complete and remove mutations for the same milestone', async () => {
+    const element = await renderLoadedState();
+    const request = deferred<Milestone>();
+    serviceMock.markCompleted.mockReturnValue(request.promise);
+
+    const first = component.complete('1');
+    const duplicate = component.complete('1');
+    const overlappingRemove = component.remove('1');
+    fixture.detectChanges();
+
+    const completeButton = Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+      button.textContent?.includes('milestones.completeBtn'),
+    );
+    const removeButton = Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+      button.textContent?.includes('milestones.removeBtn'),
+    );
+
+    expect(serviceMock.markCompleted).toHaveBeenCalledTimes(1);
+    expect(serviceMock.deleteMilestone).not.toHaveBeenCalled();
+    expect(component.isMutating('1')).toBe(true);
+    expect(completeButton?.disabled).toBe(true);
+    expect(removeButton?.disabled).toBe(true);
+    expect(completeButton?.getAttribute('aria-busy')).toBe('true');
+    expect(removeButton?.getAttribute('aria-busy')).toBe('true');
+
+    request.resolve({ id: '1', title: 'Complete 10 flashcards', completed: true });
+    await Promise.all([first, duplicate, overlappingRemove]);
+
+    expect(component.isMutating('1')).toBe(false);
+  });
+
+  it('clears row pending state and exposes an error after a failed mutation', async () => {
+    await renderLoadedState();
+    serviceMock.markCompleted.mockRejectedValue(new Error('network unavailable'));
+
+    await component.complete('1');
+
+    expect(component.isMutating('1')).toBe(false);
+    expect(component.mutationError()).toBe(true);
   });
 
   it('removes a milestone', async () => {
