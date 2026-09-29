@@ -6,55 +6,77 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { DirectConversationService } from './direct-conversation.service';
 
+const TARGET_ID = '22222222-2222-4222-8222-222222222222';
+const ROOM_ID = '33333333-3333-4333-8333-333333333333';
+
+function configure(accessToken: string | null = 'token-123'): {
+  service: DirectConversationService;
+  http: HttpTestingController;
+} {
+  TestBed.configureTestingModule({
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      DirectConversationService,
+      {
+        provide: AuthService,
+        useValue: { getAccessToken: vi.fn().mockReturnValue(accessToken) },
+      },
+    ],
+  });
+
+  return {
+    service: TestBed.inject(DirectConversationService),
+    http: TestBed.inject(HttpTestingController),
+  };
+}
+
 describe('DirectConversationService', () => {
   it('posts the target user and returns the authoritative room id', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        DirectConversationService,
-        {
-          provide: AuthService,
-          useValue: { getAccessToken: vi.fn().mockReturnValue('token-123') },
-        },
-      ],
-    });
-
-    const service = TestBed.inject(DirectConversationService);
-    const http = TestBed.inject(HttpTestingController);
-    const requestPromise = service.openOrCreate('22222222-2222-4222-8222-222222222222');
+    const { service, http } = configure();
+    const requestPromise = service.openOrCreate(TARGET_ID);
 
     const request = http.expectOne(`${environment.apiUrl}/chat/direct-conversations`);
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({
-      targetUserId: '22222222-2222-4222-8222-222222222222',
-    });
+    expect(request.request.body).toEqual({ targetUserId: TARGET_ID });
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-123');
-    request.flush({ roomId: '33333333-3333-4333-8333-333333333333' });
+    request.flush({ roomId: ROOM_ID });
 
-    await expect(requestPromise).resolves.toBe('33333333-3333-4333-8333-333333333333');
+    await expect(requestPromise).resolves.toBe(ROOM_ID);
     http.verify();
   });
 
-  it('fails closed when the server response has no room id', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        DirectConversationService,
-        {
-          provide: AuthService,
-          useValue: { getAccessToken: vi.fn().mockReturnValue('token-123') },
-        },
-      ],
-    });
+  it('fails closed before network access when there is no authenticated session', async () => {
+    const { service, http } = configure(null);
 
-    const service = TestBed.inject(DirectConversationService);
-    const http = TestBed.inject(HttpTestingController);
-    const requestPromise = service.openOrCreate('22222222-2222-4222-8222-222222222222');
-    http.expectOne(`${environment.apiUrl}/chat/direct-conversations`).flush({});
+    await expect(service.openOrCreate(TARGET_ID)).rejects.toThrow('authenticated session');
+    http.expectNone(`${environment.apiUrl}/chat/direct-conversations`);
+    http.verify();
+  });
 
-    await expect(requestPromise).rejects.toThrow('room ID');
+  it('rejects malformed target ids before network access', async () => {
+    const { service, http } = configure();
+
+    await expect(service.openOrCreate('../settings')).rejects.toThrow('target user ID');
+    http.expectNone(`${environment.apiUrl}/chat/direct-conversations`);
+    http.verify();
+  });
+
+  it.each([
+    null,
+    'not-an-object',
+    [],
+    {},
+    { roomId: '' },
+    { roomId: 'not-a-room-id' },
+    { roomId: 42 },
+  ])('fails closed for malformed room responses: %j', async (response) => {
+    const { service, http } = configure();
+    const requestPromise = service.openOrCreate(TARGET_ID);
+
+    http.expectOne(`${environment.apiUrl}/chat/direct-conversations`).flush(response);
+
+    await expect(requestPromise).rejects.toThrow('valid room ID');
     http.verify();
   });
 });
