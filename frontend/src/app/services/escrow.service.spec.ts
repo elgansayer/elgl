@@ -80,7 +80,7 @@ describe('EscrowService', () => {
     const escrows = [createMockEscrow()];
 
     const promise = service.listUserEscrows();
-    const req = httpMock.expectOne('http://localhost:3000/api/escrow');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow');
     expect(req.request.method).toBe('GET');
     req.flush(escrows);
 
@@ -105,7 +105,7 @@ describe('EscrowService', () => {
     const dto = { partner_id: 'partner-1', amount: 100, description: 'Test' };
 
     const promise = service.createEscrow(dto);
-    const req = httpMock.expectOne('http://localhost:3000/api/escrow/create');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/create');
     expect(req.request.method).toBe('POST');
     req.flush({ id: 'esc-1', status: 'pending', amount_held: 100, coins_remaining: 400 });
 
@@ -129,7 +129,7 @@ describe('EscrowService', () => {
     vi.spyOn(mockNetwork, 'isOnline').mockReturnValue(true as unknown as boolean);
 
     const promise = service.releaseEscrow('escrow-1');
-    const req = httpMock.expectOne('http://localhost:3000/api/escrow/release');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/release');
     expect(req.request.method).toBe('POST');
     req.flush({ id: 'escrow-1', status: 'released', amount_released: 100, receiver_new_balance: 600 });
 
@@ -151,7 +151,7 @@ describe('EscrowService', () => {
     vi.spyOn(mockNetwork, 'isOnline').mockReturnValue(true as unknown as boolean);
 
     const promise = service.refundEscrow('escrow-1', 'Changed mind');
-    const req = httpMock.expectOne('http://localhost:3000/api/escrow/refund');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/refund');
     expect(req.request.method).toBe('POST');
     req.flush({ id: 'escrow-1', status: 'refunded', amount_refunded: 100, sender_new_balance: 500 });
 
@@ -174,7 +174,7 @@ describe('EscrowService', () => {
     const disputeResult = createMockEscrow({ status: 'disputed', dispute_reason: 'Issue' });
 
     const promise = service.disputeEscrow('escrow-1', 'Issue');
-    const req = httpMock.expectOne('http://localhost:3000/api/escrow/dispute');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/dispute');
     expect(req.request.method).toBe('POST');
     req.flush(disputeResult);
 
@@ -196,7 +196,7 @@ describe('EscrowService', () => {
     const escrow = createMockEscrow();
 
     const promise = service.getEscrow('escrow-1');
-    const req = httpMock.expectOne('http://localhost:3000/api/escrow/escrow-1');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/escrow-1');
     expect(req.request.method).toBe('GET');
     req.flush(escrow);
 
