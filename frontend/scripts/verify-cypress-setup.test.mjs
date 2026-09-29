@@ -9,6 +9,8 @@ function validFixture() {
     'cypress/support/commands.ts',
     'cypress/e2e/cypress-setup.cy.ts',
     'cypress/e2e/app.cy.ts',
+    'cypress/e2e/moments-flow.cy.ts',
+    'cypress/e2e/chat-flow.cy.ts',
   ]);
 
   return {
@@ -87,12 +89,16 @@ test('rejects missing runner scripts and canonical configuration', () => {
   );
 });
 
-test('rejects a missing support or smoke-test file', () => {
+test('rejects missing support or smoke-test files', () => {
   const fixture = validFixture();
-  fixture.exists = (file) => file !== 'cypress/support/commands.ts' && file !== 'cypress/e2e/app.cy.ts';
+  fixture.exists = (file) =>
+    file !== 'cypress/support/commands.ts' &&
+    file !== 'cypress/e2e/app.cy.ts' &&
+    file !== 'cypress/e2e/chat-flow.cy.ts';
 
   assert.deepEqual(collectCypressSetupFailures(fixture), [
     'missing Cypress setup file: cypress/support/commands.ts',
     'missing Cypress setup file: cypress/e2e/app.cy.ts',
+    'missing Cypress setup file: cypress/e2e/chat-flow.cy.ts',
   ]);
 });

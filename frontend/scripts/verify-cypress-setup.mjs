@@ -7,6 +7,8 @@ const REQUIRED_FILES = [
   'cypress/support/commands.ts',
   'cypress/e2e/cypress-setup.cy.ts',
   'cypress/e2e/app.cy.ts',
+  'cypress/e2e/moments-flow.cy.ts',
+  'cypress/e2e/chat-flow.cy.ts',
 ];
 
 const REQUIRED_CONFIG_MARKERS = [

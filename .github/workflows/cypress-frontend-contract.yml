@@ -58,7 +58,7 @@ jobs:
       - name: Test Cypress setup verifier
         run: node --test scripts/verify-cypress-setup.test.mjs
 
-      - name: Run Cypress setup, app and Moments smoke tests
+      - name: Run Cypress setup, app, Moments, and Chat smoke tests
         run: >-
           npx start-server-and-test start http://localhost:4200
-          "cypress run --spec 'cypress/e2e/cypress-setup.cy.ts,cypress/e2e/app.cy.ts,cypress/e2e/moments-flow.cy.ts' --browser electron"
+          "cypress run --spec 'cypress/e2e/cypress-setup.cy.ts,cypress/e2e/app.cy.ts,cypress/e2e/moments-flow.cy.ts,cypress/e2e/chat-flow.cy.ts' --browser electron"

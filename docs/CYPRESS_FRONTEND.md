@@ -37,7 +37,7 @@ The verifier checks that:
 - `package-lock.json` contains matching root declarations and installed-package entries for both tools;
 - the `cypress:open`, `e2e`, and `e2e:ci` scripts still invoke the intended runners;
 - the canonical base URL, support file, and spec pattern remain configured;
-- the support, commands, setup-smoke, and app-smoke files remain present.
+- the support, commands, setup, app, Moments, and Chat smoke files remain present.
 
 Lockfile verification is deliberate. A package declaration without a matching lockfile can look configured locally but make `npm ci` fail in a clean checkout before Cypress ever starts.
 
@@ -48,7 +48,7 @@ Lockfile verification is deliberate. A package declaration without a matching lo
 1. installs the exact frontend lockfile with `npm ci`;
 2. verifies the Cypress binary;
 3. runs the reusable setup verifier and its Node regression tests;
-4. starts the Angular app and runs `cypress-setup.cy.ts`, `app.cy.ts`, and `moments-flow.cy.ts` in Electron.
+4. starts the Angular app and runs `cypress-setup.cy.ts`, `app.cy.ts`, `moments-flow.cy.ts`, and `chat-flow.cy.ts` in Electron.
 
 A failure means the Cypress installation/configuration is no longer usable from a clean checkout. Do not bypass the check with `continue-on-error` or by replacing the smoke test with a command that never starts the application.
 

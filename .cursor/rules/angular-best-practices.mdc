@@ -68,4 +68,4 @@ In addition to the Angular and TypeScript best practices above, you must adhere 
 - **Monetary Display:** Always display both currencies (`8 UKP / $10 USD`).
 - **Globalisation, RTL & Zero Hard-Coded Strings:** Support ANY language with 0 hard-coded UI strings. Never write raw hard-coded text inside Angular templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`{{ 'key' | t }}`) and use `I18nService.translate('key', params)` inside code (`src/app/services/i18n.service.ts`). Use native `Intl.Segmenter` for word tokenisation and strictly use Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL layout compatibility.
 - **API First:** Never connect Angular directly to the database; every request must route through NestJS REST API or Centrifugo WebSockets.
-- **Verification:** Always run `npm run lint` and verify no compiler errors exist before marking tasks complete in `TODO.md`.
+- **Verification:** Always run `npm run lint` and verify no compiler errors exist before marking tasks complete in the GitHub issue backlog.
