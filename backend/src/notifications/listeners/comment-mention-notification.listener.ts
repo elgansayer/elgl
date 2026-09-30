@@ -29,41 +29,43 @@ export class CommentMentionNotificationListener {
       )
       .slice(0, MAX_MENTION_RECIPIENTS);
 
-    for (const recipientId of recipientIds) {
-      let shouldSend: boolean;
-      try {
-        shouldSend =
-          await this.notificationPreferencesService.shouldSendNotification(
+    await Promise.allSettled(
+      recipientIds.map(async (recipientId) => {
+        let shouldSend: boolean;
+        try {
+          shouldSend =
+            await this.notificationPreferencesService.shouldSendNotification(
+              recipientId,
+              'moment_comment',
+              'push',
+            );
+        } catch {
+          // Notification preferences are a privacy boundary. Fail closed when
+          // their authoritative state is unavailable and avoid logging user IDs
+          // or provider errors from a private comment-notification path.
+          this.logger.warn('comment_mention_preferences_unavailable');
+          return;
+        }
+
+        if (!shouldSend) {
+          return;
+        }
+
+        try {
+          await this.notificationsService.createNotification(
             recipientId,
-            'moment_comment',
-            'push',
+            payload.commenterId,
+            'mention_comment',
+            payload.momentId,
+            payload.commentPreview,
           );
-      } catch {
-        // Notification preferences are a privacy boundary. Fail closed when
-        // their authoritative state is unavailable and avoid logging user IDs
-        // or provider errors from a private comment-notification path.
-        this.logger.warn('comment_mention_preferences_unavailable');
-        continue;
-      }
-
-      if (!shouldSend) {
-        continue;
-      }
-
-      try {
-        await this.notificationsService.createNotification(
-          recipientId,
-          payload.commenterId,
-          'mention_comment',
-          payload.momentId,
-          payload.commentPreview,
-        );
-      } catch {
-        // A storage/provider failure for one mention must not prevent other
-        // mentioned recipients from being processed. Keep diagnostics free of
-        // user IDs, Moment IDs and comment text.
-        this.logger.warn('comment_mention_delivery_failed');
-      }
-    }
+        } catch {
+          // A storage/provider failure for one mention must not prevent other
+          // mentioned recipients from being processed. Keep diagnostics free of
+          // user IDs, Moment IDs and comment text.
+          this.logger.warn('comment_mention_delivery_failed');
+        }
+      }),
+    );
   }
 }
