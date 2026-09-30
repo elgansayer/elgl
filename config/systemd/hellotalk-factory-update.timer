@@ -1,0 +1,15 @@
+[Unit]
+Description=Daily timer - HelloTalk factory self-update
+
+[Timer]
+# Fire once per day at 03:00 UTC - chosen to land between typical overnight
+# batch work finishing and the morning European/Asian peak. Persistent=true
+# catches up if the host was offline at the scheduled time.
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+# Spread the start by up to 5 minutes to avoid thundering-herd with other
+# nightly jobs on the same host.
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

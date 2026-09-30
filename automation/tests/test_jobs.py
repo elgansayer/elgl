@@ -95,63 +95,91 @@ def test_reconcile_requeues_a_reopened_external_pull_request(tmp_path: Path) -> 
     assert restored["10"].attempts == 0
 
 
-def test_reconcile_migrates_quarantined_job_not_in_active_tasks(tmp_path: Path) -> None:
-    store = JobStore(tmp_path / "jobs.json")
+def test_save_never_persists_quarantine_and_preserves_failure_evidence(tmp_path: Path) -> None:
+    store = JobStore(tmp_path / "jobs.json", max_repeated_failures=3)
     stale = Task("258", "Historical issue", "", "github-issue", 0)
     jobs = store.reconcile([stale])
-    jobs["258"].state = JobState.QUARANTINED
-    jobs["258"].attempts = 12
-    jobs["258"].repair_attempts = 5
-    jobs["258"].last_error = "legacy permanent failure"
-    jobs["258"].failure_counts = {"tool": 7}
-    jobs["258"].last_failure_kind = "tool"
-    jobs["258"].last_failure_fingerprint = "deadbeef"
-    jobs["258"].repeated_failure_count = 7
+    job = jobs["258"]
+    job.state = JobState.QUARANTINED
+    job.attempts = 12
+    job.repair_attempts = 5
+    job.last_error = "legacy permanent failure"
+    job.failure_counts = {"tool": 7}
+    job.last_failure_kind = "tool"
+    job.last_failure_fingerprint = "deadbeef"
+    job.repeated_failure_count = 7
+    job.quarantined_at = datetime.now(UTC)
+    job.quarantine_reason = "legacy operator state"
+    job.quarantine_notification_pending = True
     store.save(jobs)
 
-    restored = store.reconcile([])
+    restored = store.load()["258"]
 
-    assert restored["258"].state is JobState.DISCOVERED
-    assert restored["258"].attempts == 0
-    assert restored["258"].repair_attempts == 0
-    assert restored["258"].last_error is None
-    assert restored["258"].next_attempt_at is None
-    assert restored["258"].failure_counts == {}
-    assert restored["258"].last_failure_kind is None
-    assert restored["258"].last_failure_fingerprint is None
-    assert restored["258"].repeated_failure_count == 0
-
-
-def test_load_normalizes_legacy_quarantine_without_reconciliation(tmp_path: Path) -> None:
-    store = JobStore(tmp_path / "jobs.json")
-    task = Task("259", "Legacy quarantined issue", "", "github-issue", 0)
-    jobs = store.reconcile([task])
-    jobs["259"].state = JobState.QUARANTINED
-    jobs["259"].attempts = 8
-    jobs["259"].repair_attempts = 3
-    jobs["259"].quality_repairs = 2
-    jobs["259"].last_error = "legacy terminal state"
-    jobs["259"].failure_counts = {"task-timeout": 2}
-    jobs["259"].last_failure_kind = "task-timeout"
-    jobs["259"].last_failure_fingerprint = "cafebabe"
-    jobs["259"].repeated_failure_count = 2
-    store.save(jobs)
-
-    restored = store.load()
-
-    assert restored["259"].state is JobState.DISCOVERED
-    assert restored["259"].attempts == 0
-    assert restored["259"].repair_attempts == 0
-    assert restored["259"].quality_repairs == 0
-    assert restored["259"].last_error is None
-    assert restored["259"].next_attempt_at is None
-    assert restored["259"].failure_counts == {}
-    assert restored["259"].last_failure_kind is None
-    assert restored["259"].last_failure_fingerprint is None
-    assert restored["259"].repeated_failure_count == 0
+    assert restored.state is JobState.DISCOVERED
+    assert restored.attempts == 12
+    assert restored.repair_attempts == 5
+    assert restored.last_error == "legacy permanent failure"
+    assert restored.next_attempt_at is not None
+    assert restored.failure_counts == {"tool": 7}
+    assert restored.last_failure_kind == "tool"
+    assert restored.last_failure_fingerprint == "deadbeef"
+    assert restored.repeated_failure_count == 7
+    assert restored.quarantine_reason is None
+    assert restored.quarantined_at is None
+    assert not restored.quarantine_notification_pending
 
 
-def test_repeated_identical_task_failure_quarantines_and_survives_restart(
+def test_load_normalizes_legacy_quarantine_without_losing_retry_evidence(tmp_path: Path) -> None:
+    path = tmp_path / "jobs.json"
+    now = datetime.now(UTC)
+    atomic_write_json(
+        path,
+        {
+            "jobs": [
+                {
+                    "task": {
+                        "identifier": "259",
+                        "title": "Legacy quarantined issue",
+                        "body": "",
+                        "source": "github-issue",
+                        "priority": 0,
+                    },
+                    "state": "quarantined",
+                    "attempts": 8,
+                    "repair_attempts": 3,
+                    "quality_repairs": 2,
+                    "last_error": "legacy terminal state",
+                    "failure_counts": {"task-timeout": 4},
+                    "last_failure_kind": "task-timeout",
+                    "last_failure_fingerprint": "cafebabe",
+                    "repeated_failure_count": 4,
+                    "quarantine_reason": "legacy circuit",
+                    "quarantined_at": now.isoformat(),
+                    "quarantine_notification_pending": True,
+                    "updated_at": now.isoformat(),
+                }
+            ]
+        },
+    )
+
+    restored = JobStore(path, max_repeated_failures=3).load()["259"]
+
+    assert restored.state is JobState.DISCOVERED
+    assert restored.attempts == 8
+    assert restored.repair_attempts == 3
+    assert restored.quality_repairs == 2
+    assert restored.last_error == "legacy terminal state"
+    assert restored.next_attempt_at is not None
+    assert restored.failure_counts == {"task-timeout": 4}
+    assert restored.last_failure_kind == "task-timeout"
+    assert restored.last_failure_fingerprint == "cafebabe"
+    assert restored.repeated_failure_count == 4
+    assert restored.quarantine_reason is None
+    assert restored.quarantined_at is None
+    assert not restored.quarantine_notification_pending
+
+
+def test_repeated_identical_task_failure_uses_autonomous_chronic_backoff(
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "jobs.json"
@@ -162,43 +190,78 @@ def test_repeated_identical_task_failure_quarantines_and_survives_restart(
     for attempt in range(1, 4):
         job.attempts = attempt
         job.last_error = "Repository validation failed with the same deterministic error"
+        job.updated_at = datetime.now(UTC)
         store.save_job(job)
         job = store.load()["266"]
 
-    assert job.state is JobState.QUARANTINED
+    assert job.state is JobState.IMPLEMENTING
     assert job.repeated_failure_count == 3
-    assert job.quarantine_reason is not None
-    assert job.quarantined_at is not None
-    assert job.quarantine_notification_pending
-    assert job.next_attempt_at is None
+    assert job.quarantine_reason is None
+    assert job.quarantined_at is None
+    assert not job.quarantine_notification_pending
+    assert job.next_attempt_at is not None
+    assert job.next_attempt_at > datetime.now(UTC) + timedelta(minutes=29)
+
+    job.attempts = 4
+    job.last_error = "Repository validation failed with the same deterministic error"
+    job.updated_at = datetime.now(UTC)
+    store.save_job(job)
+    repeated = store.load()["266"]
+
+    assert repeated.state is JobState.IMPLEMENTING
+    assert repeated.repeated_failure_count == 4
+    assert repeated.next_attempt_at is not None
+    assert repeated.next_attempt_at > datetime.now(UTC) + timedelta(minutes=59)
 
     restarted = JobStore(path, max_repeated_failures=3).load()["266"]
-    assert restarted.state is JobState.QUARANTINED
-    assert restarted.quarantine_reason == job.quarantine_reason
+    assert restarted.state is JobState.IMPLEMENTING
+    assert restarted.next_attempt_at == repeated.next_attempt_at
+    assert restarted.last_failure_fingerprint == repeated.last_failure_fingerprint
 
 
-def test_operator_requeue_resets_only_selected_durable_quarantine(tmp_path: Path) -> None:
+def test_legacy_operator_requeue_cannot_leave_other_jobs_quarantined(tmp_path: Path) -> None:
     path = tmp_path / "jobs.json"
+    now = datetime.now(UTC)
+    atomic_write_json(
+        path,
+        {
+            "jobs": [
+                {
+                    "task": {
+                        "identifier": task_id,
+                        "title": f"Legacy {task_id}",
+                        "body": "",
+                        "source": "github-issue",
+                        "priority": 0,
+                    },
+                    "state": "quarantined",
+                    "attempts": 1,
+                    "last_error": "Deterministic repository failure",
+                    "failure_counts": {"tool": 1},
+                    "last_failure_kind": "tool",
+                    "last_failure_fingerprint": f"fp-{task_id}",
+                    "repeated_failure_count": 1,
+                    "quarantine_reason": "legacy",
+                    "quarantined_at": now.isoformat(),
+                    "updated_at": now.isoformat(),
+                }
+                for task_id in ("267", "268")
+            ]
+        },
+    )
     store = JobStore(path, max_repeated_failures=1)
-    tasks = [
-        Task("267", "First failure", "", "github-issue", 0),
-        Task("268", "Second failure", "", "github-issue", 0),
-    ]
-    jobs = store.reconcile(tasks)
-    for job in jobs.values():
-        job.state = JobState.IMPLEMENTING
-        job.attempts = 1
-        job.last_error = "Deterministic repository failure"
-        store.save_job(job)
 
     requeued = store.requeue_quarantined({"267"})
     restored = store.load()
 
     assert requeued == ["267"]
     assert restored["267"].state is JobState.DISCOVERED
-    assert restored["267"].quarantine_reason is None
     assert restored["267"].attempts == 0
-    assert restored["268"].state is JobState.QUARANTINED
+    assert restored["267"].last_error is None
+    assert restored["268"].state is JobState.DISCOVERED
+    assert restored["268"].attempts == 1
+    assert restored["268"].last_error == "Deterministic repository failure"
+    assert restored["268"].next_attempt_at is not None
 
 
 def test_retry_diagnostics_round_trip(tmp_path: Path) -> None:
