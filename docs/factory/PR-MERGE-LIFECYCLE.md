@@ -8,6 +8,8 @@ A pull request now advances through these observable states:
 
 ```text
 REVIEWING
+  -> stays draft with factory-stack-blocked while a declared Depends-On/
+     Factory-Stack-Parent PR is still open (see PR-CONVERGENCE-AND-WIP.md)
   -> factory review approves the exact head SHA
   -> factory/independent-review = success
   -> factory-reviewed label is applied
