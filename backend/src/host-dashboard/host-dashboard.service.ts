@@ -2,18 +2,6 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { HostDashboardStatsDto } from './dto/host-dashboard.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 
-interface HostDashboardRpcResult {
-  data: unknown;
-  error: { message?: string } | null;
-}
-
-interface HostDashboardRpcClient {
-  rpc(
-    functionName: string,
-    args: Record<string, unknown>,
-  ): PromiseLike<HostDashboardRpcResult>;
-}
-
 function firstResultRow(data: unknown): unknown {
   if (!Array.isArray(data)) return data;
   const rows: unknown[] = data;
@@ -73,11 +61,13 @@ export class HostDashboardService {
     // history in the backend. The RPC also scopes gifts to the room host.
     let earnedCoins = 0;
     try {
-      const { data: earnings, error: earningsError } =
-        await this.getRpcClient().rpc('get_host_dashboard_earnings', {
+      const { data: earnings, error: earningsError } = await supabase.rpc(
+        'get_host_dashboard_earnings',
+        {
           p_room_id: roomId,
           p_host_id: room.host_id,
-        });
+        },
+      );
       if (!earningsError) earnedCoins = parseEarnedCoins(earnings);
     } catch {
       // Earnings are supplementary. Preserve room statistics and fail closed
@@ -90,9 +80,5 @@ export class HostDashboardService {
       earnedCoins,
       startTime: room.created_at ? new Date(room.created_at) : new Date(),
     };
-  }
-
-  private getRpcClient(): HostDashboardRpcClient {
-    return this.supabaseService.getClient() as unknown as HostDashboardRpcClient;
   }
 }
