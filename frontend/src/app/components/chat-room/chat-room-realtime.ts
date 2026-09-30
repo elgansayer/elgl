@@ -11,6 +11,11 @@ const SYSTEM_EVENT_TYPE_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 const SYSTEM_EVENT_PARAM_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 const MAX_SYSTEM_EVENT_PARAMS = 12;
 const MAX_SYSTEM_EVENT_PARAM_LENGTH = 500;
+const DELIVERY_STATUS_RANK: Record<DeliveryStatus, number> = {
+  sent: 0,
+  delivered: 1,
+  read: 2,
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -121,9 +126,25 @@ export function applyChatRoomRealtimeEvent(
     let changed = false;
     const nextMessages = messages.map((candidate) => {
       if (candidate.id !== messageId) return candidate;
-      if (candidate.delivery_status === deliveryStatus) return candidate;
+
+      // Centrifugo publications can be delayed or delivered out of order. A
+      // stale `sent`/`delivered` event must never downgrade a message that the
+      // UI has already observed as `read`.
+      const currentStatus = candidate.delivery_status ?? (candidate.is_read ? 'read' : undefined);
+      if (
+        currentStatus &&
+        DELIVERY_STATUS_RANK[deliveryStatus] < DELIVERY_STATUS_RANK[currentStatus]
+      ) {
+        return candidate;
+      }
+
+      const isRead = candidate.is_read || deliveryStatus === 'read';
+      if (candidate.delivery_status === deliveryStatus && candidate.is_read === isRead) {
+        return candidate;
+      }
+
       changed = true;
-      return { ...candidate, delivery_status: deliveryStatus };
+      return { ...candidate, delivery_status: deliveryStatus, is_read: isRead };
     });
 
     return {

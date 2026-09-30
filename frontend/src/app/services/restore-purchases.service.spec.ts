@@ -5,9 +5,6 @@ import { RestorePurchasesService } from './restore-purchases.service';
 import { I18nService } from './i18n.service';
 import { environment } from '../../environments/environment';
 
-vi.mock('./toast.service', () => ({
-  showToast: vi.fn(),
-}));
 
 describe('RestorePurchasesService', () => {
   let service: RestorePurchasesService;

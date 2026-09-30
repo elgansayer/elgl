@@ -1,3 +1,32 @@
+## 2026-08-24 - [Optimize Offline Reading Cache Articles via Promise.all]
+
+**Learning:** In the frontend `offline-reading.service.ts`, iterating through arrays to sequentially await insertions (`this.putInStore`) and evictions (`this.deleteFromStore`) in `cacheArticles` causes significant, additive delay to the UI thread/local storage interaction. A simple loop adds unnecessary serialization of writes to IndexedDB when caching lists of articles for offline support.
+**Action:** Replace single sequential IDB writes inside a `for...of` loop with a single concurrent `Promise.all` batch using `.map`. This allows multiple object store requests to queue effectively in IndexedDB and resolves much faster, keeping offline cache updates snappy and reducing potential stuttering.
+
+## 2026-08-25 - [Batch Supabase Queries with Promise.all]
+
+**Learning:** Independent Supabase query builder `.then()` requests in NestJS services block sequentially, creating N+1 latency across network calls to the Postgres database.
+**Action:** When aggregating data across multiple independent tables (e.g., getting counts from `moments`, `moment_comments`, `profile_visits`), gather all configured query builder objects and resolve them concurrently using a single `Promise.all` array.
+
+## 2026-08-27 - [Batch Hydration Supabase Queries with Promise.all in MomentsService]
+
+**Learning:** Independent Supabase database lookups sequentially awaiting responses block the Node.js event loop unnecessarily. N+1 lookups on the same method (e.g. hydrating profiles, likes, and votes) can be parallelized.
+**Action:** When a service method requests multiple related collections (like hydrating author profiles and user likes for a feed), use a concurrent `Promise.all` batch array to mitigate additive network latency.
+
+## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
+
+**Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
+**Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-08-31 - [Batch Archive Cleanup Queries with Promise.allSettled]
+
+**Learning:** Sequential awaits in `for...of` loops during maintenance jobs like `purgeExpiredArchives` create significant N+1 database latency, especially since each loop execution awaits both object storage deletion and database table row updates.
+**Action:** Replace sequential awaiting with `Promise.allSettled` over bounded chunks. Inspect every settled result and emit a privacy-safe aggregate failure count so concurrency retains partial progress without hiding provider or database failures.
+## 2026-08-29 - Parallelize Profile Fetching in Gift Transaction Broadcast
+
+**Learning:** In the `economy.service.ts` gift transaction logic, fetching sender and receiver profiles sequentially adds latency. Because the reads enrich a broadcast after the gift is committed, a lookup failure must not report that the committed gift failed.
+**Action:** Run independent post-commit enrichment reads concurrently with `Promise.allSettled`, retain successful partial results, and keep ancillary failures from changing the transaction outcome.
+
 ## Performance Optimizations
 
 - **Date:** 2026-08-06
@@ -106,7 +135,9 @@
 
 **Learning:** In the backend `data-retention.service.ts`, finalizing user account deletions (`finaliseAccountDeletions`) looped sequentially through `usersToDelete` executing `wipeUserData` and a table update. Simply changing this to an unbounded `Promise.allSettled` is dangerous and can exhaust database connections when processing dozens of concurrent users.
 **Action:** When optimizing long-running cron jobs or batch loops across multiple records, replace sequential iterations with a bounded concurrent approach. Use a `for` loop with `slice(i, i + chunkSize)` (e.g. chunk size 10) and wrap the execution in `Promise.allSettled`. This safely provides concurrent execution benefits without breaking connection pool limits. Ensure the mapped functions catch errors and explicitly narrow return unions (e.g., `success: true as const`) to satisfy TypeScript.
+
 ## 2026-08-17 - Recommendation Service Bottleneck (O(n^2) nested maps)
+
 **Learning:** Nested loops where the inner loop does array operations like `filter` and `map` followed by `JSON.stringify` can cause severe performance issues with large datasets.
 **Action:** Pre-process inner-loop data structure outside loop. If generating JSON subsets where an item needs to be excluded, map and stringify elements just once, and string-manipulate the full string using `.replace` instead of re-evaluating arrays.
 
@@ -130,14 +161,15 @@
 **Learning:** In the backend `moments.service.ts`, `getLifetimeCounts` sequentially queried three independent counts (`moments`, `moment_comments`, and `translations`). In an isolated benchmark simulating network delay, fetching these sequentially took ~160ms, whereas fetching them concurrently via `Promise.all` reduced the execution time to ~50ms.
 **Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.
 
-## 2026-08-21 - [Optimize full achievements lookup via Promise.all]
+## 2026-08-21 - [Optimize Full Achievements Evaluation via Promise.all]
 
-**Learning:** In the backend `achievements.service.ts`, `getFullAchievements` executed three independent queries sequentially: `getUserAchievements`, `getUserMessageCount`, and `getStudyStreakDays`. In an isolated benchmark simulating network delay, fetching these sequentially takes more time, whereas fetching them concurrently reduces the execution time.
-**Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.
+**Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
+**Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
 
 ## 2024-05-24 - [Replaced sequential safety checks with Promise.all in chat.service.ts]
 **Learning:** Found sequential calls to `getBlockedAndBlockerIds` for sender and receiver in both `sendMessage` and `sendContact` functions of `chat.service.ts`. These independent queries cause unnecessary additive network latency.
 **Action:** Used `Promise.all` to fetch both `receiverBlockedIds` and `senderBlockedIds` concurrently to optimize the database query execution and reduce wait times.
+
 ## 2026-08-24 - Optimize joinChallenge with Promise.all
 **Learning:** Sequential, independent database queries in user-facing endpoints (like joining a challenge) add unnecessary network latency. The `joinChallenge` method sequentially fetched the challenge and then the existing participant.
 **Action:** Always group independent database lookups using a single concurrent `Promise.all` batch fetch to mitigate additive network latency. Remember to update the corresponding tests to mock the newly concurrent queries correctly (e.g. chaining `maybeSingle` mocks).

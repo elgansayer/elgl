@@ -143,6 +143,33 @@ describe('DiscoveryService PostGIS partner queries', () => {
     ]);
   });
 
+  it('uses the bounded default radius and neutral optional filters', async () => {
+    rpc.mockResolvedValue({
+      data: [makeRpcUser('partner-defaults', 1200)],
+      error: null,
+    } satisfies QueryResult);
+
+    await service.searchPartners('current-user', null, {
+      latitude: 51.5074,
+      longitude: -0.1278,
+    });
+
+    expect(rpc).toHaveBeenCalledWith('search_nearby_users', {
+      search_lat: 51.5074,
+      search_lon: -0.1278,
+      radius_m: 50000,
+      exclude_user_id: 'current-user',
+      filter_native_arr: null,
+      filter_target: null,
+      serious_only: false,
+      filter_level: null,
+      filter_gender: null,
+      filter_age_min: null,
+      filter_age_max: null,
+      filter_audio_intro: false,
+    });
+  });
+
   it('uses VIP mock coordinates and forwards the VIP-only gender filter', async () => {
     rpc.mockResolvedValue({
       data: [makeRpcUser('tokyo-partner', 800)],
@@ -174,6 +201,44 @@ describe('DiscoveryService PostGIS partner queries', () => {
         filter_gender: 'female',
       }),
     );
+  });
+
+  it('forwards serious learner mode to the PostGIS RPC', async () => {
+    rpc.mockResolvedValue({
+      data: [makeRpcUser('serious-partner', 900)],
+      error: null,
+    } satisfies QueryResult);
+
+    await service.searchPartners(
+      'current-user',
+      { is_serious_learner: true } as UserProfile,
+      {
+        latitude: 53.4808,
+        longitude: -2.2426,
+      },
+    );
+
+    expect(rpc).toHaveBeenCalledWith(
+      'search_nearby_users',
+      expect.objectContaining({ serious_only: true }),
+    );
+  });
+
+  it('does not invoke the PostGIS RPC with only one coordinate', async () => {
+    queryBuilder.limit.mockResolvedValue({
+      data: [makeRpcUser('non-spatial-partner')],
+      error: null,
+    } satisfies QueryResult);
+
+    const result = await service.searchPartners('current-user', null, {
+      latitude: 51.5074,
+    });
+
+    expect(rpc).not.toHaveBeenCalled();
+    expect(queryBuilder.limit).toHaveBeenCalledWith(50);
+    expect(result).toEqual([
+      expect.objectContaining({ id: 'non-spatial-partner' }),
+    ]);
   });
 
   it('defensively removes blocked users returned by the PostGIS RPC', async () => {
@@ -214,6 +279,27 @@ describe('DiscoveryService PostGIS partner queries', () => {
     expect(result).toEqual([
       expect.objectContaining({
         id: 'fallback-partner',
+        distance_metres: undefined,
+      }),
+    ]);
+  });
+
+  it('falls back when the PostGIS RPC returns no nearby users', async () => {
+    rpc.mockResolvedValue({ data: [], error: null } satisfies QueryResult);
+    queryBuilder.limit.mockResolvedValue({
+      data: [makeRpcUser('fallback-empty')],
+      error: null,
+    } satisfies QueryResult);
+
+    const result = await service.searchPartners('current-user', null, {
+      latitude: 51.5074,
+      longitude: -0.1278,
+    });
+
+    expect(queryBuilder.limit).toHaveBeenCalledWith(50);
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'fallback-empty',
         distance_metres: undefined,
       }),
     ]);

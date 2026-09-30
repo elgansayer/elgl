@@ -54,9 +54,8 @@ export const authRoutes: Routes = [
   },
   {
     path: 'help',
-    loadComponent: () =>
-      import('../pages/help-centre/help-centre.component').then((m) => m.HelpCentreComponent),
-    title: 'Help Centre - HelloTalk',
+    redirectTo: 'support',
+    pathMatch: 'full',
   },
   {
     path: 'support',
@@ -68,8 +67,7 @@ export const authRoutes: Routes = [
   },
   {
     path: 'help-about',
-    loadComponent: () =>
-      import('../pages/help-about/help-about.component').then((m) => m.HelpAboutComponent),
-    title: 'Help & About - HelloTalk',
+    redirectTo: 'support',
+    pathMatch: 'full',
   },
 ];

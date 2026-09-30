@@ -3,10 +3,12 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   Res,
+  UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -76,6 +78,10 @@ export class FlashcardsController {
     description: 'Flashcard created or updated successfully.',
   })
   @ApiResponse({
+    status: 400,
+    description: 'Flashcard payload failed validation.',
+  })
+  @ApiResponse({
     status: 401,
     description: 'Unauthorized -- missing or invalid JWT.',
   })
@@ -83,8 +89,11 @@ export class FlashcardsController {
     @CurrentUser() user: User | null,
     @Body() dto: CreateFlashcardDto,
     @Res({ passthrough: true }) res?: Response,
-  ): Promise<Flashcard | null> {
-    if (!user) return null;
+  ): Promise<Flashcard> {
+    if (!user) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const result = await this.flashcardsService.createOrUpdateFlashcard(
       user.id,
       dto,
@@ -107,7 +116,7 @@ export class FlashcardsController {
   @ApiParam({
     name: 'id',
     description: 'UUID of the flashcard being reviewed',
-    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+    example: 'c9b1a2d3-e4f5-4789-abcd-ef0123456789',
   })
   @ApiResponse({
     status: 200,
@@ -121,6 +130,10 @@ export class FlashcardsController {
       },
     },
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Flashcard id or SRS review payload failed validation.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({
     status: 404,
@@ -128,11 +141,14 @@ export class FlashcardsController {
   })
   async updateSrs(
     @CurrentUser() user: User | null,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateSrsDto,
     @Res({ passthrough: true }) res?: Response,
-  ): Promise<Flashcard | null> {
-    if (!user) return null;
+  ): Promise<Flashcard> {
+    if (!user) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const result = await this.flashcardsService.updateSrsLevel(
       user.id,
       id,

@@ -128,7 +128,10 @@ describe('SupabaseAuthGuard', () => {
       it('rejects ambiguous duplicate authorization headers', async () => {
         const request: any = {
           headers: {
-            authorization: ['Bearer first.jwt.token', 'Bearer second.jwt.token'],
+            authorization: [
+              'Bearer first.jwt.token',
+              'Bearer second.jwt.token',
+            ],
           },
         };
         const context = createMockExecutionContext('http', request);
