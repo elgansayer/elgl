@@ -14,8 +14,14 @@ interface HostDashboardRpcClient {
   ): PromiseLike<HostDashboardRpcResult>;
 }
 
+function firstResultRow(data: unknown): unknown {
+  if (!Array.isArray(data)) return data;
+  const rows: unknown[] = data;
+  return rows[0];
+}
+
 function parseEarnedCoins(data: unknown): number {
-  const row = Array.isArray(data) ? data[0] : data;
+  const row = firstResultRow(data);
   if (typeof row !== 'object' || row === null || !('earned_coins' in row)) {
     return 0;
   }

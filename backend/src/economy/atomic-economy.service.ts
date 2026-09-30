@@ -44,6 +44,12 @@ function isDailyCheckInResult(value: unknown): value is DailyCheckInResult {
     : value.coins_rewarded === 0;
 }
 
+function firstResultRow(data: unknown): unknown {
+  if (!Array.isArray(data)) return data;
+  const rows: unknown[] = data;
+  return rows[0];
+}
+
 /**
  * EconomyService variant that moves daily check-in idempotency into one
  * database transaction. Other economy behaviour remains inherited unchanged.
@@ -96,9 +102,7 @@ export class AtomicEconomyService extends EconomyService {
         throw new Error('daily check-in RPC failed');
       }
 
-      const row = Array.isArray(response.data)
-        ? response.data[0]
-        : response.data;
+      const row = firstResultRow(response.data);
       if (!isDailyCheckInResult(row)) {
         throw new Error('daily check-in RPC returned an invalid result');
       }
