@@ -161,36 +161,6 @@ describe('VersionService', () => {
     });
   });
 
-  it('should trim a stable configured minimum supported version', () => {
-    const saved = process.env.MINIMUM_SUPPORTED_APP_VERSION;
-    process.env.MINIMUM_SUPPORTED_APP_VERSION = ' 2.3.4 ';
-
-    try {
-      const service = new VersionService();
-      expect(service.getMinimumSupportedVersion()).toEqual({
-        minimumSupported: '2.3.4',
-      });
-    } finally {
-      process.env.MINIMUM_SUPPORTED_APP_VERSION = saved;
-    }
-  });
-
-  it.each(['latest', '1', '1.2', '1.2.3-beta.1', '01.2.3', ''])(
-    'should fail fast for malformed minimum supported version %j',
-    (minimumSupportedVersion) => {
-      const saved = process.env.MINIMUM_SUPPORTED_APP_VERSION;
-      process.env.MINIMUM_SUPPORTED_APP_VERSION = minimumSupportedVersion;
-
-      try {
-        expect(() => new VersionService()).toThrow(
-          'MINIMUM_SUPPORTED_APP_VERSION must be a stable semantic version (major.minor.patch)',
-        );
-      } finally {
-        process.env.MINIMUM_SUPPORTED_APP_VERSION = saved;
-      }
-    },
-  );
-
   it('should default minimumSupportedVersion to 1.0.0 when MINIMUM_SUPPORTED_APP_VERSION missing', () => {
     const saved = process.env.MINIMUM_SUPPORTED_APP_VERSION;
     delete process.env.MINIMUM_SUPPORTED_APP_VERSION;

@@ -17,15 +17,7 @@ import { TranslatePipe } from '../services/translate.pipe';
       <ul class="space-y-2">
         @for (user of users(); track user.id) {
           <li class="flex items-center gap-3">
-            <img
-              [src]="user.avatar_url"
-              [alt]="user.display_name"
-              width="40"
-              height="40"
-              loading="lazy"
-              decoding="async"
-              class="w-10 h-10 rounded-full"
-            />
+            <img [src]="user.avatar_url" [alt]="user.display_name" class="w-10 h-10 rounded-full" />
             <div>
               <p class="text-lg font-bold">{{ user.display_name }}</p>
               <p class="text-sm text-text-muted">{{ user.native_languages.join(', ') }}</p>

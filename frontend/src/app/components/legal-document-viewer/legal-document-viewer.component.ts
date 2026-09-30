@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import type { LegalSection } from '../../services/legal.service';
 
@@ -81,10 +82,7 @@ export class LegalDocumentViewerComponent {
   readonly lastUpdated = input.required<Date | string>();
   readonly sections = input.required<LegalSection[]>();
 
-  private readonly longDateFormatter = new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'long',
-    timeZone: 'UTC',
-  });
+  private readonly datePipe = new DatePipe('en-GB');
   private readonly parsedDate = computed(() => this.parseDate(this.lastUpdated()));
 
   readonly dateTimeValue = computed(() => {
@@ -103,7 +101,7 @@ export class LegalDocumentViewerComponent {
       return String(this.lastUpdated());
     }
 
-    return this.longDateFormatter.format(date);
+    return this.datePipe.transform(date, 'longDate') ?? String(this.lastUpdated());
   });
 
   private parseDate(value: Date | string): Date | null {
@@ -124,12 +122,12 @@ export class LegalDocumentViewerComponent {
     const year = Number(yearText);
     const month = Number(monthText);
     const day = Number(dayText);
-    const date = new Date(Date.UTC(year, month - 1, day));
+    const date = new Date(year, month - 1, day);
 
     if (
-      date.getUTCFullYear() !== year ||
-      date.getUTCMonth() !== month - 1 ||
-      date.getUTCDate() !== day
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
     ) {
       return null;
     }

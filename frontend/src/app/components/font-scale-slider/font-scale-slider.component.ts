@@ -7,21 +7,25 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-font-scale-slider',
   imports: [TranslatePipe],
   template: `
-    <div class="flex items-center gap-2 ps-4 text-sm">
-      <label class="flex min-w-0 items-center gap-2 text-text-secondary">
-        <span class="whitespace-nowrap">{{ 'settings.fontScale' | t }}</span>
-        <input
-          type="range"
-          [min]="min"
-          [max]="max"
-          [step]="step"
-          [value]="scale()"
-          [attr.aria-valuetext]="scalePercentLabel()"
-          (input)="onInput($event)"
-          class="h-1 w-24 accent-primary"
-        />
+    <div class="flex items-center gap-2 ps-4 text-sm" role="group" aria-label="{{ 'settings.fontScale' | t }}">
+      <label for="fontScaleSlider" class="text-text-secondary whitespace-nowrap">
+        {{ 'settings.fontScale' | t }}
       </label>
-      <span class="w-8 text-end text-text-secondary" aria-hidden="true">{{ scalePercentLabel() }}</span>
+      <input
+        id="fontScaleSlider"
+        type="range"
+        [min]="min"
+        [max]="max"
+        [step]="step"
+        [value]="scale()"
+        [attr.aria-valuemin]="min"
+        [attr.aria-valuemax]="max"
+        [attr.aria-valuenow]="scale()"
+        [attr.aria-valuetext]="scalePercentLabel()"
+        (input)="onInput($event)"
+        class="w-24 h-1 accent-primary"
+      />
+      <span class="text-text-secondary w-8 text-end" aria-hidden="true">{{ scalePercentLabel() }}</span>
     </div>
   `,
 })
@@ -43,8 +47,10 @@ export class FontScaleSliderComponent {
 
   protected onInput(event: Event): void {
     const input = event.target;
-    if (!(input instanceof HTMLInputElement) || !Number.isFinite(input.valueAsNumber)) return;
-
-    this.fontScaleService.setScale(input.valueAsNumber);
+    if (!(input instanceof HTMLInputElement)) return;
+    const value = Number.parseFloat(input.value);
+    if (!Number.isNaN(value)) {
+      this.fontScaleService.setScale(value);
+    }
   }
 }

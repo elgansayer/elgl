@@ -7,20 +7,15 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { User } from '@supabase/supabase-js';
+import { Request } from 'express';
 import { AdminAuditService } from '../admin-audit.service';
 import { AdminAuthorizationService } from '../admin-authorization.service';
 import { AdminCapability } from '../admin-capabilities';
 import { ADMIN_CAPABILITIES_METADATA_KEY } from '../decorators/require-admin-capabilities.decorator';
 
-type AuthenticatedRequest = {
+interface AuthenticatedRequest extends Request {
   user?: User;
-  method?: string;
-  baseUrl?: string;
-  path?: string;
-  route?: { path?: string };
-  headers?: Record<string, string | string[] | undefined>;
-  params?: Record<string, string | string[] | undefined>;
-};
+}
 
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const SAFE_TARGET_ID = /^[A-Za-z0-9_-]{1,200}$/;
@@ -92,14 +87,15 @@ export class AdminCapabilityGuard implements CanActivate {
       SAFE_TARGET_ID.test(candidateTargetId)
         ? candidateTargetId
         : undefined;
-    const actionPath = `${request.baseUrl ?? ''}${routePath}`;
-    const actionMethod = request.method?.toLowerCase() ?? 'request';
-    const action = `${actionMethod} ${actionPath}`.slice(0, 160);
 
     try {
       await this.audit.record({
         actorUserId,
-        action,
+        action:
+          `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
+            0,
+            160,
+          ),
         capabilityKey,
         targetType: targetId ? 'admin-resource' : undefined,
         targetId,
