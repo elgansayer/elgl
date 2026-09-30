@@ -20,30 +20,20 @@ describe('OnboardingService diagnostic step', () => {
     service = TestBed.inject(OnboardingService);
   });
 
-  it('places the diagnostic between target language and display name', () => {
+  it('places the diagnostic as the only step', () => {
     expect(service.steps.map((step) => step.label)).toEqual([
-      'onboarding.step1',
-      'onboarding.step2',
       'diagnosticQuiz.title',
-      'onboarding.step4',
     ]);
   });
 
   it('cannot leave the diagnostic step until a server result is recorded', () => {
-    service.setNativeLanguage('en');
-    service.nextStep();
-    service.toggleTargetLanguage('ja');
-    service.nextStep();
-
-    expect(service.currentStep()).toBe(2);
+    expect(service.currentStep()).toBe(0);
     expect(service.canGoNext()).toBe(false);
     service.nextStep();
-    expect(service.currentStep()).toBe(2);
+    expect(service.currentStep()).toBe(0);
 
     service.setQuizResult(result);
     expect(service.canGoNext()).toBe(true);
-    service.nextStep();
-    expect(service.currentStep()).toBe(3);
   });
 
   it('uses the first selected target language as the diagnostic context', () => {

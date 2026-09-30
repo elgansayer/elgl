@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
@@ -182,7 +183,7 @@ class AgentsConfig(BaseModel):
                 enabled=True,
                 command="claude",
                 auth_mode="subscription",
-                model="fable",
+                model="sonnet",
                 credential_paths=[".claude", ".claude.json"],
                 runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
                 phase_models={
@@ -191,9 +192,9 @@ class AgentsConfig(BaseModel):
                     "security_review": "opus",
                     "implementation": "sonnet",
                     "quality_repair": "haiku",
-                    "code_review": "haiku",
+                    "code_review": "sonnet",
                     "ci_repair": "haiku",
-                    "general_action": "fable",
+                    "general_action": "haiku",
                 },
             ),
             "codex": ProviderConfig(
@@ -282,6 +283,22 @@ class AgentsConfig(BaseModel):
                 normalised_providers[name] = provider
                 continue
             normalised_provider = dict(provider)
+            if name == "claude":
+                # Root-managed production configuration can lag the package during
+                # a rolling deployment. Fable now requires separate usage credits,
+                # so migrate that retired alias at load time until the root updater
+                # installs the current Sonnet/Haiku configuration.
+                migrating_fable = normalised_provider.get("model") == "fable"
+                if migrating_fable:
+                    normalised_provider["model"] = "sonnet"
+                phase_models = normalised_provider.get("phase_models")
+                if isinstance(phase_models, dict):
+                    migrated_phase_models = dict(phase_models)
+                    if migrated_phase_models.get("general_action") == "fable":
+                        migrated_phase_models["general_action"] = "haiku"
+                    if migrating_fable and migrated_phase_models.get("code_review") == "haiku":
+                        migrated_phase_models["code_review"] = "sonnet"
+                    normalised_provider["phase_models"] = migrated_phase_models
             normalised_provider.setdefault(
                 "transport", "openhands-sdk" if name == "openhands" else "cli"
             )
@@ -392,6 +409,12 @@ class FactoryConfig(BaseModel):
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
+    repository_profile: Literal["hellotalk", "workout-agent"] = "hellotalk"
+    prompt_dir: Path = Path("/var/lib/hellotalk-factory/repository/automation/prompts")
+    system_prompt_path: Path = Path(
+        "/var/lib/hellotalk-factory/repository/automation/prompts/system.md"
+    )
+    provider_capacity_dir: Path = Path("/var/lib/hellotalk-factory")
     # Static architecture identity. This is deliberately separate from
     # factory_generation, which generation.py replaces with a unique per-daemon
     # ownership UUID after the host-level lock is acquired.
@@ -424,6 +447,24 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    max_open_pull_requests: int = 40
+    max_queued_ci: int = 12
+    pull_request_history_limit: int = 2_000
+    lane_wip_limits: dict[str, int] = Field(
+        default_factory=lambda: {"architect": 1, "dependency": 12, "factory": 8}
+    )
+    component_wip_limits: dict[str, int] = Field(
+        default_factory=lambda: {
+            "admin-portal": 6,
+            "automation": 4,
+            "backend": 12,
+            "ci": 6,
+            "database": 4,
+            "docs": 6,
+            "frontend": 12,
+            "multi": 8,
+        }
+    )
     # Zero preserves the historical unlimited admission behaviour. Production can
     # set 3600/1 to admit exactly one newly discovered GitHub issue per hour while
     # allowing in-flight implementation, review, CI repair, and PR work to continue.
@@ -442,6 +483,13 @@ class FactoryConfig(BaseModel):
     # once the check has already failed once (it only logs on state changes).
     recovery_retention_hours: float = 72
     max_no_pr_hours: float = 6
+    # How long a stall condition (storage blocked, or no PR progress past
+    # max_no_pr_hours) must persist continuously before the daemon dispatches
+    # a Telegram alert and a best-effort AI investigation. Both signals were
+    # previously only checkable on demand (hellotalk-factory doctor); nothing
+    # evaluated them proactively, so a real multi-hour stall produced no
+    # notification at all until an operator happened to look.
+    stall_alert_minutes: float = 20
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
     # Quarantine (after FACTORY_MAX_CONSECUTIVE_FAILURES repeated identical
@@ -454,7 +502,7 @@ class FactoryConfig(BaseModel):
     quarantine_recovery_minutes: int = 30
     review_lane_first: bool = True
     review_reserve_provider_slot: bool = True
-    review_lane_max_concurrent: int = 1
+    review_lane_max_concurrent: int = 2
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
@@ -469,7 +517,15 @@ class FactoryConfig(BaseModel):
     dry_run: bool = False
 
     @field_validator(
-        "repository", "state_dir", "log_dir", "profile_store", "worktree_dir", "recovery_dir"
+        "repository",
+        "state_dir",
+        "log_dir",
+        "profile_store",
+        "worktree_dir",
+        "recovery_dir",
+        "prompt_dir",
+        "system_prompt_path",
+        "provider_capacity_dir",
     )
     @classmethod
     def absolute_paths(cls, value: Path) -> Path:
@@ -482,6 +538,9 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "max_open_pull_requests",
+        "max_queued_ci",
+        "pull_request_history_limit",
         "new_issues_per_interval",
         "openai_max_concurrent_conversations",
         "opencode_max_concurrent_conversations",
@@ -495,6 +554,23 @@ class FactoryConfig(BaseModel):
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("factory limits must be positive")
+        return value
+
+    @field_validator("lane_wip_limits", "component_wip_limits")
+    @classmethod
+    def positive_wip_limits(cls, value: dict[str, int]) -> dict[str, int]:
+        if any(
+            not name or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", name) or limit <= 0
+            for name, limit in value.items()
+        ):
+            raise ValueError("Factory WIP maps require safe names and positive limits")
+        return value
+
+    @field_validator("pull_request_history_limit")
+    @classmethod
+    def bounded_pull_request_history(cls, value: int) -> int:
+        if value > 10_000:
+            raise ValueError("pull request history limit cannot exceed 10000")
         return value
 
     @field_validator("new_issue_interval_seconds")
@@ -527,6 +603,8 @@ class FactoryConfig(BaseModel):
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
         if self.recovery_retention_hours <= 0:
             raise ValueError("recovery retention must be positive")
+        if self.stall_alert_minutes <= 0:
+            raise ValueError("stall alert threshold must be positive")
         if self.factory_architecture != EXPECTED_FACTORY_ARCHITECTURE:
             raise ValueError(
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
@@ -551,6 +629,21 @@ class FactoryConfig(BaseModel):
         def boolean(name: str, default: bool) -> bool:
             return env.get(name, str(default)).lower() in {"1", "true", "yes"}
 
+        def limit_map(name: str, default: Mapping[str, int]) -> dict[str, int]:
+            raw = env.get(name, "").strip()
+            if not raw:
+                return dict(default)
+            parsed: dict[str, int] = {}
+            for item in raw.split(","):
+                key, separator, limit = item.strip().partition("=")
+                if not separator or not key or not limit:
+                    raise ConfigurationError(f"Invalid {name} entry: {item!r}")
+                try:
+                    parsed[key.casefold()] = int(limit)
+                except ValueError as error:
+                    raise ConfigurationError(f"Invalid {name} limit: {limit!r}") from error
+            return parsed
+
         import json
 
         agents_config = AgentsConfig.legacy_openhands_only()
@@ -568,6 +661,8 @@ class FactoryConfig(BaseModel):
                 raise ConfigurationError(f"Invalid FACTORY_AGENTS_CONFIG: {error}") from error
 
         github_repository = env.get("GITHUB_REPOSITORY", "elgansayer/elgl")
+        repository = Path(env.get("FACTORY_REPOSITORY", cls.model_fields["repository"].default))
+        state_dir = Path(env.get("FACTORY_STATE_DIR", cls.model_fields["state_dir"].default))
         repository_owner = github_repository.partition("/")[0]
         trusted_github_actors = frozenset(
             actor.strip().casefold()
@@ -583,11 +678,9 @@ class FactoryConfig(BaseModel):
         try:
             return cls(
                 agents=agents_config,
-                repository=Path(
-                    env.get("FACTORY_REPOSITORY", cls.model_fields["repository"].default)
-                ),
+                repository=repository,
                 base_branch=env.get("FACTORY_BASE_BRANCH", "main"),
-                state_dir=Path(env.get("FACTORY_STATE_DIR", cls.model_fields["state_dir"].default)),
+                state_dir=state_dir,
                 log_dir=Path(env.get("FACTORY_LOG_DIR", cls.model_fields["log_dir"].default)),
                 profile_store=Path(
                     env.get("FACTORY_PROFILE_STORE", cls.model_fields["profile_store"].default)
@@ -597,6 +690,22 @@ class FactoryConfig(BaseModel):
                 ),
                 recovery_dir=Path(
                     env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
+                ),
+                repository_profile=cast(
+                    Literal["hellotalk", "workout-agent"],
+                    env.get("FACTORY_REPOSITORY_PROFILE", "hellotalk"),
+                ),
+                prompt_dir=Path(
+                    env.get("FACTORY_PROMPT_DIR", str(repository / "automation" / "prompts"))
+                ),
+                system_prompt_path=Path(
+                    env.get(
+                        "FACTORY_SYSTEM_PROMPT_PATH",
+                        str(repository / "automation" / "prompts" / "system.md"),
+                    )
+                ),
+                provider_capacity_dir=Path(
+                    env.get("FACTORY_PROVIDER_CAPACITY_DIR", str(state_dir))
                 ),
                 factory_architecture=env.get("FACTORY_ARCHITECTURE", EXPECTED_FACTORY_ARCHITECTURE),
                 factory_generation=env.get("FACTORY_GENERATION", "unknown"),
@@ -640,6 +749,28 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                max_open_pull_requests=int(env.get("FACTORY_MAX_OPEN_PULL_REQUESTS", "40")),
+                max_queued_ci=int(env.get("FACTORY_MAX_QUEUED_CI", "12")),
+                pull_request_history_limit=int(
+                    env.get("FACTORY_PULL_REQUEST_HISTORY_LIMIT", "2000")
+                ),
+                lane_wip_limits=limit_map(
+                    "FACTORY_LANE_WIP_LIMITS",
+                    {"architect": 1, "dependency": 12, "factory": 8},
+                ),
+                component_wip_limits=limit_map(
+                    "FACTORY_COMPONENT_WIP_LIMITS",
+                    {
+                        "admin-portal": 6,
+                        "automation": 4,
+                        "backend": 12,
+                        "ci": 6,
+                        "database": 4,
+                        "docs": 6,
+                        "frontend": 12,
+                        "multi": 8,
+                    },
+                ),
                 new_issue_interval_seconds=int(env.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")),
                 new_issues_per_interval=int(env.get("FACTORY_NEW_ISSUES_PER_INTERVAL", "1")),
                 label_reconciliation_batch_size=int(
@@ -652,6 +783,7 @@ class FactoryConfig(BaseModel):
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
                 recovery_retention_hours=float(env.get("FACTORY_RECOVERY_RETENTION_HOURS", "72")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
+                stall_alert_minutes=float(env.get("FACTORY_STALL_ALERT_MINUTES", "20")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
                 quarantine_recovery_minutes=int(
@@ -659,7 +791,7 @@ class FactoryConfig(BaseModel):
                 ),
                 review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
                 review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
-                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
+                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "2")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
