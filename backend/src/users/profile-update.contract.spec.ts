@@ -23,9 +23,9 @@ describe('profile update contract', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('rejects more than three target languages at the API validation boundary', async () => {
+  it('rejects more than five target languages at the API validation boundary', async () => {
     const dto = Object.assign(new UpdateProfileDto(), {
-      target_languages: ['ja', 'es', 'fr', 'de'],
+      target_languages: ['ja', 'es', 'fr', 'de', 'it', 'pt'],
     });
 
     const errors = await validate(dto);
@@ -67,7 +67,7 @@ describe('profile update contract', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('keeps the service-side VIP ceiling at three target languages', async () => {
+  it('keeps the service-side Consumer VIP ceiling at three target languages', async () => {
     const service = Object.create(UsersService.prototype) as UsersService;
     vi.spyOn(service, 'getProfile').mockResolvedValue({
       id: 'vip-user',
