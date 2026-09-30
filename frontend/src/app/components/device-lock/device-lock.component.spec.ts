@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AppLockService } from '../../services/app-lock.service';
@@ -6,10 +7,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { DeviceLockComponent } from './device-lock.component';
 
 class MockI18nService {
-  translations: Record<string, string> = {};
+  readonly translations = signal<Record<string, string>>({});
 
   translate(key: string): string {
-    return this.translations[key] ?? key;
+    return this.translations()[key] ?? key;
   }
 }
 
@@ -190,15 +191,15 @@ describe('DeviceLockComponent', () => {
     await retry;
   });
 
-  it('remains direction-neutral and wraps long RTL translations without physical-direction utilities', () => {
+  it('remains direction-neutral and wraps long RTL translations without physical-direction utilities', async () => {
     const longArabic = 'هذا نص عربي طويل لاختبار إعادة التدفق والوصول عند التكبير '.repeat(8).trim();
-    i18n.translations = {
+    i18n.translations.set({
       'deviceLock.title': longArabic,
       'deviceLock.message': longArabic,
       'deviceLock.unlock': `${longArabic} فتح`,
-    };
+    });
     document.documentElement.dir = 'rtl';
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     const shell: HTMLDivElement = fixture.nativeElement.querySelector('div');
     const heading: HTMLHeadingElement = fixture.nativeElement.querySelector('h1');
@@ -215,11 +216,16 @@ describe('DeviceLockComponent', () => {
     expect(classes).not.toMatch(/(?:^|\s)(?:ml|mr|pl|pr|left|right)-/);
   });
 
-  it('introduces no component-level motion that bypasses reduced-motion preferences', () => {
-    const markup = fixture.nativeElement.innerHTML as string;
+  it('introduces no feature-owned motion beyond the native Spartan button', () => {
+    const elements: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('div, h1, p'),
+    );
+    const classes = elements.map((element) => element.className).join(' ');
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
 
-    expect(markup).not.toMatch(/\banimate-/);
-    expect(markup).not.toMatch(/\btransition(?:-|\b)/);
-    expect(markup).not.toMatch(/\bduration-/);
+    expect(classes).not.toMatch(/\banimate-/);
+    expect(classes).not.toMatch(/\btransition(?:-|\b)/);
+    expect(classes).not.toMatch(/\bduration-/);
+    expect(button.classList).toContain('transition-all');
   });
 });

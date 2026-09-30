@@ -29,6 +29,7 @@ describe('LanguagePartyCreateModalComponent', () => {
 
     fixture = TestBed.createComponent(LanguagePartyCreateModalComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
@@ -46,7 +47,6 @@ describe('LanguagePartyCreateModalComponent', () => {
   });
 
   it('should make isValid true when title is filled', () => {
-    expect(component.isValid()).toBe(false);
     component.title.set('My Language Party');
     fixture.detectChanges();
     expect(component.isValid()).toBe(true);
@@ -58,7 +58,7 @@ describe('LanguagePartyCreateModalComponent', () => {
     expect(component.isValid()).toBe(false);
   });
 
-  it('should emit closed and reset form on closeModal', () => {
+  it('should emit closed and reset form on an explicit close', () => {
     const closedSpy = vi.fn();
     const sub = component.closed.subscribe(closedSpy);
 
@@ -79,9 +79,9 @@ describe('LanguagePartyCreateModalComponent', () => {
     sub.unsubscribe();
   });
 
-  it('should emit created with correct payload and close on submit', () => {
+  it('emits a create request without closing or clearing retryable form state', () => {
     let emitted: LanguagePartyCreatePayload | undefined;
-    const createdSub = component.created.subscribe((p) => (emitted = p));
+    const createdSub = component.created.subscribe((payload) => (emitted = payload));
     const closedSpy = vi.fn();
     const closedSub = component.closed.subscribe(closedSpy);
 
@@ -92,7 +92,6 @@ describe('LanguagePartyCreateModalComponent', () => {
     component.isVideoStream.set(true);
 
     component.submit();
-    fixture.detectChanges();
 
     expect(emitted).toEqual({
       title: 'Conversation Club',
@@ -101,10 +100,45 @@ describe('LanguagePartyCreateModalComponent', () => {
       level: 'advanced',
       isVideoStream: true,
     });
-    expect(closedSpy).toHaveBeenCalledTimes(1);
+    expect(closedSpy).not.toHaveBeenCalled();
+    expect(component.title()).toBe('  Conversation Club  ');
 
     createdSub.unsubscribe();
     closedSub.unsubscribe();
+  });
+
+  it('blocks duplicate submission and dismissal while creation is in flight', () => {
+    const createdSpy = vi.fn();
+    const closedSpy = vi.fn();
+    const createdSub = component.created.subscribe(createdSpy);
+    const closedSub = component.closed.subscribe(closedSpy);
+    component.title.set('My Party');
+    fixture.componentRef.setInput('submitting', true);
+    fixture.detectChanges();
+
+    component.submit();
+    component.closeModal();
+
+    expect(createdSpy).not.toHaveBeenCalled();
+    expect(closedSpy).not.toHaveBeenCalled();
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog.getAttribute('aria-busy')).toBe('true');
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    expect(buttons.every((button) => button.disabled)).toBe(true);
+
+    createdSub.unsubscribe();
+    closedSub.unsubscribe();
+  });
+
+  it('renders a retryable create failure as an accessible alert', () => {
+    fixture.componentRef.setInput('submissionError', 'Could not create this party');
+    fixture.detectChanges();
+
+    const alert = fixture.nativeElement.querySelector('#language-party-create-error') as HTMLElement;
+    expect(alert.getAttribute('role')).toBe('alert');
+    expect(alert.textContent).toContain('Could not create this party');
   });
 
   it('should not emit when submit is called with invalid form', () => {
@@ -172,13 +206,10 @@ describe('LanguagePartyCreateModalComponent', () => {
     expect(submitSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('should close modal on overlay click', () => {
+  it('should close modal on overlay click when idle', () => {
     const closeSpy = vi.spyOn(component, 'closeModal');
-    const el: HTMLElement = fixture.nativeElement;
-    const overlay = el.querySelector('.fixed.inset-0') as HTMLElement;
-    if (overlay) {
-      overlay.click();
-      expect(closeSpy).toHaveBeenCalled();
-    }
+    const overlay = fixture.nativeElement.querySelector('.fixed.inset-0') as HTMLElement;
+    overlay.click();
+    expect(closeSpy).toHaveBeenCalled();
   });
 });

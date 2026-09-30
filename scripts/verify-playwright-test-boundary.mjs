@@ -103,12 +103,41 @@ function scanFrontendSpecs(files) {
   return violations;
 }
 
+function scanBrittleE2eLoginHelpers(files) {
+  const violations = [];
+
+  for (const [rawPath, content] of Object.entries(files)) {
+    const path = normalizePath(rawPath);
+    if (!path.startsWith('e2e/tests/') || !/\.spec\.ts$/.test(path)) {
+      continue;
+    }
+
+    if (/\bloginIfNeeded\b/.test(content)) {
+      violations.push(
+        `${path} defines or calls loginIfNeeded; E2E specs must not conditionally scrape the login form`,
+      );
+    }
+
+    if (
+      !/(?:^|\/)auth(?:-flows)?\.spec\.ts$/.test(path) &&
+      /input\[name=["']email["']\]/.test(content)
+    ) {
+      violations.push(
+        `${path} targets the legacy input[name="email"] login selector outside an authentication spec`,
+      );
+    }
+  }
+
+  return violations;
+}
+
 export function analysePlaywrightBoundary({ files, e2ePackageJson, e2eConfig }) {
   return [
     ...validateE2ePackage(e2ePackageJson),
     ...validateE2eConfig(e2eConfig),
     ...scanPlaywrightInvocations(files),
     ...scanFrontendSpecs(files),
+    ...scanBrittleE2eLoginHelpers(files),
   ];
 }
 
@@ -152,7 +181,9 @@ function main() {
     return;
   }
 
-  console.log('Playwright test boundary verified: E2E discovery is isolated from frontend Vitest suites.');
+  console.log(
+    'Playwright test boundary verified: E2E discovery is isolated and brittle conditional login helpers are absent.',
+  );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
