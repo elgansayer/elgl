@@ -165,3 +165,6 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+## 2026-09-30 - Cache Invalidation Latency
+**Learning:** Sequential await calls for cache invalidation (like Redis del or pattern scan deletions) add significant network latency, particularly when user actions trigger bulk cache clears across multiple namespaces.
+**Action:** Group independent cache invalidation promises and resolve them concurrently using Promise.all to collapse the network roundtrips into a single wait time.
