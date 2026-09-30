@@ -62,7 +62,9 @@ describe('MomentsFeedService', () => {
     expect(result).toHaveLength(50);
     expect(result[0]?.id).toBe('moment-0');
     expect(new Set(result.map((item) => item.id)).size).toBe(50);
-    expect(result.some((item) => item.id.startsWith('mock-moment-'))).toBe(false);
+    expect(result.some((item) => item.id.startsWith('mock-moment-'))).toBe(
+      false,
+    );
   });
 
   it('enforces Classmates membership against the normalised target language', async () => {
@@ -116,15 +118,24 @@ describe('MomentsFeedService', () => {
       error: { message: 'provider details must not escape' },
     });
 
-    await expect(service.getFeed('viewer-1', 'Following')).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      service.getFeed('viewer-1', 'Following'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('fails closed when the Following membership query rejects', async () => {
+    momentsService.getFeed.mockResolvedValue([
+      moment('possibly-followed', 'author-1'),
+    ]);
+    followsEq.mockRejectedValue(new Error('provider details must not escape'));
+
+    await expect(
+      service.getFeed('viewer-1', 'Following'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('does not perform follow-graph reads for All or Classmates', async () => {
-    momentsService.getFeed.mockResolvedValue([
-      moment('moment-1', 'author-1'),
-    ]);
+    momentsService.getFeed.mockResolvedValue([moment('moment-1', 'author-1')]);
 
     await service.getFeed('viewer-1', 'All');
     await service.getFeed('viewer-1', 'Classmates', 'ja');

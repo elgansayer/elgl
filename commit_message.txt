@@ -1,3 +1,0 @@
-refactor: consolidate duplicated components and services
-
-Consolidated conceptual duplicates across frontend and backend, merging them to use a single canonical file path per domain to reduce codebase sprawl and simplify imports. Consumers were updated to reference the chosen canonical file, and redundant files were completely removed.

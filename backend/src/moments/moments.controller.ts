@@ -23,6 +23,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
 import { MomentsFeedService, MomentFeedFilter } from './moments-feed.service';
+import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService, MomentLikeUser } from './moments.service';
 
 const MOMENT_FEED_FILTERS: readonly MomentFeedFilter[] = [
@@ -40,6 +41,7 @@ export class MomentsController {
     private readonly momentsFeedService: MomentsFeedService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
+    private readonly momentsRankingService: MomentsRankingService,
   ) {}
 
   @Post()
@@ -69,11 +71,17 @@ export class MomentsController {
       return [];
     }
 
-    return await this.momentsFeedService.getFeed(
+    const feed = await this.momentsFeedService.getFeed(
       user.id,
       activeFilter,
       targetLanguage ?? undefined,
     );
+
+    if (activeFilter === 'For You') {
+      return await this.momentsRankingService.rankForYou(user.id, feed);
+    }
+
+    return feed;
   }
 
   private parseFeedFilter(filter?: string): MomentFeedFilter {

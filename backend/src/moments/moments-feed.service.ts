@@ -7,11 +7,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { MomentRecord } from './interfaces/moment.interface';
 import { MomentsService } from './moments.service';
 
-export type MomentFeedFilter =
-  | 'All'
-  | 'Classmates'
-  | 'Following'
-  | 'For You';
+export type MomentFeedFilter = 'All' | 'Classmates' | 'Following' | 'For You';
 
 interface UserFollowRow {
   following_id: string;
@@ -96,27 +92,33 @@ export class MomentsFeedService {
   }
 
   private async getFollowingIds(userId: string): Promise<Set<string>> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = (await supabase
-      .from('user_follows')
-      .select('following_id')
-      .eq('follower_id', userId)) as unknown as {
-      data: UserFollowRow[] | null;
-      error: { message?: string } | null;
-    };
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { data, error } = (await supabase
+        .from('user_follows')
+        .select('following_id')
+        .eq('follower_id', userId)) as unknown as {
+        data: UserFollowRow[] | null;
+        error: { message?: string } | null;
+      };
 
-    if (error) {
+      if (error) {
+        throw new Error('Follow membership lookup failed');
+      }
+
+      return new Set(
+        (data ?? [])
+          .map((row) => row.following_id)
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
+      );
+    } catch {
       this.logger.warn('Moments Following filter membership lookup failed');
       throw new ServiceUnavailableException(
         'Moments feed is temporarily unavailable',
       );
     }
-
-    return new Set(
-      (data ?? [])
-        .map((row) => row.following_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0),
-    );
   }
 
   private normaliseLanguage(language?: string): string | null {

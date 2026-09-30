@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { MomentsController } from './moments.controller';
 import { MomentsFeedService } from './moments-feed.service';
+import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService } from './moments.service';
 import { UsersService } from '../users/users.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
@@ -11,6 +12,7 @@ describe('MomentsController feed filters', () => {
   let controller: MomentsController;
   let momentsFeedService: { getFeed: ReturnType<typeof vi.fn> };
   let usersService: { getProfile: ReturnType<typeof vi.fn> };
+  let rankingService: { rankForYou: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     momentsFeedService = {
@@ -19,12 +21,18 @@ describe('MomentsController feed filters', () => {
     usersService = {
       getProfile: vi.fn(),
     };
+    rankingService = {
+      rankForYou: vi
+        .fn()
+        .mockImplementation((_userId, moments) => Promise.resolve(moments)),
+    };
 
     controller = new MomentsController(
       {} as MomentsService,
       momentsFeedService as unknown as MomentsFeedService,
       usersService as unknown as UsersService,
       {} as R2Service,
+      rankingService as unknown as MomentsRankingService,
     );
   });
 
@@ -40,6 +48,7 @@ describe('MomentsController feed filters', () => {
       'All',
       undefined,
     );
+    expect(rankingService.rankForYou).not.toHaveBeenCalled();
     expect(result).toEqual([{ id: 'moment-1', user_id: 'author-1' }]);
   });
 
@@ -100,6 +109,24 @@ describe('MomentsController feed filters', () => {
       undefined,
     );
     expect(result).toEqual([{ id: 'followed-moment', user_id: 'author-2' }]);
+  });
+
+  it('routes only production For You candidates through the personalized ranker', async () => {
+    momentsFeedService.getFeed.mockResolvedValue([
+      { id: 'own-moment', user_id: 'viewer-1' },
+      { id: 'real-moment', user_id: 'author-2' },
+    ]);
+    rankingService.rankForYou.mockResolvedValue([
+      { id: 'real-moment', user_id: 'author-2' },
+    ]);
+
+    const result = await controller.getFeed(user, 'For You');
+
+    expect(rankingService.rankForYou).toHaveBeenCalledWith('viewer-1', [
+      { id: 'own-moment', user_id: 'viewer-1' },
+      { id: 'real-moment', user_id: 'author-2' },
+    ]);
+    expect(result).toEqual([{ id: 'real-moment', user_id: 'author-2' }]);
   });
 
   it('rejects unsupported filter values instead of silently broadening the feed', async () => {
