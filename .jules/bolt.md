@@ -18,6 +18,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-08-31 - [Batch Archive Cleanup Queries with Promise.allSettled]
+
+**Learning:** Sequential awaits in `for...of` loops during maintenance jobs like `purgeExpiredArchives` create significant N+1 database latency, especially since each loop execution awaits both object storage deletion and database table row updates.
+**Action:** Replace sequential awaiting with `Promise.allSettled` over bounded chunks. Inspect every settled result and emit a privacy-safe aggregate failure count so concurrency retains partial progress without hiding provider or database failures.
 ## 2026-08-29 - Parallelize Profile Fetching in Gift Transaction Broadcast
 
 **Learning:** In the `economy.service.ts` gift transaction logic, fetching sender and receiver profiles sequentially adds latency. Because the reads enrich a broadcast after the gift is committed, a lookup failure must not report that the committed gift failed.
