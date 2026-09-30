@@ -1,0 +1,35 @@
+name: Touch Target Sizing Contract
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: touch-target-sizing-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  touch-target-sizing:
+    name: accessibility / touch-target-sizing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Verify touch target sizing
+        run: npm run check:touch-target-sizing
