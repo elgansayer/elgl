@@ -61,6 +61,12 @@ export class I18nService {
   ];
 
   private readonly baseDictionary: Record<string, string> = {
+    // Forced update gate
+    'forcedUpdateModal.title': 'Update required',
+    'forcedUpdateModal.message':
+      'A new version of the app is available. Please update to continue.',
+    'forcedUpdateModal.updateButton': 'Update now',
+
     // Top App Navigation & Header
     'app.title': 'HelloTalk',
     'shop.title': 'Shop',
