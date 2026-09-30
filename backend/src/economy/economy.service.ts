@@ -1327,8 +1327,34 @@ export class EconomyService {
       );
     }
 
-    const senderProfile = await this.usersService.getProfile(senderId);
-    const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
+    // Profile display names enrich the real-time event after the gift has
+    // already been committed, so lookup failures must not fail the request.
+    const [senderProfileResult, receiverProfileResult] =
+      await Promise.allSettled([
+        this.usersService.getProfile(senderId),
+        this.usersService.getProfile(dto.receiver_id),
+      ]);
+    const senderProfile =
+      senderProfileResult.status === 'fulfilled'
+        ? senderProfileResult.value
+        : null;
+    const receiverProfile =
+      receiverProfileResult.status === 'fulfilled'
+        ? receiverProfileResult.value
+        : null;
+
+    const failedProfileLookupRoles: string[] = [];
+    if (senderProfileResult.status === 'rejected') {
+      failedProfileLookupRoles.push('sender');
+    }
+    if (receiverProfileResult.status === 'rejected') {
+      failedProfileLookupRoles.push('receiver');
+    }
+    if (failedProfileLookupRoles.length > 0) {
+      this.logger.warn(
+        `Gift profile enrichment failed for ${failedProfileLookupRoles.join(' and ')} lookup${failedProfileLookupRoles.length === 1 ? '' : 's'}`,
+      );
+    }
 
     // Trim payload to only essential fields for real-time broadcast.
     // animation_url can be hundreds of bytes; send it only when populated.
