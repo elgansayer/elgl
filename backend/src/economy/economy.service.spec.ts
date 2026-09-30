@@ -55,6 +55,7 @@ import type Stripe from 'stripe';
 describe('EconomyService', () => {
   let service: EconomyService;
   let centrifugoService: CentrifugoService;
+  let usersService: UsersService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let module: TestingModule;
@@ -161,6 +162,7 @@ describe('EconomyService', () => {
 
     service = module.get<EconomyService>(EconomyService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService);
+    usersService = module.get<UsersService>(UsersService);
   });
 
   afterEach(() => {
@@ -772,6 +774,113 @@ describe('EconomyService', () => {
       );
       expect(result.success).toBe(true);
       expect(result.coins_remaining).toBe(80);
+    });
+
+    it('should fetch both profiles concurrently', async () => {
+      const giftRow = {
+        id: 'gift-3',
+        name: 'Book',
+        cost_coins: 10,
+        icon: 'book.png',
+        animation_type: 'open',
+      };
+      mockQueryBuilder.maybeSingle
+        .mockResolvedValueOnce({ data: giftRow, error: null })
+        .mockResolvedValueOnce({ data: { id: 'receiver-1' }, error: null });
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: { id: 'sender-1', coins_balance: 100 },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: 'receiver-1', coins_balance: 20 },
+          error: null,
+        });
+
+      let resolveSenderProfile: ((value: unknown) => void) | undefined;
+      vi.spyOn(usersService, 'getProfile').mockImplementation((id: string) => {
+        if (id === 'sender-1') {
+          return new Promise((resolve) => {
+            resolveSenderProfile = resolve;
+          });
+        }
+        return Promise.resolve({
+          id: 'receiver-1',
+          display_name: 'Receiver User',
+        }) as ReturnType<UsersService['getProfile']>;
+      });
+
+      const sendPromise = service.sendGift('sender-1', {
+        gift_id: 'gift-3',
+        receiver_id: 'receiver-1',
+      });
+
+      await vi.waitFor(() => {
+        expect(usersService.getProfile).toHaveBeenCalledTimes(2);
+      });
+      resolveSenderProfile?.({
+        id: 'sender-1',
+        display_name: 'Sender User',
+      });
+
+      await expect(sendPromise).resolves.toMatchObject({ success: true });
+    });
+
+    it('should not report failure after a committed gift when a profile lookup fails', async () => {
+      const giftRow = {
+        id: 'gift-4',
+        name: 'Flower',
+        cost_coins: 15,
+        icon: 'flower.png',
+        animation_type: 'bloom',
+      };
+      mockQueryBuilder.maybeSingle
+        .mockResolvedValueOnce({ data: giftRow, error: null })
+        .mockResolvedValueOnce({ data: { id: 'receiver-1' }, error: null });
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: { id: 'sender-1', coins_balance: 100 },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: 'receiver-1', coins_balance: 20 },
+          error: null,
+        });
+      vi.spyOn(usersService, 'getProfile').mockImplementation((id: string) => {
+        if (id === 'sender-1') {
+          return Promise.reject(
+            new Error('profile unavailable SECRET-PROVIDER-DETAIL'),
+          );
+        }
+        return Promise.resolve({
+          id: 'receiver-1',
+          display_name: 'Receiver User',
+        }) as ReturnType<UsersService['getProfile']>;
+      });
+
+      await expect(
+        service.sendGift('sender-1', {
+          gift_id: 'gift-4',
+          receiver_id: 'receiver-1',
+        }),
+      ).resolves.toMatchObject({
+        success: true,
+        coins_remaining: 85,
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'user_receiver-1',
+        expect.objectContaining({
+          sender_name: null,
+          receiver_name: 'Receiver User',
+        }),
+      );
+      const logger = module.get<{ warn: Mock }>('PinoLogger:EconomyService');
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Gift profile enrichment failed for sender lookup',
+      );
+      expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(
+        'SECRET-PROVIDER-DETAIL',
+      );
     });
   });
 
