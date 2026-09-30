@@ -1,9 +1,9 @@
-import { describe, beforeEach, afterEach, it, expect } from 'vitest';
-import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { VersionService, VersionInfo } from './version.service';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '../../environments/environment';
+import { VersionInfo, VersionService } from './version.service';
 
 describe('VersionService', () => {
   let service: VersionService;
@@ -12,11 +12,7 @@ describe('VersionService', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [
-        VersionService,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [VersionService, provideHttpClient(), provideHttpClientTesting()],
     });
 
     service = TestBed.inject(VersionService);
@@ -27,15 +23,13 @@ describe('VersionService', () => {
     httpMock.verify();
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-
-  it('should fetch version info via GET request', () => {
+  it('fetches the public version policy via GET', () => {
     const mockVersion: VersionInfo = {
-      current: '1.0.0',
-      latest: '1.1.0',
-      updateUrl: 'https://example.com/update',    };
+      current: '2.0.0',
+      latest: '2.1.0',
+      minimumSupported: '2.0.0',
+      updateUrl: 'https://github.com/elgansayer/elgl/releases/tag/v2.1.0',
+    };
 
     service.getVersion().subscribe((version) => {
       expect(version).toEqual(mockVersion);
@@ -43,6 +37,7 @@ describe('VersionService', () => {
 
     const req = httpMock.expectOne(`${environment.apiUrl}/version`);
     expect(req.request.method).toBe('GET');
+    expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush(mockVersion);
   });
 });

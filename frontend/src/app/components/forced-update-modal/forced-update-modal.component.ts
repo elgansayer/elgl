@@ -1,116 +1,50 @@
-import { Component, input, OnInit, OnDestroy, inject } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { Component, input } from '@angular/core';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+const DEFAULT_UPDATE_URL = 'https://github.com/elgansayer/elgl/releases/latest';
+
 /**
- * A blocking modal overlay that prevents all interaction until the user
- * navigates to the app store for an update.
- *
- * The modal locks body scrolling (via `overflow: hidden`) and intercepts
- * all clicks, scroll, touch, and keyboard events. The Escape key is
- * explicitly suppressed so the user cannot dismiss the overlay.
- *
- * Place `<app-forced-update-modal .../>` at the top of your root component
- * template and bind with `@if (versionCheck.isDeprecated())`.
+ * A non-dismissible update gate shown when the installed app version is below
+ * the operator-controlled minimum supported version.
  */
 @Component({
   selector: 'app-forced-update-modal',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmDialogImports],
   template: `
-    <div
-      class="fixed inset-0 z-[11000] flex items-center justify-center
-             bg-black/70 backdrop-blur-sm"
-      tabindex="0"
-      role="dialog"
+    <hlm-dialog
+      state="open"
+      role="alertdialog"
       aria-modal="true"
-      [attr.aria-label]="'forcedUpdateModal.title' | t"
-      (touchmove)="blockEvent($event)"
-      (wheel)="blockEvent($event)"
-      (keydown)="blockEvent($event)"
+      aria-labelledby="forced-update-title"
+      aria-describedby="forced-update-message"
+      disableClose
     >
-      <div
-        class="bg-surface-200 p-8 rounded-3xl max-w-md mx-4
-               shadow-2xl border border-surface-100 text-center space-y-5"
-        tabindex="0"
-        (click)="blockEvent($event)"
-        (keydown)="blockEvent($event)"
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="bg-surface-200 p-8 rounded-3xl max-w-md mx-4 shadow-2xl border border-surface-100 text-center space-y-5"
       >
-        <div class="text-5xl">&#x26A0;&#xFE0F;</div>
-        <h2 class="text-2xl font-black text-text-primary">
+        <div class="text-5xl" aria-hidden="true">&#x26A0;&#xFE0F;</div>
+        <h2 id="forced-update-title" class="text-2xl font-black text-text-primary">
           {{ 'forcedUpdateModal.title' | t }}
         </h2>
-        <p class="text-sm text-text-secondary leading-relaxed">
+        <p id="forced-update-message" class="text-sm text-text-secondary leading-relaxed">
           {{ 'forcedUpdateModal.message' | t }}
         </p>
         <a
           [href]="storeUrl()"
           target="_blank"
-          rel="noopener"
-          class="inline-flex items-center justify-center px-6 py-3
-                 font-bold text-white bg-primary rounded-full
-                 hover:bg-primary-dark transition-colors shadow-lg"
+          rel="noopener noreferrer"
+          class="inline-flex min-h-11 items-center justify-center px-6 py-3 font-bold text-white bg-primary rounded-full hover:bg-primary-dark transition-colors shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         >
           {{ 'forcedUpdateModal.updateButton' | t }}
         </a>
-      </div>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
-  host: {
-    '(document:click)': 'onDocumentClick($event)',
-    '(window:scroll)': 'preventScroll($event)',
-    '(window:touchmove)': 'preventScroll($event)',
-    '(window:wheel)': 'preventScroll($event)',
-    '(window:keydown)': 'onKeydown($event)',
-  },
 })
-export class ForcedUpdateModalComponent implements OnInit, OnDestroy {
-  /** URL to the app store listing */
-  storeUrl = input('https://yourapp.com/update');
-
-  private document = inject(DOCUMENT);
-
-  ngOnInit(): void {
-    this.document.body.style.overflow = 'hidden';
-  }
-
-  ngOnDestroy(): void {
-    this.document.body.style.overflow = '';
-  }
-
-  /**
-   * Prevent any background clicks from reaching elements behind the overlay.
-   */
-  onDocumentClick(event: Event): void {
-    event.stopPropagation();
-    event.preventDefault();
-  }
-
-  /**
-   * Lock scrolling while the modal is visible.
-   */
-  preventScroll(event: Event): void {
-    event.preventDefault();
-  }
-
-  /**
-   * Prevent events from bubbling up inside the modal wrapper.
-   */
-  blockEvent(event: Event): void {
-    event.stopPropagation();
-    event.preventDefault();
-  }
-
-  /**
-   * Intercept all keyboard events and block Escape to prevent dismissal.
-   * Only allows Tab within the modal for accessibility.
-   */
-  onKeydown(event: Event): void {
-    const keyboardEvent = event as KeyboardEvent;
-    if (keyboardEvent.key === 'Escape' || keyboardEvent.key === 'Esc') {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    event.preventDefault();
-  }
+export class ForcedUpdateModalComponent {
+  /** Validated by VersionCheckService; the default remains a safe HTTPS destination. */
+  readonly storeUrl = input(DEFAULT_UPDATE_URL);
 }
