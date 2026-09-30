@@ -38,19 +38,14 @@ export class DataStorageService {
   readonly cellularAutoDownload = signal<boolean>(loadCellularPreference());
 
   clearLocalCache(): void {
-    try {
-      localStorage.clear();
-    } catch {
-      // localStorage may be unavailable in restricted/private browser contexts.
+    localStorage.clear();
+    sessionStorage.clear();
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => caches.delete(key));
+      });
     }
-
-    try {
-      sessionStorage.clear();
-    } catch {
-      // sessionStorage may be unavailable in restricted/private browser contexts.
-    }
-
-    // Re-persist the cellular preference after localStorage has been cleared.
+    // Re-persist the cellular preference since localStorage was cleared
     persistCellularPreference(this.cellularAutoDownload());
   }
 

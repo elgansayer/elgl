@@ -12,7 +12,6 @@ describe('NotificationsService', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     mockQueryBuilder = {
-      single: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       insert: vi.fn().mockResolvedValue({ error: null }),
       update: vi.fn().mockReturnThis(),

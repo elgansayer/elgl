@@ -1,27 +1,18 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersController } from './users.controller';
 import { DeviceLinkController } from './device-link.controller';
-import { ProfileVisitsController } from './profile-visits.controller';
 import { UsersService } from './users.service';
-import { ProfileVisitsService } from './profile-visits.service';
 import { DataExportWorker } from './data-export.worker';
 import { MediaModule } from '../media/media.module';
 import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
-import { ProfileVisitsInterceptor } from './interceptors/profile-visits.interceptor';
 import { ProfileUpdateIntegrityInterceptor } from './interceptors/profile-update-integrity.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 import { NotificationsModule } from '../notifications/notifications.module';
 import { XpModule } from '../xp/xp.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
-
-// Keep the existing controller implementation free of documentation-only churn while
-// still making the full profile surface discoverable and authenticated in live Swagger.
-ApiTags('User Profiles')(UsersController);
-ApiBearerAuth('bearer')(UsersController);
 
 @Module({
   imports: [
@@ -31,10 +22,9 @@ ApiBearerAuth('bearer')(UsersController);
     XpModule,
     TwoFactorModule,
   ],
-  controllers: [UsersController, DeviceLinkController, ProfileVisitsController],
+  controllers: [UsersController, DeviceLinkController],
   providers: [
     UsersService,
-    ProfileVisitsService,
     DataExportWorker,
     AccountDeletionCron,
     {
@@ -43,13 +33,9 @@ ApiBearerAuth('bearer')(UsersController);
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: ProfileVisitsInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
       useClass: ProfileUpdateIntegrityInterceptor,
     },
   ],
-  exports: [UsersService, ProfileVisitsService, DataExportWorker],
+  exports: [UsersService, DataExportWorker],
 })
 export class UsersModule {}

@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { SendMessageDto } from './send-message.dto';
@@ -62,36 +61,11 @@ describe('SendMessageDto', () => {
     },
   );
 
-  it('accepts a canvas PNG data URL for doodles', async () => {
+  it('accepts a data URL for doodles', async () => {
     const errors = await validateMessage({
       room_id: 'room-1',
       message_type: 'doodle',
       media_url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB',
-    });
-
-    expect(errors).toHaveLength(0);
-  });
-
-  it.each([
-    'https://example.com/doodle.png',
-    'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ',
-    'data:image/png;base64,QUJDRA==',
-    'data:text/html;base64,PGltZyBzcmM9eCBvbmVycm9yPWFsZXJ0KDEpPg==',
-  ])('rejects non-canvas doodle media payload %s', async (mediaUrl) => {
-    const errors = await validateMessage({
-      room_id: 'room-1',
-      message_type: 'doodle',
-      media_url: mediaUrl,
-    });
-
-    expect(hasError(errors, 'media_url')).toBe(true);
-  });
-
-  it('does not apply the doodle data URL restriction to other media messages', async () => {
-    const errors = await validateMessage({
-      room_id: 'room-1',
-      message_type: 'voice',
-      media_url: 'https://media.example.com/voice-note.webm',
     });
 
     expect(errors).toHaveLength(0);

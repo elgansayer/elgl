@@ -5,19 +5,15 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import { AdminAuditService } from '../admin-audit.service';
 import { AdminAuthorizationService } from '../admin-authorization.service';
 import { AdminCapability } from '../admin-capabilities';
 
-type AuthenticatedRequest = {
+interface AuthenticatedRequest extends Request {
   user?: User;
-  method?: string;
-  baseUrl?: string;
-  path?: string;
-  route?: { path?: string };
-  headers?: Record<string, string | string[] | undefined>;
-};
+}
 
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 
@@ -67,14 +63,15 @@ export class AdminGuard implements CanActivate {
         ? rawCorrelationId
         : undefined;
     const routePath = request.route?.path ?? request.path ?? '';
-    const actionPath = `${request.baseUrl ?? ''}${routePath}`;
-    const actionMethod = request.method?.toLowerCase() ?? 'request';
-    const action = `${actionMethod} ${actionPath}`.slice(0, 160);
 
     try {
       await this.audit.record({
         actorUserId,
-        action,
+        action:
+          `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
+            0,
+            160,
+          ),
         targetType: 'admin-resource',
         outcome,
         correlationId,

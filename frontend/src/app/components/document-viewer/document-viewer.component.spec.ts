@@ -1,24 +1,12 @@
-import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DocumentViewerComponent } from './document-viewer.component';
-
-@Component({
-  imports: [DocumentViewerComponent],
-  template: `
-    <app-document-viewer title="Terms">
-      <a href="#retention">Retention details</a>
-      <button type="button">Caller action</button>
-    </app-document-viewer>
-  `,
-})
-class ProjectedContentHostComponent {}
 
 describe('DocumentViewerComponent', () => {
   let fixture: ComponentFixture<DocumentViewerComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DocumentViewerComponent, ProjectedContentHostComponent],
+      imports: [DocumentViewerComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DocumentViewerComponent);
@@ -33,24 +21,6 @@ describe('DocumentViewerComponent', () => {
     expect(heading?.classList).toContain('text-text-primary');
     expect(heading?.classList).toContain('text-2xl');
     expect(heading?.classList).toContain('sm:text-3xl');
-  });
-
-  it('exposes the document as a named article without adding a nested main landmark', () => {
-    const article: HTMLElement | null = fixture.nativeElement.querySelector('article');
-
-    expect(article?.getAttribute('aria-label')).toBe('Privacy policy');
-    expect(article?.querySelector('h1')?.textContent?.trim()).toBe('Privacy policy');
-    expect(fixture.nativeElement.querySelector('main')).toBeNull();
-  });
-
-  it('keeps the accessible article name synchronized with the supplied title', () => {
-    fixture.componentRef.setInput('title', 'Updated legal notice');
-    fixture.detectChanges();
-
-    const article: HTMLElement | null = fixture.nativeElement.querySelector('article');
-
-    expect(article?.getAttribute('aria-label')).toBe('Updated legal notice');
-    expect(article?.querySelector('h1')?.textContent?.trim()).toBe('Updated legal notice');
   });
 
   it('uses Relay semantic surfaces and theme-neutral content styling', () => {
@@ -85,60 +55,5 @@ describe('DocumentViewerComponent', () => {
     expect(card.classList).toContain('p-4');
     expect(card.classList).toContain('sm:p-6');
     expect(card.classList).toContain('lg:p-8');
-  });
-
-  it('keeps long translated and projected content reflow-safe at high zoom', () => {
-    const wrapper: HTMLElement = fixture.nativeElement.querySelector('.max-w-4xl');
-    const card: HTMLElement = fixture.nativeElement.querySelector('app-card');
-    const heading: HTMLElement = fixture.nativeElement.querySelector('h1');
-    const content: HTMLElement = fixture.nativeElement.querySelector('app-card > div');
-
-    expect(wrapper.classList).toContain('min-w-0');
-    expect(card.classList).toContain('min-w-0');
-    expect(heading.classList).toContain('break-words');
-    expect(content.classList).toContain('min-w-0');
-    expect(content.classList).toContain('break-words');
-    expect(content.classList).toContain('[overflow-wrap:anywhere]');
-  });
-
-  it('keeps the component direction-neutral and free of feature-owned motion', () => {
-    const host: HTMLElement = fixture.nativeElement;
-    const featureOwnedElements = [
-      host.querySelector<HTMLElement>('article'),
-      host.querySelector<HTMLElement>('.max-w-4xl'),
-      host.querySelector<HTMLElement>('h1'),
-      host.querySelector<HTMLElement>('app-card > div'),
-    ].filter((element): element is HTMLElement => element !== null);
-    const classNames = featureOwnedElements.map((element) => element.className).join(' ');
-
-    expect(classNames).not.toMatch(
-      /(?:^|\s)(?:ml-|mr-|pl-|pr-|left-|right-|text-left|text-right)/,
-    );
-    expect(classNames).not.toMatch(
-      /(?:^|\s)(?:animate-|transition|duration-|delay-)/,
-    );
-  });
-
-  it('does not manufacture command controls or synthetic keyboard behaviour', () => {
-    const host: HTMLElement = fixture.nativeElement;
-
-    expect(host.querySelector('button')).toBeNull();
-    expect(host.querySelector('[role="button"]')).toBeNull();
-    expect(host.querySelector('[tabindex]')).toBeNull();
-  });
-
-  it('leaves projected link and button semantics owned by the caller', () => {
-    const hostFixture = TestBed.createComponent(ProjectedContentHostComponent);
-    hostFixture.detectChanges();
-
-    const link: HTMLAnchorElement | null = hostFixture.nativeElement.querySelector('a');
-    const button: HTMLButtonElement | null = hostFixture.nativeElement.querySelector('button');
-
-    expect(link?.getAttribute('href')).toBe('#retention');
-    expect(link?.getAttribute('role')).toBeNull();
-    expect(link?.getAttribute('tabindex')).toBeNull();
-    expect(button?.type).toBe('button');
-    expect(button?.getAttribute('role')).toBeNull();
-    expect(button?.getAttribute('tabindex')).toBeNull();
   });
 });

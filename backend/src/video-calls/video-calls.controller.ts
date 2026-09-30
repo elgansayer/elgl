@@ -25,10 +25,6 @@ import {
 } from '../common/cache.interceptor';
 import { StartVideoCallDto } from './dto/start-video-call.dto';
 import { AcceptVideoCallDto } from './dto/accept-video-call.dto';
-import {
-  VideoCallsRateLimit,
-  VideoCallsRateLimiterGuard,
-} from './video-calls-rate-limiter.guard';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -36,7 +32,7 @@ interface AuthenticatedRequest extends Request {
 
 @ApiTags('Video Classrooms')
 @Controller('video-calls')
-@UseGuards(SupabaseAuthGuard, VideoCallsRateLimiterGuard)
+@UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class VideoCallsController {
   constructor(
@@ -45,7 +41,6 @@ export class VideoCallsController {
   ) {}
 
   @Post('start')
-  @VideoCallsRateLimit({ maxRequests: 3, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Start a new encrypted call room',
@@ -104,7 +99,6 @@ export class VideoCallsController {
   }
 
   @Post('accept')
-  @VideoCallsRateLimit({ maxRequests: 10, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Accept and join an encrypted call room',

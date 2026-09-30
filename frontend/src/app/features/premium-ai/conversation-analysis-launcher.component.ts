@@ -148,16 +148,10 @@ export class ConversationAnalysisLauncherComponent {
     } catch (error: unknown) {
       if (roomId !== this.roomId()) return;
       this.runError.set(true);
-      // Unknown transport outcomes, active 409 conflicts, and 500-level
-      // reconciliation failures keep the same key so a retry cannot create a
-      // second charge. Definitive server outcomes such as a 410 refunded run
-      // discard the key and allow a fresh purchase attempt.
-      if (
-        error instanceof HttpErrorResponse &&
-        error.status > 0 &&
-        error.status !== 409 &&
-        error.status !== 500
-      ) {
+      // A received server error means the backend has a definite mutation
+      // outcome. Unknown transport failures keep the same key so retry cannot
+      // accidentally buy a second report.
+      if (error instanceof HttpErrorResponse && error.status > 0 && error.status !== 409) {
         this.idempotencyKey = null;
       }
     } finally {

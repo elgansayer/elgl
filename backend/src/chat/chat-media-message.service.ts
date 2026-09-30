@@ -3,7 +3,6 @@ import {
   ForbiddenException,
   Injectable,
   ServiceUnavailableException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 import { SendChatMediaMessageDto } from '../media/dto/send-chat-media-message.dto';
@@ -24,17 +23,16 @@ export class ChatMediaMessageService {
     userId: string,
     dto: SendChatMediaMessageDto,
   ): Promise<ChatMessage> {
-    const messageType = this.resolveMessageType(dto);
     const mediaUrl = this.resolveOwnedMediaUrl(userId, dto);
     const existing = await this.findExisting(userId, mediaUrl);
     if (existing) {
-      return this.assertMatchingRetry(existing, dto, messageType);
+      return this.assertMatchingRetry(existing, dto);
     }
 
     try {
       return await this.chatService.sendMessage(userId, {
         room_id: dto.roomId,
-        message_type: messageType,
+        message_type: dto.mediaKind,
         media_url: mediaUrl,
       });
     } catch (cause) {
@@ -44,24 +42,10 @@ export class ChatMediaMessageService {
       // the database-level backstop for concurrent retries.
       const raced = await this.findExisting(userId, mediaUrl);
       if (raced) {
-        return this.assertMatchingRetry(raced, dto, messageType);
+        return this.assertMatchingRetry(raced, dto);
       }
       throw cause;
     }
-  }
-
-  private resolveMessageType(
-    dto: SendChatMediaMessageDto,
-  ): 'image' | 'video' | 'video_note' {
-    if (dto.presentation === 'instant_video') {
-      if (dto.mediaKind !== 'video') {
-        throw new UnprocessableEntityException(
-          'Instant video presentation requires a video upload',
-        );
-      }
-      return 'video_note';
-    }
-    return dto.mediaKind;
   }
 
   private resolveOwnedMediaUrl(
@@ -100,11 +84,10 @@ export class ChatMediaMessageService {
   private assertMatchingRetry(
     message: ChatMessage,
     dto: SendChatMediaMessageDto,
-    expectedMessageType: string,
   ): ChatMessage {
     if (
       message.room_id !== dto.roomId ||
-      message.message_type !== expectedMessageType
+      message.message_type !== dto.mediaKind
     ) {
       throw new ConflictException(
         'Uploaded chat media has already been used by another message',

@@ -159,6 +159,10 @@ describe('LanguageChallengesService', () => {
         data: null,
         error: { message: 'not found' },
       });
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
 
       await expect(
         service.joinChallenge('user-1', 'challenge-1'),
@@ -168,6 +172,10 @@ describe('LanguageChallengesService', () => {
     it('throws BadRequestException when the challenge is not open', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { ...baseChallenge, status: 'closed' },
+        error: null,
+      });
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: null,
         error: null,
       });
 

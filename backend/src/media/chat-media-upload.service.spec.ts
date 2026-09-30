@@ -3,12 +3,12 @@ import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 import { ChatMediaUploadService } from './chat-media-upload.service';
 
 describe('ChatMediaUploadService', () => {
-  const createUploadUrl = vi.fn();
+  const createUploadUrl = jest.fn();
   const r2ObjectService = { createUploadUrl } as unknown as R2ObjectService;
   let service: ChatMediaUploadService;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     createUploadUrl.mockReturnValue({
       uploadUrl: 'https://gateway.example/upload',
       publicUrl: 'https://cdn.example/chat-media/file.jpg',

@@ -3,8 +3,8 @@ import { Routes } from '@angular/router';
 export const commerceRoutes: Routes = [
   {
     path: 'vip',
-    redirectTo: 'subscription',
-    pathMatch: 'full',
+    loadComponent: () => import('../pages/vip/vip.component').then((m) => m.VipComponent),
+    title: 'VIP Subscription - HelloTalk',
   },
   {
     path: 'subscription',
@@ -32,11 +32,6 @@ export const commerceRoutes: Routes = [
   },
   {
     path: 'my-subscription',
-    redirectTo: 'settings/subscription',
-    pathMatch: 'full',
-  },
-  {
-    path: 'settings/subscription',
     loadComponent: () =>
       import('../pages/my-subscription/my-subscription.component').then(
         (m) => m.MySubscriptionComponent,

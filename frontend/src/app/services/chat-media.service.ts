@@ -7,7 +7,6 @@ import { ImageCompressionService } from './image-compression.service';
 
 export type ChatMediaQuality = 'standard' | 'hd';
 export type ChatMediaKind = 'image' | 'video';
-export type ChatMediaPresentation = 'standard' | 'instant_video';
 
 interface ChatMediaUploadTicket {
   uploadUrl: string;
@@ -23,8 +22,6 @@ export interface UploadedChatMedia {
   objectKey: string;
   kind: ChatMediaKind;
   quality: ChatMediaQuality;
-  /** Rendering intent only. The backend still derives the media URL from the owned object key. */
-  presentation?: ChatMediaPresentation;
 }
 
 const ALLOWED_TYPES = new Set([

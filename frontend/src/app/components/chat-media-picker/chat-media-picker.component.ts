@@ -8,7 +8,6 @@ import {
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { HlmCheckbox } from '../ui/checkbox/src';
 
 const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime';
 
@@ -19,7 +18,6 @@ const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,vid
     TranslatePipe,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
-    HlmCheckbox,
   ],
   template: `
     <section
@@ -80,10 +78,11 @@ const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,vid
           <span class="block text-sm font-bold text-text-primary">HD quality</span>
           <span class="block text-xs text-text-secondary">Higher quality, larger upload</span>
         </span>
-        <hlm-checkbox
-          class="h-5 w-5"
+        <input
+          type="checkbox"
+          class="h-5 w-5 accent-primary"
           [checked]="quality() === 'hd'"
-          (checkedChange)="onQualityCheckedChange($event)"
+          (change)="onQualityChanged($event)"
           aria-label="Send in HD quality"
         />
       </label>
@@ -157,11 +156,6 @@ export class ChatMediaPickerComponent implements OnDestroy {
 
   onQualityChanged(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    this.quality.set(checked ? 'hd' : 'standard');
-    this.error.set(null);
-  }
-
-  onQualityCheckedChange(checked: boolean): void {
     this.quality.set(checked ? 'hd' : 'standard');
     this.error.set(null);
   }

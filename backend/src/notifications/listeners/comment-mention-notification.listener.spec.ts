@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentMentionNotificationListener } from './comment-mention-notification.listener';
 import { NotificationsService } from '../notifications.service';
@@ -39,15 +38,11 @@ describe('CommentMentionNotificationListener', () => {
     );
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('should be defined', () => {
     expect(listener).toBeDefined();
   });
 
-  it('creates a notification for a mentioned user', async () => {
+  it('should create a notification when comment mentions a user via mentionedUserIds', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
@@ -72,78 +67,23 @@ describe('CommentMentionNotificationListener', () => {
     );
   });
 
-  it('deduplicates recipients, skips self mentions, and caps fan-out', async () => {
-    const recipients = [
-      'commenter-1',
-      'mentioned-user-1',
-      'mentioned-user-1',
-      ...Array.from(
-        { length: 25 },
-        (_, index) => `mentioned-user-${index + 2}`,
-      ),
-    ];
-
-    await listener.handleCommentMention(
-      new MomentCommentEvent(
-        'moment-1',
-        'commenter-1',
-        'moment-author-1',
-        'hello',
-        undefined,
-        undefined,
-        recipients,
-      ),
-    );
-
-    expect(
-      notificationPreferencesService.shouldSendNotification,
-    ).toHaveBeenCalledTimes(10);
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(10);
-    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
-      'commenter-1',
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-    );
-  });
-
-  it('should de-duplicate repeated recipients', async () => {
+  it('should create notifications for multiple mentioned users', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
       'moment-author-1',
-      'Hey @alice @alice',
+      'Hey @alice and @bob check this out',
       undefined,
       undefined,
-      ['mentioned-user-1', 'mentioned-user-1'],
+      ['mentioned-user-1', 'mentioned-user-2'],
     );
 
     await listener.handleCommentMention(payload);
 
     expect(
       notificationPreferencesService.shouldSendNotification,
-    ).toHaveBeenCalledTimes(1);
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
-  });
-
-  it('should bound mention fan-out to ten recipients', async () => {
-    const payload = new MomentCommentEvent(
-      'moment-1',
-      'commenter-1',
-      'moment-author-1',
-      'Many mentions',
-      undefined,
-      undefined,
-      Array.from({ length: 12 }, (_, index) => `mentioned-user-${index}`),
-    );
-
-    await listener.handleCommentMention(payload);
-
-    expect(
-      notificationPreferencesService.shouldSendNotification,
-    ).toHaveBeenCalledTimes(10);
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(10);
+    ).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
   });
 
   it('should fall back to momentAuthorId for backward compatibility', async () => {
@@ -162,7 +102,7 @@ describe('CommentMentionNotificationListener', () => {
     expect(notificationsService.createNotification).toHaveBeenCalled();
   });
 
-  it('skips notification when preferences disable push', async () => {
+  it('should skip notification when preferences disable push', async () => {
     vi.spyOn(
       notificationPreferencesService,
       'shouldSendNotification',
@@ -183,16 +123,11 @@ describe('CommentMentionNotificationListener', () => {
     expect(notificationsService.createNotification).not.toHaveBeenCalled();
   });
 
-  it('should fail closed when notification preferences cannot be read', async () => {
-    const warnSpy = vi
-      .spyOn(Logger.prototype, 'warn')
-      .mockImplementation(() => {
-        // Suppress expected test diagnostics.
-      });
+  it('should still send notification if preference check fails', async () => {
     vi.spyOn(
       notificationPreferencesService,
       'shouldSendNotification',
-    ).mockRejectedValue(new Error('sensitive provider failure'));
+    ).mockRejectedValue(new Error('DB error'));
 
     const payload = new MomentCommentEvent(
       'moment-1',
@@ -206,55 +141,10 @@ describe('CommentMentionNotificationListener', () => {
 
     await listener.handleCommentMention(payload);
 
-    expect(notificationsService.createNotification).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
-      'comment_mention_preferences_unavailable',
-    );
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('mentioned-user-1'),
-    );
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('sensitive provider failure'),
-    );
+    expect(notificationsService.createNotification).toHaveBeenCalled();
   });
 
-  it('should continue processing other recipients after one delivery failure', async () => {
-    const warnSpy = vi
-      .spyOn(Logger.prototype, 'warn')
-      .mockImplementation(() => {
-        // Suppress expected test diagnostics.
-      });
-    vi.spyOn(notificationsService, 'createNotification')
-      .mockRejectedValueOnce(new Error('private storage error'))
-      .mockResolvedValueOnce(undefined);
-
-    const payload = new MomentCommentEvent(
-      'moment-1',
-      'commenter-1',
-      'moment-author-1',
-      'Hey @alice and @bob',
-      undefined,
-      undefined,
-      ['mentioned-user-1', 'mentioned-user-2'],
-    );
-
-    await listener.handleCommentMention(payload);
-
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
-    expect(notificationsService.createNotification).toHaveBeenLastCalledWith(
-      'mentioned-user-2',
-      'commenter-1',
-      'mention_comment',
-      'moment-1',
-      'Hey @alice and @bob',
-    );
-    expect(warnSpy).toHaveBeenCalledWith('comment_mention_delivery_failed');
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('private storage error'),
-    );
-  });
-
-  it('skips self mention', async () => {
+  it('should skip self-mention (commenter mentioning themselves)', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',

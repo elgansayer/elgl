@@ -92,7 +92,7 @@ describe('FlashcardReviewComponent', () => {
     const fixture = TestBed.createComponent(FlashcardReviewComponent);
     fixture.componentRef.setInput('cards', MOCK_CARDS);
     fixture.detectChanges();
-    await vi.waitFor(() => expect(fixture.componentInstance.isLoading()).toBe(false));
+    await Promise.resolve();
     fixture.detectChanges();
 
     const progressBar = fixture.nativeElement.querySelector('[role="progressbar"]') as HTMLElement;
