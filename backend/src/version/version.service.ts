@@ -5,6 +5,9 @@ interface GithubRelease {
   html_url?: string;
 }
 
+const DEFAULT_MINIMUM_SUPPORTED_VERSION = '1.0.0';
+const STABLE_SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -21,6 +24,21 @@ function isGithubRelease(value: unknown): value is GithubRelease {
   );
 }
 
+function parseMinimumSupportedVersion(value: string | undefined): string {
+  if (value === undefined) {
+    return DEFAULT_MINIMUM_SUPPORTED_VERSION;
+  }
+
+  const candidate = value.trim();
+  if (!STABLE_SEMVER_PATTERN.test(candidate)) {
+    throw new Error(
+      'MINIMUM_SUPPORTED_APP_VERSION must be a stable semantic version (major.minor.patch)',
+    );
+  }
+
+  return candidate;
+}
+
 @Injectable()
 export class VersionService implements OnModuleInit {
   private readonly logger = new Logger(VersionService.name);
@@ -32,8 +50,9 @@ export class VersionService implements OnModuleInit {
   constructor() {
     this.currentVersion = process.env.npm_package_version || '0.0.0';
     this.latestVersion = this.currentVersion;
-    this.minimumSupportedVersion =
-      process.env.MINIMUM_SUPPORTED_APP_VERSION || '1.0.0';
+    this.minimumSupportedVersion = parseMinimumSupportedVersion(
+      process.env.MINIMUM_SUPPORTED_APP_VERSION,
+    );
   }
 
   async onModuleInit(): Promise<void> {

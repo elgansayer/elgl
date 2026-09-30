@@ -24,7 +24,7 @@ import { retryInterceptor } from './interceptors/retry.interceptor';
 
 export async function initialiseRuntimeConfiguration(
   configService: Pick<ConfigurationService, 'loadConfiguration'>,
-  platformId: object,
+  platformId: Parameters<typeof isPlatformServer>[0],
 ): Promise<void> {
   if (isPlatformServer(platformId)) {
     return;
