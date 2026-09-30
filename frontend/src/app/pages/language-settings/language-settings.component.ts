@@ -2,8 +2,8 @@ import { Location } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
-import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { UiLanguagePreferenceService } from '../../services/ui-language-preference.service';
 
 @Component({
   selector: 'app-language-settings',
@@ -102,10 +102,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class LanguageSettingsComponent {
   private readonly location = inject(Location);
-  readonly i18n = inject(I18nService);
+  private readonly languagePreference = inject(UiLanguagePreferenceService);
 
-  readonly langs = this.i18n.availableLanguages;
-  readonly currentLang = this.i18n.currentLang;
+  readonly langs = this.languagePreference.availableLanguages;
+  readonly currentLang = this.languagePreference.currentLang;
   readonly isChanging = signal(false);
   readonly hasError = signal(false);
 
@@ -127,7 +127,7 @@ export class LanguageSettingsComponent {
     this.hasError.set(false);
     this.isChanging.set(true);
     try {
-      await this.i18n.setLanguage(nextLanguage);
+      await this.languagePreference.changeLanguage(nextLanguage);
     } catch {
       this.hasError.set(true);
     } finally {

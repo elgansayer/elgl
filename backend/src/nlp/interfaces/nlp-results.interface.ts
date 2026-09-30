@@ -7,6 +7,14 @@ export interface TranslationResult {
   pronunciation_url?: string;
 }
 
+export interface TransliterationResult {
+  original_text: string;
+  transliterated_text: string;
+  language: string;
+  from_script: string;
+  to_script: string;
+}
+
 export interface GrammarCheckResult {
   original: string;
   corrected: string;

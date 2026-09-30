@@ -47,7 +47,7 @@ export const mediaRoutes: Routes = [
       ),
   },
   {
-    path: 'host-dashboard',
+    path: 'host-dashboard/:roomId',
     loadComponent: () =>
       import('../components/host-dashboard/host-dashboard.component').then(
         (m) => m.HostDashboardComponent,

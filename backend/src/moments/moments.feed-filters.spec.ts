@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { MomentsController } from './moments.controller';
+import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService } from './moments.service';
 import { UsersService } from '../users/users.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
@@ -10,6 +11,7 @@ describe('MomentsController feed filters', () => {
   let controller: MomentsController;
   let momentsService: { getFeed: ReturnType<typeof vi.fn> };
   let usersService: { getProfile: ReturnType<typeof vi.fn> };
+  let rankingService: { rankForYou: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     momentsService = {
@@ -18,11 +20,17 @@ describe('MomentsController feed filters', () => {
     usersService = {
       getProfile: vi.fn(),
     };
+    rankingService = {
+      rankForYou: vi
+        .fn()
+        .mockImplementation(async (_userId, moments) => moments),
+    };
 
     controller = new MomentsController(
       momentsService as unknown as MomentsService,
       usersService as unknown as UsersService,
       {} as R2Service,
+      rankingService as unknown as MomentsRankingService,
     );
   });
 
@@ -38,6 +46,7 @@ describe('MomentsController feed filters', () => {
       'All',
       undefined,
     );
+    expect(rankingService.rankForYou).not.toHaveBeenCalled();
     expect(result).toEqual([{ id: 'moment-1', user_id: 'author-1' }]);
   });
 
@@ -97,6 +106,25 @@ describe('MomentsController feed filters', () => {
     const result = await controller.getFeed(user, 'Following');
 
     expect(result).toEqual([{ id: 'followed-moment', user_id: 'author-2' }]);
+  });
+
+  it('routes only production For You candidates through the personalized ranker', async () => {
+    momentsService.getFeed.mockResolvedValue([
+      { id: 'mock-moment-1', user_id: 'fake-1' },
+      { id: 'own-moment', user_id: 'viewer-1' },
+      { id: 'real-moment', user_id: 'author-2' },
+    ]);
+    rankingService.rankForYou.mockResolvedValue([
+      { id: 'real-moment', user_id: 'author-2' },
+    ]);
+
+    const result = await controller.getFeed(user, 'For You');
+
+    expect(rankingService.rankForYou).toHaveBeenCalledWith('viewer-1', [
+      { id: 'own-moment', user_id: 'viewer-1' },
+      { id: 'real-moment', user_id: 'author-2' },
+    ]);
+    expect(result).toEqual([{ id: 'real-moment', user_id: 'author-2' }]);
   });
 
   it('does not expose generated mock Moments through production feed filters', async () => {
