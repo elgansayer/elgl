@@ -31,7 +31,11 @@ _DEFAULT_EFFORT = "max"
 class ClaudeCodeProvider(JsonAuthProbeMixin, CLIProvider):
     name = "claude"
     default_command = "claude"
-    default_model = "fable"
+    # Fable requires separately purchased usage credits even when Claude Code is
+    # authenticated with a Pro subscription. Sonnet is the strongest verified
+    # subscription-backed default; phase-specific routing still selects Opus or
+    # Haiku where appropriate.
+    default_model = "sonnet"
     default_credential_paths = (".claude", ".claude.json")
     default_runtime_paths = (".local/bin", ".local/share/claude", ".npm-global")
 
