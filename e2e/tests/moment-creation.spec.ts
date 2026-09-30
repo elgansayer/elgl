@@ -1,162 +1,142 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+const createdAt = '2026-08-25T12:00:00.000Z';
+
+async function installMomentsApi(page: Page): Promise<void> {
+  await page.route('**/api/moments/feed**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+
+  await page.route('**/api/users/me', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'mock-user-123',
+        display_name: 'E2E Learner',
+        native_languages: ['en'],
+        target_languages: ['ja'],
+        is_vip: false,
+        vip_tier: 'free',
+        coins_balance: 0,
+        study_streak_days: 0,
+        correction_ratio: 0,
+        is_serious_learner: false,
+        privacy_hide_age: false,
+        privacy_hide_location: false,
+        privacy_hide_from_search: false,
+        privacy_hide_gender: false,
+        created_at: createdAt,
+      }),
+    });
+  });
+
+  await page.route('**/api/nlp/grammar-check', async (route) => {
+    const requestBody = route.request().postDataJSON() as { text?: string };
+    const text = requestBody.text ?? '';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        original: text,
+        corrected: text,
+        explanation: 'No corrections needed.',
+        errors_found: 0,
+      }),
+    });
+  });
+}
+
+async function openComposer(page: Page) {
+  const composeButton = page.locator('header button').last();
+  await expect(composeButton).toBeVisible();
+  await composeButton.click();
+
+  const composer = page.locator('section').first();
+  const textarea = composer.locator('textarea');
+  await expect(textarea).toBeVisible();
+  return { composeButton, composer, textarea };
+}
 
 test.describe('HelloTalk Moment Creation E2E', () => {
-  test.describe('Moments Feed Page', () => {
-    test('should load the moments feed page with header', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
-
-      // The page should have a header with "Moments" title
-      const header = page.locator('header');
-      await expect(header.first()).toBeVisible();
-
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-    });
-
-    test('should display the compose toggle button', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
-
-      // The compose button (camera/post icon) should be in the header
-      const composeBtn = page.locator('header button').last();
-      await expect(composeBtn).toBeVisible();
-    });
-
-    test('should show filter pills for moments', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
-
-      // The page should have the scrollable pills component with filter options
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-    });
-
-    test('should open compose form when clicking compose button', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
-
-      // Click the compose button in the header (last button with svg)
-      const composeBtn = page.locator('header button').last();
-      await composeBtn.click();
-      await page.waitForTimeout(500);
-
-      // The compose form should now be visible with a textarea
-      const textarea = page.locator('textarea');
-      const textareaVisible = await textarea.isVisible().catch(() => false);
-
-      if (textareaVisible) {
-        await expect(textarea).toBeVisible();
-        await expect(textarea).toHaveAttribute('placeholder');
-      }
-    });
-
-    test('should allow typing text in the compose form textarea', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
-
-      // Open the compose form
-      const composeBtn = page.locator('header button').last();
-      await composeBtn.click();
-      await page.waitForTimeout(500);
-
-      const textarea = page.locator('textarea');
-      if (await textarea.isVisible().catch(() => false)) {
-        await textarea.fill('This is my test moment! Can anyone correct my English?');
-        await expect(textarea).toHaveValue('This is my test moment! Can anyone correct my English?');
-      }
-    });
-
-    test('should display language picker in compose form', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
-
-      // Open the compose form
-      const composeBtn = page.locator('header button').last();
-      await composeBtn.click();
-      await page.waitForTimeout(500);
-
-      // The language picker should be present in the compose form
-      const languagePicker = page.locator('app-language-picker');
-      const pickerVisible = await languagePicker.isVisible().catch(() => false);
-
-      if (pickerVisible) {
-        await expect(languagePicker).toBeVisible();
-      }
-    });
-
-    test('should show post button in compose form', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
-
-      // Open the compose form
-      const composeBtn = page.locator('header button').last();
-      await composeBtn.click();
-      await page.waitForTimeout(500);
-
-      // The post button should be present
-      const postBtn = page.locator('button').filter({ hasText: /Post|Publish|Share/i });
-      const postBtnVisible = await postBtn.isVisible().catch(() => false);
-
-      if (postBtnVisible) {
-        await expect(postBtn).toBeVisible();
-      }
-    });
+  test.beforeEach(async ({ page }) => {
+    await installMomentsApi(page);
   });
 
-  test.describe('Moments Feed Display', () => {
-    test('should render moment cards with author info', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
+  test('creates a text Moment through the grammar-check and Moments API boundaries', async ({
+    page,
+  }) => {
+    let momentPayload: unknown;
 
-      // Moment cards should be rendered as articles
-      const articles = page.locator('article');
-      const articleCount = await articles.count();
-
-      if (articleCount > 0) {
-        // At least one moment card has author name
-        const firstArticle = articles.first();
-
-        // Check for avatar image
-        const avatar = firstArticle.locator('img').first();
-        await expect(avatar).toBeVisible();
-      }
+    await page.route('**/api/moments', async (route) => {
+      momentPayload = route.request().postDataJSON();
+      const requestBody = momentPayload as {
+        text_content?: string;
+        media_type?: 'none' | 'images' | 'audio';
+        target_language?: string;
+      };
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'moment_e2e_created',
+          user_id: 'mock-user-123',
+          text_content: requestBody.text_content,
+          media_urls: [],
+          media_type: requestBody.media_type ?? 'none',
+          target_language: requestBody.target_language ?? 'en',
+          is_pinned: false,
+          likes_count: 0,
+          comments_count: 0,
+          created_at: createdAt,
+          author: { id: 'mock-user-123', display_name: 'E2E Learner', avatar_url: null },
+        }),
+      });
     });
+
+    await page.goto('/moments');
+
+    const { composer, textarea } = await openComposer(page);
+    const text = '今日は日本語をれんしゅうしました。';
+    await textarea.fill(text);
+
+    const createRequest = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/api/moments'),
+    );
+    await composer.locator('button').last().click();
+    await createRequest;
+
+    expect(momentPayload).toMatchObject({
+      text_content: text,
+      media_urls: [],
+      media_type: 'none',
+      target_language: expect.any(String),
+    });
+    await expect(page.locator('article').filter({ hasText: text })).toBeVisible();
   });
 
-  test.describe('Moments Navigation', () => {
-    test('should navigate to moments from bottom nav', async ({ page }) => {
-      await page.goto('/home');
-      await page.waitForTimeout(2000);
-
-      // On mobile, bottom nav has moments link
-      const momentsNavLink = page.locator('a[routerLink="/moments"]');
-      if (await momentsNavLink.isVisible().catch(() => false)) {
-        await momentsNavLink.click();
-        await page.waitForTimeout(2000);
-
-        const header = page.locator('header');
-        await expect(header.first()).toBeVisible();
-      }
+  test('retains a failed Moment draft so the user can retry without retyping', async ({ page }) => {
+    await page.route('**/api/moments', async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Temporarily unavailable' }),
+      });
     });
 
-    test('should navigate to user profile from moment author link', async ({ page }) => {
-      await page.goto('/moments');
-      await page.waitForTimeout(3000);
+    await page.goto('/moments');
 
-      // Look for author avatar links
-      const authorLinks = page.locator('article a[href*="/profile/"]');
-      const authorLinkCount = await authorLinks.count();
+    const { composeButton, composer, textarea } = await openComposer(page);
+    const text = 'Retry-safe draft text';
+    await textarea.fill(text);
 
-      if (authorLinkCount > 0) {
-        await expect(authorLinks.first()).toBeVisible();
-        await authorLinks.first().click();
-        await page.waitForTimeout(2000);
+    const failedResponse = page.waitForResponse(
+      (response) => response.url().endsWith('/api/moments') && response.request().method() === 'POST',
+    );
+    await composer.locator('button').last().click();
+    await failedResponse;
 
-        // Should navigate to a profile page
-        const url = page.url();
-        expect(url).toContain('/profile/');
-      }
-    });
+    await composeButton.click();
+    await expect(page.locator('section').first().locator('textarea')).toHaveValue(text);
   });
 });

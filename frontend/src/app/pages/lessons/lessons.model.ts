@@ -24,6 +24,14 @@ export interface Lesson {
   updated_at?: string | null;
 }
 
+export interface LessonProgress {
+  lesson_id: string;
+  segment_index: number;
+  completed: boolean;
+  completed_at: string | null;
+  updated_at: string | null;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
