@@ -9,6 +9,7 @@ on:
       - 'scripts/deploy-workflow-contract.test.mjs'
       - 'scripts/deploy-and-start-factory.sh'
       - 'scripts/maintain-factory-host-storage.sh'
+      - 'scripts/relocate-home-cache-to-second-disk.sh'
   push:
     branches: [main]
     paths:
@@ -18,6 +19,7 @@ on:
       - 'scripts/deploy-workflow-contract.test.mjs'
       - 'scripts/deploy-and-start-factory.sh'
       - 'scripts/maintain-factory-host-storage.sh'
+      - 'scripts/relocate-home-cache-to-second-disk.sh'
   workflow_dispatch:
 
 permissions:
@@ -60,7 +62,10 @@ jobs:
         run: |
           shellcheck \
             scripts/deploy-and-start-factory.sh \
-            scripts/maintain-factory-host-storage.sh
+            scripts/maintain-factory-host-storage.sh \
+            scripts/relocate-home-cache-to-second-disk.sh \
+            config/systemd/hellotalk-factory-update.sh \
+            config/systemd/hellotalk-factory-watchdog.sh
 
       - name: Validate workflow syntax, expressions, and shell scripts
         run: |

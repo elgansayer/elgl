@@ -6,6 +6,7 @@ import { test } from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const workflow = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8');
+const ciWorkflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
 
 function indexOfOrFail(fragment) {
   const index = workflow.indexOf(fragment);
@@ -14,6 +15,7 @@ function indexOfOrFail(fragment) {
 }
 
 test('deploys only successful CI runs from main and serializes main promotion', () => {
+  assert.match(ciWorkflow, /^name: CI$/m);
   assert.match(workflow, /workflow_run:\s*\n\s+workflows:\s*\[CI\]/);
   assert.match(workflow, /types:\s*\[completed\]/);
   assert.match(workflow, /branches:\s*\[main\]/);
@@ -65,12 +67,14 @@ test('builds production API and Web images with cache, SBOM and provenance enabl
   assert.match(workflow, /context:\s*frontend[\s\S]*?file:\s*frontend\/Dockerfile[\s\S]*?target:\s*production/);
 
   const pushes = workflow.match(/push:\s*true/g) ?? [];
+  const pulls = workflow.match(/pull:\s*true/g) ?? [];
   const sboms = workflow.match(/sbom:\s*true/g) ?? [];
   const provenance = workflow.match(/provenance:\s*mode=max/g) ?? [];
   const cacheFrom = workflow.match(/cache-from:\s*type=gha/g) ?? [];
   const cacheTo = workflow.match(/cache-to:\s*type=gha,mode=max/g) ?? [];
 
   assert.equal(pushes.length, 2);
+  assert.equal(pulls.length, 2);
   assert.equal(sboms.length, 2);
   assert.equal(provenance.length, 2);
   assert.equal(cacheFrom.length, 2);
@@ -78,16 +82,30 @@ test('builds production API and Web images with cache, SBOM and provenance enabl
 });
 
 test('scans both immutable images before attestation and latest promotion', () => {
+  const apiBuild = indexOfOrFail('Build and push immutable API image');
+  const webBuild = indexOfOrFail('Build and push immutable Web image');
   const apiScan = indexOfOrFail('Scan immutable API image');
   const webScan = indexOfOrFail('Scan immutable Web image');
   const apiAttestation = indexOfOrFail('Attest API build provenance');
   const webAttestation = indexOfOrFail('Attest Web build provenance');
   const promotion = indexOfOrFail('Promote verified image digests to latest');
 
-  assert.ok(apiScan < apiAttestation);
-  assert.ok(webScan < webAttestation);
+  assert.ok(apiBuild < webBuild);
+  assert.ok(webBuild < apiScan);
+  assert.ok(apiScan < webScan);
+  assert.ok(webScan < apiAttestation);
+  assert.ok(apiAttestation < webAttestation);
   assert.ok(apiAttestation < promotion);
   assert.ok(webAttestation < promotion);
+
+  assert.match(
+    workflow,
+    /image-ref:\s*ghcr\.io\/\$\{\{ github\.repository \}\}\/api@\$\{\{ steps\.build-api\.outputs\.digest \}\}/,
+  );
+  assert.match(
+    workflow,
+    /image-ref:\s*ghcr\.io\/\$\{\{ github\.repository \}\}\/web@\$\{\{ steps\.build-web\.outputs\.digest \}\}/,
+  );
 
   const failingScans = workflow.match(/exit-code:\s*'1'/g) ?? [];
   const severities = workflow.match(/severity:\s*HIGH,CRITICAL/g) ?? [];

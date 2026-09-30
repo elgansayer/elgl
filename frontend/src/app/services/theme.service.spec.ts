@@ -30,7 +30,7 @@ describe('ThemeService', () => {
       })),
     });
 
-    document.documentElement.classList.toggle = vi.fn();
+    vi.spyOn(document.documentElement.classList, 'toggle');
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
 
@@ -41,6 +41,7 @@ describe('ThemeService', () => {
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
     vi.restoreAllMocks();
+    document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
   });
 

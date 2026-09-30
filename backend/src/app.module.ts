@@ -69,7 +69,6 @@ import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { LanguageIslandsModule } from './language-islands/language-islands.module';
-import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
@@ -80,6 +79,9 @@ import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
 import { LivekitModule } from './livekit/livekit.module';
+import { OpenApiFixtureFactoryController } from './mock/openapi-fixture-factory.controller';
+import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
+import { MockScenariosModule } from './mock/mock-scenarios.module';
 
 @Module({
   imports: [
@@ -161,7 +163,6 @@ import { LivekitModule } from './livekit/livekit.module';
     LessonsModule,
     LinkPreviewModule,
     ResourceLibraryModule,
-    NotificationPreferencesModule,
     ModerationModule,
     WordOfTheDayModule,
     SpamDetectionModule,
@@ -176,8 +177,9 @@ import { LivekitModule } from './livekit/livekit.module';
     ReadingEngineModule,
     CloudflareModule,
     LearnerKnowledgeModule,
+    MockScenariosModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, OpenApiFixtureFactoryController],
   providers: [
     AppService,
     {
@@ -186,6 +188,7 @@ import { LivekitModule } from './livekit/livekit.module';
       useClass: ThrottlerGuard,
     },
     AnkiiIntegrationService,
+    OpenApiFixtureFactoryRegistry,
   ],
 })
 export class AppModule {}

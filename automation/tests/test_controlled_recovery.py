@@ -5,95 +5,91 @@ from pathlib import Path
 
 from openhands_factory.controlled_recovery import recover_due_quarantines
 from openhands_factory.jobs import JobStore
-from openhands_factory.models import JobState, Task
+from openhands_factory.models import JobState
+from openhands_factory.state import atomic_write_json
 
 
-def _quarantined_job(path: Path) -> tuple[JobStore, str]:
-    store = JobStore(path, max_repeated_failures=1)
-    task_id = "7036"
-    job = store.reconcile([Task(task_id, "Bounded recovery", "", "github-issue", 0)])[task_id]
-    job.state = JobState.IMPLEMENTING
-    job.attempts = 1
-    job.last_error = "Repository validation failed with the same deterministic error"
-    store.save_job(job)
-    assert store.load()[task_id].state is JobState.QUARANTINED
-    return store, task_id
-
-
-def test_quarantine_does_not_recover_before_full_window(tmp_path: Path) -> None:
-    store, task_id = _quarantined_job(tmp_path / "jobs.json")
-    quarantined = store.load()[task_id]
-    assert quarantined.quarantined_at is not None
-
-    recovered = recover_due_quarantines(
-        store,
-        now=quarantined.quarantined_at + timedelta(hours=23),
+def _write_legacy_quarantine(path: Path, *, quarantined_at: datetime) -> None:
+    atomic_write_json(
+        path,
+        {
+            "jobs": [
+                {
+                    "task": {
+                        "identifier": "7036",
+                        "title": "Legacy bounded recovery",
+                        "body": "",
+                        "source": "github-issue",
+                        "priority": 0,
+                    },
+                    "state": "quarantined",
+                    "attempts": 4,
+                    "repair_attempts": 2,
+                    "last_error": "Repository validation failed with the same deterministic error",
+                    "failure_counts": {"validation": 4},
+                    "last_failure_kind": "validation",
+                    "last_failure_fingerprint": "legacy-fingerprint",
+                    "repeated_failure_count": 4,
+                    "quarantine_reason": "legacy circuit",
+                    "quarantined_at": quarantined_at.isoformat(),
+                    "quarantine_notification_pending": True,
+                    "updated_at": quarantined_at.isoformat(),
+                }
+            ]
+        },
     )
 
-    assert recovered == []
-    assert store.load()[task_id].state is JobState.QUARANTINED
 
-
-def test_due_quarantine_recovers_without_resetting_failure_evidence(tmp_path: Path) -> None:
+def test_legacy_quarantine_migrates_immediately_to_autonomous_backoff(tmp_path: Path) -> None:
     path = tmp_path / "jobs.json"
-    store, task_id = _quarantined_job(path)
-    quarantined = store.load()[task_id]
-    assert quarantined.quarantined_at is not None
-    failure_counts = dict(quarantined.failure_counts)
-    fingerprint = quarantined.last_failure_fingerprint
-    repeated = quarantined.repeated_failure_count
-    attempts = quarantined.attempts
-    last_error = quarantined.last_error
+    now = datetime.now(UTC)
+    _write_legacy_quarantine(path, quarantined_at=now)
+    store = JobStore(path, max_repeated_failures=3)
 
-    restarted = JobStore(path, max_repeated_failures=1)
-    recovered = recover_due_quarantines(
-        restarted,
-        now=quarantined.quarantined_at + timedelta(hours=24, seconds=1),
-    )
-    restored = restarted.load()[task_id]
+    recovered = recover_due_quarantines(store, now=now)
+    restored = store.load()["7036"]
 
-    assert recovered == [task_id]
+    assert recovered == ["7036"]
     assert restored.state is JobState.DISCOVERED
-    assert restored.failure_counts == failure_counts
-    assert restored.last_failure_fingerprint == fingerprint
-    assert restored.repeated_failure_count == repeated
-    assert restored.attempts == attempts
-    assert restored.last_error == last_error
+    assert restored.next_attempt_at is not None
+    assert restored.next_attempt_at >= now + timedelta(hours=1)
+    assert restored.attempts == 4
+    assert restored.repair_attempts == 2
+    assert restored.failure_counts == {"validation": 4}
+    assert restored.last_failure_fingerprint == "legacy-fingerprint"
+    assert restored.repeated_failure_count == 4
+    assert restored.last_error is not None
     assert restored.quarantine_reason is None
     assert restored.quarantined_at is None
     assert not restored.quarantine_notification_pending
 
 
-def test_same_failure_after_recovery_reopens_bounded_circuit(tmp_path: Path) -> None:
-    store, task_id = _quarantined_job(tmp_path / "jobs.json")
-    quarantined = store.load()[task_id]
-    assert quarantined.quarantined_at is not None
-    first_repeated_count = quarantined.repeated_failure_count
+def test_legacy_quarantine_migration_is_idempotent(tmp_path: Path) -> None:
+    path = tmp_path / "jobs.json"
+    now = datetime.now(UTC)
+    _write_legacy_quarantine(path, quarantined_at=now)
+    store = JobStore(path, max_repeated_failures=3)
 
-    recover_due_quarantines(
-        store,
-        now=quarantined.quarantined_at + timedelta(hours=24, seconds=1),
-    )
-    job = store.load()[task_id]
-    job.state = JobState.IMPLEMENTING
-    job.attempts += 1
-    job.last_error = "Repository validation failed with the same deterministic error"
-    job.updated_at = datetime.now(UTC)
-    store.save_job(job)
-    requarantined = store.load()[task_id]
+    assert recover_due_quarantines(store, now=now) == ["7036"]
+    first = store.load()["7036"]
+    assert recover_due_quarantines(store, now=now + timedelta(minutes=1)) == []
+    second = store.load()["7036"]
 
-    assert requarantined.state is JobState.QUARANTINED
-    assert requarantined.repeated_failure_count == first_repeated_count + 1
-    assert requarantined.quarantined_at is not None
+    assert second.state is JobState.DISCOVERED
+    assert second.next_attempt_at == first.next_attempt_at
+    assert second.failure_counts == first.failure_counts
+    assert second.last_failure_fingerprint == first.last_failure_fingerprint
 
 
-def test_legacy_quarantine_without_timestamp_is_immediately_recoverable(tmp_path: Path) -> None:
-    store, task_id = _quarantined_job(tmp_path / "jobs.json")
-    job = store.load()[task_id]
-    job.quarantined_at = None
-    store._save_raw({task_id: job})
+def test_expired_legacy_quarantine_becomes_runnable_without_manual_release(tmp_path: Path) -> None:
+    path = tmp_path / "jobs.json"
+    now = datetime.now(UTC)
+    _write_legacy_quarantine(path, quarantined_at=now - timedelta(days=2))
+    store = JobStore(path, max_repeated_failures=3)
 
-    recovered = recover_due_quarantines(store)
+    recovered = recover_due_quarantines(store, now=now)
+    restored = store.load()["7036"]
 
-    assert recovered == [task_id]
-    assert store.load()[task_id].state is JobState.DISCOVERED
+    assert recovered == ["7036"]
+    assert restored.state is JobState.DISCOVERED
+    assert restored.next_attempt_at is None

@@ -58,7 +58,6 @@ const EXPECTED_MODULE_NAMES = [
   'LessonsModule',
   'LinkPreviewModule',
   'ResourceLibraryModule',
-  'NotificationPreferencesModule',
   'ModerationModule',
   'WordOfTheDayModule',
   'SpamDetectionModule',
@@ -135,6 +134,16 @@ describe('AppModule', () => {
     for (const name of EXPECTED_MODULE_NAMES) {
       expect(importedNames).toContain(name);
     }
+  });
+
+  it('should not import the legacy NotificationPreferencesModule wrapper', () => {
+    const imports =
+      (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
+    const importedNames = imports.map(
+      (mod) => (mod as { name?: string })?.name ?? '',
+    );
+
+    expect(importedNames).not.toContain('NotificationPreferencesModule');
   });
 
   it('should not contain duplicate feature module imports', () => {
