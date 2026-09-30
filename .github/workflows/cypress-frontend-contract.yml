@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   cypress-setup:
-    name: Cypress installation and smoke test
+    name: Cypress installation and product smoke tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -43,16 +43,15 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Verify Cypress binary
         run: npx cypress verify
 
-      - name: Verify Cypress configuration and smoke spec
+      - name: Verify Cypress configuration and smoke specs
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
-          import path from 'node:path';
 
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           const config = fs.readFileSync('cypress.config.ts', 'utf8');
@@ -73,8 +72,14 @@ jobs:
             if (!config.includes(marker)) failures.push(`cypress.config.ts missing: ${marker}`);
           }
 
-          if (!fs.existsSync('cypress/support/e2e.ts')) failures.push('missing Cypress support file');
-          if (!fs.existsSync('cypress/e2e/app.cy.ts')) failures.push('missing Cypress app smoke spec');
+          const requiredSpecs = [
+            'cypress/e2e/app.cy.ts',
+            'cypress/e2e/moments-flow.cy.ts',
+            'cypress/e2e/chat-flow.cy.ts',
+          ];
+          for (const spec of requiredSpecs) {
+            if (!fs.existsSync(spec)) failures.push(`missing Cypress smoke spec: ${spec}`);
+          }
 
           if (failures.length) {
             console.error(failures.join('\n'));
@@ -83,5 +88,7 @@ jobs:
           console.log('Cypress frontend installation/configuration contract passed.');
           NODE
 
-      - name: Run Cypress app smoke test
-        run: npx start-server-and-test start http://localhost:4200 "cypress run --spec cypress/e2e/app.cy.ts --browser electron"
+      - name: Run Cypress app, Moments, and Chat smoke tests
+        run: >-
+          npx start-server-and-test start http://localhost:4200
+          "cypress run --spec 'cypress/e2e/app.cy.ts,cypress/e2e/moments-flow.cy.ts,cypress/e2e/chat-flow.cy.ts' --browser electron"

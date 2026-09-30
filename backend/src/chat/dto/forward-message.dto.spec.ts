@@ -34,7 +34,9 @@ describe('ForwardMessageDto', () => {
   });
 
   it('rejects malformed room identifiers', async () => {
-    await expect(constraintsFor(['not-a-room-id'])).resolves.toContain('isUuid');
+    await expect(constraintsFor(['not-a-room-id'])).resolves.toContain(
+      'isUuid',
+    );
   });
 
   it('rejects non-array request bodies', async () => {
