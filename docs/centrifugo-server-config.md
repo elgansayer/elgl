@@ -22,7 +22,7 @@ The Compose services map the existing application variables into the Centrifugo 
 - `CENTRIFUGO_SECRET` -> `CENTRIFUGO_TOKEN_HMAC_SECRET_KEY`
 - `CENTRIFUGO_API_KEY` -> `CENTRIFUGO_API_KEY`
 
-The NestJS `CentrifugoService` consumes the same `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` values when minting client tokens and calling the Centrifugo HTTP API. Production startup already rejects missing critical credentials.
+The NestJS `CentrifugoService` consumes the same `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` values when minting client tokens and calling the Centrifugo HTTP API. Production startup rejects missing, blank, whitespace-padded and repository-known placeholder credentials through the global environment validator. Production Compose additionally requires both values during interpolation and waits for the validated API health check before starting Centrifugo.
 
 Do not commit real signing keys, API keys, connection tokens or Redis credentials. They belong in the deployment secret store or runtime environment. The browser never needs either Centrifugo server credential.
 
@@ -42,7 +42,8 @@ Do not set production to `*`. Wildcard browser origins weaken the WebSocket orig
 
 ## Failure behavior
 
-- Missing Centrifugo credentials in production fail the application configuration/startup boundary rather than silently minting unusable credentials.
+- Missing, blank, whitespace-padded or repository-known placeholder Centrifugo credentials fail the application configuration/startup boundary.
+- Production Compose does not start Centrifugo until the API has validated the shared credentials and become healthy, so a predictable signing secret is never exposed while the API is failing.
 - Missing `CENTRIFUGO_ALLOWED_ORIGINS` fails production Compose interpolation before Centrifugo starts.
 - An unavailable Centrifugo container fails its health check and prevents dependent application startup according to the Compose dependency policy.
 - An unavailable Redis service prevents Centrifugo's Redis engine from becoming healthy. The NestJS connection-rate limiter retains its existing degradation behavior when its own Redis client is unavailable.
@@ -67,7 +68,7 @@ The contract verifies:
 - example environment ownership; and
 - Prometheus metrics scraping.
 
-For a deployment smoke test, provide non-placeholder `CENTRIFUGO_SECRET`, `CENTRIFUGO_API_KEY` and a deployment-specific `CENTRIFUGO_ALLOWED_ORIGINS`, start `cache` and `websocket`, verify the Centrifugo health endpoint, then start `api` and verify a minted connection token can establish an authenticated client connection from an allowed browser origin. Verify an unrelated browser origin is rejected.
+For a deployment smoke test, provide non-placeholder `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` plus a deployment-specific `CENTRIFUGO_ALLOWED_ORIGINS`, then start the production stack. Verify that the API becomes healthy before `websocket`, that Centrifugo becomes healthy, and that a minted connection token can establish an authenticated client connection from an allowed browser origin. Verify an unrelated browser origin is rejected.
 
 ## Rollout and rollback
 
@@ -76,8 +77,8 @@ No database migration or persisted-data transformation is required.
 1. Provision non-placeholder `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` in the deployment secret store.
 2. Set `CENTRIFUGO_ALLOWED_ORIGINS` to the exact production browser origins.
 3. Validate `docker compose -f docker-compose.prod.yml config` with the deployment environment.
-4. Deploy Redis and Centrifugo with the updated environment mapping.
-5. Verify Centrifugo health, Prometheus metrics and allowed/disallowed browser-origin behavior.
-6. Deploy the NestJS API and verify token minting plus an authenticated subscription.
+4. Deploy Redis and the NestJS API so the shared credentials pass startup validation.
+5. Allow Compose to start Centrifugo after the API health check succeeds.
+6. Verify Centrifugo health, Prometheus metrics, token minting, authenticated subscription and allowed/disallowed browser-origin behaviour.
 
 Rollback is a normal application/Compose revert. If rollback restores the previous Compose file, keep the production reverse-proxy origin and authentication controls in place and do not restore real credentials to tracked JSON configuration. Reapply the explicit origin allowlist before the next production promotion.

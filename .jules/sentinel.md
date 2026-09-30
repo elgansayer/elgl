@@ -100,6 +100,12 @@
 **Learning:** Economy rewards that genuinely require randomness need a cryptographically secure source. Values presented as persisted earnings must not be random at all.
 **Prevention:** Generate the reward with Node's `crypto.randomInt()` before entering the atomic claim transaction, validate its range again inside the RPC, and derive authenticated dashboard totals from authoritative host-scoped transaction data.
 
+## 2026-08-30 - [Fail-Fast Centrifugo Credentials in Production]
+
+**Vulnerability:** Centrifugo `CENTRIFUGO_API_KEY` and `CENTRIFUGO_SECRET` could reach production as configuration defaults, tracked example placeholders, or whitespace-only values.
+**Learning:** Configuration defaults and example environment files can mask missing deployment secrets with predictable strings. Protect the service startup boundary against every repository-known placeholder, not only the schema default.
+**Prevention:** Reject missing, blank, whitespace-padded, test-default and example-placeholder Centrifugo credentials in the global production environment validator. Require both variables during production Compose interpolation and start Centrifugo only after the validated API is healthy, so predictable credentials are never exposed by the standalone WebSocket container.
+
 ## 2026-09-05 - Missing authentication on admin dashboard
 
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
