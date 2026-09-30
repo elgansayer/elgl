@@ -1,7 +1,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FocusTrapDirective } from '../../directives/focus-trap.directive';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ForcedUpdateModalComponent } from './forced-update-modal.component';
 
 @Pipe({ name: 't' })
@@ -17,13 +17,11 @@ describe('ForcedUpdateModalComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    document.body.style.overflow = '';
-
     await TestBed.configureTestingModule({
       imports: [ForcedUpdateModalComponent],
     })
       .overrideComponent(ForcedUpdateModalComponent, {
-        set: { imports: [MockTranslatePipe, FocusTrapDirective] },
+        set: { imports: [MockTranslatePipe, ...HlmDialogImports] },
       })
       .compileComponents();
 
@@ -34,60 +32,54 @@ describe('ForcedUpdateModalComponent', () => {
 
   afterEach(() => {
     if (!fixture.componentRef.hostView.destroyed) fixture.destroy();
-    document.body.style.overflow = '';
-    vi.restoreAllMocks();
     TestBed.resetTestingModule();
   });
 
   it('uses a real HTTPS update destination by default', () => {
     expect(component.storeUrl()).toBe('https://github.com/elgansayer/elgl/releases/latest');
-    const anchor = fixture.nativeElement.querySelector('a') as HTMLAnchorElement | null;
+    const anchor = document.body.querySelector(
+      'a[href="https://github.com/elgansayer/elgl/releases/latest"]',
+    ) as HTMLAnchorElement | null;
     expect(anchor?.getAttribute('href')).toBe('https://github.com/elgansayer/elgl/releases/latest');
   });
 
   it('renders a non-dismissible accessible alert dialog', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const dialog = compiled.querySelector('[role="alertdialog"]');
+    const dialog = fixture.nativeElement.querySelector(
+      '[role="alertdialog"]',
+    ) as HTMLElement | null;
+    const content = document.body.querySelector('hlm-dialog-content') as HTMLElement | null;
     expect(dialog?.getAttribute('aria-modal')).toBe('true');
     expect(dialog?.getAttribute('aria-labelledby')).toBe('forced-update-title');
     expect(dialog?.getAttribute('aria-describedby')).toBe('forced-update-message');
-    expect(compiled.textContent).toContain('forcedUpdateModal.title');
-    expect(compiled.textContent).toContain('forcedUpdateModal.message');
+    expect(content?.textContent).toContain('forcedUpdateModal.title');
+    expect(content?.textContent).toContain('forcedUpdateModal.message');
   });
 
   it('renders the update link with safe new-tab isolation', () => {
-    const anchor = fixture.nativeElement.querySelector('a') as HTMLAnchorElement | null;
+    const anchor = document.body.querySelector(
+      'a[href="https://github.com/elgansayer/elgl/releases/latest"]',
+    ) as HTMLAnchorElement | null;
     expect(anchor?.getAttribute('target')).toBe('_blank');
     expect(anchor?.getAttribute('rel')).toBe('noopener noreferrer');
     expect(anchor?.textContent).toContain('forcedUpdateModal.updateButton');
   });
 
-  it('locks body scrolling while mounted and restores the previous value', () => {
-    fixture.destroy();
-    document.body.style.overflow = 'clip';
+  it('delegates focus, scroll and Escape handling to a non-dismissible Spartan dialog', () => {
+    const dialog = fixture.nativeElement.querySelector('hlm-dialog') as HTMLElement | null;
+    expect(dialog?.getAttribute('state')).toBe('open');
+    expect(dialog?.hasAttribute('disableclose')).toBe(true);
+    expect(document.body.querySelector('hlm-dialog-content')).toBeTruthy();
 
-    fixture = TestBed.createComponent(ForcedUpdateModalComponent);
-    component = fixture.componentInstance;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     fixture.detectChanges();
-    expect(document.body.style.overflow).toBe('hidden');
 
-    fixture.destroy();
-    expect(document.body.style.overflow).toBe('clip');
-  });
-
-  it('prevents Escape from dismissing the gate', () => {
-    const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
-    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
-    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
-    component.blockEscape(event);
-
-    expect(stopPropagationSpy).toHaveBeenCalled();
-    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(document.body.querySelector('hlm-dialog-content')).toBeTruthy();
   });
 
   it('does not cancel keyboard activation of the update link', () => {
-    const anchor = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
+    const anchor = document.body.querySelector(
+      'a[href="https://github.com/elgansayer/elgl/releases/latest"]',
+    ) as HTMLAnchorElement;
     const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
 
     anchor.dispatchEvent(event);

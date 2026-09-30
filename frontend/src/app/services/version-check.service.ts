@@ -69,10 +69,14 @@ export function compareSemanticVersions(left: string, right: string): number | n
   const parsedRight = parseSemanticVersion(right);
   if (!parsedLeft || !parsedRight) return null;
 
-  for (const key of ['major', 'minor', 'patch'] as const) {
-    if (parsedLeft[key] !== parsedRight[key]) {
-      return parsedLeft[key] < parsedRight[key] ? -1 : 1;
-    }
+  if (parsedLeft.major !== parsedRight.major) {
+    return parsedLeft.major < parsedRight.major ? -1 : 1;
+  }
+  if (parsedLeft.minor !== parsedRight.minor) {
+    return parsedLeft.minor < parsedRight.minor ? -1 : 1;
+  }
+  if (parsedLeft.patch !== parsedRight.patch) {
+    return parsedLeft.patch < parsedRight.patch ? -1 : 1;
   }
 
   return comparePrerelease(parsedLeft.prerelease, parsedRight.prerelease);
@@ -157,7 +161,9 @@ export class VersionCheckService {
 
   private readMinimumSupported(response: VersionInfo): string | null {
     if (typeof response.minimumSupported !== 'string') return null;
-    return parseSemanticVersion(response.minimumSupported) ? response.minimumSupported.trim() : null;
+    return parseSemanticVersion(response.minimumSupported)
+      ? response.minimumSupported.trim()
+      : null;
   }
 
   private applyMinimumVersion(minimum: string): void {

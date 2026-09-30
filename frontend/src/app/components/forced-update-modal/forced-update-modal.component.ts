@@ -1,6 +1,5 @@
-import { DOCUMENT } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, input } from '@angular/core';
-import { FocusTrapDirective } from '../../directives/focus-trap.directive';
+import { Component, input } from '@angular/core';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 const DEFAULT_UPDATE_URL = 'https://github.com/elgansayer/elgl/releases/latest';
@@ -11,19 +10,20 @@ const DEFAULT_UPDATE_URL = 'https://github.com/elgansayer/elgl/releases/latest';
  */
 @Component({
   selector: 'app-forced-update-modal',
-  imports: [TranslatePipe, FocusTrapDirective],
+  imports: [TranslatePipe, ...HlmDialogImports],
   template: `
-    <div
-      class="fixed inset-0 z-[11000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+    <hlm-dialog
+      state="open"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="forced-update-title"
+      aria-describedby="forced-update-message"
+      disableClose
     >
-      <div
-        appFocusTrap
-        [active]="true"
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
         class="bg-surface-200 p-8 rounded-3xl max-w-md mx-4 shadow-2xl border border-surface-100 text-center space-y-5"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="forced-update-title"
-        aria-describedby="forced-update-message"
       >
         <div class="text-5xl" aria-hidden="true">&#x26A0;&#xFE0F;</div>
         <h2 id="forced-update-title" class="text-2xl font-black text-text-primary">
@@ -40,32 +40,11 @@ const DEFAULT_UPDATE_URL = 'https://github.com/elgansayer/elgl/releases/latest';
         >
           {{ 'forcedUpdateModal.updateButton' | t }}
         </a>
-      </div>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
-  host: {
-    '(document:keydown.escape)': 'blockEscape($event)',
-  },
 })
-export class ForcedUpdateModalComponent implements OnInit, OnDestroy {
+export class ForcedUpdateModalComponent {
   /** Validated by VersionCheckService; the default remains a safe HTTPS destination. */
   readonly storeUrl = input(DEFAULT_UPDATE_URL);
-
-  private readonly document = inject(DOCUMENT);
-  private previousBodyOverflow = '';
-
-  ngOnInit(): void {
-    this.previousBodyOverflow = this.document.body.style.overflow;
-    this.document.body.style.overflow = 'hidden';
-  }
-
-  ngOnDestroy(): void {
-    this.document.body.style.overflow = this.previousBodyOverflow;
-  }
-
-  /** Escape cannot dismiss a mandatory update gate. Other keys retain native accessibility behavior. */
-  blockEscape(event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-  }
 }
