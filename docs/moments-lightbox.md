@@ -1,6 +1,6 @@
 # Moments image lightbox
 
-Issue #1040 uses the shared Angular `LightboxComponent` to present image Moments as a full-screen gallery. The Moments feed owns only the selected image list and initial index; focus management, dismissal and gallery navigation remain inside the shared lightbox.
+The shared Angular `LightboxComponent` presents image Moments as a full-screen gallery. The Moments feed owns only the selected image list and initial index; focus management, dismissal and gallery navigation remain inside the shared lightbox.
 
 ## User-visible behaviour
 
@@ -22,7 +22,9 @@ Image state is held only for the lifetime of the component. Closing and reopenin
 
 The component continues to use the shared Spartan dialog primitives for focus trapping, Escape dismissal, focus return and modal semantics. Interactive controls are native buttons with accessible names and visible focus behavior inherited from Spartan.
 
-Only the active image remains exposed to assistive technology; inactive or failed image elements are marked `aria-hidden`. Current gallery position changes are announced in a polite live region. Indicator controls have at least a 32 by 32 CSS pixel target, and the indicator row can wrap on narrow or highly zoomed viewports.
+Only the active image remains exposed to assistive technology; inactive or failed image elements are marked `aria-hidden`. Current gallery position changes are announced in a polite live region. Close, navigation and gallery-indicator controls use Spartan's 44 by 44 CSS pixel touch target. The indicator row can wrap on narrow or highly zoomed viewports.
+
+Image and indicator transitions are removed when the operating system requests reduced motion. This does not change gallery navigation, focus order or live-region announcements.
 
 ## Security and privacy
 
@@ -40,7 +42,7 @@ npm run lint:check
 npm run build
 ```
 
-Regression coverage includes index clamping, bounded navigation, keyboard navigation, horizontal swipe intent, cancellation and mismatched pointers, mouse/secondary-pointer isolation, load/error state recovery, Moments-to-lightbox wiring, duplicate URLs and accessibility semantics.
+Regression coverage includes index clamping, bounded navigation, keyboard navigation, horizontal swipe intent, cancellation and mismatched pointers, mouse/secondary-pointer isolation, load/error state recovery, Moments-to-lightbox wiring, duplicate URLs, touch-target sizing, reduced-motion behavior and accessibility semantics.
 
 ## Rollout and rollback
 

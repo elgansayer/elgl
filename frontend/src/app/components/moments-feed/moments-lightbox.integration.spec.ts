@@ -70,6 +70,18 @@ describe('Moments lightbox integration', () => {
     expect(lightboxTemplate).toContain('[attr.aria-current]="i === currentIndex() ? \'true\' : null"');
   });
 
+  it('keeps gallery indicators touch-sized and respects reduced motion', () => {
+    expect(lightboxTemplate).toContain(
+      'size="icon-touch"\n            (click)="goTo(i, $event)"',
+    );
+    expect(lightboxTemplate).toContain(
+      'transition-all duration-300 ease-out motion-reduce:transition-none',
+    );
+    expect(lightboxTemplate).toContain(
+      'transition-colors duration-200 motion-reduce:transition-none',
+    );
+  });
+
   it('renders explicit image loading and unavailable states', () => {
     expect(lightboxTemplate).toContain("'common.loading' | t");
     expect(lightboxTemplate).toContain("'common.loadError' | t");
