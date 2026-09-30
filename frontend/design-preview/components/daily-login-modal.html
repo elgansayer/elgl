@@ -1,0 +1,175 @@
+<!-- @dsCard group="Components" name="Daily login modal" subtitle="Relay sheet · accent CTA · 390px / tablet / desktop · light / dark" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Daily login modal · Relay + Spartan</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 1rem;
+        background: Canvas;
+        color: CanvasText;
+      }
+      main {
+        display: grid;
+        gap: 1rem;
+        max-inline-size: 70rem;
+        margin-inline: auto;
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        gap: 1rem;
+        align-items: start;
+      }
+      .viewport {
+        inline-size: 100%;
+        min-block-size: 24rem;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: color-mix(in srgb, CanvasText 5%, Canvas);
+      }
+      .viewport.mobile {
+        max-inline-size: 390px;
+      }
+      .viewport.tablet {
+        max-inline-size: 48rem;
+      }
+      .viewport.desktop {
+        max-inline-size: 64rem;
+      }
+      .viewport.light {
+        color-scheme: light;
+      }
+      .viewport.dark {
+        color-scheme: dark;
+      }
+      .backdrop {
+        inline-size: 100%;
+        min-block-size: 20rem;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        background: color-mix(in srgb, CanvasText 42%, transparent);
+        border-radius: 1rem;
+      }
+      .sheet {
+        inline-size: min(100%, 24rem);
+        max-block-size: calc(100dvh - 2rem);
+        overflow-y: auto;
+        padding: 1.25rem;
+        display: grid;
+        gap: 1rem;
+        text-align: center;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: Canvas;
+        color: CanvasText;
+        box-shadow:
+          0 1px 2px color-mix(in srgb, CanvasText 5%, transparent),
+          0 10px 30px color-mix(in srgb, CanvasText 14%, transparent);
+      }
+      .gift {
+        font-size: 3.75rem;
+        line-height: 1;
+      }
+      .sheet h2 {
+        overflow-wrap: anywhere;
+        font-size: 1.5rem;
+        line-height: 1.2;
+      }
+      .body-copy {
+        overflow-wrap: anywhere;
+        color: color-mix(in srgb, CanvasText 70%, Canvas);
+        line-height: 1.5;
+      }
+      .primary-action {
+        min-block-size: 44px;
+        inline-size: 100%;
+        margin-block-start: 0.25rem;
+        border: 1px solid Highlight;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: Highlight;
+        color: HighlightText;
+        font: inherit;
+        font-weight: 700;
+        white-space: normal;
+      }
+      .primary-action:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 3px;
+      }
+      @media (min-width: 40rem) {
+        .sheet {
+          padding: 1.5rem;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Daily login modal</h1>
+        <p>Relay semantic surface/elevation with Spartan primary action and responsive containment.</p>
+      </header>
+      <div class="preview-grid">
+        <section class="viewport mobile light" aria-label="Light theme, 390 pixel mobile state">
+          <div class="backdrop">
+            <div class="sheet" role="dialog" aria-labelledby="daily-login-mobile-title">
+              <div class="gift" aria-hidden="true">🎁</div>
+              <h2 id="daily-login-mobile-title">Daily reward</h2>
+              <p class="body-copy">You earned 8 coins for coming back today.</p>
+              <button class="primary-action" type="button">Collect reward</button>
+            </div>
+          </div>
+        </section>
+        <section class="viewport tablet dark" aria-label="Dark theme, tablet state">
+          <div class="backdrop">
+            <div class="sheet" role="dialog" aria-labelledby="daily-login-tablet-title">
+              <div class="gift" aria-hidden="true">🎁</div>
+              <h2 id="daily-login-tablet-title">Daily reward</h2>
+              <p class="body-copy">You earned 8 coins for coming back today.</p>
+              <button class="primary-action" type="button">Collect reward</button>
+            </div>
+          </div>
+        </section>
+        <section class="viewport desktop light" aria-label="Light theme, desktop state">
+          <div class="backdrop">
+            <div class="sheet" role="dialog" aria-labelledby="daily-login-desktop-title">
+              <div class="gift" aria-hidden="true">🎁</div>
+              <h2 id="daily-login-desktop-title">毎日のログインボーナス</h2>
+              <p class="body-copy" lang="ja">今日も戻ってきてくれてありがとう。8コインを受け取りました。</p>
+              <button class="primary-action" type="button">報酬を受け取る</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
