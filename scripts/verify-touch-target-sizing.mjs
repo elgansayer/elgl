@@ -116,8 +116,14 @@ export function scanAngularSource(source, file = '(source)') {
 export function validateSharedTouchVariants(source, file = 'hlm-button.ts') {
   const failures = [];
   const requirements = [
-    [/\btouch\s*:\s*['"][^'"]*\bmin-h-11\b/, 'touch size must retain min-h-11 (44 CSS px minimum height)'],
-    [/["']icon-touch["']\s*:\s*['"][^'"]*\bsize-11\b/, 'icon-touch size must retain size-11 (44 by 44 CSS px)'],
+    [
+      /\btouch\s*:\s*['"][^'"]*\bmin-h-11\b/,
+      'touch size must retain min-h-11 (44 CSS px minimum height)',
+    ],
+    [
+      /["']icon-touch["']\s*:\s*['"][^'"]*\bsize-11\b/,
+      'icon-touch size must retain size-11 (44 by 44 CSS px)',
+    ],
   ];
 
   for (const [pattern, detail] of requirements) {
@@ -204,12 +210,27 @@ function resolveBaseRef() {
 
 function changedAngularFiles(baseRef) {
   try {
-    return git(['diff', '--name-only', '--diff-filter=ACMR', `${baseRef}...HEAD`, '--', 'frontend/src/app'])
+    return git([
+      'diff',
+      '--name-only',
+      '--diff-filter=ACMR',
+      `${baseRef}...HEAD`,
+      '--',
+      'frontend/src/app',
+    ])
       .split('\n')
       .map((file) => file.trim())
       .filter((file) => ANGULAR_FILE.test(file));
   } catch {
-    return git(['diff', '--name-only', '--diff-filter=ACMR', baseRef, 'HEAD', '--', 'frontend/src/app'])
+    return git([
+      'diff',
+      '--name-only',
+      '--diff-filter=ACMR',
+      baseRef,
+      'HEAD',
+      '--',
+      'frontend/src/app',
+    ])
       .split('\n')
       .map((file) => file.trim())
       .filter((file) => ANGULAR_FILE.test(file));

@@ -2,7 +2,7 @@
 
 ## Scope
 
-`PATCH /users/me` remains the canonical authenticated profile mutation endpoint. `UsersController` and `UsersService` continue to own validation, mutation construction, cache invalidation, and profile update events. The `ProfileUpdateIntegrityInterceptor` adds fail-closed checks around the fields called out by issue #951 without introducing a second profile store.
+`PATCH /users/me` remains the canonical authenticated profile mutation endpoint. `UsersController` and `UsersService` continue to own validation, mutation construction, cache invalidation, and profile update events. The `ProfileUpdateIntegrityInterceptor` adds fail-closed checks around the profile fields covered by #1684 without introducing a second profile store.
 
 The integrity boundary covers:
 
@@ -16,21 +16,28 @@ The integrity boundary covers:
 - `privacy_hide_exact_location`
 - `privacy_hide_online_status`
 
-All existing `UpdateProfileDto` validation remains authoritative. In particular, the request DTO bounds target languages to three entries.
+`UpdateProfileDto` provides the transport-level ceiling for target languages. It accepts at most five entries so Pro and Developer requests can reach the authoritative entitlement check; the lower Free and Consumer VIP limits are enforced server-side from persisted subscription state.
 
 ## Authentication and authorization
 
 `UsersController` is protected by `SupabaseAuthGuard`, and `PATCH /users/me` also uses `TwoFactorGuard`. The integrity interceptor never accepts a caller-supplied user ID; it uses the authenticated `request.user.id`/`sub` established by the auth boundary.
 
-Free users may persist one target language. A request containing two or three target languages performs a direct `users.is_vip` lookup before the controller executes. This lookup deliberately does not use `UsersService.getProfile()` because that legacy read path can return a development/mock profile during provider failures. A missing or unavailable entitlement therefore fails closed instead of accidentally granting a VIP-only multi-language update.
+Free users may persist one target language. Any request containing more than one target language performs a direct `users.is_vip,vip_tier` lookup before the controller executes. This lookup deliberately does not use `UsersService.getProfile()` because that legacy read path can return a development/mock profile during provider failures. A missing or unavailable entitlement therefore fails closed instead of accidentally granting a paid multi-language update.
 
-VIP users may persist up to three target languages through this endpoint, matching `UpdateProfileDto` and the consumer VIP product contract.
+The persisted tier determines the maximum:
+
+- Free: 1 target language.
+- Consumer VIP (including legacy/unknown VIP tier values): 3 target languages.
+- Pro: 5 target languages.
+- Developer: 5 target languages, matching the existing `UsersService` paid-tier contract.
+
+A request exceeding its persisted tier fails before the profile mutation runs. The DTO independently rejects more than five entries before entitlement work.
 
 ## Persistence verification
 
 After the existing controller/service mutation completes, the interceptor reads back only the core fields present in the request. The response is returned only when persisted state exactly matches the requested strings, booleans, and language arrays.
 
-This closes a legacy failure mode where `UsersService.updateProfile()` can return a mock-shaped profile when Supabase persistence fails. For the issue #951 profile fields, a failed/no-op write is now surfaced as an error rather than a successful response.
+This closes a legacy failure mode where `UsersService.updateProfile()` can return a mock-shaped profile when Supabase persistence fails. For the #1684 profile fields, a failed/no-op write is surfaced as an error rather than a successful response.
 
 The read-back is intentionally bounded to requested fields. It does not scan other users or load unrelated profile content.
 
@@ -40,6 +47,8 @@ The read-back is intentionally bounded to requested fields. It does not scan oth
 - Multi-language entitlement lookup cannot reach storage: `503 Service Unavailable`.
 - Authenticated identity has no persisted profile row: `404 Not Found`.
 - Free user requests more than one target language: `400 Bad Request`.
+- Consumer VIP requests more than three target languages: `400 Bad Request`.
+- Any request contains more than five target languages: `400 Bad Request` at DTO validation.
 - Post-write verification cannot reach storage: `503 Service Unavailable`.
 - Post-write values do not match requested core profile values: `500 Internal Server Error`.
 
@@ -59,7 +68,9 @@ Focused Vitest coverage validates:
 - missing authentication fails before mutation;
 - non-VIP multi-language requests are rejected;
 - entitlement-provider failures fail closed;
-- verified VIP users can save three target languages;
+- Consumer VIP users can save three target languages but not four;
+- Pro and Developer users can save up to five target languages;
+- the DTO admits the five-language paid-tier transport contract and rejects six;
 - the free one-language path remains available;
 - mock-success/non-persisted core updates are rejected;
 - post-write provider failures fail closed;
@@ -70,6 +81,6 @@ Repository CI remains authoritative for the full backend unit, lint, build, and 
 
 ## Rollout and rollback
 
-There is no database migration. Deploy the backend normally. The new checks apply immediately to `PATCH /users/me`; frontend contracts and response shapes are unchanged on successful writes.
+There is no database migration. Deploy the backend normally. The entitlement lookup now reads `vip_tier` together with `is_vip`; existing profile rows remain compatible because missing/legacy paid tier values intentionally retain the Consumer VIP three-language limit.
 
-Rollback is a normal revert of the interceptor registration and implementation. Rolling back removes the fail-closed/read-back protection but does not require data repair because this change creates no schema or persisted state.
+Rollback is a normal code/documentation revert. Rolling back restores the previous three-entry DTO ceiling and boolean-only VIP check; no data repair or schema rollback is required.
