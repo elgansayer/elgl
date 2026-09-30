@@ -10,20 +10,14 @@ class MockHostDashboardService {
     startTime: new Date(),
   };
 
-  getDashboardStats(_roomId: string): Promise<{
-    viewerCount: number;
-    earnedCoins: number;
-    startTime: Date;
-  }> {
-    return Promise.resolve({ ...this.stats });
-  }
+  readonly getDashboardStats = vi.fn((_roomId: string) => Promise.resolve({ ...this.stats }));
 
   setStats(viewerCount: number, earnedCoins: number, startTime = new Date()): void {
     this.stats = { viewerCount, earnedCoins, startTime };
   }
 }
 
-describe.skip('HostDashboardComponent', () => {
+describe('HostDashboardComponent', () => {
   let component: HostDashboardComponent;
   let fixture: ComponentFixture<HostDashboardComponent>;
   let mockService: MockHostDashboardService;
@@ -45,6 +39,7 @@ describe.skip('HostDashboardComponent', () => {
 
     fixture = TestBed.createComponent(HostDashboardComponent);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('roomId', 'room-1');
     fixture.detectChanges();
   });
 
@@ -71,23 +66,49 @@ describe.skip('HostDashboardComponent', () => {
     expect(component.earnedCoins()).toBe(0);
   });
 
-  it('should update viewerCount and earnedCoins when service returns new stats', async () => {
-    mockService.setStats(123, 456, new Date());
+  it('loads the bound room without requesting the empty construction value', async () => {
+    await vi.waitFor(() => {
+      expect(mockService.getDashboardStats).toHaveBeenCalledTimes(1);
+    });
 
-    // trigger a manual update by calling the stats directly via the effect
-    component.viewerCount.set(123);
-    component.earnedCoins.set(456);
+    expect(mockService.getDashboardStats).toHaveBeenCalledWith('room-1');
+    expect(mockService.getDashboardStats).not.toHaveBeenCalledWith('');
+  });
+
+  it('updates immediately when the bound room changes', async () => {
+    await vi.waitFor(() => {
+      expect(mockService.getDashboardStats).toHaveBeenCalledWith('room-1');
+    });
+
+    mockService.setStats(123, 456, new Date());
+    fixture.componentRef.setInput('roomId', 'room-2');
+    fixture.detectChanges();
+
+    await vi.waitFor(() => {
+      expect(mockService.getDashboardStats).toHaveBeenCalledWith('room-2');
+      expect(component.viewerCount()).toBe(123);
+      expect(component.earnedCoins()).toBe(456);
+    });
     fixture.detectChanges();
 
     expect(component.viewerCount()).toBe(123);
     expect(component.earnedCoins()).toBe(456);
   });
 
-  it('should compute uptime based on startTime', () => {
-    const now = Date.now();
-    component.startTime.set(new Date(now - 3600 * 1000));
+  it('should compute uptime based on persisted startTime', async () => {
+    const now = Date.parse('2026-09-08T08:00:00.000Z');
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    mockService.setStats(0, 0, new Date(now - 3600 * 1000));
+    fixture.componentRef.setInput('roomId', 'room-2');
+    fixture.detectChanges();
+
+    await vi.waitFor(() => {
+      expect(mockService.getDashboardStats).toHaveBeenCalledWith('room-2');
+      expect(component.uptime()).toBe('01:00:00');
+    });
 
     expect(component.uptime()).toBe('01:00:00');
+    dateNowSpy.mockRestore();
   });
 
   it('should render uptime in HH:MM:SS format', () => {

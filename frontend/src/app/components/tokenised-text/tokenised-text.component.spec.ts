@@ -130,12 +130,14 @@ describe('TokenisedTextComponent', () => {
     const root = render('Hello, world!');
     const spans = [...tokenHost(root).querySelectorAll<HTMLElement>(':scope > span')];
     const hello = spans.find((span) => span.textContent?.trim() === 'Hello');
-    const comma = spans.find((span) => span.textContent === ',');
+    const punctuation = spans.find((span) => span.textContent?.includes(','));
 
+    expect(hello).toBeTruthy();
     expect(hello?.getAttribute('role')).toBe('button');
     expect(hello?.getAttribute('tabindex')).toBe('0');
-    expect(comma?.hasAttribute('role')).toBe(false);
-    expect(comma?.hasAttribute('tabindex')).toBe(false);
+    expect(punctuation).toBeTruthy();
+    expect(punctuation?.hasAttribute('role')).toBe(false);
+    expect(punctuation?.hasAttribute('tabindex')).toBe(false);
     expect(tokenHost(root).getAttribute('dir')).toBe('auto');
   });
 

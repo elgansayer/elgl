@@ -1,6 +1,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FocusTrapDirective } from '../../directives/focus-trap.directive';
 import { ForcedUpdateModalComponent } from './forced-update-modal.component';
 
 @Pipe({ name: 't' })
@@ -22,7 +23,7 @@ describe('ForcedUpdateModalComponent', () => {
       imports: [ForcedUpdateModalComponent],
     })
       .overrideComponent(ForcedUpdateModalComponent, {
-        set: { imports: [MockTranslatePipe] },
+        set: { imports: [MockTranslatePipe, FocusTrapDirective] },
       })
       .compileComponents();
 

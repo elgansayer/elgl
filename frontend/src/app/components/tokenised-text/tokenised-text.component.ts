@@ -38,14 +38,23 @@ interface ParsedTokens {
 export function tokeniseText(
   text: string,
   language: string,
-  Segmenter: SegmenterConstructor | undefined =
-    typeof Intl === 'undefined' ? undefined : Intl.Segmenter,
+  Segmenter?: SegmenterConstructor,
 ): TokenSegment[] {
   if (!text) return [];
-  if (!Segmenter) return [{ segment: text, isWordLike: false, index: 0 }];
+
+  // A caller may explicitly pass undefined to model browsers without
+  // Intl.Segmenter. Only fall back to the runtime implementation when the
+  // optional dependency was omitted entirely.
+  const resolvedSegmenter =
+    arguments.length >= 3
+      ? Segmenter
+      : typeof Intl === 'undefined'
+        ? undefined
+        : Intl.Segmenter;
+  if (!resolvedSegmenter) return [{ segment: text, isWordLike: false, index: 0 }];
 
   const toTokens = (locale?: string): TokenSegment[] => {
-    const segmenter = new Segmenter(locale, { granularity: 'word' });
+    const segmenter = new resolvedSegmenter(locale, { granularity: 'word' });
     return [...segmenter.segment(text)].map((item) => ({
       segment: item.segment,
       isWordLike: item.isWordLike ?? false,
