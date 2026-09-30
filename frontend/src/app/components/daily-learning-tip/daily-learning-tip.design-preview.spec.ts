@@ -11,6 +11,16 @@ function readHomePreview(): string {
   return readFileSync(homePreviewPath, 'utf8');
 }
 
+function readDailyTipState(preview: string, state: string): string {
+  const match = preview.match(
+    new RegExp(`<article\\b(?=[^>]*data-daily-tip-state="${state}")[^>]*>[\\s\\S]*?<\\/article>`),
+  );
+  if (!match) {
+    throw new Error(`Missing Daily Learning Tip ${state} preview`);
+  }
+  return match[0];
+}
+
 describe('DailyLearningTipComponent design-preview contract', () => {
   it('keeps the Home screen mapped to the authoritative Claude Design preview', () => {
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
@@ -44,14 +54,25 @@ describe('DailyLearningTipComponent design-preview contract', () => {
   it('keeps preview semantics aligned with the non-interactive Angular region contract', () => {
     const preview = readHomePreview();
 
-    expect(preview).toMatch(/data-daily-tip-state="loading"[\s\S]*?role="region"/);
-    expect(preview).toMatch(/role="region"[\s\S]*?aria-label="Daily learning tip"/);
-    expect(preview).toContain('aria-busy="true"');
-    expect(preview).toContain('aria-busy="false"');
+    const states = [
+      { name: 'loading', busy: 'true' },
+      { name: 'fallback', busy: 'false' },
+      { name: 'success', busy: 'false' },
+    ];
+    for (const state of states) {
+      const card = readDailyTipState(preview, state.name);
+      expect(card).toContain('role="region"');
+      expect(card).toContain('aria-label="Daily learning tip"');
+      expect(card).toContain(`aria-busy="${state.busy}"`);
+      expect(card).not.toMatch(/<button\b|<a\b|<input\b|tabindex=/);
+    }
 
-    const showcase = preview.match(
-      /<section class="daily-tip-showcase"[\s\S]*?<\/section>/,
-    )?.[0];
+    expect(preview).toMatch(/\.daily-tip-preview\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?\}/);
+    expect(preview).toMatch(
+      /\.daily-tip-preview p\s*\{[\s\S]*?overflow-wrap:\s*anywhere;[\s\S]*?\}/,
+    );
+
+    const showcase = preview.match(/<section class="daily-tip-showcase"[\s\S]*?<\/section>/)?.[0];
     expect(showcase).toBeTruthy();
     expect(showcase).not.toMatch(/<button\b|<a\b|<input\b|tabindex=/);
   });
