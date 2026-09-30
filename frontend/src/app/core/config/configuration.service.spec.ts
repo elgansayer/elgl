@@ -10,7 +10,7 @@ describe('ConfigurationService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [ConfigurationService]
+      providers: [ConfigurationService],
     });
 
     service = TestBed.inject(ConfigurationService);
@@ -25,31 +25,82 @@ describe('ConfigurationService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should return fallback config if accessed before initialization', () => {
-    const config = service.config;
-    expect(config.environment).toBe('fallback');
+  it('should return a non-mock fallback config before initialization', () => {
+    expect(service.config.environment).toBe('fallback');
+    expect(service.mockBackendMode).toBe('disabled');
+    expect(service.isMockBackend).toBe(false);
   });
 
-  it('should load configuration successfully', async () => {
+  it('should load ordinary configuration with mock mode disabled', async () => {
     const mockConfig: AppConfig = {
       apiEndpoint: 'https://test.api.com',
       appName: 'TestApp',
       version: '1.0.0',
-      environment: 'test'
+      environment: 'test',
     };
 
     const loadPromise = service.loadConfiguration();
-
     const req = httpMock.expectOne('./assets/config.json');
     expect(req.request.method).toBe('GET');
     req.flush(mockConfig);
-
     await loadPromise;
 
-    expect(service.config).toEqual(mockConfig);
+    expect(service.config).toEqual({
+      ...mockConfig,
+      mockBackendMode: 'disabled',
+    });
+    expect(service.isMockBackend).toBe(false);
   });
 
-  it('should use fallback configuration on error', async () => {
+  it.each(['local', 'test', 'demo'] as const)(
+    'accepts explicit %s mock mode in a local client profile',
+    async (mode) => {
+      const loadPromise = service.loadConfiguration();
+      httpMock.expectOne('./assets/config.json').flush({
+        apiEndpoint: 'http://127.0.0.1:3000/api',
+        appName: 'ELGL Offline',
+        version: '1.0.0',
+        environment: 'development',
+        mockBackendMode: mode,
+      } satisfies AppConfig);
+      await loadPromise;
+
+      expect(service.mockBackendMode).toBe(mode);
+      expect(service.isMockBackend).toBe(true);
+    },
+  );
+
+  it('fails closed when production config attempts to enable fixtures', async () => {
+    const loadPromise = service.loadConfiguration();
+    httpMock.expectOne('./assets/config.json').flush({
+      apiEndpoint: 'https://api.example.test',
+      appName: 'ELGL',
+      version: '1.0.0',
+      environment: 'production',
+      mockBackendMode: 'demo',
+    } satisfies AppConfig);
+    await loadPromise;
+
+    expect(service.config.environment).toBe('fallback');
+    expect(service.mockBackendMode).toBe('disabled');
+    expect(service.isMockBackend).toBe(false);
+  });
+
+  it('fails closed for an invalid runtime mock mode', async () => {
+    const loadPromise = service.loadConfiguration();
+    httpMock.expectOne('./assets/config.json').flush({
+      apiEndpoint: 'http://127.0.0.1:3000/api',
+      appName: 'ELGL',
+      version: '1.0.0',
+      environment: 'development',
+      mockBackendMode: 'automatic',
+    });
+    await loadPromise;
+
+    expect(service.mockBackendMode).toBe('disabled');
+  });
+
+  it('should use a non-mock fallback configuration on network error', async () => {
     const loadPromise = service.loadConfiguration();
 
     const req = httpMock.expectOne('./assets/config.json');
@@ -58,5 +109,6 @@ describe('ConfigurationService', () => {
     await loadPromise;
 
     expect(service.config.environment).toBe('fallback');
+    expect(service.mockBackendMode).toBe('disabled');
   });
 });

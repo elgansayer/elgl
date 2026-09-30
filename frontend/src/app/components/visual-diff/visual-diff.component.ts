@@ -124,10 +124,14 @@ export class VisualDiffComponent {
 
   async createFlashcard() {
     try {
+      const wordToken = this.corrected().substring(0, 200);
+      const translation = this.original().substring(0, 500);
+      const originalContext = this.explanation() ? this.explanation()!.substring(0, 1000) : undefined;
+
       await this.flashcardService.createFlashcard({
-        word_token: this.corrected(),
-        translation: this.original(),
-        original_context: this.explanation() || undefined,
+        word_token: wordToken,
+        translation: translation,
+        original_context: originalContext,
       });
       showToast(this.i18n.translate('correction.flashcardCreatedAlert') || 'Flashcard created');
     } catch (err) {

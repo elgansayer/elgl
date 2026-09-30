@@ -349,14 +349,18 @@ async function seedCuratedContent(supabase: any) {
     },
   ];
 
-  for (const article of articlesToSeed) {
-    const { error: artErr } = await supabase
-      .from('curated_articles')
-      .upsert(article, { onConflict: 'id', ignoreDuplicates: true });
-    if (artErr) {
-      console.error('Failed to seed article:', artErr);
-    }
-  }
+  // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all
+  // Expected impact: Drastically reduces database latency when seeding bulk curated articles.
+  await Promise.all(
+    articlesToSeed.map(async (article) => {
+      const { error: artErr } = await supabase
+        .from('curated_articles')
+        .upsert(article, { onConflict: 'id', ignoreDuplicates: true });
+      if (artErr) {
+        console.error('Failed to seed article:', artErr);
+      }
+    }),
+  );
   console.log('✅ Seeded curated articles');
 
   const dialoguesToSeed = [
@@ -388,14 +392,18 @@ async function seedCuratedContent(supabase: any) {
     },
   ];
 
-  for (const dialogue of dialoguesToSeed) {
-    const { error: diaErr } = await supabase
-      .from('curated_dialogues')
-      .upsert(dialogue, { onConflict: 'id', ignoreDuplicates: true });
-    if (diaErr) {
-      console.error('Failed to seed dialogue:', diaErr);
-    }
-  }
+  // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all
+  // Expected impact: Drastically reduces database latency when seeding bulk curated dialogues.
+  await Promise.all(
+    dialoguesToSeed.map(async (dialogue) => {
+      const { error: diaErr } = await supabase
+        .from('curated_dialogues')
+        .upsert(dialogue, { onConflict: 'id', ignoreDuplicates: true });
+      if (diaErr) {
+        console.error('Failed to seed dialogue:', diaErr);
+      }
+    }),
+  );
   console.log('✅ Seeded curated dialogues');
 }
 

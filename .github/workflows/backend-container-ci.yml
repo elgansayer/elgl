@@ -28,4 +28,35 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Build production backend image
-        run: docker build --target production --tag "elgl-api-ci:${GITHUB_SHA}" backend
+        run: docker build --pull --target production --tag "elgl-api-ci:${GITHUB_SHA}" backend
+
+      - name: Diagnose Angular packages in production image
+        run: |
+          docker run --rm "elgl-api-ci:${GITHUB_SHA}" sh -ec '
+            echo "=== npm dependency tree ==="
+            npm ls @angular/compiler @angular/compiler-cli @angular/core @angular/platform-browser @angular/platform-browser-dynamic @angular/router --all || true
+            echo "=== physical Angular package directories ==="
+            find node_modules/@angular -maxdepth 2 -type f -name package.json -print 2>/dev/null || true
+            echo "=== installed Angular versions ==="
+            for package in compiler compiler-cli core platform-browser platform-browser-dynamic router; do
+              if [ -f "node_modules/@angular/${package}/package.json" ]; then
+                node -e "const p=require(\"./node_modules/@angular/${package}/package.json\"); console.log(p.name, p.version)"
+              fi
+            done
+            echo "=== hidden npm lock Angular entries ==="
+            if [ -f node_modules/.package-lock.json ]; then
+              grep -n '"'"'node_modules/@angular/'"'"' node_modules/.package-lock.json || true
+            fi
+          '
+
+      - name: Scan production backend image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: "elgl-api-ci:${{ github.sha }}"
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          timeout: 10m

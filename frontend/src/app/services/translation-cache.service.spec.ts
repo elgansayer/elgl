@@ -1,129 +1,69 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TranslationCacheService } from './translation-cache.service';
-
-const mockStore: Record<string, string> = {};
-const originalLocalStorage = globalThis.localStorage;
 
 describe('TranslationCacheService', () => {
   let service: TranslationCacheService;
 
   beforeEach(() => {
-    Object.keys(mockStore).forEach((k) => delete mockStore[k]);
-    const mockLocalStorage = {
-      getItem: vi.fn((key: string) => mockStore[key] ?? null),
-      setItem: vi.fn((key: string, value: string) => {
-        mockStore[key] = value;
-      }),
-      removeItem: vi.fn((key: string) => {
-        delete mockStore[key];
-      }),
-      clear: vi.fn(() => {
-        Object.keys(mockStore).forEach((k) => delete mockStore[k]);
-      }),
-      get length() {
-        return Object.keys(mockStore).length;
-      },
-      key: vi.fn((index: number) => Object.keys(mockStore)[index] ?? null),
-    };
-    globalThis.localStorage = mockLocalStorage as unknown as Storage;
-
     TestBed.configureTestingModule({});
     service = TestBed.inject(TranslationCacheService);
+    service.clear();
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    globalThis.localStorage = originalLocalStorage;
+    service.clear();
   });
 
-  it('should return null for an uncached translation', () => {
+  it('returns null for an uncached translation', () => {
     expect(service.get('Bonjour', 'en')).toBeNull();
   });
 
-  it('should store and retrieve a translation', () => {
+  it('stores and retrieves an exact source/target translation in memory', () => {
     service.set('Bonjour', 'en', 'Hello');
+
+    expect(service.get('Bonjour', 'en')).toBe('Hello');
+    expect(service.get('Bonjour', 'es')).toBeNull();
+    expect(service.get('Hola', 'en')).toBeNull();
+  });
+
+  it('normalizes target-language casing and surrounding whitespace', () => {
+    service.set('Bonjour', ' EN ', 'Hello');
+
     expect(service.get('Bonjour', 'en')).toBe('Hello');
   });
 
-  it('should return null for a different target language', () => {
-    service.set('Bonjour', 'en', 'Hello');
-    expect(service.get('Bonjour', 'es')).toBeNull();
-  });
-
-  it('should return null for a different source text', () => {
-    service.set('Bonjour', 'en', 'Hello');
-    expect(service.get('Hola', 'en')).toBeNull();
-  });
-
-  it('should clear all translation cache entries', () => {
+  it('clears every in-memory translation entry', () => {
     service.set('Bonjour', 'en', 'Hello');
     service.set('Hola', 'en', 'Hi');
+
     service.clear();
+
     expect(service.get('Bonjour', 'en')).toBeNull();
     expect(service.get('Hola', 'en')).toBeNull();
   });
 
-  it('should not clear non-translation localStorage entries', () => {
-    localStorage.setItem('other-key', 'value');
+  it('never writes private translation content to localStorage', () => {
+    const setItem = vi.spyOn(localStorage, 'setItem');
+    const getItem = vi.spyOn(localStorage, 'getItem');
+
+    service.set('Private chat sentence', 'en', 'Private translated sentence');
+    expect(service.get('Private chat sentence', 'en')).toBe('Private translated sentence');
+
+    expect(setItem).not.toHaveBeenCalled();
+    expect(getItem).not.toHaveBeenCalled();
+  });
+
+  it('does not persist translations into a fresh service instance', () => {
     service.set('Bonjour', 'en', 'Hello');
-    service.clear();
-    expect(localStorage.getItem('other-key')).toBe('value');
+
+    const freshService = new TranslationCacheService();
+
+    expect(freshService.get('Bonjour', 'en')).toBeNull();
   });
 
-  it('should serve cached translation without additional API calls', () => {
-    service.set('Bonjour', 'en', 'Hello');
-    const result = service.get('Bonjour', 'en');
-    expect(result).toBe('Hello');
-  });
-
-  it('should fail open to a cache miss when storage reads are blocked', () => {
-    vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
-      throw new DOMException('Storage blocked', 'SecurityError');
-    });
-
-    expect(() => service.get('Bonjour', 'en')).not.toThrow();
-    expect(service.get('Bonjour', 'en')).toBeNull();
-  });
-
-  it('should keep a successful translation usable when cache writes fail', () => {
-    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
-      throw new DOMException('Quota exceeded', 'QuotaExceededError');
-    });
-
-    expect(() => service.set('Bonjour', 'en', 'Hello')).not.toThrow();
-  });
-
-  it('should make cache clearing best-effort when storage access is blocked', () => {
-    Object.defineProperty(localStorage, 'length', {
-      configurable: true,
-      get: () => {
-        throw new DOMException('Storage blocked', 'SecurityError');
-      },
-    });
-
-    expect(() => service.clear()).not.toThrow();
-  });
-
-  it('should discard malformed cached values without throwing', () => {
-    service.set('Bonjour', 'en', 'Hello');
-    const cacheKey = Object.keys(mockStore).find((key) => key.startsWith('elgl:tr:'))!;
-    mockStore[cacheKey] = '{invalid-json';
-
-    expect(service.get('Bonjour', 'en')).toBeNull();
-    expect(mockStore[cacheKey]).toBeUndefined();
-  });
-
-  it('should reject a cached entry whose source metadata does not match', () => {
-    service.set('Bonjour', 'en', 'Hello');
-    const cacheKey = Object.keys(mockStore).find((key) => key.startsWith('elgl:tr:'))!;
-    const entry = JSON.parse(mockStore[cacheKey]) as Record<string, unknown>;
-    mockStore[cacheKey] = JSON.stringify({ ...entry, sourceText: 'Different source' });
-
-    expect(service.get('Bonjour', 'en')).toBeNull();
-  });
-
-  it('should expire cached translations after seven days', () => {
+  it('expires cached translations after seven days', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-01T00:00:00Z'));
     service.set('Bonjour', 'en', 'Hello');
@@ -133,15 +73,27 @@ describe('TranslationCacheService', () => {
     expect(service.get('Bonjour', 'en')).toBeNull();
   });
 
-  it('should continue reading legacy cache entries without source metadata', () => {
-    service.set('Bonjour', 'en', 'Hello');
-    const cacheKey = Object.keys(mockStore).find((key) => key.startsWith('elgl:tr:'))!;
-    const entry = JSON.parse(mockStore[cacheKey]) as {
-      value: string;
-      timestamp: number;
-    };
-    mockStore[cacheKey] = JSON.stringify({ value: entry.value, timestamp: entry.timestamp });
+  it('keeps the cache bounded and evicts the least recently used entry', () => {
+    for (let index = 0; index < 500; index += 1) {
+      service.set(`source-${index}`, 'en', `target-${index}`);
+    }
 
-    expect(service.get('Bonjour', 'en')).toBe('Hello');
+    // Touch source-0 so source-1 becomes the least recently used entry.
+    expect(service.get('source-0', 'en')).toBe('target-0');
+    service.set('source-500', 'en', 'target-500');
+
+    expect(service.get('source-0', 'en')).toBe('target-0');
+    expect(service.get('source-1', 'en')).toBeNull();
+    expect(service.get('source-500', 'en')).toBe('target-500');
+  });
+
+  it('ignores empty source, target-language, or translated values', () => {
+    service.set('', 'en', 'Hello');
+    service.set('Bonjour', '', 'Hello');
+    service.set('Bonjour', 'en', '   ');
+
+    expect(service.get('', 'en')).toBeNull();
+    expect(service.get('Bonjour', '')).toBeNull();
+    expect(service.get('Bonjour', 'en')).toBeNull();
   });
 });
