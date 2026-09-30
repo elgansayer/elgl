@@ -1469,18 +1469,24 @@ export interface Database {
           user_id: string;
           room_id: string;
           is_locked: boolean;
+          is_archived: boolean;
+          archived_at: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [
@@ -2184,6 +2190,15 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_host_dashboard_earnings: {
+        Args: {
+          p_room_id: string;
+          p_host_id: string;
+        };
+        Returns: {
+          earned_coins: number;
+        }[];
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;

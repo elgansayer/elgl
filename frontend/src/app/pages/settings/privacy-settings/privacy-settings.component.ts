@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
@@ -14,6 +15,10 @@ import {
   ProfileVisibility,
   ProfileVisibilityService,
 } from '../../../services/profile-visibility.service';
+import {
+  PresencePrivacyService,
+  PresencePrivacySettings,
+} from '../../../services/presence-privacy.service';
 
 interface HubNavItem {
   readonly icon: string;
@@ -28,10 +33,13 @@ interface ProfileVisibilityOption {
   readonly descriptionKey: string;
 }
 
+type PresencePrivacyKey = keyof PresencePrivacySettings;
+
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
   imports: [
+    HlmCheckbox,
     HlmInput,
     HlmButton,
     HlmRadio,
@@ -46,6 +54,7 @@ export class PrivacySettingsComponent {
   private safetyService = inject(SafetyService);
   private blockedUsersService = inject(BlockedUsersService);
   private profileVisibilityService = inject(ProfileVisibilityService);
+  private presencePrivacyService = inject(PresencePrivacyService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
@@ -56,6 +65,9 @@ export class PrivacySettingsComponent {
   readonly isVisibilitySaving = signal(false);
   readonly visibilitySaveError = signal(false);
   readonly visibilitySaveSuccess = signal(false);
+  readonly presencePrivacySaving = signal<PresencePrivacyKey | null>(null);
+  readonly presencePrivacySaveError = signal(false);
+  readonly presencePrivacySaveSuccess = signal(false);
 
   readonly mutedWords = this.safetyService.mutedWords;
   readonly blockedUsers = this.blockedUsersService.blockedUsers;
@@ -65,6 +77,16 @@ export class PrivacySettingsComponent {
   });
   readonly profileVisibility = linkedSignal(
     () => this.profileVisibilityResource.value() ?? 'everyone',
+  );
+
+  readonly presencePrivacyResource = resource({
+    loader: () => this.presencePrivacyService.getPresencePrivacy(),
+  });
+  readonly hideOnlineStatus = linkedSignal(
+    () => this.presencePrivacyResource.value()?.privacy_hide_online_status ?? false,
+  );
+  readonly hideVipStatus = linkedSignal(
+    () => this.presencePrivacyResource.value()?.privacy_hide_vip_status ?? false,
   );
 
   readonly profileVisibilityOptions: readonly ProfileVisibilityOption[] = [
@@ -152,6 +174,45 @@ export class PrivacySettingsComponent {
     this.visibilitySaveError.set(false);
     this.visibilitySaveSuccess.set(false);
     this.profileVisibilityResource.reload();
+  }
+
+  async updatePresencePrivacy(key: PresencePrivacyKey, value: boolean): Promise<void> {
+    if (this.presencePrivacySaving()) {
+      return;
+    }
+
+    const target =
+      key === 'privacy_hide_online_status' ? this.hideOnlineStatus : this.hideVipStatus;
+    const previous = target();
+    if (value === previous) {
+      return;
+    }
+
+    target.set(value);
+    this.presencePrivacySaving.set(key);
+    this.presencePrivacySaveError.set(false);
+    this.presencePrivacySaveSuccess.set(false);
+
+    const update: Partial<PresencePrivacySettings> =
+      key === 'privacy_hide_online_status'
+        ? { privacy_hide_online_status: value }
+        : { privacy_hide_vip_status: value };
+
+    try {
+      await this.presencePrivacyService.updatePresencePrivacy(update);
+      this.presencePrivacySaveSuccess.set(true);
+    } catch {
+      target.set(previous);
+      this.presencePrivacySaveError.set(true);
+    } finally {
+      this.presencePrivacySaving.set(null);
+    }
+  }
+
+  retryPresencePrivacyLoad(): void {
+    this.presencePrivacySaveError.set(false);
+    this.presencePrivacySaveSuccess.set(false);
+    this.presencePrivacyResource.reload();
   }
 
   addMutedWord(): void {

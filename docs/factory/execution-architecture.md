@@ -89,8 +89,8 @@ Review excludes every provider that may have mutated the current worktree. Same-
 when no alternative can run and is recorded as a diversity fallback. `.factory-review.json` is removed before
 each attempt and validated before success. Every PR-backed AI phase, refresh, and base update removes review
 labels and marks the current SHA-scoped status `PENDING` before work starts. A changed review head is marked
-pending before verification. An otherwise reviewed head that falls behind `main` is updated through GitHub with
-an expected-head guard, then returns to local verification and independent review.
+pending before verification. Any newly discovered or previously reviewed head that falls behind `main` is updated
+through GitHub with an expected-head guard before local verification, then returns to independent review.
 
 Autonomous merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present
 and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human

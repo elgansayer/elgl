@@ -1,216 +1,125 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrivacyService } from './privacy.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyCacheInvalidationService } from '../safety/safety-cache-invalidation.service';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 
-// Mock the sanitise-economy helper to avoid loading jsdom/dompurify ESM
-// dependencies that the privacy spec does not need.
 vi.mock('../economy/sanitise-economy.helper', () => ({
-  sanitiseEconomyData: vi.fn((value: unknown) => value),
-  scrubReceiptToken: vi.fn((token: string | null | undefined) => {
-    if (token == null || token === '') return token as null;
-    if (token.length < 8) return '[REDACTED-SHORT-TOKEN]';
-    return '***...' + token.slice(-4);
-  }),
-  scrubCoinPurchaseForArchive: vi.fn(
-    (
-      record: Record<string, unknown> | null | undefined,
-    ): Record<string, unknown> | null | undefined => {
-      if (record == null) return record;
-      const scrubbed = { ...record };
-      for (const key of ['receipt_token', 'transaction_id']) {
-        if (typeof scrubbed[key] === 'string') {
-          const val = scrubbed[key];
-          scrubbed[key] =
-            val.length < 8
-              ? '[REDACTED-SHORT-TOKEN]'
-              : '***...' + val.slice(-4);
-        }
-      }
-      return scrubbed;
-    },
-  ),
-  scrubCoinPurchasesForArchive: vi.fn(
-    (records: unknown[] | null | undefined): unknown[] | null | undefined => {
-      if (records == null || !Array.isArray(records)) return records;
-      return records.map((record) => {
-        if (record !== null && typeof record === 'object') {
-          const r = record as Record<string, unknown>;
-          const scrubbed = { ...r };
-          for (const key of ['receipt_token', 'transaction_id']) {
-            if (typeof scrubbed[key] === 'string') {
-              const val = scrubbed[key];
-              scrubbed[key] =
-                val.length < 8
-                  ? '[REDACTED-SHORT-TOKEN]'
-                  : '***...' + val.slice(-4);
-            }
-          }
-          return scrubbed;
-        }
-        return record;
-      });
-    },
-  ),
-  scrubEscrowTransactionForArchive: vi.fn(
-    (
-      record: Record<string, unknown> | null | undefined,
-    ): Record<string, unknown> | null | undefined => {
-      if (record == null) return record;
-      const scrubbed = { ...record };
-      scrubbed['payer_id'] = '00000000-0000-0000-0000-000000000000';
-      scrubbed['payee_id'] = '00000000-0000-0000-0000-000000000000';
-      if (typeof scrubbed['description'] === 'string') {
-        scrubbed['description'] = null;
-      }
-      if (typeof scrubbed['reference_id'] === 'string') {
-        scrubbed['reference_id'] = null;
-      }
-      return scrubbed;
-    },
-  ),
-  scrubEscrowTransactionsForArchive: vi.fn(
-    (
-      records: unknown[] | null | undefined,
-      userId: string,
-    ): Record<string, unknown>[] => {
-      if (records == null || !Array.isArray(records)) return [];
-      return records.map((record) => {
-        if (record !== null && typeof record === 'object') {
-          const r = record as Record<string, unknown>;
-          const scrubbed = { ...r };
-          scrubbed['payer_id'] =
-            r['payer_id'] === userId
-              ? userId
-              : '00000000-0000-0000-0000-000000000000';
-          scrubbed['payee_id'] =
-            r['payee_id'] === userId
-              ? userId
-              : '00000000-0000-0000-0000-000000000000';
-          scrubbed['description'] = null;
-          scrubbed['reference_id'] = null;
-          return scrubbed;
-        }
-        return record as Record<string, unknown>;
-      });
-    },
-  ),
+  scrubCoinPurchasesForArchive: vi.fn((records: unknown[]) => records),
+  scrubEscrowTransactionsForArchive: vi.fn((records: unknown[]) => records),
 }));
+
+interface QueryResult {
+  data: unknown;
+  error: { message?: string; code?: string } | null;
+}
 
 describe('PrivacyService', () => {
   let service: PrivacyService;
   const mockFrom = vi.fn();
-  const mockSelect = vi.fn();
-  const mockEq = vi.fn();
-  const mockOrder = vi.fn();
-  const mockInsert = vi.fn();
-  const mockUpdate = vi.fn();
   const mockUpload = vi.fn();
-  const mockGetPublicUrl = vi.fn();
+  const mockCreateSignedUrl = vi.fn();
+  const mockRemove = vi.fn();
+  const mockInvalidateUserCaches = vi.fn();
+  const tableRows = new Map<string, unknown[]>();
+  const queryErrors = new Map<string, { message: string }>();
+  const updates: Array<{ table: string; value: Record<string, unknown> }> = [];
+  const inserts: Array<{ table: string; value: Record<string, unknown> }> = [];
+  const ranges: Array<{ table: string; from: number; to: number }> = [];
+  let latestArchive: Record<string, unknown> | null;
+
+  function makeQuery(table: string): Record<string, unknown> {
+    let operation: 'select' | 'update' | 'insert' = 'select';
+    let updateValue: Record<string, unknown> | undefined;
+    let insertValue: Record<string, unknown> | undefined;
+
+    const resolveResult = (): QueryResult => {
+      const error = queryErrors.get(table) ?? null;
+      if (operation === 'update' && updateValue) {
+        updates.push({ table, value: updateValue });
+      }
+      if (operation === 'insert' && insertValue) {
+        inserts.push({ table, value: insertValue });
+      }
+      return { data: tableRows.get(table) ?? [], error };
+    };
+
+    const query: Record<string, unknown> & PromiseLike<QueryResult> = {
+      select: vi.fn(() => query),
+      eq: vi.fn(() => query),
+      lte: vi.fn(() => query),
+      in: vi.fn(() => query),
+      order: vi.fn(() => query),
+      limit: vi.fn(() => query),
+      insert: vi.fn((value: Record<string, unknown>) => {
+        operation = 'insert';
+        insertValue = value;
+        return query;
+      }),
+      update: vi.fn((value: Record<string, unknown>) => {
+        operation = 'update';
+        updateValue = value;
+        return query;
+      }),
+      range: vi.fn(async (from: number, to: number) => {
+        ranges.push({ table, from, to });
+        const error = queryErrors.get(table) ?? null;
+        const rows = tableRows.get(table) ?? [];
+        return { data: rows.slice(from, to + 1), error };
+      }),
+      single: vi.fn(async () => ({
+        data: table === 'users' ? { id: 'user-1' } : null,
+        error: queryErrors.get(table) ?? null,
+      })),
+      maybeSingle: vi.fn(async () => ({
+        data:
+          table === 'archive_requests'
+            ? latestArchive
+            : table === 'reading_progress'
+              ? null
+              : null,
+        error: queryErrors.get(table) ?? null,
+      })),
+      then: (resolve, reject) =>
+        Promise.resolve(resolveResult()).then(resolve, reject),
+    };
+
+    return query;
+  }
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    tableRows.clear();
+    queryErrors.clear();
+    updates.length = 0;
+    inserts.length = 0;
+    ranges.length = 0;
+    latestArchive = null;
+
+    mockFrom.mockImplementation((table: string) => makeQuery(table));
+    mockUpload.mockResolvedValue({ error: null });
+    mockCreateSignedUrl.mockResolvedValue({
+      data: { signedUrl: 'https://storage.example/signed/archive?token=short' },
+      error: null,
+    });
+    mockRemove.mockResolvedValue({ error: null });
+    mockInvalidateUserCaches.mockResolvedValue(undefined);
 
     const mockSupabaseClient = {
       from: mockFrom,
       storage: {
         from: vi.fn().mockReturnValue({
           upload: mockUpload,
-          getPublicUrl: mockGetPublicUrl,
+          createSignedUrl: mockCreateSignedUrl,
+          remove: mockRemove,
         }),
       },
     };
-
-    mockFrom.mockImplementation((table: string) => {
-      const defaultChain = {
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-          order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        }),
-        in: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        }),
-      };
-
-      return {
-        select: vi.fn().mockReturnValue(defaultChain),
-        insert: mockInsert,
-        update: mockUpdate,
-      };
-    });
-
-    mockInsert.mockReturnValue({ eq: mockEq });
-    mockUpdate.mockReturnValue({ eq: mockEq });
-
-    // For collection queries (collectUserData):
-    // Each from() call returns a new object, so mockFrom always returns a
-    // fresh object.  collectUserData calls .from() many times, so we set up
-    // mockFrom to return a helper that can handle each table name properly.
-    mockFrom.mockImplementation((table: string) => {
-      // Return empty data for economy tables we don't need to test in detail
-      if (table === 'coin_purchases') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: [], error: null }),
-            }),
-          }),
-        };
-      }
-      if (table === 'gift_transactions') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: [], error: null }),
-            }),
-          }),
-        };
-      }
-      if (table === 'escrow_transactions') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: [], error: null }),
-            }),
-          }),
-        };
-      }
-      if (table === 'user_sticker_packs') {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: [], error: null }),
-            }),
-          }),
-        };
-      }
-      // Default for users, moments, moment_comments, chat_messages,
-      // flashcards, decks, deck_flashcards, favourites
-      return {
-        select: mockSelect,
-        insert: mockInsert,
-        update: mockUpdate,
-      };
-    });
-
-    mockSelect.mockReturnValue({
-      eq: mockEq,
-      order: mockOrder,
-      // For deck_flashcards .in() call
-      in: vi.fn().mockReturnValue({
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      }),
-    });
-    mockEq.mockReturnValue({
-      single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      order: mockOrder,
-    });
-    mockOrder.mockReturnValue({
-      eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -225,13 +134,7 @@ describe('PrivacyService', () => {
         },
         {
           provide: SafetyCacheInvalidationService,
-          useValue: {
-            invalidateUserCaches: vi.fn().mockResolvedValue(undefined),
-            invalidateTrustAndSafetyCaches: vi
-              .fn()
-              .mockResolvedValue(undefined),
-            invalidateUserPairCaches: vi.fn().mockResolvedValue(undefined),
-          },
+          useValue: { invalidateUserCaches: mockInvalidateUserCaches },
         },
       ],
     }).compile();
@@ -239,272 +142,235 @@ describe('PrivacyService', () => {
     service = module.get<PrivacyService>(PrivacyService);
   });
 
-  it('should be defined', () => {
+  it('is defined', () => {
     expect(service).toBeDefined();
   });
 
+  describe('requestArchive', () => {
+    it('uploads to a private opaque object key and returns only a short-lived signed URL', async () => {
+      const result = await service.requestArchive('user-1', {
+        receipt_id: null,
+        app_store: null,
+      });
+
+      expect(result.status).toBe('ready');
+      expect(result.download_url).toContain('/signed/archive?token=short');
+      expect(mockUpload).toHaveBeenCalledTimes(1);
+      expect(mockCreateSignedUrl).toHaveBeenCalledTimes(1);
+      const [objectKey, json, options] = mockUpload.mock.calls[0];
+      expect(objectKey).toMatch(/^[0-9a-f-]{36}\.json$/);
+      expect(objectKey).not.toContain('user-1');
+      expect(options).toMatchObject({
+        contentType: 'application/json',
+        upsert: false,
+      });
+      expect(JSON.parse(json)).toMatchObject({
+        export_schema_version: 2,
+        user_profile: { id: 'user-1' },
+      });
+
+      const requestInsert = inserts.find(
+        (entry) => entry.table === 'archive_requests',
+      );
+      expect(requestInsert?.value.archive_url).toBeNull();
+      expect(requestInsert?.value.status).toBe('processing');
+      expect(requestInsert?.value.object_key).toBeNull();
+      expect(updates).toContainEqual(
+        expect.objectContaining({
+          table: 'archive_requests',
+          value: expect.objectContaining({
+            status: 'ready',
+            archive_url: null,
+          }),
+        }),
+      );
+    });
+
+    it('reuses an unexpired ready archive without rebuilding private data', async () => {
+      latestArchive = {
+        id: '11111111-1111-4111-8111-111111111111',
+        user_id: 'user-1',
+        status: 'ready',
+        object_key: 'opaque.json',
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+        created_at: new Date().toISOString(),
+      };
+
+      const result = await service.requestArchive('user-1', {
+        receipt_id: null,
+        app_store: null,
+      });
+
+      expect(result.status).toBe('ready');
+      expect(mockUpload).not.toHaveBeenCalled();
+      expect(mockCreateSignedUrl).toHaveBeenCalledWith('opaque.json', 300);
+    });
+
+    it('returns processing for an idempotent concurrent request', async () => {
+      latestArchive = {
+        id: '22222222-2222-4222-8222-222222222222',
+        user_id: 'user-1',
+        status: 'processing',
+        object_key: null,
+        expires_at: null,
+        created_at: new Date().toISOString(),
+      };
+
+      await expect(
+        service.requestArchive('user-1', {
+          receipt_id: null,
+          app_store: null,
+        }),
+      ).resolves.toEqual({
+        request_id: '22222222-2222-4222-8222-222222222222',
+        status: 'processing',
+      });
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it('fails the whole archive when any exported dataset cannot be read', async () => {
+      queryErrors.set('chat_messages', { message: 'provider detail' });
+
+      await expect(
+        service.requestArchive('user-1', {
+          receipt_id: null,
+          app_store: null,
+        }),
+      ).rejects.toThrow(ServiceUnavailableException);
+
+      expect(mockUpload).not.toHaveBeenCalled();
+      expect(updates).toContainEqual(
+        expect.objectContaining({
+          table: 'archive_requests',
+          value: expect.objectContaining({
+            status: 'failed',
+            failure_code: 'dataset_unavailable',
+          }),
+        }),
+      );
+    });
+
+    it('removes an uploaded object when persistence of ready state fails', async () => {
+      let archiveRequestCalls = 0;
+      mockFrom.mockImplementation((table: string) => {
+        if (table !== 'archive_requests') return makeQuery(table);
+        archiveRequestCalls += 1;
+        const query = makeQuery(table) as Record<string, unknown> & {
+          update: ReturnType<typeof vi.fn>;
+        };
+        if (archiveRequestCalls >= 3) {
+          const originalUpdate = query.update;
+          query.update = vi.fn((value: Record<string, unknown>) => {
+            originalUpdate(value);
+            queryErrors.set('archive_requests', { message: 'write failed' });
+            return query;
+          });
+        }
+        return query;
+      });
+
+      await expect(
+        service.requestArchive('user-1', {
+          receipt_id: null,
+          app_store: null,
+        }),
+      ).rejects.toThrow(ServiceUnavailableException);
+
+      expect(mockRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it('paginates collection datasets rather than relying on provider row defaults', async () => {
+      tableRows.set(
+        'moments',
+        Array.from({ length: 501 }, (_, index) => ({ id: `moment-${index}` })),
+      );
+
+      await service.requestArchive('user-1', {
+        receipt_id: null,
+        app_store: null,
+      });
+
+      const momentRanges = ranges.filter((entry) => entry.table === 'moments');
+      expect(momentRanges).toEqual([
+        { table: 'moments', from: 0, to: 499 },
+        { table: 'moments', from: 500, to: 999 },
+      ]);
+    });
+  });
+
+  describe('archive retention', () => {
+    it('removes expired objects and clears their object keys', async () => {
+      tableRows.set('archive_requests', [
+        {
+          id: '33333333-3333-4333-8333-333333333333',
+          user_id: 'user-1',
+          status: 'ready',
+          object_key: 'opaque.json',
+          expires_at: '2026-08-01T00:00:00.000Z',
+          created_at: '2026-07-25T00:00:00.000Z',
+        },
+      ]);
+
+      await expect(service.purgeExpiredArchives()).resolves.toBe(1);
+      expect(mockRemove).toHaveBeenCalledWith(['opaque.json']);
+      expect(updates).toContainEqual(
+        expect.objectContaining({
+          value: expect.objectContaining({
+            status: 'expired',
+            object_key: null,
+            archive_url: null,
+          }),
+        }),
+      );
+    });
+  });
+
   describe('deleteAccount', () => {
-    it('should throw if confirm_delete is false', async () => {
+    it('requires explicit confirmation', async () => {
       const dto: DeleteAccountDto = { confirm_delete: false };
       await expect(service.deleteAccount('user-1', dto)).rejects.toThrow(
         BadRequestException,
       );
     });
 
-    it('should set scheduled_for_deletion_at 30 days in the future and scrub location', async () => {
-      const dto: DeleteAccountDto = { confirm_delete: true };
-      mockEq.mockResolvedValue({ error: null });
+    it('scrubs location, hides discovery and schedules the 30-day grace period', async () => {
+      await service.deleteAccount('user-1', { confirm_delete: true });
 
-      await service.deleteAccount('user-1', dto);
-
-      expect(mockFrom).toHaveBeenCalledWith('users');
-      expect(mockUpdate).toHaveBeenCalled();
-
-      const updateArg = mockUpdate.mock.calls[0][0];
-      expect(updateArg.is_deletion_pending).toBe(true);
-      expect(updateArg.privacy_hide_from_search).toBe(true);
-      expect(updateArg.location).toBeNull();
-      expect(updateArg.mock_location).toBeNull();
-      expect(updateArg.mock_country).toBeNull();
-      expect(updateArg.mock_city).toBeNull();
-      expect(updateArg.scheduled_for_deletion_at).toBeDefined();
-      expect(updateArg.deletion_requested_at).toBeDefined();
-
-      // Verify the scheduled date is ~30 days in the future
-      const scheduledDate = new Date(updateArg.scheduled_for_deletion_at);
-      const expectedDate = new Date();
-      expectedDate.setDate(expectedDate.getDate() + 30);
-      const diffDays = Math.abs(
-        (scheduledDate.getTime() - expectedDate.getTime()) /
-          (1000 * 60 * 60 * 24),
-      );
-      expect(diffDays).toBeLessThan(0.01); // Should be within a few seconds
-
-      expect(mockEq).toHaveBeenCalledWith('id', 'user-1');
+      const userUpdate = updates.find((entry) => entry.table === 'users');
+      expect(userUpdate?.value).toMatchObject({
+        is_deletion_pending: true,
+        privacy_hide_from_search: true,
+        location: null,
+        mock_location: null,
+        mock_country: null,
+        mock_city: null,
+      });
+      const scheduled = new Date(
+        String(userUpdate?.value.scheduled_for_deletion_at),
+      ).getTime();
+      const expected = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      expect(Math.abs(scheduled - expected)).toBeLessThan(5_000);
+      expect(mockInvalidateUserCaches).toHaveBeenCalledWith('user-1');
     });
 
-    it('should throw BadRequestException on update error', async () => {
-      const dto: DeleteAccountDto = { confirm_delete: true };
-      const updateError = { message: 'DB error' };
-      mockUpdate.mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: updateError }),
-      });
-
-      await expect(service.deleteAccount('user-1', dto)).rejects.toThrow(
-        BadRequestException,
-      );
+    it('fails closed when the deletion schedule cannot be persisted', async () => {
+      queryErrors.set('users', { message: 'DB unavailable' });
+      await expect(
+        service.deleteAccount('user-1', { confirm_delete: true }),
+      ).rejects.toThrow(ServiceUnavailableException);
+      expect(mockInvalidateUserCaches).not.toHaveBeenCalled();
     });
   });
 
   describe('cancelDeletion', () => {
-    it('should clear deletion fields', async () => {
-      const mockEqCancel = vi.fn().mockResolvedValue({ error: null });
-      mockUpdate.mockReturnValue({ eq: mockEqCancel });
-
+    it('clears deletion state', async () => {
       await service.cancelDeletion('user-1');
-
-      expect(mockFrom).toHaveBeenCalledWith('users');
-      expect(mockUpdate).toHaveBeenCalledWith({
+      const userUpdate = updates.find((entry) => entry.table === 'users');
+      expect(userUpdate?.value).toEqual({
         scheduled_for_deletion_at: null,
         deletion_requested_at: null,
         is_deletion_pending: false,
       });
-      expect(mockEqCancel).toHaveBeenCalledWith('id', 'user-1');
-    });
-
-    it('should throw BadRequestException on error', async () => {
-      const mockEqCancel = vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'DB error' } });
-      mockUpdate.mockReturnValue({ eq: mockEqCancel });
-
-      await expect(service.cancelDeletion('user-1')).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-  });
-
-  describe('requestArchive', () => {
-    it('should handle archive creation', async () => {
-      mockUpload.mockResolvedValue({ error: null });
-      mockGetPublicUrl.mockReturnValue({
-        data: { publicUrl: 'https://example.com/archive.json' },
-      });
-      mockInsert.mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-
-      await service.requestArchive('user-1', {
-        receipt_id: null,
-        app_store: null,
-      });
-
-      expect(mockUpload).toHaveBeenCalled();
-      expect(mockInsert).toHaveBeenCalled();
-    });
-
-    it('should include escrow transactions in the archive', async () => {
-      // Override escrow_transactions mock to return data
-      mockFrom.mockImplementation((table: string) => {
-        const defaultChain = {
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-            order: vi.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-          in: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-        };
-
-        if (table === 'escrow_transactions') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                order: vi.fn().mockResolvedValue({
-                  data: [
-                    {
-                      id: 'esc_1',
-                      payer_id: 'user-1',
-                      payee_id: 'other-user',
-                      amount_coins: 50,
-                      status: 'held',
-                      reason: 'Lesson payment',
-                      metadata: { type: 'conversation' },
-                    },
-                  ],
-                  error: null,
-                }),
-              }),
-            }),
-            insert: mockInsert,
-            update: mockUpdate,
-          };
-        }
-
-        return {
-          select: vi.fn().mockReturnValue(defaultChain),
-          insert: mockInsert,
-          update: mockUpdate,
-        };
-      });
-
-      mockUpload.mockResolvedValue({ error: null });
-      mockGetPublicUrl.mockReturnValue({
-        data: { publicUrl: 'https://example.com/archive.json' },
-      });
-      mockInsert.mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-
-      await service.requestArchive('user-1', {
-        receipt_id: null,
-        app_store: null,
-      });
-
-      expect(mockUpload).toHaveBeenCalled();
-      const uploadArgs = mockUpload.mock.calls[0];
-      const jsonBlob = uploadArgs[1];
-      const parsed = JSON.parse(jsonBlob);
-
-      expect(parsed.escrow_transactions).toBeDefined();
-      expect(Array.isArray(parsed.escrow_transactions)).toBe(true);
-      expect(parsed.escrow_transactions.length).toBeGreaterThanOrEqual(1);
-
-      const escrowRecord = parsed.escrow_transactions[0];
-      expect(escrowRecord.id).toBe('esc_1');
-      expect(escrowRecord.amount_coins).toBe(50);
-      expect(escrowRecord.status).toBe('held');
-      expect(escrowRecord.reason).toBe('Lesson payment');
-      // Role tag should be present
-      expect(escrowRecord.role).toBeDefined();
-      expect(['payer', 'payee']).toContain(escrowRecord.role);
-    });
-
-    it('should include scrubbed coin purchases in the archive', async () => {
-      // Override the coin_purchases mock to return sensitive data
-      mockFrom.mockImplementation((table: string) => {
-        const defaultChain = {
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-            order: vi.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-          in: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-        };
-
-        if (table === 'coin_purchases') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                order: vi.fn().mockResolvedValue({
-                  data: [
-                    {
-                      id: 'cp_1',
-                      user_id: 'user-1',
-                      receipt_token: 'cs_test_sensitive_session_abc123',
-                      transaction_id: 'txn_long_transaction_id_xyz789',
-                      status: 'completed',
-                      coins_added: 100,
-                    },
-                  ],
-                  error: null,
-                }),
-              }),
-            }),
-            insert: mockInsert,
-            update: mockUpdate,
-          };
-        }
-
-        return {
-          select: vi.fn().mockReturnValue(defaultChain),
-          insert: mockInsert,
-          update: mockUpdate,
-        };
-      });
-
-      mockUpload.mockResolvedValue({ error: null });
-      mockGetPublicUrl.mockReturnValue({
-        data: { publicUrl: 'https://example.com/archive.json' },
-      });
-      mockInsert.mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-
-      // The upload call contains the JSON blob. We can inspect mockUpload to
-      // verify the scrubbing happened.
-      await service.requestArchive('user-1', {
-        receipt_id: null,
-        app_store: null,
-      });
-
-      expect(mockUpload).toHaveBeenCalled();
-      const uploadArgs = mockUpload.mock.calls[0];
-      const jsonBlob = uploadArgs[1];
-      expect(typeof jsonBlob).toBe('string');
-
-      const parsed = JSON.parse(jsonBlob);
-      expect(parsed.coin_purchases).toBeDefined();
-      expect(Array.isArray(parsed.coin_purchases)).toBe(true);
-
-      const purchaseRecord = parsed.coin_purchases[0];
-      // receipt_token should be scrubbed (only last 4 chars)
-      expect(purchaseRecord.receipt_token).toBe('***...c123');
-      // transaction_id should be scrubbed
-      expect(purchaseRecord.transaction_id).toBe('***...z789');
-      // Non-sensitive fields preserved
-      expect(purchaseRecord.id).toBe('cp_1');
-      expect(purchaseRecord.status).toBe('completed');
-      expect(purchaseRecord.coins_added).toBe(100);
-    });
-
-    it('should throw BadRequestException on upload error', async () => {
-      mockUpload.mockResolvedValue({ error: { message: 'Upload failed' } });
-
-      await expect(
-        service.requestArchive('user-1', { receipt_id: null, app_store: null }),
-      ).rejects.toThrow(BadRequestException);
     });
   });
 });

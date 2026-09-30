@@ -126,6 +126,9 @@ export class DiscoveryController {
     if (profile?.is_serious_learner === true) {
       query.serious_learner_mode = true;
     }
+    if (query.serious_learner_mode === true) {
+      query.serious_learner_only = true;
+    }
     const result = await this.discoveryService.searchPartnersWithDegradation(
       user.id,
       profile,
@@ -194,6 +197,12 @@ export class DiscoveryController {
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
+    if (profile?.is_serious_learner === true) {
+      query.serious_learner_mode = true;
+    }
+    if (query.serious_learner_mode === true) {
+      query.serious_learner_only = true;
+    }
     const result = await this.discoveryService.getAudioIntros(
       user.id,
       profile,
@@ -391,6 +400,9 @@ export class DiscoveryController {
     const profile = await this.usersService.getProfile(user.id);
     if (profile?.is_serious_learner === true) {
       query.serious_learner_mode = true;
+    }
+    if (query.serious_learner_mode === true) {
+      query.serious_learner_only = true;
     }
     return this.discoveryService.searchPartnersWithDegradation(
       user.id,

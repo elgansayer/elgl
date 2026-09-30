@@ -1,9 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
-import { HlmInput } from '@spartan-ng/helm/input';
-import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import type { DiagnosticQuizResult } from '../../services/quiz.service';
 import { I18nService } from '../../services/i18n.service';
 import { OnboardingService } from '../../services/onboarding.service';
@@ -15,9 +12,6 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 @Component({
   selector: 'app-onboarding-wizard',
   imports: [
-    HlmCheckbox,
-    HlmNativeSelect,
-    HlmInput,
     CommonModule,
     TranslatePipe,
     DiagnosticQuizComponent,
@@ -45,43 +39,6 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
       </div>
 
       @if (onboardingService.currentStep() === 0) {
-        <div class="mt-4">
-          <label class="mb-1 block text-sm" for="native-lang">{{
-            'onboarding.step1.label' | t
-          }}</label>
-          <hlm-native-select
-            selectId="native-lang"
-            class="w-full rounded border border-surface-100 bg-surface-200 p-2 text-text-primary"
-            selectClass="w-full rounded border border-surface-100 bg-surface-200 p-2 text-text-primary"
-            [value]="onboardingService.nativeLanguage()"
-            (change)="onNativeLanguageChange($event)"
-          >
-            <option value="">{{ 'onboarding.step1.placeholder' | t }}</option>
-            @for (lang of i18n.availableLanguages; track lang.code) {
-              <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }}</option>
-            }
-          </hlm-native-select>
-        </div>
-      }
-
-      @if (onboardingService.currentStep() === 1) {
-        <div class="mt-4">
-          <span class="mb-1 block text-sm">{{ 'onboarding.step2.label' | t }}</span>
-          <div class="grid grid-cols-1 gap-2">
-            @for (lang of i18n.availableLanguages; track lang.code) {
-              <label class="flex cursor-pointer items-center gap-2">
-                <hlm-checkbox
-                  [checked]="onboardingService.targetLanguages().has(lang.code)"
-                  (change)="onboardingService.toggleTargetLanguage(lang.code)"
-                />
-                <span>{{ lang.flag }} {{ lang.nativeName }}</span>
-              </label>
-            }
-          </div>
-        </div>
-      }
-
-      @if (onboardingService.currentStep() === 2) {
         <div class="mt-6">
           <app-diagnostic-quiz
             [targetLanguage]="onboardingService.primaryTargetLanguage()"
@@ -102,22 +59,6 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
               </p>
             </div>
           }
-        </div>
-      }
-
-      @if (onboardingService.currentStep() === 3) {
-        <div class="mt-4">
-          <label class="mb-1 block text-sm" for="display-name">{{
-            'onboarding.step4.label' | t
-          }}</label>
-          <input
-            hlmInput
-            id="display-name"
-            class="w-full rounded border border-surface-100 bg-surface-200 p-2 text-text-primary"
-            [value]="onboardingService.displayName()"
-            (input)="onDisplayNameInput($event)"
-            placeholder="{{ 'onboarding.step4.placeholder' | t }}"
-          />
         </div>
       }
 

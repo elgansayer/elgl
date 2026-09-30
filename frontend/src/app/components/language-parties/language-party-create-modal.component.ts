@@ -2,7 +2,7 @@ import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -31,6 +31,9 @@ interface SelectOption {
       tabindex="-1"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="language-party-create-title"
+      [attr.aria-describedby]="submissionError() ? 'language-party-create-error' : null"
+      [attr.aria-busy]="submitting()"
     >
       <div
         class="w-full max-w-md bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
@@ -40,11 +43,15 @@ interface SelectOption {
       >
         <!-- Header -->
         <div class="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
-          <h2 class="text-xl font-bold text-text-primary">{{ 'languageParty.modalTitle' | t }}</h2>
+          <h2 id="language-party-create-title" class="text-xl font-bold text-text-primary">
+            {{ 'languageParty.modalTitle' | t }}
+          </h2>
           <button
             hlmBtn
+            type="button"
             (click)="closeModal()"
-            class="text-text-muted hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100"
+            [disabled]="submitting()"
+            class="text-text-muted hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100 disabled:opacity-50"
             [attr.aria-label]="'languageParty.cancelBtn' | t"
           >
             ✕
@@ -54,6 +61,17 @@ interface SelectOption {
         <!-- Body -->
         <div class="p-6 flex flex-col gap-5 overflow-y-auto">
           <p class="text-sm text-text-secondary mb-2">{{ 'languageParty.modalSubtitle' | t }}</p>
+
+          @if (submissionError()) {
+            <p
+              id="language-party-create-error"
+              role="alert"
+              aria-live="assertive"
+              class="rounded-app border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
+              {{ submissionError() }}
+            </p>
+          }
 
           <!-- Title Input -->
           <div class="flex flex-col gap-2">
@@ -65,6 +83,7 @@ interface SelectOption {
               id="partyTitle"
               type="text"
               [(ngModel)]="title"
+              [disabled]="submitting()"
               [placeholder]="'languageParty.roomTitlePlaceholder' | t"
               class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
               maxlength="100"
@@ -79,6 +98,7 @@ interface SelectOption {
             <hlm-native-select
               selectId="langPair"
               [(ngModel)]="languagePair"
+              [disabled]="submitting()"
               class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
               selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
@@ -98,6 +118,7 @@ interface SelectOption {
             <hlm-native-select
               selectId="topicTag"
               [(ngModel)]="topicTag"
+              [disabled]="submitting()"
               class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
               selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
@@ -117,6 +138,7 @@ interface SelectOption {
             <hlm-native-select
               selectId="levelSelect"
               [(ngModel)]="level"
+              [disabled]="submitting()"
               class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
               selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
@@ -136,6 +158,7 @@ interface SelectOption {
             <hlm-checkbox
               inputId="isVideoStream"
               [(ngModel)]="isVideoStream"
+              [disabled]="submitting()"
               class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-primary focus:ring-primary"
             />
             {{ 'languageParty.videoStreamLabel' | t }}
@@ -143,18 +166,22 @@ interface SelectOption {
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 border-t border-surface-100 flex justify-end gap-3 bg-surface-100/50">
+        <div class="px-6 py-4 border-t border-surface-100 flex flex-wrap justify-end gap-3 bg-surface-100/50">
           <button
             hlmBtn
+            type="button"
             (click)="closeModal()"
-            class="px-5 py-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors"
+            [disabled]="submitting()"
+            class="px-5 py-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors disabled:opacity-50"
           >
             {{ 'languageParty.cancelBtn' | t }}
           </button>
           <button
             hlmBtn
+            type="button"
             (click)="submit()"
-            [disabled]="!isValid()"
+            [disabled]="!isValid() || submitting()"
+            [attr.aria-busy]="submitting()"
             class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"
           >
             {{ 'languageParty.launchBtn' | t }}
@@ -167,6 +194,8 @@ interface SelectOption {
 export class LanguagePartyCreateModalComponent {
   readonly closed = output<void>();
   readonly created = output<LanguagePartyCreatePayload>();
+  readonly submitting = input(false);
+  readonly submissionError = input<string | null>(null);
 
   readonly LANGUAGE_PAIR_OPTIONS: readonly SelectOption[] = [
     { value: 'en-es', labelKey: 'audioRoom.languagePair.en-es' },
@@ -232,12 +261,13 @@ export class LanguagePartyCreateModalComponent {
   );
 
   closeModal(): void {
+    if (this.submitting()) return;
     this.closed.emit();
     this.resetForm();
   }
 
   submit(): void {
-    if (!this.isValid()) return;
+    if (!this.isValid() || this.submitting()) return;
 
     this.created.emit({
       title: this.title().trim(),
@@ -246,8 +276,6 @@ export class LanguagePartyCreateModalComponent {
       level: this.level(),
       isVideoStream: this.isVideoStream(),
     });
-
-    this.closeModal();
   }
 
   private resetForm(): void {

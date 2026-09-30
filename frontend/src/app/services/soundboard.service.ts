@@ -1,9 +1,13 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { AuthService } from './auth.service';
+import {
+  BUNDLED_SOUNDBOARD_CLIPS,
+  isBundledSoundboardSoundId,
+} from './soundboard-clips';
 
 export interface SoundItem {
   id: string;
   name: string;
-  url: string;
   icon: string;
 }
 
@@ -12,52 +16,123 @@ export interface SoundboardListResponse {
 }
 
 export interface PlaySoundResponse {
-  success: boolean;
-  soundUrl: string | null;
+  success: true;
+}
+
+const MAX_ROOM_ID_LENGTH = 128;
+const MAX_SOUND_NAME_LENGTH = 80;
+const MAX_ICON_LENGTH = 16;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normaliseRoomId(roomId: string): string {
+  const value = roomId.trim();
+  if (!value || value.length > MAX_ROOM_ID_LENGTH) {
+    throw new Error('Invalid soundboard room');
+  }
+  return value;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class SoundboardService {
-  private baseUrl = '/api/audio-rooms/soundboard';
+  private readonly authService = inject(AuthService);
+  private readonly baseUrl = '/api/audio-rooms/soundboard';
 
-  /**
-   * Fetch the list of available sound effects.
-   */
-  async getSounds(): Promise<SoundboardListResponse> {
-    const response = await fetch(`${this.baseUrl}/list`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to load sounds: ${response.statusText}`);
+  private async apiFetch(path: string, options: RequestInit): Promise<unknown> {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      throw new Error('Authentication required');
     }
-    const data: SoundboardListResponse = await response.json();
-    return data;
+
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Soundboard request failed');
+    }
+
+    try {
+      return await response.json();
+    } catch {
+      throw new Error('Invalid soundboard response');
+    }
   }
 
   /**
-   * Instruct the server to play a sound inside the given audio room.
-   * The server broadcasts a `soundboard_play` Centrifugo event to all
-   * room participants.
+   * Fetches the server-authoritative sound IDs while keeping playback media
+   * client-owned. Unknown or malformed catalogue entries are discarded rather
+   * than becoming remote media URLs that the browser could be asked to play.
    */
+  async getSounds(): Promise<SoundboardListResponse> {
+    const payload = await this.apiFetch('/list', { method: 'GET' });
+    if (!isRecord(payload) || !Array.isArray(payload['sounds'])) {
+      throw new Error('Invalid soundboard response');
+    }
+
+    const bundledById = new Map(
+      BUNDLED_SOUNDBOARD_CLIPS.map((clip) => [clip.id, clip]),
+    );
+    const seen = new Set<string>();
+    const sounds: SoundItem[] = [];
+
+    for (const item of payload['sounds']) {
+      if (!isRecord(item)) continue;
+      const id = typeof item['id'] === 'string' ? item['id'].trim() : '';
+      if (!isBundledSoundboardSoundId(id) || seen.has(id)) continue;
+
+      const bundled = bundledById.get(id);
+      if (!bundled) continue;
+      const rawName = typeof item['name'] === 'string' ? item['name'].trim() : '';
+      const rawIcon = typeof item['icon'] === 'string' ? item['icon'].trim() : '';
+      sounds.push({
+        id,
+        name:
+          rawName && rawName.length <= MAX_SOUND_NAME_LENGTH
+            ? rawName
+            : bundled.name,
+        icon:
+          rawIcon && rawIcon.length <= MAX_ICON_LENGTH
+            ? rawIcon
+            : bundled.icon,
+      });
+      seen.add(id);
+    }
+
+    return { sounds };
+  }
+
   async playSound(
     roomId: string,
     soundId: string,
   ): Promise<PlaySoundResponse> {
-    const response = await fetch(`${this.baseUrl}/play`, {
+    const normalisedRoomId = normaliseRoomId(roomId);
+    const normalisedSoundId = soundId.trim();
+    if (!isBundledSoundboardSoundId(normalisedSoundId)) {
+      throw new Error('Invalid soundboard sound');
+    }
+
+    const payload = await this.apiFetch('/play', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        room_id: roomId,
-        sound_id: soundId,
+        room_id: normalisedRoomId,
+        sound_id: normalisedSoundId,
       }),
     });
-    if (!response.ok) {
-      throw new Error(`Failed to play sound: ${response.statusText}`);
+
+    if (!isRecord(payload) || payload['success'] !== true) {
+      throw new Error('Invalid soundboard response');
     }
-    const result: PlaySoundResponse = await response.json();
-    return result;
+
+    return { success: true };
   }
 }
