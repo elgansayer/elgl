@@ -6,7 +6,7 @@ import {
   RecommendationReason,
   RecommendationsService,
 } from '../../../services/recommendations.service';
-import { StudyBuddiesService } from '../../../services/study-buddies.service';
+import { StudyBuddyService } from '../../../services/study-buddy.service';
 import { TranslatePipe } from '../../../services/translate.pipe';
 
 type RecommendationAction = 'follow' | 'message';
@@ -19,7 +19,7 @@ type RecommendationAction = 'follow' | 'message';
 })
 export class RecommendedForYouCarouselComponent {
   private readonly recommendationsService = inject(RecommendationsService);
-  private readonly studyBuddiesService = inject(StudyBuddiesService);
+  private readonly studyBuddiesService = inject(StudyBuddyService);
   private readonly router = inject(Router);
   private loadRequestId = 0;
 

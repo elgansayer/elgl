@@ -14,7 +14,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { AuthService } from './services/auth.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
-import { FcmService } from './services/fcm.service';
+import { FirebaseMessagingService } from './services/firebase-messaging.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
 import {
@@ -87,7 +87,7 @@ export class AppComponent implements OnInit {
   economyStore = inject(EconomyStore);
   private tourService = inject(TourService);
   centrifugeService = inject(CentrifugeService);
-  fcmService = inject(FcmService);
+  fcmService = inject(FirebaseMessagingService);
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
@@ -249,7 +249,7 @@ export class AppComponent implements OnInit {
       await this.loadInitialUnreadCounts();
 
       // Request notification permission after user is authenticated
-      await this.fcmService.requestPermission();
+      await this.fcmService.requestPermissionAndGetToken();
       await this.fcmService.persistFcmToken(user.id);
     }
   }
