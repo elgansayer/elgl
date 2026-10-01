@@ -92,3 +92,51 @@ The `create()` and `delete()` methods in `communities.component.ts` are asynchro
 
 ## Suggested Labels
 bug, error-handling, high-priority
+# Issue 6: Performance Bug: Inefficient For-Loop Tracking in Chat Page
+
+## Title
+perf(chat): improve message rendering by tracking primitive IDs in chat loop
+
+## Description
+In `frontend/src/app/pages/chat/chat-page.component.ts`, the message loop uses `@for (msg of messages(); track msg)`. Tracking by the full object reference instead of a primitive unique ID means Angular cannot efficiently reuse DOM nodes when the `messages()` signal updates (e.g., when a new message arrives or status changes). This causes unnecessary DOM thrashing and performance degradation, especially in long chat histories.
+
+## Acceptance Criteria
+*   Update the `@for` loop in `chat-page.component.ts` to use `track msg.id` instead of `track msg`.
+*   Ensure that new incoming messages do not cause the entire message list to re-render.
+
+## Suggested Labels
+bug, performance, ui
+
+
+# Issue 7: Bug: Race Condition Permitting Duplicate Message Submissions
+
+## Title
+bug(chat): disable send button while message is sending to prevent duplicates
+
+## Description
+The `sendMessage()` method in `chat-page.component.ts` does not disable the submit button or input field while the asynchronous `this.chatService.sendMessage(...)` request is pending. If a user clicks the send button multiple times rapidly, it can trigger multiple concurrent network requests, resulting in duplicate messages being sent to the chat room.
+
+## Acceptance Criteria
+*   Introduce an `isSending` signal (boolean) in `ChatPageComponent`.
+*   Set `isSending` to `true` at the start of `sendMessage()` and reset it to `false` in a `finally` block.
+*   Disable the Send button and input field in the template when `isSending()` is true.
+
+## Suggested Labels
+bug, ui/ux
+
+
+# Issue 8: Performance/Tech-Debt: N+1 Network Requests for Marking Messages Read
+
+## Title
+perf(chat): bulk update read receipts instead of N+1 individual requests
+
+## Description
+When a user selects a room in `chat-page.component.ts`, the component loops through all unread messages from others and makes two separate asynchronous network requests (`markMessageStatus`) for *every single message* (one for 'delivered', one for 'read'). In a room with many unread messages, this causes a severe N+1 request storm, heavily impacting network performance and potentially rate-limiting the client or overloading the backend.
+
+## Acceptance Criteria
+*   Refactor the `chat.service.ts` to support bulk status updates (e.g., `markMessagesStatus(messageIds: string[], status: string)`).
+*   Update `selectRoom()` in `chat-page.component.ts` to gather all unread message IDs and send a single bulk request for 'delivered' and a single bulk request for 'read', or a combined bulk operation.
+*   Ensure the local state is optimistically updated or updated once after the bulk request succeeds.
+
+## Suggested Labels
+bug, performance, tech-debt
