@@ -905,6 +905,9 @@ def test_pull_request_status_treats_missing_canonical_gate_as_pending(tmp_path: 
     assert not status.checks_passed
     assert status.checks_pending
     assert status.failed_checks == frozenset()
+    assert status.ci_required_pending
+    assert not status.ci_required_passed
+    assert not status.ci_required_failed
 
 
 def test_pull_request_status_requires_independent_review_success(tmp_path: Path) -> None:
@@ -929,6 +932,8 @@ def test_pull_request_status_requires_independent_review_success(tmp_path: Path)
     assert status.checks_pending
     assert status.failed_checks == frozenset({"factory/independent-review"})
     assert status.ci_required_passed
+    assert not status.ci_required_pending
+    assert not status.ci_required_failed
 
 
 @pytest.mark.parametrize("conclusion", ["SKIPPED", "NEUTRAL"])
@@ -1005,6 +1010,9 @@ def test_pull_request_status_does_not_mark_terminal_required_failure_as_pending(
     assert not status.checks_passed
     assert not status.checks_pending
     assert status.failed_checks == frozenset({"CI / required"})
+    assert status.ci_required_failed
+    assert not status.ci_required_pending
+    assert not status.ci_required_passed
 
 
 def test_pull_request_status_never_merges_over_requested_human_changes(
