@@ -6,6 +6,7 @@ import {
   UseGuards,
   Req,
   Param,
+  ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlockUserDto, ReportUserDto, UnblockUserDto } from './dto/safety.dto';
@@ -60,12 +61,26 @@ export class SafetyController {
   }
 
   @Get('blocked-ids/:userId')
-  async getBlockedUserIds(@Param('userId') userId: string): Promise<string[]> {
+  async getBlockedUserIds(
+    @Req() req: { user: { id: string } },
+    @Param('userId') userId: string,
+  ): Promise<string[]> {
+    // Prevent IDOR by ensuring users can only fetch their own blocked list
+    if (req.user.id !== userId) {
+      throw new ForbiddenException('Cannot access data for another user');
+    }
     return this.safetyService.getBlockedUserIds(userId);
   }
 
   @Get('blocker-ids/:userId')
-  async getBlockerUserIds(@Param('userId') userId: string): Promise<string[]> {
+  async getBlockerUserIds(
+    @Req() req: { user: { id: string } },
+    @Param('userId') userId: string,
+  ): Promise<string[]> {
+    // Prevent IDOR by ensuring users can only fetch their own blocker list
+    if (req.user.id !== userId) {
+      throw new ForbiddenException('Cannot access data for another user');
+    }
     return this.safetyService.getBlockerUserIds(userId);
   }
 
@@ -96,8 +111,13 @@ export class SafetyController {
 
   @Get('blocked-and-blocker-ids/:userId')
   async getBlockedAndBlockerIds(
+    @Req() req: { user: { id: string } },
     @Param('userId') userId: string,
   ): Promise<string[]> {
+    // Prevent IDOR by ensuring users can only fetch their own combined lists
+    if (req.user.id !== userId) {
+      throw new ForbiddenException('Cannot access data for another user');
+    }
     return this.safetyService.getBlockedAndBlockerIds(userId);
   }
 

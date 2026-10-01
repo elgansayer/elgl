@@ -99,9 +99,4 @@ export class HapticFeedbackService {
   success(): void {
     this.trigger('selection');
   }
-
-  /** Convenience for an error or failed action */
-  error(): void {
-    this.trigger('heavy');
-  }
 }

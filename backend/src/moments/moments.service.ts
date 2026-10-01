@@ -460,24 +460,20 @@ export class MomentsService {
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
-    const [profilesResponse, likesResponse] = await Promise.all([
-      supabase
-        .from('users')
-        .select('id, display_name, avatar_url')
-        .in('id', authorIds),
-      supabase
-        .from('moment_likes')
-        .select('moment_id')
-        .eq('user_id', userId)
-        .in('moment_id', momentIdsList),
-    ]);
-
+    const profilesResponse = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds);
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 
+    const likesResponse = await supabase
+      .from('moment_likes')
+      .select('moment_id')
+      .eq('user_id', userId)
+      .in('moment_id', momentIdsList);
     const myLikes = likesResponse.data as MomentLikeRow[] | null;
     const likeRows = myLikes ?? [];
     const likedSet = new Set<string>(likeRows.map((l) => l.moment_id));
@@ -567,23 +563,19 @@ export class MomentsService {
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
-    const [profilesResponse, likesResponse] = await Promise.all([
-      supabase
-        .from('users')
-        .select('id, display_name, avatar_url')
-        .in('id', authorIds),
-      supabase
-        .from('moment_likes')
-        .select('moment_id')
-        .eq('user_id', userId)
-        .in('moment_id', momentIdsList),
-    ]);
-
+    const profilesResponse = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds);
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileMap = new Map<string, UserProfileRow>();
     (profiles ?? []).forEach((p) => profileMap.set(p.id, p));
 
+    const likesResponse = await supabase
+      .from('moment_likes')
+      .select('moment_id')
+      .eq('user_id', userId)
+      .in('moment_id', momentIdsList);
     const myLikes = likesResponse.data as MomentLikeRow[] | null;
     const likedSet = new Set<string>((myLikes ?? []).map((l) => l.moment_id));
 
@@ -1086,24 +1078,21 @@ export class MomentsService {
     }
 
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
-    const commentIds = commentRows.map((c) => c.id);
-
-    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
-    const [profilesResponse, { data: votesData }] = await Promise.all([
-      supabase
-        .from('users')
-        .select('id, display_name, avatar_url')
-        .in('id', authorIds),
-      supabase
-        .from('moment_comment_votes')
-        .select('comment_id, user_id, vote')
-        .in('comment_id', commentIds),
-    ]);
-
+    const profilesResponse = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds);
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
+
+    // Fetch vote data for these comments
+    const commentIds = commentRows.map((c) => c.id);
+    const { data: votesData } = await supabase
+      .from('moment_comment_votes')
+      .select('comment_id, user_id, vote')
+      .in('comment_id', commentIds);
 
     const votesMap = new Map<string, { up: number; down: number }>();
     const myVotesMap = new Map<string, string>();
