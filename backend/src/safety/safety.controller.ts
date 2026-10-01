@@ -65,6 +65,7 @@ export class SafetyController {
     @Req() req: { user: { id: string } },
     @Param('userId') userId: string,
   ): Promise<string[]> {
+    // Prevent IDOR by ensuring users can only fetch their own blocked list
     if (req.user.id !== userId) {
       throw new ForbiddenException('Cannot access data for another user');
     }
@@ -76,6 +77,7 @@ export class SafetyController {
     @Req() req: { user: { id: string } },
     @Param('userId') userId: string,
   ): Promise<string[]> {
+    // Prevent IDOR by ensuring users can only fetch their own blocker list
     if (req.user.id !== userId) {
       throw new ForbiddenException('Cannot access data for another user');
     }
@@ -112,6 +114,7 @@ export class SafetyController {
     @Req() req: { user: { id: string } },
     @Param('userId') userId: string,
   ): Promise<string[]> {
+    // Prevent IDOR by ensuring users can only fetch their own combined lists
     if (req.user.id !== userId) {
       throw new ForbiddenException('Cannot access data for another user');
     }

@@ -5,10 +5,6 @@ import * as jwt from 'jsonwebtoken';
 import Redis from 'ioredis';
 import { randomUUID } from 'crypto';
 
-const CONNECTION_TOKEN_TTL_SECONDS = 60 * 60;
-const CONNECTION_TOKEN_SIGNING_ERROR =
-  'Centrifugo connection token signing unavailable';
-
 /**
  * Result of a connection rate-limit check.
  * When `allowed` is false, `retryAfterMs` indicates how long the client
@@ -218,61 +214,17 @@ export class CentrifugoService implements OnModuleInit {
   generateConnectionToken(userId: string): { token: string } {
     const payload = {
       sub: userId,
-      exp: Math.floor(Date.now() / 1000) + CONNECTION_TOKEN_TTL_SECONDS,
+      exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24 hours
     };
-
-    try {
-      return { token: this.signConnectionJwt(payload) };
-    } catch {
-      this.logConnectionTokenFailure('signing_failed');
-      throw new Error(CONNECTION_TOKEN_SIGNING_ERROR);
-    }
+    const token = jwt.sign(payload, this.tokenSecret);
+    return { token };
   }
 
   /**
-   * Signs a Centrifugo connection JWT payload after enforcing the connection
-   * claim contract used by POST /chat/token.
+   * Signs an arbitrary JWT payload using the Centrifugo token secret.
    */
   signJwt(payload: Record<string, unknown>): Promise<string> {
-    try {
-      return Promise.resolve(this.signConnectionJwt(payload));
-    } catch {
-      this.logConnectionTokenFailure('signing_failed');
-      return Promise.reject(new Error(CONNECTION_TOKEN_SIGNING_ERROR));
-    }
-  }
-
-  private signConnectionJwt(payload: Record<string, unknown>): string {
-    const subject = payload['sub'];
-    const expiresAt = payload['exp'];
-    const now = Math.floor(Date.now() / 1000);
-
-    if (!this.tokenSecret) {
-      throw new Error(CONNECTION_TOKEN_SIGNING_ERROR);
-    }
-    if (typeof subject !== 'string' || subject.trim().length === 0) {
-      throw new Error(CONNECTION_TOKEN_SIGNING_ERROR);
-    }
-    if (
-      typeof expiresAt !== 'number' ||
-      !Number.isInteger(expiresAt) ||
-      expiresAt <= now ||
-      expiresAt > now + CONNECTION_TOKEN_TTL_SECONDS
-    ) {
-      throw new Error(CONNECTION_TOKEN_SIGNING_ERROR);
-    }
-
-    return jwt.sign(payload, this.tokenSecret, { algorithm: 'HS256' });
-  }
-
-  private logConnectionTokenFailure(reason: string): void {
-    this.logger.error(
-      {
-        event: 'centrifugo_connection_token_mint_failed',
-        reason,
-      },
-      'Centrifugo connection token mint failed',
-    );
+    return Promise.resolve(jwt.sign(payload, this.tokenSecret));
   }
 
   async publish(
@@ -305,7 +257,7 @@ export class CentrifugoService implements OnModuleInit {
   }
 
   /**
-   * Publishes a voice-room chat message.
+   * Publishes a voice‑room chat message.
    */
   async publishTranslated(
     channel: string,
