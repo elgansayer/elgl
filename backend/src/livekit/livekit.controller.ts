@@ -4,8 +4,10 @@ import {
   Body,
   UseGuards,
   UseInterceptors,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { LivekitService } from './livekit.service';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
@@ -87,10 +89,13 @@ export class LivekitController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async getToken(@Body() dto: LivekitTokenDto) {
-    return this.livekitService.generateToken(
-      dto.participant_identity,
-      dto.room_name,
-    );
+  async getToken(
+    @CurrentUser() user: User | null,
+    @Body() dto: LivekitTokenDto,
+  ) {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return this.livekitService.generateToken(user.id, dto.room_name);
   }
 }
