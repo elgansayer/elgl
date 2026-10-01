@@ -111,6 +111,7 @@ _REVIEW_STATE_ORDER = {
     JobState.CI_PENDING: 6,
     JobState.PR_DRAFT: 7,
 }
+_ACTIONABLE_CI_PENDING_ORDER = _REVIEW_STATE_ORDER[JobState.REVIEWING] + 1
 
 
 def admission_slots_while_respecting_wip(
@@ -132,9 +133,15 @@ def admission_slots_while_respecting_wip(
 def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
     """Prioritise merge proximity while rotating equally eligible PRs fairly."""
 
+    state_order = _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER))
+    if job.state is JobState.CI_PENDING and job.next_attempt_at is None:
+        # A first CI transition is actionable: one cheap status read can discover
+        # a changed head, a completed gate, or a merge candidate. Timed CI polls
+        # retain their lower priority so they cannot starve deterministic repair.
+        state_order = _ACTIONABLE_CI_PENDING_ORDER
     return (
         job.task.priority,
-        _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
+        state_order,
         job.updated_at,
         int(job.task.identifier),
     )
