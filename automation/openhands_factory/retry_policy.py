@@ -35,7 +35,11 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
     text = detail.lower()
     infrastructure_tokens = (
         "the cypress binary is missing",
+        "we expected the binary to be installed here",
         "getaddrinfo eai_again",
+        "no space left on device",
+        "failed with exit 137",
+        "failed with exit 143",
     )
     if any(token in text for token in infrastructure_tokens):
         return FailureKind.INFRASTRUCTURE
