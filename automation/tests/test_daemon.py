@@ -236,13 +236,29 @@ def test_select_batch_finishes_final_review_before_older_verification() -> None:
     assert [item.task.identifier for item in selected] == ["7347"]
 
 
-def test_select_batch_advances_actionable_repair_before_passive_ci_polling() -> None:
+def test_select_batch_refreshes_actionable_ci_before_repair() -> None:
     jobs = {
         "7346": pull_request_job("7346", state=JobState.CI_PENDING),
         "7347": pull_request_job("7347", state=JobState.REPAIRING),
     }
 
     selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7346"]
+
+
+def test_select_batch_advances_repair_before_timed_ci_polling() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    ci_poll = replace(
+        pull_request_job("7346", state=JobState.CI_PENDING),
+        next_attempt_at=now - timedelta(seconds=1),
+    )
+    jobs = {
+        "7346": ci_poll,
+        "7347": pull_request_job("7347", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch(jobs, 1, now=now)
 
     assert [item.task.identifier for item in selected] == ["7347"]
 
