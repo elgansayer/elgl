@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   Req,
+  UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -48,7 +49,7 @@ import {
 } from '../common/cache.interceptor';
 
 interface AuthRequest extends Request {
-  user: { sub: string };
+  user: { id?: string; sub?: string };
 }
 
 @ApiTags('Admin - Users')
@@ -257,7 +258,10 @@ export class AdminController {
     @Param('id') id: string,
     @Req() req: AuthRequest,
   ): Promise<{ message: string }> {
-    const adminUserId = req.user.sub;
+    const adminUserId = req.user.id ?? req.user.sub;
+    if (!adminUserId) {
+      throw new UnauthorizedException();
+    }
     await this.adminService.banUser(id, adminUserId);
     return { message: 'User banned' };
   }
@@ -295,7 +299,10 @@ export class AdminController {
     @Param('id') id: string,
     @Req() req: AuthRequest,
   ): Promise<{ message: string }> {
-    const adminUserId = req.user.sub;
+    const adminUserId = req.user.id ?? req.user.sub;
+    if (!adminUserId) {
+      throw new UnauthorizedException();
+    }
     await this.adminService.warnUser(id, adminUserId);
     return { message: 'User warned' };
   }

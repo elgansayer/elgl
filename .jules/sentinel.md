@@ -111,3 +111,7 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-10-01 - Prevent Authorization Bypass (Missing ID/Sub Check)
+**Vulnerability:** The admin `banUser` and `warnUser` endpoints implicitly trusted `req.user.sub` to determine the admin actor ID, without checking for undefined or falling back to `id`.
+**Learning:** In authentication contexts where the user ID might reside in either `id` or `sub`, failing to normalize and explicitly check for truthiness can result in actions being attributed to `undefined` or null, breaking audit trails and bypassing expected actor checks.
+**Prevention:** Always extract identity using `id ?? sub`, explicitly check for truthiness, and throw an `UnauthorizedException` if missing before performing sensitive operations.
