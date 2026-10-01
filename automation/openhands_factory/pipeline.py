@@ -1654,6 +1654,7 @@ class FactoryPipeline:
             predecessor_pull_request=job.predecessor_pull_request,
         )
         self._copy_claim_metadata(job, bound)
+        self.router.observe_review_head(job)
         self.github.publish_review_pending(
             job.head_sha,
             detail="Factory pull request verification in progress",
@@ -1761,6 +1762,7 @@ class FactoryPipeline:
 
         workflow.prepare_pull_request_worktree(worktree, job.branch)
         job.head_sha = self._workflow(worktree).head_sha()
+        self.router.observe_review_head(job)
         self.github.publish_review_pending(
             job.head_sha,
             detail="Factory pull request refresh in progress",

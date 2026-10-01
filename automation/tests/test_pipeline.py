@@ -749,6 +749,12 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
         github=github,  # type: ignore[arg-type]
         conversations=Conversations(),  # type: ignore[arg-type]
     )
+    observed_heads: list[tuple[int | None, str | None]] = []
+    monkeypatch.setattr(
+        pipeline.router,
+        "observe_review_head",
+        lambda job, now=None: observed_heads.append((job.pull_request, job.head_sha)),
+    )
     pipeline.refresh()
 
     states = []
@@ -768,6 +774,7 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
     # try to close_issue() a pull request number.
     assert github.closed == []
     assert github.reviewed == ["abcdef1234567"]
+    assert observed_heads == [(77, "abcdef1234567")]
 
 
 def test_behind_pull_request_updates_base_before_local_verification(
