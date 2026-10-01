@@ -1,7 +1,5 @@
 # Product Information Architecture & Route Mapping
 
-Status: source inventory and proposed information architecture. The proposed grouping is not the current route configuration or an approved migration. Preserve legacy deep links and their query parameters. Runtime route files under `frontend/src/app/routes` remain authoritative; root currently redirects to `/ai-conversation`.
-
 ## Executive Summary
 This document maps every user-facing route and major capability in the platform. It identifies overlapping, duplicate, redundant, or contradictory features and navigation paths, and proposes a consolidated product information architecture (IA) where every major capability has a clear purpose, entry point, and relationship to the rest of the application.
 
@@ -123,7 +121,7 @@ These are the primary entry points accessible from a bottom navigation bar or si
 ### Tier 2: Sub-Hierarchies (Logical Groupings)
 
 **A. Settings Hub (`/settings/*`)**
-- Preserve existing compatibility redirects for bookmarks, notifications and inbound links. New navigation may use canonical destinations; route removal requires a separate migration backed by usage evidence and redirect/query-parameter tests.
+*Remove all root-level aliases. Users must access these via `/settings` or deep links that resolve explicitly to the full path.*
 * `/settings/account` (Account & Password)
 * `/settings/privacy` (Blocks, Message Filters, GDPR, Incognito)
 * `/settings/notifications`
@@ -150,7 +148,7 @@ These are the primary entry points accessible from a bottom navigation bar or si
 
 ### 4. Required Action Items for Refactoring
 
-- Preserve existing compatibility redirects for bookmarks, notifications and inbound links. New navigation may use canonical destinations; route removal requires a separate migration backed by usage evidence and redirect/query-parameter tests.
+1. **Deprecate Root Aliases:** Remove redirects like `/language`, `/gdpr`, `/version`, `/vip`, `/blocks`, `/chat-settings` from the route configuration to enforce a strict hierarchical URL structure.
 2. **Consolidate Gamification:** Move `/leaderboard`, `/stats`, `/milestones`, and `/study-streak` under a unified "Progress" or "Me" section rather than scattered root paths.
 3. **Unify Community/Groups:** Resolve the overlapping concepts of "Groups", "Communities", "Language Parties", and "Language Islands" into a single `/discover` or `/community` module.
 4. **Standardize Branding:** Choose either "VIP" or "Subscription" as the primary user-facing term and align all routes and UI copy accordingly.
