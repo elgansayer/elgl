@@ -79,6 +79,7 @@ CODE_MUTATING_AGENT_PHASES = {
 VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
     "the cypress binary is missing",
     "we expected the binary to be installed here",
+    "getaddrinfo eai_again",
     "no space left on device",
     "failed with exit 137",
     "failed with exit 143",

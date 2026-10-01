@@ -2268,9 +2268,17 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert verified.quality_repairs == 0
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "frontend-e2e failed with exit 1: The Cypress binary is missing",
+        "frontend-build failed with exit 1: getaddrinfo EAI_AGAIN fonts.googleapis.com",
+    ],
+)
 def test_verification_infrastructure_failure_retries_without_agent_repair(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    failure: str,
 ) -> None:
     factory_config = config(tmp_path)
     worktree = factory_config.worktree_dir / "issue-42"
@@ -2289,9 +2297,7 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
     monkeypatch.setattr(
         "openhands_factory.pipeline.run_verification",
-        lambda commands: (_ for _ in ()).throw(
-            VerificationFailed("frontend-e2e failed with exit 1: The Cypress binary is missing")
-        ),
+        lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
     )
 
     failed = pipeline.run_job("42")
