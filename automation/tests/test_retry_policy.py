@@ -24,6 +24,9 @@ def test_classifies_failure_kinds_from_outer_openhands_diagnostics() -> None:
     assert classify_failure("HTTP 429 rate limit exceeded") is FailureKind.RATE_LIMIT
     assert classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
     assert classify_failure("Quality gate validation failed") is FailureKind.VALIDATION
+    assert (
+        classify_failure("getaddrinfo EAI_AGAIN fonts.googleapis.com") is FailureKind.INFRASTRUCTURE
+    )
 
 
 def test_agent_failure_context_is_persisted_in_stable_fingerprint() -> None:
@@ -137,6 +140,32 @@ def test_job_store_persists_class_budget_and_jittered_next_attempt(tmp_path: Pat
     assert restored.last_failure_kind == FailureKind.TASK_TIMEOUT.value
     assert restored.last_failure_fingerprint is not None
     assert restored.repeated_failure_count == 1
+    assert restored.next_attempt_at is not None
+    delay = restored.next_attempt_at - restored.updated_at
+    assert timedelta(minutes=3, seconds=59) <= delay <= timedelta(minutes=6, seconds=1)
+
+
+def test_new_infrastructure_failure_does_not_inherit_transient_retry_debt(
+    tmp_path: Path,
+) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    job = _job()
+    job.state = JobState.VERIFYING
+    job.failure_counts = {FailureKind.TRANSIENT.value: 23}
+    store.save({job.task.identifier: job})
+
+    failed = store.load()[job.task.identifier]
+    failed.attempts = 24
+    failed.last_error = "frontend-build failed: getaddrinfo EAI_AGAIN fonts.googleapis.com"
+    failed.updated_at = datetime.now(UTC)
+    store.save_job(failed)
+
+    restored = store.load()[job.task.identifier]
+    assert restored.failure_counts == {
+        FailureKind.TRANSIENT.value: 23,
+        FailureKind.INFRASTRUCTURE.value: 1,
+    }
+    assert restored.last_failure_kind == FailureKind.INFRASTRUCTURE.value
     assert restored.next_attempt_at is not None
     delay = restored.next_attempt_at - restored.updated_at
     assert timedelta(minutes=3, seconds=59) <= delay <= timedelta(minutes=6, seconds=1)

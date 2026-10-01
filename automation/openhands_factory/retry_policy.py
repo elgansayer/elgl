@@ -33,6 +33,13 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
         return _AGENT_KIND_MAP[agent_kind]
 
     text = detail.lower()
+    infrastructure_tokens = (
+        "the cypress binary is missing",
+        "getaddrinfo eai_again",
+    )
+    if any(token in text for token in infrastructure_tokens):
+        return FailureKind.INFRASTRUCTURE
+
     authentication_tokens = (
         "unauthorized",
         "authentication",
