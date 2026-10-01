@@ -227,6 +227,17 @@ describe('AiConversationService', () => {
       );
     });
 
+    it('should include struggling knowledge items in the default system prompt', async () => {
+      llmProxy.chatCompletion.mockResolvedValue('Interesting!');
+
+      await service.generateReply('user-123', 'Tell me about yourself');
+
+      const messages = llmProxy.chatCompletion.mock.calls[0][0];
+      expect(messages[0].role).toBe('system');
+      expect(messages[0].content).toContain('gato');
+      expect(messages[0].content).toContain('The user has been struggling with the following concepts or vocabulary');
+    });
+
     it('should fallback to local replies when LLM fails', async () => {
       llmProxy.chatCompletion.mockRejectedValue(new Error('API down'));
 
