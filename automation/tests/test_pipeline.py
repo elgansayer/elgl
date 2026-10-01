@@ -863,6 +863,56 @@ def test_behind_pull_request_updates_base_before_local_verification(
     assert github.updated_branches == [(77, "old-head")]
 
 
+def test_pull_request_waits_for_protected_ci_before_local_verification(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.tasks = []
+    github.pull_requests = [
+        Task(
+            "77",
+            "Wait for protected CI",
+            "Body",
+            "github-pull-request",
+            10,
+            pr_branch="fix/wait-for-ci",
+        )
+    ]
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "pending-head",
+            False,
+            True,
+            ci_required_pending=True,
+        )
+    ]
+
+    def prepare_pr(workflow: GitWorkflow, worktree: Path, branch: str) -> None:
+        worktree.mkdir(parents=True)
+
+    monkeypatch.setattr(GitWorkflow, "prepare_pull_request_worktree", prepare_pr)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "pending-head")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: pytest.fail("local verification must wait for protected CI"),
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    pipeline.refresh()
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.CI_PENDING
+    assert result.next_attempt_at is not None
+    assert result.latest_verified_sha is None
+
+
 def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
