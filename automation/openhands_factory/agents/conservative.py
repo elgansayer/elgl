@@ -266,6 +266,23 @@ class ConservativeAgentRouter(AgentRouter):
         pull_request = job.pull_request if job.pull_request is not None else job.task.identifier
         return f"pr-{pull_request}"
 
+    def observe_review_head(self, job: Job, now: datetime | None = None) -> None:
+        """Start the quiet-period clock when an external exact head is first known."""
+
+        gate = self._review_head_stability
+        if (
+            gate is None
+            or not gate.enabled
+            or job.task.source != "github-pull-request"
+            or not job.head_sha
+        ):
+            return
+        gate.defer_seconds(
+            self._review_identity(job),
+            job.head_sha,
+            now or datetime.now(UTC),
+        )
+
     def _ensure_review_head_stable(self, job: Job, now: datetime) -> None:
         """Avoid spending independent-review allowance on a moving external PR head."""
 
