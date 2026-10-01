@@ -66,6 +66,7 @@ class PullRequestStatus:
     failed_checks: frozenset[str] = frozenset()
     merge_state_status: str = "CLEAN"
     workflow_run_ids: frozenset[str] = frozenset()
+    ci_required_passed: bool = False
 
 
 @dataclass(frozen=True)
@@ -1161,4 +1162,5 @@ class GitHubClient:
             failed_checks=failed_checks,
             merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN").upper(),
             workflow_run_ids=PullRequestRecord.from_payload(item).workflow_run_ids,
+            ci_required_passed="CI / required" in successful_checks,
         )

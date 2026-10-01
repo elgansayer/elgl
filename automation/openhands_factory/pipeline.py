@@ -1678,9 +1678,10 @@ class FactoryPipeline:
         ):
             job.state = JobState.REPAIRING
             return
-        verified_paths = self._verify_or_schedule_quality_repair(
+        verified_paths = self._verify_pull_request_for_review(
             job,
             self._workflow(worktree),
+            status,
         )
         if verified_paths is None:
             return
@@ -1783,9 +1784,10 @@ class FactoryPipeline:
         ):
             job.state = JobState.REPAIRING
             return
-        verified_paths = self._verify_or_schedule_quality_repair(
+        verified_paths = self._verify_pull_request_for_review(
             job,
             self._workflow(worktree),
+            status,
         )
         if verified_paths is None:
             return
@@ -1948,6 +1950,24 @@ class FactoryPipeline:
             job.state = JobState.QUALITY_REPAIRING
             return None
         return changed
+
+    def _verify_pull_request_for_review(
+        self,
+        job: Job,
+        workflow: GitWorkflow,
+        status: PullRequestStatus,
+    ) -> set[Path] | None:
+        """Reuse the protected exact-head CI result instead of running it twice."""
+        if status.head_sha == job.head_sha and status.ci_required_passed:
+            changed = workflow.changed_paths()
+            if not changed:
+                raise FactoryError("No changed paths were found")
+            LOGGER.info(
+                "Reused exact-head CI / required success for pull request %s",
+                job.pull_request,
+            )
+            return changed
+        return self._verify_or_schedule_quality_repair(job, workflow)
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
         # README.md deliberately excluded: it embeds the full feature-spec
