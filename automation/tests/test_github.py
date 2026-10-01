@@ -928,6 +928,7 @@ def test_pull_request_status_requires_independent_review_success(tmp_path: Path)
     assert not status.checks_passed
     assert status.checks_pending
     assert status.failed_checks == frozenset({"factory/independent-review"})
+    assert status.ci_required_passed
 
 
 @pytest.mark.parametrize("conclusion", ["SKIPPED", "NEUTRAL"])
