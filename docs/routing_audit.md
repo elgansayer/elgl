@@ -5,14 +5,14 @@ To map every user-facing route and major capability, identify overlapping, dupli
 
 ## 2. Identified Route Domains
 The codebase utilizes feature-based routing modules:
-- `auth.routes.ts`: Authentication, user onboarding, legal, help center.
-- `media.routes.ts`: Video calls, audio rooms, host dashboard.
-- `learning.routes.ts`: Vocabulary, flashcards, diagnostic quiz, study streak.
-- `commerce.routes.ts`: Subscriptions, escrow, coin economy, shop.
-- `social.routes.ts`: Moments, profile, discovery, leaderboard, visitors.
-- `settings.routes.ts`: Privacy, data storage, notifications, account.
-- `chat.routes.ts`: Group discovery, messaging.
-- `admin.routes.ts`: Moderation, user management.
+- `auth.routes.ts`: `/onboarding`, `/forgot-password`, `/reset-password`, `/change-password`, `/lock`, `/terms`, `/privacy`, `/help`, `/support`, `/help-about`.
+- `media.routes.ts`: `/audio-rooms`, `/classrooms`, `/video-call`, `/call-logs`, `/active-call`, `/voiceroom-notes/:roomId`, `/preview/room/:id`, `/host-dashboard`.
+- `learning.routes.ts`: `/vocabulary`, `/decks`, `/review`, `/suggest-flashcards`, `/suggest-flashcards/:message`, `/diagnostic-quiz`, `/proficiency`, `/lessons`, `/quests`, `/read`, `/resource-library`, `/pronunciation-feedback`, `/study-streak`, `/study-buddy`, `/ai-conversation`.
+- `commerce.routes.ts`: `/vip` (redirects to `/subscription`), `/subscription`, `/subscription/success`, `/subscription/cancel`, `/my-subscription` (redirects to `/settings/subscription`), `/settings/subscription`, `/coins/success`, `/coins/cancel`, `/coin-economy`, `/shop`, `/sticker-store`, `/cart`, `/escrow`, `/escrow/:id`.
+- `social.routes.ts`: `/discovery`, `/moments`, `/profile`, `/profile/:userId`, `/profile/:userId/followers`, `/profile/:userId/following`, `/visitors` (redirects to `/profile/visitors`), `/profile/visitors`, `/favourites`, `/leaderboard`, `/hobby-tags`, `/stats`, `/milestones`, `/notifications`, `/notification-preferences` (redirects to `/settings/notification`), `/events`, `/events/calendar`, `/language-parties` (redirects to `/community/language-parties`), `/language-islands` (redirects to `/community/language-islands`), `/business-profile`.
+- `settings.routes.ts`: `/settings/chat`, `/settings`, `/settings/account`, `/settings/notification`, `/settings/notification-customization` (redirects to `/settings/notification`), `/settings/message-filters`, `/settings/appearance`, `/language` (redirects to `/settings/language`), `/settings/language`, `/settings/privacy`, `/blocks` (redirects to `/settings/blocks`), `/settings/blocks`, `/settings/backup-restore`, `/settings/linked-accounts`, `/data-storage` (redirects to `/settings/data-storage`), `/settings/data-storage`, `/device-transfer` (redirects to `/settings/device-transfer`), `/settings/device-transfer`, `/gdpr` (redirects to `/settings/gdpr`), `/settings/gdpr`, `/account/deletion` (redirects to `/settings/account/deletion`), `/settings/account/deletion`, `/version` (redirects to `/settings/version`), `/settings/version`.
+- `chat.routes.ts`: `/chat`, `/chat/:id`, `/chat-settings` (redirects to `/settings/chat`), `/groups`, `/groups/create` (redirects to `/community/groups/create`), `/communities` (redirects to `/community`), `/join`, `/join/:code`, `/message-filters` (redirects to `/settings/message-filters`), `/blocks` (redirects to `/settings/blocks`).
+- `admin.routes.ts`: `/admin`, `/admin/lessons`, `/admin/moderation`, `/admin/blocks`, `/admin/users`, `/developer`.
 
 ## 3. Findings: Duplications & Redundancies
 The audit revealed that `frontend/src/app/app.routes.ts` contained numerous duplicated route definitions that were already accurately managed in the domain-specific modules. This redundant architectural setup led to disconnected and hard-to-maintain navigation paths.
