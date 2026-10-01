@@ -95,13 +95,19 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
     ) -> list[Task]:
         """Refresh the large issue backlog only when admission can consume it.
 
-        Pull requests still refresh on every normal control-plane cycle. While the
-        new-issue admission window is full, durable cached issue tasks are sufficient
-        because the scheduler cannot admit another discovered issue anyway. The first
-        refresh with an available admission performs a full GitHub issue scan before
+        Pull requests refresh before issues on every normal control-plane cycle. While
+        pull-request capacity pauses new issue dispatch, or the new-issue admission
+        window is full, durable cached issue tasks are sufficient because the scheduler
+        cannot admit another discovered issue anyway. The first refresh with both PR
+        capacity and issue admission available performs a full GitHub issue scan before
         scheduling, so stale or closed backlog entries cannot consume the newly-opened
-        slot. Disabling issue admission limits preserves the original full-scan behavior.
+        slot. Disabling issue admission limits preserves the original full-scan behaviour
+        whenever pull-request capacity is available.
         """
+
+        pull_request_capacity = getattr(self.pipeline, "pull_request_capacity", None)
+        if bool(getattr(pull_request_capacity, "pause_new_dispatch", False)):
+            return [task for task in self.pipeline.tasks.cached() if task.source == "github-issue"]
 
         available = self.issue_admission.available_slots(now or datetime.now(UTC))
         if available is None or available > 0:
