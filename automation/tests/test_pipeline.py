@@ -728,10 +728,50 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
         )
     ]
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(77, "MERGED", False, "UNKNOWN", "", "abcdef1234567", True, False),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            77,
+            "MERGED",
+            False,
+            "UNKNOWN",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
     ]
 
     def prepare_pr(workflow: GitWorkflow, worktree: Path, branch: str) -> None:
@@ -743,7 +783,10 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "abcdef1234567")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
-    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: pytest.fail("protected exact-head CI must not be repeated locally"),
+    )
     pipeline = FactoryPipeline(
         factory_config,
         github=github,  # type: ignore[arg-type]
@@ -775,6 +818,7 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
     assert github.closed == []
     assert github.reviewed == ["abcdef1234567"]
     assert observed_heads == [(77, "abcdef1234567")]
+    assert job.latest_verified_sha == "abcdef1234567"
 
 
 def test_behind_pull_request_updates_base_before_local_verification(
