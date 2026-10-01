@@ -1,28 +1,56 @@
 # Moments feed filters
 
-`GET /moments/feed` is authenticated by `SupabaseAuthGuard` and accepts the existing `filter` query parameter.
+The authenticated `GET /moments/feed` route exposes the existing Moments feed through four stable filter values. The product filters covered by issue #1348 are `All`, `Classmates`, and `Following`; `For You` remains supported for backward compatibility.
 
-Supported filters are:
+## Filter contract
 
-- `All`: the normal authenticated Moments feed.
-- `Classmates`: Moments for the viewer's study language. `lang` may explicitly select the language; when omitted, the viewer's primary `target_languages` entry is used. If no target language is available, the endpoint returns an empty list rather than assuming English.
-- `Following`: Moments from followed users. The viewer's own Moments are excluded from this filtered response.
-- `For You`: the existing recommendation filter retained for backward compatibility.
+| Filter | Behavior |
+| --- | --- |
+| `All` | Returns the normal authenticated Moments feed after common safety and row-shape checks. |
+| `Classmates` | Returns only regular Moments whose `target_language` matches the requested language, or the signed-in learner's primary target language when `lang` is omitted. If the learner has no target language, the result is an honest empty list. |
+| `Following` | Returns only regular Moments authored by users the learner currently follows. The current follow graph is re-read before responding so stale Redis timeline entries from users who were later unfollowed cannot leak into the feed. The learner's own Moments are excluded. |
+| `For You` | Preserves the existing recommendation-oriented feed behavior and passes through the same common safety boundary. |
 
-Language values are trimmed and normalised to lowercase before they reach `MomentsService`. Unknown filters are rejected with HTTP 400 rather than silently widening the response to `All`.
+Language values are trimmed and normalized to lowercase. Unsupported filter values return `400 Bad Request` rather than silently broadening to `All`.
 
-The controller also removes legacy generated `mock-moment-*` fallback records from production feed responses. A genuinely empty feed is therefore represented as `[]`.
+## Common response boundary
+
+Responses are bounded to 50 unique Moments. The final policy layer removes:
+
+- legacy synthetic `mock-moment-*` rows;
+- ephemeral Story rows;
+- question/language-question rows;
+- duplicate Moment IDs.
+
+The existing `MomentsService` remains responsible for datastore retrieval, bidirectional block filtering, author hydration, likes, and timeline-cache use. `MomentsFeedService` is the final policy boundary before the controller returns a feed.
 
 ## Security and privacy
 
-The route remains authenticated. Blocking and targeted-visibility rules continue to be owned by `MomentsService`; the controller does not bypass those checks. The Classmates default comes only from the authenticated viewer's own profile and no profile or language data is logged by this filter layer.
+All feed requests remain protected by `SupabaseAuthGuard`. `Following` membership is verified server-side against `user_follows`; browser input cannot supply an arbitrary author allow-list. If that authoritative membership lookup fails, the backend returns a stable `503` instead of guessing that stale timeline rows are still allowed.
+
+Diagnostics intentionally avoid user IDs, Moment IDs, profile text, tokens, and raw provider/database errors. No new personal data is stored and no schema migration is required.
+
+## Failure behavior
+
+- Missing authentication is handled by the existing authentication guard.
+- Invalid filters return `400`.
+- A Classmates request without any resolvable target language returns `[]`.
+- Following membership-store failure returns `503` with a generic message.
+- Empty feeds return `[]`; the API never exposes legacy generated mock Moments to hide an empty result.
 
 ## Verification
 
-The focused controller regression suite covers default `All`, explicit and profile-derived Classmates language selection, missing-language empty state, Following self-exclusion, mock-record suppression, and invalid-filter rejection.
+Focused backend coverage:
 
-Run the normal backend validation, including unit tests, lint, build, and E2E checks, before merge.
+```bash
+cd backend
+npm test -- src/moments/moments.feed-filters.spec.ts src/moments/moments-feed.service.spec.ts
+```
 
-## Rollback
+The normal repository CI remains the merge gate for formatting, linting, build, backend unit/E2E tests, database checks, and dependency review.
 
-This change has no schema, persistence, or migration impact. Roll back by reverting the controller and its regression tests. Existing clients using `GET /moments/feed?filter=...` retain the same route shape.
+## Rollout and rollback
+
+This is an additive backend policy layer with no schema or response-shape migration. Deploy the backend normally. Mixed frontend versions remain compatible because the route, query parameters, and array response are unchanged.
+
+Rollback is code-only: revert the controller/service/module changes. No database cleanup is necessary. If rollback is required, do not reintroduce fail-open Following behavior for unverifiable memberships; prefer returning an unavailable response until the authoritative follow graph can be read.
