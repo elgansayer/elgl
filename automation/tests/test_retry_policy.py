@@ -1,6 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import FailureKind, Job, JobState, Task
 from openhands_factory.retry_policy import (
@@ -145,8 +147,17 @@ def test_job_store_persists_class_budget_and_jittered_next_attempt(tmp_path: Pat
     assert timedelta(minutes=3, seconds=59) <= delay <= timedelta(minutes=6, seconds=1)
 
 
+@pytest.mark.parametrize(
+    "diagnostic",
+    (
+        "getaddrinfo EAI_AGAIN fonts.googleapis.com",
+        "The Cypress binary is missing",
+    ),
+    ids=("dns", "missing-cypress"),
+)
 def test_new_infrastructure_failure_does_not_inherit_transient_retry_debt(
     tmp_path: Path,
+    diagnostic: str,
 ) -> None:
     store = JobStore(tmp_path / "jobs.json")
     job = _job()
@@ -156,7 +167,7 @@ def test_new_infrastructure_failure_does_not_inherit_transient_retry_debt(
 
     failed = store.load()[job.task.identifier]
     failed.attempts = 24
-    failed.last_error = "frontend-build failed: getaddrinfo EAI_AGAIN fonts.googleapis.com"
+    failed.last_error = f"frontend verification failed: {diagnostic}"
     failed.updated_at = datetime.now(UTC)
     store.save_job(failed)
 
