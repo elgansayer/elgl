@@ -26,9 +26,16 @@ def test_classifies_failure_kinds_from_outer_openhands_diagnostics() -> None:
     assert classify_failure("HTTP 429 rate limit exceeded") is FailureKind.RATE_LIMIT
     assert classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
     assert classify_failure("Quality gate validation failed") is FailureKind.VALIDATION
-    assert (
-        classify_failure("getaddrinfo EAI_AGAIN fonts.googleapis.com") is FailureKind.INFRASTRUCTURE
+    infrastructure_failures = (
+        "getaddrinfo EAI_AGAIN fonts.googleapis.com",
+        "The Cypress binary is missing",
+        "We expected the binary to be installed here",
+        "No space left on device",
+        "frontend-build failed with exit 137",
+        "frontend-build failed with exit 143",
     )
+    for detail in infrastructure_failures:
+        assert classify_failure(detail) is FailureKind.INFRASTRUCTURE, detail
 
 
 def test_agent_failure_context_is_persisted_in_stable_fingerprint() -> None:
