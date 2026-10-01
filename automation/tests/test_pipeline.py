@@ -1296,11 +1296,16 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
+    job.last_error = (
+        "design-sync-drift failed: screen.chat implementation changed without its preview"
+    )
     agent_calls: list[Task] = []
+    prompts: list[str] = []
 
     class TrackingConversations(Conversations):
         def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
             agent_calls.append(task)
+            prompts.append(prompt)
             return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
 
     pipeline = FactoryPipeline(
@@ -1328,6 +1333,8 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
 
     assert result is not None and result.last_error is None
     assert len(agent_calls) == 1
+    assert "Previous local Factory failure for this same head" in prompts[0]
+    assert "design-sync-drift failed" in prompts[0]
     assert result.state is JobState.REVIEWING
     assert "repair CI" in committed[0]
 
@@ -2261,9 +2268,17 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert verified.quality_repairs == 0
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "frontend-e2e failed with exit 1: The Cypress binary is missing",
+        "frontend-build failed with exit 1: getaddrinfo EAI_AGAIN fonts.googleapis.com",
+    ],
+)
 def test_verification_infrastructure_failure_retries_without_agent_repair(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    failure: str,
 ) -> None:
     factory_config = config(tmp_path)
     worktree = factory_config.worktree_dir / "issue-42"
@@ -2282,9 +2297,7 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
     monkeypatch.setattr(
         "openhands_factory.pipeline.run_verification",
-        lambda commands: (_ for _ in ()).throw(
-            VerificationFailed("frontend-e2e failed with exit 1: The Cypress binary is missing")
-        ),
+        lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
     )
 
     failed = pipeline.run_job("42")

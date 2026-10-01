@@ -15,6 +15,8 @@ PRUNE_AGE=${FACTORY_CONTAINER_PRUNE_AGE:-168h}
 DOCKER_CACHE_LIMIT=${FACTORY_DOCKER_CACHE_LIMIT:-2GB}
 MINIMUM_FREE_GIB=${FACTORY_MINIMUM_FREE_DISK_GIB:-5}
 FREE_HEADROOM_GIB=${FACTORY_STORAGE_FREE_HEADROOM_GIB:-1}
+TEMP_QUARANTINE_ROOT=${FACTORY_TEMP_QUARANTINE_ROOT:-/var/tmp}
+TEMP_QUARANTINE_MAX_AGE_SECONDS=${FACTORY_TEMP_QUARANTINE_MAX_AGE_SECONDS:-86400}
 LOCK_FILE=${FACTORY_STORAGE_MAINTENANCE_LOCK:-/run/lock/hellotalk-factory-storage.lock}
 APPLY=false
 PRUNE_CONTAINERS=false
@@ -30,10 +32,12 @@ and provider-home usage without changing the host.
 With --apply, installs the bounded journal policy only when it changed, vacuums
 archived journal entries, prunes unused uv cache records, and performs the
 bounded one-time migration of a legacy verified updater into the neutral Repo
-Factory runtime when that runtime is present. Add --prune-containers to remove
-dangling Docker/Podman images older than seven days and bounded Docker/Podman
-build cache. If either container store falls below the Factory reserve plus
-headroom, the age grace is dropped for dangling images and build cache only.
+Factory runtime when that runtime is present. It also removes Factory-owned
+temporary mypy-cache quarantines after one day. Add --prune-containers to
+remove dangling Docker/Podman images older than seven days and bounded
+Docker/Podman build cache. If either container store falls below the Factory
+reserve plus headroom, the age grace is dropped for dangling images and build
+cache only.
 
 The historical --prune-docker name is retained as an alias. This command never
 removes volumes, named images, running/stopped containers, provider credentials,
@@ -218,6 +222,58 @@ prune_cypress_cache() {
   log 'WARNING: Cypress cache is present but no installed Cypress CLI can prune it'
 }
 
+prune_factory_temp_quarantines() {
+  local root candidate metadata owner modified now cutoff removed=0
+  case "$TEMP_QUARANTINE_ROOT" in
+    /tmp|/var/tmp) root=$TEMP_QUARANTINE_ROOT ;;
+    *)
+      log "WARNING: refusing unsafe temporary quarantine root: $TEMP_QUARANTINE_ROOT"
+      return 1
+      ;;
+  esac
+  if [ ! -d "$root" ] || [ -L "$root" ]; then
+    log "WARNING: temporary quarantine root is not a real directory: $root"
+    return 1
+  fi
+  case "$TEMP_QUARANTINE_MAX_AGE_SECONDS" in
+    ''|*[!0-9]*|0)
+      log 'WARNING: invalid temporary quarantine maximum age; skipping cleanup'
+      return 1
+      ;;
+  esac
+  owner=$(factory_uid) || return 0
+  now=$(date +%s) || return 1
+  cutoff=$((now - TEMP_QUARANTINE_MAX_AGE_SECONDS))
+
+  while IFS= read -r -d '' candidate; do
+    [ ! -L "$candidate" ] || continue
+    [ "${candidate%/*}" = "$root" ] || continue
+    case "${candidate##*/}" in
+      factory-mypy-cache-quarantine.?*) ;;
+      *) continue ;;
+    esac
+    metadata=$(stat -c '%u:%Y' -- "$candidate" 2>/dev/null) || continue
+    [ "${metadata%%:*}" = "$owner" ] || continue
+    modified=${metadata#*:}
+    case "$modified" in
+      ''|*[!0-9]*) continue ;;
+    esac
+    [ "$modified" -le "$cutoff" ] || continue
+    if rm -rf --one-file-system -- "$candidate"; then
+      removed=$((removed + 1))
+    else
+      log "WARNING: failed to remove stale temporary quarantine: $candidate"
+    fi
+  done < <(
+    find "$root" -xdev -mindepth 1 -maxdepth 1 -type d \
+      -name 'factory-mypy-cache-quarantine.*' -print0
+  )
+
+  if [ "$removed" -gt 0 ]; then
+    log "Removed $removed stale temporary mypy-cache quarantine(s)"
+  fi
+}
+
 bootstrap_repo_factory_updater() {
   local legacy=/opt/hellotalk-factory/hellotalk-factory-update.sh
   local neutral_root=/opt/repo-factory
@@ -398,6 +454,7 @@ if ! install_journal_policy; then
 fi
 prune_uv_cache
 prune_cypress_cache
+prune_factory_temp_quarantines
 if [ "$PRUNE_CONTAINERS" = true ]; then
   prune_docker_storage
   prune_podman_storage
