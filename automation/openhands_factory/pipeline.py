@@ -1278,8 +1278,6 @@ class FactoryPipeline:
                 job.state = JobState.MERGED
             elif self._recover_closed_pull_request(job, status):
                 return
-            elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.merge_state_status == "BEHIND":
                 self._update_pull_request_branch(job, status)
             elif (
@@ -1290,6 +1288,15 @@ class FactoryPipeline:
                 # when CI never starts for an unmergeable head. Conflict evidence
                 # must win or the same PR is polled forever without repair.
                 job.state = JobState.REPAIRING
+            elif status.ci_required_failed:
+                job.state = JobState.REPAIRING
+            elif status.ci_required_pending:
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+                return
+            elif status.failed_checks - {"factory/independent-review"}:
+                job.state = JobState.REPAIRING
+            elif job.head_sha != status.head_sha or job.latest_verified_sha != status.head_sha:
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.failed_checks:
                 # A pending status can coexist with a terminal failure. In
                 # particular, the Factory's own review context stays pending while
@@ -1678,6 +1685,10 @@ class FactoryPipeline:
         ):
             job.state = JobState.REPAIRING
             return
+        if status.ci_required_pending:
+            job.state = JobState.CI_PENDING
+            job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+            return
         verified_paths = self._verify_pull_request_for_review(
             job,
             self._workflow(worktree),
@@ -1783,6 +1794,10 @@ class FactoryPipeline:
             or status.merge_state_status in CONFLICTING_MERGE_STATES
         ):
             job.state = JobState.REPAIRING
+            return
+        if status.ci_required_pending:
+            job.state = JobState.CI_PENDING
+            job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
             return
         verified_paths = self._verify_pull_request_for_review(
             job,
