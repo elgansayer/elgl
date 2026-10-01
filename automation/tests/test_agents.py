@@ -415,7 +415,7 @@ class TestAgentProviders(unittest.TestCase):
         result = provider.run(request)
         self.assertTrue(result.success)
         self.assertEqual(result.summary, "success output")
-        self.assertIn("sonnet", runner.commands[0])
+        self.assertIn("fable", runner.commands[0])
         self.assertNotIn("--max-turns", runner.commands[0])
         self.assertIn("--safe-mode", runner.commands[0])
         self.assertEqual(runner.stdin, ["do it"])
