@@ -142,6 +142,11 @@ class AgentRouter:
         with self._review_capacity_lock:
             self._review_capacity_tasks.discard(task_id)
 
+    def observe_review_head(self, job: Job, now: datetime | None = None) -> None:
+        """Record an exact review head when the active routing policy needs it."""
+
+        del job, now
+
     def _capacity_limit(self, provider: str, job: Job) -> int:
         limit = self.provider_limits.get(provider, 1)
         with self._review_capacity_lock:
