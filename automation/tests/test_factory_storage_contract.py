@@ -43,6 +43,24 @@ def test_host_maintenance_prunes_only_obsolete_cypress_binaries_under_pressure()
     assert '"$cypress" cache clear' not in script
 
 
+def test_host_maintenance_prunes_only_stale_factory_temp_quarantines() -> None:
+    script = _read("scripts/maintain-factory-host-storage.sh")
+
+    assert "TEMP_QUARANTINE_ROOT=${FACTORY_TEMP_QUARANTINE_ROOT:-/var/tmp}" in script
+    assert "TEMP_QUARANTINE_MAX_AGE_SECONDS" in script
+    assert "prune_factory_temp_quarantines" in script
+    assert "factory-mypy-cache-quarantine.?*" in script
+    assert "${metadata%%:*}" in script
+    assert 'find "$root" -xdev -mindepth 1 -maxdepth 1 -type d' in script
+    assert "rm -rf --one-file-system" in script
+    assert (
+        "prune_uv_cache\n"
+        "prune_cypress_cache\n"
+        "prune_factory_temp_quarantines\n"
+        'if [ "$PRUNE_CONTAINERS" = true ]' in script
+    )
+
+
 def test_host_report_covers_every_relocated_provider_directory() -> None:
     script = _read("scripts/maintain-factory-host-storage.sh")
 

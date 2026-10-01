@@ -79,6 +79,7 @@ CODE_MUTATING_AGENT_PHASES = {
 VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
     "the cypress binary is missing",
     "we expected the binary to be installed here",
+    "getaddrinfo eai_again",
     "no space left on device",
     "failed with exit 137",
     "failed with exit 143",
@@ -1361,6 +1362,10 @@ class FactoryPipeline:
                 f"Mergeability: {status.mergeable}\n"
                 f"Merge state: {status.merge_state_status or 'not reported'}"
             )
+            if job.last_error:
+                repair_context += (
+                    f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
+                )
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM
