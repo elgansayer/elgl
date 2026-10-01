@@ -55,15 +55,28 @@ describe('AudioIntroController', () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
+      const req = { user: { id: 'user-1' } };
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const result = await controller.updateAudioIntro('user-1', dto);
+      const result = await controller.updateAudioIntro(req, 'user-1', dto);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
         'user-1',
         dto.audio_url,
       );
       expect(result).toBeUndefined();
+    });
+
+    it('should throw ForbiddenException if user id does not match requested user id', async () => {
+      const dto: UpdateAudioIntroDto = {
+        audio_url: 'https://example.com/audio.mp3',
+      };
+      const req = { user: { id: 'user-2' } };
+
+      await expect(
+        controller.updateAudioIntro(req, 'user-1', dto),
+      ).rejects.toThrow('You can only update your own audio intro');
+      expect(mockService.updateAudioIntro).not.toHaveBeenCalled();
     });
   });
 
