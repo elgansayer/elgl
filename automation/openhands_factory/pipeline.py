@@ -1361,6 +1361,10 @@ class FactoryPipeline:
                 f"Mergeability: {status.mergeable}\n"
                 f"Merge state: {status.merge_state_status or 'not reported'}"
             )
+            if job.last_error:
+                repair_context += (
+                    f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
+                )
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM

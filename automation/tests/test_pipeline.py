@@ -1296,11 +1296,16 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
+    job.last_error = (
+        "design-sync-drift failed: screen.chat implementation changed without its preview"
+    )
     agent_calls: list[Task] = []
+    prompts: list[str] = []
 
     class TrackingConversations(Conversations):
         def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
             agent_calls.append(task)
+            prompts.append(prompt)
             return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
 
     pipeline = FactoryPipeline(
@@ -1328,6 +1333,8 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
 
     assert result is not None and result.last_error is None
     assert len(agent_calls) == 1
+    assert "Previous local Factory failure for this same head" in prompts[0]
+    assert "design-sync-drift failed" in prompts[0]
     assert result.state is JobState.REVIEWING
     assert "repair CI" in committed[0]
 
