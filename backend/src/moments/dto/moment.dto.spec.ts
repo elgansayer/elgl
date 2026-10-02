@@ -116,7 +116,9 @@ describe('CreateMomentDto', () => {
     const dto = new CreateMomentDto();
     dto.target_language = 'en';
     dto.post_type = 'poll' as unknown as
-      'moment' | 'question' | 'language_question';
+      | 'moment'
+      | 'question'
+      | 'language_question';
 
     const errors = await validate(dto);
 

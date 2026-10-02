@@ -32,7 +32,8 @@ export class ReadingEngineService {
     private readonly cacheService: ReadingEngineCacheService,
     @Optional()
     private readonly crashReportService:
-      ReadingEngineCrashReportService | undefined,
+      | ReadingEngineCrashReportService
+      | undefined,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
