@@ -168,3 +168,7 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+
+## 2026-08-25 - [Optimize Chunked Database Inserts via Bounded Promise.allSettled]
+**Learning:** In the backend `chat-backup.service.ts`, importing large backups by splitting them into chunks and iterating sequentially with `await` introduces compounding N+1 network latency. Sequential I/O inside a loop degrades performance on large batch jobs. However, blindly wrapping all requests in an unbounded `Promise.all` can overwhelm database connection pools.
+**Action:** When inserting large sets of data in chunks, push the chunk insertion promises into an array and execute them using a bounded concurrent approach (e.g., batching into chunks of 10) with `Promise.allSettled` instead of sequentially awaiting each one in a `for` loop. Throw the reason on rejection to maintain error handling logic. Wrap Supabase queries in `Promise.resolve` before attaching `.then` or `.catch` to avoid TS2339 build errors.
