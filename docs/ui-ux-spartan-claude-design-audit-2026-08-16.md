@@ -58,13 +58,7 @@ The numbered Spartan programme still contains per-surface audit, conversion, Rel
 
 A programme with active conversion tickets is, by definition, not complete.
 
-### 2. Contradictory design authority
-
-Root `AGENTS.md` still contains a legacy design mandate describing strict `#121212` dark mode and vibrant neon styling. That conflicts with the newer Relay design contract, where light and dark are both first-class and semantic tokens own product colour roles.
-
-Issue #6997 already captures this and should be treated as P0 because autonomous agents cannot reliably follow contradictory mandatory instructions.
-
-### 3. Primitive consolidation remains incomplete
+### 2. Primitive consolidation remains incomplete
 
 `DESIGN.md` and the redesign audit describe structural issues including historical button duplication, wrapper/attribute-forwarding gaps, bespoke presentation primitives, and the need to move suitable interaction mechanics to Spartan-backed primitives.
 
@@ -130,7 +124,6 @@ This allows true two-way iteration while keeping production changes auditable.
 
 ### P0
 
-- Resolve #6997 so autonomous agents see one visual authority.
 - Land the bidirectional Claude Design sync contract (#7065).
 - Add stable design-sync manifest/provenance IDs (#7067).
 - Add design/code drift CI (#7068).
