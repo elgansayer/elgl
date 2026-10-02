@@ -75,20 +75,41 @@ export class ChatBackupService {
     const chunkSize = 500;
     let totalInserted = 0;
 
+    // ⚡ Bolt Optimization: Replaced sequential await loop with bounded concurrent chunks.
+    // Process up to 10 insert requests concurrently to drastically reduce backup import latency
+    // without exhausting database connection pools or hitting rate limits.
+    const chunks: typeof rows[] = [];
     for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize);
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .insert(chunk)
-        .select('id');
+      chunks.push(rows.slice(i, i + chunkSize));
+    }
 
-      if (error) {
-        this.logger.error(
-          `Import failed for chunk starting at index ${i}: ${error.message}`,
-        );
-        throw new Error(error.message);
-      }
-      totalInserted += data?.length ?? 0;
+    const CONCURRENCY_LIMIT = 10;
+    for (let i = 0; i < chunks.length; i += CONCURRENCY_LIMIT) {
+      const batch = chunks.slice(i, i + CONCURRENCY_LIMIT);
+      const results = await Promise.allSettled(
+        batch.map(async (chunk, index) => {
+          const { data, error } = await Promise.resolve(
+            supabase.from('chat_messages').insert(chunk).select('id'),
+          );
+
+          if (error) {
+            const actualIndex = (i + index) * chunkSize;
+            this.logger.error(
+              `Import failed for chunk starting at index ${actualIndex}: ${error.message}`,
+            );
+            throw new Error(error.message);
+          }
+          return data?.length ?? 0;
+        }),
+      );
+
+      results.forEach((result) => {
+        if (result.status === 'rejected') {
+          throw new Error(result.reason.message);
+        } else {
+          totalInserted += result.value;
+        }
+      });
     }
 
     return totalInserted;
