@@ -168,3 +168,8 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+
+## 2024-10-03 - [Optimize Sequential Cache Invalidations via Promise.all]
+
+**Learning:** In the backend `admin.service.ts`, sequential calls to `await this.invalidate...Caches()` were being made at the end of mutation methods (e.g., `setVipStatus`, `banUser`, `warnUser`). These operations independently delete keys from Redis, and executing them sequentially introduces unnecessary additive network latency.
+**Action:** When making multiple independent cache invalidation calls or other independent network operations (e.g., `invalidateUserListCaches()`), group the sequential `await` calls into a single `Promise.all` batch fetch to mitigate additive network latency.
