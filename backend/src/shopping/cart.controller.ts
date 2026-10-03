@@ -1,7 +1,15 @@
-import { Body, Controller, Get, Post, UseGuards, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { User } from '@supabase/supabase-js';
 import { CartService } from './cart.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('cart')
 @UseGuards(SupabaseAuthGuard)
@@ -9,32 +17,36 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  getCart(@Req() req: Request) {
-    const userId = (req as any).user?.sub ?? (req as any).user?.id ?? 'unknown';
-    return this.cartService.getCart(userId);
+  getCart(@CurrentUser() user: User | null) {
+    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    return this.cartService.getCart(user.id);
   }
 
   @Post('add')
   addItem(
-    @Req() req: Request,
+    @CurrentUser() user: User | null,
     @Body() body: { itemId: string; quantity?: number },
   ) {
-    const userId = (req as any).user?.sub ?? (req as any).user?.id ?? 'unknown';
-    return this.cartService.addItem(userId, body.itemId, body.quantity ?? 1);
+    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    return this.cartService.addItem(user.id, body.itemId, body.quantity ?? 1);
   }
 
   @Post('remove')
   removeItem(
-    @Req() req: Request,
+    @CurrentUser() user: User | null,
     @Body() body: { itemId: string; quantity?: number },
   ) {
-    const userId = (req as any).user?.sub ?? (req as any).user?.id ?? 'unknown';
-    return this.cartService.removeItem(userId, body.itemId, body.quantity ?? 1);
+    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    return this.cartService.removeItem(
+      user.id,
+      body.itemId,
+      body.quantity ?? 1,
+    );
   }
 
   @Post('checkout')
-  async checkout(@Req() req: Request) {
-    const userId = (req as any).user?.sub ?? (req as any).user?.id ?? 'unknown';
-    return this.cartService.checkout(userId);
+  async checkout(@CurrentUser() user: User | null) {
+    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    return this.cartService.checkout(user.id);
   }
 }
