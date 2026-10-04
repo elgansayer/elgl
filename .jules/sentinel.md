@@ -111,3 +111,8 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-09-06 - [Fix IDOR in CartController by removing 'unknown' fallback]
+**Vulnerability:** The `CartController` explicitly extracted `userId` from the request and defaulted to the string `'unknown'` if the user object or ID was missing.
+**Learning:** Defaulting to a static, non-unique fallback identifier like `'unknown'` when authentication state is missing or malformed bypasses authorization completely and causes IDOR. Any request processed under the `'unknown'` fallback shares the same global context with other unauthorized requests.
+**Prevention:** In NestJS controllers, retrieve the authenticated user context explicitly using the `@CurrentUser()` decorator and immediately throw an `UnauthorizedException` if the user or `user.id` is missing. Never fall back to default identifier strings.
