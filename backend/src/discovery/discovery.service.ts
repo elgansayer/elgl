@@ -543,7 +543,7 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort));
+      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort, searchLat, searchLon, _currentUserProfile));
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -1206,23 +1206,126 @@ export class DiscoveryService {
     sort?: string,
     _searchLat?: number,
     _searchLon?: number,
+    searcherProfile?: UserProfile | null,
   ): UserProfile[] {
     if (!sort || !users.length) return users;
-    const discoveryUsers = users as DiscoveryUser[];
+    let discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
-      case 'best_match':
-        return discoveryUsers.sort((a, b) => {
+      case 'best_match': {
+        const usersWithScores = discoveryUsers.map((candidate) => {
+          let score = 0;
+          const reasons: string[] = [];
+
+          if (searcherProfile) {
+            // A. Complementary Languages (Reciprocity Score)
+            const searcherTargets = searcherProfile.target_languages || [];
+            const searcherNatives = searcherProfile.native_languages || [];
+            const candidateNatives = candidate.native_languages || [];
+            const candidateTargets = candidate.target_languages || [];
+
+            const candidateSpeaksTarget = candidateNatives.some((lang) => searcherTargets.includes(lang));
+            const candidateLearnsNative = candidateTargets.some((lang) => searcherNatives.includes(lang));
+
+            if (candidateSpeaksTarget && candidateLearnsNative) {
+              score += 50;
+              reasons.push('Perfect language exchange match (+50)');
+            } else if (candidateSpeaksTarget || candidateLearnsNative) {
+              score += 20;
+              reasons.push('Complementary language match (+20)');
+            }
+
+            // B. Proficiency Level Gap
+            if (searcherProfile.proficiency_level && candidate.proficiency_level) {
+              if (searcherProfile.proficiency_level === candidate.proficiency_level) {
+                score += 10;
+                reasons.push(`Similar proficiency level: ${candidate.proficiency_level} (+10)`);
+              }
+            }
+
+            // C. Timezone / Active Hours Overlap
+            if (searcherProfile.availability_morning && candidate.availability_morning) {
+              score += 10;
+              reasons.push('Shared availability: Morning (+10)');
+            }
+            if (searcherProfile.availability_afternoon && candidate.availability_afternoon) {
+              score += 10;
+              reasons.push('Shared availability: Afternoon (+10)');
+            }
+            if (searcherProfile.availability_evening && candidate.availability_evening) {
+              score += 10;
+              reasons.push('Shared availability: Evening (+10)');
+            }
+
+            // D. Interest & Hobby Overlap
+            const searcherInterests = searcherProfile.interests || [];
+            const candidateInterests = candidate.interests || [];
+            if (searcherInterests.length > 0 && candidateInterests.length > 0) {
+              const overlapCount = candidateInterests.filter((int) => searcherInterests.includes(int)).length;
+              if (overlapCount > 0) {
+                const interestPoints = overlapCount * 10;
+                score += interestPoints;
+                reasons.push(`Shared interests overlap (+${interestPoints})`);
+              }
+            }
+          }
+
+          // E. Response Behaviour (Responsiveness Score)
+          if (candidate.reply_rate !== undefined) {
+            if (candidate.reply_rate > 0.8) {
+              score += 30;
+              reasons.push(`Highly responsive partner (+30)`);
+            } else if (candidate.reply_rate > 0.5) {
+              score += 15;
+              reasons.push(`Responsive partner (+15)`);
+            }
+          }
+
+          // F. Correction Behaviour (Helpfulness)
+          const ratio = candidate.correction_ratio ?? 0;
+          const correctorScore = candidate.corrector_score ?? 0;
+          const compositeHelpfulness = (ratio * 0.4) + ((correctorScore / 5) * 0.6);
+          const helpfulnessPoints = Math.round(compositeHelpfulness * 40);
+          if (helpfulnessPoints > 0) {
+            score += helpfulnessPoints;
+            reasons.push(`Highly helpful corrector (+${helpfulnessPoints})`);
+          }
+
+          // G. Learning Seriousness (Dedication)
+          const streak = candidate.study_streak_days ?? 0;
+          const seriousnessWeight = searcherProfile?.is_serious_learner ? 50 : 20;
+          const dedicationPoints = Math.min(streak, seriousnessWeight);
+          if (dedicationPoints > 0) {
+            score += dedicationPoints;
+            reasons.push(`Dedicated learner streak (+${dedicationPoints})`);
+          }
+
+          // H. Conversation Compatibility (Past Success)
+          if (candidate.past_success_score !== undefined && candidate.past_success_score > 0) {
+            const successPoints = Math.min(candidate.past_success_score * 20, 20);
+            score += successPoints;
+            reasons.push(`High conversation compatibility (+${successPoints})`);
+          }
+
+          return {
+            ...candidate,
+            _computedScore: score,
+            recommendation_reason: reasons.length > 0 ? reasons.join(', ') : undefined,
+          };
+        });
+
+        // Pre-computed sort
+        const sortedWithScores = usersWithScores.sort((a, b) => {
           const aPow = a.is_partner_of_week ? 1 : 0;
           const bPow = b.is_partner_of_week ? 1 : 0;
           if (aPow !== bPow) return bPow - aPow;
-          const streakA = a.study_streak_days ?? 0;
-          const streakB = b.study_streak_days ?? 0;
-          if (streakB !== streakA) return streakB - streakA;
-          const ratioA = a.correction_ratio ?? 0;
-          const ratioB = b.correction_ratio ?? 0;
-          if (ratioB !== ratioA) return ratioB - ratioA;
+
+          if (b._computedScore !== a._computedScore) return b._computedScore - a._computedScore;
           return 0;
         });
+
+        // Strip the internal score before returning
+        return sortedWithScores.map(({ _computedScore, ...rest }) => rest as DiscoveryUser);
+      }
       case 'online_now':
         return discoveryUsers.sort((a, b) => {
           const aDate = a.last_active_at ?? '';
