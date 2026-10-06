@@ -23,6 +23,9 @@ def test_updater_reconciles_provider_policy_from_verified_commits() -> None:
     assert 'readlink -m -- "$candidate"' in updater
     assert "/etc/repo-factory/*|/etc/hellotalk-factory/*" in updater
     assert "agents_config_metadata_current" in updater
+    assert "repository_managed_agents_config" in updater
+    assert "agents_config_matches_commit" in updater
+    assert "Adopting verified repository-managed provider policy" in updater
     assert "stat -Lc '%u:%g:%a'" in updater
     assert "openhands_factory.config_reconcile" in updater
     assert 'reconcile_agents_config_from_commits "$local_sha" "$pulled_sha"' in updater
@@ -54,6 +57,56 @@ def test_updater_rejects_dotdot_escape_from_approved_config_root(tmp_path: Path)
     )
     assert result.returncode != 0
     assert result.stdout == ""
+
+
+def test_neutral_provider_policy_is_repository_managed_and_content_checked(
+    tmp_path: Path,
+) -> None:
+    updater = _read("config/systemd/hellotalk-factory-update.sh")
+    functions = _function_range(
+        updater,
+        "repository_managed_agents_config() {",
+        "\nrepo_runtime_root_safe() {",
+    )
+    repository = tmp_path / "repository"
+    policy = repository / "config" / "factory" / "agents.production.json"
+    policy.parent.mkdir(parents=True)
+    policy.write_text('{"routing_enabled": true}\n', encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "-c",
+            "user.name=Factory Test",
+            "-c",
+            "user.email=factory@example.invalid",
+            "commit",
+            "-qm",
+            "test policy",
+        ],
+        check=True,
+    )
+    deployed = tmp_path / "agents.json"
+    deployed.write_bytes(policy.read_bytes())
+    harness = tmp_path / "managed-policy.sh"
+    harness.write_text(
+        "set -euo pipefail\n"
+        f"REPOSITORY={repository}\n"
+        "AGENTS_CONFIG_SOURCE=config/factory/agents.production.json\n"
+        'factory_git_read() { git -C "$REPOSITORY" "$@"; }\n'
+        f"{functions}\n"
+        "repository_managed_agents_config /etc/repo-factory/agents.json\n"
+        "! repository_managed_agents_config /etc/hellotalk-factory/agents.json\n"
+        f"agents_config_matches_commit {deployed} HEAD\n"
+        f"printf 'stale\\n' >> {deployed}\n"
+        f"! agents_config_matches_commit {deployed} HEAD\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(["bash", str(harness)], check=True)
 
 
 def test_provider_config_rollback_reloads_both_services(tmp_path: Path) -> None:

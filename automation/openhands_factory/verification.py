@@ -78,6 +78,12 @@ for masked_root in /mnt /srv /media; do
     /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
   fi
 done
+for container_socket in /run/containerd/containerd.sock /run/docker.sock \
+  /run/podman/podman.sock; do
+  if [ -S "$container_socket" ]; then
+    /usr/bin/mount --bind /dev/null "$container_socket"
+  fi
+done
 if [ -d "$state_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$state_dir"
 fi
