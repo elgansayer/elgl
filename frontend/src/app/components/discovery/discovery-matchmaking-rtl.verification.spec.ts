@@ -32,7 +32,7 @@ const MATCHMAKING_PATHS = [
   'src/app/components/profile-discovery-card',
   'src/app/discovery',
   'src/app/services/discovery.service.ts',
-  'src/app/services/study-buddy.service.ts',
+  'src/app/services/study-buddies.service.ts',
 ];
 
 const TEMPLATE_EXTS = new Set(['.html', '.ts', '.scss', '.css']);
