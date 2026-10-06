@@ -31,22 +31,36 @@ export class UserInterestsService {
   }
 
   async getUserInterests(userId: string): Promise<string[]> {
-    const { data, error } = await this.supabase
-      .from('user_interests')
-      .select('tag')
-      .eq('user_id', userId)
-      .returns<UserInterestTagRow[]>();
-    if (error) throw error;
-    return (data ?? []).map((r) => r.tag);
+    return Promise.resolve(
+      this.supabase
+        .from('user_interests')
+        .select('tag')
+        .eq('user_id', userId)
+        .returns<UserInterestTagRow[]>(),
+    ).then(({ data, error }) => {
+      if (error) throw error;
+      return (data ?? []).map((r) => r.tag);
+    });
   }
 
   async updateUserInterests(userId: string, tags: string[]): Promise<void> {
     // remove all existing interests
-    await this.supabase.from('user_interests').delete().eq('user_id', userId);
-    if (tags.length === 0) return;
+    await Promise.resolve(
+      this.supabase.from('user_interests').delete().eq('user_id', userId),
+    ).then(({ error }) => {
+      if (error) throw error;
+    });
+
+    if (tags.length === 0) {
+      void this.invalidateInterestMatchmakingCaches(userId);
+      return;
+    }
     const rows = tags.map((tag) => ({ user_id: userId, tag }));
-    const { error } = await this.supabase.from('user_interests').insert(rows);
-    if (error) throw error;
+    await Promise.resolve(
+      this.supabase.from('user_interests').insert(rows),
+    ).then(({ error }) => {
+      if (error) throw error;
+    });
 
     // Invalidate interest-based recommendation caches for this user.
     void this.invalidateInterestMatchmakingCaches(userId);
@@ -77,18 +91,21 @@ export class UserInterestsService {
     tags: string[],
     language: string,
   ): Promise<VocabularyEntry[]> {
-    const { data, error } = await this.supabase
-      .from('interest_vocabulary')
-      .select('interest_tag, vocab_word, translation, srs_level')
-      .in('interest_tag', tags)
-      .eq('language', language)
-      .returns<VocabularyRow[]>();
-    if (error) throw error;
-    return (data ?? []).map((r) => ({
-      interestTag: r.interest_tag,
-      vocabWord: r.vocab_word,
-      translation: r.translation,
-      srsLevel: r.srs_level,
-    }));
+    return Promise.resolve(
+      this.supabase
+        .from('interest_vocabulary')
+        .select('interest_tag, vocab_word, translation, srs_level')
+        .in('interest_tag', tags)
+        .eq('language', language)
+        .returns<VocabularyRow[]>(),
+    ).then(({ data, error }) => {
+      if (error) throw error;
+      return (data ?? []).map((r) => ({
+        interestTag: r.interest_tag,
+        vocabWord: r.vocab_word,
+        translation: r.translation,
+        srsLevel: r.srs_level,
+      }));
+    });
   }
 }
