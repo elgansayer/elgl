@@ -55,6 +55,28 @@ describe('ChatBackupService', () => {
       expect(result).toContain('Backup End');
     });
 
+    it('should format messages correctly using fallback fields', async () => {
+      const mockData = [
+        { created_at: '2023-01-03', sender_id: 'Bob', text_content: 'Hi' },
+        { created_at: '2023-01-04', sender_id: 'Charlie' }, // No content or text_content
+      ];
+
+      const mockOrder = vi
+        .fn()
+        .mockResolvedValue({ data: mockData, error: null });
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
+
+      supabaseService.getClient.mockReturnValue({ from: mockFrom });
+
+      const result = await service.createBackup('user-123');
+      expect(result).toContain('Backup Start');
+      expect(result).toContain('[2023-01-03] Bob: Hi');
+      expect(result).toContain('[2023-01-04] Charlie: ');
+      expect(result).toContain('Backup End');
+    });
+
     it('should return empty string if no data', async () => {
       const mockOrder = vi.fn().mockResolvedValue({ data: null, error: null });
       supabaseService.getClient.mockReturnValue({
