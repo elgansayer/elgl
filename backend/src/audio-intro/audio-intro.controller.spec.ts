@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import { AudioIntroController } from './audio-intro.controller';
 import { AudioIntroService } from './audio-intro.service';
 import { UpdateAudioIntroDto } from './dto/update-audio-intro.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { ForbiddenException } from '@nestjs/common';
 
 describe('AudioIntroController', () => {
   let controller: AudioIntroController;
@@ -59,7 +59,7 @@ describe('AudioIntroController', () => {
       const req = { user: { id: 'user-1' } };
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const result = await controller.updateAudioIntro('user-1', dto, req);
+      const result = await controller.updateAudioIntro(req, 'user-1', dto);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
         'user-1',
@@ -68,14 +68,14 @@ describe('AudioIntroController', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should throw ForbiddenException when authenticated user attempts to update another user’s audio intro', async () => {
+    it('should throw ForbiddenException if user id does not match param id', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
-      const req = { user: { id: 'different-user' } };
+      const req = { user: { id: 'user-2' } };
 
       await expect(
-        controller.updateAudioIntro('user-1', dto, req),
+        controller.updateAudioIntro(req, 'user-1', dto),
       ).rejects.toThrow(ForbiddenException);
 
       expect(mockService.updateAudioIntro).not.toHaveBeenCalled();

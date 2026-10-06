@@ -6,8 +6,8 @@ import {
   Body,
   Post,
   UseGuards,
-  ForbiddenException,
   Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AudioIntroService } from './audio-intro.service';
 import { UpdateAudioIntroDto } from './dto/update-audio-intro.dto';
@@ -25,12 +25,12 @@ export class AudioIntroController {
   @UseGuards(SupabaseAuthGuard)
   @Patch(':userId')
   async updateAudioIntro(
+    @Req() req: { user: { id: string } },
     @Param('userId') userId: string,
     @Body() dto: UpdateAudioIntroDto,
-    @Req() req: { user: { id: string } },
   ) {
-    if (req.user?.id !== userId) {
-      throw new ForbiddenException('Cannot update another user’s audio intro');
+    if (req.user.id !== userId) {
+      throw new ForbiddenException();
     }
     return this.audioIntroService.updateAudioIntro(userId, dto.audio_url);
   }
