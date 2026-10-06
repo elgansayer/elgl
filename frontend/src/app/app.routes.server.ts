@@ -14,7 +14,7 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
-    path: 'device-transfer',
+    path: 'settings/device-transfer',
     renderMode: RenderMode.Client,
   },
   {
