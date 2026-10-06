@@ -18,6 +18,7 @@ from openhands_factory.agents.base import (
 from openhands_factory.state import atomic_write_json, read_json
 
 MAX_RETRY_AFTER_SECONDS = 7 * 24 * 3600
+MAX_QUOTA_COOLDOWN_MULTIPLIER = 4
 HALF_OPEN_PROBE_LEASE_SECONDS = 60
 
 
@@ -58,6 +59,32 @@ class AgentCircuitBreaker:
     retry_after_seconds: int | None = None
     last_failure_kind: AgentFailureKind | None = None
 
+    def effective_cooldown_seconds(self) -> int:
+        """Return the bounded cooldown for the current failure streak.
+
+        Subscription quota exhaustion is persistent enough that repeatedly probing at
+        a fixed cadence wastes allowance without improving recovery. Increase the
+        effective quota cooldown after failed half-open probes. The effective base is
+        the larger of the breaker default and the current retry-after floor, because
+        production passes its failure-specific quota floor through that field. A
+        successful call resets the streak immediately.
+        """
+
+        cooldown = max(self.cooldown_seconds, self.retry_after_seconds or 0)
+        if self.last_failure_kind is AgentFailureKind.PROVIDER_QUOTA:
+            excess_failures = max(0, self.consecutive_failures - self.failure_threshold)
+            # Cap the exponent before exponentiation. Durable state is validated but
+            # may still contain an unexpectedly large non-negative streak, and
+            # computing an enormous intermediate integer would turn a bounded policy
+            # into a health-check denial of service.
+            bounded_exponent = min(
+                excess_failures,
+                MAX_QUOTA_COOLDOWN_MULTIPLIER.bit_length(),
+            )
+            multiplier = min(2**bounded_exponent, MAX_QUOTA_COOLDOWN_MULTIPLIER)
+            cooldown = min(cooldown * multiplier, MAX_RETRY_AFTER_SECONDS)
+        return cooldown
+
     def permits_call(self, now: datetime | None = None) -> bool:
         current = now or datetime.now(UTC)
         if self.state == "half-open":
@@ -75,7 +102,7 @@ class AgentCircuitBreaker:
             return False
         if self.state != "open":
             return True
-        cooldown = max(self.cooldown_seconds, self.retry_after_seconds or 0)
+        cooldown = self.effective_cooldown_seconds()
         if self.opened_at and current >= self.opened_at + timedelta(seconds=cooldown):
             self.state = "half-open"
             self.opened_at = current
@@ -95,19 +122,38 @@ class AgentCircuitBreaker:
         now: datetime | None = None,
         retry_after_seconds: int | None = None,
     ) -> None:
+        previous_kind = self.last_failure_kind
+        previous_retry_after = self.retry_after_seconds
         self.last_failure_kind = kind
         if retry_after_seconds is not None:
-            self.retry_after_seconds = min(
+            bounded_retry_after = min(
                 max(retry_after_seconds, 0),
                 MAX_RETRY_AFTER_SECONDS,
             )
+            if (
+                kind is AgentFailureKind.PROVIDER_QUOTA
+                and previous_kind is AgentFailureKind.PROVIDER_QUOTA
+                and previous_retry_after is not None
+            ):
+                self.retry_after_seconds = max(previous_retry_after, bounded_retry_after)
+            else:
+                self.retry_after_seconds = bounded_retry_after
 
-        if kind in {
-            AgentFailureKind.PROVIDER_AUTH,
-            AgentFailureKind.PROVIDER_QUOTA,
-        }:
+        if kind is AgentFailureKind.PROVIDER_AUTH:
             self.state = "open"
             self.consecutive_failures = self.failure_threshold
+            self.opened_at = now or datetime.now(UTC)
+            return
+
+        if kind is AgentFailureKind.PROVIDER_QUOTA:
+            previous_quota_failures = (
+                self.consecutive_failures if previous_kind is AgentFailureKind.PROVIDER_QUOTA else 0
+            )
+            self.state = "open"
+            self.consecutive_failures = max(
+                self.failure_threshold,
+                previous_quota_failures + 1,
+            )
             self.opened_at = now or datetime.now(UTC)
             return
 
@@ -131,13 +177,15 @@ class AgentCircuitBreaker:
                     ProviderStatus.UNAVAILABLE,
                 )
         elif self.state == "half-open":
-            status = ProviderStatus.DEGRADED
+            # The half-open permit is a lease for one recovery operation. Any
+            # concurrent caller observing the persisted half-open state must stay
+            # ineligible until that operation resolves or the lease expires.
+            status = ProviderStatus.UNAVAILABLE
 
         retry_after = None
         if self.opened_at:
             if self.state == "open":
-                cooldown = max(self.cooldown_seconds, self.retry_after_seconds or 0)
-                retry_after = self.opened_at + timedelta(seconds=cooldown)
+                retry_after = self.opened_at + timedelta(seconds=self.effective_cooldown_seconds())
             elif self.state == "half-open":
                 retry_after = self.opened_at + timedelta(seconds=HALF_OPEN_PROBE_LEASE_SECONDS)
 
