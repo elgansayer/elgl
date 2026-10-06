@@ -30,7 +30,7 @@ export class AudioIntroController {
     @Req() req: { user: { id: string } },
   ) {
     if (req.user?.id !== userId) {
-      throw new ForbiddenException();
+      throw new ForbiddenException('Cannot update another user’s audio intro');
     }
     return this.audioIntroService.updateAudioIntro(userId, dto.audio_url);
   }
