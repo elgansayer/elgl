@@ -43,16 +43,22 @@ export async function fetchWithExponentialBackoff(
       return response;
     }
 
-    // Consume body to free up the socket for connection reuse (keep-alive)
-    if (typeof response.arrayBuffer === 'function') {
-      await response.arrayBuffer().catch(() => {});
-    }
-
     if (attempt < maxRetries) {
+      const cleanupPromises: Promise<unknown>[] = [];
+
+      // Consume body to free up the socket for connection reuse (keep-alive)
+      if (typeof response.arrayBuffer === 'function') {
+        cleanupPromises.push(response.arrayBuffer());
+      }
+
       // We are retrying. Cancel the response body so Node/undici can reuse the connection
       // in the connection pool immediately, preventing socket exhaustion.
       if (response.body) {
-        await response.body.cancel().catch(() => {});
+        cleanupPromises.push(response.body.cancel());
+      }
+
+      if (cleanupPromises.length > 0) {
+        await Promise.allSettled(cleanupPromises);
       }
       const computedDelay = Math.min(
         baseDelayMs * Math.pow(2, attempt),
