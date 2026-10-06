@@ -111,3 +111,8 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2024-10-06 - [Fix Path Traversal in Factory Dashboard]
+**Vulnerability:** Static file server used regex replacement `replace(/^(\.\.[/\\])+/, '')` which can be bypassed using URL-encoded sequences like `%2e%2e`.
+**Learning:** Fragile regex replacements for path traversal prevention are inadequate against URL-encoded paths.
+**Prevention:** Use `decodeURIComponent` on the path, resolve it to an absolute path using `path.resolve` (stripping leading slashes first), and verify it strictly starts with the intended base directory using `targetPath.startsWith(PUBLIC_DIR + path.sep)`.
