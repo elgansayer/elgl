@@ -1,7 +1,7 @@
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-EXTERNAL_REVIEW_QUIET_SECONDS = 600
+EXTERNAL_REVIEW_QUIET_SECONDS = 120
 
 
 def _env_value(relative_path: str, key: str) -> str:
