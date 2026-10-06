@@ -1,160 +1,102 @@
-# Angular Animations
+# Angular Motion
 
-When animating elements in Angular, **first analyze the project's Angular version** in `package.json`.
-For modern applications (**Angular v20.2 and above**), prefer using native CSS with `animate.enter` and `animate.leave`. For older applications, you may need to use the deprecated `@angular/animations` package.
+This repository targets Angular 22 and is preparing for Angular 23. Do **not** add `@angular/animations`, `provideAnimations()`, `provideAnimationsAsync()`, `BrowserAnimationsModule`, or the legacy trigger/state animation DSL.
 
-## 1. Native CSS Animations (v20.2+ Recommended)
+Use the repository motion hierarchy instead:
 
-Modern Angular provides `animate.enter` and `animate.leave` to animate elements as they enter or leave the DOM. They apply CSS classes at the appropriate times.
+1. CSS transitions/keyframes for ordinary state changes.
+2. Angular `animate.enter` and `animate.leave` for DOM entry/exit lifecycle.
+3. The repository `ViewTransitionService` for progressive route/shared-element transitions.
+4. The governed `lottie-web` adapter only for approved authored illustrations.
 
-### `animate.enter` and `animate.leave`
+## Native CSS animations
 
-Use these directly on elements to apply CSS classes during the enter or leave phase. Angular automatically removes the enter classes when the animation completes. For `animate.leave`, Angular waits for the animation to finish before removing the element from the DOM.
-
-`animate.enter` example:
+Prefer semantic Relay motion tokens and transform/opacity where appropriate. Motion must never block input readiness or become the only way state is communicated.
 
 ```html
 @if (isShown()) {
-<div class="enter-container" animate.enter="enter-animation">
-  <p>The box is entering.</p>
-</div>
+  <div class="enter-container" animate.enter="enter-animation">
+    <p>The box is entering.</p>
+  </div>
 }
 ```
 
 ```css
-/* Ensure you have a starting style if using transitions instead of keyframes */
-.enter-container {
-  border: 1px solid #dddddd;
-  margin-top: 1em;
-  padding: 20px;
-  font-weight: bold;
-  font-size: 20px;
-}
-.enter-container p {
-  margin: 0;
-}
 .enter-animation {
-  animation: slide-fade 1s;
+  animation: slide-fade var(--motion-duration-standard, 200ms)
+    var(--motion-easing-enter, ease-out);
 }
+
 @keyframes slide-fade {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(0.5rem);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .enter-animation {
+    animation: none;
+  }
+}
 ```
 
-_Note: `animate.leave` may be added to child elements being removed._
+## Entry and exit callbacks
 
-### Event Bindings and Third-party Libraries
-
-You can bind to `(animate.enter)` and `(animate.leave)` to call functions or use JS libraries like GSAP.
+When imperative completion is genuinely required, use Angular's native animation callback API from `@angular/core`:
 
 ```html
-@if(show()) {
-<div (animate.leave)="onLeave($event)">...</div>
+@if (isShown()) {
+  <div (animate.leave)="onLeave($event)">...</div>
 }
 ```
 
 ```ts
 import { AnimationCallbackEvent } from '@angular/core';
 
-onLeave(event: AnimationCallbackEvent) {
-  // Custom animation logic here
-  // CRITICAL: You MUST call animationComplete() when done so Angular removes the element!
+onLeave(event: AnimationCallbackEvent): void {
+  // Complete any bounded imperative work, then release the element.
   event.animationComplete();
 }
 ```
 
-## 2. Advanced CSS Animations
+Do not use animation completion to commit authoritative business state.
 
-CSS offers robust tools for advanced animation sequences.
+## State transitions
 
-### Animating State and Styles
-
-Toggle CSS classes on elements using property binding to trigger transitions.
+For stateful components, toggle classes or data attributes and let CSS own presentation:
 
 ```html
-<div [class.open]="isOpen">...</div>
+<div [class.open]="isOpen()">...</div>
 ```
 
 ```css
-div {
-  transition: height 0.3s ease-out;
-  height: 100px;
+.panel {
+  opacity: 0;
+  transition: opacity var(--motion-duration-fast, 150ms) ease-out;
 }
-div.open {
-  height: 200px;
-}
-```
 
-### Animating Auto Height
-
-You can use `css-grid` to animate to auto height.
-
-```css
-.container {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.3s;
-}
-.container.open {
-  grid-template-rows: 1fr;
-}
-.container > div {
-  overflow: hidden;
+.panel.open {
+  opacity: 1;
 }
 ```
 
-### Staggering and Parallel Animations
+## Accessibility and lifecycle requirements
 
-- **Staggering**: Use `animation-delay` or `transition-delay` with different values for items in a list.
-- **Parallel**: Apply multiple animations in the `animation` shorthand (e.g., `animation: rotate 3s, fade-in 2s;`).
+Every motion change must preserve:
 
-### Programmatic Control
+- `prefers-reduced-motion` behavior;
+- focus placement and restoration;
+- screen-reader reading order and announcements;
+- RTL and logical layout;
+- 200–400% zoom/reflow;
+- touch and keyboard input;
+- SSR/hydration correctness;
+- cancellation/cleanup on rapid navigation or component destruction.
 
-Retrieve animations directly using standard Web APIs:
-
-```ts
-const animations = element.getAnimations();
-animations.forEach((anim) => anim.pause());
-```
-
-## 3. Legacy Animations DSL (Deprecated)
-
-For older projects (pre v20.2 or where `@angular/animations` is already heavily used), you use the component metadata DSL.
-
-**Important:** Do not mix legacy animations and `animate.enter`/`leave` in the same component.
-
-### Setup
-
-```ts
-bootstrapApplication(App, {
-  providers: [provideAnimationsAsync()],
-});
-```
-
-### Defining Transitions
-
-```ts
-import { signal } from '@angular/core';
-import { trigger, state, style, animate, transition } from '@angular/animations';
-
-@Component({
-  animations: [
-    trigger('openClose', [
-      state('open', style({ opacity: 1 })),
-      state('closed', style({ opacity: 0 })),
-      transition('open <=> closed', [animate('0.5s')]),
-    ]),
-  ],
-  template: `<div [@openClose]="isOpen() ? 'open' : 'closed'">...</div>`,
-})
-export class OpenClose {
-  protected readonly isOpen = signal(true);
-}
-```
+If a third-party component appears to require the deprecated Angular animation runtime, verify its current Angular 22 support and prefer a supported/native configuration. Do not re-introduce the deprecated runtime as a local workaround without an explicit architecture decision.
