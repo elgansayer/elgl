@@ -112,6 +112,18 @@ describe('TranslationService', () => {
       expect(result).toBe('en');
     });
 
+    it('should fallback to "en" if detected_source_language is missing or empty', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ detected_source_language: '' }],
+        }),
+      });
+
+      const result = await service.detectLanguage('Bonjour');
+      expect(result).toBe('en');
+    });
+
     it('should fallback to "en" and log warn if fetch throws error', async () => {
       global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
 
@@ -160,6 +172,24 @@ describe('TranslationService', () => {
       const result = await service.translate('Hello', 'en', 'fr');
       expect(result).toBe('Bonjour');
       expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return original text and cache it if translations array is missing or text is invalid', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ text: '' }],
+        }),
+      });
+
+      const result = await service.translate('Hello', 'en', 'fr');
+      expect(result).toBe('Hello');
+
+      // Verify it was cached
+      global.fetch = vi.fn();
+      const cachedResult = await service.translate('Hello', 'en', 'fr');
+      expect(cachedResult).toBe('Hello');
+      expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should return original text and log warn if fetch fails (!ok)', async () => {
