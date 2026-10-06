@@ -168,3 +168,9 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+## 2026-10-06 - Stream Cancellation Resource Leak
+**Learning:** In Node.js `fetch` implementations, calling `response.body.cancel()` sequentially after `response.arrayBuffer()` throws a 'ReadableStream is locked' error. Furthermore, sequential awaits on stream cleanups delay socket reuse.
+**Action:** Execute stream cleanups (`arrayBuffer()` and `body.cancel()`) concurrently using `Promise.allSettled()` to prevent the lock error and expedite connection pool release.
+## 2026-10-06 - Stream Cancellation Resource Leak
+**Learning:** In Node.js `fetch` implementations, calling `response.body.cancel()` sequentially after `response.arrayBuffer()` throws a 'ReadableStream is locked' error. Furthermore, sequential awaits on stream cleanups delay socket reuse.
+**Action:** Execute stream cleanups (`arrayBuffer()` and `body.cancel()`) concurrently using `Promise.allSettled()` to prevent the lock error and expedite connection pool release.
