@@ -239,7 +239,25 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "metrics":
-            print(json.dumps(MetricsStore(config.state_dir / "metrics.json").snapshot(), indent=2))
+            from openhands_factory.pr_metrics import PullRequestMetricsStore
+
+            provider_metrics = MetricsStore(config.state_dir / "metrics.json").snapshot()
+            pull_request_snapshot = PullRequestMetricsStore(
+                config.state_dir / "pull-request-metrics.json",
+                max_records=config.pull_request_history_limit,
+            ).snapshot()
+            print(
+                json.dumps(
+                    {
+                        **provider_metrics,
+                        "pull_requests": {
+                            "capacity": pull_request_snapshot.get("capacity", {}),
+                            "summary": pull_request_snapshot.get("summary", {}),
+                        },
+                    },
+                    indent=2,
+                )
+            )
             return 0
         if args.command == "dashboard":
             if args.action == "show":

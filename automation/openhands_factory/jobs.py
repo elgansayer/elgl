@@ -21,6 +21,7 @@ from openhands_factory.retry_policy import (
 from openhands_factory.state import atomic_write_json, read_json
 
 MAX_PERSISTED_RETRY_DELAY = timedelta(hours=24)
+ABANDONED_ATTEMPT_RETRY_DELAY = timedelta(minutes=15)
 AUTONOMOUS_CHRONIC_RETRY_BASE = timedelta(minutes=30)
 RECOVERABLE_ACTIVE_STATES = {
     JobState.LEASED,
@@ -135,6 +136,14 @@ class JobStore:
         if not isinstance(review_findings, list):
             review_findings = []
         updated_at = self._restore_datetime(item.get("updated_at")) or now
+        last_error = item.get("last_error")
+        next_attempt_at = self._load_next_attempt_at(item.get("next_attempt_at"), now)
+        if (
+            isinstance(last_error, str)
+            and last_error.startswith("Watchdog recovered abandoned ")
+            and next_attempt_at is not None
+        ):
+            next_attempt_at = min(next_attempt_at, now + ABANDONED_ATTEMPT_RETRY_DELAY)
         return Job(
             task=task,
             state=JobState(item["state"]),
@@ -151,8 +160,8 @@ class JobStore:
             attempts=int(item.get("attempts", 0)),
             repair_attempts=int(item.get("repair_attempts", 0)),
             quality_repairs=int(item.get("quality_repairs", 0)),
-            last_error=item.get("last_error"),
-            next_attempt_at=self._load_next_attempt_at(item.get("next_attempt_at"), now),
+            last_error=last_error,
+            next_attempt_at=next_attempt_at,
             failure_counts=restored_failure_counts,
             last_failure_kind=item.get("last_failure_kind"),
             last_failure_fingerprint=item.get("last_failure_fingerprint"),
@@ -462,6 +471,11 @@ class JobStore:
                 )
                 job.updated_at = current
                 self._apply_retry_policy(None, job, now=current)
+                if job.next_attempt_at is not None:
+                    job.next_attempt_at = min(
+                        job.next_attempt_at,
+                        current + ABANDONED_ATTEMPT_RETRY_DELAY,
+                    )
                 recovered.append(task_id)
             if recovered:
                 self._save_raw(jobs)
