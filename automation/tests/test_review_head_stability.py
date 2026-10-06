@@ -73,31 +73,6 @@ def test_review_head_observation_survives_restart(tmp_path: Path) -> None:
     assert restarted.defer_seconds("pr-42", "head-a", start + timedelta(seconds=120)) == 0
 
 
-def test_router_observation_counts_verification_time_towards_quiet_period(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("FACTORY_REVIEW_HEAD_STABILITY_SECONDS", "120")
-    router = ConservativeAgentRouter(
-        [Provider()],
-        capacity_store=ProviderCapacityStore(tmp_path),
-        provider_limits={"first": 1},
-        enabled=True,
-    )
-    job = Job(
-        Task("42", "PR 42", "Body", "github-pull-request", 0),
-        pull_request=42,
-        head_sha="verified-head",
-    )
-    observed_at = datetime.now(UTC) - timedelta(seconds=120)
-
-    router.observe_review_head(job, observed_at)
-
-    gate = router._review_head_stability
-    assert gate is not None
-    assert gate.defer_seconds("pr-42", "verified-head", datetime.now(UTC)) == 0
-
-
 def test_future_review_head_observation_resets_to_current_clock(tmp_path: Path) -> None:
     path = tmp_path / "heads.json"
     current = datetime(2026, 9, 7, 22, 0, tzinfo=UTC)

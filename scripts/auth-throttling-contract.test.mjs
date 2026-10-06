@@ -250,6 +250,9 @@ test('keeps endpoint-specific throttles on sensitive authentication and account 
 
 test('documents the executable throttling verification command', () => {
   const docs = read('docs/api-auth-throttling.md');
-  assert.match(docs, /node --test scripts\/auth-throttling-contract\.test\.mjs/);
+  assert.match(
+    docs,
+    /node --test scripts\/auth-throttling-contract\.test\.mjs/,
+  );
   assert.match(docs, /global `APP_GUARD`/);
 });
