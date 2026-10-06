@@ -6,8 +6,8 @@
 #   - Only pulls if the remote has new commits (fast-forward only - no merges).
 #   - Materialises root-owned runtime scripts and provider policy from immutable
 #     Git blobs, never from the Factory-user-writable working tree.
-#   - Three-way provider-policy reconciliation preserves host overrides while
-#     adopting repository changes the host had not overridden.
+#   - The neutral multi-repository runtime adopts the verified repository provider
+#     policy exactly. The legacy runtime keeps three-way host-override reconciliation.
 #   - Provider config is schema-validated after package refresh and rolled back
 #     automatically if any later update step or service restart fails.
 #   - Aborts on any error; the EXIT trap restores services stopped by an update.
@@ -241,6 +241,17 @@ agents_config_metadata_current() {
   [ "$(stat -Lc '%u:%g:%a' -- "$parent")" = "0:${factory_gid}:750" ]
 }
 
+repository_managed_agents_config() {
+  [ "$1" = /etc/repo-factory/agents.json ]
+}
+
+agents_config_matches_commit() {
+  local config=$1 commit=$2 actual_blob expected_blob
+  expected_blob=$(factory_git_read rev-parse "${commit}:${AGENTS_CONFIG_SOURCE}") || return 1
+  actual_blob=$(git hash-object "$config") || return 1
+  [ "$actual_blob" = "$expected_blob" ]
+}
+
 repo_runtime_root_safe() {
   [ -d "$REPO_RUNTIME_ROOT" ] || return 1
   [ ! -L "$REPO_RUNTIME_ROOT" ] || return 1
@@ -398,7 +409,10 @@ reconcile_agents_config_from_commits() {
     return 1
   fi
 
-  if [ -f "$AGENTS_CONFIG" ]; then
+  if repository_managed_agents_config "$AGENTS_CONFIG"; then
+    log 'Adopting verified repository-managed provider policy'
+    cp -- "$workspace/desired.json" "$workspace/local.json"
+  elif [ -f "$AGENTS_CONFIG" ]; then
     cp -- "$AGENTS_CONFIG" "$workspace/local.json"
   else
     cp -- "$workspace/base.json" "$workspace/local.json"
@@ -513,7 +527,9 @@ config_is_current=false
 config_path=$(canonical_agents_config_path "$AGENTS_CONFIG" 2>/dev/null || true)
 if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
   AGENTS_CONFIG=$config_path
-  if validate_agents_config; then
+  if validate_agents_config && \
+    { ! repository_managed_agents_config "$AGENTS_CONFIG" || \
+      agents_config_matches_commit "$AGENTS_CONFIG" "$local_sha"; }; then
     config_is_current=true
   fi
 fi
