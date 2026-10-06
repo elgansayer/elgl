@@ -34,32 +34,30 @@ repository=$2
 state_dir=$3
 log_dir=$4
 service_home=$5
-sandbox_root=$6
-workdir=$7
-shift 7
+workdir=$6
+shift 6
 
 /usr/bin/mount --make-rprivate /
-/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
-staging=$sandbox_root/factory-verification
-/usr/bin/mkdir -p "$staging/workspace"
-/usr/bin/mount --bind "$workspace" "$staging/workspace"
+/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs /mnt
+/usr/bin/mkdir -p /mnt/factory-verification/workspace
+/usr/bin/mount --bind "$workspace" /mnt/factory-verification/workspace
 
 same_repository=false
 if [ "$repository" = "$workspace" ]; then
   same_repository=true
 else
-  /usr/bin/mkdir -p "$staging/repository"
-  /usr/bin/mount --bind "$repository" "$staging/repository"
-  /usr/bin/mount -o remount,bind,ro "$staging/repository"
+  /usr/bin/mkdir -p /mnt/factory-verification/repository
+  /usr/bin/mount --bind "$repository" /mnt/factory-verification/repository
+  /usr/bin/mount -o remount,bind,ro /mnt/factory-verification/repository
 fi
 
 cypress_cache=$service_home/.cache/Cypress
 has_cypress_cache=false
 if [ -d "$cypress_cache" ]; then
   has_cypress_cache=true
-  /usr/bin/mkdir -p "$staging/cypress"
-  /usr/bin/mount --bind "$cypress_cache" "$staging/cypress"
-  /usr/bin/mount -o remount,bind,ro "$staging/cypress"
+  /usr/bin/mkdir -p /mnt/factory-verification/cypress
+  /usr/bin/mount --bind "$cypress_cache" /mnt/factory-verification/cypress
+  /usr/bin/mount -o remount,bind,ro /mnt/factory-verification/cypress
 fi
 
 # uv resolves each worktree as its own project and needs its dependencies
@@ -71,22 +69,16 @@ uv_cache=$service_home/.cache/uv
 has_uv_cache=false
 if [ -d "$uv_cache" ]; then
   has_uv_cache=true
-  /usr/bin/mkdir -p "$staging/uv-cache"
-  /usr/bin/mount --bind "$uv_cache" "$staging/uv-cache"
+  /usr/bin/mkdir -p /mnt/factory-verification/uv-cache
+  /usr/bin/mount --bind "$uv_cache" /mnt/factory-verification/uv-cache
 fi
 
-for masked_root in /mnt /srv /media; do
-  if [ "$masked_root" != "$sandbox_root" ] && [ -d "$masked_root" ]; then
-    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
-  fi
-done
 if [ -d "$state_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$state_dir"
 fi
 if [ -d "$log_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$log_dir"
 fi
-/usr/bin/mkdir -p /run/user
 /usr/bin/mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run/user
 /usr/bin/mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 if [ -d /var/tmp ]; then
@@ -101,18 +93,18 @@ if [ -d /opt/hellotalk-factory ]; then
 fi
 
 /usr/bin/mkdir -p "$workspace" "$repository" /tmp/home /tmp/npm-cache /tmp/uv-cache
-/usr/bin/mount --bind "$staging/workspace" "$workspace"
+/usr/bin/mount --bind /mnt/factory-verification/workspace "$workspace"
 if [ "$same_repository" = false ]; then
-  /usr/bin/mount --bind "$staging/repository" "$repository"
+  /usr/bin/mount --bind /mnt/factory-verification/repository "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
 if [ "$has_cypress_cache" = true ]; then
   /usr/bin/mkdir -p /tmp/cypress-cache
-  /usr/bin/mount --bind "$staging/cypress" /tmp/cypress-cache
+  /usr/bin/mount --bind /mnt/factory-verification/cypress /tmp/cypress-cache
   /usr/bin/mount -o remount,bind,ro /tmp/cypress-cache
 fi
 if [ "$has_uv_cache" = true ]; then
-  /usr/bin/mount --bind "$staging/uv-cache" /tmp/uv-cache
+  /usr/bin/mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache
 fi
 
 /usr/sbin/ip link set lo up
@@ -172,18 +164,6 @@ def _sandbox_path(value: Path, *, name: str) -> str:
     return str(resolved)
 
 
-def _verification_sandbox_root(*sources: Path) -> Path:
-    """Choose a staging root that does not hide a verification source."""
-
-    resolved_sources = tuple(source.resolve() for source in sources)
-    for candidate in (Path("/srv"), Path("/media"), Path("/run")):
-        if not any(
-            source == candidate or source.is_relative_to(candidate) for source in resolved_sources
-        ):
-            return candidate
-    raise VerificationFailed("No safe verification staging root is available")
-
-
 def run_isolated_verification_process(
     arguments: tuple[str, ...],
     cwd: Path,
@@ -202,11 +182,6 @@ def run_isolated_verification_process(
     log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
     service_home = state_dir / "home"
-    sandbox_root = _verification_sandbox_root(
-        resolved_workspace,
-        repository,
-        service_home,
-    )
     # Resolving a virtual environment's Python executable follows its symlink to
     # the system interpreter and loses the environment's bin directory. sys.prefix
     # remains the owning environment and therefore exposes uv inside the sandbox.
@@ -252,7 +227,6 @@ def run_isolated_verification_process(
         _sandbox_path(state_dir, name="state"),
         _sandbox_path(log_dir, name="log"),
         _sandbox_path(service_home, name="home"),
-        str(sandbox_root),
         _sandbox_path(resolved_cwd, name="working directory"),
         *arguments,
     )
@@ -435,10 +409,7 @@ def commands_for(
                 ),
                 VerificationCommand(
                     "factory-tests",
-                    # Use the worktree as Python's import root. The pytest console
-                    # script lives in the shared runtime venv and would otherwise
-                    # test the installed Factory package instead of this PR's code.
-                    ("uv", "run", "--frozen", "python", "-m", "pytest"),
+                    ("uv", "run", "--frozen", "pytest"),
                     repository / "automation",
                 ),
             ]
