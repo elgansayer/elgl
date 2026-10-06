@@ -146,16 +146,17 @@ export class VideoCallsCacheInvalidationService {
   async invalidateAllVideoClassroomCaches(): Promise<void> {
     const redis = this.getRedis();
     try {
-      let totalDeleted = 0;
-
-      for (const pattern of VIDEO_CLASSROOM_CACHE_PATTERNS) {
+      // ⚡ Bolt Optimization: Executing cache invalidations concurrently via Promise.all to reduce latency.
+      const deletionPromises = VIDEO_CLASSROOM_CACHE_PATTERNS.map((pattern) => {
         if (pattern.endsWith(':*')) {
           const prefix = pattern.slice(0, -2);
-          totalDeleted += await this.deleteByScan(redis, prefix);
+          return this.deleteByScan(redis, prefix);
         } else {
-          totalDeleted += await redis.del(pattern);
+          return redis.del(pattern);
         }
-      }
+      });
+      const results = await Promise.all(deletionPromises);
+      const totalDeleted = results.reduce((acc, count) => acc + count, 0);
 
       if (totalDeleted > 0) {
         this.logger.log(
