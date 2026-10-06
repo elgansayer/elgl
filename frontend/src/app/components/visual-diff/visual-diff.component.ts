@@ -44,20 +44,36 @@ interface DiffSegment {
     </div>
     @if (explanation()) {
       <div class="mt-1 text-xs text-text-secondary italic group flex flex-col gap-1">
-        <div class="flex items-center gap-2">
-          <span>{{ explanation() }}</span>
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span>{{ explanation() }}</span>
+            @if (showActions()) {
+              <button
+                hlmBtn
+                variant="ghost"
+                size="icon-sm"
+                class="opacity-0 group-hover:opacity-100 transition-opacity"
+                (click)="translateExplanation()"
+                [disabled]="isTranslating()"
+                [attr.aria-label]="'moments.translate' | t"
+              >
+                <ng-icon name="lucideLanguages" class="text-text-secondary" />
+              </button>
+            }
+          </div>
           @if (showActions()) {
-            <button
-              hlmBtn
-              variant="ghost"
-              size="icon-sm"
-              class="opacity-0 group-hover:opacity-100 transition-opacity"
-              (click)="translateExplanation()"
-              [disabled]="isTranslating()"
-              [attr.aria-label]="'moments.translate' | t"
-            >
-              <ng-icon name="lucideLanguages" class="text-text-secondary" />
-            </button>
+            <div class="flex items-center gap-2">
+              <label class="text-[10px] uppercase tracking-wider font-bold text-text-secondary cursor-pointer" for="auto-translate-toggle">
+                Auto-translate
+              </label>
+              <input
+                id="auto-translate-toggle"
+                type="checkbox"
+                [checked]="isAutoTranslateEnabled()"
+                (change)="toggleAutoTranslate()"
+                class="h-3 w-3 accent-neon-blue cursor-pointer"
+              />
+            </div>
           }
         </div>
         @if (translatedExplanation()) {
@@ -89,6 +105,16 @@ export class VisualDiffComponent {
 
   readonly isTranslating = signal(false);
   readonly translatedExplanation = signal<string | null>(null);
+  readonly isAutoTranslateEnabled = signal(false);
+
+  toggleAutoTranslate() {
+    this.isAutoTranslateEnabled.update(v => !v);
+    if (this.isAutoTranslateEnabled()) {
+      this.translateExplanation();
+    } else {
+      this.translatedExplanation.set(null);
+    }
+  }
 
   async translateExplanation() {
     const text = this.explanation();

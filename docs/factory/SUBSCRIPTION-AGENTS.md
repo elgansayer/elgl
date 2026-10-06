@@ -38,12 +38,10 @@ sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   claude auth status --json
 ```
 
-The adapter uses `claude -p` in non-interactive mode with subscription-backed aliases: Opus for planning and
-architecture, Sonnet for implementation and merge-critical reviews, and Haiku for bounded repair and general work.
-Fable is intentionally excluded because it requires separately purchased usage credits even for an authenticated
-Claude Pro account. The adapter applies a Factory-enforced phase timeout, safe mode, no session persistence, and
-text output. Safe mode preserves authentication and built-in tools while disabling personal and repository
-customisations such as hooks, plugins, MCP servers, and `CLAUDE.md` auto-discovery. Repository-owned Factory policy uses Claude's
+The adapter uses `claude -p` in non-interactive mode, model `fable`, maximum effort, a Factory-enforced phase
+timeout, safe mode, no session persistence, and text output. Safe mode preserves authentication and built-in
+tools while disabling personal and repository customisations such as hooks, plugins, MCP servers, and
+`CLAUDE.md` auto-discovery. Repository-owned Factory policy uses Claude's
 `--append-system-prompt` channel, while untrusted task text uses stdin. A failed `auth status --json` reports
 `AUTH_REQUIRED` without starting a coding job.
 
