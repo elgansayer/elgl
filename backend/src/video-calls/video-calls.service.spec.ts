@@ -3,7 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VideoCallsService } from './video-calls.service';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken } from 'livekit-server-sdk';
-import { VideoCallsDegradationService } from './video-calls-degradation.service';
+import {
+  DegradationMarker,
+  VideoCallsDegradationService,
+} from './video-calls-degradation.service';
 import { VideoCallsEncryptionService } from './video-calls-encryption.service';
 import { MetricsService } from '../metrics/metrics.service';
 
@@ -61,7 +64,7 @@ describe('VideoCallsService', () => {
           _service: string,
           operation: () => Promise<unknown>,
           _fallback: () => unknown,
-          marker: any,
+          marker: DegradationMarker,
         ) => {
           try {
             return await operation();
@@ -162,17 +165,29 @@ describe('VideoCallsService', () => {
                   if (key === 'NODE_ENV') return 'production';
                   if (key === 'LIVEKIT_API_KEY') return 'test-livekit-api-key';
                   if (key === 'LIVEKIT_SECRET') return 'test-livekit-secret';
-                  if (key === 'LIVEKIT_URL') return 'https://test.livekit.cloud';
+                  if (key === 'LIVEKIT_URL')
+                    return 'https://test.livekit.cloud';
                   return null;
                 }),
               },
             },
-            { provide: VideoCallsDegradationService, useValue: mockDegradationService },
-            { provide: VideoCallsEncryptionService, useValue: mockEncryptionService },
-            { provide: LivekitService, useValue: { buildIceServers: vi.fn().mockReturnValue([]) } },
+            {
+              provide: VideoCallsDegradationService,
+              useValue: mockDegradationService,
+            },
+            {
+              provide: VideoCallsEncryptionService,
+              useValue: mockEncryptionService,
+            },
+            {
+              provide: LivekitService,
+              useValue: {
+                buildIceServers: vi.fn().mockReturnValue([]),
+              },
+            },
             { provide: MetricsService, useValue: mockMetricsService },
           ],
-        }).compile()
+        }).compile(),
       ).rejects.toThrow(
         'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
       );
@@ -245,7 +260,7 @@ describe('VideoCallsService', () => {
           _service: string,
           operation: () => Promise<unknown>,
           fallback: () => unknown,
-          marker: any,
+          marker: DegradationMarker,
         ) => {
           marker.degraded = true;
           marker.reason = 'Service livekit failed: LiveKit connection refused';
@@ -319,7 +334,7 @@ describe('VideoCallsService', () => {
           _service: string,
           operation: () => Promise<unknown>,
           fallback: () => unknown,
-          marker: any,
+          marker: DegradationMarker,
         ) => {
           marker.degraded = true;
           marker.reason = 'Service livekit failed: timeout';
