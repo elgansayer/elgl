@@ -245,9 +245,12 @@ export class ReadingEngineCacheService {
       ReadingEngineCacheNamespace.TRANSLATION,
       ReadingEngineCacheNamespace.SESSION,
     ];
-    for (const ns of prefixes) {
-      await this.deletePattern(this.buildUserPattern(ns, payload.userId));
-    }
+    // ⚡ Bolt Optimization: Replace sequential database queries in a loop with a concurrent Promise.all execution to improve cache invalidation performance
+    await Promise.all(
+      prefixes.map((ns) =>
+        this.deletePattern(this.buildUserPattern(ns, payload.userId)),
+      ),
+    );
     this.logger.log(
       { userId: payload.userId },
       'Bulk-invalidated all reading-engine caches for user (user_data_cleared)',
