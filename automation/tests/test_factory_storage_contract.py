@@ -72,11 +72,9 @@ def test_host_maintenance_reclaims_only_reproducible_repository_outputs() -> Non
     assert "frontend/dist" in script
     assert "backend/coverage" in script
     assert "admin-portal/.angular" in script
-    repository_cleanup = script[
-        script.index("prune_repository_caches()") : script.index(
-            "prune_factory_temp_quarantines()"
-        )
-    ]
+    cleanup_start = script.index("prune_repository_caches()")
+    cleanup_end = script.index("prune_factory_temp_quarantines()")
+    repository_cleanup = script[cleanup_start:cleanup_end]
     assert "node_modules" not in repository_cleanup
 
 
