@@ -11,7 +11,10 @@ const ACTIVE_DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_WEEK_MS = 7 * ACTIVE_DAY_MS;
 
 export type RecommendationReason =
-  'language_exchange' | 'shared_interests' | 'active_recently' | 'study_streak';
+  | 'language_exchange'
+  | 'shared_interests'
+  | 'active_recently'
+  | 'study_streak';
 
 export interface DiscoveryRecommendationDto {
   id: string;
