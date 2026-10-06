@@ -222,6 +222,55 @@ prune_cypress_cache() {
   log 'WARNING: Cypress cache is present but no installed Cypress CLI can prune it'
 }
 
+prune_repository_caches() {
+  local repository candidate resolved relative removed=0
+  filesystem_below_target "$FACTORY_REPOSITORY" || return 0
+  repository=$(readlink -f -- "$FACTORY_REPOSITORY") || return 0
+  if [ ! -d "$repository" ] || [ -L "$repository" ]; then
+    log "WARNING: repository cache root is not a real directory: $repository"
+    return 1
+  fi
+
+  for relative in \
+    .mypy_cache \
+    automation/.mypy_cache \
+    backend/coverage \
+    backend/dist \
+    frontend/.angular \
+    frontend/coverage \
+    frontend/dist \
+    frontend/playwright-report \
+    frontend/test-results \
+    admin-portal/.angular \
+    admin-portal/coverage \
+    admin-portal/dist; do
+    candidate="$repository/$relative"
+    [ -d "$candidate" ] || continue
+    if [ -L "$candidate" ]; then
+      log "WARNING: refusing symlinked repository cache: $candidate"
+      continue
+    fi
+    resolved=$(readlink -f -- "$candidate") || continue
+    case "$resolved" in
+      "$repository"/*) ;;
+      *)
+        log "WARNING: refusing repository cache outside checkout: $candidate"
+        continue
+        ;;
+    esac
+    if find "$candidate" -xdev -depth -delete; then
+      removed=$((removed + 1))
+    else
+      log "WARNING: failed to remove repository cache: $candidate"
+    fi
+    filesystem_below_target "$repository" || break
+  done
+
+  if [ "$removed" -gt 0 ]; then
+    log "Removed $removed reproducible repository cache(s) under storage pressure"
+  fi
+}
+
 prune_factory_temp_quarantines() {
   local root candidate metadata owner modified now cutoff removed=0
   case "$TEMP_QUARANTINE_ROOT" in
@@ -454,6 +503,7 @@ if ! install_journal_policy; then
 fi
 prune_uv_cache
 prune_cypress_cache
+prune_repository_caches
 prune_factory_temp_quarantines
 if [ "$PRUNE_CONTAINERS" = true ]; then
   prune_docker_storage

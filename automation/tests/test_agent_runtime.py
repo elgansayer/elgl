@@ -159,6 +159,8 @@ def test_provider_sandbox_restores_only_explicit_home_mounts(tmp_path: Path) -> 
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "for masked_root in /mnt /srv /media" in sandbox_script
+    assert "/run/containerd/containerd.sock /run/docker.sock" in sandbox_script
+    assert 'mount --bind /dev/null "$container_socket"' in sandbox_script
 
 
 def test_provider_sandbox_staging_does_not_mask_a_protected_source(tmp_path: Path) -> None:
