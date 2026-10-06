@@ -74,6 +74,40 @@ def test_cleanup_does_nothing_when_target_headroom_exists(
     assert cache.is_dir()
 
 
+def test_pressure_cleanup_removes_generated_build_and_test_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    generated_paths = (
+        tmp_path / "issue-11/backend/coverage",
+        tmp_path / "issue-11/backend/dist",
+        tmp_path / "issue-11/frontend/.angular",
+        tmp_path / "issue-11/frontend/dist",
+        tmp_path / "issue-11/frontend/playwright-report",
+        tmp_path / "issue-11/frontend/test-results",
+        tmp_path / "issue-11/admin-portal/.angular",
+        tmp_path / "issue-11/admin-portal/dist",
+    )
+    for generated_path in generated_paths:
+        generated_path.mkdir(parents=True)
+        (generated_path / "generated.txt").write_text("generated", encoding="utf-8")
+
+    free = iter([_usage(10), *[_usage(10) for _ in generated_paths[:-1]], _usage(30)])
+    monkeypatch.setattr(
+        "openhands_factory.worktree_cache.shutil.disk_usage", lambda path: next(free)
+    )
+
+    removed = prune_inactive_worktree_caches(
+        tmp_path,
+        set(),
+        minimum_free_bytes=20,
+        target_free_bytes=30,
+    )
+
+    assert set(removed) == set(generated_paths)
+    assert all(not path.exists() for path in generated_paths)
+
+
 def test_cleanup_rejects_target_below_reserve(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="below minimum"):
         prune_inactive_worktree_caches(
