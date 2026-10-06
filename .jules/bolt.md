@@ -168,3 +168,8 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+
+## 2026-10-06 - [Optimize Reading Engine Cache Invalidation via Promise.all]
+
+**Learning:** In the backend `reading-engine-cache.service.ts`, clearing reading engine caches (`handleUserDataCleared`) iteratively over prefixes using `await` inside a `for...of` loop creates N separate sequential cache invalidation calls, which add up to unnecessary delay during user data deletion.
+**Action:** Replaced single sequential iterations inside cache invalidation loops with an array lookup via `.map` and grouped them via `Promise.all`. This safely mitigates latency issues when bulk deleting multiple cached items.
