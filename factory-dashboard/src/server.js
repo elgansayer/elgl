@@ -253,10 +253,24 @@ async function handleRoute(req, res) {
     return sendJson(res, 404, { error: 'Not found' });
   }
 
-  // Serve static - normalise path to prevent directory traversal
-  const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
-  const filePath = path.join(PUBLIC_DIR, safePath === '/' ? 'index.html' : safePath);
-  serveStatic(res, filePath);
+  // Serve static - resolve safely to prevent directory traversal
+  let decodedPathname = '';
+  try {
+    decodedPathname = decodeURIComponent(pathname);
+  } catch (err) {
+    return sendJson(res, 400, { error: 'Bad Request' });
+  }
+  const relativePath = decodedPathname.replace(/^[\/\\]+/, '');
+  const targetPath = path.resolve(PUBLIC_DIR, relativePath);
+
+  if (!targetPath.startsWith(PUBLIC_DIR + path.sep) && targetPath !== PUBLIC_DIR) {
+    return sendJson(res, 403, { error: 'Forbidden' });
+  }
+
+  const finalPath = (targetPath === PUBLIC_DIR || targetPath === PUBLIC_DIR + path.sep)
+    ? path.join(PUBLIC_DIR, 'index.html')
+    : targetPath;
+  serveStatic(res, finalPath);
 }
 
 // ---- Server ----
