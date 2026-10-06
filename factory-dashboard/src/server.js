@@ -254,9 +254,23 @@ async function handleRoute(req, res) {
   }
 
   // Serve static - normalise path to prevent directory traversal
-  const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
-  const filePath = path.join(PUBLIC_DIR, safePath === '/' ? 'index.html' : safePath);
-  serveStatic(res, filePath);
+  let decodedPath = '';
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch (err) {
+    return sendJson(res, 400, { error: 'Bad request' });
+  }
+
+  // Strip leading slash to prevent absolute path resolution issues
+  const relativePath = decodedPath.replace(/^\/+/, '');
+  const targetPath = path.resolve(PUBLIC_DIR, relativePath || 'index.html');
+
+  // Ensure the resolved path remains within the PUBLIC_DIR
+  if (!targetPath.startsWith(PUBLIC_DIR + path.sep) && targetPath !== PUBLIC_DIR) {
+    return sendJson(res, 403, { error: 'Forbidden' });
+  }
+
+  serveStatic(res, targetPath);
 }
 
 // ---- Server ----
