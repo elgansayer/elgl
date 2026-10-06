@@ -59,30 +59,42 @@ export class DailyTipService {
       return;
     }
 
-    for (const user of users ?? []) {
-      const lang = user.target_languages?.[0] ?? user.native_language ?? 'en';
-      const prompt = `Give me a short daily learning tip (1-2 sentences) for someone learning ${lang}. Include practical advice. Do not include greetings.`;
+    const chunkSize = 10;
+    const allUsers = users ?? [];
 
-      try {
-        const { response } = await this.llmProxyService.proxyMessage(prompt);
-        const tipText = response?.trim() ?? 'Keep practising every day!';
+    // ⚡ Bolt Optimization: Replace sequential awaits in a for...of loop with a bounded concurrent
+    // Promise.allSettled batch map to drastically reduce network latency during LLM proxy calls,
+    // transforming N sequential calls into concurrent batches.
+    for (let i = 0; i < allUsers.length; i += chunkSize) {
+      const chunk = allUsers.slice(i, i + chunkSize);
 
-        // Emit a push notification via the existing notification system
-        const event = new ChatMessageEvent(
-          'system', // sender id (a virtual system sender)
-          user.id, // receiver
-          '', // room id (not used for push)
-          'text', // message type
-          tipText.substring(0, 120), // notification preview
-        );
-        this.eventEmitter.emit('chat.message', event);
-        this.logger.log(`Daily tip sent to user ${user.id}`);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        this.logger.error(
-          `Failed to generate tip for user ${user.id}: ${message}`,
-        );
-      }
+      await Promise.allSettled(
+        chunk.map(async (user) => {
+          const lang = user.target_languages?.[0] ?? user.native_language ?? 'en';
+          const prompt = `Give me a short daily learning tip (1-2 sentences) for someone learning ${lang}. Include practical advice. Do not include greetings.`;
+
+          try {
+            const { response } = await this.llmProxyService.proxyMessage(prompt);
+            const tipText = response?.trim() ?? 'Keep practising every day!';
+
+            // Emit a push notification via the existing notification system
+            const event = new ChatMessageEvent(
+              'system', // sender id (a virtual system sender)
+              user.id, // receiver
+              '', // room id (not used for push)
+              'text', // message type
+              tipText.substring(0, 120), // notification preview
+            );
+            this.eventEmitter.emit('chat.message', event);
+            this.logger.log(`Daily tip sent to user ${user.id}`);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger.error(
+              `Failed to generate tip for user ${user.id}: ${message}`,
+            );
+          }
+        }),
+      );
     }
   }
 }
