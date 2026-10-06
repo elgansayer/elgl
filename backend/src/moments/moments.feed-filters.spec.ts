@@ -1,6 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
 import { MomentsController } from './moments.controller';
-import { MomentsFeedService } from './moments-feed.service';
 import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService } from './moments.service';
 import { UsersService } from '../users/users.service';
@@ -10,12 +9,12 @@ const user = { id: 'viewer-1' } as any;
 
 describe('MomentsController feed filters', () => {
   let controller: MomentsController;
-  let momentsFeedService: { getFeed: ReturnType<typeof vi.fn> };
+  let momentsService: { getFeed: ReturnType<typeof vi.fn> };
   let usersService: { getProfile: ReturnType<typeof vi.fn> };
   let rankingService: { rankForYou: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    momentsFeedService = {
+    momentsService = {
       getFeed: vi.fn().mockResolvedValue([]),
     };
     usersService = {
@@ -24,12 +23,11 @@ describe('MomentsController feed filters', () => {
     rankingService = {
       rankForYou: vi
         .fn()
-        .mockImplementation((_userId, moments) => Promise.resolve(moments)),
+        .mockImplementation(async (_userId, moments) => moments),
     };
 
     controller = new MomentsController(
-      {} as MomentsService,
-      momentsFeedService as unknown as MomentsFeedService,
+      momentsService as unknown as MomentsService,
       usersService as unknown as UsersService,
       {} as R2Service,
       rankingService as unknown as MomentsRankingService,
@@ -37,13 +35,13 @@ describe('MomentsController feed filters', () => {
   });
 
   it('uses All by default and keeps the established feed route contract', async () => {
-    momentsFeedService.getFeed.mockResolvedValue([
+    momentsService.getFeed.mockResolvedValue([
       { id: 'moment-1', user_id: 'author-1' },
     ]);
 
     const result = await controller.getFeed(user);
 
-    expect(momentsFeedService.getFeed).toHaveBeenCalledWith(
+    expect(momentsService.getFeed).toHaveBeenCalledWith(
       'viewer-1',
       'All',
       undefined,
@@ -53,14 +51,14 @@ describe('MomentsController feed filters', () => {
   });
 
   it('normalises an explicit Classmates language before querying the feed', async () => {
-    momentsFeedService.getFeed.mockResolvedValue([
+    momentsService.getFeed.mockResolvedValue([
       { id: 'moment-fr', user_id: 'author-1' },
     ]);
 
     const result = await controller.getFeed(user, 'Classmates', ' FR ');
 
     expect(usersService.getProfile).not.toHaveBeenCalled();
-    expect(momentsFeedService.getFeed).toHaveBeenCalledWith(
+    expect(momentsService.getFeed).toHaveBeenCalledWith(
       'viewer-1',
       'Classmates',
       'fr',
@@ -73,11 +71,14 @@ describe('MomentsController feed filters', () => {
       id: 'viewer-1',
       target_languages: ['JA', 'fr'],
     });
+    momentsService.getFeed.mockResolvedValue([
+      { id: 'moment-ja', user_id: 'author-1' },
+    ]);
 
     await controller.getFeed(user, 'Classmates');
 
     expect(usersService.getProfile).toHaveBeenCalledWith('viewer-1');
-    expect(momentsFeedService.getFeed).toHaveBeenCalledWith(
+    expect(momentsService.getFeed).toHaveBeenCalledWith(
       'viewer-1',
       'Classmates',
       'ja',
@@ -93,26 +94,23 @@ describe('MomentsController feed filters', () => {
     const result = await controller.getFeed(user, 'Classmates');
 
     expect(result).toEqual([]);
-    expect(momentsFeedService.getFeed).not.toHaveBeenCalled();
+    expect(momentsService.getFeed).not.toHaveBeenCalled();
   });
 
-  it('routes Following through the feed policy boundary', async () => {
-    momentsFeedService.getFeed.mockResolvedValue([
+  it('keeps Following limited to followed users rather than the viewer', async () => {
+    momentsService.getFeed.mockResolvedValue([
+      { id: 'own-moment', user_id: 'viewer-1' },
       { id: 'followed-moment', user_id: 'author-2' },
     ]);
 
     const result = await controller.getFeed(user, 'Following');
 
-    expect(momentsFeedService.getFeed).toHaveBeenCalledWith(
-      'viewer-1',
-      'Following',
-      undefined,
-    );
     expect(result).toEqual([{ id: 'followed-moment', user_id: 'author-2' }]);
   });
 
   it('routes only production For You candidates through the personalized ranker', async () => {
-    momentsFeedService.getFeed.mockResolvedValue([
+    momentsService.getFeed.mockResolvedValue([
+      { id: 'mock-moment-1', user_id: 'fake-1' },
       { id: 'own-moment', user_id: 'viewer-1' },
       { id: 'real-moment', user_id: 'author-2' },
     ]);
@@ -129,10 +127,21 @@ describe('MomentsController feed filters', () => {
     expect(result).toEqual([{ id: 'real-moment', user_id: 'author-2' }]);
   });
 
+  it('does not expose generated mock Moments through production feed filters', async () => {
+    momentsService.getFeed.mockResolvedValue([
+      { id: 'mock-moment-1', user_id: 'fake-1' },
+      { id: 'real-moment', user_id: 'author-1' },
+    ]);
+
+    const result = await controller.getFeed(user, 'All');
+
+    expect(result).toEqual([{ id: 'real-moment', user_id: 'author-1' }]);
+  });
+
   it('rejects unsupported filter values instead of silently broadening the feed', async () => {
     await expect(controller.getFeed(user, 'Everyone')).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    expect(momentsFeedService.getFeed).not.toHaveBeenCalled();
+    expect(momentsService.getFeed).not.toHaveBeenCalled();
   });
 });
