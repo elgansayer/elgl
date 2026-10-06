@@ -111,3 +111,9 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-10-04 - [Strict Path Resolution for Static File Servers]
+
+**Vulnerability:** A static file server used a naive regex `replace(/^(\.\.[/\\])+/, '')` to prevent path traversal. This could be bypassed using URL encoded dot-dot-slash sequences (e.g., `%2e%2e%2f%2e%2e%2fetc%2fpasswd`), allowing attackers to read arbitrary files on the filesystem.
+**Learning:** URL components remain encoded in `req.url` and `new URL(req.url).pathname`. Node's `path.normalize()` will not resolve encoded traversal attempts. Manual regex sanitisation is almost always brittle and prone to bypasses via encoding or malformed characters like null bytes (`%00`).
+**Prevention:** Always use `decodeURIComponent` before manipulating request paths. Remove null bytes (`\0`). Use `path.resolve()` against the intended base directory (after stripping leading slashes) to generate an absolute target path. Finally, enforce a strict prefix check ensuring the resulting `targetPath` starts exactly with the base directory plus a path separator (`PUBLIC_DIR + path.sep`).
