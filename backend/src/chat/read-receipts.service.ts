@@ -73,21 +73,19 @@ export class ReadReceiptsService {
 
   async markAllAsRead(roomId: string, userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { data: messages } = await supabase
-      .from('chat_messages')
-      .select('id')
-      .eq('room_id', roomId)
-      .neq('sender_id', userId)
-      .neq('delivery_status', 'read');
 
-    if (!messages || messages.length === 0) return;
-
-    const messageIds = messages.map((m: { id: string }) => m.id);
-
-    await supabase
+    // ⚡ Bolt Optimization: Combined `.select('id')` and `.update()` into a single query to eliminate a round trip.
+    const { data: updatedMessages } = await supabase
       .from('chat_messages')
       .update({ delivery_status: 'read' })
-      .in('id', messageIds);
+      .eq('room_id', roomId)
+      .neq('sender_id', userId)
+      .neq('delivery_status', 'read')
+      .select('id');
+
+    if (!updatedMessages || updatedMessages.length === 0) return;
+
+    const messageIds = updatedMessages.map((m: { id: string }) => m.id);
 
     await this.centrifugoService.publish(`chat:${roomId}:receipts`, {
       type: 'bulk_read',
