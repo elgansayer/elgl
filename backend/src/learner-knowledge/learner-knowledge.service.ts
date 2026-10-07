@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
+import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
@@ -52,6 +53,7 @@ export class LearnerKnowledgeService {
   constructor(
     private readonly flashcardsService: FlashcardsService,
     private readonly hobbyTagsService: HobbyTagsService,
+    private readonly assessmentsService: AssessmentsService,
     private readonly lessonsService: LessonsService,
     private readonly momentsService: MomentsService,
   ) {}
@@ -65,16 +67,20 @@ export class LearnerKnowledgeService {
     );
 
     // Fetch data from various sources (Mock implementation for now based on design doc)
-    const [flashcards, vocabulary, lessons, momentsCounts] = await Promise.all([
-      this.flashcardsService
-        .getFlashcards(userId, undefined, 20)
-        .catch(() => []),
-      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
-      this.lessonsService.listLessons().catch(() => []), // Placeholder
-      this.momentsService
-        .getLifetimeCounts(userId)
-        .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
-    ]);
+    const [flashcards, vocabulary, assessments, lessons, momentsCounts] =
+      await Promise.all([
+        this.flashcardsService
+          .getFlashcards(userId, undefined, 20)
+          .catch(() => []),
+        this.hobbyTagsService
+          .getUserVocabulary(userId, language)
+          .catch(() => []),
+        this.assessmentsService.getQuestions(language).catch(() => []), // Placeholder
+        this.lessonsService.listLessons().catch(() => []), // Placeholder
+        this.momentsService
+          .getLifetimeCounts(userId)
+          .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+      ]);
 
     const knowledgeItems = new Map<string, KnowledgeItem>();
 
