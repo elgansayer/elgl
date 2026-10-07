@@ -9,14 +9,10 @@ JOURNAL_POLICY_TARGET=/etc/systemd/journald.conf.d/99-hellotalk-factory-storage.
 FACTORY_USER=${FACTORY_STORAGE_USER:-dev}
 FACTORY_HOME=${FACTORY_STORAGE_HOME:-/home/dev}
 FACTORY_VENV=${FACTORY_STORAGE_VENV:-/opt/hellotalk-factory/venv}
-FACTORY_REPOSITORY=${FACTORY_REPOSITORY:-/home/dev/hellotalk}
-CYPRESS_CACHE=${FACTORY_CYPRESS_CACHE:-$FACTORY_HOME/.cache/Cypress}
 PRUNE_AGE=${FACTORY_CONTAINER_PRUNE_AGE:-168h}
 DOCKER_CACHE_LIMIT=${FACTORY_DOCKER_CACHE_LIMIT:-2GB}
 MINIMUM_FREE_GIB=${FACTORY_MINIMUM_FREE_DISK_GIB:-5}
 FREE_HEADROOM_GIB=${FACTORY_STORAGE_FREE_HEADROOM_GIB:-1}
-TEMP_QUARANTINE_ROOT=${FACTORY_TEMP_QUARANTINE_ROOT:-/var/tmp}
-TEMP_QUARANTINE_MAX_AGE_SECONDS=${FACTORY_TEMP_QUARANTINE_MAX_AGE_SECONDS:-86400}
 LOCK_FILE=${FACTORY_STORAGE_MAINTENANCE_LOCK:-/run/lock/hellotalk-factory-storage.lock}
 APPLY=false
 PRUNE_CONTAINERS=false
@@ -32,12 +28,10 @@ and provider-home usage without changing the host.
 With --apply, installs the bounded journal policy only when it changed, vacuums
 archived journal entries, prunes unused uv cache records, and performs the
 bounded one-time migration of a legacy verified updater into the neutral Repo
-Factory runtime when that runtime is present. It also removes Factory-owned
-temporary mypy-cache quarantines after one day. Add --prune-containers to
-remove dangling Docker/Podman images older than seven days and bounded
-Docker/Podman build cache. If either container store falls below the Factory
-reserve plus headroom, the age grace is dropped for dangling images and build
-cache only.
+Factory runtime when that runtime is present. Add --prune-containers to remove
+dangling Docker/Podman images older than seven days and bounded Docker/Podman
+build cache. If either container store falls below the Factory reserve plus
+headroom, the age grace is dropped for dangling images and build cache only.
 
 The historical --prune-docker name is retained as an alias. This command never
 removes volumes, named images, running/stopped containers, provider credentials,
@@ -201,140 +195,22 @@ prune_uv_cache() {
   fi
 }
 
-prune_cypress_cache() {
-  local cypress
-  [ -d "$CYPRESS_CACHE" ] || return 0
-  filesystem_below_target "$CYPRESS_CACHE" || return 0
-
-  for cypress in \
-    "$FACTORY_REPOSITORY/frontend/node_modules/.bin/cypress" \
-    "/var/lib/repo-factory/hellotalk/repository/frontend/node_modules/.bin/cypress" \
-    "/var/lib/hellotalk-factory/repository/frontend/node_modules/.bin/cypress"; do
-    [ -x "$cypress" ] || continue
-    log 'Factory-state filesystem is below target; pruning obsolete Cypress binaries'
-    if ! run_as_factory_user env CYPRESS_CACHE_FOLDER="$CYPRESS_CACHE" \
-      "$cypress" cache prune; then
-      log 'WARNING: Cypress binary cache prune failed'
-    fi
-    return 0
-  done
-
-  log 'WARNING: Cypress cache is present but no installed Cypress CLI can prune it'
-}
-
-prune_repository_caches() {
-  local repository candidate resolved relative removed=0
-  filesystem_below_target "$FACTORY_REPOSITORY" || return 0
-  repository=$(readlink -f -- "$FACTORY_REPOSITORY") || return 0
-  if [ ! -d "$repository" ] || [ -L "$repository" ]; then
-    log "WARNING: repository cache root is not a real directory: $repository"
-    return 1
-  fi
-
-  for relative in \
-    .mypy_cache \
-    automation/.mypy_cache \
-    backend/coverage \
-    backend/dist \
-    frontend/.angular \
-    frontend/coverage \
-    frontend/dist \
-    frontend/playwright-report \
-    frontend/test-results \
-    admin-portal/.angular \
-    admin-portal/coverage \
-    admin-portal/dist; do
-    candidate="$repository/$relative"
-    [ -d "$candidate" ] || continue
-    if [ -L "$candidate" ]; then
-      log "WARNING: refusing symlinked repository cache: $candidate"
-      continue
-    fi
-    resolved=$(readlink -f -- "$candidate") || continue
-    case "$resolved" in
-      "$repository"/*) ;;
-      *)
-        log "WARNING: refusing repository cache outside checkout: $candidate"
-        continue
-        ;;
-    esac
-    if find "$candidate" -xdev -depth -delete; then
-      removed=$((removed + 1))
-    else
-      log "WARNING: failed to remove repository cache: $candidate"
-    fi
-    filesystem_below_target "$repository" || break
-  done
-
-  if [ "$removed" -gt 0 ]; then
-    log "Removed $removed reproducible repository cache(s) under storage pressure"
-  fi
-}
-
-prune_factory_temp_quarantines() {
-  local root candidate metadata owner modified now cutoff removed=0
-  case "$TEMP_QUARANTINE_ROOT" in
-    /tmp|/var/tmp) root=$TEMP_QUARANTINE_ROOT ;;
-    *)
-      log "WARNING: refusing unsafe temporary quarantine root: $TEMP_QUARANTINE_ROOT"
-      return 1
-      ;;
-  esac
-  if [ ! -d "$root" ] || [ -L "$root" ]; then
-    log "WARNING: temporary quarantine root is not a real directory: $root"
-    return 1
-  fi
-  case "$TEMP_QUARANTINE_MAX_AGE_SECONDS" in
-    ''|*[!0-9]*|0)
-      log 'WARNING: invalid temporary quarantine maximum age; skipping cleanup'
-      return 1
-      ;;
-  esac
-  owner=$(factory_uid) || return 0
-  now=$(date +%s) || return 1
-  cutoff=$((now - TEMP_QUARANTINE_MAX_AGE_SECONDS))
-
-  while IFS= read -r -d '' candidate; do
-    [ ! -L "$candidate" ] || continue
-    [ "${candidate%/*}" = "$root" ] || continue
-    case "${candidate##*/}" in
-      factory-mypy-cache-quarantine.?*) ;;
-      *) continue ;;
-    esac
-    metadata=$(stat -c '%u:%Y' -- "$candidate" 2>/dev/null) || continue
-    [ "${metadata%%:*}" = "$owner" ] || continue
-    modified=${metadata#*:}
-    case "$modified" in
-      ''|*[!0-9]*) continue ;;
-    esac
-    [ "$modified" -le "$cutoff" ] || continue
-    if rm -rf --one-file-system -- "$candidate"; then
-      removed=$((removed + 1))
-    else
-      log "WARNING: failed to remove stale temporary quarantine: $candidate"
-    fi
-  done < <(
-    find "$root" -xdev -mindepth 1 -maxdepth 1 -type d \
-      -name 'factory-mypy-cache-quarantine.*' -print0
-  )
-
-  if [ "$removed" -gt 0 ]; then
-    log "Removed $removed stale temporary mypy-cache quarantine(s)"
-  fi
-}
-
 bootstrap_repo_factory_updater() {
   local legacy=/opt/hellotalk-factory/hellotalk-factory-update.sh
   local neutral_root=/opt/repo-factory
   local neutral="$neutral_root/repo-factory-update.sh"
   local marker=FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1
-  local repository branch head tracking actual_commit updater_blob actual_blob temporary
 
   [ -e "$neutral_root" ] || return 0
   if [ ! -d "$neutral_root" ] || [ -L "$neutral_root" ] || \
     [ "$(readlink -f -- "$neutral_root")" != "$neutral_root" ] || \
     [ "$(stat -Lc '%u:%g:%a' -- "$neutral_root")" != '0:0:755' ]; then
     log "WARNING: neutral Repo Factory runtime root is not a safe root-owned directory"
+    return 1
+  fi
+  if [ ! -f "$legacy" ] || [ -L "$legacy" ] || \
+    [ "$(stat -Lc '%u:%g:%a' -- "$legacy")" != '0:0:755' ]; then
+    log 'WARNING: verified legacy updater is unavailable for neutral-runtime bootstrap'
     return 1
   fi
   if [ -L "$neutral" ]; then
@@ -344,60 +220,17 @@ bootstrap_repo_factory_updater() {
   if [ -f "$neutral" ] && grep -q "$marker" "$neutral"; then
     return 0
   fi
-  if [ -f "$legacy" ] && [ ! -L "$legacy" ] && \
-    [ "$(stat -Lc '%u:%g:%a' -- "$legacy")" = '0:0:755' ] && \
-    grep -q "$marker" "$legacy"; then
-    if ! install -o root -g root -m 0755 "$legacy" "$neutral"; then
-      log 'WARNING: failed to bootstrap the neutral Repo Factory updater'
-      return 1
-    fi
-    log 'Bootstrapped neutral Repo Factory updater from verified legacy runtime'
+  if ! grep -q "$marker" "$legacy"; then
+    # The old updater installs the new verified legacy runtime after its first
+    # pull. A later bounded maintenance pass sees the marker and completes the
+    # one-time neutral-runtime migration without copying stale code.
     return 0
   fi
-
-  # Some hosts predate the verified legacy runtime and can never reach the
-  # marker-based branch above. Extract the replacement from an immutable Git
-  # object only when the factory-owned checkout is cleanly pinned to the fetched
-  # origin/main tip and the commit and blob hashes both verify independently.
-  repository=$(readlink -f -- "$SCRIPT_DIRECTORY/..") || return 1
-  branch=$(run_as_factory_user git -C "$repository" symbolic-ref --quiet --short HEAD) || return 0
-  head=$(run_as_factory_user git -C "$repository" rev-parse --verify HEAD) || return 0
-  tracking=$(
-    run_as_factory_user git -C "$repository" rev-parse --verify refs/remotes/origin/main
-  ) || return 0
-  if [ "$branch" != main ] || [ "$head" != "$tracking" ] || \
-    [[ ! "$head" =~ ^[0-9a-f]{40,64}$ ]]; then
-    return 0
-  fi
-  actual_commit=$(
-    run_as_factory_user git -C "$repository" cat-file commit "$head" | \
-      git hash-object -t commit --stdin
-  ) || return 1
-  [ "$actual_commit" = "$head" ] || return 1
-  updater_blob=$(
-    run_as_factory_user git -C "$repository" rev-parse \
-      "$head:config/systemd/hellotalk-factory-update.sh"
-  ) || return 1
-  [[ "$updater_blob" =~ ^[0-9a-f]{40,64}$ ]] || return 1
-  temporary=$(mktemp "$neutral.new.XXXXXX") || return 1
-  if ! run_as_factory_user git -C "$repository" cat-file blob "$updater_blob" > "$temporary"; then
-    rm -f -- "$temporary"
+  if ! install -o root -g root -m 0755 "$legacy" "$neutral"; then
+    log 'WARNING: failed to bootstrap the neutral Repo Factory updater'
     return 1
   fi
-  actual_blob=$(git hash-object "$temporary") || {
-    rm -f -- "$temporary"
-    return 1
-  }
-  if [ "$actual_blob" != "$updater_blob" ] || ! grep -q "$marker" "$temporary"; then
-    rm -f -- "$temporary"
-    return 1
-  fi
-  if ! chown root:root "$temporary" || ! chmod 0755 "$temporary" || \
-    ! mv -fT -- "$temporary" "$neutral"; then
-    rm -f -- "$temporary"
-    return 1
-  fi
-  log "Bootstrapped neutral Repo Factory updater from verified commit ${head:0:12}"
+  log 'Bootstrapped neutral Repo Factory updater from verified legacy runtime'
 }
 
 prune_docker_storage() {
@@ -502,9 +335,6 @@ if ! install_journal_policy; then
   log 'WARNING: journal policy/vacuum maintenance failed'
 fi
 prune_uv_cache
-prune_cypress_cache
-prune_repository_caches
-prune_factory_temp_quarantines
 if [ "$PRUNE_CONTAINERS" = true ]; then
   prune_docker_storage
   prune_podman_storage
