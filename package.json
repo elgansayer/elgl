@@ -4,7 +4,7 @@
   "private": true,
   "description": "HelloTalk Open-Core Platform (Angular v22 + NestJS + Supabase + Centrifugo + LiveKit)",
   "engines": {
-    "node": ">=22.0.0",
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
     "npm": ">=10.0.0"
   },
   "packageManager": "npm@10.9.8",
