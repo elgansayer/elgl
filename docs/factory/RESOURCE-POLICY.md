@@ -6,10 +6,10 @@ The production Factory deliberately limits admission of expensive AI work so a l
 
 | Work | Limit | Enforcement |
 | --- | ---: | --- |
-| Newly discovered GitHub issues | 4 per hour | Restart-safe `issue-admissions.json` scheduler gate |
-| AI-backed Factory phase starts | 48 per hour | Restart-safe `agent-route-admissions.json` router gate |
-| Fresh independent PR review SHAs | 36 per hour | Restart-safe `review-admissions.json` agent gate |
-| Concurrent independent review agents | 2 | In-process bounded semaphore on the shared router |
+| Newly discovered GitHub issues | 1 per hour | Restart-safe `issue-admissions.json` scheduler gate |
+| AI-backed Factory phase starts | 6 per hour | Restart-safe `agent-route-admissions.json` router gate |
+| Fresh independent PR review SHAs | 2 per hour | Restart-safe `review-admissions.json` agent gate |
+| Concurrent independent review agents | 1 | In-process bounded semaphore on the shared router |
 | Concurrent agent executions overall | 2 | In-process bounded semaphore on the shared router |
 | Provider candidates per phase | 2 | Preferred provider plus at most one fallback |
 | Same-provider transient retry | 0 under conservative policy | Defer/re-route instead of immediately spending twice on one provider |
@@ -18,15 +18,14 @@ The existing production environment controls issue intake and the independent AI
 
 ```text
 FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
-FACTORY_NEW_ISSUES_PER_INTERVAL=4
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
 FACTORY_AGENT_ROUTE_INTERVAL_SECONDS=3600
-FACTORY_AGENT_ROUTES_PER_INTERVAL=48
-FACTORY_REVIEWS_PER_INTERVAL=36
+FACTORY_AGENT_ROUTES_PER_INTERVAL=6
 ```
 
 Issue intake and agent-route admission are intentionally separate. One admitted issue can require implementation, security review, independent code review and a bounded repair. Limiting only new issues therefore does not bound subscription consumption.
 
-Forty-eight route starts/hour lets the two-worker host stay productive without creating an unlimited retry loop. Thirty-six of those starts may be fresh independent reviews, leaving capacity for implementation and repair. Each route can use the preferred provider and at most one distinct fallback. The conservative policy disables immediate same-provider retries, so a single provider-side transient failure cannot double-spend the same subscription before fallback. The next durable scheduler transition may revisit a provider after health/circuit state changes.
+Six route starts/hour leaves enough budget for a healthy issue path plus the two-review lane while retaining recovery capacity. Each route can use the preferred provider and at most one distinct fallback. The conservative policy disables immediate same-provider retries, so a single provider-side transient failure cannot double-spend the same subscription before fallback. The next durable scheduler transition may revisit a provider after health/circuit state changes.
 
 ## Prompt-size budget
 
@@ -84,7 +83,7 @@ For code and security review, providers that previously mutated the job are move
 
 The daemon may retain multiple workers because many state transitions are cheap control-plane operations. Expensive agent execution is independently capped at two concurrent routes across implementation, planning, security, repair, review, and the architect cycle.
 
-Independent code review has a two-agent concurrency cap. When eligible non-review work exists and the host exposes only two available slots, the scheduler limits the current selection to one review and preserves the other slot for implementation or repair. If no issue work can advance, both slots drain the PR backlog.
+Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 
 The semaphores live on the shared router instance used by daemon workers and the architect executor. The host-level Factory lock already prevents a second daemon from owning the same repository concurrently.
 

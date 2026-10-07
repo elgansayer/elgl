@@ -45,7 +45,7 @@ def test_claude_uses_low_effort_for_factory_general_action() -> None:
 
     effort_index = command.index("--effort")
     assert command[effort_index + 1] == "low"
-    assert "sonnet" in command
+    assert "fable" in command
 
 
 def test_claude_keeps_security_and_build_effort_floors() -> None:
