@@ -6,13 +6,15 @@ import { json, urlencoded, Request, Response } from 'express';
 import helmet from 'helmet';
 import { isMockBackendEnabled } from './config/mock-backend-mode';
 import { getMockFixtureDiagnostics } from './mock/deterministic-fixtures';
+import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.use(helmet());
   app.setGlobalPrefix('api');
 
-  if (isMockBackendEnabled()) {
+  const mockBackendEnabled = isMockBackendEnabled();
+  if (mockBackendEnabled) {
     const diagnostics = getMockFixtureDiagnostics();
     Logger.log(
       `Mock backend fixtures enabled: seed=${diagnostics.seed} seedId=${diagnostics.seedId} epoch=${diagnostics.epoch}`,
@@ -129,8 +131,17 @@ spatial filtering, language pair, audio intros, Partner of the Week,
 spotlight, and location-based search).`,
     )
     .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, documentFactory);
+
+  if (mockBackendEnabled) {
+    // In explicit local/test/demo profiles, build the document once and feed
+    // the same authoritative schema to both Swagger and the fixture registry.
+    const document = SwaggerModule.createDocument(app, config);
+    app.get(OpenApiFixtureFactoryRegistry).registerDocument(document);
+    SwaggerModule.setup('api/docs', app, document);
+  } else {
+    const documentFactory = () => SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, documentFactory);
+  }
 
   await app.listen(process.env.PORT ?? 3000);
 }
