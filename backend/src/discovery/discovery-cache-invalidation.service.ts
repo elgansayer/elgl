@@ -253,12 +253,17 @@ export class DiscoveryCacheInvalidationService {
     ];
     // Delete exact keys and prefixed patterns
     let total = 0;
-    for (const prefix of prefixes) {
-      if (prefix.includes(':')) {
-        total += await this.deleteByPattern(`${prefix}:*`);
-      }
-      total += await this.getRedis().del(prefix);
-    }
+    const results = await Promise.all(
+      prefixes.map(async (prefix) => {
+        let deleted = 0;
+        if (prefix.includes(':')) {
+          deleted += await this.deleteByPattern(`${prefix}:*`);
+        }
+        deleted += await this.getRedis().del(prefix);
+        return deleted;
+      }),
+    );
+    total = results.reduce((acc, curr) => acc + curr, 0);
     if (total > 0) {
       this.logger.info(
         `Bulk-invalidated ${total} discovery cache key(s) for user ${payload.userId}`,
