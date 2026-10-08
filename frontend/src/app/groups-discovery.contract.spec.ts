@@ -28,11 +28,11 @@ describe('groups discovery product contract', () => {
   });
 
   it('keeps a standalone lazy-loaded Groups Discovery route', () => {
-    expect(chatRoutes).toContain("path: 'groups'");
+    expect(chatRoutes).toContain("path: 'chat/groups'");
     expect(chatRoutes).toContain(
       "import('../components/groups-discovery/groups-discovery.component')",
     );
-    expect(chatRoutes).toContain("title: 'Groups Discovery - HelloTalk'");
+    expect(chatRoutes).toContain("title: 'Group Chats - HelloTalk'");
   });
 
   it('loads authenticated discoverable groups and topic metadata', () => {
