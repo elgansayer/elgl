@@ -3,6 +3,11 @@ import { Routes } from '@angular/router';
 export const learningRoutes: Routes = [
   {
     path: 'vocabulary',
+    redirectTo: 'learn/vocabulary',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/vocabulary',
     loadComponent: () =>
       import('../components/vocabulary-dashboard/vocabulary-dashboard.component').then(
         (m) => m.VocabularyDashboardComponent,
@@ -10,6 +15,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'decks',
+    redirectTo: 'learn/vocabulary/decks',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/vocabulary/decks',
     loadComponent: () =>
       import('../components/flashcard-deck/flashcard-deck.component').then(
         (m) => m.FlashcardDeckComponent,
@@ -18,6 +28,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'review',
+    redirectTo: 'learn/vocabulary/review',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/vocabulary/review',
     loadComponent: () =>
       import('../components/flashcard-review/flashcard-review.component').then(
         (m) => m.FlashcardReviewComponent,
@@ -42,22 +57,29 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'diagnostic-quiz',
-    loadComponent: () =>
-      import('../components/diagnostic-quiz/diagnostic-quiz.component').then(
-        (m) => m.DiagnosticQuizComponent,
-      ),
-    title: 'Language Level Diagnostic - HelloTalk',
+    redirectTo: 'learn/assessment',
+    pathMatch: 'full',
   },
   {
     path: 'proficiency',
+    redirectTo: 'learn/assessment',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/assessment',
     loadComponent: () =>
       import('../components/proficiency-assessment/proficiency-assessment.component').then(
         (m) => m.ProficiencyAssessmentComponent,
       ),
-    title: 'Proficiency Assessment - HelloTalk',
+    title: 'Language Assessment - HelloTalk',
   },
   {
     path: 'lessons',
+    redirectTo: 'learn/lessons',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/lessons',
     loadComponent: () =>
       import('../pages/lessons/lessons.component').then((m) => m.LessonsComponent),
     title: 'Lessons - HelloTalk',
@@ -70,6 +92,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'read',
+    redirectTo: 'learn/read',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/read',
     loadComponent: () =>
       import('../components/reading-engine/reading-engine.component').then(
         (m) => m.ReadingEngineComponent,
@@ -86,6 +113,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'pronunciation-feedback',
+    redirectTo: 'learn/assessment/pronunciation',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/assessment/pronunciation',
     loadComponent: () =>
       import('../components/pronunciation-feedback/pronunciation-feedback.component').then(
         (m) => m.PronunciationFeedbackComponent,
@@ -108,6 +140,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'ai-conversation',
+    redirectTo: 'learn/ai-chat',
+    pathMatch: 'full',
+  },
+  {
+    path: 'learn/ai-chat',
     loadComponent: () =>
       import('../ai-conversation/ai-conversation.component').then((m) => m.AiConversationComponent),
     title: 'AI Conversation - HelloTalk',

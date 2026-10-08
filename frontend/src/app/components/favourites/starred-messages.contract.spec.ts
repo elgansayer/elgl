@@ -11,7 +11,7 @@ describe('starred messages retrieval contract', () => {
   });
 
   it('keeps a dedicated favourites retrieval route', () => {
-    const favouritesRoute = routes.find((route) => route.path === 'favourites');
+    const favouritesRoute = routes.find((route) => route.path === 'profile/me/favourites');
 
     expect(favouritesRoute).toBeDefined();
     expect(favouritesRoute?.loadComponent).toBeTypeOf('function');
