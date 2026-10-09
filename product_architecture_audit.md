@@ -63,6 +63,26 @@ This report outlines the user-facing routes, capabilities, overlaps, redundancie
 - Nested settings: `/settings/account`, `/settings/notification`, `/settings/message-filters`, `/settings/appearance`, `/settings/language`, `/settings/privacy`, `/settings/blocks`, `/settings/backup-restore`, `/settings/linked-accounts`, `/settings/data-storage`, `/settings/device-transfer`, `/settings/gdpr`, `/settings/account/deletion`, `/settings/version`
 - Many top-level redundancies redirecting to settings: `/language`, `/blocks`, `/data-storage`, `/device-transfer`, `/gdpr`, `/account/deletion`, `/version`.
 
+### Auth & Legal Routes (`auth.routes.ts`)
+- `/onboarding`: Onboarding wizard
+- `/forgot-password`: Forgot password
+- `/reset-password`: Reset password
+- `/change-password`: Change password
+- `/lock`: App Lock
+- `/terms`: Terms of Service
+- `/privacy`: Privacy Policy
+- `/support`: Support Centre
+- Redundancies/Redirects: `/help` -> `/support`, `/help-about` -> `/support`
+
+### Admin & Core App Routes (`app.routes.ts`, `admin.routes.ts`)
+- `/home`: Home component
+- `/admin`: Admin Portal
+- `/admin/lessons`: Lesson Management
+- `/admin/moderation`: Moderation Queue
+- `/admin/blocks`: Block Management
+- `/admin/users`: Admin Users
+- `/developer`: Developer Dashboard
+
 ## 2. Identified Redundancies, Overlaps, and Contradictions
 - **Community vs Groups vs Communities:** There is a top-level `/community` route handling 'Communities' but also a `/groups` route for 'Groups Discovery'. It is unclear how a 'Group' differs from a 'Community'. The redirect `/groups/create` -> `/community/groups/create` suggests they overlap conceptually.
 - **Events vs Language Parties / Islands:** Social routes contain `/events`, but also redirect `/language-parties` and `/language-islands` into `/community/...`. This splinters 'happenings' across Social and Community.
@@ -70,9 +90,11 @@ This report outlines the user-facing routes, capabilities, overlaps, redundancie
 - **Vocabulary Management:** `/vocabulary` vs `/decks` vs `/review`. There's potential to consolidate these into a single Vocabulary Hub rather than separate top-level routes.
 - **Settings Splat:** Too many legacy top-level routes (e.g., `/blocks`, `/language`, `/gdpr`) exist merely to redirect to `/settings/...`. While not harmful, it shows legacy architectural sprawl.
 - **Profile & Stats:** `/profile`, `/stats`, `/milestones` are all separate top-level social routes when they conceptually belong to a unified user profile view.
+- **Home vs Default Route:** Root `/` redirects to `/ai-conversation`, but there is a `/home` route. It's unclear what the primary landing experience should be.
+- **Support Redundancies:** `/help` and `/help-about` both redirect to `/support`.
 
 ## 3. Consolidated Product Information Architecture
-We propose collapsing the scattered routes into 6 distinct Core Pillars.
+We propose collapsing the scattered routes into distinct Core Pillars.
 
 ### Pillar 1: Social & Discovery (The Hub)
 **Purpose:** Finding people, consuming cultural content, and interacting passively.
@@ -94,7 +116,7 @@ We propose collapsing the scattered routes into 6 distinct Core Pillars.
 
 ### Pillar 4: Learning & AI (The Classroom)
 **Purpose:** Structured study, AI assistance, and vocabulary building.
-- `/learn` (Dashboard)
+- `/learn` (Dashboard, potentially consolidating `/home`)
   - `/learn/lessons` (Structured Quests & Lessons)
   - `/learn/ai-chat` (AI Conversation)
   - `/learn/read` (LingQ Engine)
@@ -113,3 +135,14 @@ We propose collapsing the scattered routes into 6 distinct Core Pillars.
 - `/shop` (Coins, Stickers, Escrow)
 - `/subscription` (VIP Status)
 - `/settings` (All configurations cleanly scoped under this path)
+
+### Pillar 7: Auth, Legal & Support
+**Purpose:** Authentication flows, legal documents, and user assistance.
+- `/auth` (Consolidating Onboarding, Password Management, and App Lock)
+- `/legal` (Consolidating Terms and Privacy)
+- `/support` (Help and Support Centre)
+
+### Pillar 8: Admin & Platform Management
+**Purpose:** System administration, moderation, and developer tools.
+- `/admin` (Portal for Users, Moderation, Blocks, and Lessons)
+- `/developer` (Developer Dashboard)
