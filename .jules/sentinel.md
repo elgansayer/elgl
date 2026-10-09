@@ -120,3 +120,8 @@
 **Vulnerability:** IDOR in audio intro update endpoint where any authenticated user could overwrite the audio intro for any other user because the route parameter `userId` was not compared against the authenticated user's ID.
 **Learning:** Endpoints mapped by `userId` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
 **Prevention:** Always extract the authenticated user ID via `@Req() req: { user: { id: string } }` (or similar decorators like `CurrentUser`) and assert it matches the target resource ID with a `ForbiddenException` or `UnauthorizedException`.
+
+## 2024-10-09 - Path Traversal Vulnerability in Static File Server
+**Vulnerability:** The factory-dashboard static file server used `path.normalize(pathname).replace(/^(\.\.[/\\])+/, '')` which is vulnerable to path traversal via URL encoding (e.g., `%2e%2e`).
+**Learning:** URL encoded strings can bypass simple regex-based path traversal protections because the `URL` object parser retains encoded sequences.
+**Prevention:** Always use `decodeURIComponent` on the path, strip leading slashes to prevent absolute path resolution, resolve it to an absolute path using `path.resolve`, and verify it strictly starts with the intended base directory using `targetPath.startsWith(PUBLIC_DIR + path.sep)`.
