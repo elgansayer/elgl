@@ -175,3 +175,7 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+
+## 2026-10-09 - [Optimize bulk cache invalidation via Promise.all mapping]
+**Learning:** In backend cache invalidation services (like `safety-cache-invalidation.service.ts` and `video-calls-cache-invalidation.service.ts`), executing Redis `del` or `scan` operations sequentially using `await` inside a `for...of` loop causes unnecessary additive network/database latency. Waiting for one Redis query to resolve before issuing the next severely throttles the event loop during bulk operations.
+**Action:** When bulk invalidating caches, replace sequential `await` loops with a concurrent mapping using `Promise.all`. This groups all Redis cache deletions into a single concurrent block, drastically reducing total Round-Trip Time (RTT). Calculate the total deleted keys via `results.reduce((sum, count) => sum + count, 0)`.
