@@ -102,7 +102,11 @@ export class ResourceLibraryService {
     return this.toResource(data);
   }
 
-  async update(id: string, dto: UpdateResourceDto): Promise<Resource> {
+  async update(
+    id: string,
+    userId: string,
+    dto: UpdateResourceDto,
+  ): Promise<Resource> {
     const { data, error } = await this.client
       .from('resource_library')
       .update({
@@ -116,6 +120,7 @@ export class ResourceLibraryService {
         ...(dto.difficulty !== undefined && { difficulty: dto.difficulty }),
       })
       .eq('id', id)
+      .eq('created_by', userId)
       .select()
       .single();
 
@@ -124,11 +129,12 @@ export class ResourceLibraryService {
     return this.toResource(data);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, userId: string): Promise<void> {
     const { error } = await this.client
       .from('resource_library')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('created_by', userId);
 
     if (error) throw error;
   }
