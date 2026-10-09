@@ -80,7 +80,7 @@ The deep immersion reading and vocabulary acquisition system integrated througho
 
 - **Desktop Web Platform:** A browser-based version of the chat interface, syncing seamlessly with the mobile app via QR code login. Designed for faster typing and keyboard-optimised workflows.
 - **Cloud Chat Backups:** Syncing the local message database to the cloud to persist message histories across devices.
-- **Sister App Integrations:** Single-sign-on (SSO) links to vocabulary builders and AI avatar conversational bots.
+- **Sister App Integrations:** Single-sign-on (SSO) links to vocabulary builders.
 
 ## 8. VIP Premium Monetisation & Virtual Economy
 
