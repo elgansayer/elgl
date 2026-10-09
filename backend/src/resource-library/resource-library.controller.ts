@@ -58,13 +58,17 @@ export class ResourceLibraryController {
 
   @Patch(':id')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
-  update(@Param('id') id: string, @Body() dto: UpdateResourceDto) {
-    return this.resourceService.update(id, dto);
+  update(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateResourceDto,
+  ) {
+    return this.resourceService.update(id, user.id, dto);
   }
 
   @Delete(':id')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
-  remove(@Param('id') id: string) {
-    return this.resourceService.remove(id);
+  remove(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.resourceService.remove(id, user.id);
   }
 }

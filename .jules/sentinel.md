@@ -120,3 +120,8 @@
 **Vulnerability:** IDOR in audio intro update endpoint where any authenticated user could overwrite the audio intro for any other user because the route parameter `userId` was not compared against the authenticated user's ID.
 **Learning:** Endpoints mapped by `userId` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
 **Prevention:** Always extract the authenticated user ID via `@Req() req: { user: { id: string } }` (or similar decorators like `CurrentUser`) and assert it matches the target resource ID with a `ForbiddenException` or `UnauthorizedException`.
+
+## 2026-10-09 - [Fix IDOR in Resource Library]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) in `ResourceLibraryController`. The `update` and `remove` endpoints accepted an `id` parameter from the path and performed database modifications without verifying if the authenticated user owned the resource.
+**Learning:** Endpoints mapped by `id` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
+**Prevention:** Always extract the authenticated user ID via `@CurrentUser() user: any` and pass it to the service layer to assert it matches the target resource owner ID with an `.eq('created_by', userId)` condition in the database query.
