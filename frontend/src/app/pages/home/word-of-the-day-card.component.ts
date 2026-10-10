@@ -1,4 +1,4 @@
-import { Component, inject, resource } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
@@ -14,6 +14,7 @@ export interface WordOfTheDay {
 
 @Component({
   selector: 'app-word-of-the-day',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     <section
