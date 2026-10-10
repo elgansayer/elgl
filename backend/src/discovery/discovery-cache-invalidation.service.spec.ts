@@ -223,9 +223,11 @@ describe('DiscoveryCacheInvalidationService', () => {
 
       await service.handleUserVipUpdated();
 
-      expect(mockRedis.del).toHaveBeenCalledWith('partner_of_week_ids');
-      expect(mockRedis.del).toHaveBeenCalledWith('discovery:recent_native');
-      expect(mockRedis.del).toHaveBeenCalledWith('discovery:spotlight');
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'partner_of_week_ids',
+        'discovery:recent_native',
+        'discovery:spotlight',
+      );
     });
   });
 
@@ -279,8 +281,10 @@ describe('DiscoveryCacheInvalidationService', () => {
         'COUNT',
         100,
       );
-      expect(mockRedis.del).toHaveBeenCalledWith('discovery:recent_native');
-      expect(mockRedis.del).toHaveBeenCalledWith('discovery:spotlight');
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'discovery:recent_native',
+        'discovery:spotlight',
+      );
     });
   });
 
@@ -294,8 +298,10 @@ describe('DiscoveryCacheInvalidationService', () => {
 
       await service.handleNewUserOnboarded();
 
-      expect(mockRedis.del).toHaveBeenCalledWith('discovery:recent_native');
-      expect(mockRedis.del).toHaveBeenCalledWith('discovery:spotlight');
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'discovery:recent_native',
+        'discovery:spotlight',
+      );
       expect(mockRedis.scan).toHaveBeenCalledWith(
         '0',
         'MATCH',
@@ -320,18 +326,12 @@ describe('DiscoveryCacheInvalidationService', () => {
       // Exact key deletions: daily_recommendations:u3, recommendations:daily:u3,
       // discovery:partner_search:user:u3, discovery:language_pair:user:u3,
       // discovery:location_search:user:u3, discovery:audio_intros:user:u3
-      expect(mockRedis.del).toHaveBeenCalledWith('daily_recommendations:u3');
-      expect(mockRedis.del).toHaveBeenCalledWith('recommendations:daily:u3');
       expect(mockRedis.del).toHaveBeenCalledWith(
+        'daily_recommendations:u3',
+        'recommendations:daily:u3',
         'discovery:partner_search:user:u3',
-      );
-      expect(mockRedis.del).toHaveBeenCalledWith(
         'discovery:language_pair:user:u3',
-      );
-      expect(mockRedis.del).toHaveBeenCalledWith(
         'discovery:location_search:user:u3',
-      );
-      expect(mockRedis.del).toHaveBeenCalledWith(
         'discovery:audio_intros:user:u3',
       );
     });
