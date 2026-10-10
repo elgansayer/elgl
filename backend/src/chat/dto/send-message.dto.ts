@@ -7,11 +7,8 @@ import {
   IsString,
   Matches,
   MaxLength,
-  registerDecorator,
   ValidateIf,
   ValidateNested,
-  ValidationArguments,
-  ValidationOptions,
 } from 'class-validator';
 
 const MEDIA_MESSAGE_TYPES = [
@@ -20,31 +17,6 @@ const MEDIA_MESSAGE_TYPES = [
   'sticker',
   'view_once_media',
 ] as const;
-
-const DOODLE_PNG_DATA_URL_PATTERN =
-  /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/;
-
-function IsDoodlePngDataUrl(validationOptions?: ValidationOptions) {
-  return (object: object, propertyName: string): void => {
-    registerDecorator({
-      name: 'isDoodlePngDataUrl',
-      target: object.constructor,
-      propertyName,
-      options: validationOptions,
-      validator: {
-        validate(value: unknown, args: ValidationArguments): boolean {
-          const messageType = (args.object as { message_type?: unknown })
-            .message_type;
-          if (messageType !== 'doodle') return true;
-
-          return (
-            typeof value === 'string' && DOODLE_PNG_DATA_URL_PATTERN.test(value)
-          );
-        },
-      },
-    });
-  };
-}
 
 export class CorrectionPayloadDto {
   @IsString()
@@ -129,9 +101,6 @@ export class SendMessageDto {
   @IsString()
   @Matches(/\S/, { message: 'media_url must not be blank' })
   @MaxLength(3000000)
-  @IsDoodlePngDataUrl({
-    message: 'doodle media_url must be a PNG data URL produced by the canvas',
-  })
   media_url?: string;
 
   @ValidateIf(
