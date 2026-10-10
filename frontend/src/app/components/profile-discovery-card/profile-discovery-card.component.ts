@@ -32,31 +32,38 @@ import { DiscoveryService } from '../../services/discovery.service';
         </div>
       </div>
       @if (displayBio(); as bio) {
-        <p class="mt-2 text-text-secondary text-xs sm:text-sm line-clamp-2">
+        <p
+          [id]="translationBioId()"
+          class="mt-2 text-text-secondary text-xs sm:text-sm line-clamp-2"
+          dir="auto"
+          aria-live="polite"
+          [attr.aria-atomic]="showTranslated() ? 'true' : null"
+        >
           {{ bio | sanitiseHtml }}
         </p>
-        @if (profile()?.bio_text) {
-          <button
-            hlmBtn
-            type="button"
-            class="mt-1 text-[10px] text-accent-400 hover:text-accent-300 transition-colors"
-            [disabled]="isTranslating()"
-            [attr.aria-busy]="isTranslating() ? 'true' : null"
-            [attr.aria-describedby]="translationErrorKey() ? translationStatusId() : null"
-            (click)="toggleTranslation($event)"
+        <button
+          hlmBtn
+          type="button"
+          class="mt-1 -ms-2 min-h-11 px-2 text-xs text-accent-400 hover:text-accent-300 transition-colors"
+          [disabled]="isTranslating()"
+          [attr.aria-busy]="isTranslating() ? 'true' : null"
+          [attr.aria-pressed]="showTranslated()"
+          [attr.aria-controls]="translationBioId()"
+          [attr.aria-label]="translationActionLabel()"
+          [attr.aria-describedby]="translationErrorKey() ? translationStatusId() : null"
+          (click)="toggleTranslation($event)"
+        >
+          {{ translationLabel() | t }}
+        </button>
+        @if (translationErrorKey()) {
+          <p
+            [id]="translationStatusId()"
+            class="mt-1 text-xs text-danger"
+            role="status"
+            aria-live="polite"
           >
-            {{ translationLabel() | t }}
-          </button>
-          @if (translationErrorKey()) {
-            <p
-              [id]="translationStatusId()"
-              class="mt-1 text-[10px] text-danger"
-              role="status"
-              aria-live="polite"
-            >
-              {{ translationErrorKey() | t }}
-            </p>
-          }
+            {{ translationErrorKey() | t }}
+          </p>
         }
       }
       <!-- Mobile-optimised tap area hint -->
@@ -81,7 +88,7 @@ export class ProfileDiscoveryCardComponent {
 
   readonly truncatedBio = computed(() => {
     const bio = this.profile().bio_text;
-    if (!bio) return null;
+    if (!bio?.trim()) return null;
     return bio.length > 120 ? bio.slice(0, 120) + '...' : bio;
   });
 
@@ -98,10 +105,18 @@ export class ProfileDiscoveryCardComponent {
     return this.showTranslated() ? 'profile.showOriginal' : 'profile.translateBio';
   });
 
+  readonly translationActionLabel = computed(() => {
+    const action = this.i18n.translate(this.translationLabel());
+    const displayName = this.profile().display_name?.trim();
+    return displayName ? `${action}: ${displayName}` : action;
+  });
+
   readonly translationContext = computed(() => {
     const targetLang = this.i18n.currentLang() || 'en-GB';
     return `${this.profile().id}\u0000${targetLang}\u0000${this.profile().bio_text ?? ''}`;
   });
+
+  readonly translationBioId = computed(() => `profile-bio-${this.profile().id}`);
 
   readonly translationStatusId = computed(
     () => `profile-bio-translation-status-${this.profile().id}`,
@@ -122,7 +137,7 @@ export class ProfileDiscoveryCardComponent {
 
   async toggleTranslation(event: Event): Promise<void> {
     event.stopPropagation();
-    if (this.isTranslating()) return;
+    if (this.isTranslating() || !this.profile().bio_text?.trim()) return;
 
     if (this.showTranslated()) {
       this.showTranslated.set(false);
