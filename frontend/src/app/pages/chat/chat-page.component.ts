@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
@@ -525,7 +525,7 @@ export class ChatPageComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
-  private centrifugoService = inject(CentrifugoService);
+  private centrifugoService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);
 
@@ -589,7 +589,7 @@ export class ChatPageComponent implements OnInit {
       if (this.subscribedRoomId !== room.id) {
         this.subscribedRoomId = room.id;
         this.centrifugoService.subscribe(`chat:${room.id}`, (data: unknown) => {
-          this.handleCentrifugoEvent(data as Record<string, unknown>);
+          this.handleCentrifugeEvent(data as Record<string, unknown>);
         });
       }
 
@@ -612,7 +612,7 @@ export class ChatPageComponent implements OnInit {
     }
   }
 
-  private handleCentrifugoEvent(data: Record<string, unknown>): void {
+  private handleCentrifugeEvent(data: Record<string, unknown>): void {
     // Handle status update events
     if (data['status_update']) {
       const update = data['status_update'] as Record<string, unknown>;
