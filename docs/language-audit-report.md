@@ -7,9 +7,9 @@ The application was audited through the lens of language-learning pedagogy rathe
 - **Vocabulary & Reading:** The integration between the LingQ-style interactive reading engine and universal text display (Chats, Moments) is exceptional. Users can acquire vocabulary in a reading context and see it highlighted dynamically across all future interactions based on their Spaced Repetition System (SRS) level. This perfectly blends **Comprehensible Input** with **Retrieval Practice**.
 - **Corrections & Meaningful Feedback:** The native speaker correction (visual diff) tool, combined with AI Grammar Checker, provides immediate, actionable feedback on **Active Production**.
 - **Streaks:** Streaks are tied to the matchmaking algorithm ("Serious Learner" toggle), effectively incentivizing consistent practice.
+- **AI Conversations:** AI conversational bots are native to the chat interface.
 
 ### Weaknesses and Gaps
-- **AI Conversations:** AI conversational bots are currently externalized to "Sister App Integrations". This breaks the loop for low-anxiety active production. AI conversations should be native to the chat interface.
 - **Assessments:** There is no mention of structured initial assessments or periodic progress assessments, beyond individual pronunciation scoring. Users lack a quantifiable measure of their overall proficiency journey.
 - **Lessons:** The app offers video broadcasts ("Stream Replays") and "lesson cards" (as seen in frontend design files), but lacks a clear integration between interactive lessons and the SRS vocabulary system.
 
