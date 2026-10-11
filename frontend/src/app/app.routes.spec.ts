@@ -94,7 +94,7 @@ describe('App routes', () => {
   });
 
   it('should lazy-load milestones component route', () => {
-    const milestones = routes.find((r) => r.path === 'milestones');
+    const milestones = routes.find((r) => r.path === 'profile/me/milestones');
     expect(milestones).toBeDefined();
     if (milestones) {
       expect(milestones.loadComponent).toBeDefined();
