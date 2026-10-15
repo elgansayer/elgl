@@ -61,24 +61,24 @@ export class SafetyCacheInvalidationService {
   async invalidateTrustAndSafetyCaches(): Promise<void> {
     const redis = this.getRedis();
     try {
-      let totalDeleted = 0;
-
-      for (const pattern of SAFETY_AFFECTED_CACHE_PATTERNS) {
+      // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
+      // Promise.all batch map to drastically reduce network latency during trust & safety cache invalidation.
+      const deletionPromises = SAFETY_AFFECTED_CACHE_PATTERNS.map((pattern) => {
         if (pattern.endsWith(':*')) {
           // Suffixed glob pattern – use SCAN for safety on larger key spaces
           const prefix = pattern.slice(0, -2);
-          const deleted = await this.deleteByScan(redis, prefix);
-          totalDeleted += deleted;
+          return this.deleteByScan(redis, prefix);
         } else if (pattern.endsWith(':')) {
           // Prefix pattern – use KEYS (acceptable for small-to-medium instances)
-          const deleted = await this.deleteByPattern(redis, `${pattern}*`);
-          totalDeleted += deleted;
+          return this.deleteByPattern(redis, `${pattern}*`);
         } else {
           // Exact single key
-          const deleted = await redis.del(pattern);
-          totalDeleted += deleted;
+          return redis.del(pattern);
         }
-      }
+      });
+
+      const deletedCounts = await Promise.all(deletionPromises);
+      const totalDeleted = deletedCounts.reduce((acc, curr) => acc + curr, 0);
 
       if (totalDeleted > 0) {
         this.logger.log(
