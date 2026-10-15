@@ -1,7 +1,7 @@
 import { Component, computed, input, inject, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { FlashcardService } from '../../services/flashcard.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { showToast } from '../../services/toast.service';
 import { I18nService } from '../../services/i18n.service';
 import { ChatService } from '../../services/chat.service';
@@ -82,7 +82,7 @@ export class VisualDiffComponent {
   readonly explanation = input<string>();
   readonly showActions = input<boolean>(false);
 
-  private flashcardService = inject(FlashcardService);
+  private vocabularyStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private chatService = inject(ChatService);
   private translationCache = inject(TranslationCacheService);
@@ -128,7 +128,7 @@ export class VisualDiffComponent {
       const translation = this.original().substring(0, 500);
       const originalContext = this.explanation() ? this.explanation()!.substring(0, 1000) : undefined;
 
-      await this.flashcardService.createFlashcard({
+      await this.vocabularyStore.saveWord({
         word_token: wordToken,
         translation: translation,
         original_context: originalContext,
@@ -149,35 +149,39 @@ export class VisualDiffComponent {
     const origTokens = Array.from(segmenter.segment(orig)).map((s) => s.segment);
     const corrTokens = Array.from(segmenter.segment(corr)).map((s) => s.segment);
 
-    const result: DiffSegment[] = [];
-    let i = 0;
-    let j = 0;
-    let indexCounter = 0;
+    const lcsMatrix = Array(origTokens.length + 1)
+      .fill(0)
+      .map(() => Array(corrTokens.length + 1).fill(0));
 
-    while (i < origTokens.length || j < corrTokens.length) {
-      if (
-        i < origTokens.length &&
-        j < corrTokens.length &&
-        origTokens[i].toLowerCase() === corrTokens[j].toLowerCase()
-      ) {
-        result.push({ type: 'unchanged', text: corrTokens[j], index: indexCounter++ });
-        i++;
-        j++;
-      } else if (
-        i < origTokens.length &&
-        !corrTokens.slice(j, j + 5).some((t) => t.toLowerCase() === origTokens[i].toLowerCase())
-      ) {
-        result.push({ type: 'removed', text: origTokens[i], index: indexCounter++ });
-        i++;
-      } else if (j < corrTokens.length) {
-        result.push({ type: 'added', text: corrTokens[j], index: indexCounter++ });
-        j++;
-      } else if (i < origTokens.length) {
-        result.push({ type: 'removed', text: origTokens[i], index: indexCounter++ });
-        i++;
+    for (let i = 1; i <= origTokens.length; i++) {
+      for (let j = 1; j <= corrTokens.length; j++) {
+        if (origTokens[i - 1].toLowerCase() === corrTokens[j - 1].toLowerCase()) {
+          lcsMatrix[i][j] = lcsMatrix[i - 1][j - 1] + 1;
+        } else {
+          lcsMatrix[i][j] = Math.max(lcsMatrix[i - 1][j], lcsMatrix[i][j - 1]);
+        }
       }
     }
 
-    return result;
+    let i = origTokens.length;
+    let j = corrTokens.length;
+    const lcsTokens: Omit<DiffSegment, 'index'>[] = [];
+
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && origTokens[i - 1].toLowerCase() === corrTokens[j - 1].toLowerCase()) {
+        lcsTokens.push({ type: 'unchanged', text: corrTokens[j - 1] });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || lcsMatrix[i][j - 1] >= lcsMatrix[i - 1][j])) {
+        lcsTokens.push({ type: 'added', text: corrTokens[j - 1] });
+        j--;
+      } else if (i > 0 && (j === 0 || lcsMatrix[i][j - 1] < lcsMatrix[i - 1][j])) {
+        lcsTokens.push({ type: 'removed', text: origTokens[i - 1] });
+        i--;
+      }
+    }
+
+    lcsTokens.reverse();
+    return lcsTokens.map((t, idx) => ({ ...t as DiffSegment, index: idx }));
   });
 }
