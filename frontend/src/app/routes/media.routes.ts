@@ -3,11 +3,21 @@ import { Routes } from '@angular/router';
 export const mediaRoutes: Routes = [
   {
     path: 'audio-rooms',
+    redirectTo: 'live/audio',
+    pathMatch: 'full',
+  },
+  {
+    path: 'live/audio',
     loadComponent: () =>
       import('../components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
     path: 'classrooms',
+    redirectTo: 'live/video',
+    pathMatch: 'full',
+  },
+  {
+    path: 'live/video',
     loadComponent: () =>
       import('../components/classrooms-marketplace/classrooms-marketplace').then(
         (m) => m.ClassroomsMarketplace,
@@ -53,5 +63,49 @@ export const mediaRoutes: Routes = [
         (m) => m.HostDashboardComponent,
       ),
     title: 'Host Dashboard - HelloTalk',
+  },
+  {
+    path: 'events',
+    redirectTo: 'live/events',
+    pathMatch: 'full',
+  },
+  {
+    path: 'live/events',
+    loadComponent: () =>
+      import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
+    title: 'Events - HelloTalk',
+  },
+  {
+    path: 'events/calendar',
+    redirectTo: 'live/events/calendar',
+    pathMatch: 'full',
+  },
+  {
+    path: 'live/events/calendar',
+    loadComponent: () =>
+      import('../components/events-calendar/events-calendar.component').then(
+        (m) => m.EventsCalendarComponent,
+      ),
+    title: 'Event Calendar - HelloTalk',
+  },
+  {
+    path: 'language-parties',
+    redirectTo: 'live/events/language-parties',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community/language-parties',
+    redirectTo: 'live/events/language-parties',
+    pathMatch: 'full',
+  },
+  {
+    path: 'language-islands',
+    redirectTo: 'live/events/language-islands',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community/language-islands',
+    redirectTo: 'live/events/language-islands',
+    pathMatch: 'full',
   },
 ];

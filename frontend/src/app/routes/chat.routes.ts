@@ -7,6 +7,14 @@ export const chatRoutes: Routes = [
       import('../components/chat-list/chat-list.component').then((m) => m.ChatListComponent),
   },
   {
+    path: 'chat/groups',
+    loadComponent: () =>
+      import('../components/groups-discovery/groups-discovery.component').then(
+        (m) => m.GroupsDiscoveryComponent,
+      ),
+    title: 'Groups Discovery - HelloTalk',
+  },
+  {
     path: 'chat/:id',
     loadComponent: () =>
       import('../pages/chat/chat-room-page.component').then((m) => m.ChatRoomPageComponent),
@@ -18,20 +26,22 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'groups',
-    loadComponent: () =>
-      import('../components/groups-discovery/groups-discovery.component').then(
-        (m) => m.GroupsDiscoveryComponent,
-      ),
-    title: 'Groups Discovery - HelloTalk',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
   },
   {
     path: 'groups/create',
-    redirectTo: 'community/groups/create',
+    redirectTo: 'chat/groups/create',
     pathMatch: 'full',
   },
   {
     path: 'communities',
-    redirectTo: 'community',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community',
+    redirectTo: 'chat/groups',
     pathMatch: 'full',
   },
   {
