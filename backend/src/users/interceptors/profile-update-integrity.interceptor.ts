@@ -21,6 +21,7 @@ type ProfileUpdateRequest = Request & {
 
 type EntitlementRow = {
   is_vip?: boolean | null;
+  vip_tier?: string | null;
 };
 
 const VERIFIED_PROFILE_FIELDS = [
@@ -43,7 +44,7 @@ type VerifiedProfileField = (typeof VERIFIED_PROFILE_FIELDS)[number];
  * path; this interceptor adds two fail-closed guarantees around it:
  *
  * 1. Multi-target-language access is verified directly against persisted VIP
- *    entitlement instead of trusting a profile fallback value.
+ *    entitlement and tier instead of trusting a profile fallback value.
  * 2. Core profile/privacy fields requested by the endpoint are read back after
  *    the mutation so a storage failure cannot be reported as a successful
  *    profile update.
@@ -104,7 +105,7 @@ export class ProfileUpdateIntegrityInterceptor implements NestInterceptor {
     const supabase = this.supabaseService.getClient();
     const response = (await supabase
       .from('users')
-      .select('is_vip')
+      .select('is_vip,vip_tier')
       .eq('id', userId)
       .maybeSingle()) as unknown as {
       data: EntitlementRow | null;
@@ -125,6 +126,16 @@ export class ProfileUpdateIntegrityInterceptor implements NestInterceptor {
     if (response.data.is_vip !== true) {
       throw new BadRequestException(
         'Free tier allows a maximum of 1 target language. Upgrade to VIP to study up to 3 languages.',
+      );
+    }
+
+    const maxLanguages =
+      response.data.vip_tier === 'pro' || response.data.vip_tier === 'developer'
+        ? 5
+        : 3;
+    if (targetLanguages.length > maxLanguages) {
+      throw new BadRequestException(
+        `A maximum of ${maxLanguages} target languages can be studied simultaneously on your current tier.`,
       );
     }
   }

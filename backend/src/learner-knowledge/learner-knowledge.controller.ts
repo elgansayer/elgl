@@ -1,10 +1,18 @@
 import { Controller, Get, Param, UseGuards, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { LearnerKnowledgeService, LearnerKnowledgeProfile } from './learner-knowledge.service';
+import {
+  LearnerKnowledgeService,
+  LearnerKnowledgeProfile,
+} from './learner-knowledge.service';
 
 interface AuthenticatedRequest {
-  user?: { id: string };
+  user: { id: string };
 }
 
 @ApiTags('Learner Knowledge')
@@ -12,12 +20,15 @@ interface AuthenticatedRequest {
 @UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class LearnerKnowledgeController {
-  constructor(private readonly learnerKnowledgeService: LearnerKnowledgeService) {}
+  constructor(
+    private readonly learnerKnowledgeService: LearnerKnowledgeService,
+  ) {}
 
   @Get(':language')
   @ApiOperation({
     summary: 'Get unified learner knowledge profile',
-    description: 'Returns a comprehensive profile of what the user knows, is learning, and their recent encounters for a specific language.',
+    description:
+      'Returns a comprehensive profile of what the user knows, is learning, and their recent encounters for a specific language.',
   })
   @ApiResponse({
     status: 200,
@@ -31,7 +42,7 @@ export class LearnerKnowledgeController {
     @Req() req: AuthenticatedRequest,
     @Param('language') language: string,
   ): Promise<LearnerKnowledgeProfile> {
-    const userId = req.user!.id;
+    const userId = req.user.id;
     return this.learnerKnowledgeService.getProfile(userId, language);
   }
 }
