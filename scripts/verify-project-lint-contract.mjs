@@ -37,22 +37,14 @@ export function verifyProjectLintContract(rootDir) {
     );
   }
 
-  const backendLint =
-    /directory:\s*backend[\s\S]*?check:\s*lint[\s\S]*?command:\s*npm run lint:check/.test(ci) ||
-    /backend-checks:[\s\S]*?check:\s*lint[\s\S]*?command:\s*npm run lint:check/.test(ci);
-  const frontendLint =
-    /directory:\s*frontend[\s\S]*?check:\s*static-analysis[\s\S]*?command:[^\n]*npm run lint:check/.test(
-      ci,
-    ) ||
-    /frontend-checks:[\s\S]*?check:\s*static-analysis[\s\S]*?command:[^\n]*npm run lint:check/.test(
-      ci,
-    );
   assert(
-    backendLint,
+    /directory:\s*backend[\s\S]*?check:\s*lint[\s\S]*?command:\s*npm run lint:check/.test(ci),
     'CI must run backend npm run lint:check',
   );
   assert(
-    frontendLint,
+    /directory:\s*frontend[\s\S]*?check:\s*static-analysis[\s\S]*?command:[^\n]*npm run lint:check/.test(
+      ci,
+    ),
     'CI must run frontend npm run lint:check as part of static analysis',
   );
 
