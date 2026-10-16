@@ -135,14 +135,17 @@ describe('SafetyController', () => {
       const ids = ['bad-1'];
       (safetyService.getBlockedUserIds as Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockedUserIds({ user: { id: 'user-1' } }, 'user-1');
+      const result = await controller.getBlockedUserIds(
+        { user: { id: 'user-1' } },
+        'user-1',
+      );
       expect(safetyService.getBlockedUserIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
     });
 
     it('should throw ForbiddenException when userId does not match req.user.id', async () => {
       await expect(
-        controller.getBlockedUserIds({ user: { id: 'user-2' } }, 'user-1')
+        controller.getBlockedUserIds({ user: { id: 'user-2' } }, 'user-1'),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
@@ -152,14 +155,17 @@ describe('SafetyController', () => {
       const ids = ['blocker-1'];
       (safetyService.getBlockerUserIds as Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockerUserIds({ user: { id: 'user-1' } }, 'user-1');
+      const result = await controller.getBlockerUserIds(
+        { user: { id: 'user-1' } },
+        'user-1',
+      );
       expect(safetyService.getBlockerUserIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
     });
 
     it('should throw ForbiddenException when userId does not match req.user.id', async () => {
       await expect(
-        controller.getBlockerUserIds({ user: { id: 'user-2' } }, 'user-1')
+        controller.getBlockerUserIds({ user: { id: 'user-2' } }, 'user-1'),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
@@ -231,7 +237,10 @@ describe('SafetyController', () => {
       const ids = ['blocked-1', 'blocker-1'];
       (safetyService.getBlockedAndBlockerIds as Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockedAndBlockerIds({ user: { id: 'user-1' } }, 'user-1');
+      const result = await controller.getBlockedAndBlockerIds(
+        { user: { id: 'user-1' } },
+        'user-1',
+      );
       expect(safetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
         'user-1',
       );
@@ -240,7 +249,10 @@ describe('SafetyController', () => {
 
     it('should throw ForbiddenException when userId does not match req.user.id', async () => {
       await expect(
-        controller.getBlockedAndBlockerIds({ user: { id: 'user-2' } }, 'user-1')
+        controller.getBlockedAndBlockerIds(
+          { user: { id: 'user-2' } },
+          'user-1',
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });

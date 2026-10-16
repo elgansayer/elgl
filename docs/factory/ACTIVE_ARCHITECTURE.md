@@ -103,6 +103,7 @@ last-known-good backup:
   verified SHAs, predecessor/successor links, path and failure fingerprints;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
+- `host-resource-gate.json`: cross-daemon reader/writer leases for host-heavy work;
 - `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
 - `generation.json`: active daemon ownership UUID and schema version;
 - `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
@@ -115,6 +116,10 @@ last-known-good backup:
 Typed metric failure counters are an additive state expansion. New readers treat an absent or malformed counter
 map as empty, while older readers ignore the added field, so mixed-version startup and rollback preserve the
 existing call, success, failure, quota, fallback, duration, and timeout counters.
+
+The host-resource gate lives in the common capacity directory shared by repository instances. Provider sessions
+hold bounded reader leases; memory-heavy frontend verification holds a writer lease. Writer priority, PID
+liveness checks, and bounded expiry prevent cross-repository build overlap without leaving a dead host lock.
 
 A restart never assumes a provider process is alive. The daemon stops admitting work, terminates registered CLI,
 OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
@@ -181,8 +186,9 @@ Review approval publishes `factory/independent-review` on the exact reviewed hea
 Before every PR-backed AI phase, refresh, or base update, the Factory removes review labels and republishes that
 status as `PENDING` on the current SHA. A crash or timeout therefore leaves the merge gate closed. If GitHub
 reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
-If GitHub reports the reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound to that exact head
-SHA. The resulting head is then rebuilt, verified, and reviewed again. Merge readiness requires all of the
+If GitHub reports a newly discovered or reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound
+to that exact head before local verification. The resulting head is then rebuilt, verified, and reviewed. Merge
+readiness requires all of the
 following:
 
 - the PR head equals the reviewed SHA;
