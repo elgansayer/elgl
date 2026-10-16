@@ -4,77 +4,67 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 ## 💬 1-on-1 Chat & Messaging
 
-- Complete emoji message reactions, disappearing messages, per-user archive and hidden chat folders, and per-user priority inbox pins.
-- Add swipe-to-reply gesture and hold-to-record direct R2 voice notes.
-- Complete group chat features for 2-19 members, and group participant drawer.
-- Add message privacy filters.
+- **Enhanced Message Interactions:** Complete emoji message reactions, disappearing messages (24h/7d/90d), edit sent messages, swipe-to-reply gestures, forwarding messages, typing indicators, and read receipts.
+- **Voice & Media:** Implement hold-to-record voice notes with playback speed controls, settings toggle to auto-play sequential voice notes, instant video messages, and audio compression.
+- **Organization & Search:** Add per-user archive, hidden chat folders, per-user priority inbox pins, and comprehensive search functionality within chats and across all conversations.
+- **Privacy & Safety:** Enable direct messaging filters based on age, gender, and native language, plus automated PII scrubbing.
+- **AI Chat Tools:** Provide conversation starter suggestions, role-play scenarios, and "Simplify this text" options in chat.
+- **Performance & Stability:** Implement virtual scrolling for data-heavy chat views, and WebSocket connection rate limiting.
 
-## 👥 Communities & Groups
+## 👥 Communities & Group Chat
 
-- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448):
-  - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
-  - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
-  - Add micro-interactions (hover effects) and unread notification badges.
-  - Extract Communities list and creation form into separate components for scalability.
-  - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
-- Harden Centrifugo connection token endpoint and lock connection-token contract.
+- **Group Collaboration:** Develop Group Chats feature for 2-19 partners based on specific interests, including real-time text correction tools for members, and a group participant drawer.
+- **Responsive Communities Experience:** Deliver a responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) with mobile drawer view, active state styling, micro-interactions, unread badges, and extracted community creation components with robust error handling.
+- **Events Integration:** Dedicated Groups & Scheduled Events System.
 
 ## 📰 Moments & Social Feed
 
-- Complete production liked-by modal.
-- Persist muted word filters across devices.
-- Complete safe quick actions for follow lists.
-- Harden TimelineWorker fan-out pagination and comment mention notification delivery.
-- Add Moments Cypress flows and analyse reference feed screenshots.
+- **Interactive Multimedia Posts:** Build swipeable full-screen lightboxes for images and an Audio Intros feed, including Chart.js integration for visual data representation.
+- **Feed Engagement & Filtering:** Enhance discovery feeds with advanced filters (Serious Learner mode, Interests, Mute Word, "Has Audio Intro"), Recommended for You carousel, Partner of the Week, and robust algorithm-based content recommendations.
+- **Social Interactions:** Build unified Notifications Area (Inbox), complete production liked-by modal, safe quick actions for follow lists, and Correction Quality rating system.
 
 ## 👤 User Profiles & Settings
 
-- Add privacy-safe profile visit tracking and Who Viewed Me logs.
-- Add online and VIP status visibility controls.
-- Add free-text learning goals and complete Translate Bio accessibility contract.
-- Align cover photo cropper with Relay theme.
-- Complete safe Data & Storage controls and complete private data archive and deletion lifecycle (GDPR).
+- **Comprehensive Profile Display:** Add free-text learning goals, proficiency levels, 30-second Audio Introduction, and translated bio with accessibility features.
+- **Profile Customisation & Settings:** Cover Photo uploader aligned with Relay theme, Language Settings, Appearance Settings, Dynamic Font Size slider, and Privacy Settings hub.
+- **Privacy & Control:** Privacy-safe profile visit tracking ("Who Viewed Me" logs), online and VIP status visibility controls, "Who can see my profile" toggle, Personal Data Collection GDPR hub, Linked Accounts page, Block Management page, and complete private data archive/deletion lifecycle.
 
 ## 🎙️ Live Audio Rooms & Video Events
 
-- Complete centralized events discovery and centralized discovery feed.
-- Complete Create Event modal and safe Attending and Interested RSVPs.
-- Complete Voice Room Active filter contract and lock host stage and audience UI contract.
-- Harden TURN/STUN connectivity for corporate NATs.
+- **Centralized Event Discovery:** Build centralized events discovery and discovery feed, along with a Create Event modal and safe Attending/Interested RSVPs.
+- **Host & Audience Controls:** Develop Host Moderation controls (Mute speaker, kick off stage, Raise Hand, Soundboard), lock host stage and audience UI contract, and categorize active Voicerooms.
+- **Interactive Enhancements:** Quick Polls, full-screen SVG gift animations, animated audio equalizer, and live chat comment overlay.
+- **Video & Room Types:** Private Parties (VIP/Pro tier), split-screen video layout for Invite Co-Host features.
+- **Post-Session Value:** AI-generated Session Summaries and HLS/DASH on-the-fly video transcoding for class replays.
 
 ## 🔍 Discovery & Matchmaking
 
-- Make Nearby use explicit GPS location.
-- Complete persisted Serious Learner mode and standardise active Serious Learner filtering.
-- Converge discovery error actions on Spartan.
+- **GPS-Based Discovery:** Make Nearby use explicit GPS location with a distance slider.
+- **Matchmaking Tools:** Dynamic Hobbies & Interests tags and standardise active Serious Learner filtering.
+- **Premium Discovery:** Pro tier offering unlimited translations, advanced visitor logs, nearby members visibility, and ad-free browsing.
 
-## 🧠 Learning & AI Tools
+## 🧠 Learning, Vocabulary & AI Tools
 
-- Integrate Correction Modal with SRS Flashcards and harden language correction visual diffs.
-- Make diagnostic quiz completion durable and dynamic.
-- Complete coin-funded language challenges.
-- Integrate unified learner knowledge model for personalization.
-- Route translation and transliteration providers.
-- Complete daily learning tip design sync and lock cultural tip accessibility contract.
-- Make daily login rewards atomic and lock database question bank contract.
+- **Flashcard & Spaced Repetition (SRS):** Flashcard Deck UI, interactive Flashcard Review UI with flip animations, partial credit scoring for minor typos during SRS reviews, and Suggest Flashcards feature.
+- **Language Practice:** Verb conjugation trainer, IPA alphabet module, 50/50 language exchange timers, and dynamic diagnostic quiz completion.
+- **AI Integration:** Architectural enhancements for Language Learning Synergy (integrate Pronunciation/AI with Flashcards and Reading Engine), Context menu option for AI-generated grammar breakdowns, Pronunciation Scoring service, and strict LLM prompt injection protection.
+- **Motivation & Engagement:** Push notification reminders, coin-funded language challenges, daily check-in coin rewards, atomic login rewards, and progress tracking with unlockable badges.
+
+## 👑 Monetisation, VIP & Virtual Economy
+
+- **In-App Economy:** Sticker Store UI, animated sticker packs, Virtual Gift animations, and premium one-off AI services (with daily usage limits).
+- **Subscription Services:** Implement subscription/purchasing mechanisms, Restore Purchases workflow, server-side App Store receipt validation, and coin balance auto-deduction.
+- **VIP Perks:** Location spoofing, incognito profile views, and unlimited AI.
 
 ## 🛡️ Trust & Safety (Moderation)
 
-- Complete production Block Management and lock ban and warn moderation endpoints.
-- Enforce typed user-content sanitisation boundaries.
-- Add ASN hosting risk controls.
+- **Moderation Tools:** Complete production Block Management and lock ban/warn moderation endpoints.
+- **Content Safety:** Enforce typed user-content sanitisation boundaries (exempting non-user-authored fields) and add ASN hosting risk controls.
 
-## ⚙️ Platform, UI Architecture & Automation
+## ⚙️ Platform Stability, Architecture & Automation
 
-- Align UI contracts with Spartan UI and Relay themes (desktop sidebars, confirm dialogs, developer dashboards).
-- Define 400 percent zoom reflow standard, enforce touch target sizing, and lock screen-reader naming contracts.
-- Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
-- Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
-- Reduce automation churn and Codex reasoning burn without lowering quality.
-- Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag (Ref: PR #8448).
-  - Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into the relevant Angular standalone components (e.g., `chat-page.component.ts`, `reading-engine.component.ts`).
-  - Replace standard loops rendering chat messages with `<cdk-virtual-scroll-viewport>`.
-  - Implement virtualised rendering or windowing in the reading components for extensive texts.
-  - Ensure dynamic height recalculation works correctly for chat messages with varying content lengths (text, media, audio).
-  - Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
-  - Write or update unit tests to verify that the virtual scroller correctly limits the rendered DOM nodes to the visible viewport slice.
+- **Core Infrastructure & UX:** Align UI contracts with Spartan UI and Relay themes (e.g., sidebars, developer dashboards), define 400 percent zoom reflow standard, enforce touch target sizing, and lock screen-reader naming contracts.
+- **Technical Improvements:** Stabilize Visual Diff Component (Myers diff, optimized segmenter), Configure Angular Universal (SSR), Audit RxJS subscriptions and migrate to Angular Signals where possible.
+- **Job Processing & Sync:** Implement TimelineWorker backend job for fan-out processing, fix IDOR/secrets validation for LiveKit and Stripe, and fail closed on missing Supabase sessions.
+- **Diagnostics & Testing:** Implement missing E2E test flows (Auth, Chat, Moments), custom Angular ErrorHandler logging to backend, Web Vitals audits (e.g., `loading=lazy`), offline support via IndexedDB, client-side image compression, and agent workflows for security vulnerabilities.
+- **Developer Experience:** Reduce automation churn and Codex reasoning burn without lowering quality.
