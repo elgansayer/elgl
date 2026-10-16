@@ -476,6 +476,7 @@ class FactoryConfig(BaseModel):
     provider_slot_wait_seconds: int = 30
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
+    storage_free_headroom_gib: float = 5
     # archive_worktree() writes a full worktree copy into recovery_dir on every
     # crash-recovery path with nothing that ever deletes them; left unpruned,
     # these silently consume the disk-space reserve minimum_free_disk_gib
@@ -601,6 +602,8 @@ class FactoryConfig(BaseModel):
             raise ValueError("budgets cannot be negative")
         if self.minimum_free_disk_gib < 1:
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
+        if self.storage_free_headroom_gib < 1:
+            raise ValueError("storage free headroom must be at least 1 GiB")
         if self.recovery_retention_hours <= 0:
             raise ValueError("recovery retention must be positive")
         if self.stall_alert_minutes <= 0:
@@ -781,6 +784,7 @@ class FactoryConfig(BaseModel):
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
+                storage_free_headroom_gib=float(env.get("FACTORY_STORAGE_FREE_HEADROOM_GIB", "5")),
                 recovery_retention_hours=float(env.get("FACTORY_RECOVERY_RETENTION_HOURS", "72")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 stall_alert_minutes=float(env.get("FACTORY_STALL_ALERT_MINUTES", "20")),
