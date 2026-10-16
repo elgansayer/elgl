@@ -28,6 +28,7 @@ from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestMatch, PullRequestStatus
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.jobs import JobStore
+from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
@@ -384,6 +385,8 @@ class FactoryPipeline:
         if self.active_label_reconciliation_pending:
             self._reconcile_active_labels(protected_task_ids or set())
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
+        if self.config.maintenance_enabled:
+            tasks = MaintenanceController(self).tag_tasks(tasks)
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
         for job in jobs.values():
@@ -592,6 +595,8 @@ class FactoryPipeline:
                 LOGGER.warning("Factory job %s deferred: %s", job.task.identifier, error)
             except Exception as error:
                 job.attempts += 1
+                if job.maintenance_recovery_id is not None:
+                    job.maintenance_recovery_failures += 1
                 job.last_error = str(error)[-2000:]
                 self._record_failure(job)
             job.updated_at = datetime.now(UTC)
@@ -704,6 +709,8 @@ class FactoryPipeline:
         prepare_attempt: Callable[[], None] | None = None,
         validate_output: Callable[[], None] | None = None,
         require_repository_change: bool = False,
+        timeout_seconds: int | None = None,
+        system_prompt_override: str | None = None,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
 
@@ -766,7 +773,8 @@ class FactoryPipeline:
             task=job.task,
             prompt=prompt,
             cwd=worktree,
-            system_prompt=self.system_prompt,
+            system_prompt=system_prompt_override or self.system_prompt,
+            timeout_seconds=timeout_seconds,
             prepare_attempt=(
                 prepare if prepare_attempt is not None or require_repository_change else None
             ),
@@ -2214,6 +2222,10 @@ class FactoryPipeline:
                     "provider_history": job.provider_history,
                 }
             )
+
+    def run_maintenance_cycle(self) -> Job | None:
+        MaintenanceController(self).run()
+        return None
 
     def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
         """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.

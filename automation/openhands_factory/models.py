@@ -153,6 +153,9 @@ class Job:
     attempts: int = 0
     repair_attempts: int = 0
     quality_repairs: int = 0
+    maintenance_recovery_id: str | None = None
+    maintenance_recovery_attempts: int = 0
+    maintenance_recovery_failures: int = 0
     last_error: str | None = None
     next_attempt_at: datetime | None = None
     failure_counts: dict[str, int] = field(default_factory=dict)

@@ -130,7 +130,11 @@ class PullRequestMetricsStore:
                         "task_key": pull_request.task_key,
                         "change_fingerprint": pull_request.change_fingerprint,
                         "lane": pull_request.lane,
-                        "component": pull_request.component,
+                        "component": (
+                            pull_request.component
+                            if pull_request.component != "unknown"
+                            else _text(record.get("component")) or "unknown"
+                        ),
                         "state": pull_request.state,
                         "is_draft": pull_request.is_draft,
                         "stack_parent": pull_request.stack_parent,

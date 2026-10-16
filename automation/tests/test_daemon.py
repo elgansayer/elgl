@@ -780,6 +780,7 @@ def _build_wip_gated_daemon(
         recovery_retention_hours=1,
         review_lane_first=True,
         review_lane_max_concurrent=1,
+        maintenance_enabled=False,
     )
     daemon.stopping = False
     daemon.storage_blocked = False
@@ -852,6 +853,42 @@ def test_loop_pauses_new_issue_and_architect_dispatch_when_pr_wip_exceeded(
 
     assert admit_calls == []
     assert architect_calls == []
+
+
+def test_maintenance_cycle_runs_during_backlog_pause_and_is_visible_to_updater(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[bool] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=True,
+        discovered_job=job("1", 5),
+        admit_calls=[],
+        architect_calls=[],
+    )
+    daemon.config.maintenance_enabled = True
+    daemon.verification_slots = object()
+    controller = SimpleNamespace(apply_recoveries=lambda active: [], due=lambda: True)
+    monkeypatch.setattr(
+        "openhands_factory.daemon.MaintenanceController", lambda pipeline: controller
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.FactoryPipeline",
+        lambda *args, **kwargs: SimpleNamespace(
+            run_maintenance_cycle=lambda: calls.append(True) and None
+        ),
+    )
+    original_write = daemon._write_daemon_state
+    visible: list[str] = []
+
+    def write(status, active, started=None):
+        visible.extend(active.values())
+        original_write(status, active, started)
+
+    monkeypatch.setattr(daemon, "_write_daemon_state", write)
+    assert daemon._loop() == 0
+    assert calls == [True]
+    assert "0" in visible
 
 
 def test_loop_uses_wip_capacity_recalculated_by_current_refresh(
