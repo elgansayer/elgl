@@ -35,7 +35,21 @@ def test_abandoned_worker_attempt_enters_durable_timeout_backoff(tmp_path: Path)
     assert restored.updated_at == now
     assert restored.next_attempt_at is not None
     assert restored.next_attempt_at > now
-    assert restored.next_attempt_at <= now + timedelta(hours=24)
+    assert restored.next_attempt_at <= now + timedelta(minutes=15)
+
+
+def test_legacy_abandoned_worker_backoff_is_clamped_on_load(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    now = datetime.now(UTC)
+    job = _job(JobState.REVIEWING, now - timedelta(hours=3))
+    job.last_error = "Watchdog recovered abandoned reviewing attempt after maximum task duration"
+    job.next_attempt_at = now + timedelta(hours=23)
+    store.save({"42": job})
+
+    restored = store.load()["42"]
+
+    assert restored.next_attempt_at is not None
+    assert restored.next_attempt_at <= datetime.now(UTC) + timedelta(minutes=15)
 
 
 def test_watchdog_never_recovers_a_live_future(tmp_path: Path) -> None:
