@@ -29,6 +29,7 @@ import { SystemMessageService } from './services/system-message.service';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { XpService } from '../xp/xp.service';
+import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
 import { UsersService } from '../users/users.service';
 
 vi.mock('./centrifugo.service', () => ({
@@ -135,6 +136,12 @@ describe('ChatService', () => {
           provide: ConfigService,
           useValue: {
             get: vi.fn().mockReturnValue(5),
+          },
+        },
+        {
+          provide: LearnerKnowledgeService,
+          useValue: {
+            getProfile: vi.fn().mockResolvedValue(null),
           },
         },
       ],
