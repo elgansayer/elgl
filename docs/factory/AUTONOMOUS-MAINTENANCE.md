@@ -33,7 +33,10 @@ These are prioritised future tasks, not claims that all seven are implemented.
    messages as historical evidence, not proof of current process crashes.
 2. Give AI bounded, redacted diagnostic data, lifetime phase-model metrics and
    read-only repository access. Require a typed report; unknown task IDs and
-   arbitrary action names are rejected. Choosing observation is legitimate.
+   arbitrary action names are rejected. Repair proposals must cite exact excerpts
+   from tracked source files, checked by the host. Manual/dead-letter proposals
+   and fabricated or escaping source references are rejected. Diagnoses remain
+   hypotheses until verified. Choosing observation is legitimate.
 3. Deduplicate one concrete maintenance issue. Only identities in the controller's
    private ledger receive the maintenance scheduling tag. A GitHub label or body
    alone cannot obtain this privilege.

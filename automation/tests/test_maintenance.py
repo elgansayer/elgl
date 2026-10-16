@@ -19,9 +19,11 @@ from openhands_factory.main_merge_gate import MainCiStatus
 from openhands_factory.maintenance import (
     MAINTENANCE_TAG,
     MaintenanceController,
+    MaintenancePlan,
     collect_incidents,
     error_identity,
     runtime_signature,
+    validate_proposal,
 )
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pr_metrics import PullRequestMetricsStore
@@ -72,6 +74,17 @@ def controller(tmp_path: Path) -> MaintenanceController:
         github_token=SecretStr("test-token"),
         maintenance_enabled=True,
     )
+    source = config.repository / "automation/openhands_factory/jobs.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("def contains_current_base(self): return True\n")
+    for args in [
+        ("init", "-q"),
+        ("config", "user.name", "test"),
+        ("config", "user.email", "test@example.test"),
+        ("add", "."),
+        ("commit", "-qm", "fixture"),
+    ]:
+        subprocess.run(["git", *args], cwd=config.repository, check=True)
     pipeline = SimpleNamespace(
         config=config,
         jobs=JobStore(state / "jobs.json"),
@@ -85,6 +98,12 @@ def controller(tmp_path: Path) -> MaintenanceController:
             "change": "Refresh the base before repair; add regression coverage",
             "acceptance_criteria": ["Offline verification succeeds"],
             "affected_task_ids": ["1", "2", "3"],
+            "source_evidence": [
+                {
+                    "path": "automation/openhands_factory/jobs.py",
+                    "quote": "def contains_current_base(self)",
+                }
+            ],
         },
     )
 
@@ -381,12 +400,13 @@ def test_deployment_requires_green_current_main_and_matching_installed_package(
     controller, monkeypatch
 ) -> None:
     repository = controller.config.repository
-    repository.mkdir()
+    repository.mkdir(exist_ok=True)
     package = Path(__file__).parents[1] / "openhands_factory"
     shutil.copytree(
         package,
         repository / "automation/openhands_factory",
         ignore=shutil.ignore_patterns("__pycache__"),
+        dirs_exist_ok=True,
     )
     for args in [
         ("init", "-q"),
@@ -410,3 +430,53 @@ def test_deployment_requires_green_current_main_and_matching_installed_package(
         lambda self: MainCiStatus(head, "IN_PROGRESS", ""),
     )
     assert not controller.deployment_ready()
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "Introduce dead-letter triage",
+        "Require explicit triage",
+        "Wait for human approval",
+        "Require manual intervention",
+    ],
+)
+def test_manual_recovery_proposals_are_rejected(controller, change: str) -> None:
+    plan = MaintenancePlan.model_validate({**controller.pipeline.plan, "change": change})
+    with pytest.raises(FactoryError, match="automatic bounded recovery"):
+        validate_proposal(plan, controller.config.repository)
+
+
+def test_repair_requires_source_evidence_but_observation_does_not(controller) -> None:
+    plan = MaintenancePlan.model_validate({**controller.pipeline.plan, "source_evidence": []})
+    with pytest.raises(FactoryError, match="tracked-source evidence"):
+        validate_proposal(plan, controller.config.repository)
+    plan.action = "observe"
+    validate_proposal(plan, controller.config.repository)
+
+
+@pytest.mark.parametrize("path", ["/etc/service-secret.env", "../outside.py", "credentials.env"])
+def test_source_references_cannot_escape_or_reference_environment_files(
+    controller, path: str
+) -> None:
+    plan = MaintenancePlan.model_validate(
+        {
+            **controller.pipeline.plan,
+            "source_evidence": [{"path": path, "quote": "Not an actual source excerpt"}],
+        }
+    )
+    with pytest.raises(FactoryError, match="Unsafe maintenance source"):
+        validate_proposal(plan, controller.config.repository)
+
+
+def test_fabricated_source_quotes_and_untracked_files_are_rejected(controller) -> None:
+    plan = MaintenancePlan.model_validate(controller.pipeline.plan)
+    plan.source_evidence[0].quote = "A fabricated code excerpt that does not exist"
+    with pytest.raises(FactoryError, match="does not match tracked code"):
+        validate_proposal(plan, controller.config.repository)
+    path = controller.config.repository / "untracked.py"
+    path.write_text("A real but untracked code excerpt\n")
+    plan.source_evidence[0].path = "untracked.py"
+    plan.source_evidence[0].quote = "A real but untracked code excerpt"
+    with pytest.raises(FactoryError, match="does not match tracked code"):
+        validate_proposal(plan, controller.config.repository)
