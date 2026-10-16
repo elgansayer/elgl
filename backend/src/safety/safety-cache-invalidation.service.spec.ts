@@ -101,12 +101,17 @@ describe('SafetyCacheInvalidationService', () => {
     });
 
     it('should handle delete for prefix patterns', async () => {
-      mockRedis.scan.mockResolvedValueOnce(['0', []]) // admin:users:list:*
+      mockRedis.scan
+        .mockResolvedValueOnce(['0', []]) // admin:users:list:*
         .mockResolvedValueOnce(['0', []]) // admin:blocks:list:*
-        .mockResolvedValueOnce(['0', [ // admin:login-history:
-          'admin:login-history:user-1',
-          'admin:login-history:user-2',
-        ]])
+        .mockResolvedValueOnce([
+          '0',
+          [
+            // admin:login-history:
+            'admin:login-history:user-1',
+            'admin:login-history:user-2',
+          ],
+        ])
         .mockResolvedValueOnce(['0', []]) // daily_recommendations:
         .mockResolvedValueOnce(['0', []]); // recommendations:daily:
       mockRedis.del
@@ -117,7 +122,13 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:login-history:*', 'COUNT', 500);
+      expect(mockRedis.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:login-history:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedis.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
         'admin:login-history:user-2',
