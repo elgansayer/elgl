@@ -678,6 +678,7 @@ def test_storage_reserve_blocks_and_recovers_scheduling(
     daemon.config = SimpleNamespace(  # type: ignore[assignment]
         cooldown_seconds=60,
         minimum_free_disk_gib=5,
+        storage_free_headroom_gib=5,
         worktree_dir=tmp_path,
     )
     daemon.storage_blocked = False
