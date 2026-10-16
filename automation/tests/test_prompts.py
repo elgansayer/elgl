@@ -62,6 +62,8 @@ def test_build_task_prompt_includes_issue_and_verification_sections(
     assert "npm run build" in prompt
     assert "do not run this entire list inside the provider session" in prompt
     assert "run only focused checks needed for your edits" in prompt
+    assert "do not run repository-wide commands" in prompt
+    assert "npm exec -- eslint <edited files>" in prompt
     assert "Untrusted-content rule" in prompt
     assert "reveal secrets" in prompt
 
@@ -113,6 +115,7 @@ def test_build_phase_prompt_supports_security_review(tmp_path: Path) -> None:
     assert "## Begin untrusted task and evidence data" in prompt
     assert "## End untrusted task and evidence data" in prompt
     assert "Do not run the full Factory verification gate inside this provider session" in prompt
+    assert "Do not run repository-wide" in prompt
 
 
 def test_build_phase_prompt_blocks_non_blocking_review_mutations(tmp_path: Path) -> None:
@@ -128,6 +131,7 @@ def test_build_phase_prompt_blocks_non_blocking_review_mutations(tmp_path: Path)
         "The Factory will follow any blocking repair with authoritative full verification" in prompt
     )
     assert "run only focused checks needed for the repair inside this provider session" in prompt
+    assert "Do not run repository-wide" in prompt
 
 
 def test_build_phase_prompt_bounds_large_evidence(tmp_path: Path) -> None:
