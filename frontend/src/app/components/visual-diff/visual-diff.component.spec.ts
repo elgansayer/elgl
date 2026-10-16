@@ -1,9 +1,11 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { VisualDiffComponent } from './visual-diff.component';
+import { vi } from 'vitest';
+import { ChatService } from '../../services/chat.service';
 import { FlashcardService } from '../../services/flashcard.service';
 import { I18nService } from '../../services/i18n.service';
-import { ChatService } from '../../services/chat.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
+import { VisualDiffComponent } from './visual-diff.component';
 
 describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
@@ -15,22 +17,25 @@ describe('VisualDiffComponent', () => {
       providers: [
         {
           provide: FlashcardService,
-          useValue: { createFlashcard: async () => undefined },
+          useValue: { createFlashcard: vi.fn().mockResolvedValue(undefined) },
         },
         {
           provide: I18nService,
           useValue: {
-            currentLang: () => 'en',
+            currentLang: signal('en'),
             translate: (key: string) => key,
           },
         },
         {
           provide: ChatService,
-          useValue: { translateText: async () => ({ translated_text: '' }) },
+          useValue: { translateText: vi.fn().mockResolvedValue({ translated_text: 'Translated' }) },
         },
         {
           provide: TranslationCacheService,
-          useValue: { get: () => null, set: () => undefined },
+          useValue: {
+            get: vi.fn().mockReturnValue(null),
+            set: vi.fn(),
+          },
         },
       ],
     }).compileComponents();
@@ -182,6 +187,35 @@ describe('VisualDiffComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('[data-type]')).toHaveLength(1);
   });
 
+  it('should render added text using the success visual contract', () => {
+    setInputs('Hello', 'Hello World');
+
+    const addedEls = fixture.nativeElement.querySelectorAll('[data-type="added"]');
+    expect(addedEls.length).toBeGreaterThan(0);
+    expect(
+      Array.from(addedEls).every((element) =>
+        (element as HTMLElement).classList.contains('text-success'),
+      ),
+    ).toBe(true);
+  });
+
+  it('should render removed text with danger styling and strikethrough', () => {
+    setInputs('Hello World', 'Hello');
+
+    const removedEls = fixture.nativeElement.querySelectorAll('[data-type="removed"]');
+    expect(removedEls.length).toBeGreaterThan(0);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('text-danger'),
+      ),
+    ).toBe(true);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('line-through'),
+      ),
+    ).toBe(true);
+  });
+
   it('should render additions and removals with semantic HTML', () => {
     setInputs('Hello old world', 'Hello new world');
 
@@ -190,5 +224,15 @@ describe('VisualDiffComponent', () => {
 
     expect(addedEls.length).toBeGreaterThan(0);
     expect(removedEls.length).toBeGreaterThan(0);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('text-danger'),
+      ),
+    ).toBe(true);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('line-through'),
+      ),
+    ).toBe(true);
   });
 });
