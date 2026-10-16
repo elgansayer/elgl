@@ -5,11 +5,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
-    paths:
-      - 'docker-compose*.yml'
-      - '.env.example'
-      - 'scripts/verify-compose-orchestration.test.mjs'
-      - '.github/workflows/core-compose-contract.yml'
+    paths-ignore:
+      - 'automation/**'
+      - 'factory-dashboard/**'
+      - 'docs/**'
+      - 'config/factory/**'
+      - 'config/systemd/**'
+      - '.github/dependabot.yml'
   merge_group:
     types: [checks_requested]
 
