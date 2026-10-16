@@ -21,6 +21,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-11 - [Start Independent User Statistics Queries Together]
+**Learning:** Awaiting the user lookup before starting four independent statistics queries added one avoidable network-latency interval to successful requests.
+**Action:** Start the five independent queries in one `Promise.all`. This preserves the query count while removing the separate user-lookup wait from the successful request's critical path.
+
 ## 2026-09-15 - [Avoid Redis KEYS in Cache Invalidation]
 **Learning:** Using the `KEYS` command in Redis for prefix-based cache invalidation (`deleteByPattern`) blocks the Redis event loop, creating a bottleneck and potential DoS vector as the keyspace grows.
 **Action:** Replaced `deleteByPattern` entirely with `deleteByScan` to asynchronously batch fetch and delete matching cache keys, preventing main thread blocking.
