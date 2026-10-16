@@ -11,7 +11,12 @@ const ACTIVE_DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_WEEK_MS = 7 * ACTIVE_DAY_MS;
 
 export type RecommendationReason =
-  'language_exchange' | 'shared_interests' | 'active_recently' | 'study_streak';
+  | 'language_exchange'
+  | 'shared_interests'
+  | 'active_recently'
+  | 'study_streak'
+  | 'proficiency_match'
+  | 'helpful_corrector';
 
 export interface DiscoveryRecommendationDto {
   id: string;
@@ -41,6 +46,8 @@ interface CandidateRow {
   is_serious_learner: boolean | null;
   study_streak_days: number | null;
   last_active_at: string | null;
+  correction_ratio?: number | null;
+  proficiency_level?: string | null;
 }
 
 interface InterestRow {
@@ -121,6 +128,8 @@ export function rankDiscoveryRecommendations(
     );
     const activityRank = getActivityRank(candidate, nowMs);
     const hasStudyStreak = (candidate.study_streak_days ?? 0) >= 7;
+    const isHelpfulCorrector = (candidate.correction_ratio ?? 1.0) > 1.5;
+    const hasProficiencyData = candidate.proficiency_level != null;
 
     let score = 0;
     const reasons: RecommendationReason[] = [];
@@ -141,8 +150,16 @@ export function rankDiscoveryRecommendations(
       reasons.push('active_recently');
     }
     if (hasStudyStreak || candidate.is_serious_learner === true) {
-      score += 10;
+      score += 25;
       reasons.push('study_streak');
+    }
+    if (isHelpfulCorrector) {
+      score += 15;
+      reasons.push('helpful_corrector');
+    }
+    if (hasProficiencyData) {
+      score += 5; // Small bonus for having a complete profile
+      reasons.push('proficiency_match');
     }
 
     if (score === 0) continue;
@@ -315,7 +332,7 @@ export class DiscoveryRecommendationsService {
     const { data: candidates, error: candidatesError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, privacy_hide_from_search, privacy_hide_online_status, is_deletion_pending, is_deleted, is_serious_learner, study_streak_days, last_active_at',
+        'id, display_name, avatar_url, native_languages, target_languages, privacy_hide_from_search, privacy_hide_online_status, is_deletion_pending, is_deleted, is_serious_learner, study_streak_days, last_active_at, correction_ratio, proficiency_level',
       )
       .in('id', boundedIds)
       .eq('privacy_hide_from_search', false)

@@ -151,6 +151,10 @@ export class RecommendedForYouCarouselComponent {
         return 'Recently active';
       case 'study_streak':
         return 'Active learner';
+      case 'proficiency_match':
+        return 'Proficiency match';
+      case 'helpful_corrector':
+        return 'Helpful corrector';
     }
   }
 
