@@ -72,10 +72,13 @@ describe('QuestsComponent', () => {
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 
-  it('should display loading state', () => {
+  it('should display loading state and expose the region as busy', () => {
     mockStore.loading.set(true);
     fixture.detectChanges();
+
     expect(fixture.nativeElement.textContent).toContain('quests.loading');
+    const region = fixture.nativeElement.querySelector('[role="region"]');
+    expect(region.getAttribute('aria-busy')).toBe('true');
   });
 
   it('should display empty state when no quests', () => {
@@ -130,6 +133,40 @@ describe('QuestsComponent', () => {
     const retry = fixture.nativeElement.querySelector('button');
     retry.click();
     expect(mockStore.fetchQuests).toHaveBeenCalled();
+  });
+
+  it('prevents duplicate retry requests while a quest request is already running', () => {
+    mockStore.fetchQuests.mockClear();
+    mockStore.error.set(true);
+    mockStore.loading.set(true);
+    component.retry();
+    expect(mockStore.fetchQuests).not.toHaveBeenCalled();
+
+    mockStore.loading.set(false);
+    component.retry();
+    expect(mockStore.fetchQuests).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the Spartan retry action while the store is busy', () => {
+    mockStore.error.set(true);
+    mockStore.quests.set([
+      {
+        id: 'q1',
+        quest_type: 'daily',
+        quest_key: 'post_moment',
+        target: 1,
+        progress: 0,
+        reward_coins: 5,
+        completed: false,
+        period_start: '2026-08-22',
+        reward_claimed_at: null,
+      },
+    ]);
+    mockStore.loading.set(true);
+    fixture.detectChanges();
+
+    const retry = fixture.nativeElement.querySelector('button');
+    expect(retry.disabled).toBe(true);
   });
 
   it('clamps invalid progress values before rendering a percentage', () => {
