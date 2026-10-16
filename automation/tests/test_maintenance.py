@@ -357,6 +357,25 @@ def test_recovery_acknowledgement_crash_cannot_reset_budget_twice(controller) ->
     assert controller.records()[0]["canary_task"] == "1"
 
 
+def test_issue_only_canary_gets_one_trusted_lane_despite_backlog_pause(controller) -> None:
+    jobs = controller.pipeline.jobs.load()
+    for job in jobs.values():
+        job.task = replace(job.task, source="github-issue")
+        job.pull_request = None
+    controller.pipeline.jobs.save(jobs)
+    ready_recovery(controller)
+    assert controller.apply_recoveries(set()) == ["1"]
+    jobs = controller.pipeline.jobs.load()
+    selected = select_batch(jobs, 3, new_issue_slots=0, review_only=True)
+    assert [job.task.identifier for job in selected] == ["1"]
+    tagged = controller.tag_tasks([replace(jobs["1"].task, triage_tags=frozenset())])
+    assert MAINTENANCE_TAG in tagged[0].triage_tags
+    state = controller.state()
+    state["records"][0]["status"] = "canary-failed"
+    atomic_write_json(controller.path, state)
+    assert MAINTENANCE_TAG not in controller.tag_tasks(tagged)[0].triage_tags
+
+
 def test_corrupt_state_recovers_from_last_valid_generation(controller) -> None:
     atomic_write_json(controller.path, {"records": [], "reports": []})
     atomic_write_json(controller.path, {"reports": ["invalid"]})

@@ -216,6 +216,11 @@ class MaintenanceController:
             for record in self.records()
             if record.get("status") == "repairing"
         }
+        admitted.update(
+            str(record.get("canary_task"))
+            for record in self.records()
+            if record.get("status") == "canary"
+        )
         return [
             replace(task, priority=0, triage_tags=task.triage_tags | {MAINTENANCE_TAG})
             if task.source == "github-issue" and task.identifier in admitted
@@ -580,6 +585,9 @@ class MaintenanceController:
                     and error_identity(job) == expected.get("error")
                 ]
                 candidates = [job for job in matching if job.task.identifier not in protected]
+                # Prefer an existing PR. A selected issue-only canary gets the
+                # same single bounded maintenance lane, not broad WIP admission.
+                candidates.sort(key=lambda job: job.pull_request is None)
                 if matching and not candidates:
                     continue
                 batch = candidates[: 1 if record.get("status") == "canary-ready" else 20]
@@ -598,6 +606,15 @@ class MaintenanceController:
                         job.quality_repairs = 0
                         job.repair_attempts = 0
                         job.latest_verified_sha = None
+                        if (
+                            record.get("status") == "canary-ready"
+                            and job.task.source == "github-issue"
+                        ):
+                            job.task = replace(
+                                job.task,
+                                priority=0,
+                                triage_tags=job.task.triage_tags | {MAINTENANCE_TAG},
+                            )
                         store._stamp(job)
                         released.append(job.task.identifier)
                     previously.append(job.task.identifier)
