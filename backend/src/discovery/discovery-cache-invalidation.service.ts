@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import Redis from 'ioredis';
+import type Redis from 'ioredis-v6';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   DiscoveryCacheNamespace,

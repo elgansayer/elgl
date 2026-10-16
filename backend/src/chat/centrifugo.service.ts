@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
-import Redis from 'ioredis';
+import Redis from 'ioredis-v6';
 import { randomUUID } from 'crypto';
 
 const CONNECTION_TOKEN_TTL_SECONDS = 60 * 60;
@@ -108,6 +108,8 @@ export class CentrifugoService implements OnModuleInit {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
         enableOfflineQueue: false,
+        // ioredis 6 defaults to RESP3; retain v5 response shapes.
+        protocol: 2,
       });
       await this.redis.connect();
       // Pre-load the Lua script so we can call it by SHA digest (EVALSHA)
