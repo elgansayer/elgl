@@ -163,6 +163,21 @@ export class AdminService {
     return result;
   }
 
+  async getUser(userId: string): Promise<AdminUserSummary> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select(SUMMARY_COLUMNS)
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('User not found');
+    }
+
+    return data;
+  }
+
   async setVipStatus(
     userId: string,
     dto: ToggleVipDto,
