@@ -10,7 +10,10 @@ is not already implemented. Do not modify that repository or execute its scripts
 Diagnose the highest-value shared failure, or propose one small throughput
 experiment if no actionable shared incident exists. Distinguish historical retry
 records from current outages. An old watchdog message alone does not prove the
-daemon is still crashing. An unknown PR component is not application throughput.
+daemon is still crashing: in the snapshot, `watchdog.recovered_total` counts actual
+recoveries by the running daemon generation, while `watchdog.oldest_queued_age_seconds`
+is only how long runnable work has waited and is not a crash. An unknown PR
+component is not application throughput.
 Prefer a common-cause repair over separate edits to dozens of affected PRs.
 Consult the supplied maintenance programme and recent outcomes. Choose one
 unfinished, evidenced item; do not repeatedly propose an already completed change.

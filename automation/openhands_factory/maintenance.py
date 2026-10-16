@@ -285,12 +285,17 @@ class MaintenanceController:
                     ),
                 }
             )
+        daemon_state = read_json(self.config.state_dir / "daemon.json", {})
+        watchdog = daemon_state.get("watchdog") if isinstance(daemon_state, dict) else None
         return {
             "observed_at": datetime.now(UTC).isoformat(),
             "repository": self.config.github_repository,
             "repository_path": str(self.config.repository),
             "runtime_signature": self.runtime_signature,
             "jobs_by_state": dict(Counter(job.state.value for job in jobs.values())),
+            # Actual recoveries by the running daemon generation, apart from queued age.
+            # A stale watchdog message on a job is history, not a current recovery.
+            "watchdog": watchdog if isinstance(watchdog, dict) else None,
             "throughput": metrics.get("summary", {}),
             "provider_usage_lifetime": usage[:30],
             "active_routing": {

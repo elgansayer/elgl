@@ -186,6 +186,31 @@ def test_only_controller_recorded_issue_receives_maintenance_admission(controlle
     assert MAINTENANCE_TAG not in tagged[1].triage_tags
 
 
+def test_snapshot_reports_current_watchdog_recoveries_not_historical_messages(
+    controller,
+) -> None:
+    jobs = controller.pipeline.jobs.load()
+    historical = "Watchdog recovered abandoned reviewing attempt after maximum task duration"
+    jobs["1"].last_error = historical
+    daemon_path = controller.config.state_dir / "daemon.json"
+
+    assert controller.snapshot(jobs)["watchdog"] is None
+
+    watchdog = {
+        "recovered_total": 0,
+        "last_recovered_at": None,
+        "last_recovered_task_ids": [],
+        "queued_count": 4,
+        "oldest_queued_age_seconds": 9000,
+    }
+    atomic_write_json(daemon_path, {"watchdog": watchdog})
+    assert controller.snapshot(jobs)["watchdog"] == watchdog
+
+    for malformed in ({"watchdog": "garbage"}, {"watchdog": ["not", "a", "mapping"]}, ["x"]):
+        atomic_write_json(daemon_path, malformed)
+        assert controller.snapshot(jobs)["watchdog"] is None
+
+
 def test_restart_after_issue_creation_reuses_exact_open_issue(controller) -> None:
     controller.pipeline.github.issues.append(
         Task("99", "fix(factory): offline-font-verification", "existing repair", "github-issue", 10)
