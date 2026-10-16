@@ -42,6 +42,11 @@ Both updater timers now check every 30 minutes with up to two minutes of jitter,
 instead of waiting until the following 03:00 UTC. The updater still skips package
 installation and restarts when current, and drains active workers before rollout.
 
+Codex implementation now requests `high` reasoning instead of `max`. Planning
+and architecture retain `max`, security review retains `high`, independent review
+retains `medium`, and bounded repairs retain `low`. Measure runtime and repair
+rate after rollout; no percentage saving is claimed.
+
 Validation: full Factory pytest suite, Ruff formatting/lint and mypy for the
 pipeline change; six regression cases cover three aggregate states through both
 initial intake and existing-head refresh. Systemd validates the timer calendar.
