@@ -167,6 +167,23 @@ def select_issue_admitted(
     return selected
 
 
+def host_admitted_jobs(jobs: dict[str, Job], available_host_slots: int) -> dict[str, Job]:
+    """Keep cheap GitHub transitions moving during exclusive verification.
+
+    These states poll CI, merge an approved head, or record a completed merge.
+    They do not start provider sessions. If a changed head needs verification,
+    the pipeline still acquires the ordinary exclusive verification gate.
+    """
+
+    if available_host_slots > 0:
+        return jobs
+    return {
+        task_id: job
+        for task_id, job in jobs.items()
+        if job.state in {JobState.CI_PENDING, JobState.MERGE_QUEUED, JobState.MERGED}
+    }
+
+
 def select_batch(
     jobs: dict[str, Job],
     limit: int,
@@ -200,7 +217,7 @@ def select_batch(
     review_ready = sorted(
         (item for item in candidates if is_review_lane_job(item)),
         key=_review_sort_key,
-    )[:review_capacity]
+    )[: min(review_capacity, limit)]
 
     # Two shared host slots are deliberate on the 8 GiB production host. When
     # both are filled from a large PR backlog, issue implementation otherwise
@@ -493,11 +510,11 @@ class FactoryDaemon:
         self.stopping = False
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
-        # Two lightweight agent sessions may run together. The fair exclusive side
-        # prevents either session from overlapping an authoritative frontend gate.
+        # Lightweight agent sessions may run together. The fair exclusive side
+        # prevents them from overlapping an authoritative frontend gate.
         self.host_resource_slots = HostResourceGate(
             config.provider_capacity_dir / "host-resource-gate.json",
-            2,
+            config.host_agent_concurrency,
             lease_seconds=config.max_task_minutes * 60 + 300,
         )
         self.verification_slots = Semaphore(1)
@@ -708,6 +725,10 @@ class FactoryDaemon:
                 worker_capacity = self.config.max_parallel_jobs - len(active)
                 available_host_slots = self.host_resource_slots.available_shared_slots()
                 capacity = min(worker_capacity, available_host_slots)
+                if worker_capacity > 0 and available_host_slots == 0:
+                    # One spare worker may advance CI/merge state without taking
+                    # a provider slot from the exclusive verifier.
+                    capacity = 1
                 # storage_ready and everything in this block must run
                 # unconditionally, before the scheduling gate below and
                 # regardless of pause/capacity state: pruning is what's
@@ -804,6 +825,7 @@ class FactoryDaemon:
                     # Schedule only from that committed view, not from an intermediate
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
+                    jobs = host_admitted_jobs(jobs, available_host_slots)
                     # A refresh recalculates PR WIP from GitHub. Use that current
                     # result for this same scheduling pass instead of admitting one
                     # extra issue from the empty startup snapshot.

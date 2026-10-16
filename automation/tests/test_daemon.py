@@ -13,6 +13,7 @@ from openhands_factory.daemon import (
     await_future_with_heartbeat,
     await_refresh,
     consume_completed_architect_future,
+    host_admitted_jobs,
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
@@ -66,6 +67,52 @@ def test_review_lane_busy_only_for_active_pull_request_work() -> None:
     assert review_lane_is_busy(jobs, {"7348"}) is True
     assert review_lane_is_busy(jobs, {"10"}) is False
     assert review_lane_is_busy(jobs, set()) is False
+
+
+def test_exclusive_build_keeps_spare_worker_available_for_ci_and_merge() -> None:
+    jobs = {
+        "10": pull_request_job("10", state=JobState.VERIFYING),
+        "11": pull_request_job("11", state=JobState.REVIEWING),
+        "12": pull_request_job("12", state=JobState.REPAIRING),
+        "13": pull_request_job("13", state=JobState.MERGE_QUEUED),
+        "14": pull_request_job("14", state=JobState.CI_PENDING),
+        "15": pull_request_job("15", state=JobState.MERGED),
+        "16": job("16", 0),
+    }
+    admitted = host_admitted_jobs(jobs, available_host_slots=0)
+
+    assert set(admitted) == {"13", "14", "15"}
+    selected = select_batch(
+        admitted,
+        1,
+        excluded_task_ids={"10", "11", "12"},
+        review_lane_max_concurrent=3,
+        review_only=True,
+    )
+    assert [item.task.identifier for item in selected] == ["13"]
+    selected = select_batch(
+        admitted,
+        1,
+        excluded_task_ids={"10", "11", "12", "13"},
+        review_lane_max_concurrent=3,
+        review_only=True,
+    )
+    assert [item.task.identifier for item in selected] == ["14"]
+    assert len(jobs) == 7
+
+
+def test_available_host_slots_preserve_the_complete_job_queue() -> None:
+    jobs = {"10": job("10", 0), "11": pull_request_job("11", state=JobState.REVIEWING)}
+
+    assert host_admitted_jobs(jobs, available_host_slots=1) is jobs
+
+
+def test_review_lane_cannot_exceed_remaining_worker_capacity() -> None:
+    jobs = {str(number): pull_request_job(str(number)) for number in range(10, 14)}
+
+    selected = select_batch(jobs, 1, review_lane_max_concurrent=3)
+
+    assert len(selected) == 1
 
 
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:

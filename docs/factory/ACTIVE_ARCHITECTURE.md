@@ -186,8 +186,10 @@ Review approval publishes `factory/independent-review` on the exact reviewed hea
 Before every PR-backed AI phase, refresh, or base update, the Factory removes review labels and republishes that
 status as `PENDING` on the current SHA. A crash or timeout therefore leaves the merge gate closed. If GitHub
 reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
-If GitHub reports a newly discovered or reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound
-to that exact head before local verification. The resulting head is then rebuilt, verified, and reviewed. Merge
+If GitHub reports a newly discovered head as `BEHIND`, the Factory asks GitHub for a base update bound to that
+exact head before local verification. The resulting head is then rebuilt, verified, and reviewed. If another
+serial Factory merge subsequently makes that already-verified head `BEHIND`, production may merge it without
+replaying the base when the repository required-check rule is non-strict. Merge
 readiness requires all of the
 following:
 
@@ -196,12 +198,14 @@ following:
 - `factory/independent-review` is present and reports literal `SUCCESS`;
 - any duplicate rollup entry for either required context also reports literal `SUCCESS`;
 - every visible terminal check is allowed;
-- mergeability is clean;
+- mergeability is non-conflicting (`CLEAN` or, under non-strict checks, `BEHIND`);
 - no human review reports `CHANGES_REQUESTED`.
 
-The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
+The daemon is the primary autonomous merge authority. It re-reads the live conditions, binds the
 squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
-administrator bypass. A baseline ruleset requires pull requests and strict `CI / required`. A second,
+administrator bypass. It serialises merge execution. Production does not wait for a full push CI run between
+each merge because the active required-check policy is non-strict; the newest integrated `main` push is still
+fully tested and superseded push runs are cancelled. A baseline ruleset requires pull requests and `CI / required`. A second,
 review-only ruleset requires `factory/independent-review`. The exact repository-owner user may be the sole
 pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI, review, or both without
 permitting direct pushes. Factory automation still requires literal success from both statuses and never invokes
