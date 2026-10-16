@@ -30,16 +30,25 @@ These are prioritised future tasks, not claims that all seven are implemented.
 ## Control loop
 
 1. Group repeated failure shapes across unfinished jobs. Treat historical watchdog
-   messages as historical evidence, not proof of current process crashes.
+   messages as historical evidence, not proof of current process crashes. The
+   baseline snapshot reports actual watchdog recoveries by the running daemon
+   generation (`watchdog.recovered_total`) separately from queued age.
 2. Give AI bounded, redacted diagnostic data, lifetime phase-model metrics and
    read-only repository access. Require a typed report; unknown task IDs and
-   arbitrary action names are rejected. Choosing observation is legitimate.
+   arbitrary action names are rejected. Repair proposals must cite exact excerpts
+   from tracked source files, checked by the host. Manual/dead-letter proposals
+   and fabricated or escaping source references are rejected. Diagnoses remain
+   hypotheses until verified. Choosing observation is legitimate.
 3. Deduplicate one concrete maintenance issue. Only identities in the controller's
    private ledger receive the maintenance scheduling tag. A GitHub label or body
    alone cannot obtain this privilege.
 4. Advance the ordinary isolated implementation, security, verification, PR,
    independent review and exact-head merge pipeline. The maintenance lane can
    advance while ordinary issue intake is WIP-paused, but it has no merge bypass.
+   The issue-cache optimisation performs a fresh scan when a controller-authorised
+   repair or canary is missing from the cache; ordinary issue admission stays closed.
+   Daemon generation activation retains the configured host gate and exclusive
+   verification semaphore rather than rebuilding a router with default capacity.
 5. A closed issue is not proof of success. Require its actual PR to be merged,
    current-main CI to be green, the checkout to match that head and this daemon's
    installed package identity to match that immutable source.

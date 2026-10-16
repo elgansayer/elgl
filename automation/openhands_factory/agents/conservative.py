@@ -141,7 +141,11 @@ class ConservativeAgentRouter(AgentRouter):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
-        self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
+        self._global_agent_slots = BoundedSemaphore(
+            _positive_int_environment(
+                "FACTORY_HOST_AGENT_CONCURRENCY", MAX_GLOBAL_AGENT_CONCURRENCY
+            )
+        )
         self._review_slots = BoundedSemaphore(
             _positive_int_environment(
                 "FACTORY_REVIEW_LANE_MAX_CONCURRENT",

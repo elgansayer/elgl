@@ -62,6 +62,12 @@ def runtime_signature() -> str:
     return digest.hexdigest()
 
 
+class SourceEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    path: str = Field(min_length=1, max_length=240)
+    quote: str = Field(min_length=16, max_length=1000)
+
+
 class MaintenancePlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -74,6 +80,51 @@ class MaintenancePlan(BaseModel):
     affected_task_ids: list[Annotated[str, Field(pattern=r"^[1-9][0-9]{0,19}$")]] = Field(
         max_length=20
     )
+    source_evidence: list[SourceEvidence] = Field(default_factory=list, max_length=4)
+
+
+def validate_proposal(plan: MaintenancePlan, repository: Path) -> None:
+    if plan.action == "observe":
+        return
+    proposed = " ".join([plan.change, *plan.acceptance_criteria]).casefold()
+    if any(
+        marker in proposed
+        for marker in (
+            "dead-letter",
+            "dead letter",
+            "explicit triage",
+            "manual triage",
+            "needs-human",
+            "manual intervention",
+            "human approval",
+            "operator approval",
+        )
+    ):
+        raise FactoryError("Maintenance proposals must preserve automatic bounded recovery")
+    if not plan.source_evidence:
+        raise FactoryError("Maintenance repair requires exact tracked-source evidence")
+    root = repository.resolve()
+    for evidence in plan.source_evidence:
+        relative = Path(evidence.path)
+        source = (root / relative).resolve()
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or not source.is_relative_to(root)
+            or relative.suffix not in {".py", ".ts", ".mjs", ".sh", ".yml", ".yaml", ".json", ".md"}
+            or not source.is_file()
+            or source.stat().st_size > 2_000_000
+        ):
+            raise FactoryError("Unsafe maintenance source reference")
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", str(relative)],
+            cwd=root,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        if tracked.returncode or evidence.quote not in source.read_text(encoding="utf-8"):
+            raise FactoryError("Maintenance source evidence does not match tracked code")
 
 
 def timestamp(value: object) -> datetime | None:
@@ -159,12 +210,21 @@ class MaintenanceController:
         value = self.state().get("records", [])
         return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
-    def tag_tasks(self, tasks: list[Task]) -> list[Task]:
+    def admitted_issue_ids(self) -> set[str]:
         admitted = {
             str(record.get("issue"))
             for record in self.records()
             if record.get("status") == "repairing"
         }
+        admitted.update(
+            str(record.get("canary_task"))
+            for record in self.records()
+            if record.get("status") == "canary"
+        )
+        return admitted
+
+    def tag_tasks(self, tasks: list[Task]) -> list[Task]:
+        admitted = self.admitted_issue_ids()
         return [
             replace(task, priority=0, triage_tags=task.triage_tags | {MAINTENANCE_TAG})
             if task.source == "github-issue" and task.identifier in admitted
@@ -225,12 +285,17 @@ class MaintenanceController:
                     ),
                 }
             )
+        daemon_state = read_json(self.config.state_dir / "daemon.json", {})
+        watchdog = daemon_state.get("watchdog") if isinstance(daemon_state, dict) else None
         return {
             "observed_at": datetime.now(UTC).isoformat(),
             "repository": self.config.github_repository,
             "repository_path": str(self.config.repository),
             "runtime_signature": self.runtime_signature,
             "jobs_by_state": dict(Counter(job.state.value for job in jobs.values())),
+            # Actual recoveries by the running daemon generation, apart from queued age.
+            # A stale watchdog message on a job is history, not a current recovery.
+            "watchdog": watchdog if isinstance(watchdog, dict) else None,
             "throughput": metrics.get("summary", {}),
             "provider_usage_lifetime": usage[:30],
             "active_routing": {
@@ -355,6 +420,7 @@ class MaintenanceController:
             allowed = {str(item["task_id"]) for item in evidence}
             if not set(plan.affected_task_ids).issubset(allowed):
                 raise FactoryError("Maintenance plan references unobserved tasks")
+            validate_proposal(plan, self.config.repository)
 
         task = Task("maintenance-analysis", "Diagnose Factory incident", "", "factory-internal", 0)
         prompt = (self.pipeline.prompt_dir / "maintenance.md").read_text()
@@ -528,6 +594,9 @@ class MaintenanceController:
                     and error_identity(job) == expected.get("error")
                 ]
                 candidates = [job for job in matching if job.task.identifier not in protected]
+                # Prefer an existing PR. A selected issue-only canary gets the
+                # same single bounded maintenance lane, not broad WIP admission.
+                candidates.sort(key=lambda job: job.pull_request is None)
                 if matching and not candidates:
                     continue
                 batch = candidates[: 1 if record.get("status") == "canary-ready" else 20]
@@ -546,6 +615,15 @@ class MaintenanceController:
                         job.quality_repairs = 0
                         job.repair_attempts = 0
                         job.latest_verified_sha = None
+                        if (
+                            record.get("status") == "canary-ready"
+                            and job.task.source == "github-issue"
+                        ):
+                            job.task = replace(
+                                job.task,
+                                priority=0,
+                                triage_tags=job.task.triage_tags | {MAINTENANCE_TAG},
+                            )
                         store._stamp(job)
                         released.append(job.task.identifier)
                     previously.append(job.task.identifier)
@@ -582,8 +660,13 @@ class MaintenanceController:
         snapshot: dict[str, object],
     ) -> str:
         criteria = "\n".join(f"- {item}" for item in plan.acceptance_criteria)
+        source_quotes = "\n\n".join(
+            f"`{item.path}`:\n```\n{item.quote}\n```" for item in plan.source_evidence
+        )
         return redact_agent_output(
-            f"## Factory maintenance\n\nIncident: `{key}`\n\n{plan.diagnosis}\n\n"
+            f"## Factory maintenance\n\nIncident: `{key}`\n\n"
+            f"## Hypothesis, not a verified root cause\n\n{plan.diagnosis}\n\n"
+            f"## Checked source evidence\n\n{source_quotes}\n\n"
             f"## Proposed change\n\n{plan.change}\n\n## Acceptance criteria\n\n{criteria}\n"
             "- Add a regression test and preserve required CI, independent review "
             "and credential isolation.\n"

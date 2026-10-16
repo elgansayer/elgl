@@ -6,9 +6,10 @@ import logging
 import signal
 import time
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -32,6 +33,7 @@ from openhands_factory.generation import (
 from openhands_factory.host_diagnostics import gather_diagnostics
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import IssueAdmissionGate
+from openhands_factory.jobs import RECOVERABLE_ACTIVE_STATES
 from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
@@ -43,6 +45,7 @@ from openhands_factory.worktree_cache import prune_inactive_worktree_caches
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
 MAX_ACTIONABLE_FAILURE_FINGERPRINTS = 5
+MAX_WATCHDOG_RECOVERED_TASK_IDS = 20
 MAINTENANCE_CYCLE_ID = "0"  # Reserved: GitHub issue identifiers are strictly positive.
 
 
@@ -556,6 +559,72 @@ def queue_snapshot(
     }
 
 
+@dataclass
+class WatchdogRecoveries:
+    """Count the abandoned attempts this daemon generation actually recovered.
+
+    Kept apart from queue age on purpose. Work can wait for hours without anything
+    having crashed, and a ``last_error`` left behind by an earlier recovery is history,
+    not proof that the watchdog is recovering anything now. Only a real recovery moves
+    this counter.
+    """
+
+    total: int = 0
+    last_recovered_at: datetime | None = None
+    last_recovered_task_ids: list[str] = field(default_factory=list)
+
+    def record(self, task_ids: Iterable[str], recovered_at: datetime) -> None:
+        recovered = list(task_ids)
+        if not recovered:
+            return
+        self.total += len(recovered)
+        self.last_recovered_at = recovered_at
+        self.last_recovered_task_ids = recovered[:MAX_WATCHDOG_RECOVERED_TASK_IDS]
+
+
+def _queued_since(job: Job) -> datetime:
+    """Return when runnable work began waiting: its last update or its elapsed deadline."""
+
+    if job.next_attempt_at is None:
+        return job.updated_at
+    return max(job.updated_at, job.next_attempt_at)
+
+
+def watchdog_snapshot(
+    jobs: Mapping[str, Job],
+    active_task_ids: set[str],
+    recoveries: WatchdogRecoveries,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    """Report actual watchdog recoveries separately from how long work has queued.
+
+    ``queued_*`` covers mid-pipeline work that is runnable but has no attempt in
+    flight, the population an age-only watchdog once mistook for abandoned workers.
+    Its age says how long the work has waited for a worker, never that anything crashed.
+    """
+
+    current = now or datetime.now(UTC)
+    queued_ages = [
+        max(0.0, (current - _queued_since(job)).total_seconds())
+        for job in jobs.values()
+        if job.state in RECOVERABLE_ACTIVE_STATES
+        and job.task.identifier not in active_task_ids
+        and job.attempt_started_at is None
+        and (job.next_attempt_at is None or job.next_attempt_at <= current)
+    ]
+    return {
+        "recovered_total": recoveries.total,
+        "last_recovered_at": (
+            recoveries.last_recovered_at.isoformat()
+            if recoveries.last_recovered_at is not None
+            else None
+        ),
+        "last_recovered_task_ids": list(recoveries.last_recovered_task_ids),
+        "queued_count": len(queued_ages),
+        "oldest_queued_age_seconds": int(max(queued_ages, default=0.0)),
+    }
+
+
 class FactoryDaemon:
     def __init__(self, config: FactoryConfig) -> None:
         self.config = config
@@ -581,6 +650,7 @@ class FactoryDaemon:
         self._next_worktree_cache_prune_at = 0.0
         self.stall_since: datetime | None = None
         self.stall_investigation_dispatched = False
+        self.watchdog_recoveries = WatchdogRecoveries()
         self.scheduler_snapshot: dict[str, object] = {
             "max_parallel_jobs": config.max_parallel_jobs,
             "capacity": config.max_parallel_jobs,
@@ -693,7 +763,11 @@ class FactoryDaemon:
         # token used by JobStore/TaskStore to stop stale processes writing state.
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
-        self.pipeline = FactoryPipeline(self.config)
+        self.pipeline = FactoryPipeline(
+            self.config,
+            verification_slots=self.verification_slots,
+            host_resource_slots=self.host_resource_slots,
+        )
         self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",
@@ -870,6 +944,7 @@ class FactoryDaemon:
                                 task_id,
                             )
                         if recovered:
+                            self.watchdog_recoveries.record(recovered, datetime.now(UTC))
                             jobs = self.pipeline.jobs.load()
                     else:
                         jobs = self.pipeline.jobs.load()
@@ -1094,6 +1169,7 @@ class FactoryDaemon:
                 "scheduler": getattr(self, "scheduler_snapshot", {}),
                 "issue_admission": self.issue_admission.snapshot(),
                 "queue": queue_snapshot(jobs, active_task_ids),
+                "watchdog": watchdog_snapshot(jobs, active_task_ids, self.watchdog_recoveries),
                 "providers": provider_status_snapshot(self.provider_health),
             },
         )

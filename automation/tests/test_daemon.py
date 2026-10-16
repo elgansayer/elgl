@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -5,10 +6,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import SecretStr
 
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
+from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import (
     FactoryDaemon,
+    WatchdogRecoveries,
     admission_slots_while_respecting_wip,
     await_future_with_heartbeat,
     await_refresh,
@@ -23,9 +27,11 @@ from openhands_factory.daemon import (
     selection_diagnostics,
     should_use_failsafe,
     stall_alert_decision,
+    watchdog_snapshot,
 )
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.models import Job, JobState, Task
+from openhands_factory.state import read_json
 
 
 def job(identifier: str, priority: int, state: JobState = JobState.DISCOVERED) -> Job:
@@ -56,6 +62,36 @@ def factory_pull_request_job(
     factory_job.pull_request = int(identifier) + 1000
     factory_job.branch = f"factory/change-{identifier}"
     return factory_job
+
+
+@pytest.mark.parametrize("limit", [1, 3])
+def test_generation_activation_retains_configured_host_and_verification_gates(tmp_path, limit):
+    prompts = Path(__file__).parents[1] / "prompts"
+    config = FactoryConfig(
+        repository=tmp_path,
+        state_dir=tmp_path / "state",
+        provider_capacity_dir=tmp_path / "shared",
+        prompt_dir=prompts,
+        system_prompt_path=prompts / "system.md",
+        github_token=SecretStr("test-token"),
+        host_agent_concurrency=limit,
+    )
+    daemon = FactoryDaemon(config)
+    gate = daemon.host_resource_slots
+    verification_slots = daemon.verification_slots
+    for _ in range(2):
+        daemon._activate_generation()
+        assert daemon.pipeline.host_resource_slots is gate
+        assert daemon.pipeline.router.host_resource_slots is gate
+        assert daemon.pipeline.verification_slots is verification_slots
+        assert gate.shared_limit == limit
+        for number in range(limit):
+            assert gate.acquire_shared(str(number))
+        assert not gate.acquire_shared("over-limit")
+        for number in range(limit):
+            gate.release_shared(str(number))
+        with gate.exclusive():
+            assert not daemon.pipeline.router.host_resource_slots.acquire_shared("during-build")
 
 
 def test_review_lane_busy_only_for_active_pull_request_work() -> None:
@@ -518,6 +554,154 @@ def test_queue_snapshot_bounds_blocked_tasks_and_aggregates_failure_fingerprints
     assert [item["task_id"] for item in oldest] == ["101", "102", "103", "104", "105"]
 
 
+def test_watchdog_snapshot_separates_actual_recoveries_from_queued_age() -> None:
+    now = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
+    recoveries = WatchdogRecoveries()
+    jobs = {
+        # Runnable mid-pipeline work that has simply waited: queued, never recovered.
+        "10": replace(
+            job("10", 0, JobState.VERIFYING),
+            updated_at=now - timedelta(hours=5),
+        ),
+        # Its retry deadline elapsed after the last update, so it waits from the deadline.
+        "11": replace(
+            job("11", 0, JobState.REPAIRING),
+            updated_at=now - timedelta(hours=9),
+            next_attempt_at=now - timedelta(hours=1),
+        ),
+        # Excluded: a pending retry deadline, a live future, a lost attempt, polling states.
+        "12": replace(
+            job("12", 0, JobState.REVIEWING),
+            updated_at=now - timedelta(hours=9),
+            next_attempt_at=now + timedelta(hours=1),
+        ),
+        "13": replace(job("13", 0, JobState.IMPLEMENTING), updated_at=now - timedelta(hours=9)),
+        "14": replace(
+            job("14", 0, JobState.IMPLEMENTING),
+            updated_at=now - timedelta(hours=9),
+            attempt_started_at=now - timedelta(hours=9),
+            attempt_generation="generation-a",
+        ),
+        "15": replace(job("15", 0, JobState.CI_PENDING), updated_at=now - timedelta(hours=9)),
+        "16": replace(job("16", 0, JobState.DISCOVERED), updated_at=now - timedelta(hours=9)),
+    }
+
+    assert watchdog_snapshot(jobs, {"13"}, recoveries, now) == {
+        "recovered_total": 0,
+        "last_recovered_at": None,
+        "last_recovered_task_ids": [],
+        "queued_count": 2,
+        "oldest_queued_age_seconds": 5 * 3600,
+    }
+
+    recoveries.record(["14"], now)
+
+    snapshot = watchdog_snapshot(jobs, {"13"}, recoveries, now)
+    assert snapshot["recovered_total"] == 1
+    assert snapshot["last_recovered_at"] == now.isoformat()
+    assert snapshot["last_recovered_task_ids"] == ["14"]
+    assert snapshot["queued_count"] == 2
+    assert snapshot["oldest_queued_age_seconds"] == 5 * 3600
+
+
+def test_watchdog_snapshot_with_nothing_queued_reports_zero_age() -> None:
+    now = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
+    future_dated = replace(job("10", 0, JobState.VERIFYING), updated_at=now + timedelta(hours=1))
+
+    snapshot = watchdog_snapshot({"10": future_dated}, set(), WatchdogRecoveries(), now)
+
+    assert snapshot["queued_count"] == 1
+    assert snapshot["oldest_queued_age_seconds"] == 0
+    assert watchdog_snapshot({}, set(), WatchdogRecoveries(), now)["queued_count"] == 0
+
+
+def test_watchdog_recoveries_only_count_real_recoveries_and_bound_task_ids() -> None:
+    now = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
+    recoveries = WatchdogRecoveries()
+
+    recoveries.record([], now)
+
+    assert recoveries.total == 0
+    assert recoveries.last_recovered_at is None
+
+    recoveries.record(["1", "2"], now)
+    later = now + timedelta(minutes=5)
+    recoveries.record([str(number) for number in range(100, 140)], later)
+
+    assert recoveries.total == 42
+    assert recoveries.last_recovered_at == later
+    assert recoveries.last_recovered_task_ids == [str(number) for number in range(100, 120)]
+
+
+def test_loop_counts_and_releases_attempts_recovered_by_the_watchdog(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    released: list[str] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=True,
+        discovered_job=job("1", priority=5),
+        admit_calls=[],
+        architect_calls=[],
+        recovered=["1"],
+        released=released,
+    )
+
+    assert daemon._loop() == 0
+
+    assert released == ["1"]
+    assert daemon.watchdog_recoveries.total == 1
+    assert daemon.watchdog_recoveries.last_recovered_task_ids == ["1"]
+    assert daemon.watchdog_recoveries.last_recovered_at is not None
+
+
+def test_loop_without_a_recovery_leaves_the_watchdog_counter_untouched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=True,
+        discovered_job=job("1", priority=5),
+        admit_calls=[],
+        architect_calls=[],
+    )
+
+    assert daemon._loop() == 0
+
+    assert daemon.watchdog_recoveries.total == 0
+    assert daemon.watchdog_recoveries.last_recovered_at is None
+
+
+def test_published_daemon_state_reports_watchdog_recoveries_and_queued_age(tmp_path: Path) -> None:
+    prompts = Path(__file__).parents[1] / "prompts"
+    config = FactoryConfig(
+        repository=tmp_path,
+        state_dir=tmp_path / "state",
+        provider_capacity_dir=tmp_path / "shared",
+        prompt_dir=prompts,
+        system_prompt_path=prompts / "system.md",
+        github_token=SecretStr("test-token"),
+    )
+    daemon = FactoryDaemon(config)
+    daemon._activate_generation()
+    queued = replace(
+        job("10", 0, JobState.VERIFYING),
+        updated_at=datetime.now(UTC) - timedelta(hours=5),
+    )
+    daemon.pipeline.jobs.save({"10": queued})
+    recovered_at = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
+    daemon.watchdog_recoveries.record(["7"], recovered_at)
+
+    daemon._write_daemon_state("running", {}, {})
+
+    watchdog = read_json(config.state_dir / "daemon.json", {})["watchdog"]
+    assert watchdog["recovered_total"] == 1
+    assert watchdog["last_recovered_at"] == recovered_at.isoformat()
+    assert watchdog["last_recovered_task_ids"] == ["7"]
+    assert watchdog["queued_count"] == 1
+    assert 5 * 3600 <= watchdog["oldest_queued_age_seconds"] < 5 * 3600 + 120
+
+
 def test_provider_status_snapshot_exposes_no_provider_detail_or_credentials() -> None:
     now = datetime(2026, 8, 17, 12, tzinfo=UTC)
     snapshot = provider_status_snapshot(
@@ -760,6 +944,8 @@ def _build_wip_gated_daemon(
     discovered_job: Job,
     admit_calls: list[tuple[str, object]],
     architect_calls: list[bool],
+    recovered: Sequence[str] = (),
+    released: list[str] | None = None,
 ) -> FactoryDaemon:
     """Build a FactoryDaemon that can run one real `_loop` iteration cheaply.
 
@@ -786,11 +972,15 @@ def _build_wip_gated_daemon(
     daemon.storage_blocked = False
     daemon.scheduler_snapshot = {}
     daemon.host_resource_slots = SimpleNamespace(available_shared_slots=lambda: 1)
+    daemon.watchdog_recoveries = WatchdogRecoveries()
     daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
         router=SimpleNamespace(health_snapshot=lambda: {}),
         jobs=SimpleNamespace(
-            recover_abandoned_attempts=lambda *a, **k: [],
+            recover_abandoned_attempts=lambda *a, **k: list(recovered),
             load=lambda: {discovered_job.task.identifier: discovered_job},
+        ),
+        tasks=SimpleNamespace(
+            release=released.append if released is not None else lambda _id: None
         ),
         pull_request_capacity=SimpleNamespace(pause_new_dispatch=pause_new_dispatch),
         architect_due=lambda: architect_calls.append(True) or False,

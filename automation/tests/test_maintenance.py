@@ -19,9 +19,11 @@ from openhands_factory.main_merge_gate import MainCiStatus
 from openhands_factory.maintenance import (
     MAINTENANCE_TAG,
     MaintenanceController,
+    MaintenancePlan,
     collect_incidents,
     error_identity,
     runtime_signature,
+    validate_proposal,
 )
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pr_metrics import PullRequestMetricsStore
@@ -72,6 +74,17 @@ def controller(tmp_path: Path) -> MaintenanceController:
         github_token=SecretStr("test-token"),
         maintenance_enabled=True,
     )
+    source = config.repository / "automation/openhands_factory/jobs.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("def contains_current_base(self): return True\n")
+    for args in [
+        ("init", "-q"),
+        ("config", "user.name", "test"),
+        ("config", "user.email", "test@example.test"),
+        ("add", "."),
+        ("commit", "-qm", "fixture"),
+    ]:
+        subprocess.run(["git", *args], cwd=config.repository, check=True)
     pipeline = SimpleNamespace(
         config=config,
         jobs=JobStore(state / "jobs.json"),
@@ -85,6 +98,12 @@ def controller(tmp_path: Path) -> MaintenanceController:
             "change": "Refresh the base before repair; add regression coverage",
             "acceptance_criteria": ["Offline verification succeeds"],
             "affected_task_ids": ["1", "2", "3"],
+            "source_evidence": [
+                {
+                    "path": "automation/openhands_factory/jobs.py",
+                    "quote": "def contains_current_base(self)",
+                }
+            ],
         },
     )
 
@@ -165,6 +184,31 @@ def test_only_controller_recorded_issue_receives_maintenance_admission(controlle
     assert MAINTENANCE_TAG in tagged[0].triage_tags
     assert tagged[0].priority == 0
     assert MAINTENANCE_TAG not in tagged[1].triage_tags
+
+
+def test_snapshot_reports_current_watchdog_recoveries_not_historical_messages(
+    controller,
+) -> None:
+    jobs = controller.pipeline.jobs.load()
+    historical = "Watchdog recovered abandoned reviewing attempt after maximum task duration"
+    jobs["1"].last_error = historical
+    daemon_path = controller.config.state_dir / "daemon.json"
+
+    assert controller.snapshot(jobs)["watchdog"] is None
+
+    watchdog = {
+        "recovered_total": 0,
+        "last_recovered_at": None,
+        "last_recovered_task_ids": [],
+        "queued_count": 4,
+        "oldest_queued_age_seconds": 9000,
+    }
+    atomic_write_json(daemon_path, {"watchdog": watchdog})
+    assert controller.snapshot(jobs)["watchdog"] == watchdog
+
+    for malformed in ({"watchdog": "garbage"}, {"watchdog": ["not", "a", "mapping"]}, ["x"]):
+        atomic_write_json(daemon_path, malformed)
+        assert controller.snapshot(jobs)["watchdog"] is None
 
 
 def test_restart_after_issue_creation_reuses_exact_open_issue(controller) -> None:
@@ -338,6 +382,25 @@ def test_recovery_acknowledgement_crash_cannot_reset_budget_twice(controller) ->
     assert controller.records()[0]["canary_task"] == "1"
 
 
+def test_issue_only_canary_gets_one_trusted_lane_despite_backlog_pause(controller) -> None:
+    jobs = controller.pipeline.jobs.load()
+    for job in jobs.values():
+        job.task = replace(job.task, source="github-issue")
+        job.pull_request = None
+    controller.pipeline.jobs.save(jobs)
+    ready_recovery(controller)
+    assert controller.apply_recoveries(set()) == ["1"]
+    jobs = controller.pipeline.jobs.load()
+    selected = select_batch(jobs, 3, new_issue_slots=0, review_only=True)
+    assert [job.task.identifier for job in selected] == ["1"]
+    tagged = controller.tag_tasks([replace(jobs["1"].task, triage_tags=frozenset())])
+    assert MAINTENANCE_TAG in tagged[0].triage_tags
+    state = controller.state()
+    state["records"][0]["status"] = "canary-failed"
+    atomic_write_json(controller.path, state)
+    assert MAINTENANCE_TAG not in controller.tag_tasks(tagged)[0].triage_tags
+
+
 def test_corrupt_state_recovers_from_last_valid_generation(controller) -> None:
     atomic_write_json(controller.path, {"records": [], "reports": []})
     atomic_write_json(controller.path, {"reports": ["invalid"]})
@@ -381,12 +444,13 @@ def test_deployment_requires_green_current_main_and_matching_installed_package(
     controller, monkeypatch
 ) -> None:
     repository = controller.config.repository
-    repository.mkdir()
+    repository.mkdir(exist_ok=True)
     package = Path(__file__).parents[1] / "openhands_factory"
     shutil.copytree(
         package,
         repository / "automation/openhands_factory",
         ignore=shutil.ignore_patterns("__pycache__"),
+        dirs_exist_ok=True,
     )
     for args in [
         ("init", "-q"),
@@ -410,3 +474,53 @@ def test_deployment_requires_green_current_main_and_matching_installed_package(
         lambda self: MainCiStatus(head, "IN_PROGRESS", ""),
     )
     assert not controller.deployment_ready()
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "Introduce dead-letter triage",
+        "Require explicit triage",
+        "Wait for human approval",
+        "Require manual intervention",
+    ],
+)
+def test_manual_recovery_proposals_are_rejected(controller, change: str) -> None:
+    plan = MaintenancePlan.model_validate({**controller.pipeline.plan, "change": change})
+    with pytest.raises(FactoryError, match="automatic bounded recovery"):
+        validate_proposal(plan, controller.config.repository)
+
+
+def test_repair_requires_source_evidence_but_observation_does_not(controller) -> None:
+    plan = MaintenancePlan.model_validate({**controller.pipeline.plan, "source_evidence": []})
+    with pytest.raises(FactoryError, match="tracked-source evidence"):
+        validate_proposal(plan, controller.config.repository)
+    plan.action = "observe"
+    validate_proposal(plan, controller.config.repository)
+
+
+@pytest.mark.parametrize("path", ["/etc/service-secret.env", "../outside.py", "credentials.env"])
+def test_source_references_cannot_escape_or_reference_environment_files(
+    controller, path: str
+) -> None:
+    plan = MaintenancePlan.model_validate(
+        {
+            **controller.pipeline.plan,
+            "source_evidence": [{"path": path, "quote": "Not an actual source excerpt"}],
+        }
+    )
+    with pytest.raises(FactoryError, match="Unsafe maintenance source"):
+        validate_proposal(plan, controller.config.repository)
+
+
+def test_fabricated_source_quotes_and_untracked_files_are_rejected(controller) -> None:
+    plan = MaintenancePlan.model_validate(controller.pipeline.plan)
+    plan.source_evidence[0].quote = "A fabricated code excerpt that does not exist"
+    with pytest.raises(FactoryError, match="does not match tracked code"):
+        validate_proposal(plan, controller.config.repository)
+    path = controller.config.repository / "untracked.py"
+    path.write_text("A real but untracked code excerpt\n")
+    plan.source_evidence[0].path = "untracked.py"
+    plan.source_evidence[0].quote = "A real but untracked code excerpt"
+    with pytest.raises(FactoryError, match="does not match tracked code"):
+        validate_proposal(plan, controller.config.repository)
