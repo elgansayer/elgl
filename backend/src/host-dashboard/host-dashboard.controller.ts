@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  Param,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common';
-import { User } from '@supabase/supabase-js';
+import { Controller, Get, Param } from '@nestjs/common';
 import { HostDashboardService } from './host-dashboard.service';
 import { HostDashboardStatsDto } from './dto/host-dashboard.dto';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -20,7 +11,6 @@ import {
 
 @ApiTags('Video Classrooms')
 @Controller('host-dashboard')
-@UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class HostDashboardController {
   constructor(private readonly service: HostDashboardService) {}
@@ -54,16 +44,9 @@ export class HostDashboardController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Only the room host can view dashboard statistics.',
-  })
   async getStats(
-    @CurrentUser() user: User | null,
     @Param('roomId') roomId: string,
   ): Promise<HostDashboardStatsDto> {
-    if (!user) throw new UnauthorizedException();
-    return this.service.getStats(roomId, user.id);
+    return this.service.getStats(roomId);
   }
 }

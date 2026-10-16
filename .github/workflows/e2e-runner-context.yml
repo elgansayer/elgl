@@ -5,9 +5,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
-    paths:
-      - 'e2e/**'
-      - '.github/workflows/e2e-runner-context.yml'
+    paths-ignore:
+      - 'automation/**'
+      - 'factory-dashboard/**'
+      - 'docs/**'
+      - 'config/factory/**'
+      - 'config/systemd/**'
+      - '.github/dependabot.yml'
   merge_group:
     types: [checks_requested]
 
