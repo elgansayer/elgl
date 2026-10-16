@@ -8,11 +8,11 @@ describe('App routes', () => {
     expect(routes.length).toBeGreaterThan(0);
   });
 
-  it('should include the root redirect to ai-conversation', () => {
+  it('should include the root redirect to learn/ai-chat', () => {
     const root = routes.find((r) => r.path === '');
     expect(root).toBeDefined();
     if (root) {
-      expect(root.redirectTo).toBe('ai-conversation');
+      expect(root.redirectTo).toBe('learn/ai-chat');
       expect(root.pathMatch).toBe('full');
     }
   });
@@ -93,12 +93,12 @@ describe('App routes', () => {
     }
   });
 
-  it('should lazy-load milestones component route', () => {
-    const milestones = routes.find((r) => r.path === 'milestones');
-    expect(milestones).toBeDefined();
-    if (milestones) {
-      expect(milestones.loadComponent).toBeDefined();
-      expect(typeof milestones.loadComponent).toBe('function');
+  it('should lazy-load profile/me/stats component route', () => {
+    const stats = routes.find((r) => r.path === 'profile/me/stats');
+    expect(stats).toBeDefined();
+    if (stats) {
+      expect(stats.loadComponent).toBeDefined();
+      expect(typeof stats.loadComponent).toBe('function');
     }
   });
 
@@ -106,7 +106,7 @@ describe('App routes', () => {
     const wildcard = routes[routes.length - 1];
 
     expect(wildcard?.path).toBe('**');
-    expect(wildcard?.redirectTo).toBe('ai-conversation');
+    expect(wildcard?.redirectTo).toBe('learn/ai-chat');
     expect(routes.some((route) => route.path === wildcard?.redirectTo)).toBe(true);
   });
 });

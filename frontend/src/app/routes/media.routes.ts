@@ -2,17 +2,33 @@ import { Routes } from '@angular/router';
 
 export const mediaRoutes: Routes = [
   {
-    path: 'audio-rooms',
+    path: 'live/audio',
     loadComponent: () =>
       import('../components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
-    path: 'classrooms',
+    path: 'audio-rooms',
+    redirectTo: 'live/audio',
+    pathMatch: 'full',
+  },
+  {
+    path: 'live/video',
     loadComponent: () =>
       import('../components/classrooms-marketplace/classrooms-marketplace').then(
         (m) => m.ClassroomsMarketplace,
       ),
     title: 'Video Classrooms - HelloTalk',
+  },
+  {
+    path: 'classrooms',
+    redirectTo: 'live/video',
+    pathMatch: 'full',
+  },
+  {
+    path: 'live/events',
+    loadComponent: () =>
+      import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
+    title: 'Live Events - HelloTalk',
   },
   {
     path: 'video-call',
