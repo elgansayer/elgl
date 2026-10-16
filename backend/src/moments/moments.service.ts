@@ -72,17 +72,18 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
 
     // ⚡ Bolt Optimization: Replace sequential awaits with Promise.all mapped concurrent operations
+    // ⚡ Bolt Optimization: Use `{ count: 'exact', head: true }` to avoid loading full payloads over the network when only counts are needed.
     const [
-      { data: momentsData, error: momentsError },
-      { data: correctionsData, error: correctionsError },
-      { data: translationsData, error: translationsError },
+      { count: momentsCount, error: momentsError },
+      { count: correctionsCount, error: correctionsError },
+      { count: translationsCount, error: translationsError },
     ] = await Promise.all([
-      supabase.from('moments').select('id'),
+      supabase.from('moments').select('*', { count: 'exact', head: true }),
       supabase
         .from('moment_comments')
-        .select('id')
+        .select('*', { count: 'exact', head: true })
         .not('correction_payload', 'is', null),
-      supabase.from('translations').select('id'),
+      supabase.from('translations').select('*', { count: 'exact', head: true }),
     ]);
 
     if (momentsError || correctionsError || translationsError) {
@@ -92,9 +93,9 @@ export class MomentsService {
     }
 
     return {
-      translations: translationsData?.length ?? 0,
-      corrections: correctionsData?.length ?? 0,
-      moments: momentsData?.length ?? 0,
+      translations: translationsCount ?? 0,
+      corrections: correctionsCount ?? 0,
+      moments: momentsCount ?? 0,
     };
   }
   constructor(
