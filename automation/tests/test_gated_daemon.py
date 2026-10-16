@@ -1,8 +1,11 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+import pytest
+
 from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
 from openhands_factory.models import Job, JobState, Task
+from openhands_factory.state import atomic_write_json
 
 
 class Gate:
@@ -253,3 +256,44 @@ def test_issue_refresh_keeps_full_scan_when_admission_limit_is_disabled() -> Non
 
     assert tasks == [fresh_issue]
     assert collector.calls == [10_000]
+
+
+@pytest.mark.parametrize("paused,slots", [(True, 4), (False, 0)])
+@pytest.mark.parametrize("status,field", [("repairing", "issue"), ("canary", "canary_task")])
+def test_issue_cache_discovers_only_ledger_admitted_missing_maintenance(
+    tmp_path, paused, slots, status, field
+) -> None:
+    daemon = object.__new__(MainCiGatedFactoryDaemon)
+    daemon.config = SimpleNamespace(maintenance_enabled=True, state_dir=tmp_path)
+    cached_issue = _task("101", "github-issue")
+    repair = _task("303", "github-issue")
+    daemon.issue_admission = AdmissionSlots(slots)
+    daemon.pipeline = SimpleNamespace(
+        config=daemon.config,
+        pull_request_capacity=SimpleNamespace(pause_new_dispatch=paused),
+        tasks=SimpleNamespace(cached=lambda: [cached_issue]),
+    )
+    collector = IssueCollector([repair, cached_issue])
+    atomic_write_json(tmp_path / "maintenance.json", {"records": [{"status": status, field: 303}]})
+    assert daemon._collect_open_issues_for_refresh(collector) == [repair, cached_issue]
+    assert collector.calls == [10_000]
+    daemon.pipeline.tasks.cached = lambda: [repair, cached_issue]
+    assert daemon._collect_open_issues_for_refresh(collector) == [repair, cached_issue]
+    assert collector.calls == [10_000]
+
+
+def test_issue_cache_does_not_scan_for_untrusted_or_completed_repair(tmp_path) -> None:
+    daemon = object.__new__(MainCiGatedFactoryDaemon)
+    daemon.config = SimpleNamespace(maintenance_enabled=True, state_dir=tmp_path)
+    cached_issue = _task("101", "github-issue")
+    daemon.issue_admission = AdmissionSlots(0)
+    daemon.pipeline = SimpleNamespace(
+        config=daemon.config,
+        tasks=SimpleNamespace(cached=lambda: [cached_issue]),
+    )
+    collector = IssueCollector([_task("303", "github-issue")])
+    atomic_write_json(
+        tmp_path / "maintenance.json", {"records": [{"status": "recovered", "issue": 303}]}
+    )
+    assert daemon._collect_open_issues_for_refresh(collector) == [cached_issue]
+    assert collector.calls == []
