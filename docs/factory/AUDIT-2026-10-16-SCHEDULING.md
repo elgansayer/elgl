@@ -26,3 +26,13 @@ model. The authenticated catalogue exposes `deepseek-v4.1-flash`, replacing the
 old `deepseek-v4-flash` setting in the host's common environment. After that
 configuration correction, `doctor --online` passed all required checks. Claude
 and Codex are usable; Google and Pi remain governed by their recovery circuits.
+
+## Model-specific routing evidence
+
+The adaptive router combined every model's history for a provider. Claude's
+retired Haiku review route had 64 failures, while Sonnet had 58 successful reviews
+out of 58. Aggregation penalised the working Sonnet route. Conversely, Google's
+240 successful reviews on a retired Gemini model promoted its unproven
+replacement ahead of Sonnet. Score only the model currently configured for each
+phase. Preserve historical metrics for reporting and existing fallback behaviour.
+Regression cases cover both independent review and implementation.
