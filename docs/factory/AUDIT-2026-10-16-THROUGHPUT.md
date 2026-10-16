@@ -25,8 +25,6 @@ The principal throughput constraints were:
 - Refresh the Google route to the account-visible Gemini 3.8 Flash effort tiers.
 - Enable the installed Pi adapter as a bounded fourth subscription provider after its GitHub Copilot OAuth probe returned `ready`.
 
-## Deliberate non-change
-
 ## Follow-up: storage, stale heads and rollout cadence
 
 A live follow-up found both instances paused at the 5 GiB storage reserve. Removing
