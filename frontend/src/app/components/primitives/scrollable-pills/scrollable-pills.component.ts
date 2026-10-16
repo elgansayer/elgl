@@ -1,8 +1,10 @@
-import { Component, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   selector: 'app-scrollable-pills',
+  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [...HlmButtonImports],
   template: `
     <div
