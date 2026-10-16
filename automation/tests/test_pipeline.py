@@ -913,8 +913,13 @@ def test_pull_request_waits_for_protected_ci_before_local_verification(
     assert result.latest_verified_sha is None
 
 
-def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("merge_state", ["UNKNOWN", "BLOCKED", "UNSTABLE"])
+@pytest.mark.parametrize("refresh_existing", [False, True])
+def test_unverified_pull_request_refreshes_a_locally_stale_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    merge_state: str,
+    refresh_existing: bool,
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
@@ -939,7 +944,7 @@ def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
             "old-head",
             True,
             False,
-            merge_state_status="UNKNOWN",
+            merge_state_status=merge_state,
         )
     ]
 
@@ -956,7 +961,15 @@ def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
     pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
     pipeline.refresh()
 
-    result = pipeline.run_job("77")
+    if refresh_existing:
+        result = pipeline.jobs.load()["77"]
+        result.branch = "fix/old"
+        result.pull_request = 77
+        pipeline._refresh_pull_request_for_review(
+            result, factory_config.worktree_dir / "issue-77", "test"
+        )
+    else:
+        result = pipeline.run_job("77")
 
     assert result is not None
     assert result.state is JobState.CI_PENDING
@@ -1496,11 +1509,7 @@ def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
     assert "resolve base conflicts" in committed[0]
 
 
-@pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
-def test_behind_pull_request_is_updated_at_the_inspected_head(
-    tmp_path: Path,
-    initial_state: JobState,
-) -> None:
+def test_green_reviewed_pull_request_can_queue_merge_while_behind_main(tmp_path: Path) -> None:
     github = GitHub()
     github.statuses = [
         PullRequestStatus(
@@ -1518,19 +1527,20 @@ def test_behind_pull_request_is_updated_at_the_inspected_head(
     pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
     job = Job(
         task=Task("77", "Refresh branch", "Body", "github-pull-request", 10),
-        state=initial_state,
+        state=JobState.CI_PENDING,
         branch="fix/behind",
         pull_request=77,
         head_sha="reviewed-head",
+        latest_verified_sha="reviewed-head",
     )
     pipeline.jobs.save({"77": job})
 
     result = pipeline.run_job("77")
 
     assert result is not None
-    assert result.state is initial_state
-    assert github.updated_branches == [(77, "reviewed-head")]
-    assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
+    assert result.state is JobState.MERGE_QUEUED
+    assert github.updated_branches == []
+    assert github.removed_labels == []
 
 
 def test_update_branch_conflict_routes_directly_to_repair(
