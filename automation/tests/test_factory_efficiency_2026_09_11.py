@@ -21,7 +21,7 @@ def test_production_claude_uses_haiku_for_bounded_stall_diagnostics() -> None:
     assert claude.phase_models["general_action"] == "haiku"
     assert claude.phase_models["quality_repair"] == "haiku"
     assert claude.phase_models["ci_repair"] == "haiku"
-    assert claude.phase_models["code_review"] == "haiku"
+    assert claude.phase_models["code_review"] == "sonnet"
     assert claude.phase_models["security_review"] == "sonnet"
     assert claude.phase_models["implementation"] == "sonnet"
     assert claude.phase_models["planning"] == "opus"
@@ -33,9 +33,8 @@ def test_production_claude_uses_haiku_for_bounded_stall_diagnostics() -> None:
     assert config.agents.timeouts.general_action == 300
     assert config.agents.routing.same_provider_retries == 0
     assert config.agents.routing.general_action == [
-        "opencode",
         "google",
-        "codex",
-        "claude",
         "pi",
+        "claude",
+        "codex",
     ]
