@@ -1278,8 +1278,6 @@ class FactoryPipeline:
                 job.state = JobState.MERGED
             elif self._recover_closed_pull_request(job, status):
                 return
-            elif status.merge_state_status == "BEHIND":
-                self._update_pull_request_branch(job, status)
             elif (
                 status.mergeable == "CONFLICTING"
                 or status.merge_state_status in CONFLICTING_MERGE_STATES
@@ -1313,7 +1311,7 @@ class FactoryPipeline:
             elif (
                 status.checks_passed
                 and status.mergeable == "MERGEABLE"
-                and status.merge_state_status == "CLEAN"
+                and status.merge_state_status in {"CLEAN", "BEHIND"}
             ):
                 # Persist a visible queue transition before the merge attempt. The
                 # MERGE_QUEUED worker re-reads GitHub immediately before using an
@@ -1324,7 +1322,8 @@ class FactoryPipeline:
                     job,
                     "merge-queued",
                     (
-                        "All required checks passed, GitHub reports the reviewed head as clean "
+                        "All required checks passed, GitHub reports the reviewed head as "
+                        "non-conflicting "
                         "and mergeable, and the Factory queued an exact-head squash merge."
                     ),
                 )
@@ -1444,7 +1443,8 @@ class FactoryPipeline:
                 job,
                 "merge-queued",
                 (
-                    "All required checks passed, GitHub reports the reviewed head as clean "
+                    "All required checks passed, GitHub reports the reviewed head as "
+                    "non-conflicting "
                     "and mergeable, and the Factory queued an exact-head squash merge."
                 ),
             )
@@ -1460,8 +1460,6 @@ class FactoryPipeline:
                 return
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
-            elif status.merge_state_status == "BEHIND":
-                self._update_pull_request_branch(job, status)
             elif (
                 status.checks_pending
                 or status.mergeable == "UNKNOWN"
@@ -1471,7 +1469,7 @@ class FactoryPipeline:
             elif (
                 not status.checks_passed
                 or status.mergeable != "MERGEABLE"
-                or status.merge_state_status != "CLEAN"
+                or status.merge_state_status not in {"CLEAN", "BEHIND"}
             ):
                 job.state = JobState.REPAIRING
             else:

@@ -41,6 +41,7 @@ planning cannot take an agent slot from the merge queue.
 | Google agent | `gemini-3.8-flash-high` | `high` for planning, architecture, implementation, and security; `medium` for review; `low` for repair and general actions              | Current Gemini family and phase-specific effort tiers exposed by the verified Antigravity catalogue                                                          |
 | OpenCode Go  | `opencode-go/kimi-k3`   | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action             | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
 | OpenHands    | `gpt-5.6-sol`           | same                                                                                                                                    | Emergency compatibility provider only                                                                                                                        |
+| Pi           | `github-copilot/claude-sonnet-5` | Opus for planning, Sonnet for implementation/security, Haiku for bounded repair and review                                   | Authenticated GitHub Copilot subscription fallback, used when earlier providers are unhealthy or busy                                                        |
 
 Primary references:
 

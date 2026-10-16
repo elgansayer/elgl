@@ -1496,11 +1496,7 @@ def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
     assert "resolve base conflicts" in committed[0]
 
 
-@pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
-def test_behind_pull_request_is_updated_at_the_inspected_head(
-    tmp_path: Path,
-    initial_state: JobState,
-) -> None:
+def test_green_reviewed_pull_request_can_queue_merge_while_behind_main(tmp_path: Path) -> None:
     github = GitHub()
     github.statuses = [
         PullRequestStatus(
@@ -1518,19 +1514,20 @@ def test_behind_pull_request_is_updated_at_the_inspected_head(
     pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
     job = Job(
         task=Task("77", "Refresh branch", "Body", "github-pull-request", 10),
-        state=initial_state,
+        state=JobState.CI_PENDING,
         branch="fix/behind",
         pull_request=77,
         head_sha="reviewed-head",
+        latest_verified_sha="reviewed-head",
     )
     pipeline.jobs.save({"77": job})
 
     result = pipeline.run_job("77")
 
     assert result is not None
-    assert result.state is initial_state
-    assert github.updated_branches == [(77, "reviewed-head")]
-    assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
+    assert result.state is JobState.MERGE_QUEUED
+    assert github.updated_branches == []
+    assert github.removed_labels == []
 
 
 def test_update_branch_conflict_routes_directly_to_repair(
