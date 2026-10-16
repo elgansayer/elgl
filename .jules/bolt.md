@@ -175,3 +175,9 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+**Learning:** Found multiple Angular components rendering static or signal-driven data that were missing `changeDetection: ChangeDetectionStrategy.OnPush`. Without this strategy, Angular performs unnecessary main-thread change detection cycles, reducing application responsiveness and performance.
+**Action:** Proactively configure Angular components that render static data or rely entirely on signals/observables to use `ChangeDetectionStrategy.OnPush` to minimize main thread change detection overhead.
+
+## 2026-10-16 - [Optimize Main Thread Render via ChangeDetectionStrategy.OnPush]
+**Learning:** Found multiple Angular components rendering static or signal-driven data that were missing `changeDetection: ChangeDetectionStrategy.OnPush`. Without this strategy, Angular performs unnecessary main-thread change detection cycles, reducing application responsiveness and performance.
+**Action:** Proactively configure Angular components that render static data or rely entirely on signals/observables to use `ChangeDetectionStrategy.OnPush` to minimize main thread change detection overhead.
