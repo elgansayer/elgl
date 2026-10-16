@@ -273,27 +273,14 @@ const server = createServer(async (req, res) => {
 
       const b64 = authHeader.substring(6);
       const decoded = Buffer.from(b64, 'base64').toString('utf8');
-      const [username, password] = decoded.split(':', 2);
-
-      let isAuthorized = false;
-      if (username !== undefined && password !== undefined) {
-        try {
-          const userBuf = Buffer.from(username);
-          const expectedUserBuf = Buffer.from(DASHBOARD_USER);
-          const passBuf = Buffer.from(password);
-          const expectedPassBuf = Buffer.from(DASHBOARD_PASSWORD);
-
-          if (userBuf.length === expectedUserBuf.length && passBuf.length === expectedPassBuf.length) {
-            const userMatch = crypto.timingSafeEqual(userBuf, expectedUserBuf);
-            const passMatch = crypto.timingSafeEqual(passBuf, expectedPassBuf);
-            if (userMatch && passMatch) {
-              isAuthorized = true;
-            }
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
+      // Compare fixed-size digests of the complete credential pair. This preserves
+      // colons in passwords and avoids branching on the configured secret's length.
+      const supplied = crypto.createHash('sha256').update(decoded).digest();
+      const expected = crypto
+        .createHash('sha256')
+        .update(`${DASHBOARD_USER}:${DASHBOARD_PASSWORD}`)
+        .digest();
+      const isAuthorized = crypto.timingSafeEqual(supplied, expected);
 
       if (!isAuthorized) {
         res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
