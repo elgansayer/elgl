@@ -148,14 +148,14 @@ export class VideoCallsCacheInvalidationService {
     try {
       let totalDeleted = 0;
 
-      for (const pattern of VIDEO_CLASSROOM_CACHE_PATTERNS) {
-        if (pattern.endsWith(':*')) {
-          const prefix = pattern.slice(0, -2);
-          totalDeleted += await this.deleteByScan(redis, prefix);
-        } else {
-          totalDeleted += await redis.del(pattern);
-        }
-      }
+      const promises = VIDEO_CLASSROOM_CACHE_PATTERNS.map((pattern) => {
+        return pattern.endsWith(':*')
+          ? this.deleteByScan(redis, pattern.slice(0, -2))
+          : redis.del(pattern);
+      });
+
+      const results = await Promise.all(promises);
+      totalDeleted = results.reduce((acc, val) => acc + val, 0);
 
       if (totalDeleted > 0) {
         this.logger.log(

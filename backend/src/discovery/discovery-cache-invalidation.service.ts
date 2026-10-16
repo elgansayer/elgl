@@ -252,13 +252,15 @@ export class DiscoveryCacheInvalidationService {
       `discovery:audio_intros:user:${payload.userId}`,
     ];
     // Delete exact keys and prefixed patterns
-    let total = 0;
-    for (const prefix of prefixes) {
+    const promises = prefixes.flatMap((prefix) => {
+      const ops = [this.getRedis().del(prefix)];
       if (prefix.includes(':')) {
-        total += await this.deleteByPattern(`${prefix}:*`);
+        ops.push(this.deleteByPattern(`${prefix}:*`));
       }
-      total += await this.getRedis().del(prefix);
-    }
+      return ops;
+    });
+    const results = await Promise.all(promises);
+    const total = results.reduce((acc, val) => acc + val, 0);
     if (total > 0) {
       this.logger.info(
         `Bulk-invalidated ${total} discovery cache key(s) for user ${payload.userId}`,
