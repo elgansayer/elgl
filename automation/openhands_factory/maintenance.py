@@ -344,7 +344,14 @@ class MaintenanceController:
             report.unlink(missing_ok=True)
 
         def validate() -> None:
-            plan = MaintenancePlan.model_validate_json(report.read_text())
+            try:
+                plan = MaintenancePlan.model_validate_json(report.read_text())
+            except (OSError, ValueError) as error:
+                # Invalid model output is eligible for the normal bounded
+                # provider fallback, not an internal Factory crash.
+                raise FactoryError(
+                    f"Invalid structured maintenance report: {type(error).__name__}"
+                ) from error
             allowed = {str(item["task_id"]) for item in evidence}
             if not set(plan.affected_task_ids).issubset(allowed):
                 raise FactoryError("Maintenance plan references unobserved tasks")

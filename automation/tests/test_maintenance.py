@@ -9,7 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from pydantic import SecretStr, ValidationError
+from pydantic import SecretStr
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import is_new_github_issue, select_batch, select_batch_failsafe
@@ -199,7 +199,7 @@ def test_daily_budget_blocks_model_work_but_keeps_reports(controller) -> None:
 @pytest.mark.parametrize("plan", [{}, {"action": "execute-host-command"}])
 def test_invalid_model_plan_is_bounded_and_cannot_create_issues(controller, plan) -> None:
     controller.pipeline.plan = plan
-    with pytest.raises(ValidationError):
+    with pytest.raises(FactoryError, match="Invalid structured maintenance report"):
         controller.run()
     assert not controller.due()
     assert controller.state()["analyses_today"] == 1
