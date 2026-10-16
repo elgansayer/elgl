@@ -1,29 +1,25 @@
-# Language Corrections Audit
+# Language corrections source audit
 
-## 1. Locations for User Corrections
+Scope: implementation and caller review. No timed usability study, tone assessment, translated-session test or end-to-end SRS persistence test was performed. The presence of a method or translation key does not demonstrate those outcomes.
 
-- **Moments Feed**: Users can correct public posts via the `CorrectionModalComponent` triggered from `MomentsFeedComponent`.
-- **Chat Rooms**: Users can correct direct messages via the inline correction form in `ChatRoomComponent`.
+## Authoring and presentation
 
-## 2. Assessment against criteria
+`CorrectionModalComponent` pre-fills an editable correction from the source text and emits corrected text with an optional explanation. The existing chat-room authoring path also needs to be considered separately: PR #8921 proposes consolidating it into the shared modal. This audit does not mark that proposed change as shipped.
 
-- **Extremely fast to create**:
-  - _Correction Modal_: Initializes with the original text automatically (`correctedText.set(this.originalText())`). The user only needs to edit the part that is wrong rather than retyping the entire sentence.
-  - _Chat Room_: The inline correction form also pre-fills the original text.
-- **Easy to understand**:
-  - Both surfaces rely on `VisualDiffComponent` which uses `Intl.Segmenter` to render word-level diffs with distinct visual markers (green background for additions, red strikethrough for removals).
-  - The live diff preview updates instantly as the user types.
-- **Non-judgemental**:
-  - The UI uses terms like "Ghost Original" and "Corrected Sentence". Explanations are marked as `(optional)`.
-- **Translatable**:
-  - All static UI strings in both surfaces use the translation pipe (`| t`) relying on `I18nService`.
-  - The actual user-provided explanation text is stored as a raw string and currently lacks an explicit "Translate" button inline within the diff rendering.
-- **Reusable as learning material (SRS / Examples)**:
-  - The `VisualDiffComponent` includes a `showActions` flag. When enabled, it renders a "➕ Create Flashcard" button.
-  - Clicking this button invokes `FlashcardService.createFlashcard()` using the corrected text as the target word, the original text as the translation, and the explanation as context.
+`VisualDiffComponent` uses Intl.Segmenter for multilingual token boundaries. That API does not guarantee minimal edits or fast rendering for arbitrary input lengths. PR #7632 bounds the proposed LCS implementation and adds long-input regressions; algorithm and performance claims must match the version actually deployed. Test CJK, Thai, punctuation, repeated words, whitespace and large messages.
 
-## 3. Actionable Recommendations
+## Translation and reuse
 
-- Enable the `showActions` flag for the `app-visual-diff` in the `CorrectionModalComponent` and `ChatRoomComponent` templates so that users viewing a correction can convert it into an SRS flashcard with one action.
-- Ensure the `VisualDiffComponent` handles long corrections gracefully when converting to flashcards.
-- Introduce an auto-translation toggle for the explanation field to make the context fully accessible to beginners.
+Static UI text uses the translation infrastructure. Explanation translation and flashcard creation are conditional component behaviours: callers must pass the explanation and enable the relevant action. Inspect each caller in chat messages, chat rooms, Moments, the correction modal and Favourites independently. Do not infer complete coverage from VisualDiff's API alone.
+
+PR #7588 addresses missing explanation propagation in the correction modal preview. This source review therefore does not conclude that every surface is already complete. Existing inline chat authoring and shared-modal authoring also have different integration paths.
+
+## Validation still required
+
+- Measure the steps and time to create a correction, including cancellation and failure recovery.
+- Review tone with learners and speakers of the target languages; positive-sounding translation keys alone do not establish neutrality.
+- Exercise explanation translation success, failure, language changes and cache behaviour.
+- Create an SRS card from each enabled surface and verify saved source, corrected text and explanation, including truncation limits and duplicate actions.
+- Check semantic additions/removals with a screen reader, long text, RTL, high zoom and both themes.
+
+These are validation requirements, not a claim that every item is broken or already complete.
