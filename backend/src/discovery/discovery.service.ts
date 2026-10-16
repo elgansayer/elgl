@@ -543,7 +543,7 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort));
+      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort, _currentUserProfile));
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -1038,15 +1038,14 @@ export class DiscoveryService {
     // For best_match, promote partner of week first, then maintain db order
     if (sort === 'best_match') {
       results.sort((a, b) => {
-        const aPoW = a.is_partner_of_week ? 1 : 0;
-        const bPoW = b.is_partner_of_week ? 1 : 0;
-        if (aPoW !== bPoW) return bPoW - aPoW;
-        const streakA = a.study_streak_days ?? 0;
-        const streakB = b.study_streak_days ?? 0;
-        if (streakB !== streakA) return streakB - streakA;
-        const ratioA = a.correction_ratio ?? 0;
-        const ratioB = b.correction_ratio ?? 0;
-        return ratioB - ratioA;
+        const computeScore = (u: DiscoveryUser): number => {
+          let score = 0;
+          if (u.is_partner_of_week) score += 1000;
+          score += Math.min(50, (u.study_streak_days ?? 0) * 2);
+          score += (u.correction_ratio ?? 0) * 40;
+          return score;
+        };
+        return computeScore(b) - computeScore(a);
       });
     }
 
@@ -1204,6 +1203,7 @@ export class DiscoveryService {
   private sortUsers(
     users: UserProfile[],
     sort?: string,
+    currentUserProfile?: UserProfile | null,
     _searchLat?: number,
     _searchLon?: number,
   ): UserProfile[] {
@@ -1211,17 +1211,53 @@ export class DiscoveryService {
     const discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
       case 'best_match':
+        const computeScore = (u: DiscoveryUser): number => {
+          let score = 0;
+
+          if (u.is_partner_of_week) {
+            score += 1000;
+          }
+
+          if (currentUserProfile) {
+            const uNative = u.native_languages ?? [];
+            const uTarget = u.target_languages ?? [];
+            const cNative = currentUserProfile.native_languages ?? [];
+            const cTarget = currentUserProfile.target_languages ?? [];
+
+            const nativeMatch = uNative.some((lang) => cTarget.includes(lang));
+            const targetMatch = uTarget.some((lang) => cNative.includes(lang));
+
+            if (nativeMatch && targetMatch) {
+              score += 50;
+            } else if (nativeMatch || targetMatch) {
+              score += 20;
+            }
+
+            const uInterests = u.interests ?? [];
+            const cInterests = currentUserProfile.interests ?? [];
+            const sharedInterests = uInterests.filter((interest) =>
+              cInterests.includes(interest),
+            );
+            score += sharedInterests.length * 10;
+
+            const streakDays = u.study_streak_days ?? 0;
+            if (currentUserProfile.is_serious_learner) {
+              score += Math.min(50, streakDays * 5);
+            } else {
+              score += Math.min(10, streakDays * 1);
+            }
+          } else {
+             score += Math.min(50, (u.study_streak_days ?? 0) * 2);
+          }
+
+          const correctionRatio = u.correction_ratio ?? 0;
+          score += correctionRatio * 40;
+
+          return score;
+        };
+
         return discoveryUsers.sort((a, b) => {
-          const aPow = a.is_partner_of_week ? 1 : 0;
-          const bPow = b.is_partner_of_week ? 1 : 0;
-          if (aPow !== bPow) return bPow - aPow;
-          const streakA = a.study_streak_days ?? 0;
-          const streakB = b.study_streak_days ?? 0;
-          if (streakB !== streakA) return streakB - streakA;
-          const ratioA = a.correction_ratio ?? 0;
-          const ratioB = b.correction_ratio ?? 0;
-          if (ratioB !== ratioA) return ratioB - ratioA;
-          return 0;
+          return computeScore(b) - computeScore(a);
         });
       case 'online_now':
         return discoveryUsers.sort((a, b) => {

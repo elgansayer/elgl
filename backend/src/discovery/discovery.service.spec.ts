@@ -1084,10 +1084,15 @@ describe('DiscoveryService', () => {
         sort: 'best_match',
       });
 
+      // The new fallback sorting formula is:
+      // a: min(50, 3*2) + (0.9 * 40) = 6 + 36 = 42
+      // b: min(50, 10*2) + (0.5 * 40) = 20 + 20 = 40
+      // c: 1000 + ... => winner
+      // order: c, a, b
       expect(result.map((u) => u.id)).toEqual([
         'partner-c',
-        'partner-b',
         'partner-a',
+        'partner-b',
       ]);
     });
 
