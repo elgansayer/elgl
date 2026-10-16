@@ -1,4 +1,4 @@
-import { Component, inject, computed, resource, signal, isDevMode } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed, resource, signal, isDevMode } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { StudyStreakService } from '../../services/study-streak.service';
@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-study-streak-widget',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="study-streak-widget flex items-center gap-3 rounded-xl bg-surface-300 ps-4 pe-4 pt-4 pb-4">
