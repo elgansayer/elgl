@@ -68,6 +68,7 @@ def test_metrics_track_requested_ratios_across_restart(tmp_path: Path) -> None:
 
     store.observe_inventory([green, replay], capacity([green, replay]), now=first_observation)
     store.record_reviewer_invocations(10, 3, now=first_observation)
+    store.record_repair_invocations(10, 2, now=first_observation)
     store.record_supersession(11, 10, "duplicate active task", now=first_observation)
 
     merged = pull_request(
@@ -94,6 +95,14 @@ def test_metrics_track_requested_ratios_across_restart(tmp_path: Path) -> None:
     )
 
     assert snapshot["summary"] == {
+        "rolling_throughput": {
+            f"{hours}h": {
+                "merged_pr_count": 1,
+                "merges_per_hour": round(1 / hours, 3),
+                "merged_pr_count_by_component": {"automation": 1},
+            }
+            for hours in (1, 6, 24)
+        },
         "active_pr_count_by_lane": {},
         "merged_pr_count": 1,
         "superseded_pr_count": 1,
@@ -102,6 +111,7 @@ def test_metrics_track_requested_ratios_across_restart(tmp_path: Path) -> None:
         "replay_prs_per_merged_pr": 1.0,
         "ci_workflow_runs_per_merged_pr": 3.0,
         "reviewer_model_invocations_per_merged_pr": 3.0,
+        "repair_model_invocations_per_merged_pr": 2.0,
         "average_green_wait_seconds": 3600.0,
         "stale_conflicting_pr_rate": 0.5,
         "duplicate_task_fingerprints": 0,
@@ -131,3 +141,23 @@ def test_non_positive_reviewer_increment_is_ignored(tmp_path: Path) -> None:
     store.record_reviewer_invocations(10, 0)
 
     assert not store.path.exists()
+
+
+def test_rolling_throughput_excludes_future_and_expired_merges(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    store = PullRequestMetricsStore(tmp_path / "metrics.json")
+    now = datetime(2026, 8, 24, 12, tzinfo=UTC)
+    records = [
+        replace(
+            pull_request(1, state="MERGED", merged_at="2026-08-24T11:30:00Z"),
+            files=("frontend/a.ts",),
+        ),
+        pull_request(2, state="MERGED", merged_at="2026-08-24T10:00:00Z"),
+        pull_request(3, state="MERGED", merged_at="2026-08-23T11:00:00Z"),
+        pull_request(4, state="MERGED", merged_at="2026-08-24T13:00:00Z"),
+    ]
+    summary = store.observe_inventory(records, capacity(records), now=now)["summary"]
+    assert summary["rolling_throughput"]["1h"]["merged_pr_count_by_component"] == {"frontend": 1}
+    assert summary["rolling_throughput"]["6h"]["merged_pr_count"] == 2
+    assert summary["rolling_throughput"]["24h"]["merged_pr_count"] == 2

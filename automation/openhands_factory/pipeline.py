@@ -786,15 +786,24 @@ class FactoryPipeline:
                 )
                 and isinstance(entry.get("provider"), str)
             }
-        history_before = len(job.provider_history)
+        # Retain references while routing so bounded-history eviction cannot
+        # make new attempts disappear from convergence metrics.
+        history_before = list(job.provider_history)
+        previous_entries = {id(entry) for entry in history_before}
         try:
             result = self.router.run(request, job, exclude=excluded)
         finally:
+            invocations = sum(id(entry) not in previous_entries for entry in job.provider_history)
             if agent_phase is AgentPhase.CODE_REVIEW and job.pull_request is not None:
                 self.pr_metrics.record_reviewer_invocations(
                     job.pull_request,
-                    len(job.provider_history) - history_before,
+                    invocations,
                 )
+            elif (
+                agent_phase in {AgentPhase.CI_REPAIR, AgentPhase.QUALITY_REPAIR}
+                and job.pull_request is not None
+            ):
+                self.pr_metrics.record_repair_invocations(job.pull_request, invocations)
 
         if agent_phase is AgentPhase.IMPLEMENTATION:
             job.implementation_provider = result.provider
@@ -1348,8 +1357,14 @@ class FactoryPipeline:
                 status.mergeable == "CONFLICTING"
                 or status.merge_state_status in CONFLICTING_MERGE_STATES
             )
+            stale_base = (
+                not base_conflict
+                and status.merge_state_status in {"BEHIND", "BLOCKED", "UNSTABLE", "UNKNOWN"}
+                and not workflow.contains_current_base()
+            )
             if (
                 not base_conflict
+                and not stale_base
                 and not status.failed_checks
                 and (
                     status.checks_pending
@@ -1377,7 +1392,7 @@ class FactoryPipeline:
             # agent's judgement. Try that for free first; only spend an LLM
             # call if the worktree is still unchanged afterwards.
             has_unmerged_paths = False
-            if base_conflict:
+            if base_conflict or stale_base:
                 has_unmerged_paths = workflow.merge_base_for_repair()
                 repair_context += (
                     "\nThe current base branch has been merged into this isolated "
@@ -1386,8 +1401,10 @@ class FactoryPipeline:
                 )
             else:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
-            mechanically_repaired = not base_conflict and workflow.has_changes()
-            if has_unmerged_paths or (not base_conflict and not mechanically_repaired):
+            mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
+            if has_unmerged_paths or (
+                not (base_conflict or stale_base) and not mechanically_repaired
+            ):
                 self._run_agent(
                     job,
                     worktree,
@@ -1396,12 +1413,16 @@ class FactoryPipeline:
                     lease_owner=lease_owner,
                     require_repository_change=True,
                 )
-            verified_paths = self._verify(workflow)
+            verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
+            if verified_paths is None:
+                return
             job.quality_repairs = 0
             workflow.stage_all()
             commit_subject = (
                 "fix: resolve base conflicts for"
                 if base_conflict
+                else "fix: refresh current base for"
+                if stale_base
                 else (
                     "fix: apply automatic formatting for"
                     if mechanically_repaired

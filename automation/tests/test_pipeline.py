@@ -1364,12 +1364,17 @@ def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
     return job
 
 
+@pytest.mark.parametrize("stale_base", [False, True])
 def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stale_base: bool
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
+    if stale_base:
+        github.statuses = [replace(github.statuses[0], merge_state_status="BLOCKED")]
+        monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: False)
+        monkeypatch.setattr(GitWorkflow, "merge_base_for_repair", lambda workflow: False)
     agent_calls: list[Task] = []
 
     class TrackingConversations(Conversations):
@@ -1401,7 +1406,7 @@ def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
     assert result is not None and result.last_error is None
     assert agent_calls == []
     assert result.state is JobState.REVIEWING
-    assert "automatic formatting" in committed[0]
+    assert ("refresh current base" if stale_base else "automatic formatting") in committed[0]
 
 
 def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
@@ -1451,6 +1456,34 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert "design-sync-drift failed" in prompts[0]
     assert result.state is JobState.REVIEWING
     assert "repair CI" in committed[0]
+
+
+def test_repair_verification_failure_enters_quality_repair_without_backoff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed("design-sync-drift: screen.chat preview needs updating")
+        ),
+    )
+    result = pipeline.run_job("77")
+    assert result is not None
+    assert result.state is JobState.QUALITY_REPAIRING
+    assert result.attempts == 0
+    assert "design-sync-drift" in result.review_findings[0]
 
 
 def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
