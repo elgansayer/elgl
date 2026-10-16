@@ -12,7 +12,7 @@ describe('App routes', () => {
     const root = routes.find((r) => r.path === '');
     expect(root).toBeDefined();
     if (root) {
-      expect(root.redirectTo).toBe('ai-conversation');
+      expect(root.redirectTo).toBe('learn/ai-chat');
       expect(root.pathMatch).toBe('full');
     }
   });
@@ -26,15 +26,15 @@ describe('App routes', () => {
       'moments',
       'chat',
       'chat/:id',
-      'profile',
+      'profile/me',
       'profile/:userId',
       'settings',
       'admin',
       'admin/moderation',
-      'milestones',
+      'profile/me/stats',
       'study-buddy',
-      'events',
-      'events/calendar',
+      'live/events',
+      'live/events/calendar',
       'coin-economy',
     ];
     for (const p of expected) {
@@ -94,7 +94,7 @@ describe('App routes', () => {
   });
 
   it('should lazy-load milestones component route', () => {
-    const milestones = routes.find((r) => r.path === 'milestones');
+    const milestones = routes.find((r) => r.path === 'profile/me/stats');
     expect(milestones).toBeDefined();
     if (milestones) {
       expect(milestones.loadComponent).toBeDefined();
@@ -106,7 +106,7 @@ describe('App routes', () => {
     const wildcard = routes[routes.length - 1];
 
     expect(wildcard?.path).toBe('**');
-    expect(wildcard?.redirectTo).toBe('ai-conversation');
+    expect(wildcard?.redirectTo).toBe('learn/ai-chat');
     expect(routes.some((route) => route.path === wildcard?.redirectTo)).toBe(true);
   });
 });
