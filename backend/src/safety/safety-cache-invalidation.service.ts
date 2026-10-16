@@ -63,22 +63,22 @@ export class SafetyCacheInvalidationService {
     try {
       let totalDeleted = 0;
 
-      for (const pattern of SAFETY_AFFECTED_CACHE_PATTERNS) {
-        if (pattern.endsWith(':*')) {
-          // Suffixed glob pattern – use SCAN for safety on larger key spaces
-          const prefix = pattern.slice(0, -2);
-          const deleted = await this.deleteByScan(redis, prefix);
-          totalDeleted += deleted;
-        } else if (pattern.endsWith(':')) {
-          // Prefix pattern – use KEYS (acceptable for small-to-medium instances)
-          const deleted = await this.deleteByPattern(redis, `${pattern}*`);
-          totalDeleted += deleted;
-        } else {
-          // Exact single key
-          const deleted = await redis.del(pattern);
-          totalDeleted += deleted;
-        }
-      }
+      const results = await Promise.all(
+        SAFETY_AFFECTED_CACHE_PATTERNS.map(async (pattern) => {
+          if (pattern.endsWith(':*')) {
+            // Suffixed glob pattern – use SCAN for safety on larger key spaces
+            const prefix = pattern.slice(0, -2);
+            return await this.deleteByScan(redis, prefix);
+          } else if (pattern.endsWith(':')) {
+            // Prefix pattern – use KEYS (acceptable for small-to-medium instances)
+            return await this.deleteByPattern(redis, `${pattern}*`);
+          } else {
+            // Exact single key
+            return await redis.del(pattern);
+          }
+        }),
+      );
+      totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
 
       if (totalDeleted > 0) {
         this.logger.log(
