@@ -68,9 +68,7 @@ export class AdminService {
       const redis = this.getRedis();
       const deleted = await this.deleteByScan(redis, CACHE_PREFIX_USERS);
       if (deleted > 0) {
-        this.logger.info(
-          `Invalidated ${deleted} admin user list cache key(s)`,
-        );
+        this.logger.info(`Invalidated ${deleted} admin user list cache key(s)`);
       }
     } catch (err) {
       this.logger.error(err, 'Failed to invalidate admin user list caches');

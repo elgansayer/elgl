@@ -344,8 +344,20 @@ describe('AdminService', () => {
       await service.banUser('bad-user', 'admin-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
-      expect(mockRedisClient.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:users:list:*', 'COUNT', 500);
-      expect(mockRedisClient.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:blocks:list:*', 'COUNT', 500);
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:blocks:list:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:bad-user',
       );
@@ -371,8 +383,20 @@ describe('AdminService', () => {
       await service.warnUser('bad-user', 'admin-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
-      expect(mockRedisClient.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:users:list:*', 'COUNT', 500);
-      expect(mockRedisClient.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:reports:list:*', 'COUNT', 500);
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:reports:list:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:bad-user',
       );
@@ -604,13 +628,22 @@ describe('AdminService', () => {
       mockQueryBuilder.delete = vi
         .fn()
         .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
-      mockRedisClient.scan.mockResolvedValueOnce(['0', ['admin:blocks:list:1:20']]);
+      mockRedisClient.scan.mockResolvedValueOnce([
+        '0',
+        ['admin:blocks:list:1:20'],
+      ]);
 
       const result = await service.removeBlock('block-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(result).toEqual({ success: true });
-      expect(mockRedisClient.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:blocks:list:*', 'COUNT', 500);
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:blocks:list:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:blocks:list:1:20',
       );
