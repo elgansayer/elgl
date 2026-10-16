@@ -22,6 +22,11 @@ hypothesis and a regression test. Otherwise choose observe and name the missing
 evidence. Never propose removing CI, independent review, authentication, isolation,
 resource limits or data-integrity checks. Do not manufacture preview approvals.
 Do not recommend global retry resets, unbounded parallelism or purchasing services.
+Never propose manual triage, dead-letter states or human approval as recovery.
+Inspect existing backoff before claiming it is missing. For a repair, cite up to
+four tracked source files and exact verbatim code excerpts, at least 16 characters
+each. The host verifies that the files and excerpts actually match. Never cite an
+environment file, secret, generated dependency or untracked file.
 
 Write exactly one JSON object to `.factory-maintenance.json`, then exit:
 
@@ -31,12 +36,16 @@ Write exactly one JSON object to `.factory-maintenance.json`, then exit:
   "diagnosis": "Evidence-backed common cause, with uncertainty stated",
   "change": "Small concrete change, regression test, measurement and rollback plan",
   "acceptance_criteria": ["A specific observable outcome"],
-  "affected_task_ids": ["123"]
+  "affected_task_ids": ["123"],
+  "source_evidence": [
+    {"path": "automation/openhands_factory/jobs.py", "quote": "Exact existing code excerpt"}
+  ]
 }
 ```
 
 Use only task identifiers present in the supplied evidence. For a throughput
-experiment use an empty affected_task_ids list. The host validates the report,
+experiment use an empty affected_task_ids list. Observations may omit source evidence.
+The host validates the report and exact source evidence for repairs,
 deduplicates the issue and admits at most one maintenance implementation at once.
 Implementation, verification, independent review, merge and deployment are handled
 by the existing Factory. No model output authorises host actions.
