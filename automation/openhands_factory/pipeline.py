@@ -1666,8 +1666,11 @@ class FactoryPipeline:
         )
         self.github.add_comment(job.pull_request, comment)
         status = self._status(job)
+        # GitHub's aggregate state masks base staleness behind required-check
+        # failures or a missing Factory review. Inspect ancestry before spending
+        # verification or provider capacity on a head missing fixes from main.
         local_base_is_stale = (
-            status.merge_state_status == "UNKNOWN"
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
             and not self._workflow(worktree).contains_current_base()
         )
         if status.merge_state_status == "BEHIND" or local_base_is_stale:
@@ -1779,8 +1782,9 @@ class FactoryPipeline:
         )
         job.review_findings.clear()
         status = known_status or self._status(job)
+        # BLOCKED/UNSTABLE do not imply that the branch contains current main.
         local_base_is_stale = (
-            status.merge_state_status == "UNKNOWN"
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
             and not self._workflow(worktree).contains_current_base()
         )
         if status.merge_state_status == "BEHIND" or local_base_is_stale:
