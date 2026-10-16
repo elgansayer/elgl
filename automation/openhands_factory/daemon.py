@@ -552,11 +552,12 @@ class FactoryDaemon:
         if blocked and now >= getattr(self, "_next_worktree_cache_prune_at", 0.0):
             self._next_worktree_cache_prune_at = now + self.config.cooldown_seconds
             reserve = int(self.config.minimum_free_disk_gib * 1024**3)
+            headroom = int(self.config.storage_free_headroom_gib * 1024**3)
             pruned = prune_inactive_worktree_caches(
                 self.config.worktree_dir,
                 active_task_ids or set(),
                 minimum_free_bytes=reserve,
-                target_free_bytes=reserve + 1024**3,
+                target_free_bytes=reserve + headroom,
             )
             if pruned:
                 failed = [check for check in disk_space_checks(self.config) if not check.passed]
