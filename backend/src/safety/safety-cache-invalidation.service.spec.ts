@@ -116,8 +116,8 @@ describe('SafetyCacheInvalidationService', () => {
         .mockResolvedValueOnce(['0', []]); // recommendations:daily:
       mockRedis.del
         .mockResolvedValueOnce(0) // partner_of_week_ids
-        .mockResolvedValueOnce(0) // scan for admin:users:list:
-        .mockResolvedValueOnce(0) // scan for admin:blocks:list:
+        .mockResolvedValueOnce(0) // del for scan (admin:users:list:) -> no op because no keys
+        .mockResolvedValueOnce(0) // del for scan (admin:blocks:list:) -> no op because no keys
         .mockResolvedValueOnce(2); // del for login-history keys
 
       await service.invalidateTrustAndSafetyCaches();
@@ -174,7 +174,7 @@ describe('SafetyCacheInvalidationService', () => {
 
       await service.invalidateTrustAndSafetyCaches();
 
-      // 2 iterations for admin:users:list:*, 1 iteration each for admin:blocks:list:*, admin:login-history:, daily_recommendations:, and recommendations:daily:
+      // Two user-list iterations, then one for each remaining pattern.
       expect(mockRedis.scan).toHaveBeenCalledTimes(6);
     });
   });

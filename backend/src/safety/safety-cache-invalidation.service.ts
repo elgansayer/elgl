@@ -68,7 +68,7 @@ export class SafetyCacheInvalidationService {
           const deleted = await this.deleteByScan(redis, prefix);
           totalDeleted += deleted;
         } else if (pattern.endsWith(':')) {
-          // Prefix pattern – use SCAN to prevent event loop blocking on potentially larger keyspaces
+          // Prefix pattern: use SCAN to avoid blocking the Redis event loop.
           const deleted = await this.deleteByScan(redis, pattern);
           totalDeleted += deleted;
         } else {
