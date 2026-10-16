@@ -32,15 +32,15 @@ subscriptions start instead of waiting for the preferred provider's slot.
 Weekly architecture analysis runs only when no pull-request review is active or newly scheduled, so background
 planning cannot take an agent slot from the merge queue.
 
-## Model policy as of 2026-09-22
+## Model policy as of 2026-10-16
 
-| Provider     | Coding default        | Reasoning and review override                                                                                               | Policy                                                                                                                                                       |
-| ------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code  | `sonnet`               | `opus` for planning and architecture, `sonnet` for implementation and merge-critical review, `haiku` for bounded repair/general actions | Verified Claude Pro subscription aliases. Sonnet reliably emits structured independent-review reports; `fable` requires separately purchased usage credits |
-| Codex CLI    | `gpt-5.6-sol`         | `gpt-5.6-sol`, `max` effort                                                                                                 | Current OpenAI flagship for complex production and coding work                                                                                               |
-| Google agent | `gemini-3.1-pro-high` | same, `high` effort                                                                                                         | Strongest Google-native Pro reasoning tier exposed by the verified Antigravity catalogue                                                                     |
-| OpenCode Go  | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
-| OpenHands    | `gpt-5.6-sol`         | same                                                                                                                        | Emergency compatibility provider only                                                                                                                        |
+| Provider     | Coding default          | Reasoning and review override                                                                                                           | Policy                                                                                                                                                       |
+| ------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claude Code  | `sonnet`                | `opus` for planning and architecture, `sonnet` for implementation and merge-critical review, `haiku` for bounded repair/general actions | Verified Claude Pro subscription aliases. Sonnet reliably emits structured independent-review reports; `fable` requires separately purchased usage credits   |
+| Codex CLI    | `gpt-5.6-sol`           | `gpt-5.6-sol`, `max` effort                                                                                                             | Current OpenAI flagship for complex production and coding work                                                                                               |
+| Google agent | `gemini-3.8-flash-high` | `high` for planning, architecture, implementation, and security; `medium` for review; `low` for repair and general actions              | Current Gemini family and phase-specific effort tiers exposed by the verified Antigravity catalogue                                                          |
+| OpenCode Go  | `opencode-go/kimi-k3`   | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action             | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
+| OpenHands    | `gpt-5.6-sol`           | same                                                                                                                                    | Emergency compatibility provider only                                                                                                                        |
 
 Primary references:
 
@@ -79,7 +79,7 @@ Google consumer subscription routing uses Antigravity CLI by default. Google mov
 Ultra access away from Gemini CLI in June 2026. Gemini CLI remains a configurable `cli_variant` for supported
 enterprise, Google Cloud, and API-authenticated deployments. Antigravity 1.1.1 or newer is required because older
 print-mode releases could hang or omit captured output in non-TTY automation. The adapter sends the full prompt
-on stdin, disables slash-command expansion, pins the account-visible `gemini-3.1-pro-high` slug, uses high effort,
+in the argument vector, disables slash-command expansion, pins an account-visible Gemini 3.8 Flash tier,
 and applies both the CLI print timeout and the Factory process timeout. Pinning avoids the CLI's omitted-model
 behaviour, which follows the account's last interactive selection rather than a guaranteed strongest model.
 

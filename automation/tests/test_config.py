@@ -535,7 +535,7 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["google"].enabled is True
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
-    assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
+    assert factory_config.agents.providers["google"].model == "gemini-3.8-flash-high"
     assert factory_config.agents.providers["opencode"].model == "opencode-go/deepseek-v4-flash"
     assert not factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
