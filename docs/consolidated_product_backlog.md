@@ -61,10 +61,11 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Agent workflow to check for security issues and vulnerabilities
 - Automated push notification reminders
 - Achievements service in NestJS
+- Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag
 
 ## Communities UI Improvements
 
-- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling)
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, Error Handling, extracted components for scalability)
 
 ## Visual Diff Component Improvements
 
