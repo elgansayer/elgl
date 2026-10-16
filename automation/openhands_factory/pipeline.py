@@ -28,6 +28,7 @@ from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestMatch, PullRequestStatus
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.jobs import JobStore
+from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
@@ -79,6 +80,7 @@ CODE_MUTATING_AGENT_PHASES = {
 VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
     "the cypress binary is missing",
     "we expected the binary to be installed here",
+    "getaddrinfo eai_again",
     "no space left on device",
     "failed with exit 137",
     "failed with exit 143",
@@ -383,6 +385,8 @@ class FactoryPipeline:
         if self.active_label_reconciliation_pending:
             self._reconcile_active_labels(protected_task_ids or set())
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
+        if self.config.maintenance_enabled:
+            tasks = MaintenanceController(self).tag_tasks(tasks)
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
         for job in jobs.values():
@@ -591,6 +595,8 @@ class FactoryPipeline:
                 LOGGER.warning("Factory job %s deferred: %s", job.task.identifier, error)
             except Exception as error:
                 job.attempts += 1
+                if job.maintenance_recovery_id is not None:
+                    job.maintenance_recovery_failures += 1
                 job.last_error = str(error)[-2000:]
                 self._record_failure(job)
             job.updated_at = datetime.now(UTC)
@@ -703,6 +709,8 @@ class FactoryPipeline:
         prepare_attempt: Callable[[], None] | None = None,
         validate_output: Callable[[], None] | None = None,
         require_repository_change: bool = False,
+        timeout_seconds: int | None = None,
+        system_prompt_override: str | None = None,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
 
@@ -765,7 +773,8 @@ class FactoryPipeline:
             task=job.task,
             prompt=prompt,
             cwd=worktree,
-            system_prompt=self.system_prompt,
+            system_prompt=system_prompt_override or self.system_prompt,
+            timeout_seconds=timeout_seconds,
             prepare_attempt=(
                 prepare if prepare_attempt is not None or require_repository_change else None
             ),
@@ -785,15 +794,24 @@ class FactoryPipeline:
                 )
                 and isinstance(entry.get("provider"), str)
             }
-        history_before = len(job.provider_history)
+        # Retain references while routing so bounded-history eviction cannot
+        # make new attempts disappear from convergence metrics.
+        history_before = list(job.provider_history)
+        previous_entries = {id(entry) for entry in history_before}
         try:
             result = self.router.run(request, job, exclude=excluded)
         finally:
+            invocations = sum(id(entry) not in previous_entries for entry in job.provider_history)
             if agent_phase is AgentPhase.CODE_REVIEW and job.pull_request is not None:
                 self.pr_metrics.record_reviewer_invocations(
                     job.pull_request,
-                    len(job.provider_history) - history_before,
+                    invocations,
                 )
+            elif (
+                agent_phase in {AgentPhase.CI_REPAIR, AgentPhase.QUALITY_REPAIR}
+                and job.pull_request is not None
+            ):
+                self.pr_metrics.record_repair_invocations(job.pull_request, invocations)
 
         if agent_phase is AgentPhase.IMPLEMENTATION:
             job.implementation_provider = result.provider
@@ -1277,10 +1295,6 @@ class FactoryPipeline:
                 job.state = JobState.MERGED
             elif self._recover_closed_pull_request(job, status):
                 return
-            elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
-            elif status.merge_state_status == "BEHIND":
-                self._update_pull_request_branch(job, status)
             elif (
                 status.mergeable == "CONFLICTING"
                 or status.merge_state_status in CONFLICTING_MERGE_STATES
@@ -1289,6 +1303,15 @@ class FactoryPipeline:
                 # when CI never starts for an unmergeable head. Conflict evidence
                 # must win or the same PR is polled forever without repair.
                 job.state = JobState.REPAIRING
+            elif status.ci_required_failed:
+                job.state = JobState.REPAIRING
+            elif status.ci_required_pending:
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+                return
+            elif status.failed_checks - {"factory/independent-review"}:
+                job.state = JobState.REPAIRING
+            elif job.head_sha != status.head_sha or job.latest_verified_sha != status.head_sha:
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.failed_checks:
                 # A pending status can coexist with a terminal failure. In
                 # particular, the Factory's own review context stays pending while
@@ -1305,7 +1328,7 @@ class FactoryPipeline:
             elif (
                 status.checks_passed
                 and status.mergeable == "MERGEABLE"
-                and status.merge_state_status == "CLEAN"
+                and status.merge_state_status in {"CLEAN", "BEHIND"}
             ):
                 # Persist a visible queue transition before the merge attempt. The
                 # MERGE_QUEUED worker re-reads GitHub immediately before using an
@@ -1316,7 +1339,8 @@ class FactoryPipeline:
                     job,
                     "merge-queued",
                     (
-                        "All required checks passed, GitHub reports the reviewed head as clean "
+                        "All required checks passed, GitHub reports the reviewed head as "
+                        "non-conflicting "
                         "and mergeable, and the Factory queued an exact-head squash merge."
                     ),
                 )
@@ -1341,8 +1365,14 @@ class FactoryPipeline:
                 status.mergeable == "CONFLICTING"
                 or status.merge_state_status in CONFLICTING_MERGE_STATES
             )
+            stale_base = (
+                not base_conflict
+                and status.merge_state_status in {"BEHIND", "BLOCKED", "UNSTABLE", "UNKNOWN"}
+                and not workflow.contains_current_base()
+            )
             if (
                 not base_conflict
+                and not stale_base
                 and not status.failed_checks
                 and (
                     status.checks_pending
@@ -1361,12 +1391,16 @@ class FactoryPipeline:
                 f"Mergeability: {status.mergeable}\n"
                 f"Merge state: {status.merge_state_status or 'not reported'}"
             )
+            if job.last_error:
+                repair_context += (
+                    f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
+                )
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM
             # call if the worktree is still unchanged afterwards.
             has_unmerged_paths = False
-            if base_conflict:
+            if base_conflict or stale_base:
                 has_unmerged_paths = workflow.merge_base_for_repair()
                 repair_context += (
                     "\nThe current base branch has been merged into this isolated "
@@ -1375,8 +1409,10 @@ class FactoryPipeline:
                 )
             else:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
-            mechanically_repaired = not base_conflict and workflow.has_changes()
-            if has_unmerged_paths or (not base_conflict and not mechanically_repaired):
+            mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
+            if has_unmerged_paths or (
+                not (base_conflict or stale_base) and not mechanically_repaired
+            ):
                 self._run_agent(
                     job,
                     worktree,
@@ -1385,12 +1421,16 @@ class FactoryPipeline:
                     lease_owner=lease_owner,
                     require_repository_change=True,
                 )
-            verified_paths = self._verify(workflow)
+            verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
+            if verified_paths is None:
+                return
             job.quality_repairs = 0
             workflow.stage_all()
             commit_subject = (
                 "fix: resolve base conflicts for"
                 if base_conflict
+                else "fix: refresh current base for"
+                if stale_base
                 else (
                     "fix: apply automatic formatting for"
                     if mechanically_repaired
@@ -1432,7 +1472,8 @@ class FactoryPipeline:
                 job,
                 "merge-queued",
                 (
-                    "All required checks passed, GitHub reports the reviewed head as clean "
+                    "All required checks passed, GitHub reports the reviewed head as "
+                    "non-conflicting "
                     "and mergeable, and the Factory queued an exact-head squash merge."
                 ),
             )
@@ -1448,8 +1489,6 @@ class FactoryPipeline:
                 return
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
-            elif status.merge_state_status == "BEHIND":
-                self._update_pull_request_branch(job, status)
             elif (
                 status.checks_pending
                 or status.mergeable == "UNKNOWN"
@@ -1459,7 +1498,7 @@ class FactoryPipeline:
             elif (
                 not status.checks_passed
                 or status.mergeable != "MERGEABLE"
-                or status.merge_state_status != "CLEAN"
+                or status.merge_state_status not in {"CLEAN", "BEHIND"}
             ):
                 job.state = JobState.REPAIRING
             else:
@@ -1649,14 +1688,18 @@ class FactoryPipeline:
             predecessor_pull_request=job.predecessor_pull_request,
         )
         self._copy_claim_metadata(job, bound)
+        self.router.observe_review_head(job)
         self.github.publish_review_pending(
             job.head_sha,
             detail="Factory pull request verification in progress",
         )
         self.github.add_comment(job.pull_request, comment)
         status = self._status(job)
+        # GitHub's aggregate state masks base staleness behind required-check
+        # failures or a missing Factory review. Inspect ancestry before spending
+        # verification or provider capacity on a head missing fixes from main.
         local_base_is_stale = (
-            status.merge_state_status == "UNKNOWN"
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
             and not self._workflow(worktree).contains_current_base()
         )
         if status.merge_state_status == "BEHIND" or local_base_is_stale:
@@ -1672,9 +1715,14 @@ class FactoryPipeline:
         ):
             job.state = JobState.REPAIRING
             return
-        verified_paths = self._verify_or_schedule_quality_repair(
+        if status.ci_required_pending:
+            job.state = JobState.CI_PENDING
+            job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+            return
+        verified_paths = self._verify_pull_request_for_review(
             job,
             self._workflow(worktree),
+            status,
         )
         if verified_paths is None:
             return
@@ -1756,14 +1804,16 @@ class FactoryPipeline:
 
         workflow.prepare_pull_request_worktree(worktree, job.branch)
         job.head_sha = self._workflow(worktree).head_sha()
+        self.router.observe_review_head(job)
         self.github.publish_review_pending(
             job.head_sha,
             detail="Factory pull request refresh in progress",
         )
         job.review_findings.clear()
         status = known_status or self._status(job)
+        # BLOCKED/UNSTABLE do not imply that the branch contains current main.
         local_base_is_stale = (
-            status.merge_state_status == "UNKNOWN"
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
             and not self._workflow(worktree).contains_current_base()
         )
         if status.merge_state_status == "BEHIND" or local_base_is_stale:
@@ -1776,9 +1826,14 @@ class FactoryPipeline:
         ):
             job.state = JobState.REPAIRING
             return
-        verified_paths = self._verify_or_schedule_quality_repair(
+        if status.ci_required_pending:
+            job.state = JobState.CI_PENDING
+            job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+            return
+        verified_paths = self._verify_pull_request_for_review(
             job,
             self._workflow(worktree),
+            status,
         )
         if verified_paths is None:
             return
@@ -1941,6 +1996,24 @@ class FactoryPipeline:
             job.state = JobState.QUALITY_REPAIRING
             return None
         return changed
+
+    def _verify_pull_request_for_review(
+        self,
+        job: Job,
+        workflow: GitWorkflow,
+        status: PullRequestStatus,
+    ) -> set[Path] | None:
+        """Reuse the protected exact-head CI result instead of running it twice."""
+        if status.head_sha == job.head_sha and status.ci_required_passed:
+            changed = workflow.changed_paths()
+            if not changed:
+                raise FactoryError("No changed paths were found")
+            LOGGER.info(
+                "Reused exact-head CI / required success for pull request %s",
+                job.pull_request,
+            )
+            return changed
+        return self._verify_or_schedule_quality_repair(job, workflow)
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
         # README.md deliberately excluded: it embeds the full feature-spec
@@ -2149,6 +2222,10 @@ class FactoryPipeline:
                     "provider_history": job.provider_history,
                 }
             )
+
+    def run_maintenance_cycle(self) -> Job | None:
+        MaintenanceController(self).run()
+        return None
 
     def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
         """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.

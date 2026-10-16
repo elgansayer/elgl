@@ -224,6 +224,8 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
+    assert "/run/containerd/containerd.sock /run/docker.sock" in sandbox_script
+    assert 'mount --bind /dev/null "$container_socket"' in sandbox_script
     assert "uv_cache=$service_home/.cache/uv" in sandbox_script
     assert "cypress_cache=$6" in sandbox_script
     assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in sandbox_script

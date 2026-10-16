@@ -13,6 +13,7 @@ from openhands_factory.daemon import (
     await_future_with_heartbeat,
     await_refresh,
     consume_completed_architect_future,
+    host_admitted_jobs,
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
@@ -66,6 +67,52 @@ def test_review_lane_busy_only_for_active_pull_request_work() -> None:
     assert review_lane_is_busy(jobs, {"7348"}) is True
     assert review_lane_is_busy(jobs, {"10"}) is False
     assert review_lane_is_busy(jobs, set()) is False
+
+
+def test_exclusive_build_keeps_spare_worker_available_for_ci_and_merge() -> None:
+    jobs = {
+        "10": pull_request_job("10", state=JobState.VERIFYING),
+        "11": pull_request_job("11", state=JobState.REVIEWING),
+        "12": pull_request_job("12", state=JobState.REPAIRING),
+        "13": pull_request_job("13", state=JobState.MERGE_QUEUED),
+        "14": pull_request_job("14", state=JobState.CI_PENDING),
+        "15": pull_request_job("15", state=JobState.MERGED),
+        "16": job("16", 0),
+    }
+    admitted = host_admitted_jobs(jobs, available_host_slots=0)
+
+    assert set(admitted) == {"13", "14", "15"}
+    selected = select_batch(
+        admitted,
+        1,
+        excluded_task_ids={"10", "11", "12"},
+        review_lane_max_concurrent=3,
+        review_only=True,
+    )
+    assert [item.task.identifier for item in selected] == ["13"]
+    selected = select_batch(
+        admitted,
+        1,
+        excluded_task_ids={"10", "11", "12", "13"},
+        review_lane_max_concurrent=3,
+        review_only=True,
+    )
+    assert [item.task.identifier for item in selected] == ["14"]
+    assert len(jobs) == 7
+
+
+def test_available_host_slots_preserve_the_complete_job_queue() -> None:
+    jobs = {"10": job("10", 0), "11": pull_request_job("11", state=JobState.REVIEWING)}
+
+    assert host_admitted_jobs(jobs, available_host_slots=1) is jobs
+
+
+def test_review_lane_cannot_exceed_remaining_worker_capacity() -> None:
+    jobs = {str(number): pull_request_job(str(number)) for number in range(10, 14)}
+
+    selected = select_batch(jobs, 1, review_lane_max_concurrent=3)
+
+    assert len(selected) == 1
 
 
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:
@@ -236,13 +283,29 @@ def test_select_batch_finishes_final_review_before_older_verification() -> None:
     assert [item.task.identifier for item in selected] == ["7347"]
 
 
-def test_select_batch_advances_actionable_repair_before_passive_ci_polling() -> None:
+def test_select_batch_refreshes_actionable_ci_before_repair() -> None:
     jobs = {
         "7346": pull_request_job("7346", state=JobState.CI_PENDING),
         "7347": pull_request_job("7347", state=JobState.REPAIRING),
     }
 
     selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7346"]
+
+
+def test_select_batch_advances_repair_before_timed_ci_polling() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    ci_poll = replace(
+        pull_request_job("7346", state=JobState.CI_PENDING),
+        next_attempt_at=now - timedelta(seconds=1),
+    )
+    jobs = {
+        "7346": ci_poll,
+        "7347": pull_request_job("7347", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch(jobs, 1, now=now)
 
     assert [item.task.identifier for item in selected] == ["7347"]
 
@@ -662,6 +725,7 @@ def test_storage_reserve_blocks_and_recovers_scheduling(
     daemon.config = SimpleNamespace(  # type: ignore[assignment]
         cooldown_seconds=60,
         minimum_free_disk_gib=5,
+        storage_free_headroom_gib=5,
         worktree_dir=tmp_path,
     )
     daemon.storage_blocked = False
@@ -716,6 +780,7 @@ def _build_wip_gated_daemon(
         recovery_retention_hours=1,
         review_lane_first=True,
         review_lane_max_concurrent=1,
+        maintenance_enabled=False,
     )
     daemon.stopping = False
     daemon.storage_blocked = False
@@ -788,6 +853,42 @@ def test_loop_pauses_new_issue_and_architect_dispatch_when_pr_wip_exceeded(
 
     assert admit_calls == []
     assert architect_calls == []
+
+
+def test_maintenance_cycle_runs_during_backlog_pause_and_is_visible_to_updater(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[bool] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=True,
+        discovered_job=job("1", 5),
+        admit_calls=[],
+        architect_calls=[],
+    )
+    daemon.config.maintenance_enabled = True
+    daemon.verification_slots = object()
+    controller = SimpleNamespace(apply_recoveries=lambda active: [], due=lambda: True)
+    monkeypatch.setattr(
+        "openhands_factory.daemon.MaintenanceController", lambda pipeline: controller
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.FactoryPipeline",
+        lambda *args, **kwargs: SimpleNamespace(
+            run_maintenance_cycle=lambda: calls.append(True) and None
+        ),
+    )
+    original_write = daemon._write_daemon_state
+    visible: list[str] = []
+
+    def write(status, active, started=None):
+        visible.extend(active.values())
+        original_write(status, active, started)
+
+    monkeypatch.setattr(daemon, "_write_daemon_state", write)
+    assert daemon._loop() == 0
+    assert calls == [True]
+    assert "0" in visible
 
 
 def test_loop_uses_wip_capacity_recalculated_by_current_refresh(

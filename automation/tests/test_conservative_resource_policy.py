@@ -157,6 +157,32 @@ def test_conservative_router_prefers_observed_phase_completions(tmp_path: Path) 
     assert candidates == ["second", "third"]
 
 
+@pytest.mark.parametrize("phase", [AgentPhase.CODE_REVIEW, AgentPhase.IMPLEMENTATION])
+def test_routing_scores_only_the_current_phase_model(tmp_path: Path, phase: AgentPhase) -> None:
+    class ModelProvider(Provider):
+        def model_for(self, requested_phase: AgentPhase) -> str:
+            return f"{self.name}-{requested_phase.value}-current"
+
+    reliable = ModelProvider("reliable")
+    replacement = ModelProvider("replacement")
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    for _ in range(20):
+        metrics.record("reliable", "retired-small-model", phase=phase.value, successful=False)
+        metrics.record("replacement", "retired-fast-model", phase=phase.value, successful=True)
+    for _ in range(8):
+        metrics.record("reliable", reliable.model_for(phase), phase=phase.value, successful=True)
+    router = ConservativeAgentRouter(
+        [replacement, reliable],
+        policy=OrderedPolicy(["replacement", "reliable"]),
+        metrics_store=metrics,
+        enabled=True,
+    )
+
+    candidates, _ = router._candidate_names(phase, Job(Task("42", "Review", "Body", "issue", 0)))
+
+    assert candidates == ["reliable", "replacement"]
+
+
 def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Path) -> None:
     first = Provider("first", AgentFailureKind.PROVIDER_TRANSPORT)
     second = Provider("second")
