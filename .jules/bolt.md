@@ -21,6 +21,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-15 - [Avoid Redis KEYS in Cache Invalidation]
+**Learning:** Using the `KEYS` command in Redis for prefix-based cache invalidation (`deleteByPattern`) blocks the Redis event loop, creating a bottleneck and potential DoS vector as the keyspace grows.
+**Action:** Replaced `deleteByPattern` entirely with `deleteByScan` to asynchronously batch fetch and delete matching cache keys, preventing main thread blocking.
+
 ## 2026-08-31 - [Batch Archive Cleanup Queries with Promise.allSettled]
 
 **Learning:** Sequential awaits in `for...of` loops during maintenance jobs like `purgeExpiredArchives` create significant N+1 database latency, especially since each loop execution awaits both object storage deletion and database table row updates.
