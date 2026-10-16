@@ -11,7 +11,11 @@ from openhands_factory.agents.openhands import OpenHandsProvider
 from openhands_factory.architect_report import ArchitectProposal
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationResult
-from openhands_factory.exceptions import FactoryError, VerificationFailed
+from openhands_factory.exceptions import (
+    FactoryError,
+    ProviderCapacityUnavailable,
+    VerificationFailed,
+)
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
@@ -913,8 +917,13 @@ def test_pull_request_waits_for_protected_ci_before_local_verification(
     assert result.latest_verified_sha is None
 
 
-def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("merge_state", ["UNKNOWN", "BLOCKED", "UNSTABLE"])
+@pytest.mark.parametrize("refresh_existing", [False, True])
+def test_unverified_pull_request_refreshes_a_locally_stale_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    merge_state: str,
+    refresh_existing: bool,
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
@@ -939,7 +948,7 @@ def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
             "old-head",
             True,
             False,
-            merge_state_status="UNKNOWN",
+            merge_state_status=merge_state,
         )
     ]
 
@@ -956,7 +965,15 @@ def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
     pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
     pipeline.refresh()
 
-    result = pipeline.run_job("77")
+    if refresh_existing:
+        result = pipeline.jobs.load()["77"]
+        result.branch = "fix/old"
+        result.pull_request = 77
+        pipeline._refresh_pull_request_for_review(
+            result, factory_config.worktree_dir / "issue-77", "test"
+        )
+    else:
+        result = pipeline.run_job("77")
 
     assert result is not None
     assert result.state is JobState.CI_PENDING
@@ -1351,12 +1368,17 @@ def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
     return job
 
 
+@pytest.mark.parametrize("stale_base", [False, True])
 def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stale_base: bool
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
+    if stale_base:
+        github.statuses = [replace(github.statuses[0], merge_state_status="BLOCKED")]
+        monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: False)
+        monkeypatch.setattr(GitWorkflow, "merge_base_for_repair", lambda workflow: False)
     agent_calls: list[Task] = []
 
     class TrackingConversations(Conversations):
@@ -1388,7 +1410,7 @@ def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
     assert result is not None and result.last_error is None
     assert agent_calls == []
     assert result.state is JobState.REVIEWING
-    assert "automatic formatting" in committed[0]
+    assert ("refresh current base" if stale_base else "automatic formatting") in committed[0]
 
 
 def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
@@ -1438,6 +1460,173 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert "design-sync-drift failed" in prompts[0]
     assert result.state is JobState.REVIEWING
     assert "repair CI" in committed[0]
+
+
+def test_repair_verification_failure_enters_quality_repair_without_backoff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed("design-sync-drift: screen.chat preview needs updating")
+        ),
+    )
+    result = pipeline.run_job("77")
+    assert result is not None
+    assert result.state is JobState.QUALITY_REPAIRING
+    assert result.attempts == 0
+    assert "design-sync-drift" in result.review_findings[0]
+
+
+def test_recovery_failure_counter_survives_attempt_resets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = FactoryPipeline(config(tmp_path), github=GitHub(), conversations=Conversations())
+    job = Job(
+        Task("42", "Recovery canary", "", "github-issue", 0),
+        state=JobState.VERIFYING,
+        maintenance_recovery_id="verified-repair",
+        attempts=0,
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(
+        pipeline, "_advance", lambda *args: (_ for _ in ()).throw(FactoryError("canary failed"))
+    )
+    result = pipeline.run_job("42")
+    assert result is not None
+    assert result.maintenance_recovery_failures == 1
+    assert pipeline.jobs.load()["42"].maintenance_recovery_failures == 1
+
+
+def _marker_pipeline(tmp_path: Path) -> FactoryPipeline:
+    pipeline = FactoryPipeline(config(tmp_path), github=GitHub(), conversations=Conversations())
+    pipeline.jobs.save(
+        {"42": Job(Task("42", "Marker canary", "", "github-issue", 0), state=JobState.VERIFYING)}
+    )
+    return pipeline
+
+
+def test_worker_attempt_is_in_flight_only_until_its_outcome_commits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+    during: list[Job] = []
+
+    def advance(running: Job, lease_owner: str) -> None:
+        del lease_owner
+        during.append(pipeline.jobs.load()["42"])
+        running.state = JobState.REVIEWING
+
+    monkeypatch.setattr(pipeline, "_advance", advance)
+
+    result = pipeline.run_job("42")
+
+    assert len(during) == 1
+    assert during[0].state is JobState.VERIFYING
+    assert during[0].attempt_started_at is not None
+    assert during[0].attempt_generation == pipeline.jobs.factory_generation
+    assert result is not None
+    assert result.state is JobState.REVIEWING
+    committed = pipeline.jobs.load()["42"]
+    assert committed.state is JobState.REVIEWING
+    assert committed.attempt_started_at is None
+    assert committed.attempt_generation is None
+
+
+def test_failed_worker_attempt_commits_its_failure_and_ends_the_marker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+    monkeypatch.setattr(
+        pipeline, "_advance", lambda *args: (_ for _ in ()).throw(FactoryError("tests failed"))
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    committed = pipeline.jobs.load()["42"]
+    assert committed.attempts == 1
+    assert committed.last_error == "tests failed"
+    assert committed.next_attempt_at is not None
+    assert committed.attempt_started_at is None
+    assert committed.attempt_generation is None
+
+
+def test_capacity_deferral_keeps_its_deadline_and_ends_the_marker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+
+    def busy(*args: object) -> None:
+        raise ProviderCapacityUnavailable("capacity busy", retry_after_seconds=600)
+
+    monkeypatch.setattr(pipeline, "_advance", busy)
+
+    pipeline.run_job("42")
+
+    committed = pipeline.jobs.load()["42"]
+    assert committed.attempts == 0
+    assert committed.next_attempt_at is not None
+    assert committed.attempt_started_at is None
+    assert committed.attempt_generation is None
+
+
+def test_worker_that_dies_before_committing_is_recovered_once_by_the_watchdog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class WorkerKilled(BaseException):
+        """A hard stop that skips every ordinary failure handler."""
+
+    pipeline = _marker_pipeline(tmp_path)
+    monkeypatch.setattr(
+        pipeline, "_advance", lambda *args: (_ for _ in ()).throw(WorkerKilled("SIGKILL"))
+    )
+
+    with pytest.raises(WorkerKilled):
+        pipeline.run_job("42")
+
+    lost = pipeline.jobs.load()["42"]
+    assert lost.state is JobState.VERIFYING
+    assert lost.attempts == 0
+    assert lost.attempt_started_at is not None
+    assert pipeline.tasks.leases() == {}
+    later = datetime.now(UTC) + timedelta(hours=3)
+    assert pipeline.jobs.recover_abandoned_attempts(set(), timedelta(hours=2), now=later) == ["42"]
+    recovered = pipeline.jobs.load()["42"]
+    assert recovered.state is JobState.VERIFYING
+    assert recovered.attempts == 1
+    assert recovered.last_error is not None
+    assert recovered.last_error.startswith("Watchdog recovered abandoned verifying attempt")
+    assert recovered.attempt_started_at is None
+    assert pipeline.jobs.recover_abandoned_attempts(set(), timedelta(hours=2), now=later) == []
+
+
+def test_queued_job_is_never_marked_or_recovered_while_it_waits_for_a_worker(
+    tmp_path: Path,
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+    stored = pipeline.jobs.load()["42"]
+    stored.updated_at = datetime.now(UTC) - timedelta(days=2)
+    pipeline.jobs.save_reconciled_jobs([stored])
+    before = pipeline.jobs.load()["42"]
+
+    recovered = pipeline.jobs.recover_abandoned_attempts(set(), timedelta(hours=2))
+
+    assert recovered == []
+    assert pipeline.jobs.load()["42"] == before
+    assert before.attempt_started_at is None
 
 
 def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
@@ -1496,11 +1685,7 @@ def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
     assert "resolve base conflicts" in committed[0]
 
 
-@pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
-def test_behind_pull_request_is_updated_at_the_inspected_head(
-    tmp_path: Path,
-    initial_state: JobState,
-) -> None:
+def test_green_reviewed_pull_request_can_queue_merge_while_behind_main(tmp_path: Path) -> None:
     github = GitHub()
     github.statuses = [
         PullRequestStatus(
@@ -1518,19 +1703,20 @@ def test_behind_pull_request_is_updated_at_the_inspected_head(
     pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
     job = Job(
         task=Task("77", "Refresh branch", "Body", "github-pull-request", 10),
-        state=initial_state,
+        state=JobState.CI_PENDING,
         branch="fix/behind",
         pull_request=77,
         head_sha="reviewed-head",
+        latest_verified_sha="reviewed-head",
     )
     pipeline.jobs.save({"77": job})
 
     result = pipeline.run_job("77")
 
     assert result is not None
-    assert result.state is initial_state
-    assert github.updated_branches == [(77, "reviewed-head")]
-    assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
+    assert result.state is JobState.MERGE_QUEUED
+    assert github.updated_branches == []
+    assert github.removed_labels == []
 
 
 def test_update_branch_conflict_routes_directly_to_repair(

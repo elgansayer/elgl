@@ -3,6 +3,9 @@
 **Learning:** In the frontend `offline-reading.service.ts`, iterating through arrays to sequentially await insertions (`this.putInStore`) and evictions (`this.deleteFromStore`) in `cacheArticles` causes significant, additive delay to the UI thread/local storage interaction. A simple loop adds unnecessary serialization of writes to IndexedDB when caching lists of articles for offline support.
 **Action:** Replace single sequential IDB writes inside a `for...of` loop with a single concurrent `Promise.all` batch using `.map`. This allows multiple object store requests to queue effectively in IndexedDB and resolves much faster, keeping offline cache updates snappy and reducing potential stuttering.
 
+## 2024-05-18 - Replacing sequential await with Promise.all in User Profile Fetching
+**Learning:** Sequential awaits for fetching related user data (follower/following counts, XP, corrector score) create unnecessary latency during user profile retrieval. The Supabase queries are completely independent and can be fired off concurrently.
+**Action:** Found sequentially awaited db queries/service calls in `UsersService.getProfile`. Used `Promise.all` to fetch the counts, xp, and score concurrently, maintaining safe fallbacks utilizing inner `catch` wrappers to ensure partial failures do not crash the entire request.
 ## 2026-08-25 - [Batch Supabase Queries with Promise.all]
 
 **Learning:** Independent Supabase query builder `.then()` requests in NestJS services block sequentially, creating N+1 latency across network calls to the Postgres database.
@@ -17,6 +20,14 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-11 - [Start Independent User Statistics Queries Together]
+**Learning:** Awaiting the user lookup before starting four independent statistics queries added one avoidable network-latency interval to successful requests.
+**Action:** Start the five independent queries in one `Promise.all`. This preserves the query count while removing the separate user-lookup wait from the successful request's critical path.
+
+## 2026-09-15 - [Avoid Redis KEYS in Cache Invalidation]
+**Learning:** Using the `KEYS` command in Redis for prefix-based cache invalidation (`deleteByPattern`) blocks the Redis event loop, creating a bottleneck and potential DoS vector as the keyspace grows.
+**Action:** Replaced `deleteByPattern` entirely with `deleteByScan` to asynchronously batch fetch and delete matching cache keys, preventing main thread blocking.
 
 ## 2026-08-31 - [Batch Archive Cleanup Queries with Promise.allSettled]
 
@@ -165,3 +176,10 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+
+## 2024-05-24 - [Replaced sequential safety checks with Promise.all in chat.service.ts]
+**Learning:** Found sequential calls to `getBlockedAndBlockerIds` for sender and receiver in both `sendMessage` and `sendContact` functions of `chat.service.ts`. These independent queries cause unnecessary additive network latency.
+**Action:** Used `Promise.all` to fetch both `receiverBlockedIds` and `senderBlockedIds` concurrently to optimize the database query execution and reduce wait times.
+## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
+**Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
+**Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.

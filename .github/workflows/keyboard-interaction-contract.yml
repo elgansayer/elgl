@@ -2,6 +2,13 @@ name: Keyboard Interaction Contract
 
 on:
   pull_request:
+    paths:
+      - 'frontend/**'
+      - 'scripts/verify-keyboard-interaction-contract.mjs'
+      - 'scripts/verify-keyboard-interaction-contract.test.mjs'
+      - 'scripts/verify-focus-ring-contract.mjs'
+      - 'scripts/verify-rtl-logical-contract.mjs'
+      - '.github/workflows/keyboard-interaction-contract.yml'
   push:
     branches: [main, develop]
   merge_group:
