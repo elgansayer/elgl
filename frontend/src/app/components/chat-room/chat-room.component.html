@@ -477,6 +477,21 @@
           [placeholder]="'chatRoom.explanation'"
           customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
         />
+
+        @if (correctedText?.trim() && correctedText?.trim() !== originalText?.trim()) {
+          <div class="min-w-0 bg-surface-100/50 rounded p-2 border border-surface-100">
+            <p class="mb-1 block text-xs font-bold uppercase tracking-wider text-warning">
+              {{ 'moments.liveDiffPreview' | t }}
+            </p>
+            <app-visual-diff
+              [original]="originalText"
+              [corrected]="correctedText"
+              [explanation]="explanationText"
+              [showActions]="false"
+            ></app-visual-diff>
+          </div>
+        }
+
         <div class="flex gap-2">
           <app-button-secondary
             (clicked)="showCorrectionForm.set(false)"
