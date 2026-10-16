@@ -5,8 +5,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import SecretStr
 
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
+from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import (
     FactoryDaemon,
     admission_slots_while_respecting_wip,
@@ -56,6 +58,36 @@ def factory_pull_request_job(
     factory_job.pull_request = int(identifier) + 1000
     factory_job.branch = f"factory/change-{identifier}"
     return factory_job
+
+
+@pytest.mark.parametrize("limit", [1, 3])
+def test_generation_activation_retains_configured_host_and_verification_gates(tmp_path, limit):
+    prompts = Path(__file__).parents[1] / "prompts"
+    config = FactoryConfig(
+        repository=tmp_path,
+        state_dir=tmp_path / "state",
+        provider_capacity_dir=tmp_path / "shared",
+        prompt_dir=prompts,
+        system_prompt_path=prompts / "system.md",
+        github_token=SecretStr("test-token"),
+        host_agent_concurrency=limit,
+    )
+    daemon = FactoryDaemon(config)
+    gate = daemon.host_resource_slots
+    verification_slots = daemon.verification_slots
+    for _ in range(2):
+        daemon._activate_generation()
+        assert daemon.pipeline.host_resource_slots is gate
+        assert daemon.pipeline.router.host_resource_slots is gate
+        assert daemon.pipeline.verification_slots is verification_slots
+        assert gate.shared_limit == limit
+        for number in range(limit):
+            assert gate.acquire_shared(str(number))
+        assert not gate.acquire_shared("over-limit")
+        for number in range(limit):
+            gate.release_shared(str(number))
+        with gate.exclusive():
+            assert not daemon.pipeline.router.host_resource_slots.acquire_shared("during-build")
 
 
 def test_review_lane_busy_only_for_active_pull_request_work() -> None:
@@ -780,6 +812,7 @@ def _build_wip_gated_daemon(
         recovery_retention_hours=1,
         review_lane_first=True,
         review_lane_max_concurrent=1,
+        maintenance_enabled=False,
     )
     daemon.stopping = False
     daemon.storage_blocked = False
@@ -852,6 +885,42 @@ def test_loop_pauses_new_issue_and_architect_dispatch_when_pr_wip_exceeded(
 
     assert admit_calls == []
     assert architect_calls == []
+
+
+def test_maintenance_cycle_runs_during_backlog_pause_and_is_visible_to_updater(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[bool] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=True,
+        discovered_job=job("1", 5),
+        admit_calls=[],
+        architect_calls=[],
+    )
+    daemon.config.maintenance_enabled = True
+    daemon.verification_slots = object()
+    controller = SimpleNamespace(apply_recoveries=lambda active: [], due=lambda: True)
+    monkeypatch.setattr(
+        "openhands_factory.daemon.MaintenanceController", lambda pipeline: controller
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.FactoryPipeline",
+        lambda *args, **kwargs: SimpleNamespace(
+            run_maintenance_cycle=lambda: calls.append(True) and None
+        ),
+    )
+    original_write = daemon._write_daemon_state
+    visible: list[str] = []
+
+    def write(status, active, started=None):
+        visible.extend(active.values())
+        original_write(status, active, started)
+
+    monkeypatch.setattr(daemon, "_write_daemon_state", write)
+    assert daemon._loop() == 0
+    assert calls == [True]
+    assert "0" in visible
 
 
 def test_loop_uses_wip_capacity_recalculated_by_current_refresh(
