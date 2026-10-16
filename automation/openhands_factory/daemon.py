@@ -32,6 +32,7 @@ from openhands_factory.generation import (
 from openhands_factory.host_diagnostics import gather_diagnostics
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import IssueAdmissionGate
+from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.recovery_retention import prune_recovery_archives
@@ -42,6 +43,7 @@ from openhands_factory.worktree_cache import prune_inactive_worktree_caches
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
 MAX_ACTIONABLE_FAILURE_FINGERPRINTS = 5
+MAINTENANCE_CYCLE_ID = "0"  # Reserved: GitHub issue identifiers are strictly positive.
 
 
 def provider_status_snapshot(
@@ -89,7 +91,35 @@ def review_lane_is_busy(jobs: Mapping[str, Job], task_ids: set[str]) -> bool:
 def is_new_github_issue(job: Job) -> bool:
     """Return whether the job is entering the Factory from issue discovery."""
 
-    return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
+    return (
+        job.state is JobState.DISCOVERED
+        and job.task.source == "github-issue"
+        and not is_maintenance_job(job)
+    )
+
+
+def is_maintenance_job(job: Job) -> bool:
+    return job.task.source == "github-issue" and MAINTENANCE_TAG in job.task.triage_tags
+
+
+def maintenance_selection(
+    jobs: dict[str, Job], excluded: set[str], now: datetime, limit: int
+) -> tuple[list[Job], dict[str, Job]]:
+    ordinary = {identifier: job for identifier, job in jobs.items() if not is_maintenance_job(job)}
+    if limit <= 0 or any(
+        is_maintenance_job(job) and identifier in excluded for identifier, job in jobs.items()
+    ):
+        return [], ordinary
+    ready = [
+        job
+        for identifier, job in jobs.items()
+        if is_maintenance_job(job)
+        and identifier not in excluded
+        and job.state not in {JobState.DONE, JobState.QUARANTINED}
+        and (job.next_attempt_at is None or job.next_attempt_at <= now)
+    ]
+    ready.sort(key=lambda job: (job.task.priority, job.updated_at, int(job.task.identifier)))
+    return ready[:1], ordinary
 
 
 # Lower value = closer to merged. Within a review-lane priority tier, jobs
@@ -198,6 +228,21 @@ def select_batch(
         return []
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
+    maintenance, jobs = maintenance_selection(jobs, excluded, current, limit)
+    if maintenance:
+        return [
+            *maintenance,
+            *select_batch(
+                jobs,
+                limit - 1,
+                excluded,
+                current,
+                new_issue_slots,
+                review_first,
+                review_lane_max_concurrent,
+                review_only,
+            ),
+        ]
     candidates = [
         job
         for job in jobs.values()
@@ -257,13 +302,17 @@ def selection_diagnostics(
 ) -> dict[str, object]:
     """Expose bounded scheduler inputs without task bodies or credentials."""
 
+    maintenance, ordinary = maintenance_selection(jobs, excluded_task_ids, now, 1)
     candidates = [
-        job
-        for job in jobs.values()
-        if job.task.identifier not in excluded_task_ids
-        and job.state.value not in {"done", "quarantined"}
-        and (job.next_attempt_at is None or job.next_attempt_at <= now)
-        and (not review_only or is_review_lane_job(job))
+        *maintenance,
+        *[
+            job
+            for job in ordinary.values()
+            if job.task.identifier not in excluded_task_ids
+            and job.state.value not in {"done", "quarantined"}
+            and (job.next_attempt_at is None or job.next_attempt_at <= now)
+            and (not review_only or is_review_lane_job(job))
+        ],
     ]
     active_review_count = sum(
         1
@@ -313,6 +362,8 @@ def select_batch_failsafe(
 ) -> list[Job]:
     """Guarantee progress if the primary selector violates its runnable invariant."""
 
+    maintenance, jobs = maintenance_selection(jobs, excluded_task_ids, now, limit)
+    limit = max(0, limit - len(maintenance))
     eligible = [
         job
         for job in jobs.values()
@@ -340,6 +391,7 @@ def select_batch_failsafe(
     if limit > 1 and issue_candidate_available:
         reviews = reviews[: limit - 1]
     return [
+        *maintenance,
         *reviews,
         *select_issue_admitted(remaining, limit - len(reviews), new_issue_slots),
     ]
@@ -825,6 +877,28 @@ class FactoryDaemon:
                     # Schedule only from that committed view, not from an intermediate
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
+                    if self.config.maintenance_enabled:
+                        maintenance_controller = MaintenanceController(self.pipeline)
+                        maintenance_controller.apply_recoveries(active_task_ids)
+                        jobs = self.pipeline.jobs.load()
+                        if (
+                            MAINTENANCE_CYCLE_ID not in active_task_ids
+                            and capacity > 0
+                            and available_host_slots > 0
+                            and maintenance_controller.due()
+                        ):
+                            maintenance_worker = FactoryPipeline(
+                                self.config,
+                                verification_slots=self.verification_slots,
+                                host_resource_slots=self.host_resource_slots,
+                                agent_router=self.pipeline.router,
+                            )
+                            future = workers.submit(maintenance_worker.run_maintenance_cycle)
+                            active[future] = MAINTENANCE_CYCLE_ID
+                            active_started_at[MAINTENANCE_CYCLE_ID] = datetime.now(UTC).isoformat()
+                            active_task_ids.add(MAINTENANCE_CYCLE_ID)
+                            capacity = max(0, capacity - 1)
+                            LOGGER.info("Scheduled bounded Factory maintenance cycle")
                     jobs = host_admitted_jobs(jobs, available_host_slots)
                     # A refresh recalculates PR WIP from GitHub. Use that current
                     # result for this same scheduling pass instead of admitting one

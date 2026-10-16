@@ -143,6 +143,17 @@ def test_non_positive_reviewer_increment_is_ignored(tmp_path: Path) -> None:
     assert not store.path.exists()
 
 
+def test_lightweight_inventory_does_not_erase_known_component(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    store = PullRequestMetricsStore(tmp_path / "metrics.json")
+    detailed = pull_request(10)
+    store.observe_inventory([detailed], capacity([detailed]))
+    lightweight = replace(detailed, files=())
+    snapshot = store.observe_inventory([lightweight], capacity([lightweight]))
+    assert snapshot["pull_requests"][0]["component"] == "automation"
+
+
 def test_rolling_throughput_excludes_future_and_expired_merges(tmp_path: Path) -> None:
     from dataclasses import replace
 

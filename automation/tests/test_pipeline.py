@@ -1486,6 +1486,26 @@ def test_repair_verification_failure_enters_quality_repair_without_backoff(
     assert "design-sync-drift" in result.review_findings[0]
 
 
+def test_recovery_failure_counter_survives_attempt_resets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = FactoryPipeline(config(tmp_path), github=GitHub(), conversations=Conversations())
+    job = Job(
+        Task("42", "Recovery canary", "", "github-issue", 0),
+        state=JobState.VERIFYING,
+        maintenance_recovery_id="verified-repair",
+        attempts=0,
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(
+        pipeline, "_advance", lambda *args: (_ for _ in ()).throw(FactoryError("canary failed"))
+    )
+    result = pipeline.run_job("42")
+    assert result is not None
+    assert result.maintenance_recovery_failures == 1
+    assert pipeline.jobs.load()["42"].maintenance_recovery_failures == 1
+
+
 def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
