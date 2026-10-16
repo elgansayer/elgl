@@ -33,7 +33,7 @@ describe('standalone route lazy-loading contract', () => {
       'vocabulary',
       'discovery',
       'moments',
-      'events',
+      'community/events',
       'settings',
       'chat',
     ];

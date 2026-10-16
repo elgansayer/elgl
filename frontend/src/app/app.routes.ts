@@ -10,7 +10,7 @@ import { chatRoutes } from './routes/chat.routes';
 import { adminRoutes } from './routes/admin.routes';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'ai-conversation', pathMatch: 'full' },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
   {
     path: 'home',
     loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent),
@@ -30,5 +30,5 @@ export const routes: Routes = [
   ...settingsRoutes,
   ...chatRoutes,
   ...adminRoutes,
-  { path: '**', redirectTo: 'ai-conversation' },
+  { path: '**', redirectTo: 'home' },
 ];
