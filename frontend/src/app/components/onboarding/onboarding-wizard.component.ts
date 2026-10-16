@@ -105,7 +105,7 @@ export class OnboardingWizardComponent {
   handleNext(): void {
     this.onboardingService.nextStep();
     if (this.onboardingService.isOnboardingComplete()) {
-      void this.router.navigate(['/ai-conversation']);
+      void this.router.navigate(['/discovery']);
     }
   }
 }
