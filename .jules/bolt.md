@@ -175,3 +175,6 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+## 2026-10-12 - [OnPush Change Detection for List Components]
+**Learning:** Components that render lists or are instantiated many times, especially those heavily utilizing Signals (`input()`, `computed()`), can significantly benefit from `ChangeDetectionStrategy.OnPush`. This prevents the framework from checking every instance during default change detection cycles, reducing main thread overhead.
+**Action:** Always proactively configure heavily instantiated view components (like chat messages or list items) that rely on static data or signals to use `changeDetection: ChangeDetectionStrategy.OnPush`.
