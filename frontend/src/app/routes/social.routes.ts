@@ -15,6 +15,11 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'profile',
+    redirectTo: 'profile/me',
+    pathMatch: 'full',
+  },
+  {
+    path: 'profile/me',
     loadComponent: () =>
       import('../components/profile/profile.component').then((m) => m.ProfileComponent),
   },
@@ -39,11 +44,16 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'visitors',
-    redirectTo: 'profile/visitors',
+    redirectTo: 'profile/me/visitors',
     pathMatch: 'full',
   },
   {
     path: 'profile/visitors',
+    redirectTo: 'profile/me/visitors',
+    pathMatch: 'full',
+  },
+  {
+    path: 'profile/me/visitors',
     loadComponent: () =>
       import('../components/profile-visitors/profile-visitors.component').then(
         (m) => m.ProfileVisitorsComponent,
@@ -51,6 +61,11 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'favourites',
+    redirectTo: 'profile/me/favourites',
+    pathMatch: 'full',
+  },
+  {
+    path: 'profile/me/favourites',
     loadComponent: () =>
       import('../components/favourites/favourites.component').then((m) => m.FavouritesComponent),
   },
@@ -66,11 +81,21 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'stats',
+    redirectTo: 'profile/me/stats',
+    pathMatch: 'full',
+  },
+  {
+    path: 'profile/me/stats',
     loadComponent: () =>
       import('../components/my-stats/my-stats.component').then((m) => m.MyStatsComponent),
   },
   {
     path: 'milestones',
+    redirectTo: 'profile/me/stats/milestones',
+    pathMatch: 'full',
+  },
+  {
+    path: 'profile/me/stats/milestones',
     loadComponent: () =>
       import('../components/milestone/milestone.component').then((m) => m.MilestoneComponent),
     title: 'Milestones - HelloTalk',
@@ -85,30 +110,6 @@ export const socialRoutes: Routes = [
   {
     path: 'notification-preferences',
     redirectTo: 'settings/notification',
-    pathMatch: 'full',
-  },
-  {
-    path: 'events',
-    loadComponent: () =>
-      import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
-    title: 'Events - HelloTalk',
-  },
-  {
-    path: 'events/calendar',
-    loadComponent: () =>
-      import('../components/events-calendar/events-calendar.component').then(
-        (m) => m.EventsCalendarComponent,
-      ),
-    title: 'Event Calendar - HelloTalk',
-  },
-  {
-    path: 'language-parties',
-    redirectTo: 'community/language-parties',
-    pathMatch: 'full',
-  },
-  {
-    path: 'language-islands',
-    redirectTo: 'community/language-islands',
     pathMatch: 'full',
   },
   {
