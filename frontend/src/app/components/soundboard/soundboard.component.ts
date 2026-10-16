@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import {
   SoundItem,
@@ -88,7 +88,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export class SoundboardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly soundboardService = inject(SoundboardService);
-  private readonly centrifugoService = inject(CentrifugoService);
+  private readonly centrifugeService = inject(CentrifugeService);
   private readonly authService = inject(AuthService);
   private readonly hapticFeedback = inject(HapticFeedbackService);
 
@@ -121,7 +121,7 @@ export class SoundboardComponent {
 
     effect(() => {
       const room = this.roomId().trim();
-      const events = this.centrifugoService.events();
+      const events = this.centrifugeService.events();
       if (!room || events.length === 0 || events.length === this.lastProcessedEventCount) {
         return;
       }

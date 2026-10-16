@@ -6,7 +6,7 @@ import { By } from '@angular/platform-browser';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { VoiceroomNotesComponent } from './voiceroom-notes.component';
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { environment } from '../../../environments/environment';
 
 @Pipe({
@@ -26,7 +26,7 @@ class MockI18nService {
   }
 }
 
-class MockCentrifugoService {
+class MockCentrifugeService {
   subscribeLiveRoom = vi.fn();
   unsubscribeLiveRoom = vi.fn();
   publish = vi.fn();
@@ -52,7 +52,7 @@ describe('VoiceroomNotesComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: I18nService, useClass: MockI18nService },
-        { provide: CentrifugoService, useClass: MockCentrifugoService },
+        { provide: CentrifugeService, useClass: MockCentrifugeService },
       ],
     });
 
