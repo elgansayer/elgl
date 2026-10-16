@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from filelock import FileLock
@@ -161,6 +161,16 @@ class PullRequestMetricsStore:
         *,
         now: datetime | None = None,
     ) -> None:
+        self._record_invocations("reviewer_model_invocations", pull_request, count, now=now)
+
+    def record_repair_invocations(
+        self, pull_request: int, count: int = 1, *, now: datetime | None = None
+    ) -> None:
+        self._record_invocations("repair_model_invocations", pull_request, count, now=now)
+
+    def _record_invocations(
+        self, field: str, pull_request: int, count: int, *, now: datetime | None
+    ) -> None:
         if count <= 0:
             return
         observed_at = (now or datetime.now(UTC)).astimezone(UTC)
@@ -168,9 +178,7 @@ class PullRequestMetricsStore:
             payload = self._restore()
             records = self._records(payload)
             record = records.setdefault(pull_request, {"number": pull_request})
-            record["reviewer_model_invocations"] = (
-                max(0, _integer(record.get("reviewer_model_invocations"))) + count
-            )
+            record[field] = max(0, _integer(record.get(field))) + count
             record["last_observed_at"] = observed_at.isoformat()
             self._write(records, _mapping(payload.get("capacity")), observed_at)
 
@@ -220,7 +228,7 @@ class PullRequestMetricsStore:
             "recorded_at": observed_at.isoformat(),
             "pull_requests": retained,
             "capacity": dict(capacity),
-            "summary": self._summary(retained, capacity),
+            "summary": self._summary(retained, capacity, observed_at),
         }
         atomic_write_json(self.path, payload, validator=_valid_payload)
         return payload
@@ -229,6 +237,7 @@ class PullRequestMetricsStore:
     def _summary(
         records: Sequence[Mapping[str, object]],
         capacity: Mapping[str, object],
+        observed_at: datetime,
     ) -> dict[str, object]:
         merged = [record for record in records if _timestamp(record.get("merged_at"))]
         workflow_runs = sum(
@@ -239,6 +248,9 @@ class PullRequestMetricsStore:
         reviewer_invocations = sum(
             max(0, _integer(record.get("reviewer_model_invocations"))) for record in merged
         )
+        repair_invocations = sum(
+            max(0, _integer(record.get("repair_model_invocations"))) for record in merged
+        )
         superseded = sum(record.get("superseded") is True for record in records)
         replays = sum(record.get("replay") is True for record in records)
         green_waits: list[float] = []
@@ -248,7 +260,25 @@ class PullRequestMetricsStore:
             if green_at is not None and merged_at is not None and merged_at >= green_at:
                 green_waits.append((merged_at - green_at).total_seconds())
         stale = sum(record.get("stale_or_conflicting") is True for record in records)
+        throughput: dict[str, object] = {}
+        for hours in (1, 6, 24):
+            recent = [
+                record
+                for record in merged
+                if (merged_at := _timestamp(record.get("merged_at"))) is not None
+                and observed_at - timedelta(hours=hours) < merged_at <= observed_at
+            ]
+            components: dict[str, int] = {}
+            for record in recent:
+                component = _text(record.get("component")) or "unknown"
+                components[component] = components.get(component, 0) + 1
+            throughput[f"{hours}h"] = {
+                "merged_pr_count": len(recent),
+                "merges_per_hour": round(len(recent) / hours, 3),
+                "merged_pr_count_by_component": components,
+            }
         return {
+            "rolling_throughput": throughput,
             "active_pr_count_by_lane": _mapping(capacity.get("active_by_lane")),
             "merged_pr_count": len(merged),
             "superseded_pr_count": superseded,
@@ -257,6 +287,7 @@ class PullRequestMetricsStore:
             "replay_prs_per_merged_pr": _ratio(replays, len(merged)),
             "ci_workflow_runs_per_merged_pr": _ratio(workflow_runs, len(merged)),
             "reviewer_model_invocations_per_merged_pr": _ratio(reviewer_invocations, len(merged)),
+            "repair_model_invocations_per_merged_pr": _ratio(repair_invocations, len(merged)),
             "average_green_wait_seconds": (
                 round(sum(green_waits) / len(green_waits), 1) if green_waits else None
             ),
