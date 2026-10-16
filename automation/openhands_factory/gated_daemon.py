@@ -1,4 +1,4 @@
-"""Factory daemon variant that serialises merges with an optional main-CI fence."""
+"""Factory daemon variant that serializes merges behind current-main CI."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ CollectOpenIssues = Callable[[int], list[Task]]
 
 
 class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
-    """Run the ordinary daemon with serial scheduling and execution fences.
+    """Run the ordinary daemon with fail-closed scheduling and execution fences.
 
     The production daemon owns one scheduler process under ``factory.lock``. The
     scheduler hook is installed only for that process and preserves the ordinary
@@ -34,12 +34,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             base_branch=config.base_branch,
         )
 
-    def _requires_green_main(self) -> bool:
-        """Return the deployment policy, defaulting closed for legacy callers."""
-
-        config = getattr(self, "config", None)
-        return bool(getattr(config, "require_green_main_between_merges", True))
-
     def _gated_select_batch(
         self,
         original: SelectBatch,
@@ -50,7 +44,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         new_issue_slots: int | None = None,
         review_first: bool = True,
         review_lane_max_concurrent: int = 1,
-        review_only: bool = False,
     ) -> list[Job]:
         batch = original(
             jobs,
@@ -60,7 +53,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             new_issue_slots,
             review_first,
             review_lane_max_concurrent,
-            review_only,
         )
         if not any(job.state is JobState.MERGE_QUEUED for job in batch):
             return batch
@@ -71,8 +63,7 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         )
         if merge_in_flight:
             return gate_merge_batch(batch, main_ci_green=False)
-        main_ci_green = self.main_merge_gate.is_green() if self._requires_green_main() else True
-        return gate_merge_batch(batch, main_ci_green=main_ci_green)
+        return gate_merge_batch(batch, main_ci_green=self.main_merge_gate.is_green())
 
     def _gated_merge_pull_request(
         self,
@@ -80,18 +71,16 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         pull_request: int,
         expected_head_sha: str,
     ) -> None:
-        """Apply the configured current-main CI fence before a merge side effect.
+        """Re-check exact current-main CI immediately before a merge side effect.
 
         Selection-time gating is insufficient when a worker waits behind other
         work or another merge actor changes ``main`` after scheduling. A missing,
         pending, failed, or unreadable exact-main CI run therefore turns this merge
         attempt into a no-op. The pipeline keeps the job MERGE_QUEUED and retries it
-        after the current main head has completed canonical CI. When the active
-        branch rule is non-strict, production can rely on the exact-head PR gate
-        and retain only the serial in-flight merge fence.
+        after the current main head has completed canonical CI.
         """
 
-        if self._requires_green_main() and not self.main_merge_gate.is_green():
+        if not self.main_merge_gate.is_green():
             return
         original(pull_request, expected_head_sha)
 
@@ -104,19 +93,13 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
     ) -> list[Task]:
         """Refresh the large issue backlog only when admission can consume it.
 
-        Pull requests refresh before issues on every normal control-plane cycle. While
-        pull-request capacity pauses new issue dispatch, or the new-issue admission
-        window is full, durable cached issue tasks are sufficient because the scheduler
-        cannot admit another discovered issue anyway. The first refresh with both PR
-        capacity and issue admission available performs a full GitHub issue scan before
+        Pull requests still refresh on every normal control-plane cycle. While the
+        new-issue admission window is full, durable cached issue tasks are sufficient
+        because the scheduler cannot admit another discovered issue anyway. The first
+        refresh with an available admission performs a full GitHub issue scan before
         scheduling, so stale or closed backlog entries cannot consume the newly-opened
-        slot. Disabling issue admission limits preserves the original full-scan behaviour
-        whenever pull-request capacity is available.
+        slot. Disabling issue admission limits preserves the original full-scan behavior.
         """
-
-        pull_request_capacity = getattr(self.pipeline, "pull_request_capacity", None)
-        if bool(getattr(pull_request_capacity, "pause_new_dispatch", False)):
-            return [task for task in self.pipeline.tasks.cached() if task.source == "github-issue"]
 
         available = self.issue_admission.available_slots(now or datetime.now(UTC))
         if available is None or available > 0:
@@ -136,7 +119,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             new_issue_slots: int | None = None,
             review_first: bool = True,
             review_lane_max_concurrent: int = 1,
-            review_only: bool = False,
         ) -> list[Job]:
             return self._gated_select_batch(
                 original_select,
@@ -147,7 +129,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
                 new_issue_slots,
                 review_first,
                 review_lane_max_concurrent,
-                review_only,
             )
 
         def gated_merge_pull_request(pull_request: int, expected_head_sha: str) -> None:
