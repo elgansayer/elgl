@@ -226,6 +226,14 @@ class ConservativeAgentRouter(AgentRouter):
                         or not isinstance(successes, int)
                     ):
                         continue
+                    model_for = getattr(self.providers.get(provider), "model_for", None)
+                    if callable(model_for):
+                        current_model = model_for(phase)
+                        if isinstance(current_model, str) and record.get("model") != current_model:
+                            # Retired model successes must not promote an unproven
+                            # replacement, nor should old failures penalise a model
+                            # that now completes this phase reliably.
+                            continue
                     prior_calls, prior_successes = totals.get(provider, (0, 0))
                     totals[provider] = (prior_calls + calls, prior_successes + successes)
             configured_order = {name: index for index, name in enumerate(candidates)}
