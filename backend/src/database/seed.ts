@@ -1,6 +1,12 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import {
+  SEED_USERS,
+  SEED_ACHIEVEMENTS,
+  SEED_ARTICLES,
+  SEED_DIALOGUES,
+} from './data';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -13,91 +19,7 @@ const supabaseKey =
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function seedUsersAndProfiles(supabase: any) {
-  const seedUsers = [
-    {
-      email: 'oliver.smith@hellotalk.uk',
-      is_vip: true,
-      vip_tier: 'developer',
-      coins_balance: 1500,
-      developer_api_key: 'ht_dev_8f3a1b2c4d5e6f7a8b9c0d1e2f3a4b5c',
-      profile: {
-        display_name: 'Oliver Smith 🇬🇧',
-        bio_text:
-          'Senior Full-Stack Engineer and language enthusiast! Learning Japanese and Spanish. British English native speaker. Feel free to ask about grammar or tech!',
-        avatar_url:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        native_languages: ['en'],
-        target_languages: ['ja', 'es'],
-        location: `POINT(-0.1278 51.5074)`,
-      },
-    },
-    {
-      email: 'sofia.garcia@hellotalk.es',
-      is_vip: true,
-      vip_tier: 'consumer',
-      coins_balance: 420,
-      profile: {
-        display_name: 'Sofía García 🇪🇸',
-        bio_text:
-          '¡Hola a todos! Architect from Madrid. Seeking British English practice partners. I love coffee, literature, and travelling across Europe.',
-        avatar_url:
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-        native_languages: ['es'],
-        target_languages: ['en'],
-        location: `POINT(-3.7038 40.4168)`,
-      },
-    },
-    {
-      email: 'yuki.tanaka@hellotalk.jp',
-      is_vip: false,
-      coins_balance: 80,
-      profile: {
-        display_name: 'Yuki Tanaka 🇯🇵',
-        bio_text:
-          'こんにちは！ Tokyo-based UX designer. Want to practice casual conversational English and French. Happy to correct your Japanese Kanji & grammar!',
-        avatar_url:
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        native_languages: ['ja'],
-        target_languages: ['en', 'fr'],
-        location: `POINT(139.6503 35.6762)`,
-      },
-    },
-    {
-      email: 'claire.dubois@hellotalk.fr',
-      is_vip: true,
-      vip_tier: 'consumer',
-      coins_balance: 310,
-      profile: {
-        display_name: 'Claire Dubois 🇫🇷',
-        bio_text:
-          'Bonjour ! Art historian living in Paris. Learning Arabic and British English. Let us exchange voice notes and cultural recommendations.',
-        avatar_url:
-          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-        native_languages: ['fr'],
-        target_languages: ['ar', 'en'],
-        location: `POINT(2.3522 48.8566)`,
-      },
-    },
-    {
-      email: 'ahmed.almansoor@hellotalk.sa',
-      is_vip: true,
-      vip_tier: 'developer',
-      coins_balance: 3000,
-      developer_api_key: 'ht_dev_1a2b3c4d5e6f7a8b9c0d1e2f3a4b5d',
-      profile: {
-        display_name: 'Ahmed Al-Mansoor 🇸🇦',
-        bio_text:
-          'مرحباً بكم! AI researcher and entrepreneur in Riyadh. Fluent in Arabic, mastering German and English. Proud supporter of open language education.',
-        avatar_url:
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-        native_languages: ['ar'],
-        target_languages: ['de', 'en'],
-        location: `POINT(46.6753 24.7136)`,
-      },
-    },
-  ];
-
-  for (const u of seedUsers) {
+  for (const u of SEED_USERS) {
     const { data: authUser, error: authErr } =
       await supabase.auth.admin.createUser({
         email: u.email,
@@ -280,40 +202,9 @@ async function seedSubscriptionEvents(supabase: any) {
 }
 
 async function seedAchievements(supabase: any) {
-  const achievementsData = [
-    {
-      code: 'first_moment',
-      name: 'First Moment',
-      description: 'Publish your first moment',
-      category: 'social',
-      points: 10,
-    },
-    {
-      code: 'streak_7',
-      name: '7-Day Streak',
-      description: 'Maintain a 7‑day study streak',
-      category: 'streak',
-      points: 50,
-    },
-    {
-      code: 'first_correction',
-      name: 'First Correction',
-      description: 'Give your first grammar correction',
-      category: 'learning',
-      points: 20,
-    },
-    {
-      code: 'vip_user',
-      name: 'VIP Member',
-      description: 'Upgrade to a VIP subscription',
-      category: 'monetisation',
-      points: 100,
-    },
-  ];
-
   const { error: achErr } = await supabase
     .from('achievements')
-    .upsert(achievementsData, {
+    .upsert(SEED_ACHIEVEMENTS, {
       onConflict: 'code',
       ignoreDuplicates: false,
     });
@@ -326,33 +217,10 @@ async function seedAchievements(supabase: any) {
 }
 
 async function seedCuratedContent(supabase: any) {
-  const articlesToSeed = [
-    {
-      title: 'A Day in London',
-      cefr_level: 'A1',
-      language: 'en',
-      content_text:
-        'Today I go to the park. I see a big dog. The dog is brown. I play with my friend. We have a nice time.',
-      word_count: 145,
-      difficulty_rating: 1,
-      tags: ['daily-life', 'city'],
-    },
-    {
-      title: 'La Vida en Madrid',
-      cefr_level: 'A2',
-      language: 'es',
-      content_text:
-        'Por la mañana voy al mercado. Compro frutas y verduras frescas. Luego tomo un café con leche en la plaza mayor. Es un día tranquilo y bonito.',
-      word_count: 190,
-      difficulty_rating: 2,
-      tags: ['cultura', 'comida'],
-    },
-  ];
-
   // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all
   // Expected impact: Drastically reduces database latency when seeding bulk curated articles.
   await Promise.all(
-    articlesToSeed.map(async (article) => {
+    SEED_ARTICLES.map(async (article) => {
       const { error: artErr } = await supabase
         .from('curated_articles')
         .upsert(article, { onConflict: 'id', ignoreDuplicates: true });
@@ -363,39 +231,10 @@ async function seedCuratedContent(supabase: any) {
   );
   console.log('✅ Seeded curated articles');
 
-  const dialoguesToSeed = [
-    {
-      title: 'Ordering Coffee – Beginner',
-      cefr_level: 'A1',
-      language: 'en',
-      lines: [
-        { speaker: 'Barista', text: 'Hello! What can I get for you?' },
-        { speaker: 'Customer', text: 'Hi! I would like a coffee, please.' },
-        { speaker: 'Barista', text: 'Sure, anything else?' },
-        { speaker: 'Customer', text: 'No, thank you. How much is it?' },
-        { speaker: 'Barista', text: 'Two pounds fifty.' },
-      ],
-      tags: ['ordering', 'food'],
-    },
-    {
-      title: 'En la Tienda de Ropa',
-      cefr_level: 'A2',
-      language: 'es',
-      lines: [
-        { speaker: 'Vendedor', text: 'Buenos días, ¿puedo ayudarle?' },
-        { speaker: 'Cliente', text: 'Sí, busco una camiseta azul.' },
-        { speaker: 'Vendedor', text: 'Tenemos esta talla M. ¿Le gusta?' },
-        { speaker: 'Cliente', text: 'Sí, me gusta. ¿Cuánto cuesta?' },
-        { speaker: 'Vendedor', text: 'Quince euros.' },
-      ],
-      tags: ['compras', 'ropa'],
-    },
-  ];
-
   // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all
   // Expected impact: Drastically reduces database latency when seeding bulk curated dialogues.
   await Promise.all(
-    dialoguesToSeed.map(async (dialogue) => {
+    SEED_DIALOGUES.map(async (dialogue) => {
       const { error: diaErr } = await supabase
         .from('curated_dialogues')
         .upsert(dialogue, { onConflict: 'id', ignoreDuplicates: true });
