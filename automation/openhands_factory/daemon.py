@@ -693,7 +693,11 @@ class FactoryDaemon:
         # token used by JobStore/TaskStore to stop stale processes writing state.
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
-        self.pipeline = FactoryPipeline(self.config)
+        self.pipeline = FactoryPipeline(
+            self.config,
+            verification_slots=self.verification_slots,
+            host_resource_slots=self.host_resource_slots,
+        )
         self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",

@@ -45,6 +45,8 @@ These are prioritised future tasks, not claims that all seven are implemented.
    advance while ordinary issue intake is WIP-paused, but it has no merge bypass.
    The issue-cache optimisation performs a fresh scan when a controller-authorised
    repair or canary is missing from the cache; ordinary issue admission stays closed.
+   Daemon generation activation retains the configured host gate and exclusive
+   verification semaphore rather than rebuilding a router with default capacity.
 5. A closed issue is not proof of success. Require its actual PR to be merged,
    current-main CI to be green, the checkout to match that head and this daemon's
    installed package identity to match that immutable source.
