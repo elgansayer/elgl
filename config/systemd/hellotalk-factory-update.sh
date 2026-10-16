@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Daily factory self-update: pull main, reinstall Python package, restart.
+# Change-aware factory self-update: refresh main, deploy changed runtime inputs.
 #
 # Safety contract:
 #   - Never restarts while active jobs are running (checked via daemon.json).
@@ -26,6 +26,7 @@ FACTORY_VENV=/opt/hellotalk-factory/venv
 RUNTIME_ROOT=/opt/hellotalk-factory
 REPO_RUNTIME_ROOT=/opt/repo-factory
 RUNTIME_SOURCE_SHA_FILE="$RUNTIME_ROOT/runtime-source.sha"
+DEPLOYED_RUNTIME_SHA_FILE="$RUNTIME_ROOT/deployed-runtime.sha"
 RUNTIME_MAINTENANCE="$RUNTIME_ROOT/scripts/maintain-factory-host-storage.sh"
 AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}
 AGENTS_CONFIG_SOURCE=config/factory/agents.production.json
@@ -51,6 +52,12 @@ if [ "$#" -gt 1 ]; then
 fi
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] factory-update: $*"; }
+
+runtime_inputs_match() {
+  # Compare immutable Git trees, not checkout timestamps. An absent/unreadable
+  # runtime marker or a Git error must take the conservative full-deploy path.
+  factory_git_read diff --quiet "$1" "$2" -- automation config/factory config/systemd scripts
+}
 
 validate_agents_config() {
   "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
@@ -334,14 +341,15 @@ install_runtime_file_from_commit() {
 
 record_runtime_commit() {
   local commit=$1
+  local destination=${2:-$RUNTIME_SOURCE_SHA_FILE}
   local temporary
-  if ! temporary=$(mktemp "${RUNTIME_SOURCE_SHA_FILE}.new.XXXXXX"); then
+  if ! temporary=$(mktemp "${destination}.new.XXXXXX"); then
     return 1
   fi
   if ! printf '%s\n' "$commit" > "$temporary" || \
     ! chown root:root "$temporary" || \
     ! chmod 0644 "$temporary" || \
-    ! mv -fT -- "$temporary" "$RUNTIME_SOURCE_SHA_FILE"; then
+    ! mv -fT -- "$temporary" "$destination"; then
     rm -f "$temporary"
     return 1
   fi
@@ -556,13 +564,24 @@ if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
   fi
 fi
 
-if [ "$local_sha" = "$remote_sha" ] && [ "$config_is_current" = true ]; then
+runtime_update_needed=true
+runtime_source_sha=
+if [ -r "$DEPLOYED_RUNTIME_SHA_FILE" ]; then
+  read -r runtime_source_sha < "$DEPLOYED_RUNTIME_SHA_FILE" || runtime_source_sha=''
+fi
+if [ "$config_is_current" = true ] && [ -n "$runtime_source_sha" ] && \
+  verify_commit_identity "$runtime_source_sha" && \
+  runtime_inputs_match "$runtime_source_sha" "$remote_sha"; then
+  runtime_update_needed=false
+fi
+
+if [ "$local_sha" = "$remote_sha" ] && [ "$runtime_update_needed" = false ]; then
   log "Already up to date at ${local_sha:0:12} with valid provider config - no restart needed"
   exit 0
 fi
 
 if [ "$local_sha" = "$remote_sha" ]; then
-  log "Repository is current at ${local_sha:0:12}, but provider config needs repair"
+  log "Repository is current at ${local_sha:0:12}, but runtime or provider config needs refresh"
 else
   log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
   merge_base=$(factory_git_read merge-base HEAD origin/main)
@@ -590,12 +609,14 @@ while ! all_factories_idle; do
 done
 log 'Factory is drained and ready to update'
 
-log 'Stopping factory service'
-systemctl stop "$SERVICE" || true
-services_stopped=true
-if [ -n "$SECONDARY_SERVICE" ] && systemctl is-active --quiet "$SECONDARY_SERVICE"; then
-  secondary_was_active=true
-  systemctl stop "$SECONDARY_SERVICE" || true
+if [ "$runtime_update_needed" = true ]; then
+  log 'Stopping factory service'
+  systemctl stop "$SERVICE" || true
+  services_stopped=true
+  if [ -n "$SECONDARY_SERVICE" ] && systemctl is-active --quiet "$SECONDARY_SERVICE"; then
+    secondary_was_active=true
+    systemctl stop "$SECONDARY_SERVICE" || true
+  fi
 fi
 
 if [ "$local_sha" != "$remote_sha" ]; then
@@ -613,6 +634,16 @@ if [ "$pulled_sha" != "$remote_sha" ] || ! verify_commit_identity "$pulled_sha";
   exit 1
 fi
 log "Deploying verified commit ${pulled_sha:0:12}"
+
+if [ "$runtime_update_needed" = false ]; then
+  log 'Application-only update: preserving running factories, Python package and worker image'
+  # The marker identifies the actually installed runtime, not the app checkout.
+  # Keeping it unchanged also detects a pending runtime update after a checkout
+  # was advanced separately or a previous deployment failed part-way through.
+  update_completed=true
+  resume_factories
+  exit 0
+fi
 
 log 'Refreshing root-owned Factory runtime scripts from verified Git blobs'
 if ! install_runtime_bundle "$pulled_sha"; then
@@ -686,6 +717,7 @@ if systemctl is-active --quiet "$SERVICE"; then
     exit 1
   fi
   log "Factory restarted successfully at ${pulled_sha:0:12}"
+  record_runtime_commit "$pulled_sha" "$DEPLOYED_RUNTIME_SHA_FILE"
   update_completed=true
   if [ -n "$agents_config_backup" ] && [ "$agents_config_backup" != __absent__ ]; then
     rm -f -- "$agents_config_backup" || \
