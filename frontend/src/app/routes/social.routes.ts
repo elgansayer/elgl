@@ -38,11 +38,6 @@ export const socialRoutes: Routes = [
     title: 'Following - HelloTalk',
   },
   {
-    path: 'visitors',
-    redirectTo: 'profile/visitors',
-    pathMatch: 'full',
-  },
-  {
     path: 'profile/visitors',
     loadComponent: () =>
       import('../components/profile-visitors/profile-visitors.component').then(
@@ -83,11 +78,6 @@ export const socialRoutes: Routes = [
       ),
   },
   {
-    path: 'notification-preferences',
-    redirectTo: 'settings/notification',
-    pathMatch: 'full',
-  },
-  {
     path: 'events',
     loadComponent: () =>
       import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
@@ -100,16 +90,6 @@ export const socialRoutes: Routes = [
         (m) => m.EventsCalendarComponent,
       ),
     title: 'Event Calendar - HelloTalk',
-  },
-  {
-    path: 'language-parties',
-    redirectTo: 'community/language-parties',
-    pathMatch: 'full',
-  },
-  {
-    path: 'language-islands',
-    redirectTo: 'community/language-islands',
-    pathMatch: 'full',
   },
   {
     path: 'business-profile',
