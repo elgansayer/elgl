@@ -204,7 +204,7 @@ async function verifyAchievements(
   }
 }
 
-async function runVerification() {
+function printHeader() {
   console.log(
     '================================================================',
   );
@@ -214,25 +214,9 @@ async function runVerification() {
   console.log(
     '================================================================\n',
   );
+}
 
-  const state: AssertionState = { passed: 0, total: 0 };
-  const assertCheck = createAssertCheck(state);
-
-  verifyLingQ(assertCheck);
-  verifyLinguistics(assertCheck);
-  verifyLiveKit(assertCheck);
-  verifyVirtualGift(assertCheck);
-
-  const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:54321';
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    'mock-key';
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  await verifyDatabase(assertCheck, supabase);
-  await verifyAchievements(assertCheck, supabase);
-
+function printSummary(state: AssertionState) {
   console.log(
     '\n================================================================',
   );
@@ -250,6 +234,34 @@ async function runVerification() {
   } else {
     process.exit(1);
   }
+}
+
+function getSupabaseClient() {
+  const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:54321';
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    'mock-key';
+  return createClient(supabaseUrl, supabaseKey);
+}
+
+async function runVerification() {
+  printHeader();
+
+  const state: AssertionState = { passed: 0, total: 0 };
+  const assertCheck = createAssertCheck(state);
+
+  verifyLingQ(assertCheck);
+  verifyLinguistics(assertCheck);
+  verifyLiveKit(assertCheck);
+  verifyVirtualGift(assertCheck);
+
+  const supabase = getSupabaseClient();
+
+  await verifyDatabase(assertCheck, supabase);
+  await verifyAchievements(assertCheck, supabase);
+
+  printSummary(state);
 }
 
 runVerification().catch((err) => {
