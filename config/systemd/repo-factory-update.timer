@@ -1,10 +1,10 @@
 [Unit]
-Description=Check for Repo Factory updates every 30 minutes
+Description=Daily timer for Repo Factory self-update
 
 [Timer]
-OnCalendar=*-*-* *:00/30:00 UTC
+OnCalendar=*-*-* 03:00:00 UTC
 Persistent=true
-RandomizedDelaySec=120
+RandomizedDelaySec=300
 
 [Install]
 WantedBy=timers.target
