@@ -13,10 +13,10 @@ Supported source formats:
 
 Quality envelopes are intentionally bounded:
 
-| Media | Standard | HD |
-| --- | ---: | ---: |
+| Media |                       Standard |                              HD |
+| ----- | -----------------------------: | ------------------------------: |
 | Image | 6 MiB after client preparation | 15 MiB after client preparation |
-| Video | 12 MiB source | 25 MiB source |
+| Video |                  12 MiB source |                   25 MiB source |
 
 Standard images are prepared at up to 1600×1600 with JPEG quality 0.78. HD images are prepared at up to 2560×2560 with JPEG quality 0.90. Browser video transcoding is deliberately not attempted because codec availability, audio preservation, thermal cost and browser support are inconsistent; Standard therefore accepts source video inside the smaller envelope while HD preserves a larger source file. A later durable media pipeline may add server-side derivatives without changing this UI contract.
 
@@ -66,16 +66,16 @@ The repository's Cloudflare-native media architecture currently exposes compatib
 
 ## Failure behavior
 
-| Failure | User-visible behavior | Data behavior |
-| --- | --- | --- |
-| Unsupported type | Selection/upload is rejected | No presign or object |
-| Oversized prepared file | Upload is rejected with the selected quality limit | No presign or object |
-| Authentication missing | Operation fails closed | No presign/send |
-| R2 PUT fails | Picker stays available with an error | No chat message |
-| Chat send fails before persistence | Retry send remains available | Same object key is reused |
-| Response/Centrifugo fails after persistence | Retry resolves the existing message | No duplicate message |
-| Delivery-state database lookup fails | Send fails closed | No unverified retry is attempted |
-| Object already used in another room/type | Send returns conflict | Existing message is preserved |
+| Failure                                     | User-visible behavior                              | Data behavior                    |
+| ------------------------------------------- | -------------------------------------------------- | -------------------------------- |
+| Unsupported type                            | Selection/upload is rejected                       | No presign or object             |
+| Oversized prepared file                     | Upload is rejected with the selected quality limit | No presign or object             |
+| Authentication missing                      | Operation fails closed                             | No presign/send                  |
+| R2 PUT fails                                | Picker stays available with an error               | No chat message                  |
+| Chat send fails before persistence          | Retry send remains available                       | Same object key is reused        |
+| Response/Centrifugo fails after persistence | Retry resolves the existing message                | No duplicate message             |
+| Delivery-state database lookup fails        | Send fails closed                                  | No unverified retry is attempted |
+| Object already used in another room/type    | Send returns conflict                              | Existing message is preserved    |
 
 The upload object can outlive a dismissed or abandoned picker. R2 lifecycle/reconciliation remains part of the repository-wide media finalisation policy; do not guess that an ambiguous send failed and delete media that may already back a persisted message.
 

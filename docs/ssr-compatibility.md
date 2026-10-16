@@ -235,9 +235,9 @@ Avoid:
 
 ```html
 @if (isBrowser) {
-  <button>...</button>
+<button>...</button>
 } @else {
-  <div>...</div>
+<div>...</div>
 }
 ```
 

@@ -13,7 +13,7 @@ Use the `host` property in the `@Component` decorator to bind properties, attrib
     role: 'slider', // Static attribute
     '[attr.aria-valuenow]': 'value', // Attribute binding
     '[class.active]': 'isActive()', // Class binding
-    '[style.color]': 'colour()', // Style binding
+    '[style.color]': 'color()', // Style binding
     '[tabIndex]': 'disabled ? -1 : 0', // Property binding
     '(keydown)': 'onKeyDown($event)', // Event binding
   },
@@ -22,7 +22,7 @@ export class CustomSlider {
   protected readonly value = 0;
   protected readonly disabled = false;
   protected readonly isActive = signal(false);
-  protected readonly colour = signal('blue');
+  protected readonly color = signal('blue');
 
   onKeyDown(event: KeyboardEvent) {
     /* ... */

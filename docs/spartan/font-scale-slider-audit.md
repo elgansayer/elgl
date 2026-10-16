@@ -22,15 +22,15 @@ No runtime behavior is changed by this audit. Because there is no visual-contrac
 
 The current range contract is:
 
-| Property | Value | Owner |
-| --- | ---: | --- |
-| Minimum scale | `0.8` / 80% | `FontScaleService.min` |
-| Maximum scale | `1.5` / 150% | `FontScaleService.max` |
-| Step | `0.05` / 5 percentage points | `FontScaleService.step` |
-| Default | `1.0` / 100% | `FontScaleService` |
-| Current value | `FontScaleService.scaleFactor` signal | service state |
-| Persistence key | `app_font_scale` | `FontScaleService` |
-| Presentation | localized percent via `Intl.NumberFormat` | component |
+| Property        |                                     Value | Owner                   |
+| --------------- | ----------------------------------------: | ----------------------- |
+| Minimum scale   |                               `0.8` / 80% | `FontScaleService.min`  |
+| Maximum scale   |                              `1.5` / 150% | `FontScaleService.max`  |
+| Step            |              `0.05` / 5 percentage points | `FontScaleService.step` |
+| Default         |                              `1.0` / 100% | `FontScaleService`      |
+| Current value   |     `FontScaleService.scaleFactor` signal | service state           |
+| Persistence key |                          `app_font_scale` | `FontScaleService`      |
+| Presentation    | localized percent via `Intl.NumberFormat` | component               |
 
 User interaction flows through the following boundary:
 
@@ -53,33 +53,32 @@ The component must remain an adapter around this service contract. Spartan/Relay
 
 There is exactly one interactive element in the target surface.
 
-| Element / state | Current implementation | Current owner | Target owner | Migration action |
-| --- | --- | --- | --- | --- |
-| Font scale label | Native `<label for="fontScaleSlider">` | Feature presentation / `TranslatePipe` | Relay presentation + native label semantics | Preserve a visible translated label; make the input ID instance-safe if the component can render more than once |
-| Slider interaction | Native `<input type="range">` | Browser/native range semantics | Native range, unless an approved Spartan Slider is introduced | Do not reimplement pointer, keyboard, focus, min/max/step, or disabled semantics in feature code |
-| Minimum | `[min]="min"` | `FontScaleService` | Service contract | Preserve 0.8 |
-| Maximum | `[max]="max"` | `FontScaleService` | Service contract | Preserve 1.5 |
-| Step | `[step]="step"` | `FontScaleService` | Service contract | Preserve 0.05 |
-| Current value | `[value]="scale()"` | Service signal | Service state | Preserve service as single source of truth |
-| Input adaptation | `(input)="onInput($event)"` plus `parseFloat` | Feature adapter | Feature adapter | Keep only type/value adaptation; service owns normalization |
-| Numeric ARIA state | Explicit `aria-valuemin/max/now` | Feature template | Native semantics where sufficient | Avoid redundant ARIA unless it adds tested value |
-| Spoken value | `aria-valuetext="scalePercentLabel()"` | Feature/i18n | Relay/i18n presentation | Preserve localized percent wording |
-| Visible value | Decorative `<span aria-hidden="true">` | Feature presentation | Relay presentation | Preserve if useful visually; it must not duplicate speech output |
-| Group wrapper | `<div role="group" aria-label=...>` | Feature template | Native/Relay grouping only if needed | Review redundancy because the slider already has a visible associated label |
-| Track/thumb styling | Browser range plus `accent-primary` | Browser + Relay primary token | Native/Relay or approved Slider Helm | Preserve per-user primary accent; avoid hard-coded product colours |
-| Width/spacing | `w-24 h-1`, `ps-4`, `gap-2`, percentage `w-8` | Feature layout | Relay responsive composition | Remove fixed-width assumptions if they cause header/high-zoom overflow |
-| Label wrapping | `whitespace-nowrap` | Feature layout | Relay responsive composition | Revisit for translation expansion and high zoom |
-| Loading state | None | n/a | n/a | Do not invent asynchronous loading state |
-| Error state | None in component | n/a | n/a | Storage failures intentionally degrade silently in the service; do not invent false failures |
-| Overlay/focus trap | None | n/a | n/a | No Dialog/Popover/Menu primitive is required |
+| Element / state     | Current implementation                        | Current owner                          | Target owner                                                  | Migration action                                                                                                |
+| ------------------- | --------------------------------------------- | -------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Font scale label    | Native `<label for="fontScaleSlider">`        | Feature presentation / `TranslatePipe` | Relay presentation + native label semantics                   | Preserve a visible translated label; make the input ID instance-safe if the component can render more than once |
+| Slider interaction  | Native `<input type="range">`                 | Browser/native range semantics         | Native range, unless an approved Spartan Slider is introduced | Do not reimplement pointer, keyboard, focus, min/max/step, or disabled semantics in feature code                |
+| Minimum             | `[min]="min"`                                 | `FontScaleService`                     | Service contract                                              | Preserve 0.8                                                                                                    |
+| Maximum             | `[max]="max"`                                 | `FontScaleService`                     | Service contract                                              | Preserve 1.5                                                                                                    |
+| Step                | `[step]="step"`                               | `FontScaleService`                     | Service contract                                              | Preserve 0.05                                                                                                   |
+| Current value       | `[value]="scale()"`                           | Service signal                         | Service state                                                 | Preserve service as single source of truth                                                                      |
+| Input adaptation    | `(input)="onInput($event)"` plus `parseFloat` | Feature adapter                        | Feature adapter                                               | Keep only type/value adaptation; service owns normalization                                                     |
+| Numeric ARIA state  | Explicit `aria-valuemin/max/now`              | Feature template                       | Native semantics where sufficient                             | Avoid redundant ARIA unless it adds tested value                                                                |
+| Spoken value        | `aria-valuetext="scalePercentLabel()"`        | Feature/i18n                           | Relay/i18n presentation                                       | Preserve localized percent wording                                                                              |
+| Visible value       | Decorative `<span aria-hidden="true">`        | Feature presentation                   | Relay presentation                                            | Preserve if useful visually; it must not duplicate speech output                                                |
+| Group wrapper       | `<div role="group" aria-label=...>`           | Feature template                       | Native/Relay grouping only if needed                          | Review redundancy because the slider already has a visible associated label                                     |
+| Track/thumb styling | Browser range plus `accent-primary`           | Browser + Relay primary token          | Native/Relay or approved Slider Helm                          | Preserve per-user primary accent; avoid hard-coded product colours                                              |
+| Width/spacing       | `w-24 h-1`, `ps-4`, `gap-2`, percentage `w-8` | Feature layout                         | Relay responsive composition                                  | Remove fixed-width assumptions if they cause header/high-zoom overflow                                          |
+| Label wrapping      | `whitespace-nowrap`                           | Feature layout                         | Relay responsive composition                                  | Revisit for translation expansion and high zoom                                                                 |
+| Loading state       | None                                          | n/a                                    | n/a                                                           | Do not invent asynchronous loading state                                                                        |
+| Error state         | None in component                             | n/a                                    | n/a                                                           | Storage failures intentionally degrade silently in the service; do not invent false failures                    |
+| Overlay/focus trap  | None                                          | n/a                                    | n/a                                                           | No Dialog/Popover/Menu primitive is required                                                                    |
 
 ## Global shell integration
 
 The only checked-in consumer is the application top bar:
 
 ```html
-<app-theme-selector />
-<app-font-scale-slider />
+<app-theme-selector /> <app-font-scale-slider />
 ```
 
 The top bar is part of `AppComponent`, not the font-scale component. It is a horizontal `flex` row containing the coin balance, purchase link, notifications, guided-tour action, optional biometric action, theme selector, and this slider.
