@@ -913,8 +913,13 @@ def test_pull_request_waits_for_protected_ci_before_local_verification(
     assert result.latest_verified_sha is None
 
 
-def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("merge_state", ["UNKNOWN", "BLOCKED", "UNSTABLE"])
+@pytest.mark.parametrize("refresh_existing", [False, True])
+def test_unverified_pull_request_refreshes_a_locally_stale_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    merge_state: str,
+    refresh_existing: bool,
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
@@ -939,7 +944,7 @@ def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
             "old-head",
             True,
             False,
-            merge_state_status="UNKNOWN",
+            merge_state_status=merge_state,
         )
     ]
 
@@ -956,7 +961,15 @@ def test_unknown_merge_state_refreshes_a_locally_stale_pull_request(
     pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
     pipeline.refresh()
 
-    result = pipeline.run_job("77")
+    if refresh_existing:
+        result = pipeline.jobs.load()["77"]
+        result.branch = "fix/old"
+        result.pull_request = 77
+        pipeline._refresh_pull_request_for_review(
+            result, factory_config.worktree_dir / "issue-77", "test"
+        )
+    else:
+        result = pipeline.run_job("77")
 
     assert result is not None
     assert result.state is JobState.CI_PENDING
