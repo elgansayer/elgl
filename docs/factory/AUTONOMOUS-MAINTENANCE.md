@@ -30,7 +30,9 @@ These are prioritised future tasks, not claims that all seven are implemented.
 ## Control loop
 
 1. Group repeated failure shapes across unfinished jobs. Treat historical watchdog
-   messages as historical evidence, not proof of current process crashes.
+   messages as historical evidence, not proof of current process crashes. The
+   baseline snapshot reports actual watchdog recoveries by the running daemon
+   generation (`watchdog.recovered_total`) separately from queued age.
 2. Give AI bounded, redacted diagnostic data, lifetime phase-model metrics and
    read-only repository access. Require a typed report; unknown task IDs and
    arbitrary action names are rejected. Repair proposals must cite exact excerpts

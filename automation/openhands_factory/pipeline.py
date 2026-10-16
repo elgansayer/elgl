@@ -575,8 +575,11 @@ class FactoryPipeline:
         try:
             # A sibling dispatch may have completed a transition while this worker
             # waited for the claim lock. Reload only after acquisition, so stale
-            # in-memory state can never repeat branch or PR creation.
-            job = self.jobs.load().get(task_id)
+            # in-memory state can never repeat branch or PR creation. The same locked
+            # read marks the attempt in flight and the write that commits its outcome
+            # clears the marker, so a worker that dies first leaves evidence the
+            # watchdog can tell apart from work that is merely queued.
+            job = self.jobs.begin_attempt(task_id)
             if job is None or job.state in TERMINAL_STATES:
                 return None
             self._copy_claim_metadata(job, claim)
@@ -599,6 +602,8 @@ class FactoryPipeline:
                     job.maintenance_recovery_failures += 1
                 job.last_error = str(error)[-2000:]
                 self._record_failure(job)
+            job.attempt_started_at = None
+            job.attempt_generation = None
             job.updated_at = datetime.now(UTC)
             self.jobs.save_job(job)
             if job.last_error and job.last_failure_fingerprint is not None:

@@ -157,8 +157,12 @@ declares an explicit `Depends-On` stack parent stays a draft, withheld from inde
 merges. See [PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md) for the full contract and the metrics exposed
 through `hellotalk-factory metrics`.
 
-Durable execution states abandoned by a dead worker are recovered through the same timeout retry policy. Live
-futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated as abandoned work.
+An attempt abandoned by a dead worker is recovered through the same timeout retry policy once its durable in-flight
+marker outlives the maximum task duration. Age alone is never evidence: queued, unadmitted and backed-off work, an
+explicit future retry deadline, live futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated
+as abandoned work. `hellotalk-factory status` reports actual watchdog recoveries (`watchdog.recovered_total`)
+separately from queued age (`watchdog.oldest_queued_age_seconds`); see
+[AUDIT-2026-10-16-ABANDONED-ATTEMPT.md](AUDIT-2026-10-16-ABANDONED-ATTEMPT.md).
 
 ## Safety gates
 

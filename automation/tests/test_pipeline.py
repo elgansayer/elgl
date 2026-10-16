@@ -11,7 +11,11 @@ from openhands_factory.agents.openhands import OpenHandsProvider
 from openhands_factory.architect_report import ArchitectProposal
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationResult
-from openhands_factory.exceptions import FactoryError, VerificationFailed
+from openhands_factory.exceptions import (
+    FactoryError,
+    ProviderCapacityUnavailable,
+    VerificationFailed,
+)
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
@@ -1504,6 +1508,125 @@ def test_recovery_failure_counter_survives_attempt_resets(
     assert result is not None
     assert result.maintenance_recovery_failures == 1
     assert pipeline.jobs.load()["42"].maintenance_recovery_failures == 1
+
+
+def _marker_pipeline(tmp_path: Path) -> FactoryPipeline:
+    pipeline = FactoryPipeline(config(tmp_path), github=GitHub(), conversations=Conversations())
+    pipeline.jobs.save(
+        {"42": Job(Task("42", "Marker canary", "", "github-issue", 0), state=JobState.VERIFYING)}
+    )
+    return pipeline
+
+
+def test_worker_attempt_is_in_flight_only_until_its_outcome_commits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+    during: list[Job] = []
+
+    def advance(running: Job, lease_owner: str) -> None:
+        del lease_owner
+        during.append(pipeline.jobs.load()["42"])
+        running.state = JobState.REVIEWING
+
+    monkeypatch.setattr(pipeline, "_advance", advance)
+
+    result = pipeline.run_job("42")
+
+    assert len(during) == 1
+    assert during[0].state is JobState.VERIFYING
+    assert during[0].attempt_started_at is not None
+    assert during[0].attempt_generation == pipeline.jobs.factory_generation
+    assert result is not None
+    assert result.state is JobState.REVIEWING
+    committed = pipeline.jobs.load()["42"]
+    assert committed.state is JobState.REVIEWING
+    assert committed.attempt_started_at is None
+    assert committed.attempt_generation is None
+
+
+def test_failed_worker_attempt_commits_its_failure_and_ends_the_marker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+    monkeypatch.setattr(
+        pipeline, "_advance", lambda *args: (_ for _ in ()).throw(FactoryError("tests failed"))
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    committed = pipeline.jobs.load()["42"]
+    assert committed.attempts == 1
+    assert committed.last_error == "tests failed"
+    assert committed.next_attempt_at is not None
+    assert committed.attempt_started_at is None
+    assert committed.attempt_generation is None
+
+
+def test_capacity_deferral_keeps_its_deadline_and_ends_the_marker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+
+    def busy(*args: object) -> None:
+        raise ProviderCapacityUnavailable("capacity busy", retry_after_seconds=600)
+
+    monkeypatch.setattr(pipeline, "_advance", busy)
+
+    pipeline.run_job("42")
+
+    committed = pipeline.jobs.load()["42"]
+    assert committed.attempts == 0
+    assert committed.next_attempt_at is not None
+    assert committed.attempt_started_at is None
+    assert committed.attempt_generation is None
+
+
+def test_worker_that_dies_before_committing_is_recovered_once_by_the_watchdog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class WorkerKilled(BaseException):
+        """A hard stop that skips every ordinary failure handler."""
+
+    pipeline = _marker_pipeline(tmp_path)
+    monkeypatch.setattr(
+        pipeline, "_advance", lambda *args: (_ for _ in ()).throw(WorkerKilled("SIGKILL"))
+    )
+
+    with pytest.raises(WorkerKilled):
+        pipeline.run_job("42")
+
+    lost = pipeline.jobs.load()["42"]
+    assert lost.state is JobState.VERIFYING
+    assert lost.attempts == 0
+    assert lost.attempt_started_at is not None
+    assert pipeline.tasks.leases() == {}
+    later = datetime.now(UTC) + timedelta(hours=3)
+    assert pipeline.jobs.recover_abandoned_attempts(set(), timedelta(hours=2), now=later) == ["42"]
+    recovered = pipeline.jobs.load()["42"]
+    assert recovered.state is JobState.VERIFYING
+    assert recovered.attempts == 1
+    assert recovered.last_error is not None
+    assert recovered.last_error.startswith("Watchdog recovered abandoned verifying attempt")
+    assert recovered.attempt_started_at is None
+    assert pipeline.jobs.recover_abandoned_attempts(set(), timedelta(hours=2), now=later) == []
+
+
+def test_queued_job_is_never_marked_or_recovered_while_it_waits_for_a_worker(
+    tmp_path: Path,
+) -> None:
+    pipeline = _marker_pipeline(tmp_path)
+    stored = pipeline.jobs.load()["42"]
+    stored.updated_at = datetime.now(UTC) - timedelta(days=2)
+    pipeline.jobs.save_reconciled_jobs([stored])
+    before = pipeline.jobs.load()["42"]
+
+    recovered = pipeline.jobs.recover_abandoned_attempts(set(), timedelta(hours=2))
+
+    assert recovered == []
+    assert pipeline.jobs.load()["42"] == before
+    assert before.attempt_started_at is None
 
 
 def test_conflicting_repair_materialises_base_merge_before_agent_resolution(
