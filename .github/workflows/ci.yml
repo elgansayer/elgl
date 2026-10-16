@@ -411,6 +411,7 @@ jobs:
         run: |
           set -euo pipefail
           max_attempts=3
+          postgres_meta_version="v0.97.0"
           for attempt in $(seq 1 "$max_attempts"); do
             attempt_log="test-results/supabase-typegen-attempt-${attempt}.log"
             attempt_output="test-results/database.types.attempt-${attempt}.ts"
@@ -428,6 +429,19 @@ jobs:
 
             cat "$attempt_log"
             rm -f "$attempt_output"
+
+            # The pinned Supabase CLI fetches postgres-meta from public ECR.
+            # Its anonymous data quota is occasionally exhausted for GitHub
+            # runners. Supabase publishes the byte-identical multi-arch image
+            # on GHCR, so seed the expected local tag before retrying.
+            if grep -Fq 'public.ecr.aws/supabase/postgres-meta' "$attempt_log" \
+              && grep -Eiq 'toomanyrequests|data limit exceeded' "$attempt_log"; then
+              mirror_image="ghcr.io/supabase/postgres-meta:${postgres_meta_version}"
+              expected_image="public.ecr.aws/supabase/postgres-meta:${postgres_meta_version}"
+              echo "Public ECR quota exhausted; seeding $expected_image from Supabase GHCR mirror."
+              docker pull "$mirror_image"
+              docker tag "$mirror_image" "$expected_image"
+            fi
 
             if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
               echo "Non-transient Supabase type-generation failure detected; refusing to retry."
