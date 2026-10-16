@@ -5,8 +5,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import SecretStr
 
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
+from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import (
     FactoryDaemon,
     admission_slots_while_respecting_wip,
@@ -56,6 +58,36 @@ def factory_pull_request_job(
     factory_job.pull_request = int(identifier) + 1000
     factory_job.branch = f"factory/change-{identifier}"
     return factory_job
+
+
+@pytest.mark.parametrize("limit", [1, 3])
+def test_generation_activation_retains_configured_host_and_verification_gates(tmp_path, limit):
+    prompts = Path(__file__).parents[1] / "prompts"
+    config = FactoryConfig(
+        repository=tmp_path,
+        state_dir=tmp_path / "state",
+        provider_capacity_dir=tmp_path / "shared",
+        prompt_dir=prompts,
+        system_prompt_path=prompts / "system.md",
+        github_token=SecretStr("test-token"),
+        host_agent_concurrency=limit,
+    )
+    daemon = FactoryDaemon(config)
+    gate = daemon.host_resource_slots
+    verification_slots = daemon.verification_slots
+    for _ in range(2):
+        daemon._activate_generation()
+        assert daemon.pipeline.host_resource_slots is gate
+        assert daemon.pipeline.router.host_resource_slots is gate
+        assert daemon.pipeline.verification_slots is verification_slots
+        assert gate.shared_limit == limit
+        for number in range(limit):
+            assert gate.acquire_shared(str(number))
+        assert not gate.acquire_shared("over-limit")
+        for number in range(limit):
+            gate.release_shared(str(number))
+        with gate.exclusive():
+            assert not daemon.pipeline.router.host_resource_slots.acquire_shared("during-build")
 
 
 def test_review_lane_busy_only_for_active_pull_request_work() -> None:

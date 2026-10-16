@@ -210,7 +210,7 @@ class MaintenanceController:
         value = self.state().get("records", [])
         return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
-    def tag_tasks(self, tasks: list[Task]) -> list[Task]:
+    def admitted_issue_ids(self) -> set[str]:
         admitted = {
             str(record.get("issue"))
             for record in self.records()
@@ -221,6 +221,10 @@ class MaintenanceController:
             for record in self.records()
             if record.get("status") == "canary"
         )
+        return admitted
+
+    def tag_tasks(self, tasks: list[Task]) -> list[Task]:
+        admitted = self.admitted_issue_ids()
         return [
             replace(task, priority=0, triage_tags=task.triage_tags | {MAINTENANCE_TAG})
             if task.source == "github-issue" and task.identifier in admitted
