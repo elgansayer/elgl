@@ -120,11 +120,11 @@ def test_factory_config_reads_hourly_issue_admission_policy() -> None:
     assert config.new_issues_per_interval == 1
 
 
-def test_production_templates_and_host_repair_keep_hourly_issue_admission() -> None:
+def test_production_templates_and_host_repair_keep_bounded_issue_admission() -> None:
     repository_root = Path(__file__).parents[2]
     template = (repository_root / "config/systemd/factory.env.example").read_text(encoding="utf-8")
     repair = (repository_root / "scripts/repair-factory-host.sh").read_text(encoding="utf-8")
 
     for content in (template, repair):
         assert "FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600" in content
-        assert "FACTORY_NEW_ISSUES_PER_INTERVAL=1" in content
+        assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in content

@@ -745,6 +745,10 @@ def test_agent_diagnostics_warn_when_no_provider_is_temporarily_usable(
         lambda provider: unavailable(provider.name),
     )
     monkeypatch.setattr(
+        "openhands_factory.agents.PiProvider.health",
+        lambda provider: unavailable(provider.name),
+    )
+    monkeypatch.setattr(
         "openhands_factory.doctor.openai_credentials_available",
         lambda _config: False,
     )

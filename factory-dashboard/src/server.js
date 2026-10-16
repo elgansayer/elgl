@@ -11,6 +11,7 @@ import { createReadStream } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { projectFor, projects, stateFile } from './projects.js';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -272,9 +273,16 @@ const server = createServer(async (req, res) => {
 
       const b64 = authHeader.substring(6);
       const decoded = Buffer.from(b64, 'base64').toString('utf8');
-      const [username, password] = decoded.split(':', 2);
+      // Compare fixed-size digests of the complete credential pair. This preserves
+      // colons in passwords and avoids branching on the configured secret's length.
+      const supplied = crypto.createHash('sha256').update(decoded).digest();
+      const expected = crypto
+        .createHash('sha256')
+        .update(`${DASHBOARD_USER}:${DASHBOARD_PASSWORD}`)
+        .digest();
+      const isAuthorized = crypto.timingSafeEqual(supplied, expected);
 
-      if (username !== DASHBOARD_USER || password !== DASHBOARD_PASSWORD) {
+      if (!isAuthorized) {
         res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
         return res.end('Unauthorized');
       }
