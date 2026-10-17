@@ -1,7 +1,7 @@
 import { Component, computed, input, inject, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { FlashcardService } from '../../services/flashcard.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { showToast } from '../../services/toast.service';
 import { I18nService } from '../../services/i18n.service';
 import { ChatService } from '../../services/chat.service';
@@ -85,7 +85,7 @@ export class VisualDiffComponent {
   readonly explanation = input<string>();
   readonly showActions = input<boolean>(false);
 
-  private readonly flashcardService = inject(FlashcardService);
+  private readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
   private readonly chatService = inject(ChatService);
   private readonly translationCache = inject(TranslationCacheService);
@@ -134,7 +134,7 @@ export class VisualDiffComponent {
         ? this.explanation()!.substring(0, 1000)
         : undefined;
 
-      await this.flashcardService.createFlashcard({
+      await this.vocabStore.saveWord({
         word_token: wordToken,
         translation: translation,
         original_context: originalContext,
