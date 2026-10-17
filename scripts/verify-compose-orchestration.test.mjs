@@ -14,9 +14,7 @@ function serviceBlock(document, service) {
   const servicesIndex = lines.findIndex((line) => line.trim() === 'services:');
   assert.notEqual(servicesIndex, -1, 'compose document must contain a services block');
 
-  const start = lines.findIndex(
-    (line, index) => index > servicesIndex && line === `  ${service}:`,
-  );
+  const start = lines.findIndex((line, index) => index > servicesIndex && line === `  ${service}:`);
   assert.notEqual(start, -1, `compose document must define service ${service}`);
 
   let end = lines.length;
@@ -124,8 +122,7 @@ test('production monitoring endpoints stay operator-only and bounded', () => {
   assert.match(grafana, /GF_AUTH_ANONYMOUS_ENABLED=false/);
   assert.match(grafana, /GF_SECURITY_DISABLE_GRAVATAR=true/);
 
-  assert.doesNotMatch(websocket, /8001:8001/);
-  assert.match(websocket, /expose:\n      - '8001'/);
+  assert.doesNotMatch(websocket, /8001/);
 
   assert.match(serviceBlock(production, 'api'), /localhost:3000\/api\/health/);
   assert.match(datadog, /api:3000\/api\/health/);
@@ -144,7 +141,7 @@ test('Prometheus scrapes the NestJS and Centrifugo metrics endpoints with bounde
   assert.match(prometheusConfig, /targets: \['api:3000'\]/);
   assert.match(prometheusConfig, /job_name: 'centrifugo'/);
   assert.match(prometheusConfig, /metrics_path: '\/metrics'/);
-  assert.match(prometheusConfig, /targets: \['websocket:8001'\]/);
+  assert.match(prometheusConfig, /targets: \['websocket:8000'\]/);
 });
 
 test('Grafana provisions exactly one immutable Prometheus datasource', () => {

@@ -44,6 +44,7 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         new_issue_slots: int | None = None,
         review_first: bool = True,
         review_lane_max_concurrent: int = 1,
+        review_only: bool = False,
     ) -> list[Job]:
         batch = original(
             jobs,
@@ -53,6 +54,7 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             new_issue_slots,
             review_first,
             review_lane_max_concurrent,
+            review_only,
         )
         if not any(job.state is JobState.MERGE_QUEUED for job in batch):
             return batch
@@ -119,6 +121,7 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             new_issue_slots: int | None = None,
             review_first: bool = True,
             review_lane_max_concurrent: int = 1,
+            review_only: bool = False,
         ) -> list[Job]:
             return self._gated_select_batch(
                 original_select,
@@ -129,6 +132,7 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
                 new_issue_slots,
                 review_first,
                 review_lane_max_concurrent,
+                review_only,
             )
 
         def gated_merge_pull_request(pull_request: int, expected_head_sha: str) -> None:
