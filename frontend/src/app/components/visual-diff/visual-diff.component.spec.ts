@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { ChatService } from '../../services/chat.service';
-import { FlashcardService } from '../../services/flashcard.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from './visual-diff.component';
@@ -16,8 +16,8 @@ describe('VisualDiffComponent', () => {
       imports: [VisualDiffComponent],
       providers: [
         {
-          provide: FlashcardService,
-          useValue: { createFlashcard: vi.fn().mockResolvedValue(undefined) },
+          provide: VocabularyStore,
+          useValue: { saveWord: vi.fn().mockResolvedValue(undefined) },
         },
         {
           provide: I18nService,
