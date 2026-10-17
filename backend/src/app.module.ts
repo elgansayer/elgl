@@ -79,9 +79,6 @@ import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
 import { LivekitModule } from './livekit/livekit.module';
-import { OpenApiFixtureFactoryController } from './mock/openapi-fixture-factory.controller';
-import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
-import { MockScenariosModule } from './mock/mock-scenarios.module';
 
 @Module({
   imports: [
@@ -177,9 +174,8 @@ import { MockScenariosModule } from './mock/mock-scenarios.module';
     ReadingEngineModule,
     CloudflareModule,
     LearnerKnowledgeModule,
-    MockScenariosModule,
   ],
-  controllers: [AppController, OpenApiFixtureFactoryController],
+  controllers: [AppController],
   providers: [
     AppService,
     {
@@ -188,7 +184,6 @@ import { MockScenariosModule } from './mock/mock-scenarios.module';
       useClass: ThrottlerGuard,
     },
     AnkiiIntegrationService,
-    OpenApiFixtureFactoryRegistry,
   ],
 })
 export class AppModule {}

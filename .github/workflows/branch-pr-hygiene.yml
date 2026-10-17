@@ -2,7 +2,7 @@ name: Branch PR Hygiene
 
 on:
   schedule:
-    - cron: '17 3 * * *'
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -88,4 +88,4 @@ jobs:
           name: branch-pr-hygiene-${{ github.run_id }}
           path: ${{ runner.temp }}/branch-hygiene.json
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14

@@ -29,13 +29,6 @@ export interface LessonProgressRecord {
   updated_at: string | null;
 }
 
-export interface RecentLessonRecord {
-  id: string;
-  title: string;
-  language_code: string;
-  encountered_at: string;
-}
-
 @Injectable()
 export class LessonsService {
   constructor(private readonly supabaseService: SupabaseService) {}
@@ -49,64 +42,6 @@ export class LessonsService {
 
     if (error) throw error;
     return data ?? [];
-  }
-
-  async listRecentLessonsForUser(
-    userId: string,
-    language: string,
-    limit = 5,
-  ): Promise<RecentLessonRecord[]> {
-    const safeLimit = Math.min(Math.max(1, limit), 20);
-    const client = this.progressClient();
-    const { data, error } = await client
-      .from('lesson_progress')
-      .select('lesson_id, updated_at, lessons!inner(id, title, language_code)')
-      .eq('user_id', userId)
-      .eq('lessons.language_code', language)
-      .order('updated_at', { ascending: false })
-      .limit(safeLimit);
-
-    if (error) throw error;
-    if (!Array.isArray(data)) return [];
-
-    const rows = data as unknown[];
-    return rows.flatMap((value: unknown) => {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        return [];
-      }
-
-      const row = value as Record<string, unknown>;
-      const related = row['lessons'];
-      const lesson: unknown = Array.isArray(related)
-        ? (related as unknown[])[0]
-        : related;
-      if (!lesson || typeof lesson !== 'object' || Array.isArray(lesson)) {
-        return [];
-      }
-
-      const lessonRow = lesson as Record<string, unknown>;
-      const id = lessonRow['id'];
-      const title = lessonRow['title'];
-      const languageCode = lessonRow['language_code'];
-      const encounteredAt = row['updated_at'];
-      if (
-        typeof id !== 'string' ||
-        typeof title !== 'string' ||
-        typeof languageCode !== 'string' ||
-        typeof encounteredAt !== 'string'
-      ) {
-        return [];
-      }
-
-      return [
-        {
-          id,
-          title,
-          language_code: languageCode,
-          encountered_at: encounteredAt,
-        },
-      ];
-    });
   }
 
   async getLesson(id: string): Promise<LessonRecord> {
