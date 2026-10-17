@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { VocabularyResultItem } from '../hobby-tags/hobby-tags.service';
-import { LessonRecord } from '../lessons/lessons.service';
+import { RecentLessonRecord } from '../lessons/lessons.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { LessonsService } from '../lessons/lessons.service';
@@ -68,22 +68,31 @@ export class LearnerKnowledgeService {
     );
 
     // Fetch data from various sources concurrently
-    const [flashcards, vocabulary, lessons, momentsCounts] = await Promise.all([
-      this.flashcardsService
-        .getFlashcards(userId, undefined, 50)
-        .catch(() => []),
-      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
-      this.lessonsService.listLessons().catch(() => []),
-      this.momentsService
-        .getLifetimeCounts(userId)
-        .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
-    ]);
+    const flashcardsPromise: Promise<Flashcard[]> = this.flashcardsService
+      .getFlashcards(userId, undefined, 50)
+      .catch(() => []);
+    const lessonsPromise: Promise<RecentLessonRecord[]> = this.lessonsService
+      .listRecentLessonsForUser(userId, language, 5)
+      .catch(() => []);
+
+    const [flashcards, vocabulary, lessons, activityCounts] = await Promise.all(
+      [
+        flashcardsPromise,
+        this.hobbyTagsService
+          .getUserVocabulary(userId, language)
+          .catch(() => []),
+        lessonsPromise,
+        this.momentsService
+          .getUserLearningCounts(userId)
+          .catch(() => ({ moments: 0, corrections: 0 })),
+      ],
+    );
 
     const globalKnowledgeItems = new Map<string, KnowledgeItem>();
     const languageKnowledgeItems = new Map<string, KnowledgeItem>();
 
     // Process flashcards to populate knowledge items
-    (flashcards as Flashcard[]).forEach((f) => {
+    flashcards.forEach((f) => {
       let status: KnowledgeItem['status'] = 'new';
       if (f.repetitions > 5 && (f.srs_level || 0) > 3) {
         status = 'known';
@@ -100,18 +109,16 @@ export class LearnerKnowledgeService {
         confidenceScore: f.easiness_factor,
         errorFrequency: status === 'struggling' ? 0.5 : 0,
         sourceIds: { flashcardId: f.id },
-        lastEncounteredAt: new Date(f.next_review_at),
+        lastEncounteredAt: new Date(f.created_at),
       });
     });
 
     // Extract recent encounters from lessons
-    const recentEncounters: RecentEncounter[] = lessons
-      .slice(0, 5)
-      .map((l: LessonRecord) => ({
-        topic: l.title || 'Unknown Topic',
-        source: 'lesson',
-        timestamp: new Date(l.created_at || Date.now()),
-      }));
+    const recentEncounters: RecentEncounter[] = lessons.map((l) => ({
+      topic: l.title || 'Unknown Topic',
+      source: 'lesson' as const,
+      timestamp: new Date(l.encountered_at),
+    }));
 
     // Process vocabulary from hobby tags
     if (Array.isArray(vocabulary)) {
@@ -148,11 +155,11 @@ export class LearnerKnowledgeService {
       language,
       globalProficiency: { level: baseLevel },
       globalSkills: {
-        speaking: calculateSkill(0.2, momentsCounts.moments, 50),
+        speaking: calculateSkill(0.2, activityCounts.moments, 50),
         listening: calculateSkill(0.2, lessons.length, 20),
-        reading: calculateSkill(0.2, momentsCounts.translations, 100),
-        writing: calculateSkill(0.2, momentsCounts.moments, 50),
-        grammar: calculateSkill(0.2, momentsCounts.corrections, 40),
+        reading: 0.2,
+        writing: calculateSkill(0.2, activityCounts.moments, 50),
+        grammar: calculateSkill(0.2, activityCounts.corrections, 40),
         vocabulary: calculateSkill(0.2, flashcards.length, 200),
       },
       globalKnowledgeItems,

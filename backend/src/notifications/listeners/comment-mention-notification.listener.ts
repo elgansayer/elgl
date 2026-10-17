@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
 import { MomentCommentEvent } from '../events/notification.events';
 
-const MAX_MENTION_RECIPIENTS = 20;
+const MAX_MENTION_RECIPIENTS = 10;
 
 @Injectable()
 export class CommentMentionNotificationListener {
+  private readonly logger = new Logger(CommentMentionNotificationListener.name);
+
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly notificationPreferencesService: NotificationPreferencesService,
@@ -37,11 +39,10 @@ export class CommentMentionNotificationListener {
             'push',
           );
       } catch {
-        // Mention notifications are best-effort, but preference lookup failures
-        // must fail closed rather than bypassing a user's notification choices.
-        console.warn(
-          'Moment mention preference lookup failed; notification suppressed.',
-        );
+        // Notification preferences are a privacy boundary. Fail closed when
+        // their authoritative state is unavailable and avoid logging user IDs
+        // or provider errors from a private comment-notification path.
+        this.logger.warn('comment_mention_preferences_unavailable');
         continue;
       }
 
@@ -58,9 +59,10 @@ export class CommentMentionNotificationListener {
           payload.commentPreview,
         );
       } catch {
-        // Isolate recipients so a transient failure for one mention never
-        // prevents delivery to the remaining bounded recipient set.
-        console.warn('Moment mention notification delivery failed.');
+        // A storage/provider failure for one mention must not prevent other
+        // mentioned recipients from being processed. Keep diagnostics free of
+        // user IDs, Moment IDs and comment text.
+        this.logger.warn('comment_mention_delivery_failed');
       }
     }
   }

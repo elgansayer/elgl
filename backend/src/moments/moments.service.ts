@@ -63,6 +63,33 @@ interface MomentCommentRow {
 
 @Injectable()
 export class MomentsService {
+  async getUserLearningCounts(userId: string): Promise<{
+    corrections: number;
+    moments: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const [
+      { data: momentsData, error: momentsError },
+      { data: correctionsData, error: correctionsError },
+    ] = await Promise.all([
+      supabase.from('moments').select('id').eq('user_id', userId),
+      supabase
+        .from('moment_comments')
+        .select('id')
+        .eq('user_id', userId)
+        .not('correction_payload', 'is', null),
+    ]);
+
+    if (momentsError || correctionsError) {
+      throw new Error('Failed to fetch user learning counts');
+    }
+
+    return {
+      corrections: correctionsData?.length ?? 0,
+      moments: momentsData?.length ?? 0,
+    };
+  }
+
   async getLifetimeCounts(_userId?: string): Promise<{
     translations: number;
     corrections: number;
@@ -460,20 +487,24 @@ export class MomentsService {
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    const profilesResponse = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url')
-      .in('id', authorIds);
+    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
+    const [profilesResponse, likesResponse] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', authorIds),
+      supabase
+        .from('moment_likes')
+        .select('moment_id')
+        .eq('user_id', userId)
+        .in('moment_id', momentIdsList),
+    ]);
+
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 
-    const likesResponse = await supabase
-      .from('moment_likes')
-      .select('moment_id')
-      .eq('user_id', userId)
-      .in('moment_id', momentIdsList);
     const myLikes = likesResponse.data as MomentLikeRow[] | null;
     const likeRows = myLikes ?? [];
     const likedSet = new Set<string>(likeRows.map((l) => l.moment_id));
@@ -563,19 +594,23 @@ export class MomentsService {
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    const profilesResponse = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url')
-      .in('id', authorIds);
+    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
+    const [profilesResponse, likesResponse] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', authorIds),
+      supabase
+        .from('moment_likes')
+        .select('moment_id')
+        .eq('user_id', userId)
+        .in('moment_id', momentIdsList),
+    ]);
+
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileMap = new Map<string, UserProfileRow>();
     (profiles ?? []).forEach((p) => profileMap.set(p.id, p));
 
-    const likesResponse = await supabase
-      .from('moment_likes')
-      .select('moment_id')
-      .eq('user_id', userId)
-      .in('moment_id', momentIdsList);
     const myLikes = likesResponse.data as MomentLikeRow[] | null;
     const likedSet = new Set<string>((myLikes ?? []).map((l) => l.moment_id));
 
@@ -1078,21 +1113,24 @@ export class MomentsService {
     }
 
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
-    const profilesResponse = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url')
-      .in('id', authorIds);
+    const commentIds = commentRows.map((c) => c.id);
+
+    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
+    const [profilesResponse, { data: votesData }] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', authorIds),
+      supabase
+        .from('moment_comment_votes')
+        .select('comment_id, user_id, vote')
+        .in('comment_id', commentIds),
+    ]);
+
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
-
-    // Fetch vote data for these comments
-    const commentIds = commentRows.map((c) => c.id);
-    const { data: votesData } = await supabase
-      .from('moment_comment_votes')
-      .select('comment_id, user_id, vote')
-      .in('comment_id', commentIds);
 
     const votesMap = new Map<string, { up: number; down: number }>();
     const myVotesMap = new Map<string, string>();

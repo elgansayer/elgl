@@ -16,16 +16,20 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
-from openhands_factory.issue_admission import DurableAdmissionGate, ReviewAdmissionGate
+from openhands_factory.issue_admission import (
+    DurableAdmissionGate,
+    ReviewAdmissionGate,
+    ReviewHeadStabilityGate,
+)
 from openhands_factory.models import Job
 
 MAX_PROVIDER_CANDIDATES_PER_PHASE = 2
 MAX_GLOBAL_AGENT_CONCURRENCY = 2
-MAX_REVIEW_CONCURRENCY = 1
+MAX_REVIEW_CONCURRENCY = 2
 REVIEW_INTERVAL_SECONDS = 60 * 60
-REVIEWS_PER_INTERVAL = 2
+REVIEWS_PER_INTERVAL = 36
 AGENT_ROUTE_INTERVAL_SECONDS = 60 * 60
-AGENT_ROUTES_PER_INTERVAL = 6
+AGENT_ROUTES_PER_INTERVAL = 48
 AGENT_ROUTES_PER_TASK_PER_INTERVAL = 4
 _RESOURCE_RETRY_SECONDS = 60
 _CODE_MUTATING_PHASES = {
@@ -47,6 +51,19 @@ def _positive_int_environment(name: str, default: int) -> int:
         raise ValueError(f"{name} must be an integer") from error
     if value <= 0:
         raise ValueError(f"{name} must be positive")
+    return value
+
+
+def _non_negative_int_environment(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError(f"{name} must be an integer") from error
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative")
     return value
 
 
@@ -116,12 +133,23 @@ def conservative_policy_enabled() -> bool:
 class ConservativeAgentRouter(AgentRouter):
     """Bound expensive execution without weakening the existing Factory pipeline."""
 
-    def __init__(self, *args: Any, enabled: bool | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        enabled: bool | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
         self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
-        self._review_slots = BoundedSemaphore(MAX_REVIEW_CONCURRENCY)
+        self._review_slots = BoundedSemaphore(
+            _positive_int_environment(
+                "FACTORY_REVIEW_LANE_MAX_CONCURRENT",
+                MAX_REVIEW_CONCURRENCY,
+            )
+        )
         self._review_admission: ReviewAdmissionGate | None = None
+        self._review_head_stability: ReviewHeadStabilityGate | None = None
         self._agent_route_admission: DurableAdmissionGate | None = None
         self._agent_routes_per_task_interval = AGENT_ROUTES_PER_TASK_PER_INTERVAL
         if self.conservative_enabled:
@@ -138,8 +166,21 @@ class ConservativeAgentRouter(AgentRouter):
             state_dir = self.capacity_store.path.parent
             self._review_admission = ReviewAdmissionGate(
                 state_dir / "review-admissions.json",
-                interval_seconds=REVIEW_INTERVAL_SECONDS,
-                max_admissions=REVIEWS_PER_INTERVAL,
+                interval_seconds=_positive_int_environment(
+                    "FACTORY_REVIEW_INTERVAL_SECONDS",
+                    REVIEW_INTERVAL_SECONDS,
+                ),
+                max_admissions=_positive_int_environment(
+                    "FACTORY_REVIEWS_PER_INTERVAL",
+                    REVIEWS_PER_INTERVAL,
+                ),
+            )
+            self._review_head_stability = ReviewHeadStabilityGate(
+                state_dir / "review-head-stability.json",
+                quiet_seconds=_non_negative_int_environment(
+                    "FACTORY_REVIEW_HEAD_STABILITY_SECONDS",
+                    0,
+                ),
             )
             self._agent_route_admission = DurableAdmissionGate(
                 state_dir / "agent-route-admissions.json",
@@ -161,6 +202,41 @@ class ConservativeAgentRouter(AgentRouter):
         candidates, health = super()._candidate_names(phase, job)
         if not self.conservative_enabled:
             return candidates, health
+
+        # Static policy is the safe starting order, but a 24/7 service must learn
+        # when that order no longer reflects the providers that actually finish
+        # work. Rank providers with enough phase-specific evidence by a smoothed
+        # completion rate. Unmeasured providers keep a neutral exploration score.
+        # This also makes a hot-deployed runtime self-correct while a root-owned
+        # production policy file is waiting for the next successful updater run.
+        if self.metrics_store is not None:
+            totals: dict[str, tuple[int, int]] = {}
+            snapshot = self.metrics_store.snapshot()
+            records = snapshot.get("providers", [])
+            if isinstance(records, list):
+                for record in records:
+                    if not isinstance(record, dict) or record.get("phase") != phase.value:
+                        continue
+                    provider = record.get("provider")
+                    calls = record.get("calls")
+                    successes = record.get("successes")
+                    if (
+                        not isinstance(provider, str)
+                        or not isinstance(calls, int)
+                        or not isinstance(successes, int)
+                    ):
+                        continue
+                    prior_calls, prior_successes = totals.get(provider, (0, 0))
+                    totals[provider] = (prior_calls + calls, prior_successes + successes)
+            configured_order = {name: index for index, name in enumerate(candidates)}
+
+            def observed_score(name: str) -> float:
+                calls, successes = totals.get(name, (0, 0))
+                if calls < 5:
+                    return 0.5
+                return (successes + 2) / (calls + 4)
+
+            candidates.sort(key=lambda name: (-observed_score(name), configured_order[name]))
 
         # Preserve independent review when possible before applying the provider
         # budget. Without this reorder, capping a route could retain the original
@@ -184,6 +260,33 @@ class ConservativeAgentRouter(AgentRouter):
     def _review_key(job: Job) -> str:
         pull_request = job.pull_request if job.pull_request is not None else job.task.identifier
         return f"pr-{pull_request}@{job.head_sha or 'unknown'}"
+
+    @staticmethod
+    def _review_identity(job: Job) -> str:
+        pull_request = job.pull_request if job.pull_request is not None else job.task.identifier
+        return f"pr-{pull_request}"
+
+    def _ensure_review_head_stable(self, job: Job, now: datetime) -> None:
+        """Avoid spending independent-review allowance on a moving external PR head."""
+
+        gate = self._review_head_stability
+        if gate is None or not gate.enabled or job.task.source != "github-pull-request":
+            return
+        if not job.head_sha:
+            raise ProviderCapacityUnavailable(
+                "Independent review is waiting for an exact pull-request head SHA",
+                retry_after_seconds=_RESOURCE_RETRY_SECONDS,
+            )
+        retry_seconds = gate.defer_seconds(
+            self._review_identity(job),
+            job.head_sha,
+            now,
+        )
+        if retry_seconds > 0:
+            raise ProviderCapacityUnavailable(
+                "Independent review deferred while the pull-request head is still settling",
+                retry_after_seconds=retry_seconds,
+            )
 
     def _ensure_task_route_available(self, job: Job, now: datetime) -> None:
         """Prevent one troubled task from monopolising the hourly agent allowance."""
@@ -217,6 +320,22 @@ class ConservativeAgentRouter(AgentRouter):
                 retry_after_seconds=_gate_retry_seconds(gate, now),
             )
 
+    def _admit_review(self, job: Job, now: datetime) -> tuple[str, datetime] | None:
+        """Charge one exact-head review only when a provider is about to start."""
+
+        gate = self._review_admission
+        if gate is None:
+            return None
+        review_key = self._review_key(job)
+        if not gate.admit(review_key, now):
+            raise ProviderCapacityUnavailable(
+                "Independent PR review budget is exhausted "
+                f"({gate.max_admissions} reviews per configured interval or SHA already "
+                "admitted)",
+                retry_after_seconds=_gate_retry_seconds(gate, now),
+            )
+        return review_key, now
+
     def run(
         self,
         request: AgentRequest,
@@ -243,43 +362,54 @@ class ConservativeAgentRouter(AgentRouter):
                     "Global conservative agent-route budget is exhausted",
                     retry_after_seconds=_gate_retry_seconds(route_gate, now),
                 )
-            # Check task fairness before consuming a SHA-scoped review admission.
-            # Otherwise a task that already exhausted its route share could burn a
-            # review slot without ever starting a provider and delay that review for
-            # another full review window.
+            # Check task fairness before reserving review concurrency. Otherwise a
+            # task that already exhausted its route share could delay a useful review
+            # even though it cannot start a provider in this scheduling attempt.
             self._ensure_task_route_available(job, now)
             if request.phase is AgentPhase.CODE_REVIEW:
+                # External/provider-managed heads may publish several commits in a
+                # burst. Let the exact SHA settle before spending a subscription-backed
+                # review. Factory-owned issue PRs are intentionally not delayed.
+                self._ensure_review_head_stable(job, now)
                 if not self._review_slots.acquire(blocking=False):
                     raise ProviderCapacityUnavailable(
                         "Independent review concurrency is full",
                         retry_after_seconds=_RESOURCE_RETRY_SECONDS,
                     )
                 review_slot_acquired = True
-                if self._review_admission is not None and not self._review_admission.admit(
-                    self._review_key(job), now
-                ):
-                    raise ProviderCapacityUnavailable(
-                        "Independent PR review budget is exhausted "
-                        f"({REVIEWS_PER_INTERVAL} reviews/hour or SHA already admitted)",
-                        retry_after_seconds=_gate_retry_seconds(self._review_admission, now),
-                    )
 
             # A logical route can examine provider health/capacity and still start no
             # paid agent process at all. Do not consume durable allowance for those
             # control-plane-only attempts. AgentRouter invokes prepare_attempt only
             # after a provider slot is successfully reserved and immediately before
-            # provider.run(); wrapping it makes the admission count real provider
-            # starts, including distinct fallback starts, rather than scheduler calls.
+            # provider.run(); wrapping it makes both route and review admissions count
+            # real provider starts rather than scheduler calls.
             original_prepare_attempt = request.prepare_attempt
+            review_admitted = False
 
             def prepare_and_admit_provider_start() -> None:
+                nonlocal review_admitted
                 if original_prepare_attempt is not None:
                     original_prepare_attempt()
                 attempt_now = datetime.now(UTC)
                 # Re-check task fairness at the actual start boundary so concurrent
                 # work cannot race past the per-task allowance after the early check.
                 self._ensure_task_route_available(job, attempt_now)
-                self._admit_agent_route(request, job, attempt_now)
+                review_admission: tuple[str, datetime] | None = None
+                if request.phase is AgentPhase.CODE_REVIEW and not review_admitted:
+                    review_admission = self._admit_review(job, attempt_now)
+                try:
+                    self._admit_agent_route(request, job, attempt_now)
+                except Exception:
+                    # The route gate can become full after the early availability
+                    # check. Roll back this attempt's exact review admission so a
+                    # provider-capacity race cannot spend review budget without
+                    # starting any provider process.
+                    if review_admission is not None and self._review_admission is not None:
+                        self._review_admission.revoke(*review_admission, now=attempt_now)
+                    raise
+                if review_admission is not None:
+                    review_admitted = True
 
             routed_request = replace(
                 request,
