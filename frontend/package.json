@@ -8,8 +8,9 @@
     "test:help-about-data": "node --test scripts/generate-help-about-data.test.mjs",
     "prestart": "npm run generate:help-about",
     "start": "ng serve",
-    "prebuild": "npm run generate:help-about",
+    "prebuild": "npm run generate:help-about && npm run test:build-config",
     "build": "ng build",
+    "test:build-config": "node --test scripts/build-config.test.mjs",
     "watch": "ng build --watch --configuration development",
     "pretest": "npm run test:help-about-data",
     "test": "ng test --no-watch",
@@ -46,7 +47,6 @@
   },
   "packageManager": "npm@10.9.8",
   "dependencies": {
-    "@angular/animations": "22.1.3",
     "@angular/cdk": "^22.1.3",
     "@angular/common": "^22.1.3",
     "@angular/compiler": "^22.1.3",

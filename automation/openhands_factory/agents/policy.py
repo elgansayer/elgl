@@ -56,4 +56,18 @@ class ConfigRoutingPolicy(RoutingPolicy):
             eligible = [name for name in eligible if name not in used] + [
                 name for name in eligible if name in used
             ]
+            # Keep the ordinary CI-repair preference list cheap-first even when a
+            # provider is unhealthy. Once two configured providers have actually
+            # started for this task, promote unused Codex into the next bounded
+            # candidate window so a fresh repair sequence can reach it inside the
+            # four-start budget.
+            attempted = used.intersection(preferred)
+            if (
+                phase is AgentPhase.CI_REPAIR
+                and len(attempted) >= 2
+                and "codex" in eligible
+                and "codex" not in attempted
+            ):
+                eligible.remove("codex")
+                eligible.insert(0, "codex")
         return [*eligible, *emergency]

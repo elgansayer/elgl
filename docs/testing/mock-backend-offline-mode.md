@@ -10,12 +10,12 @@ Mock fixtures are an explicit local/test/demo facility. They are never a depende
 
 The backend accepts these `MOCK_BACKEND_MODE` values:
 
-| Value | Meaning |
-| --- | --- |
+| Value      | Meaning                                |
+| ---------- | -------------------------------------- |
 | `disabled` | Default. Mock backend behavior is off. |
-| `local` | Explicit local development profile. |
-| `test` | Explicit automated-test profile. |
-| `demo` | Explicit offline/demo profile. |
+| `local`    | Explicit local development profile.    |
+| `test`     | Explicit automated-test profile.       |
+| `demo`     | Explicit offline/demo profile.         |
 
 Fixture-enabled values are accepted only with `NODE_ENV=development` or `NODE_ENV=test`. `NODE_ENV=production` and `NODE_ENV=provision` refuse to start when an enabled mock mode is supplied. Unknown values also fail startup validation.
 
@@ -40,6 +40,12 @@ The same seed produces byte-stable fixture snapshots. A different seed produces 
 When mock mode is enabled, backend startup logs include the numeric seed, seed identifier, generator version and fixed fixture epoch. The seed is deliberately numeric and non-secret; fixture diagnostics must never contain credentials or production identifiers. Backend tests can read the same information through `MOCK_FIXTURE_DIAGNOSTICS` or `getMockFixtureDiagnostics()`.
 
 `buildMockFixtureSnapshot(seed)` is a pure reset boundary: each call returns fresh arrays and objects. Rebuilding with the same seed restores the exact initial scenario even if a previous consumer mutated its local snapshot.
+
+## Schema-driven response factories
+
+MB-004 adds a second reusable primitive on top of the deterministic seed: every documented public `2xx` JSON response in the NestJS OpenAPI document gets a deterministic factory automatically. Mock-mode tests can list, generate and validate these response fixtures through `/api/mock/schema-fixtures/*`; production/non-mock clients receive `404`.
+
+See [OpenAPI-driven mock response factories](./mock-openapi-fixture-factories.md) for the API, override rules, whole-catalogue validation, compile-time typed-factory helper and frontend integration client.
 
 ## Client activation and indicator
 
@@ -81,6 +87,7 @@ The ordinary backend and frontend test suites additionally cover runtime validat
 4. Confirm the client indicator is visible whenever fixture mode is active.
 5. Record the startup `seedId` in test failure diagnostics so a scenario can be replayed exactly.
 6. Add future scenario payloads behind the same boundary and build them from `DeterministicFixtureGenerator` rather than adding per-feature fallback flags.
+7. Prefer the OpenAPI response-factory registry when a scenario needs ordinary API-shaped payloads, and use typed named factories only when domain-specific defaults are required.
 
 ## Rollback
 

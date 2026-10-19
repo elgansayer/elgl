@@ -56,6 +56,7 @@ class AgentFailureKind(StrEnum):
     REPOSITORY_FAILURE = "repository_failure"
     POLICY_FAILURE = "policy_failure"
     INTERNAL_FACTORY_FAILURE = "internal_factory_failure"
+    CANCELLED = "cancelled"
 
 
 @dataclass
@@ -81,6 +82,8 @@ class AgentResult:
     model: str | None = None
     attempt: int = 1
     fallback_reason: str | None = None
+    captured_output_chars: int | None = None
+    output_truncated: bool | None = None
 
 
 @dataclass

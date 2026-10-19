@@ -1,0 +1,44 @@
+[
+  {
+    "id": "verified-runtime-rollback",
+    "objective": "Make a failed runtime deployment recover to the previous verified package, provider policy and worker image, rather than only restarting services.",
+    "evidence_required": "Inspect the deployed updater and prove the failure path in an isolated harness before changing it.",
+    "acceptance": "Inject install, image and startup failures; restore the exact prior verified runtime without losing jobs or exposing credentials. No live destructive failure injection."
+  },
+  {
+    "id": "provider-generation-canaries",
+    "objective": "Recover unused but due provider circuits with small schema-validated real generation canaries, using existing shared capacity and allowance accounting.",
+    "evidence_required": "Compare authenticated catalogue health with actual phase-model generation outcomes. Exclude operator cancellations and retired-model records.",
+    "acceptance": "One bounded canary per due provider, no repeated quota probes before cooldown, no sibling-state loss and no manufactured healthy status."
+  },
+  {
+    "id": "repair-family-playbooks",
+    "objective": "Turn repeated font, design-preview and invalid-output failures into versioned, tested, narrowly applicable repair strategies.",
+    "evidence_required": "Use failing job evidence and inspect the current branch and main before proposing any edit.",
+    "acceptance": "Add failure fixtures and regression tests. Never fake preview approval, delete failure history or reset unrelated jobs."
+  },
+  {
+    "id": "application-throughput-attribution",
+    "objective": "Reliably distinguish application merges from factory maintenance, documentation, duplicates and unknown changes; measure CI wait and repair time.",
+    "evidence_required": "Preserve known components in lightweight inventories and enrich only missing recent merge metadata with bounded GitHub calls.",
+    "acceptance": "Report rolling application merges/hour, model time/merge and CI wait; show unknowns explicitly and test missing or stale metadata."
+  },
+  {
+    "id": "measured-scheduler-fairness",
+    "objective": "Reduce head-of-line blocking between cheap merges, reviews and heavy verification without exceeding the shared host resource budget.",
+    "evidence_required": "Measure queue and gate waits; reproduce starvation with deterministic scheduling tests.",
+    "acceptance": "Demonstrate better completed application throughput under a replayed workload with equal or lower resource use; retain exact-head merge checks and exclusive heavy-build admission."
+  },
+  {
+    "id": "targeted-verification-evidence",
+    "objective": "Remove duplicated or unaffected verification while retaining meaningful changed-path coverage and full main integration tests.",
+    "evidence_required": "Identify actual repeated test executions and prove a replacement's affected-path mapping with fixtures.",
+    "acceptance": "No blanket test removal; preserve security, database, cross-workspace and review-mutated-head coverage. Measure saved CI and model minutes."
+  },
+  {
+    "id": "model-routing-evaluations",
+    "objective": "Improve phase-specific model choice using current-model success, latency, quota and validated output evidence, with bounded exploration.",
+    "evidence_required": "Replay historical failure fixtures and consult account model catalogues. Do not assume a newer model is available or better.",
+    "acceptance": "Version routing changes, independently review them, compare outcomes and retain a known-good policy. Never bypass allowance accounting or spawn untracked model sessions."
+  }
+]

@@ -1,4 +1,10 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
+import { ChatService } from '../../services/chat.service';
+import { FlashcardService } from '../../services/flashcard.service';
+import { I18nService } from '../../services/i18n.service';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from './visual-diff.component';
 
 describe('VisualDiffComponent', () => {
@@ -8,12 +14,34 @@ describe('VisualDiffComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [VisualDiffComponent],
+      providers: [
+        {
+          provide: FlashcardService,
+          useValue: { createFlashcard: vi.fn().mockResolvedValue(undefined) },
+        },
+        {
+          provide: I18nService,
+          useValue: {
+            currentLang: signal('en'),
+            translate: (key: string) => key,
+          },
+        },
+        {
+          provide: ChatService,
+          useValue: { translateText: vi.fn().mockResolvedValue({ translated_text: 'Translated' }) },
+        },
+        {
+          provide: TranslationCacheService,
+          useValue: {
+            get: vi.fn().mockReturnValue(null),
+            set: vi.fn(),
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VisualDiffComponent);
     component = fixture.componentInstance;
-
-    // Set initial required inputs before detectChanges()
     fixture.componentRef.setInput('original', '');
     fixture.componentRef.setInput('corrected', '');
     fixture.detectChanges();
@@ -53,19 +81,69 @@ describe('VisualDiffComponent', () => {
     expect(segments.some((segment) => segment.type === 'added')).toBe(false);
   });
 
-  it('should treat case differences as unchanged', () => {
+  it('should treat case differences as unchanged while preserving corrected casing', () => {
     setInputs('Hello', 'hello');
 
     const segments = component.segments();
-    expect(segments.length).toBe(1);
-    expect(segments[0].type).toBe('unchanged');
-    expect(segments[0].text).toBe('hello');
+    expect(segments).toHaveLength(1);
+    expect(segments[0]?.type).toBe('unchanged');
+    expect(segments[0]?.text).toBe('hello');
   });
 
-  it('should handle punctuation changes', () => {
+  it('should handle punctuation substitutions as removals and additions', () => {
     setInputs('Hello!', 'Hello?');
 
     const segments = component.segments();
+    expect(segments.some((segment) => segment.type === 'removed' && segment.text === '!')).toBe(
+      true,
+    );
+    expect(segments.some((segment) => segment.type === 'added' && segment.text === '?')).toBe(true);
+  });
+
+  it('should align multiple consecutive replacements without the old lookahead heuristic', () => {
+    const original = 'I really like learning Japanese every day';
+    const corrected = 'I really enjoy studying Japanese every day';
+    setInputs(original, corrected);
+
+    const segments = component.segments();
+    const removedText = segments
+      .filter((segment) => segment.type === 'removed')
+      .map((segment) => segment.text)
+      .join('');
+    const addedText = segments
+      .filter((segment) => segment.type === 'added')
+      .map((segment) => segment.text)
+      .join('');
+
+    expect(removedText).toContain('like');
+    expect(removedText).toContain('learning');
+    expect(addedText).toContain('enjoy');
+    expect(addedText).toContain('studying');
+    expect(
+      segments
+        .filter((segment) => segment.type !== 'removed')
+        .map((segment) => segment.text)
+        .join(''),
+    ).toBe(corrected);
+  });
+
+  it('should preserve repeated tokens while producing a valid edit sequence', () => {
+    const original = 'very very good';
+    const corrected = 'very good very';
+    setInputs(original, corrected);
+
+    const segments = component.segments();
+    const originalReconstruction = segments
+      .filter((segment) => segment.type !== 'added')
+      .map((segment) => segment.text)
+      .join('');
+    const correctedReconstruction = segments
+      .filter((segment) => segment.type !== 'removed')
+      .map((segment) => segment.text)
+      .join('');
+
+    expect(originalReconstruction).toBe(original);
+    expect(correctedReconstruction).toBe(corrected);
     expect(segments.some((segment) => segment.type === 'removed')).toBe(true);
     expect(segments.some((segment) => segment.type === 'added')).toBe(true);
   });
@@ -81,48 +159,80 @@ describe('VisualDiffComponent', () => {
     }
   });
 
-  it('should preserve the longest common sequence after a middle deletion', () => {
-    setInputs('one two three four five', 'one three four five');
-
-    const changedSegments = component.segments().filter((segment) => segment.type !== 'unchanged');
-    expect(changedSegments).toEqual([
-      { type: 'removed', text: 'two', index: 2 },
-      { type: 'removed', text: ' ', index: 3 },
-    ]);
-  });
-
-  it('should fall back to a faithful coarse diff when the edit distance is excessive', () => {
-    const original = Array.from({ length: 600 }, (_, index) => `old${index}`).join(' ');
-    const corrected = Array.from({ length: 600 }, (_, index) => `new${index}`).join(' ');
-    setInputs(original, corrected);
-
-    expect(component.segments()).toEqual([
-      { type: 'removed', text: original, index: 0 },
-      { type: 'added', text: corrected, index: 1 },
-    ]);
-  });
-
-  it('should handle non-Latin text (Arabic)', () => {
-    const original = 'مرحبا';
-    const corrected = 'مرحبا';
-    setInputs(original, corrected);
+  it('should handle non-Latin text', () => {
+    setInputs('مرحبا بالعالم', 'مرحبا بالعالم');
 
     const segments = component.segments();
     expect(segments.length).toBeGreaterThan(0);
     expect(segments.every((segment) => segment.type === 'unchanged')).toBe(true);
   });
 
-  it('should render added spans in the DOM', () => {
+  it('preserves complete long texts with a bounded replacement instead of a quadratic diff', () => {
+    const original = 'old word '.repeat(600);
+    const corrected = 'new text '.repeat(600);
+    setInputs(original, corrected);
+
+    expect(component.segments()).toEqual([
+      { type: 'removed', text: original, index: 0 },
+      { type: 'added', text: corrected, index: 1 },
+    ]);
+    expect(fixture.nativeElement.querySelectorAll('[data-type]')).toHaveLength(2);
+  });
+
+  it('keeps identical long text unchanged without rendering a token for every word', () => {
+    const text = '同じ文章 unchanged '.repeat(600);
+    setInputs(text, text);
+
+    expect(component.segments()).toEqual([{ type: 'unchanged', text, index: 0 }]);
+    expect(fixture.nativeElement.querySelectorAll('[data-type]')).toHaveLength(1);
+  });
+
+  it('should render added text using the success visual contract', () => {
     setInputs('Hello', 'Hello World');
 
     const addedEls = fixture.nativeElement.querySelectorAll('[data-type="added"]');
     expect(addedEls.length).toBeGreaterThan(0);
+    expect(
+      Array.from(addedEls).every((element) =>
+        (element as HTMLElement).classList.contains('text-success'),
+      ),
+    ).toBe(true);
   });
 
-  it('should render removed spans in the DOM', () => {
+  it('should render removed text with danger styling and strikethrough', () => {
     setInputs('Hello World', 'Hello');
 
     const removedEls = fixture.nativeElement.querySelectorAll('[data-type="removed"]');
     expect(removedEls.length).toBeGreaterThan(0);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('text-danger'),
+      ),
+    ).toBe(true);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('line-through'),
+      ),
+    ).toBe(true);
+  });
+
+  it('should render additions and removals with semantic HTML', () => {
+    setInputs('Hello old world', 'Hello new world');
+
+    const addedEls = fixture.nativeElement.querySelectorAll('ins[data-type="added"]');
+    const removedEls = fixture.nativeElement.querySelectorAll('del[data-type="removed"]');
+
+    expect(addedEls.length).toBeGreaterThan(0);
+    expect(removedEls.length).toBeGreaterThan(0);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('text-danger'),
+      ),
+    ).toBe(true);
+    expect(
+      Array.from(removedEls).every((element) =>
+        (element as HTMLElement).classList.contains('line-through'),
+      ),
+    ).toBe(true);
   });
 });

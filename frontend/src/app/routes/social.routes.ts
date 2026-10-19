@@ -102,6 +102,12 @@ export const socialRoutes: Routes = [
     title: 'Event Calendar - HelloTalk',
   },
   {
+    path: 'events/:eventId',
+    loadComponent: () =>
+      import('../components/event-detail/event-detail.component').then((m) => m.EventDetailComponent),
+    title: 'Event - HelloTalk',
+  },
+  {
     path: 'language-parties',
     redirectTo: 'community/language-parties',
     pathMatch: 'full',
@@ -115,8 +121,7 @@ export const socialRoutes: Routes = [
     path: 'business-profile',
     loadComponent: () =>
       import('../components/business-profile/business-profile.component').then(
-        (m) => m.BusinessProfileComponent,
-      ),
+        (m) => m.BusinessProfileComponent),
     title: 'Business Profile - HelloTalk',
   },
 ];

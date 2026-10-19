@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal, cast
@@ -182,7 +183,7 @@ class AgentsConfig(BaseModel):
                 enabled=True,
                 command="claude",
                 auth_mode="subscription",
-                model="fable",
+                model="sonnet",
                 credential_paths=[".claude", ".claude.json"],
                 runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
                 phase_models={
@@ -191,9 +192,9 @@ class AgentsConfig(BaseModel):
                     "security_review": "opus",
                     "implementation": "sonnet",
                     "quality_repair": "haiku",
-                    "code_review": "haiku",
+                    "code_review": "sonnet",
                     "ci_repair": "haiku",
-                    "general_action": "fable",
+                    "general_action": "haiku",
                 },
             ),
             "codex": ProviderConfig(
@@ -209,18 +210,18 @@ class AgentsConfig(BaseModel):
                 command="agy",
                 cli_variant="antigravity",
                 auth_mode="subscription",
-                model="gemini-3.1-pro-high",
+                model="gemini-3.8-flash-high",
                 credential_paths=[".gemini"],
                 runtime_paths=[".local/bin", ".npm-global"],
                 phase_models={
-                    "planning": "gemini-3.1-pro-high",
-                    "architecture": "gemini-3.1-pro-high",
-                    "security_review": "gemini-3.1-pro-high",
-                    "implementation": "gemini-3.1-pro-high",
-                    "quality_repair": "gemini-3.7-flash-low",
-                    "code_review": "gemini-3.7-flash-low",
-                    "ci_repair": "gemini-3.7-flash-low",
-                    "general_action": "gemini-3.7-flash-low",
+                    "planning": "gemini-3.8-flash-high",
+                    "architecture": "gemini-3.8-flash-high",
+                    "security_review": "gemini-3.8-flash-high",
+                    "implementation": "gemini-3.8-flash-high",
+                    "quality_repair": "gemini-3.8-flash-low",
+                    "code_review": "gemini-3.8-flash-medium",
+                    "ci_repair": "gemini-3.8-flash-low",
+                    "general_action": "gemini-3.8-flash-low",
                 },
             ),
             "opencode": ProviderConfig(
@@ -282,6 +283,22 @@ class AgentsConfig(BaseModel):
                 normalised_providers[name] = provider
                 continue
             normalised_provider = dict(provider)
+            if name == "claude":
+                # Root-managed production configuration can lag the package during
+                # a rolling deployment. Fable now requires separate usage credits,
+                # so migrate that retired alias at load time until the root updater
+                # installs the current Sonnet/Haiku configuration.
+                migrating_fable = normalised_provider.get("model") == "fable"
+                if migrating_fable:
+                    normalised_provider["model"] = "sonnet"
+                phase_models = normalised_provider.get("phase_models")
+                if isinstance(phase_models, dict):
+                    migrated_phase_models = dict(phase_models)
+                    if migrated_phase_models.get("general_action") == "fable":
+                        migrated_phase_models["general_action"] = "haiku"
+                    if migrating_fable and migrated_phase_models.get("code_review") == "haiku":
+                        migrated_phase_models["code_review"] = "sonnet"
+                    normalised_provider["phase_models"] = migrated_phase_models
             normalised_provider.setdefault(
                 "transport", "openhands-sdk" if name == "openhands" else "cli"
             )
@@ -430,6 +447,29 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    # Provider sessions are relatively light, while frontend verification is
+    # separately serialised through the exclusive side of HostResourceGate.
+    # Keep this explicit so a larger host can use otherwise-idle CPU and memory
+    # without coupling agent concurrency to cheap control-plane workers.
+    host_agent_concurrency: int = 2
+    max_open_pull_requests: int = 40
+    max_queued_ci: int = 12
+    pull_request_history_limit: int = 2_000
+    lane_wip_limits: dict[str, int] = Field(
+        default_factory=lambda: {"architect": 1, "dependency": 12, "factory": 8}
+    )
+    component_wip_limits: dict[str, int] = Field(
+        default_factory=lambda: {
+            "admin-portal": 6,
+            "automation": 4,
+            "backend": 12,
+            "ci": 6,
+            "database": 4,
+            "docs": 6,
+            "frontend": 12,
+            "multi": 8,
+        }
+    )
     # Zero preserves the historical unlimited admission behaviour. Production can
     # set 3600/1 to admit exactly one newly discovered GitHub issue per hour while
     # allowing in-flight implementation, review, CI repair, and PR work to continue.
@@ -441,6 +481,7 @@ class FactoryConfig(BaseModel):
     provider_slot_wait_seconds: int = 30
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
+    storage_free_headroom_gib: float = 5
     # archive_worktree() writes a full worktree copy into recovery_dir on every
     # crash-recovery path with nothing that ever deletes them; left unpruned,
     # these silently consume the disk-space reserve minimum_free_disk_gib
@@ -457,6 +498,19 @@ class FactoryConfig(BaseModel):
     stall_alert_minutes: float = 20
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
+    maintenance_enabled: bool = False
+    maintenance_interval_seconds: int = Field(default=1800, ge=300, le=86400)
+    maintenance_daily_limit: int = Field(default=4, ge=1, le=24)
+    maintenance_analysis_timeout_seconds: int = Field(default=180, ge=30, le=600)
+    maintenance_peer_states: list[Path] = Field(default_factory=list)
+
+    @field_validator("maintenance_peer_states")
+    @classmethod
+    def safe_maintenance_peers(cls, value: list[Path]) -> list[Path]:
+        if len(value) > 8 or any(not path.is_absolute() for path in value):
+            raise ValueError("maintenance peer states require at most eight absolute paths")
+        return value
+
     # Quarantine (after FACTORY_MAX_CONSECUTIVE_FAILURES repeated identical
     # failures) is a bounded cooldown, not a dead end: a fully autonomous
     # deployment with no operator triage step needs a task to come back and
@@ -467,7 +521,12 @@ class FactoryConfig(BaseModel):
     quarantine_recovery_minutes: int = 30
     review_lane_first: bool = True
     review_reserve_provider_slot: bool = True
-    review_lane_max_concurrent: int = 1
+    review_lane_max_concurrent: int = 2
+    # Requiring a green push run for every intermediate main SHA serialises the
+    # merge queue behind a full CI cycle. Repositories with non-strict required
+    # checks can disable this extra fence while retaining exact-head PR CI,
+    # independent review, serial merge execution and GitHub branch rules.
+    require_green_main_between_merges: bool = True
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
@@ -503,6 +562,10 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "host_agent_concurrency",
+        "max_open_pull_requests",
+        "max_queued_ci",
+        "pull_request_history_limit",
         "new_issues_per_interval",
         "openai_max_concurrent_conversations",
         "opencode_max_concurrent_conversations",
@@ -516,6 +579,23 @@ class FactoryConfig(BaseModel):
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("factory limits must be positive")
+        return value
+
+    @field_validator("lane_wip_limits", "component_wip_limits")
+    @classmethod
+    def positive_wip_limits(cls, value: dict[str, int]) -> dict[str, int]:
+        if any(
+            not name or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", name) or limit <= 0
+            for name, limit in value.items()
+        ):
+            raise ValueError("Factory WIP maps require safe names and positive limits")
+        return value
+
+    @field_validator("pull_request_history_limit")
+    @classmethod
+    def bounded_pull_request_history(cls, value: int) -> int:
+        if value > 10_000:
+            raise ValueError("pull request history limit cannot exceed 10000")
         return value
 
     @field_validator("new_issue_interval_seconds")
@@ -546,6 +626,8 @@ class FactoryConfig(BaseModel):
             raise ValueError("budgets cannot be negative")
         if self.minimum_free_disk_gib < 1:
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
+        if self.storage_free_headroom_gib < 1:
+            raise ValueError("storage free headroom must be at least 1 GiB")
         if self.recovery_retention_hours <= 0:
             raise ValueError("recovery retention must be positive")
         if self.stall_alert_minutes <= 0:
@@ -573,6 +655,21 @@ class FactoryConfig(BaseModel):
 
         def boolean(name: str, default: bool) -> bool:
             return env.get(name, str(default)).lower() in {"1", "true", "yes"}
+
+        def limit_map(name: str, default: Mapping[str, int]) -> dict[str, int]:
+            raw = env.get(name, "").strip()
+            if not raw:
+                return dict(default)
+            parsed: dict[str, int] = {}
+            for item in raw.split(","):
+                key, separator, limit = item.strip().partition("=")
+                if not separator or not key or not limit:
+                    raise ConfigurationError(f"Invalid {name} entry: {item!r}")
+                try:
+                    parsed[key.casefold()] = int(limit)
+                except ValueError as error:
+                    raise ConfigurationError(f"Invalid {name} limit: {limit!r}") from error
+            return parsed
 
         import json
 
@@ -679,6 +776,29 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                host_agent_concurrency=int(env.get("FACTORY_HOST_AGENT_CONCURRENCY", "2")),
+                max_open_pull_requests=int(env.get("FACTORY_MAX_OPEN_PULL_REQUESTS", "40")),
+                max_queued_ci=int(env.get("FACTORY_MAX_QUEUED_CI", "12")),
+                pull_request_history_limit=int(
+                    env.get("FACTORY_PULL_REQUEST_HISTORY_LIMIT", "2000")
+                ),
+                lane_wip_limits=limit_map(
+                    "FACTORY_LANE_WIP_LIMITS",
+                    {"architect": 1, "dependency": 12, "factory": 8},
+                ),
+                component_wip_limits=limit_map(
+                    "FACTORY_COMPONENT_WIP_LIMITS",
+                    {
+                        "admin-portal": 6,
+                        "automation": 4,
+                        "backend": 12,
+                        "ci": 6,
+                        "database": 4,
+                        "docs": 6,
+                        "frontend": 12,
+                        "multi": 8,
+                    },
+                ),
                 new_issue_interval_seconds=int(env.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")),
                 new_issues_per_interval=int(env.get("FACTORY_NEW_ISSUES_PER_INTERVAL", "1")),
                 label_reconciliation_batch_size=int(
@@ -689,17 +809,34 @@ class FactoryConfig(BaseModel):
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
+                storage_free_headroom_gib=float(env.get("FACTORY_STORAGE_FREE_HEADROOM_GIB", "5")),
                 recovery_retention_hours=float(env.get("FACTORY_RECOVERY_RETENTION_HOURS", "72")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 stall_alert_minutes=float(env.get("FACTORY_STALL_ALERT_MINUTES", "20")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
+                maintenance_enabled=boolean("FACTORY_MAINTENANCE_ENABLED", False),
+                maintenance_interval_seconds=int(
+                    env.get("FACTORY_MAINTENANCE_INTERVAL_SECONDS", "1800")
+                ),
+                maintenance_daily_limit=int(env.get("FACTORY_MAINTENANCE_DAILY_LIMIT", "4")),
+                maintenance_analysis_timeout_seconds=int(
+                    env.get("FACTORY_MAINTENANCE_ANALYSIS_TIMEOUT_SECONDS", "180")
+                ),
+                maintenance_peer_states=[
+                    Path(value)
+                    for value in env.get("FACTORY_MAINTENANCE_PEER_STATES", "").split(",")
+                    if value
+                ],
                 quarantine_recovery_minutes=int(
                     env.get("FACTORY_QUARANTINE_RECOVERY_MINUTES", "30")
                 ),
                 review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
                 review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
-                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
+                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "2")),
+                require_green_main_between_merges=boolean(
+                    "FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES", True
+                ),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
