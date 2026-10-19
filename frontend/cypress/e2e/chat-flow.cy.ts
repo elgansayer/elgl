@@ -1,12 +1,27 @@
+type ExpectedConsoleErrorWindow = Window & {
+  __cypressExpectedConsoleError?: string;
+};
+
 describe('Chat Flow (Mocked)', () => {
   const roomId = 'room-123';
   const fixedTimestamp = '2026-08-28T12:00:00.000Z';
   let failNextSend = false;
   let sendAttempts = 0;
+  let centrifugoTokenAttempts = 0;
+
+  const visitChat = (path: string): void => {
+    cy.visit(path, {
+      onBeforeLoad(win) {
+        (win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError =
+          'Failed to initialise Centrifugo connection.';
+      },
+    });
+  };
 
   beforeEach(() => {
     failNextSend = false;
     sendAttempts = 0;
+    centrifugoTokenAttempts = 0;
 
     // Keep the chat flow deterministic and isolated from external services.
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
@@ -16,15 +31,21 @@ describe('Chat Flow (Mocked)', () => {
       'getBlockedAndBlockerIds',
     );
     cy.intercept('POST', '**/api/economy/daily-check-in', {
+      statusCode: 200,
       body: { claimed: false, coins_rewarded: 0, new_balance: 50 },
     }).as('dailyCheckIn');
+    cy.intercept('POST', '**/api/chat/token', (req) => {
+      centrifugoTokenAttempts += 1;
+      if (centrifugoTokenAttempts === 1) {
+        req.reply({ statusCode: 200, body: { token: '' } });
+        return;
+      }
 
-    // Mock the backend's supported rate-limit response so this product-flow test
-    // exercises the realtime degraded path without creating a real WebSocket.
-    cy.intercept('POST', '**/api/chat/token', {
-      statusCode: 429,
-      headers: { 'retry-after': '30' },
-      body: { message: 'Centrifugo unavailable in the mocked E2E environment' },
+      req.reply({
+        statusCode: 429,
+        headers: { 'retry-after': '30' },
+        body: { message: 'Centrifugo unavailable in the mocked E2E environment' },
+      });
     }).as('centrifugoUnavailable');
     cy.intercept('GET', '**/api/chat/rooms/*/members', { body: [] }).as('getRoomMembers');
     cy.intercept('GET', '**/api/chat/groups/*/members', { body: [] }).as('getGroupMembers');
@@ -105,29 +126,25 @@ describe('Chat Flow (Mocked)', () => {
   });
 
   it('displays the chat list and navigates to the selected room', () => {
-    cy.visit('/chat');
+    visitChat('/chat');
 
-    // The room and message may come from IndexedDB on a Cypress retry.
+    cy.wait('@getRooms');
     cy.contains('Language Exchange with Maria').should('be.visible').click();
 
     cy.url().should('include', `/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').should(($messages) => {
-      expect($messages.length).to.be.greaterThan(0);
-    });
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
   });
 
   it('sends a text message with the canonical room and message payload', () => {
-    let initialMessageCount = 0;
-    cy.visit(`/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').then(($messages) => {
-      initialMessageCount = $messages.length;
-      expect(initialMessageCount).to.be.greaterThan(0);
-    });
+    visitChat(`/chat/${roomId}`);
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
 
     const testMessage = 'I am doing great, thanks for asking!';
     cy.get('[data-testid="chat-message-input"]').type(`${testMessage}{enter}`);
 
-    cy.wait('@checkGrammar').its('request.body.text').should('eq', testMessage);
+    cy.wait('@checkGrammar')
+      .its('request.body.text')
+      .should('eq', testMessage);
     cy.wait('@sendMessage').then((interception) => {
       expect(interception.response?.statusCode).to.eq(201);
       expect(interception.request.body).to.deep.include({
@@ -137,65 +154,55 @@ describe('Chat Flow (Mocked)', () => {
       });
     });
 
-    cy.get('[data-testid="chat-message"]').should(($messages) => {
-      expect($messages).to.have.length(initialMessageCount + 1);
-    });
+    cy.get('[data-testid="chat-message"]').should('have.length', 2);
     cy.get('[data-testid="chat-message-input"]').should('have.value', '');
   });
 
   it('does not submit whitespace-only messages', () => {
-    let initialMessageCount = 0;
-    cy.visit(`/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').then(($messages) => {
-      initialMessageCount = $messages.length;
-      expect(initialMessageCount).to.be.greaterThan(0);
-    });
+    visitChat(`/chat/${roomId}`);
+    cy.get('[data-testid="chat-message"]').then((messages) => {
+      const initialCount = messages.length;
+      cy.get('[data-testid="chat-message-input"]').type('   {enter}');
 
-    cy.get('[data-testid="chat-message-input"]').type('   {enter}');
-
-    cy.then(() => {
-      expect(sendAttempts).to.eq(0);
-    });
-    cy.get('[data-testid="chat-message"]').should(($messages) => {
-      expect($messages).to.have.length(initialMessageCount);
+      cy.then(() => {
+        expect(sendAttempts).to.eq(0);
+      });
+      cy.get('[data-testid="chat-message"]').should('have.length', initialCount);
     });
   });
 
   it('retains a failed message draft and allows a successful retry', () => {
     failNextSend = true;
     const retryMessage = 'Please keep this draft if sending fails.';
-    let initialMessageCount = 0;
 
-    cy.visit(`/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').then(($messages) => {
-      initialMessageCount = $messages.length;
-      expect(initialMessageCount).to.be.greaterThan(0);
-    });
-    cy.window().then((win) => {
-      (
-        win as typeof win & { __cypressExpectedConsoleError?: string }
-      ).__cypressExpectedConsoleError = 'Failed to send text message:';
-    });
-    cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
+    visitChat(`/chat/${roomId}`);
+    cy.get('[data-testid="chat-message"]').then((messages) => {
+      const initialCount = messages.length;
+      cy.wait('@centrifugoUnavailable').its('response.statusCode').should('eq', 200);
+      cy.window().should((win) => {
+        expect((win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError).to.be.undefined;
+      });
+      cy.window().then((win) => {
+        (win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError =
+          'Failed to send text message:';
+      });
+      cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
 
-    cy.wait('@sendMessage').its('response.statusCode').should('eq', 503);
-    cy.get('[data-testid="chat-message-input"]').should('have.value', retryMessage);
-    cy.get('[data-testid="chat-message"]').should(($messages) => {
-      expect($messages).to.have.length(initialMessageCount);
-    });
+      cy.wait('@sendMessage').its('response.statusCode').should('eq', 503);
+      cy.get('[data-testid="chat-message-input"]').should('have.value', retryMessage);
+      cy.get('[data-testid="chat-message"]').should('have.length', initialCount);
 
-    cy.get('[data-testid="chat-message-input"]').type('{enter}');
-    cy.wait('@sendMessage').then((interception) => {
-      expect(interception.response?.statusCode).to.eq(201);
-      expect(interception.request.body.text_content).to.eq(retryMessage);
-    });
+      cy.get('[data-testid="chat-message-input"]').type('{enter}');
+      cy.wait('@sendMessage').then((interception) => {
+        expect(interception.response?.statusCode).to.eq(201);
+        expect(interception.request.body.text_content).to.eq(retryMessage);
+      });
 
-    cy.get('[data-testid="chat-message-input"]').should('have.value', '');
-    cy.get('[data-testid="chat-message"]').should(($messages) => {
-      expect($messages).to.have.length(initialMessageCount + 1);
-    });
-    cy.then(() => {
-      expect(sendAttempts).to.eq(2);
+      cy.get('[data-testid="chat-message-input"]').should('have.value', '');
+      cy.get('[data-testid="chat-message"]').should('have.length', initialCount + 1);
+      cy.then(() => {
+        expect(sendAttempts).to.eq(2);
+      });
     });
   });
 });

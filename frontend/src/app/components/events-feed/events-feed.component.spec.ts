@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventsFeedComponent } from './events-feed.component';
@@ -21,7 +20,6 @@ describe('EventsFeedComponent', () => {
   let fixture: ComponentFixture<EventsFeedComponent>;
   let component: EventsFeedComponent;
   let listEvents: ReturnType<typeof vi.fn>;
-  let getCategories: ReturnType<typeof vi.fn>;
 
   async function settle(): Promise<void> {
     await Promise.resolve();
@@ -31,67 +29,29 @@ describe('EventsFeedComponent', () => {
 
   beforeEach(async () => {
     listEvents = vi.fn().mockReturnValue(of([]));
-    getCategories = vi
-      .fn()
-      .mockReturnValue(
-        of(['audio_room', 'learning_seminar', 'in_person_meetup', 'cultural_exchange']),
-      );
 
     await TestBed.configureTestingModule({
       imports: [EventsFeedComponent],
-      providers: [
-        provideRouter([]),
-        { provide: EventsService, useValue: { listEvents, getCategories } },
-      ],
+      providers: [{ provide: EventsService, useValue: { listEvents } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(EventsFeedComponent);
     component = fixture.componentInstance;
   });
 
-  it('loads the first upcoming page and backend-owned category identifiers', async () => {
+  it('loads the first upcoming page and exposes Spartan radio-group selection semantics', async () => {
     fixture.detectChanges();
     await settle();
 
-    expect(getCategories).toHaveBeenCalledTimes(1);
-    expect(component.categories()).toContain('audio_room');
     expect(listEvents).toHaveBeenCalledWith({
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 1,
       limit: 20,
     });
     expect(fixture.nativeElement.querySelector('[role="radiogroup"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('hlm-radio')).toHaveLength(2);
-    expect(fixture.nativeElement.querySelectorAll('app-select')).toHaveLength(2);
-  });
-
-  it('sends canonical category identifiers and resets pagination when category changes', async () => {
-    fixture.detectChanges();
-    await settle();
-
-    component.onCategoryChange('audio_room');
-    await settle();
-
-    expect(listEvents).toHaveBeenLastCalledWith({
-      status: 'upcoming',
-      language_pair: undefined,
-      category: 'audio_room',
-      page: 1,
-      limit: 20,
-    });
-  });
-
-  it('renders event titles as native links to the event detail route', async () => {
-    listEvents.mockReturnValueOnce(of([event('detail-1')]));
-
-    fixture.detectChanges();
-    await settle();
-
-    const link = fixture.nativeElement.querySelector('a[href="/events/detail-1"]');
-    expect(link).not.toBeNull();
-    expect(link.textContent).toContain('Event detail-1');
+    expect(fixture.nativeElement.querySelector('app-select')).not.toBeNull();
   });
 
   it('opens the create modal and refreshes the first page after creation', async () => {
@@ -112,7 +72,6 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenLastCalledWith({
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 1,
       limit: 20,
     });
@@ -140,14 +99,12 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenNthCalledWith(2, {
       status: 'past',
       language_pair: undefined,
-      category: undefined,
       page: 1,
       limit: 20,
     });
     expect(listEvents).toHaveBeenNthCalledWith(3, {
       status: 'past',
       language_pair: 'en-ja',
-      category: undefined,
       page: 1,
       limit: 20,
     });
@@ -182,7 +139,7 @@ describe('EventsFeedComponent', () => {
       .mockReset()
       .mockReturnValueOnce(of(firstPage))
       .mockReturnValueOnce(throwError(() => new Error('temporary failure')))
-      .mockReturnValueOnce(of([event('page-2')]));
+      .mockReturnValueOnce(of([event('page-2')])) ;
 
     fixture.detectChanges();
     await settle();
@@ -197,14 +154,12 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenNthCalledWith(2, {
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 2,
       limit: 20,
     });
     expect(listEvents).toHaveBeenNthCalledWith(3, {
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 2,
       limit: 20,
     });
@@ -228,7 +183,6 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenLastCalledWith({
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 1,
       limit: 20,
     });

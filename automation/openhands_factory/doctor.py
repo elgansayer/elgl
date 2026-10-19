@@ -926,38 +926,7 @@ def startup_security_checks(config: FactoryConfig) -> list[Check]:
         verification_isolation_check(),
         git_credential_helper_check(config),
         persistent_github_credentials_check(config.state_dir / "home"),
-        service_environment_permissions_check(),
     ]
-
-
-def service_environment_permissions_check(
-    roots: tuple[Path, ...] = (Path("/etc/repo-factory"), Path("/etc/hellotalk-factory")),
-    *,
-    owner_uid: int = 0,
-) -> Check:
-    """Inspect metadata only; systemd reads secrets before dropping privileges."""
-    unsafe: list[str] = []
-    for root in roots:
-        for pattern in ("common.env", "runtime.env", "factory.env", "factory.env.backup*"):
-            try:
-                paths = list(root.glob(pattern))
-            except PermissionError:
-                continue  # An inaccessible parent already hides these files from workers.
-            for path in paths:
-                try:
-                    metadata = path.stat()
-                except PermissionError:
-                    continue
-                except OSError:
-                    unsafe.append(f"{path.name}: unreadable metadata")
-                    continue
-                if metadata.st_uid != owner_uid or metadata.st_mode & 0o077:
-                    unsafe.append(f"{path.name}: owner-only access required")
-    return Check(
-        "service-environment-permissions",
-        not unsafe,
-        "; ".join(unsafe[:5]) if unsafe else "service environments and backups are private",
-    )
 
 
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:

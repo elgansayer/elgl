@@ -24,7 +24,6 @@ import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bub
 import { SafetyService } from '../../services/safety.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
-import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import {
@@ -58,7 +57,6 @@ import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
     StickerPickerComponent,
     ChatSystemBubbleComponent,
     CulturalTipComponent,
-    CorrectionModalComponent,
     ReplyPreviewComponent,
     LinkPreviewCardComponent,
     GroupParticipantDrawerComponent,
