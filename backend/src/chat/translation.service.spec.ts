@@ -112,12 +112,58 @@ describe('TranslationService', () => {
       expect(result).toBe('en');
     });
 
+    it('should fallback to "en" if detected_source_language is missing or empty', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ detected_source_language: '' }],
+        }),
+      });
+
+      const result = await service.detectLanguage('Bonjour');
+      expect(result).toBe('en');
+    });
+
     it('should fallback to "en" and log warn if fetch throws error', async () => {
       global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
 
       const result = await service.detectLanguage('Bonjour');
       expect(result).toBe('en');
       expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should fallback to "en" if detected_source_language is missing or empty', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ detected_source_language: '' }],
+        }),
+      });
+
+      const result = await service.detectLanguage('Bonjour');
+      expect(result).toBe('en');
+    });
+
+    it('should fallback to "en" if response body is null', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => null,
+      });
+
+      const result = await service.detectLanguage('Bonjour');
+      expect(result).toBe('en');
+    });
+
+    it('should fallback to "en" if translations[0] is null', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [null],
+        }),
+      });
+
+      const result = await service.detectLanguage('Bonjour');
+      expect(result).toBe('en');
     });
   });
 
@@ -162,6 +208,24 @@ describe('TranslationService', () => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
+    it('should return original text and cache it if translations array is missing or text is invalid', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ text: '' }],
+        }),
+      });
+
+      const result = await service.translate('Hello', 'en', 'fr');
+      expect(result).toBe('Hello');
+
+      // Verify it was cached
+      global.fetch = vi.fn();
+      const cachedResult = await service.translate('Hello', 'en', 'fr');
+      expect(cachedResult).toBe('Hello');
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
     it('should return original text and log warn if fetch fails (!ok)', async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
@@ -179,6 +243,40 @@ describe('TranslationService', () => {
       const result = await service.translate('Hello', 'en', 'fr');
       expect(result).toBe('Hello');
       expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should fallback to original text if translation text is missing or empty', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ text: '' }],
+        }),
+      });
+
+      const result = await service.translate('Hello', 'en', 'fr');
+      expect(result).toBe('Hello');
+    });
+
+    it('should fallback to original text if response body is null', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => null,
+      });
+
+      const result = await service.translate('Hello', 'en', 'fr');
+      expect(result).toBe('Hello');
+    });
+
+    it('should fallback to original text if translations[0] is null', async () => {
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [null],
+        }),
+      });
+
+      const result = await service.translate('Hello', 'en', 'fr');
+      expect(result).toBe('Hello');
     });
   });
 
@@ -221,6 +319,28 @@ describe('TranslationService', () => {
       expect(service.translate).toHaveBeenCalledTimes(2);
       expect(service.translate).toHaveBeenNthCalledWith(1, 'Hello', 'en', 'es');
       expect(service.translate).toHaveBeenNthCalledWith(2, 'Hola', 'es', 'en');
+    });
+
+    it('should handle missing reverse translation in alternatives', async () => {
+      vi.spyOn(service, 'translate')
+        .mockResolvedValueOnce('Hola') // Primary translation
+        .mockResolvedValueOnce(''); // Reverse translation (empty)
+
+      const result = await service.translateWithExplanations(
+        'Hello',
+        'en',
+        'es',
+      );
+
+      expect(result).toEqual({
+        translation: 'Hola',
+        alternatives: ['Hola', '(more formal) Hola', '(more colloquial) Hola'],
+        contextExplanation: expect.stringContaining(
+          '"Hello" is a phrase in en that',
+        ),
+      });
+
+      expect(service.translate).toHaveBeenCalledTimes(2);
     });
   });
 });

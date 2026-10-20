@@ -245,8 +245,7 @@ export class ReadingEngineCacheService {
       ReadingEngineCacheNamespace.TRANSLATION,
       ReadingEngineCacheNamespace.SESSION,
     ];
-    // Batch delete namespace patterns concurrently to prevent N+1 latency roundtrips to Redis.
-    await Promise.all(
+    // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to drastically reduce network latency during bulk cache invalidation.    await Promise.all(
       prefixes.map((ns) =>
         this.deletePattern(this.buildUserPattern(ns, payload.userId)),
       ),
