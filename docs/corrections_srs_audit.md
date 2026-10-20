@@ -20,7 +20,7 @@
   - The actual user-provided explanation text is stored as a raw string and currently lacks an explicit "Translate" button inline within the diff rendering.
 - **Reusable as learning material (SRS / Examples)**:
   - The `VisualDiffComponent` includes a `showActions` flag. When enabled, it renders a "➕ Create Flashcard" button.
-  - Clicking this button invokes `FlashcardService.createFlashcard()` using the corrected text as the target word, the original text as the translation, and the explanation as context.
+  - Clicking this button invokes `VocabularyStore.saveWord()` using the corrected text as the target word, the original text as the translation, and the explanation as context.
 
 ## 3. Actionable Recommendations
 

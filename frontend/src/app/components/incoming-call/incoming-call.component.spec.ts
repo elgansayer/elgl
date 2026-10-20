@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { I18nService } from '../../services/i18n.service';
 import { LivekitService } from '../../services/livekit.service';
@@ -13,7 +13,7 @@ import { IncomingCallComponent, IncomingCallInfo } from './incoming-call.compone
 describe('IncomingCallComponent', () => {
   let component: IncomingCallComponent;
   let fixture: ComponentFixture<IncomingCallComponent>;
-  let mockCentrifugoService: ReturnType<typeof createCentrifugoMock>;
+  let mockCentrifugeService: ReturnType<typeof createCentrifugoMock>;
   let mockAuthService: ReturnType<typeof createAuthMock>;
   let mockLivekitService: ReturnType<typeof createLivekitMock>;
   let userServiceMock: { getMyProfile: ReturnType<typeof vi.fn> };
@@ -53,7 +53,7 @@ describe('IncomingCallComponent', () => {
   }
 
   function subscribedCallback(): (data: unknown) => void {
-    const callback = mockCentrifugoService.subscribe.mock.calls[0]?.[1] as
+    const callback = mockCentrifugeService.subscribe.mock.calls[0]?.[1] as
       | ((data: unknown) => void)
       | undefined;
     expect(callback).toBeTypeOf('function');
@@ -61,7 +61,7 @@ describe('IncomingCallComponent', () => {
   }
 
   beforeEach(async () => {
-    mockCentrifugoService = createCentrifugoMock();
+    mockCentrifugeService = createCentrifugoMock();
     mockAuthService = createAuthMock();
     mockLivekitService = createLivekitMock();
     userServiceMock = {
@@ -88,7 +88,7 @@ describe('IncomingCallComponent', () => {
       imports: [IncomingCallComponent],
       providers: [
         I18nService,
-        { provide: CentrifugoService, useValue: mockCentrifugoService },
+        { provide: CentrifugeService, useValue: mockCentrifugeService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: LivekitService, useValue: mockLivekitService },
         { provide: UserService, useValue: userServiceMock },
@@ -108,7 +108,7 @@ describe('IncomingCallComponent', () => {
 
   it('creates and subscribes only to the authenticated user channel', () => {
     expect(component).toBeTruthy();
-    expect(mockCentrifugoService.subscribe).toHaveBeenCalledWith(
+    expect(mockCentrifugeService.subscribe).toHaveBeenCalledWith(
       'user_test-user-123',
       expect.any(Function),
     );
@@ -208,7 +208,7 @@ describe('IncomingCallComponent', () => {
       false,
       undefined,
     );
-    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+    expect(mockCentrifugeService.publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_accepted',
       data: {
         userId: 'test-user-123',
@@ -230,7 +230,7 @@ describe('IncomingCallComponent', () => {
     expect(component.showCallModal()).toBe(true);
     expect(component.callInfo()).toEqual(callInfo);
     expect(component.callActionPending()).toBe(false);
-    expect(mockCentrifugoService.publish).not.toHaveBeenCalled();
+    expect(mockCentrifugeService.publish).not.toHaveBeenCalled();
     expect(hapticMock.error).toHaveBeenCalledTimes(1);
 
     mockLivekitService.joinRoom.mockResolvedValueOnce(undefined);
@@ -261,7 +261,7 @@ describe('IncomingCallComponent', () => {
     resolveJoin();
     await Promise.all([firstAccept, secondAccept]);
 
-    expect(mockCentrifugoService.publish).toHaveBeenCalledTimes(1);
+    expect(mockCentrifugeService.publish).toHaveBeenCalledTimes(1);
     expect(component.callActionPending()).toBe(false);
   });
 
@@ -274,7 +274,7 @@ describe('IncomingCallComponent', () => {
     await component.acceptCall();
 
     expect(mockLivekitService.joinRoom).not.toHaveBeenCalled();
-    expect(mockCentrifugoService.publish).not.toHaveBeenCalled();
+    expect(mockCentrifugeService.publish).not.toHaveBeenCalled();
     expect(hapticMock.error).toHaveBeenCalledTimes(1);
   });
 
@@ -290,8 +290,8 @@ describe('IncomingCallComponent', () => {
     expect(component.callInfo()).toBeNull();
     expect(emitSpy).toHaveBeenCalledTimes(1);
     expect(emitSpy).toHaveBeenCalledWith(callInfo);
-    expect(mockCentrifugoService.publish).toHaveBeenCalledTimes(1);
-    expect(mockCentrifugoService.publish).toHaveBeenCalledWith('user_caller-456', {
+    expect(mockCentrifugeService.publish).toHaveBeenCalledTimes(1);
+    expect(mockCentrifugeService.publish).toHaveBeenCalledWith('user_caller-456', {
       type: 'call_rejected',
       data: {
         userId: 'test-user-123',
