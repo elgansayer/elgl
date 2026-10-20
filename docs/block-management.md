@@ -1,45 +1,80 @@
-# Block Management
+# Block management
+
+Issue #1672 exposes the authenticated block APIs as a production user-facing management flow.
 
 ## Product contract
 
-The Privacy Settings hub links to `/blocks`. That route lazy-loads `BlockManagementComponent`, which displays the authenticated user's blocked accounts and allows an individual account to be unblocked.
+- Privacy Settings links to `/blocks`; `/settings/blocked-users` is a compatibility alias.
+- The page loads the signed-in user's blocked-account summaries from `GET /blocks`.
+- Loading, empty, stale-data refresh failure, and first-load failure are distinct states.
+- Unblocking is a two-step action. The first activation reveals Cancel/Unblock controls; no mutation is sent until the second activation.
+- A row is removed only after `DELETE /blocks/:blockedId` returns `{ success: true }`.
+- Failed unblocks keep the account in the list and keep confirmation available for an explicit retry.
+- Duplicate unblock requests for the same account are suppressed while the first request is pending.
 
-The page distinguishes four states rather than treating failures as empty data:
+## API and query contract
 
-- loading: skeleton content is exposed with `aria-busy`;
-- unavailable: the blocked-users request failed and a Retry action is shown;
-- empty: the authenticated request succeeded with no blocked users;
-- populated: each blocked account is shown with available profile/language metadata and an Unblock action.
+`GET /blocks` remains an array response for compatibility and now accepts bounded pagination:
 
-Unblock is a confirmed mutation. While a request is in flight the affected action is disabled and marked busy. A failed unblock leaves the account in the list and exposes an alert so a retry cannot be mistaken for success. Duplicate concurrent unblocks for the same account are suppressed.
+- `limit`: integer from 1 through 100, default 100;
+- `offset`: integer from 0 through 10,000, default 0.
 
-## API and authorization
+Rows are selected newest-block first. The service clamps limits again internally so non-HTTP callers cannot trigger an unbounded query. The Angular client requests 100-row pages sequentially and stops at a short page or 500 rows, whichever comes first. Profile hydration is a single `users ... IN (...)` query per page rather than an N+1 lookup, and the resulting profiles are restored to block-recency order.
 
-The frontend uses the existing authenticated endpoints:
+Read requests are throttled to 60/minute per configured throttler policy; block and unblock mutations are throttled to 30/minute. Block creation uses the existing `(blocker_id, blocked_id)` uniqueness contract through an idempotent upsert, and self-block attempts are rejected. Deleting an already-absent block remains retry-safe.
 
-- `GET /blocks` to load blocked account details;
-- `DELETE /blocks/:userId` to unblock one account.
+## Authentication and privacy
 
-Bearer credentials come from `AuthService`; the feature does not read authentication tokens directly from browser storage. Missing credentials fail closed without issuing an unauthenticated request. User IDs are URL-encoded before they are placed in the delete path.
+`BlockedUsersService` obtains the current Supabase access token from `AuthService`; it does not read a separate token from `localStorage`. The NestJS `BlocksController` remains protected by `SupabaseAuthGuard`, and the backend scopes reads/deletes to the authenticated blocker ID.
 
-No schema or migration changes are required. Block persistence, authorization, retention and cascade behavior remain owned by the existing backend Blocks module and database policies.
+The client treats profile summaries as untrusted input. It:
 
-## Accessibility and privacy
+- accepts at most 500 rows per load;
+- deduplicates IDs;
+- bounds display/language fields;
+- limits displayed target languages to three;
+- permits avatar URLs only when they use HTTP or HTTPS; and
+- sends avatar requests with `no-referrer`.
 
-The page has a labelled main landmark, native Spartan buttons, 44px touch targets, contextual accessible names, visible loading/error states, and logical spacing. User-authored names and language text use `dir="auto"`; layout does not depend on physical left/right utilities. Avatar images are decorative because the adjacent text already identifies the account.
+Block-management errors are deliberately generic and do not copy database/provider messages, tokens, profile content, or target user IDs into logs or UI diagnostics. Backend query/mutation failures emit only sanitized operation-level warnings. Successful removals retain the existing trust-and-safety block-removal metric.
 
-The frontend does not log blocked-account identities, access tokens, or mutation failures. Error feedback is intentionally generic.
+## Failure and concurrency behavior
+
+Refresh failures retain the last successfully loaded list. This prevents a network outage from being presented as an empty block list. A later Retry starts a new generation; stale responses from an older request cannot overwrite newer state.
+
+Unblock failures are fail-closed: the local row and `SafetyService` blocked-user cache are changed only after server confirmation. While a delete is in flight, controls for that row are disabled and expose `aria-busy`.
+
+Malformed pagination, missing target IDs and self-blocking return validation errors before persistence. Database failures return sanitized server errors rather than raw provider messages.
+
+## Accessibility
+
+The page uses the shared header/button/card/empty-state primitives and logical RTL spacing. It provides:
+
+- a keyboard-operable back action and minimum touch-sized mutation controls;
+- semantic list/list-item structure;
+- `dir="auto"` for user-provided names/language text;
+- screen-reader loading, status, failure, and busy states;
+- a confirmation step before the privacy-reducing unblock action; and
+- stacked controls and breakable content for narrow screens/high zoom.
+
+No important state is communicated by colour alone.
 
 ## Verification
 
-Relevant automated coverage lives in:
+Focused coverage lives in:
 
-- `frontend/src/app/pages/block-management/block-management.component.spec.ts`;
-- `frontend/src/app/services/blocked-users.service.spec.ts`;
-- `frontend/src/app/routes/block-management-route.contract.spec.ts`.
+- `backend/src/blocks/blocks.controller.spec.ts`
+- `backend/src/blocks/blocks.service.spec.ts`
+- `frontend/src/app/services/blocked-users.service.spec.ts`
+- `frontend/src/app/pages/block-management/block-management.component.spec.ts`
+- `frontend/src/app/routes/settings.routes.spec.ts`
 
-Run the frontend unit suite, static analysis and production build before rollout. Repository CI remains authoritative for the complete integration gate.
+Coverage includes authorization guards at the controller boundary, bounded pagination, query ordering, retry-safe mutations, sanitized failure behavior, current-session authentication, response validation, paged loading, stale-data recovery, concurrent unblock suppression, explicit confirmation, RTL and high-zoom semantics.
+
+Repository CI should additionally run the normal backend/frontend build, unit, lint, translation-safety, UI-design and dependency checks.
 
 ## Rollout and rollback
 
-This change is backward-compatible with the existing Blocks API and requires no data migration. Rollback is a normal code revert. A rollback must not restore fake-success unblock behavior or direct reads of authentication credentials from browser storage.
+The change requires no schema migration. Deploy the backend before or with the frontend so the client receives bounded pages immediately. Existing clients remain compatible because `GET /blocks` still returns the same array shape and the block/unblock response contracts are unchanged.
+
+Rollback consists of reverting the route/client changes and then, if necessary, the API pagination hardening. Blocking data is not rewritten or deleted by rollout itself; only explicit, authenticated block/unblock requests mutate existing rows.

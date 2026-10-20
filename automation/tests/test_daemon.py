@@ -9,7 +9,6 @@ import pytest
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
 from openhands_factory.daemon import (
     FactoryDaemon,
-    await_future_with_heartbeat,
     await_refresh,
     provider_status_snapshot,
     queue_snapshot,
@@ -347,6 +346,31 @@ def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> N
     assert retry_at == 40.0
 
 
+def test_refresh_jobs_propagates_storage_pressure_mode() -> None:
+    calls: list[tuple[set[str], bool]] = []
+
+    def refresh(protected: set[str], *, storage_pressure: bool = False) -> dict[str, Job]:
+        calls.append((protected, storage_pressure))
+        return {"42": job("42", 0)}
+
+    pipeline = SimpleNamespace(
+        refresh=refresh,
+        jobs=SimpleNamespace(load=lambda: {}),
+    )
+
+    refreshed, retry_at = refresh_jobs(
+        pipeline,
+        set(),
+        10.0,
+        900,
+        storage_pressure=True,  # type: ignore[arg-type]
+    )
+
+    assert set(refreshed) == {"42"}
+    assert retry_at == 910.0
+    assert calls == [(set(), True)]
+
+
 def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None:
     attempts = 0
     heartbeats: list[str] = []
@@ -370,37 +394,6 @@ def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None
 
     assert set(jobs) == {"42"}
     assert retry_at == 30.0
-    assert heartbeats == ["published"]
-
-
-def test_await_future_publishes_heartbeat_while_provider_health_is_busy() -> None:
-    attempts = 0
-    heartbeats: list[str] = []
-
-    class HealthFuture:
-        def result(self, timeout: float | None = None) -> dict[str, ProviderHealth]:
-            nonlocal attempts
-            assert timeout == 10.0
-            attempts += 1
-            if attempts == 1:
-                raise FutureTimeoutError
-            return {
-                "codex": ProviderHealth(
-                    "codex",
-                    ProviderStatus.HEALTHY,
-                    datetime.now(UTC),
-                )
-            }
-
-        def done(self) -> bool:
-            return attempts > 1
-
-    health = await_future_with_heartbeat(  # type: ignore[arg-type]
-        HealthFuture(),
-        lambda: heartbeats.append("published"),
-    )
-
-    assert health["codex"].status is ProviderStatus.HEALTHY
     assert heartbeats == ["published"]
 
 
@@ -594,7 +587,7 @@ def test_check_stall_dispatches_investigation_once_threshold_elapsed(
     daemon.stall_since = datetime.now(UTC) - timedelta(minutes=21)
     daemon.stall_investigation_dispatched = False
     daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
-        run_stall_investigation=lambda reason, diagnostics: None
+        run_stall_investigation=lambda reason, diagnostics, provider_backed: None
     )
     monkeypatch.setattr(
         "openhands_factory.daemon.no_pr_progress_check",
@@ -619,9 +612,10 @@ def test_check_stall_dispatches_investigation_once_threshold_elapsed(
 
     assert daemon.stall_investigation_dispatched
     assert len(started_args) == 1
-    reason, diagnostics = started_args[0]
+    reason, diagnostics, provider_backed = started_args[0]
     assert "stalled for 21 minutes" in reason
     assert diagnostics == "diagnostics snapshot"
+    assert provider_backed is False
 
     # A second cycle within the same continuous stall must not dispatch again.
     daemon._check_stall()

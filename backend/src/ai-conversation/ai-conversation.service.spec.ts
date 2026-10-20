@@ -50,8 +50,8 @@ describe('AiConversationService', () => {
 
     learnerKnowledgeService = {
       getProfile: vi.fn().mockResolvedValue({
-        overallProficiency: { level: 'B2' },
-        knowledgeItems: new Map([
+        globalProficiency: { level: 'B2' },
+        globalKnowledgeItems: new Map([
           ['vocab:gato', { id: 'vocab:gato', status: 'struggling' }],
         ]),
       }),
@@ -82,6 +82,24 @@ describe('AiConversationService', () => {
       expect(result[0].id).toBe('ordering-coffee');
       expect(result[0].name).toBe('Ordering Coffee');
     });
+
+    it.each([
+      ['ordering-coffee', 'State price naturally'],
+      ['job-interview', 'End by saying you will be in touch'],
+      ['airport-checkin', 'Provide gate and boarding time'],
+      ['bank-account', 'Ask initial deposit amount'],
+      ['shopping', 'Mention prices'],
+      ['travel-directions', 'Mention walking time or bus numbers'],
+    ])(
+      'retains concrete task outcomes and short turns for %s',
+      async (scenarioId, task) => {
+        llmProxy.chatCompletion.mockResolvedValue('Please tell me more.');
+        await service.generateReply('user-1', 'Please continue', scenarioId);
+        const messages = llmProxy.chatCompletion.mock.calls[0][0];
+        expect(messages[0].content).toContain(task);
+        expect(messages[0].content).toContain('Keep replies 1-3 sentences');
+      },
+    );
 
     it('should have unique scenario IDs', () => {
       const result = service.getScenarios();
@@ -174,6 +192,50 @@ describe('AiConversationService', () => {
   });
 
   describe('generateReply', () => {
+    it('should generate a reply without English-only vocabulary for Spanish prompts', async () => {
+      // Set target language to 'es'
+      usersService.getProfile.mockResolvedValue({
+        target_languages: ['es'],
+        proficiency_level: 'A2',
+        interests: ['culture'],
+      });
+
+      // Provide both global and language items
+      learnerKnowledgeService.getProfile.mockResolvedValue({
+        globalProficiency: { level: 'A2' },
+        globalKnowledgeItems: new Map([
+          [
+            'vocab:globalWord',
+            { id: 'vocab:globalWord', status: 'struggling' },
+          ],
+        ]),
+        languageKnowledgeItems: new Map([
+          ['vocab:hola', { id: 'vocab:hallo', status: 'struggling' }],
+        ]),
+      });
+
+      llmProxy.chatCompletion.mockResolvedValue('Hola! ¿Cómo estás?');
+
+      const reply = await service.generateReply('user1', 'Hola', undefined);
+
+      expect(reply).toBe('Hola! ¿Cómo estás?');
+      expect(usersService.getProfile).toHaveBeenCalledWith('user1');
+      expect(learnerKnowledgeService.getProfile).toHaveBeenCalledWith(
+        'user1',
+        'es',
+      );
+
+      const llmMessages = llmProxy.chatCompletion.mock.calls[0][0];
+      const systemPrompt = llmMessages.find(
+        (m: any) => m.role === 'system',
+      ).content;
+
+      // Should contain the Spanish struggling word 'hallo' and the global one 'globalWord'
+      // It should NOT fetch 'en' explicitly
+      expect(systemPrompt).toContain('globalWord');
+      expect(systemPrompt).toContain('hallo');
+    });
+
     it('should call llmProxy.chatCompletion with system prompt from scenario', async () => {
       llmProxy.chatCompletion.mockResolvedValue(
         'Would you like a latte or cappuccino?',
@@ -216,6 +278,11 @@ describe('AiConversationService', () => {
     });
 
     it('should use default system prompt when no scenarioId provided', async () => {
+      learnerKnowledgeService.getProfile.mockResolvedValue({
+        globalProficiency: { level: 'A2' },
+        globalKnowledgeItems: new Map(),
+        languageKnowledgeItems: new Map(),
+      });
       llmProxy.chatCompletion.mockResolvedValue('Interesting!');
 
       await service.generateReply('user-123', 'Tell me about yourself');
@@ -224,6 +291,19 @@ describe('AiConversationService', () => {
       expect(messages[0].role).toBe('system');
       expect(messages[0].content).toContain(
         'You are a personalized, expert language tutor',
+      );
+    });
+
+    it('should include struggling knowledge items in the default system prompt', async () => {
+      llmProxy.chatCompletion.mockResolvedValue('Interesting!');
+
+      await service.generateReply('user-123', 'Tell me about yourself');
+
+      const messages = llmProxy.chatCompletion.mock.calls[0][0];
+      expect(messages[0].role).toBe('system');
+      expect(messages[0].content).toContain('gato');
+      expect(messages[0].content).toContain(
+        'The user has been struggling with the following concepts or vocabulary',
       );
     });
 

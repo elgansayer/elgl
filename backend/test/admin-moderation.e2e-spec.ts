@@ -10,7 +10,6 @@ import { AdminModerationQueryService } from '../src/admin/admin-moderation-query
 import { AdminRoleInventoryService } from '../src/admin/admin-role-inventory.service';
 import { AdminService } from '../src/admin/admin.service';
 import { AdminSystemHealthService } from '../src/admin/admin-system-health.service';
-import { AdminUserDetailService } from '../src/admin/admin-user-detail.service';
 import { AdminGuard } from '../src/admin/guards/admin.guard';
 import { AdminV1Controller } from '../src/admin/admin-v1.controller';
 
@@ -38,7 +37,6 @@ describe('Admin moderation queue E2E', () => {
           },
         },
         { provide: AdminService, useValue: {} },
-        { provide: AdminUserDetailService, useValue: {} },
         { provide: AdminLoginHistoryQueryService, useValue: {} },
         { provide: AdminAuditService, useValue: { record: auditRecord } },
         { provide: AdminAuditQueryService, useValue: {} },
@@ -87,19 +85,7 @@ describe('Admin moderation queue E2E', () => {
       'moderation.cases.read',
     ]);
     expect(moderationList).not.toHaveBeenCalled();
-    expect(auditRecord).toHaveBeenCalledWith({
-      actorUserId: 'admin-1',
-      action: 'get /admin/v1/moderation/reports',
-      capabilityKey: 'moderation.cases.read',
-      targetType: undefined,
-      targetId: undefined,
-      outcome: 'denied',
-      correlationId: undefined,
-      metadata: {
-        source: 'admin-capability-guard',
-        operation: 'capability-denied',
-      },
-    });
+    expect(auditRecord).not.toHaveBeenCalled();
   });
 
   it('transforms bounded query filters and audits the moderation queue read', async () => {
