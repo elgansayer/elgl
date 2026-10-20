@@ -146,3 +146,8 @@
 **Vulnerability:** IDOR in audio intro update endpoint where any authenticated user could overwrite the audio intro for any other user because the route parameter `userId` was not compared against the authenticated user's ID.
 **Learning:** Endpoints mapped by `userId` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
 **Prevention:** Always extract the authenticated user ID via `@Req() req: { user: { id: string } }` (or similar decorators like `CurrentUser`) and assert it matches the target resource ID with a `ForbiddenException` or `UnauthorizedException`.
+
+## 2026-10-12 - Improper Authentication Extraction in NestJS Controllers
+**Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
+**Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
+**Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
