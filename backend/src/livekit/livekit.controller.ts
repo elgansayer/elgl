@@ -4,6 +4,8 @@ import {
   Body,
   UseGuards,
   UseInterceptors,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { LivekitService } from './livekit.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -46,17 +48,12 @@ export class LivekitController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['room_name', 'participant_identity'],
+      required: ['room_name'],
       properties: {
         room_name: {
           type: 'string',
           description: 'LiveKit room name to join',
           example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        },
-        participant_identity: {
-          type: 'string',
-          description: 'User identity for the LiveKit participant',
-          example: 'user_abc123',
         },
       },
     },
@@ -87,10 +84,13 @@ export class LivekitController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async getToken(@Body() dto: LivekitTokenDto) {
-    return this.livekitService.generateToken(
-      dto.participant_identity,
-      dto.room_name,
-    );
+  async getToken(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: LivekitTokenDto,
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException('User not identified');
+    }
+    return this.livekitService.generateToken(req.user.id, dto.room_name);
   }
 }
