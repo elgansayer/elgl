@@ -535,7 +535,7 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["google"].enabled is True
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
-    assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
+    assert factory_config.agents.providers["google"].model == "gemini-3.8-flash-high"
     assert factory_config.agents.providers["opencode"].model == "opencode-go/deepseek-v4-flash"
     assert not factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
@@ -544,21 +544,24 @@ def test_production_agent_configuration_loads() -> None:
     ]
     assert factory_config.agents.providers["openhands"].emergency_only
     assert not factory_config.agents.providers["openhands"].enabled
-    assert not factory_config.agents.providers["pi"].enabled
+    assert factory_config.agents.providers["pi"].enabled
     assert factory_config.agents.providers["pi"].model == "github-copilot/claude-sonnet-5"
     assert factory_config.agents.providers["pi"].credential_paths == [".pi"]
     assert factory_config.agents.routing.implementation == [
         "google",
         "claude",
         "codex",
+        "pi",
     ]
     assert factory_config.agents.routing.code_review == [
         "claude",
         "google",
         "codex",
+        "pi",
     ]
     assert factory_config.agents.routing.general_action == [
         "google",
+        "pi",
         "claude",
         "codex",
     ]
@@ -673,6 +676,8 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_AGENTS_CONFIG=/etc/hellotalk-factory/agents.json" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
     assert "FACTORY_MAX_PARALLEL_JOBS=3" in template
+    assert "FACTORY_HOST_AGENT_CONCURRENCY=2" in template
+    assert "FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES=true" in template
     assert "FACTORY_MAX_OPEN_PULL_REQUESTS=40" in template
     assert "FACTORY_MAX_QUEUED_CI=12" in template
     assert "FACTORY_PULL_REQUEST_HISTORY_LIMIT=2000" in template
@@ -784,6 +789,21 @@ def test_parallel_job_limit_must_be_positive() -> None:
         FactoryConfig.from_environment(environment(FACTORY_MAX_PARALLEL_JOBS="0"))
 
 
+def test_host_agent_concurrency_and_merge_fence_are_configurable() -> None:
+    configured = FactoryConfig.from_environment(
+        environment(
+            FACTORY_HOST_AGENT_CONCURRENCY="3",
+            FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES="false",
+        )
+    )
+
+    assert configured.host_agent_concurrency == 3
+    assert configured.require_green_main_between_merges is False
+
+    with pytest.raises(ConfigurationError, match="factory limits must be positive"):
+        FactoryConfig.from_environment(environment(FACTORY_HOST_AGENT_CONCURRENCY="0"))
+
+
 def test_disk_reserve_cannot_be_disabled() -> None:
     with pytest.raises(ConfigurationError, match="at least 1 GiB"):
         FactoryConfig.from_environment(environment(FACTORY_MINIMUM_FREE_DISK_GIB="0"))
@@ -848,14 +868,18 @@ def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> Non
     assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
 
 
-def test_hellotalk_instance_uses_two_review_lanes() -> None:
+def test_hellotalk_instance_uses_three_review_lanes_and_pr_scoped_merge_gate() -> None:
     root = Path(__file__).parents[2]
     profile = (root / "config/factory/instances/hellotalk.env").read_text(encoding="utf-8")
 
-    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=2" in profile
+    assert "FACTORY_MAX_PARALLEL_JOBS=4" in profile
+    assert "FACTORY_HOST_AGENT_CONCURRENCY=3" in profile
+    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=3" in profile
+    assert "FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES=false" in profile
+    assert "FACTORY_REVIEW_HEAD_STABILITY_SECONDS=30" in profile
     assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in profile
-    assert "FACTORY_AGENT_ROUTES_PER_INTERVAL=48" in profile
-    assert "FACTORY_REVIEWS_PER_INTERVAL=36" in profile
+    assert "FACTORY_AGENT_ROUTES_PER_INTERVAL=72" in profile
+    assert "FACTORY_REVIEWS_PER_INTERVAL=60" in profile
 
 
 def test_instance_installer_preserves_legacy_rollback_path() -> None:
