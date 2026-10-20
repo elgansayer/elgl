@@ -23,23 +23,12 @@ export class StripeService {
     @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {
-    let secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    const env = this.configService.get<string>('NODE_ENV') || 'development';
-
-    if (env === 'production') {
-      if (!secretKey || /^sk_test(?:_|$)/i.test(secretKey.trim())) {
-        throw new Error(
-          'STRIPE_SECRET_KEY must be configured securely in production',
-        );
-      }
-    } else {
-      if (!secretKey) {
-        secretKey = 'sk_test_123';
-      }
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is required');
     }
-
     this.stripe = new Stripe(secretKey, {
-      apiVersion: '2023-10-16',
+      apiVersion: '2026-07-29.dahlia',
     });
   }
 
@@ -218,7 +207,11 @@ export class StripeService {
 
   async handleInvoicePaymentSucceeded(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
-    const subscriptionId = invoice.subscription as string;
+    const subscriptionId = this.getInvoiceSubscriptionId(invoice);
+    if (!subscriptionId) {
+      return;
+    }
+
     const subscription =
       await this.stripe.subscriptions.retrieve(subscriptionId);
     const metadata = subscription.metadata;
@@ -231,7 +224,11 @@ export class StripeService {
 
   async handleInvoicePaymentFailed(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;
-    const subscriptionId = invoice.subscription as string;
+    const subscriptionId = this.getInvoiceSubscriptionId(invoice);
+    if (!subscriptionId) {
+      return;
+    }
+
     const subscription =
       await this.stripe.subscriptions.retrieve(subscriptionId);
     const metadata = subscription.metadata;
@@ -240,5 +237,22 @@ export class StripeService {
     this.logger.warn(
       `Payment failed for user ${userId}, subscription ${subscriptionId}`,
     );
+  }
+
+  private getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+    const currentSubscription =
+      invoice.parent?.subscription_details?.subscription;
+    const legacySubscription = (
+      invoice as Stripe.Invoice & {
+        subscription?: string | { id: string } | null;
+      }
+    ).subscription;
+    const subscription = currentSubscription ?? legacySubscription;
+
+    if (typeof subscription === 'string') {
+      return subscription;
+    }
+
+    return subscription?.id ?? null;
   }
 }

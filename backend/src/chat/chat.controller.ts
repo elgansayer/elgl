@@ -17,6 +17,7 @@ import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { FavouritesService } from '../favourites/favourites.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { ConversationStarterDto } from './dto/conversation-starter.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
@@ -45,6 +46,7 @@ import type { Request, Response } from 'express';
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
+    private readonly favouritesService: FavouritesService,
     private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
@@ -75,47 +77,22 @@ export class ChatController {
     const allowed =
       typeof rateLimit === 'boolean' ? rateLimit : rateLimit.allowed;
     if (!allowed) {
-      const retryAfterMs =
-        typeof rateLimit !== 'boolean' &&
-        Number.isFinite(rateLimit.retryAfterMs) &&
-        rateLimit.retryAfterMs > 0
-          ? rateLimit.retryAfterMs
-          : this.centrifugoService.getRateWindowSec() * 1000;
-      const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
       const exception = new HttpException(
         'Too many WebSocket connection attempts. Please wait before reconnecting.',
         HttpStatus.TOO_MANY_REQUESTS,
       );
-      response
-        .header('Retry-After', retryAfterSeconds.toString())
-        .status(HttpStatus.TOO_MANY_REQUESTS)
-        .json({
-          statusCode: HttpStatus.TOO_MANY_REQUESTS,
-          message: exception.message,
-        });
-      return null;
-    }
-
-    try {
-      const token = await this.chatService.generateConnectionToken(user.id);
-      if (!token || token.trim().length === 0) {
-        throw new Error('Empty Centrifugo connection token');
-      }
-
-      const result = { token };
-      response.json(result);
-      return result;
-    } catch {
-      const exception = new HttpException(
-        'Realtime authentication is temporarily unavailable.',
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-      response.status(HttpStatus.SERVICE_UNAVAILABLE).json({
-        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+      response.header('Retry-After', '30').status(429).json({
+        statusCode: 429,
         message: exception.message,
       });
       return null;
     }
+
+    const token =
+      (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
+    const result = { token };
+    response.json(result);
+    return result;
   }
 
   @Post('messages')
@@ -178,7 +155,12 @@ export class ChatController {
     @CurrentUser() user: User | null,
   ): Promise<FavouriteRecord[]> {
     if (!user) return [];
-    return await this.chatService.getFavourites(user.id);
+    const page = await this.favouritesService.getStarredMessages(
+      user.id,
+      100,
+      0,
+    );
+    return page.items as unknown as FavouriteRecord[];
   }
 
   @Delete('favourites/:id')

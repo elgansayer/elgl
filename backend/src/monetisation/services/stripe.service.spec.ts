@@ -1,76 +1,95 @@
-import { ConfigService } from '@nestjs/config';
-import { Test } from '@nestjs/testing';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MonetisationService } from '../monetisation.service';
 import { StripeService } from './stripe.service';
-import { SubscriptionPlansService } from './subscription-plans.service';
 
-vi.mock('stripe', () => ({
-  default: vi.fn().mockImplementation(function () {
-    return {};
-  }),
-}));
-
-describe('StripeService', () => {
-  async function createService(
-    nodeEnv: string,
-    secretKey: string | undefined,
-  ): Promise<StripeService> {
-    const module = await Test.createTestingModule({
-      providers: [
-        StripeService,
-        {
-          provide: 'PinoLogger:StripeService',
-          useValue: { error: vi.fn(), info: vi.fn() },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: vi.fn((key: string) => {
-              if (key === 'NODE_ENV') return nodeEnv;
-              if (key === 'STRIPE_SECRET_KEY') return secretKey;
-              return undefined;
-            }),
-          },
-        },
-        { provide: SubscriptionPlansService, useValue: {} },
-        { provide: MonetisationService, useValue: {} },
-      ],
-    }).compile();
-
-    return module.get(StripeService);
-  }
+describe('StripeService invoice webhooks', () => {
+  const retrieveSubscription = vi.fn();
+  const logger = {
+    info: vi.fn(),
+    warn: vi.fn(),
+  };
+  let service: StripeService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
+    const configService = {
+      get: vi.fn().mockReturnValue('sk_test_123'),
+    };
 
-  it.each([undefined, 'sk_test', 'sk_test_123', ' SK_TEST_example '])(
-    'rejects the production Stripe secret %s',
-    async (secretKey) => {
-      await expect(createService('production', secretKey)).rejects.toThrow(
-        'STRIPE_SECRET_KEY must be configured securely in production',
-      );
-      expect(Stripe).not.toHaveBeenCalled();
-    },
-  );
-
-  it('initialises Stripe with a live key in production', async () => {
-    await expect(
-      createService('production', 'sk_live_example'),
-    ).resolves.toBeInstanceOf(StripeService);
-    expect(Stripe).toHaveBeenCalledWith('sk_live_example', {
-      apiVersion: '2023-10-16',
+    service = new StripeService(
+      logger as never,
+      configService as never,
+      {} as never,
+      {} as never,
+    );
+    (
+      service as unknown as {
+        stripe: {
+          subscriptions: {
+            retrieve: typeof retrieveSubscription;
+          };
+        };
+      }
+    ).stripe = {
+      subscriptions: {
+        retrieve: retrieveSubscription,
+      },
+    };
+    retrieveSubscription.mockResolvedValue({
+      metadata: { userId: 'user-123' },
     });
   });
 
-  it('retains the development fallback key', async () => {
-    await expect(
-      createService('development', undefined),
-    ).resolves.toBeInstanceOf(StripeService);
-    expect(Stripe).toHaveBeenCalledWith('sk_test_123', {
-      apiVersion: '2023-10-16',
-    });
+  it('reads subscription IDs from current invoice parents', async () => {
+    const event = {
+      data: {
+        object: {
+          parent: {
+            subscription_details: {
+              subscription: 'sub_current',
+            },
+          },
+        },
+      },
+    } as unknown as Stripe.Event;
+
+    await service.handleInvoicePaymentSucceeded(event);
+
+    expect(retrieveSubscription).toHaveBeenCalledWith('sub_current');
+    expect(logger.info).toHaveBeenCalledWith(
+      'Payment succeeded for user user-123, subscription sub_current',
+    );
+  });
+
+  it('continues to accept legacy-version invoice payloads', async () => {
+    const event = {
+      data: {
+        object: {
+          subscription: { id: 'sub_legacy' },
+        },
+      },
+    } as unknown as Stripe.Event;
+
+    await service.handleInvoicePaymentFailed(event);
+
+    expect(retrieveSubscription).toHaveBeenCalledWith('sub_legacy');
+    expect(logger.warn).toHaveBeenCalledWith(
+      'Payment failed for user user-123, subscription sub_legacy',
+    );
+  });
+
+  it('ignores one-off invoices without a subscription', async () => {
+    const event = {
+      data: {
+        object: {
+          parent: null,
+        },
+      },
+    } as unknown as Stripe.Event;
+
+    await service.handleInvoicePaymentSucceeded(event);
+
+    expect(retrieveSubscription).not.toHaveBeenCalled();
+    expect(logger.info).not.toHaveBeenCalled();
   });
 });

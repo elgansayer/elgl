@@ -14,20 +14,16 @@ def _workflow(name: str) -> str:
     return (REPOSITORY_ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
 
 
-def test_product_contract_workflows_only_run_for_their_inputs() -> None:
-    expected_paths = {
-        "core-compose-contract.yml": (
-            "docker-compose*.yml",
-            "scripts/verify-compose-orchestration.test.mjs",
-        ),
-        "e2e-core-flows-contract.yml": ("e2e/**", "scripts/verify-core-e2e-flows.mjs"),
-        "e2e-runner-context.yml": ("e2e/**", ".github/workflows/e2e-runner-context.yml"),
-    }
-    for workflow_name, paths in expected_paths.items():
+def test_product_impact_workflows_skip_factory_only_pull_requests() -> None:
+    for workflow_name in (
+        "core-compose-contract.yml",
+        "e2e-core-flows-contract.yml",
+        "e2e-runner-context.yml",
+    ):
         workflow = _workflow(workflow_name)
-        assert "    paths:\n" in workflow
-        for path in paths:
-            assert f"      - '{path}'\n" in workflow
+        assert "    paths-ignore:\n" in workflow
+        for path in FACTORY_ONLY_PR_PATHS:
+            assert path in workflow
 
 
 def test_cypress_setup_smoke_only_runs_for_frontend_pull_requests() -> None:

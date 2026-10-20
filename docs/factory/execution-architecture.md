@@ -55,10 +55,6 @@ overwrites a sibling worker transition.
 - Provider health probes run in disposable empty workspaces instead of the writable canonical checkout.
 - Persisted provider and task leases are generation-aware, duration-bounded, and reject malformed timestamps.
 - Task leases and every `jobs.json` read-modify-write path are locked across processes.
-- Worker-distinct task claims are acquired before branch or agent work, renewed at bounded transitions, released
-  with an owner compare-and-swap, and retain one canonical branch and PR after worker release.
-- Open and recently closed PRs are reconciled before branch creation. Equivalent sibling dispatches attach or skip
-  instead of creating another implementation branch. See [TASK-OWNERSHIP.md](TASK-OWNERSHIP.md).
 - Per-job provider provenance retains the latest 500 attempts, bounding durable state growth.
 - Provider credential artefacts, high-confidence tokens, and private keys fail the pre-push quality gate.
 - Persistent GitHub CLI and Git credential stores are forbidden in the service home; GitHub access is injected
@@ -97,7 +93,7 @@ and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeabil
 review may report `CHANGES_REQUESTED`. The scheduled merge workflow is the only autonomous merge authority and
 enforces the same boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`.
 
-GitHub applies a baseline ruleset requiring pull requests and non-strict `CI / required`, plus a second review-only
+GitHub applies a baseline ruleset requiring pull requests and strict `CI / required`, plus a second review-only
 ruleset requiring `factory/independent-review`. Only the exact repository-owner user may bypass either ruleset,
 and only through an existing pull request. This permits a deliberate human waiver of CI, review, or both while
 Factory automation continues to require literal success from both statuses. Roles, apps, teams, deploy keys,
