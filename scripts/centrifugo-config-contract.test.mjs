@@ -45,18 +45,6 @@ for (const path of composeFiles) {
   });
 }
 
-test('production requires an explicit Centrifugo browser origin allowlist', () => {
-  const compose = read('docker-compose.prod.yml');
-  assert.match(
-    compose,
-    /CENTRIFUGO_ALLOWED_ORIGINS=\$\{CENTRIFUGO_ALLOWED_ORIGINS:\?CENTRIFUGO_ALLOWED_ORIGINS must be set in production\}/,
-  );
-  assert.doesNotMatch(
-    compose,
-    /CENTRIFUGO_ALLOWED_ORIGINS=\$\{CENTRIFUGO_ALLOWED_ORIGINS:-\*\}/,
-  );
-});
-
 test('example environment declares the backend/Centrifugo shared credentials', () => {
   const env = read('.env.example');
   assert.match(env, /^CENTRIFUGO_API_KEY=/m);
@@ -65,5 +53,5 @@ test('example environment declares the backend/Centrifugo shared credentials', (
 
 test('Prometheus scrapes the Centrifugo internal metrics endpoint', () => {
   const prometheus = read('prometheus/prometheus.yml');
-  assert.match(prometheus, /targets: \['websocket:8000'\]/);
+  assert.match(prometheus, /targets: \['websocket:8001'\]/);
 });

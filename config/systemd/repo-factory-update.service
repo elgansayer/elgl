@@ -2,6 +2,7 @@
 Description=Repo Factory daily self-update
 After=network-online.target repo-factory@hellotalk.service repo-factory@workout-agent.service
 Wants=network-online.target
+Conflicts=repo-factory-health@hellotalk.service repo-factory-health@workout-agent.service
 
 [Service]
 Type=oneshot
@@ -14,7 +15,7 @@ Environment=REPO_FACTORY_PRIMARY_HEARTBEAT=/var/lib/hellotalk-factory/daemon.jso
 Environment=REPO_FACTORY_PRIMARY_SERVICE=repo-factory@hellotalk.service
 Environment=REPO_FACTORY_SECONDARY_HEARTBEAT=/var/lib/repo-factory/workout-agent/state/daemon.json
 Environment=REPO_FACTORY_SECONDARY_SERVICE=repo-factory@workout-agent.service
-ExecStart=/usr/bin/flock --wait 120 /run/lock/repo-factory-update.lock /bin/bash /opt/repo-factory/repo-factory-update.sh
+ExecStart=/bin/bash /opt/repo-factory/repo-factory-update.sh
 UMask=0077
 PrivateTmp=true
 ProtectHome=false

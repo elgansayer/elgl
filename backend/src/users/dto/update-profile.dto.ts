@@ -92,7 +92,7 @@ export class UpdateProfileDto {
   @IsArray()
   @IsString({ each: true })
   @ArrayMinSize(1)
-  @ArrayMaxSize(5)
+  @ArrayMaxSize(3)
   target_languages?: string[];
 
   @IsOptional()
@@ -231,9 +231,11 @@ export class UpdateProfileDto {
   proficiency_level?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  learning_goals?: string;
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(100, { each: true })
+  learning_goals?: string[];
 
   @IsOptional()
   @IsString()
