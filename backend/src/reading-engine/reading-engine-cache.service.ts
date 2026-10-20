@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import type Redis from 'ioredis-v6';
+import type Redis from 'ioredis';
 import {
   ReadingEngineCacheNamespace,
   CacheInvalidationRule,

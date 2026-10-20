@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsIn,
   IsNotEmpty,
@@ -104,18 +105,6 @@ export class SendMessageDto {
   @ValidateNested()
   @Type(() => CorrectionPayloadDto)
   correction_payload?: CorrectionPayloadDto;
-
-  @IsOptional()
-  @IsString()
-  media_url?: string;
-
-  @IsOptional()
-  @IsObject()
-  correction_payload?: {
-    original: string;
-    corrected: string;
-    explanation?: string;
-  };
 
   @IsOptional()
   @IsString()

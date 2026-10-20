@@ -45,6 +45,9 @@ export interface LearnerKnowledgeProfile {
   };
   knowledgeItems: Map<string, KnowledgeItem>;
   recentEncounters: RecentEncounter[];
+  interests?: string[];
+  nativeLanguages?: string[];
+  targetLanguages?: string[];
 }
 
 @Injectable()

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for Repo Factory updates every 30 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/30:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

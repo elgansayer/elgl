@@ -3,11 +3,10 @@ import { CommonModule } from '@angular/common';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { Quest, QuestStore } from '../../services/quests.store';
-import { QuestStore } from '../../services/quests.store';
 
 @Component({
   selector: 'app-quests',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, HlmButton, TranslatePipe],
   template: `
     <div class="p-4 bg-surface text-start" role="region" aria-label="{{ 'quests.title' | t }}">
       <h2 class="text-xl font-bold mb-4">{{ 'quests.title' | t }}</h2>

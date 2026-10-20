@@ -69,20 +69,26 @@ export class LanguageChallengesService {
     return { challengeId };
   }
 
-  async listChallenges() {
+  async listChallenges(userId?: string, limit?: number, offset?: number) {
     const supabase = this.supabase;
-    const { data, error } = await supabase
+    let query = supabase
       .from('language_challenges')
       .select('*')
       .eq('status', 'open')
-      .order('created_at', { ascending: false })
-      .returns<LanguageChallenge[]>();
+      .order('created_at', { ascending: false });
+
+    if (typeof limit === 'number' && limit > 0) {
+      const from = typeof offset === 'number' && offset > 0 ? offset : 0;
+      query = query.range(from, from + limit - 1);
+    }
+
+    const { data, error } = await query.returns<LanguageChallenge[]>();
 
     if (error) {
       this.logger.error(`Failed to list challenges: ${error.message}`);
       return [];
     }
-    return data;
+    return data ?? [];
   }
 
   async joinChallenge(userId: string, challengeId: string) {
@@ -114,8 +120,6 @@ export class LanguageChallengesService {
     if (challenge.status !== 'open') {
       throw new BadRequestException('Challenge is not open for joining');
     }
-
-    const { data: existing } = existingRes;
 
     if (existing) {
       throw new BadRequestException('You have already joined this challenge');

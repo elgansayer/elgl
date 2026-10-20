@@ -397,7 +397,7 @@ export class DiscoveryService {
   }
 
   // Expose the current Partner of the Week IDs
-  async getPartnerOfWeekIds(): Promise<string[]> {
+  async getPartnerOfWeekIds(userId?: string): Promise<string[]> {
     const redis = this.supabaseService.getRedisClient();
     const raw = await redis.get('partner_of_week_ids');
     return sanitiseDiscoveryData(this.parseStringArray(raw));

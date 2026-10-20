@@ -3,13 +3,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from './supabase.service';
 import { createClient } from '@supabase/supabase-js';
-import Redis from 'ioredis-v6';
+import Redis from 'ioredis';
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(),
 }));
 
-vi.mock('ioredis-v6');
+vi.mock('ioredis');
 
 describe('SupabaseService', () => {
   let service: SupabaseService;

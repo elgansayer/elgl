@@ -5,6 +5,7 @@ import { MetricsModule } from '../metrics/metrics.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { RecommendationsController } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';
+import { DiscoveryRecommendationsService } from './discovery-recommendations.service';
 import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 
@@ -17,10 +18,11 @@ import { MatchmakingCrashReportService } from './matchmaking-crash-report.servic
   controllers: [RecommendationsController],
   providers: [
     RecommendationsService,
+    DiscoveryRecommendationsService,
     RecommendationsRateLimiterGuard,
     CircuitBreakerService,
     MatchmakingCrashReportService,
   ],
-  exports: [RecommendationsService],
+  exports: [RecommendationsService, DiscoveryRecommendationsService],
 })
 export class RecommendationsModule {}

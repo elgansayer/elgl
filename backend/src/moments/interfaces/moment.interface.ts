@@ -43,5 +43,6 @@ export interface MomentRecord {
     display_name?: string;
     avatar_url?: string | null;
   };
+  hashtags?: string[];
   is_liked_by_me?: boolean;
 }

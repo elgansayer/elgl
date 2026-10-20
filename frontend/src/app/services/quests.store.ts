@@ -18,15 +18,18 @@ export class QuestStore {
   private http = inject(HttpClient);
   readonly quests = signal<Quest[]>([]);
   readonly loading = signal(false);
+  readonly error = signal(false);
 
   async fetchQuests(): Promise<void> {
     this.loading.set(true);
+    this.error.set(false);
     try {
       const data = await firstValueFrom(
         this.http.get<Quest[]>(`${environment.apiUrl}/quests`),
       );
       this.quests.set(data);
     } catch {
+      this.error.set(true);
       this.quests.set([]);
     } finally {
       this.loading.set(false);

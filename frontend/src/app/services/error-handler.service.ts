@@ -141,7 +141,7 @@ export class GlobalErrorHandler implements ErrorHandler {
 
   private reportUnknown(err: unknown): void {
     let message = 'Unknown client error';
-    let rawType = typeof err;
+    let rawType: string = typeof err;
 
     if (typeof err === 'object' && err !== null) {
       try {

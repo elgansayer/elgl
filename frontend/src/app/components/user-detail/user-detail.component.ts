@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, input, effect } from '@angular/core';
+import { Component, inject, signal, input, effect, computed } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';

@@ -105,7 +105,7 @@ export class MessageReactionsService {
     if (count > 0) return;
 
     const channel = `chat:${roomId}`;
-    const unlisten = this.centrifuge.listen(channel, (publication) => {
+    const unlisten = this.centrifuge.listen(channel, (publication: unknown) => {
       const state = parseMessageReactionPublication(publication);
       if (state) this.applyMessageState(roomId, state);
     });

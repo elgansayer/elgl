@@ -1,4 +1,3 @@
-import { Component, input, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
