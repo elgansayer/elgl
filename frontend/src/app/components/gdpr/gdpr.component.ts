@@ -1,5 +1,5 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { GdprService } from '../../services/gdpr.service';
@@ -28,8 +28,27 @@ import { I18nService } from '../../services/i18n.service';
 
       <main class="mx-auto max-w-lg space-y-6 ps-4 pe-4 pt-4 pb-4">
         <p class="text-sm text-text-secondary">{{ 'gdpr.description' | t }}</p>
-        @if (statusLoadError()) {
-          <p class="text-xs text-danger" role="alert">{{ 'common.loadError' | t }}</p>
+
+        @if (statusLoading()) {
+          <p class="text-xs text-text-secondary" role="status">
+            {{ 'common.loading' | t }}
+          </p>
+        }
+        @if (statusError()) {
+          <div
+            class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger/10 p-3"
+          >
+            <span class="text-xs text-danger" role="alert">{{ statusError() }}</span>
+            <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="touch"
+              (click)="loadStatus()"
+            >
+              {{ 'common.retry' | t }}
+            </button>
+          </div>
         }
 
         <section class="space-y-4">
@@ -52,18 +71,6 @@ import { I18nService } from '../../services/i18n.service';
             >
               {{ loading() ? ('common.loading' | t) : ('gdpr.requestArchiveBtn' | t) }}
             </button>
-            @if (archiveDownloadUrl()) {
-              <button
-                hlmBtn
-                type="button"
-                variant="secondary"
-                size="touch"
-                class="w-full"
-                (click)="downloadLatestArchive()"
-              >
-                {{ 'privacy.hub.downloadData' | t }}
-              </button>
-            }
             @if (archiveSuccess()) {
               <p class="text-xs text-success" role="status">{{ 'gdpr.archiveSuccess' | t }}</p>
             }
@@ -73,43 +80,49 @@ import { I18nService } from '../../services/i18n.service';
           </div>
         </section>
 
-        <section class="space-y-4">
-          <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
-            {{ 'gdpr.deleteSection' | t }}
-          </h2>
-          <div
-            class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
-          >
-            <p class="text-xs text-text-secondary">{{ 'gdpr.deleteInfo' | t }}</p>
-            <label class="flex cursor-pointer items-center gap-2">
-              <hlm-checkbox
-                [checked]="confirmDelete()"
-                (change)="confirmDelete.set(!confirmDelete())"
-                class="h-5 w-5 rounded border-surface-300 text-danger"
-              />
-              <span class="text-sm text-text-primary">{{ 'gdpr.deleteConfirmLabel' | t }}</span>
-            </label>
-            <button
-              hlmBtn
-              type="button"
-              variant="destructive-solid"
-              size="touch"
-              class="w-full"
-              (click)="deleteAccount()"
-              [disabled]="!confirmDelete() || deleting()"
-              [attr.aria-busy]="deleting()"
-              [attr.aria-label]="'gdpr.deleteAccountBtn' | t"
+        @if (deleteSuccess()) {
+          <p class="text-xs text-success" role="status">{{ 'gdpr.deleteSuccess' | t }}</p>
+        }
+        @if (cancelSuccess()) {
+          <p class="text-xs text-success" role="status">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
+        }
+
+        @if (!isPendingDeletion()) {
+          <section class="space-y-4">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
+              {{ 'gdpr.deleteSection' | t }}
+            </h2>
+            <div
+              class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
             >
-              {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
-            </button>
-            @if (deleteSuccess()) {
-              <p class="text-xs text-success" role="status">{{ 'gdpr.deleteSuccess' | t }}</p>
-            }
-            @if (deleteError()) {
-              <p class="text-xs text-danger" role="alert">{{ deleteError() }}</p>
-            }
-          </div>
-        </section>
+              <p class="text-xs text-text-secondary">{{ 'gdpr.deleteInfo' | t }}</p>
+              <label class="flex cursor-pointer items-center gap-2">
+                <hlm-checkbox
+                  [checked]="confirmDelete()"
+                  (change)="confirmDelete.set(!confirmDelete())"
+                  class="h-5 w-5 rounded border-surface-300 text-danger"
+                />
+                <span class="text-sm text-text-primary">{{ 'gdpr.deleteConfirmLabel' | t }}</span>
+              </label>
+              <button
+                hlmBtn
+                type="button"
+                variant="destructive-solid"
+                size="touch"
+                class="w-full"
+                (click)="deleteAccount()"
+                [disabled]="!confirmDelete() || deleting()"
+                [attr.aria-busy]="deleting()"
+                [attr.aria-label]="'gdpr.deleteAccountBtn' | t"
+              >
+                {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
+              </button>
+              @if (deleteError()) {
+                <p class="text-xs text-danger" role="alert">{{ deleteError() }}</p>
+              }
+            </div>
+          </section>
+        }
 
         @if (isPendingDeletion()) {
           <section class="space-y-4">
@@ -131,11 +144,6 @@ import { I18nService } from '../../services/i18n.service';
               >
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}
               </button>
-              @if (cancelSuccess()) {
-                <p class="text-xs text-success" role="status">
-                  {{ 'gdpr.cancelDeletionSuccess' | t }}
-                </p>
-              }
               @if (cancelError()) {
                 <p class="text-xs text-danger" role="alert">{{ cancelError() }}</p>
               }
@@ -146,37 +154,13 @@ import { I18nService } from '../../services/i18n.service';
     </div>
   `,
 })
-export class GdprComponent {
-  private readonly gdprService = inject(GdprService);
-  private readonly i18n = inject(I18nService);
+export class GdprComponent implements OnInit {
+  private gdprService = inject(GdprService);
+  private i18n = inject(I18nService);
+  private statusRequestId = 0;
 
-  readonly statusLoadError = signal(false);
-  readonly privacyStatusResource = resource({
-    loader: async () => {
-      this.statusLoadError.set(false);
-      try {
-        return await this.gdprService.getStatus();
-      } catch {
-        this.statusLoadError.set(true);
-        return undefined;
-      }
-    },
-  });
-  private readonly deletionPendingOverride = signal<boolean | null>(null);
-  private readonly archiveDownloadOverride = signal<string | null>(null);
-
-  readonly isPendingDeletion = computed(
-    () =>
-      this.deletionPendingOverride() ??
-      this.privacyStatusResource.value()?.is_deletion_pending ??
-      false,
-  );
-  readonly archiveDownloadUrl = computed(
-    () =>
-      this.archiveDownloadOverride() ??
-      this.privacyStatusResource.value()?.latest_archive?.download_url ??
-      '',
-  );
+  statusLoading = signal(false);
+  statusError = signal('');
 
   loading = signal(false);
   archiveSuccess = signal(false);
@@ -187,12 +171,36 @@ export class GdprComponent {
   deleteSuccess = signal(false);
   deleteError = signal('');
 
+  isPendingDeletion = signal(false);
   cancelling = signal(false);
   cancelSuccess = signal(false);
   cancelError = signal('');
 
+  ngOnInit(): void {
+    void this.loadStatus();
+  }
+
   goBack(): void {
     window.history.back();
+  }
+
+  async loadStatus(): Promise<void> {
+    const requestId = ++this.statusRequestId;
+    this.statusLoading.set(true);
+    this.statusError.set('');
+
+    try {
+      const status = await this.gdprService.getStatus();
+      if (requestId !== this.statusRequestId) return;
+      this.isPendingDeletion.set(status.deletion.pending);
+    } catch {
+      if (requestId !== this.statusRequestId) return;
+      this.statusError.set(this.i18n.translate('common.loadError'));
+    } finally {
+      if (requestId === this.statusRequestId) {
+        this.statusLoading.set(false);
+      }
+    }
   }
 
   async requestArchive(): Promise<void> {
@@ -205,9 +213,6 @@ export class GdprComponent {
       if (archive.status === 'ready') {
         if (!archive.download_url) throw new Error('Missing archive URL');
         this.downloadArchive(archive.download_url);
-        this.archiveDownloadOverride.set(archive.download_url);
-      } else {
-        this.privacyStatusResource.reload();
       }
       this.archiveSuccess.set(true);
     } catch {
@@ -224,8 +229,12 @@ export class GdprComponent {
     this.deleteError.set('');
     try {
       await this.gdprService.deleteAccount(true);
+      this.statusRequestId += 1;
+      this.statusLoading.set(false);
+      this.statusError.set('');
+      this.cancelSuccess.set(false);
       this.deleteSuccess.set(true);
-      this.deletionPendingOverride.set(true);
+      this.isPendingDeletion.set(true);
     } catch {
       this.deleteError.set(this.i18n.translate('common.loadError'));
     } finally {
@@ -240,20 +249,16 @@ export class GdprComponent {
     this.cancelError.set('');
     try {
       await this.gdprService.cancelDeletion();
+      this.statusRequestId += 1;
+      this.statusLoading.set(false);
+      this.statusError.set('');
+      this.deleteSuccess.set(false);
       this.cancelSuccess.set(true);
-      this.deletionPendingOverride.set(false);
+      this.isPendingDeletion.set(false);
     } catch {
       this.cancelError.set(this.i18n.translate('common.loadError'));
     } finally {
       this.cancelling.set(false);
-    }
-  }
-
-  downloadLatestArchive(): void {
-    try {
-      this.downloadArchive(this.archiveDownloadUrl());
-    } catch {
-      this.archiveError.set(this.i18n.translate('common.loadError'));
     }
   }
 

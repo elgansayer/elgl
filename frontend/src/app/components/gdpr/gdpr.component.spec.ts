@@ -19,15 +19,16 @@ describe('GdprComponent', () => {
   beforeEach(async () => {
     mockGdprService = {
       getStatus: vi.fn().mockResolvedValue({
-        is_deletion_pending: false,
-        scheduled_for_deletion_at: null,
-        latest_archive: null,
+        deletion: {
+          pending: false,
+          scheduled_for: null,
+          requested_at: null,
+        },
       }),
       requestArchive: vi.fn().mockResolvedValue({
         request_id: '11111111-1111-4111-8111-111111111111',
         status: 'ready',
-        download_url:
-          'https://example.supabase.co/storage/v1/object/sign/gdpr-archives/archive.json?token=short-lived',
+        download_url: 'https://example.supabase.co/storage/v1/object/sign/gdpr-archives/archive.json?token=short-lived',
         expires_at: '2026-09-01T00:00:00.000Z',
         message: 'Archive ready for download.',
       }),
@@ -49,8 +50,6 @@ describe('GdprComponent', () => {
 
     fixture = TestBed.createComponent(GdprComponent);
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
   });
 
   afterEach(() => {
@@ -62,6 +61,47 @@ describe('GdprComponent', () => {
     expect(el.querySelector('.app-header-title')?.textContent).toContain('gdpr.title');
     expect(el.textContent).toContain('gdpr.archiveSection');
     expect(el.textContent).toContain('gdpr.deleteSection');
+  });
+
+  it('rehydrates a pending deletion from the authenticated server state', async () => {
+    mockGdprService.getStatus.mockResolvedValueOnce({
+      deletion: {
+        pending: true,
+        scheduled_for: '2026-09-26T04:00:00.000Z',
+        requested_at: '2026-08-27T04:00:00.000Z',
+      },
+    });
+
+    await fixture.componentInstance.loadStatus();
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
+    expect(el.textContent).toContain('gdpr.cancelDeletionSection');
+    expect(el.textContent).not.toContain('gdpr.deleteAccountBtn');
+  });
+
+  it('keeps lifecycle lookup failures retryable without inventing local state', async () => {
+    mockGdprService.getStatus.mockRejectedValueOnce(new Error('provider detail'));
+
+    await fixture.componentInstance.loadStatus();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.isPendingDeletion()).toBe(false);
+    expect(fixture.componentInstance.statusError()).toBe('common.loadError');
+    expect(fixture.nativeElement.textContent).toContain('common.retry');
+
+    mockGdprService.getStatus.mockResolvedValueOnce({
+      deletion: {
+        pending: true,
+        scheduled_for: '2026-09-26T04:00:00.000Z',
+        requested_at: '2026-08-27T04:00:00.000Z',
+      },
+    });
+    await fixture.componentInstance.loadStatus();
+
+    expect(fixture.componentInstance.statusError()).toBe('');
+    expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
   });
 
   it('requests a private archive, downloads the signed URL, and shows success', async () => {
@@ -131,9 +171,11 @@ describe('GdprComponent', () => {
     fixture.detectChanges();
 
     await fixture.componentInstance.deleteAccount();
+    fixture.detectChanges();
 
     expect(mockGdprService.deleteAccount).toHaveBeenCalledWith(true);
     expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('gdpr.deleteSuccess');
   });
 
   it('deduplicates concurrent delete submissions', async () => {
@@ -160,55 +202,23 @@ describe('GdprComponent', () => {
   });
 
   it('should show cancel deletion section when deletion is pending', () => {
-    mockGdprService.getStatus.mockResolvedValue({
-      is_deletion_pending: true,
-      scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
-      latest_archive: null,
-    });
-    fixture.componentInstance.privacyStatusResource.reload();
+    fixture.componentInstance.isPendingDeletion.set(true);
     fixture.detectChanges();
 
-    return fixture.whenStable().then(() => {
-      fixture.detectChanges();
-
-      const el: HTMLElement = fixture.nativeElement;
-      expect(el.textContent).toContain('gdpr.cancelDeletionSection');
-    });
-  });
-
-  it('restores and downloads the latest ready archive after reload', async () => {
-    mockGdprService.getStatus.mockResolvedValue({
-      is_deletion_pending: false,
-      scheduled_for_deletion_at: null,
-      latest_archive: {
-        request_id: '55555555-5555-4555-8555-555555555555',
-        status: 'ready',
-        download_url: 'https://storage.example/signed/archive?token=restored',
-        expires_at: '2026-09-01T00:00:00.000Z',
-      },
-    });
-    fixture.componentInstance.privacyStatusResource.reload();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const clickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => undefined);
-    fixture.componentInstance.downloadLatestArchive();
-
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.textContent).toContain('privacy.hub.downloadData');
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('gdpr.cancelDeletionSection');
   });
 
   it('should call cancelDeletion and hide section on success', async () => {
-    fixture.componentInstance.confirmDelete.set(true);
-    await fixture.componentInstance.deleteAccount();
+    fixture.componentInstance.isPendingDeletion.set(true);
     fixture.detectChanges();
 
     await fixture.componentInstance.cancelDeletion();
+    fixture.detectChanges();
 
     expect(mockGdprService.cancelDeletion).toHaveBeenCalled();
     expect(fixture.componentInstance.isPendingDeletion()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('gdpr.cancelDeletionSuccess');
   });
 
   it('should show archive error when requestArchive fails', async () => {
@@ -217,17 +227,5 @@ describe('GdprComponent', () => {
     await fixture.componentInstance.requestArchive();
 
     expect(fixture.componentInstance.archiveError()).toBe('common.loadError');
-  });
-
-  it('shows an error when persisted privacy status cannot be restored', async () => {
-    mockGdprService.getStatus.mockRejectedValue(new Error('Network error'));
-    fixture.componentInstance.privacyStatusResource.reload();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.statusLoadError()).toBe(true);
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
-      'common.loadError',
-    );
   });
 });

@@ -11,15 +11,14 @@ export interface GdprArchiveResponse {
   message: string;
 }
 
-export interface PrivacyStatus {
-  is_deletion_pending: boolean;
-  scheduled_for_deletion_at: string | null;
-  latest_archive: {
-    request_id: string;
-    status: 'processing' | 'ready' | 'failed' | 'expired';
-    download_url?: string;
-    expires_at: string | null;
-  } | null;
+export interface AccountDeletionStatus {
+  pending: boolean;
+  scheduled_for: string | null;
+  requested_at: string | null;
+}
+
+export interface GdprStatusResponse {
+  deletion: AccountDeletionStatus;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -27,11 +26,17 @@ export class GdprService {
   private readonly http = inject(HttpClient);
   private readonly apiBase = environment.apiUrl;
 
-  async getStatus(): Promise<PrivacyStatus> {
-    return lastValueFrom(this.http.get<PrivacyStatus>(`${this.apiBase}/privacy/status`));
+  async getStatus(): Promise<GdprStatusResponse> {
+    const response = await lastValueFrom(
+      this.http.get<unknown>('/api/privacy/status'),
+    );
+    return this.parseStatusResponse(response);
   }
 
-  async requestArchive(receiptId?: string, appStore?: string): Promise<GdprArchiveResponse> {
+  async requestArchive(
+    receiptId?: string,
+    appStore?: string,
+  ): Promise<GdprArchiveResponse> {
     return lastValueFrom(
       this.http.post<GdprArchiveResponse>(`${this.apiBase}/privacy/request-archive`, {
         receipt_id: receiptId,
@@ -50,5 +55,36 @@ export class GdprService {
 
   async cancelDeletion(): Promise<void> {
     await lastValueFrom(this.http.post(`${this.apiBase}/privacy/cancel-deletion`, {}));
+  }
+
+  private parseStatusResponse(value: unknown): GdprStatusResponse {
+    if (!this.isRecord(value) || !this.isRecord(value['deletion'])) {
+      throw new Error('Invalid privacy status response');
+    }
+
+    const deletion = value['deletion'];
+    if (typeof deletion['pending'] !== 'boolean') {
+      throw new Error('Invalid privacy status response');
+    }
+
+    return {
+      deletion: {
+        pending: deletion['pending'],
+        scheduled_for: this.parseNullableTimestamp(deletion['scheduled_for']),
+        requested_at: this.parseNullableTimestamp(deletion['requested_at']),
+      },
+    };
+  }
+
+  private parseNullableTimestamp(value: unknown): string | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) {
+      throw new Error('Invalid privacy status timestamp');
+    }
+    return new Date(value).toISOString();
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 }
