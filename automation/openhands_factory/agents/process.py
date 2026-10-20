@@ -41,18 +41,20 @@ state_dir=$3
 log_dir=$4
 service_home=$5
 mount_count=$6
-shift 6
+sandbox_root=$7
+shift 7
 
 /usr/bin/mount --make-rprivate /
-/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs /mnt
+/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
+staging=$sandbox_root/factory-provider
 for name in workspace repository credentials; do
-  /usr/bin/mkdir -p "/mnt/factory-provider/$name"
+  /usr/bin/mkdir -p "$staging/$name"
 done
-/usr/bin/mount --bind "$workspace" /mnt/factory-provider/workspace
-/usr/bin/mount --bind "$repository" /mnt/factory-provider/repository
-/usr/bin/mount -o remount,bind,ro /mnt/factory-provider/repository
+/usr/bin/mount --bind "$workspace" "$staging/workspace"
+/usr/bin/mount --bind "$repository" "$staging/repository"
+/usr/bin/mount -o remount,bind,ro "$staging/repository"
 
-manifest=/mnt/factory-provider/mounts
+manifest=$staging/mounts
 : > "$manifest"
 index=0
 while [ "$index" -lt "$mount_count" ]; do
@@ -61,7 +63,7 @@ while [ "$index" -lt "$mount_count" ]; do
   shift 2
   source=$service_home/$relative
   if [ -e "$source" ]; then
-    staged=/mnt/factory-provider/credentials/$index
+    staged=$staging/credentials/$index
     if [ -d "$source" ]; then
       /usr/bin/mkdir -p "$staged"
     else
@@ -114,12 +116,12 @@ fi
 /usr/bin/chmod 700 "$service_home"
 /usr/bin/mkdir -p "$workspace" "$repository"
 if [ "$repository" != "$workspace" ]; then
-  /usr/bin/mount --bind /mnt/factory-provider/repository "$repository"
+  /usr/bin/mount --bind "$staging/repository" "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
-/usr/bin/mount --bind /mnt/factory-provider/workspace "$workspace"
+/usr/bin/mount --bind "$staging/workspace" "$workspace"
 while IFS='|' read -r index mode relative; do
-  staged=/mnt/factory-provider/credentials/$index
+  staged=$staging/credentials/$index
   target=$service_home/$relative
   /usr/bin/mkdir -p "$(/usr/bin/dirname "$target")"
   if [ -d "$staged" ]; then
@@ -232,6 +234,26 @@ class AgentProcessRunner:
     def __init__(self, *, isolate_processes: bool = True) -> None:
         self.isolate_processes = isolate_processes
 
+    @staticmethod
+    def _sandbox_root(
+        protected_paths: Sequence[Path],
+        *,
+        candidates: Sequence[Path] = (Path("/mnt"), Path("/srv"), Path("/media")),
+    ) -> Path:
+        resolved_paths = tuple(path.resolve() for path in protected_paths)
+        for candidate in candidates:
+            resolved_candidate = candidate.resolve()
+            if not candidate.is_dir():
+                continue
+            if any(
+                protected.is_relative_to(resolved_candidate)
+                or resolved_candidate.is_relative_to(protected)
+                for protected in resolved_paths
+            ):
+                continue
+            return resolved_candidate
+        raise ValueError("No safe provider sandbox staging root is available")
+
     def _launch_command(
         self,
         command: Sequence[str],
@@ -249,6 +271,7 @@ class AgentProcessRunner:
         protected_paths = (cwd, repository, state_dir, log_dir, service_home)
         if any(path.resolve() == Path("/") for path in protected_paths):
             raise ValueError("Provider isolation paths must not resolve to the filesystem root")
+        sandbox_root = self._sandbox_root(protected_paths)
         mount_arguments: list[str] = []
         service_home_resolved = service_home.resolve()
         for mount in home_mounts:
@@ -276,6 +299,7 @@ class AgentProcessRunner:
             str(log_dir.resolve()),
             str(service_home.resolve()),
             str(len(home_mounts)),
+            str(sandbox_root),
             *mount_arguments,
             "--",
             *command,

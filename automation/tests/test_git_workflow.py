@@ -37,6 +37,25 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     assert (worktree / "admin-portal/node_modules").is_symlink()
 
 
+def test_prepare_worktree_resolves_dependency_links_from_repository_alias(
+    tmp_path: Path,
+) -> None:
+    real_repository = tmp_path / "source" / "repository"
+    real_repository.mkdir(parents=True)
+    (real_repository / "frontend/node_modules").mkdir(parents=True)
+    repository = tmp_path / "configured-repository"
+    repository.symlink_to(real_repository, target_is_directory=True)
+    worktree = tmp_path / "worktrees" / "issue-12"
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.prepare_worktree(worktree, "12", "Fix build")
+
+    dependency_link = worktree / "frontend/node_modules"
+    assert dependency_link.is_symlink()
+    assert dependency_link.readlink() == (real_repository / "frontend/node_modules").resolve()
+
+
 def test_prepare_worktree_retries_a_transient_lock_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
