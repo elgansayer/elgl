@@ -40,7 +40,7 @@
   </div>
 
   @if (isLoading()) {
-    <div class="overflow-x-auto" aria-busy="true">
+    <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-surface-100">
         <thead class="bg-surface-100">
           <tr>
@@ -112,15 +112,11 @@
         </tbody>
       </table>
     </div>
-  } @else if (usersLoadError() || users().length === 0) {
+  } @else if (users().length === 0) {
     <app-empty-state
-      [icon]="usersLoadError() ? '⚠️' : '👥'"
-      [title]="(usersLoadError() ? 'admin.userManagement.loadError' : 'admin.users.emptyTitle') | t"
-      [description]="
-        (usersLoadError() ? 'admin.userManagement.loadErrorDesc' : 'admin.users.emptyDesc') | t
-      "
-      [actionLabel]="usersLoadError() ? ('common.retry' | t) : ''"
-      (actionClicked)="retryUsers()"
+      icon="👥"
+      [title]="'admin.users.emptyTitle' | t"
+      [description]="'admin.users.emptyDesc' | t"
     />
   } @else {
     <div class="overflow-x-auto">
@@ -255,33 +251,9 @@
       <div
         class="bg-surface-200 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
         (click)="$event.stopPropagation()"
-        role="dialog"
-        aria-modal="true"
-        [attr.aria-label]="'admin.users.loginHistoryTitle' | t"
       >
         <h3 class="text-lg font-semibold mb-4">{{ 'admin.users.loginHistoryTitle' | t }}</h3>
-        @if (isHistoryLoading()) {
-          <div class="space-y-3" aria-busy="true">
-            @for (row of [1, 2, 3]; track row) {
-              <app-skeleton-loader [height]="'16px'" [width]="'100%'" [variant]="'text'" />
-            }
-          </div>
-        } @else if (historyLoadError()) {
-          <div
-            role="alert"
-            class="rounded-card border border-danger/40 bg-danger/5 p-4 text-start"
-          >
-            <p class="font-semibold text-text-primary">
-              {{ 'admin.userManagement.loadError' | t }}
-            </p>
-            <p class="mt-1 text-sm text-text-secondary">
-              {{ 'admin.userManagement.loadErrorDesc' | t }}
-            </p>
-            <button hlmBtn type="button" class="mt-3" (click)="retryHistory()">
-              {{ 'common.retry' | t }}
-            </button>
-          </div>
-        } @else if (loginHistory().length === 0) {
+        @if (loginHistory().length === 0) {
           <p class="text-text-secondary">{{ 'admin.users.noHistory' | t }}</p>
         } @else {
           <table class="min-w-full divide-y divide-surface-100">

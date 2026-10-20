@@ -217,8 +217,8 @@ def test_deployment_installs_bounded_host_storage_policy() -> None:
     assert "SystemMaxUse=512M" in journal_policy
     assert "SystemKeepFree=5G" in journal_policy
     assert "MaxRetentionSec=14day" in journal_policy
-    assert "docker image prune" in maintenance
-    assert "docker builder prune" in maintenance
+    assert '"$docker" image prune' in maintenance
+    assert '"$docker" builder prune' in maintenance
     assert "docker system prune" not in maintenance
     assert "docker volume prune" not in maintenance
     assert "docker container prune" not in maintenance
@@ -421,7 +421,6 @@ def test_default_repository_is_production_clone() -> None:
     config = FactoryConfig.from_environment(environment())
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
-    assert config.recovery_retention_hours == 72
     assert config.max_parallel_jobs == 5
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"

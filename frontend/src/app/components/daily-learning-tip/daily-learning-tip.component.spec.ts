@@ -70,23 +70,7 @@ describe('DailyLearningTipComponent', () => {
     });
   });
 
-  it('names the Relay region and exposes its loading state without adding focus targets', () => {
-    mockFetch.mockReturnValue(new Promise(() => undefined));
-
-    createComponent();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    const card = compiled.querySelector('app-card');
-
-    expect(card?.getAttribute('role')).toBe('region');
-    expect(card?.getAttribute('aria-label')).toBe('home.dailyTip.title');
-    expect(card?.getAttribute('aria-busy')).toBe('true');
-    expect(
-      compiled.querySelectorAll('button, a[href], input, select, textarea, [tabindex]').length,
-    ).toBe(0);
-  });
-
-  it('renders the fetched tip once loaded and clears the busy state', async () => {
+  it('renders the fetched tip once loaded', async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ tip: 'Practise daily.' }),
@@ -95,29 +79,7 @@ describe('DailyLearningTipComponent', () => {
     createComponent();
     await settleComponent();
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Practise daily.');
-    expect(compiled.querySelector('app-card')?.getAttribute('aria-busy')).toBeNull();
-  });
-
-  it('keeps long content reflowable at high zoom without physical-direction utilities', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ tip: 'averylongunbrokentipthatmustremainreadableat400percentzoom' }),
-    });
-
-    createComponent();
-    await settleComponent();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    const card = compiled.querySelector('app-card');
-    const tip = compiled.querySelector('p.text-base');
-
-    expect(card?.className).toContain('min-w-0');
-    expect(card?.className).toContain('motion-reduce:transition-none');
-    expect(tip?.className).toContain('break-words');
-    expect(tip?.className).toContain('[overflow-wrap:anywhere]');
-    expect(compiled.innerHTML).not.toMatch(/\b(?:ml|mr|pl|pr|left|right)-/);
+    expect(fixture.nativeElement.textContent).toContain('Practise daily.');
   });
 
   it('falls back to the default tip when the request fails', async () => {

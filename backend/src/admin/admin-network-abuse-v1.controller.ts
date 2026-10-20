@@ -87,7 +87,9 @@ export class AdminNetworkAbuseV1Controller {
   @Post('impact')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.read')
-  @ApiOperation({ summary: 'Preview the observed impact of a proposed CIDR block' })
+  @ApiOperation({
+    summary: 'Preview the observed impact of a proposed CIDR block',
+  })
   async impact(
     @Body() input: AdminNetworkImpactDto,
     @Req() req: AdminAuthRequest,
@@ -372,7 +374,10 @@ export class AdminNetworkAbuseV1Controller {
   ): Promise<AdminNetworkAllowlistEntry> {
     const actorUserId = this.actor(req);
     try {
-      const result = await this.networkAbuse.createAllowlist(actorUserId, input);
+      const result = await this.networkAbuse.createAllowlist(
+        actorUserId,
+        input,
+      );
       await this.record(req, actorUserId, {
         action: 'security.network.allowlist.create',
         capabilityKey: 'security.network.manage',

@@ -5,7 +5,8 @@
     </h3>
     <button
       hlmBtn
-      aria-label="Cancel recording"
+      type="button"
+      [attr.aria-label]="'common.cancel' | t"
       (click)="cancel()"
       class="text-text-muted hover:text-text-secondary font-bold"
     >
@@ -13,9 +14,17 @@
     </button>
   </div>
 
-  <div class="flex justify-center gap-1.5">
-    <app-chip>{{ 'voiceRecorder.chipSpeak' | t }}</app-chip>
-    <app-chip>{{ 'voiceRecorder.chipSend' | t }}</app-chip>
+  <div class="flex flex-wrap justify-center gap-1.5">
+    <span
+      class="inline-flex items-center rounded-pill border border-surface-100 bg-surface-100 px-2.5 py-1 text-xs font-semibold text-text-primary"
+    >
+      {{ 'voiceRecorder.chipSpeak' | t }}
+    </span>
+    <span
+      class="inline-flex items-center rounded-pill border border-surface-100 bg-surface-100 px-2.5 py-1 text-xs font-semibold text-text-primary"
+    >
+      {{ 'voiceRecorder.chipSend' | t }}
+    </span>
   </div>
 
   <div class="py-6 flex flex-col items-center justify-center">
@@ -23,7 +32,7 @@
       <div
         class="w-24 h-24 rounded-full bg-danger/20 border-4 border-danger flex items-center justify-center animate-pulse shadow-lg"
       >
-        <span class="text-3xl">🔴</span>
+        <span class="text-3xl" aria-hidden="true">🔴</span>
       </div>
     }
 
@@ -31,48 +40,62 @@
       <div
         class="w-24 h-24 rounded-full bg-surface-100 border-4 border-surface-100 flex items-center justify-center text-3xl"
       >
-        🎙️
+        <span aria-hidden="true">🎙️</span>
       </div>
     }
 
     @if (audioPreviewUrl()) {
       <div class="w-full mt-2">
-        <audio [src]="audioPreviewUrl()" controls class="w-full rounded-xl shadow-inner"></audio>
+        <audio
+          [src]="audioPreviewUrl()"
+          controls
+          class="w-full rounded-xl shadow-inner"
+          [attr.aria-label]="'chatRoom.playVoiceMessage' | t"
+        ></audio>
       </div>
     }
 
-    <div class="mt-4 text-2xl font-mono font-bold text-text-primary">
+    <div
+      class="mt-4 text-2xl font-mono font-bold text-text-primary"
+      role="status"
+      aria-live="polite"
+    >
       {{ formatDuration(durationSeconds()) }}
     </div>
   </div>
 
-  <div class="flex justify-center gap-3 pt-2">
-    @if (!isRecording() && !audioPreviewUrl()) {
-      <button
-        hlmBtn
-        (click)="startRecording()"
-        class="px-6 py-3 rounded-app bg-danger hover:bg-danger/80 text-on-fill font-bold text-sm shadow-md transition-all flex items-center gap-2"
-        [attr.aria-label]="'voiceRecorder.startBtn' | t"
-      >
-        <span>{{ 'voiceRecorder.startBtn' | t }}</span>
-      </button>
-    }
+  @if (errorKey(); as error) {
+    <p class="text-sm font-medium text-danger" role="alert">
+      {{ error | t }}
+    </p>
+  }
 
-    @if (isRecording()) {
+  <div class="flex flex-wrap justify-center gap-3 pt-2">
+    @if (!audioPreviewUrl() && !isUploading()) {
       <button
         hlmBtn
-        (click)="stopRecording()"
-        class="px-6 py-3 rounded-app bg-danger hover:bg-danger/80 text-on-fill font-bold text-sm shadow-md transition-all flex items-center gap-2"
-        [attr.aria-label]="'voiceRecorder.stopBtn' | t"
+        type="button"
+        (pointerdown)="onRecordPointerDown($event)"
+        (pointerup)="onRecordPointerUp($event)"
+        (pointercancel)="onRecordPointerCancel($event)"
+        (keydown)="onRecordKeyDown($event)"
+        (keyup)="onRecordKeyUp($event)"
+        (click)="onRecordClick()"
+        (contextmenu)="$event.preventDefault()"
+        class="touch-none select-none px-6 py-3 rounded-app bg-danger hover:bg-danger/80 text-on-fill font-bold text-sm shadow-md transition-all flex items-center gap-2 min-h-11"
+        [attr.aria-busy]="isPreparing()"
+        [attr.aria-label]="(isRecording() ? 'voiceRecorder.stopBtn' : 'voiceRecorder.startBtn') | t"
       >
-        <span>{{ 'voiceRecorder.stopBtn' | t }}</span>
+        <span>
+          {{ (isRecording() ? 'voiceRecorder.stopBtn' : 'voiceRecorder.startBtn') | t }}
+        </span>
       </button>
     }
 
     @if (audioPreviewUrl() && !isUploading()) {
       <app-button-primary
         (clicked)="uploadAndSend()"
-        customClass="px-6 py-3 flex items-center gap-2"
+        customClass="px-6 py-3 flex items-center gap-2 min-h-11"
       >
         <span>{{ 'voiceRecorder.sendBtn' | t }}</span>
       </app-button-primary>
@@ -81,8 +104,9 @@
     @if (isUploading()) {
       <button
         hlmBtn
+        type="button"
         disabled
-        class="px-6 py-3 bg-surface-100 text-text-secondary rounded-app font-bold text-sm flex items-center gap-2 cursor-not-allowed"
+        class="px-6 py-3 bg-surface-100 text-text-secondary rounded-app font-bold text-sm flex items-center gap-2 cursor-not-allowed min-h-11"
         [attr.aria-label]="'voiceRecorder.uploadingBtn' | t"
       >
         <span>{{ 'voiceRecorder.uploadingBtn' | t }}</span>
