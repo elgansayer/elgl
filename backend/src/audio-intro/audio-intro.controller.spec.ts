@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import { AudioIntroController } from './audio-intro.controller';
 import { AudioIntroService } from './audio-intro.service';
 import { UpdateAudioIntroDto } from './dto/update-audio-intro.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { ForbiddenException } from '@nestjs/common';
 
 describe('AudioIntroController', () => {
   let controller: AudioIntroController;
@@ -52,31 +52,33 @@ describe('AudioIntroController', () => {
   });
 
   describe('updateAudioIntro', () => {
-    it('should throw ForbiddenException if user id does not match requested user', async () => {
-      const dto: UpdateAudioIntroDto = {
-        audio_url: 'https://example.com/audio.mp3',
-      };
-      const req = { user: { id: 'user-2' } };
-
-      await expect(
-        controller.updateAudioIntro(req as any, 'user-1', dto),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should call the service with the given user id and audio url when authorized', async () => {
+    it('should call the service with the given user id and audio url when authenticated user matches', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
       const req = { user: { id: 'user-1' } };
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const result = await controller.updateAudioIntro(req as any, 'user-1', dto);
+      const result = await controller.updateAudioIntro(req, 'user-1', dto);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
         'user-1',
         dto.audio_url,
       );
       expect(result).toBeUndefined();
+    });
+
+    it('should throw ForbiddenException if user id does not match param id', async () => {
+      const dto: UpdateAudioIntroDto = {
+        audio_url: 'https://example.com/audio.mp3',
+      };
+      const req = { user: { id: 'user-2' } };
+
+      await expect(
+        controller.updateAudioIntro(req, 'user-1', dto),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockService.updateAudioIntro).not.toHaveBeenCalled();
     });
   });
 
