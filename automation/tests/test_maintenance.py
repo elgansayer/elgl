@@ -111,6 +111,7 @@ def controller(tmp_path: Path) -> MaintenanceController:
         pipeline.calls += 1
         assert phase == "maintenance"
         assert kwargs["timeout_seconds"] == 180
+        assert kwargs["read_only_reference"] == config.repository.resolve()
         assert "Untrusted diagnostic data" in prompt
         kwargs["prepare_attempt"]()
         (scratch / ".factory-maintenance.json").write_text(json.dumps(pipeline.plan))
@@ -125,6 +126,15 @@ def make_due(controller: MaintenanceController) -> None:
     state = controller.state()
     state["next_run_at"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
     atomic_write_json(controller.path, state)
+
+
+def test_reference_prompt_and_snapshot_use_the_mounted_canonical_path(controller, tmp_path):
+    source = controller.config.repository
+    alias = tmp_path / "repository-alias"
+    alias.symlink_to(source, target_is_directory=True)
+    controller.config.repository = alias
+    controller.run()
+    assert controller.state()["records"][0]["baseline"]["repository_path"] == str(source.resolve())
 
 
 def ready_recovery(controller: MaintenanceController) -> dict[str, object]:

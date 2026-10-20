@@ -716,6 +716,7 @@ class FactoryPipeline:
         require_repository_change: bool = False,
         timeout_seconds: int | None = None,
         system_prompt_override: str | None = None,
+        read_only_reference: Path | None = None,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
 
@@ -779,6 +780,7 @@ class FactoryPipeline:
             prompt=prompt,
             cwd=worktree,
             system_prompt=system_prompt_override or self.system_prompt,
+            read_only_reference=read_only_reference,
             timeout_seconds=timeout_seconds,
             prepare_attempt=(
                 prepare if prepare_attempt is not None or require_repository_change else None
