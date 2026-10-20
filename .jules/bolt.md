@@ -19,6 +19,10 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-16 - [Optimize Angular @for list tracking by identity]
+**Learning:** In standard Angular frontend architecture, `@for` loops that track objects by value (e.g. `track msg` instead of `track msg.id`) needlessly destroy and recreate DOM nodes when arrays change slightly, creating severe performance bottlenecks, layout thrashing, and re-renders, especially when processing real-time websocket pushes for chat lists.
+**Action:** Always prefer to track array iterations by unique stable identifier primitives (like `track msg.id`) when using the Angular control flow `@for` loop to optimize list renderings and DOM reuse.
+
 
 ## 2026-09-16 - [Angular Chat Page Performance Optimization]
 **Learning:** In the frontend `chat-page.component.ts`, large chat message arrays (where new messages stream in dynamically via Centrifugo and push into the signal array) and long chat room lists cause excessive, repetitive full-list DOM reconstructions when rendered with `@for (item of items; track item)`. Tracking by object reference (`item`) instead of a unique ID forces Angular's differ to re-render nodes unnecessarily on every signal update. Furthermore, without `ChangeDetectionStrategy.OnPush`, global zone events constantly trigger change detection for these heavy lists.
@@ -45,6 +49,7 @@
 ## 2026-09-13 - Angular Change Detection Strategy Optimization
 **Learning:** Found an opportunity to improve frontend performance by setting `ChangeDetectionStrategy.OnPush` on frequently rendered list and message components (`chat-message.component.ts` and `chat-list.component.ts`), which prevents unnecessary change detection cycles. Combined with memoizing expensive method calls in templates (converting `isOwnMessage()` into a computed signal) this creates a substantial reduction in rendering overhead for long lists.
 **Action:** Always check frequently instantiated components (like chat messages or list items) for missing `OnPush` strategy and ensure template methods are converted to computed signals to prevent repeated evaluation during change detection cycles.
+
 
 
 
