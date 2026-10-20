@@ -42,6 +42,11 @@ export type UsersRow = {
   bio_text?: string | null;
   status_text?: string | null;
   proficiency_level?: string | null;
+  availability_morning?: boolean | null;
+  availability_afternoon?: boolean | null;
+  availability_evening?: boolean | null;
+  available_time_start?: string | null;
+  available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
   mock_country?: string | null;
