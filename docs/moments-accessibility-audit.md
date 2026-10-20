@@ -17,6 +17,7 @@ No API, schema, authorization, persistence, analytics, or moderation behavior is
 - Feed media opens through native Spartan buttons. Lightbox image buttons use the translated `lightbox.imageAlt` contract and the nested image is decorative (`alt=""`) to avoid duplicate announcements.
 - Like, comments, correction, quote, translation, pin/unpin, reply, and cancel-reply actions are native buttons using the repository-owned `hlmBtn` primitive rather than synthetic `role="button"` controls.
 - There is no positive `tabindex` or feature-owned synthetic button keyboard emulation in the Moments template.
+- Comment mentions use the repository-owned Spartan autocomplete for listbox, active-option, pointer, and keyboard semantics; the remaining comment-submit handler ignores IME composition events.
 - Loading and empty feed states reuse the shared empty-state primitive rather than exposing unstructured placeholder content.
 - User-authored Moment text is rendered as text through `TokenisedTextComponent`; correction output uses the shared Visual Diff surface rather than trusted HTML.
 
@@ -24,15 +25,14 @@ No API, schema, authorization, persistence, analytics, or moderation behavior is
 
 The following findings are the current audit baseline. They are deliberately recorded by stable IDs and checked by `scripts/moments-accessibility-audit.test.mjs`. When a finding is fixed, remove it from this baseline and update the contract in the same change. New findings must not be silently added to the baseline.
 
-| ID | Priority | Finding | User impact | Required remediation |
-| --- | --- | --- | --- | --- |
-| MOM-A11Y-001 | P1 | The media-removal icon uses the hard-coded English accessible name `Remove media`. | Screen-reader users whose app language is not English hear mixed-language UI. | Replace with a translated repository key and preserve an explicit accessible name. |
-| MOM-A11Y-002 | P1 | The voice-record action uses the hard-coded English accessible name `Record voice`. | Same localisation failure as above on an important composer action. | Move the accessible name to the translation system and keep the control native/Spartan-owned. |
-| MOM-A11Y-003 | P1 | Composer image-URL and comment inputs expose the generic hard-coded accessible name `text input`. | The field purpose is not identifiable from the accessibility tree; repeated generic controls are ambiguous. | Bind each input to its visible/translated purpose with a label, `aria-labelledby`, or a purpose-specific translated `aria-label`. |
-| MOM-A11Y-004 | P1 | The likes-count button that opens the Liked By modal has no explicit accessible name beyond the numeric count. | A screen reader may announce only a number, with no indication that it opens the list of people who liked the Moment. | Add a translated contextual label that includes the count where useful. |
-| MOM-A11Y-005 | P1 | Media removal is `h-5 w-5` and comment submit is `h-8 w-8`, both below the repository 44 CSS-pixel touch-target baseline. | Touch, switch, tremor, low-vision, and high-zoom users have unnecessarily small targets. | Use Spartan `icon-touch` / equivalent 44px hit areas without enlarging the visual glyph. |
-| MOM-A11Y-006 | P1 | The comment-submit icon uses the hard-coded English accessible name `Submit comment`. | Screen-reader users whose app language is not English hear mixed-language UI on a primary feed action. | Replace it with the established translated comment-submit key while preserving an explicit accessible name. |
-| MOM-A11Y-007 | P1 | The comment field submits through raw `(keyup.enter)` handling without checking IME composition state. | Users entering Japanese, Chinese, Korean, or other composed text can accidentally submit an unfinished comment when confirming a candidate. | Route submission through the repository IME-safe keyboard contract and add focused composition coverage. |
+| ID           | Priority | Finding                                                                                                                   | User impact                                                                                                           | Required remediation                                                                                                             |
+| ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| MOM-A11Y-001 | P1       | The media-removal icon uses the hard-coded English accessible name `Remove media`.                                        | Screen-reader users whose app language is not English hear mixed-language UI.                                         | Replace with a translated repository key and preserve an explicit accessible name.                                               |
+| MOM-A11Y-002 | P1       | The voice-record action uses the hard-coded English accessible name `Record voice`.                                       | Same localisation failure as above on an important composer action.                                                   | Move the accessible name to the translation system and keep the control native/Spartan-owned.                                    |
+| MOM-A11Y-003 | P1       | The composer image-URL input exposes the generic hard-coded accessible name `text input`.                                 | The field purpose is not identifiable from the accessibility tree.                                                    | Bind the input to its visible/translated purpose with a label, `aria-labelledby`, or a purpose-specific translated `aria-label`. |
+| MOM-A11Y-004 | P1       | The likes-count button that opens the Liked By modal has no explicit accessible name beyond the numeric count.            | A screen reader may announce only a number, with no indication that it opens the list of people who liked the Moment. | Add a translated contextual label that includes the count where useful.                                                          |
+| MOM-A11Y-005 | P1       | Media removal is `h-5 w-5` and comment submit is `h-8 w-8`, both below the repository 44 CSS-pixel touch-target baseline. | Touch, switch, tremor, low-vision, and high-zoom users have unnecessarily small targets.                              | Use Spartan `icon-touch` / equivalent 44px hit areas without enlarging the visual glyph.                                         |
+| MOM-A11Y-006 | P1       | The comment-submit icon uses the hard-coded English accessible name `Submit comment`.                                     | Screen-reader users whose app language is not English hear mixed-language UI on a primary feed action.                | Replace it with the established translated comment-submit key while preserving an explicit accessible name.                      |
 
 ### Additional follow-up observations
 
@@ -70,7 +70,7 @@ Required behavior:
 - Tab order follows DOM/visual reading order and never uses positive `tabindex`.
 - Icon-only actions keep visible `focus-visible` treatment through Spartan/Relay ownership.
 - Enter in the comment field may submit only when that field's higher-level autocomplete/reply behavior does not consume the key.
-- IME composition must not be treated as a submit keystroke. Any future key handler on text inputs must check the existing repository composition contract rather than adding raw `keydown.enter` behavior blindly.
+- IME composition is not treated as a submit keystroke; the comment key handler returns before acting on Enter while composition is active.
 - Dialogs/lightbox/correction surfaces retain focus trapping, Escape dismissal, initial focus, and focus restoration through the shared Spartan dialog implementation.
 
 ## Zoom and reflow review
