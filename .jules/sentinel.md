@@ -112,6 +112,11 @@
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
 
+## 2026-09-06 - [Fix IDOR in CartController by removing 'unknown' fallback]
+**Vulnerability:** The `CartController` explicitly extracted `userId` from the request and defaulted to the string `'unknown'` if the user object or ID was missing.
+**Learning:** Defaulting to a static, non-unique fallback identifier like `'unknown'` when authentication state is missing or malformed bypasses authorization completely and causes IDOR. Any request processed under the `'unknown'` fallback shares the same global context with other unauthorized requests.
+**Prevention:** In NestJS controllers, retrieve the authenticated user context explicitly using the `@CurrentUser()` decorator and immediately throw an `UnauthorizedException` if the user or `user.id` is missing. Never fall back to default identifier strings.
+
 ## 2026-10-04 - [Strict Path Resolution for Static File Servers]
 
 **Vulnerability:** A static file server used a naive regex `replace(/^(\.\.[/\\])+/, '')` to prevent path traversal. This could be bypassed using URL encoded dot-dot-slash sequences (e.g., `%2e%2e%2f%2e%2e%2fetc%2fpasswd`), allowing attackers to read arbitrary files on the filesystem.
@@ -197,6 +202,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
