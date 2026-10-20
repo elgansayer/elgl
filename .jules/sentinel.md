@@ -111,6 +111,11 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-10-03 - [Fix IDOR vulnerability in cart controller]
+**Vulnerability:** Cart endpoints were using `(req as any).user?.id ?? 'unknown'`, allowing unauthenticated or partially authenticated users without IDs to share and manipulate the same 'unknown' cart.
+**Learning:** Bypassing types using `any` to extract authentication state often hides missing verification logic. Controllers must strictly enforce user presence via decorators like `@CurrentUser()`.
+**Prevention:** Use typed user decorators (`@CurrentUser() user: User | null`) and explicitly verify existence (`if (!user?.id) throw new UnauthorizedException(...)`) rather than falling back to default identifier strings.
+
 
 ## 2026-09-06 - [Fix IDOR in CartController by removing 'unknown' fallback]
 **Vulnerability:** The `CartController` explicitly extracted `userId` from the request and defaulted to the string `'unknown'` if the user object or ID was missing.
@@ -202,6 +207,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
