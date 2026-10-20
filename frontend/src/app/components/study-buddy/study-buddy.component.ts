@@ -2,10 +2,10 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, resource, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import {
-  StudyBuddyService,
+  StudyBuddiesService,
   StudyBuddyMatch,
   BuddyRequest,
-} from '../../services/study-buddy.service';
+} from '../../services/study-buddies.service';
 
 @Component({
   selector: 'app-study-buddy',
@@ -101,7 +101,7 @@ import {
   `,
 })
 export class StudyBuddyComponent {
-  private sbService = inject(StudyBuddyService);
+  private sbService = inject(StudyBuddiesService);
 
   readonly requestedIds = signal<Set<string>>(new Set());
 
