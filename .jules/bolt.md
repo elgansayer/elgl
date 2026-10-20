@@ -21,6 +21,32 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-24 - [Batch Redis Cache Invalidations with Promise.all]
+**Learning:** Sequential `await` calls to independent cache invalidation methods (like `redis.del()`) create additive network latency when clearing multiple related caches.
+**Action:** When invalidating multiple independent cache sets (e.g., `invalidateUserListCaches()`, `invalidateBlocksListCaches()`), group the method calls into a single concurrent `Promise.all` batch to improve execution speed.
+
+## 2024-10-31 - [Batch Cache Invalidation Calls with Promise.all]
+**Learning:** Sequential cache invalidation `await` calls in NestJS services block sequentially, creating additive N+1 latency across network calls to Redis.
+**Action:** When invalidating multiple independent caches (e.g., user lists, blocks, login history), group all invalidation calls and resolve them concurrently using a single `Promise.all` array.
+
+## 2025-01-24 - Batching independent cache invalidation network calls
+**Learning:** Sequential await calls for independent cache invalidation (like Redis deletes) introduce additive network latency.
+**Action:** Group independent await cache operations into a single Promise.all batch request to reduce round trip waiting time.
+
+
+## 2024-09-27 - [Optimize Lifetime Counts by using exact count]
+**Learning:** Using `.select('id')` to fetch full rows over the network just to determine their length creates N+1 latency, wastes memory, and causes bottleneck for operations aggregating multiple queries, like fetching stats.
+**Action:** When determining the length of rows, use `.select('*', { count: 'exact', head: true })` instead and extract `count` from the response. This asks Supabase for only the headers and row count instead of transferring any body data.
+
+## 2026-09-27 - [Optimize Counting Queries using HEAD requests]
+**Learning:** Fetching full rows from a database over a network exclusively to count them using `.length` in Node.js (e.g., `momentsData.length`) scales poorly and creates a massive performance penalty. Supabase supports native counting without returning the payload.
+**Action:** Always append `{ count: 'exact', head: true }` to the Supabase `.select()` call when only the total number of records is needed, ensuring the backend receives just the integer count.
+
+## 2026-09-28 - [Optimize Supabase Counts with HEAD Requests]
+**Learning:** Using `.select('count(*) as ...')` still forces Supabase/PostgREST to generate a response body wrapping the integer.
+**Action:** When only a row count is needed, always use `.select('id', { count: 'exact', head: true })` and read from `response.count` to avoid downloading the payload entirely.
+
+
 ## 2026-09-28 - [Batch Independent Redis Operations]
 **Learning:** Sequential `await` calls for independent cache operations (e.g., clearing multiple Redis cache keys in admin controllers) create additive network latency that delays API responses.
 **Action:** Identify sequences of independent asynchronous cache or database operations and batch them using `Promise.all` to resolve them concurrently, significantly reducing overall latency.
@@ -335,6 +361,12 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
+
+
+
+
+
 
 
 

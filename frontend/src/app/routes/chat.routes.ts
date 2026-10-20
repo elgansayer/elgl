@@ -76,9 +76,4 @@ export const chatRoutes: Routes = [
     redirectTo: 'settings/message-filters',
     pathMatch: 'full',
   },
-  {
-    path: 'blocks',
-    redirectTo: 'settings/blocks',
-    pathMatch: 'full',
-  },
 ];

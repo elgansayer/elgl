@@ -1,6 +1,9 @@
 # Mobile UI source audit
 
+This report provides an evidence-based audit of the mobile application interface, documenting verified implementations based strictly on the current codebase, evaluated as an actual mobile social application rather than merely a responsive website.
+
 This is a source review, not a device test or accessibility certification. It does not establish measured touch-target sizes, frame times, keyboard visibility, thumb reach or browser Back behaviour. Source baseline: main at b613278fe70f743c45d6ea9e5a2a291c6015ab27.
+
 
 | Area | Source to inspect | Required runtime evidence |
 | --- | --- | --- |
