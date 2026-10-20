@@ -47,8 +47,12 @@ Write exactly one JSON object to `.factory-maintenance.json`, then exit:
 ```
 
 Use only task identifiers present in the supplied evidence. For a throughput
-experiment use an empty affected_task_ids list. Observations may omit source evidence.
-The host validates the report and exact source evidence for repairs,
+experiment use an empty affected_task_ids list.
+Every assessment, including an observation, must contain at least one exact
+tracked-source excerpt. Reading source is a required capability check: inability
+to access it is not a successful observation. Use the canonical repository_path
+provided in the snapshot. Do not quote this prompt as repository evidence.
+The host validates the report and exact source evidence for every assessment,
 deduplicates the issue and admits at most one maintenance implementation at once.
 Implementation, verification, independent review, merge and deployment are handled
 by the existing Factory. No model output authorises host actions.
