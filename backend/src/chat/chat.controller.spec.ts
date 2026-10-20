@@ -177,8 +177,15 @@ describe('ChatController', () => {
 
       await expect(
         controller.getConnectionToken(mockUser(), mockReq(), res),
-      ).rejects.toThrow('signing unavailable');
-      expect(res.json).not.toHaveBeenCalled();
+      ).resolves.toBeNull();
+      expect(res.status).toHaveBeenCalledWith(503);
+      expect(res.json).toHaveBeenCalledWith({
+        statusCode: 503,
+        message: 'Realtime authentication is temporarily unavailable.',
+      });
+      expect(JSON.stringify(res.json.mock.calls)).not.toContain(
+        'signing unavailable',
+      );
     });
 
     it('should respond with 429 when rate limit is exceeded', async () => {
