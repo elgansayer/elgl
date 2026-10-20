@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -324,73 +325,67 @@ describe('PrivacyService', () => {
       );
     });
 
-    it('continues processing all rows after a rejected storage request', async () => {
+    it('processes expired archives concurrently with a maximum batch size of ten', async () => {
       tableRows.set(
         'archive_requests',
-        Array.from({ length: 8 }, (_, index) => ({
+        Array.from({ length: 25 }, (_, index) => ({
           id: `archive-${index}`,
           user_id: 'user-1',
           status: 'ready',
-          object_key: `archive-${index}.json`,
-          expires_at: '2026-08-01T00:00:00.000Z',
-          created_at: '2026-07-25T00:00:00.000Z',
-        })),
-      );
-      mockRemove.mockRejectedValueOnce(new Error('private storage details'));
-      await expect(service.purgeExpiredArchives()).resolves.toBe(7);
-      expect(mockRemove).toHaveBeenCalledTimes(8);
-      expect(
-        updates.filter(
-          (entry) =>
-            entry.table === 'archive_requests' &&
-            entry.value.status === 'expired',
-        ),
-      ).toHaveLength(7);
-    });
-
-    it('bounds concurrent removals and continues after one row fails', async () => {
-      tableRows.set(
-        'archive_requests',
-        Array.from({ length: 8 }, (_, index) => ({
-          id: `archive-${index}`,
-          user_id: 'user-1',
-          status: 'ready',
-          object_key: `archive-${index}.json`,
+          object_key: `opaque-${index}.json`,
           expires_at: '2026-08-01T00:00:00.000Z',
           created_at: '2026-07-25T00:00:00.000Z',
         })),
       );
 
       let activeRemovals = 0;
-      let maxActiveRemovals = 0;
-      mockRemove.mockImplementation(
-        (keys: string[]) =>
-          new Promise((resolve) => {
-            activeRemovals += 1;
-            maxActiveRemovals = Math.max(maxActiveRemovals, activeRemovals);
-            queueMicrotask(() => {
-              activeRemovals -= 1;
-              resolve({
-                error:
-                  keys[0] === 'archive-2.json'
-                    ? { message: 'storage unavailable' }
-                    : null,
-              });
-            });
-          }),
-      );
+      let peakRemovals = 0;
+      mockRemove.mockImplementation(async () => {
+        activeRemovals += 1;
+        peakRemovals = Math.max(peakRemovals, activeRemovals);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        activeRemovals -= 1;
+        return { error: null };
+      });
 
-      await expect(service.purgeExpiredArchives()).resolves.toBe(7);
-      expect(maxActiveRemovals).toBeGreaterThan(1);
-      expect(maxActiveRemovals).toBeLessThanOrEqual(5);
-      expect(mockRemove).toHaveBeenCalledTimes(8);
-      expect(
-        updates.filter(
-          (entry) =>
-            entry.table === 'archive_requests' &&
-            entry.value.status === 'expired',
-        ),
-      ).toHaveLength(7);
+      await expect(service.purgeExpiredArchives()).resolves.toBe(25);
+      expect(mockRemove).toHaveBeenCalledTimes(25);
+      expect(peakRemovals).toBeGreaterThan(1);
+      expect(peakRemovals).toBeLessThanOrEqual(10);
+    });
+
+    it('reports failed cleanup items without blocking successful items', async () => {
+      tableRows.set('archive_requests', [
+        {
+          id: 'archive-failed',
+          user_id: 'private-user',
+          status: 'ready',
+          object_key: 'private-failed.json',
+          expires_at: '2026-08-01T00:00:00.000Z',
+          created_at: '2026-07-25T00:00:00.000Z',
+        },
+        {
+          id: 'archive-success',
+          user_id: 'private-user',
+          status: 'ready',
+          object_key: 'private-success.json',
+          expires_at: '2026-08-01T00:00:00.000Z',
+          created_at: '2026-07-25T00:00:00.000Z',
+        },
+      ]);
+      mockRemove
+        .mockRejectedValueOnce(new Error('private provider detail'))
+        .mockResolvedValueOnce({ error: null });
+      const errorLog = vi.spyOn(Logger.prototype, 'error');
+
+      await expect(service.purgeExpiredArchives()).resolves.toBe(1);
+
+      expect(errorLog).toHaveBeenCalledWith(
+        'gdpr_archive_cleanup_items_failed count=1',
+      );
+      expect(errorLog).not.toHaveBeenCalledWith(
+        expect.stringContaining('private'),
+      );
     });
   });
 
