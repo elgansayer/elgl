@@ -21,10 +21,11 @@ exec 9>"$state_dir/$mode.lock"
 flock -n 9 || { echo "another $mode run is active"; exit 0; }
 
 worktree="$state_dir/worktree-$mode"
-git -C "$repo" fetch --quiet origin main
+ref="${DESIGN_AUTOMATION_REF:-main}" # branch to run against; override only for testing
+git -C "$repo" fetch --quiet origin "$ref"
 git -C "$repo" worktree remove --force "$worktree" 2>/dev/null || rm -rf "$worktree"
 git -C "$repo" worktree prune
-git -C "$repo" worktree add --quiet --detach "$worktree" origin/main
+git -C "$repo" worktree add --quiet --detach "$worktree" "origin/$ref"
 trap 'git -C "$repo" worktree remove --force "$worktree" >/dev/null 2>&1 || true' EXIT
 ln -s "$repo/node_modules" "$worktree/node_modules"
 cd "$worktree"
@@ -49,7 +50,7 @@ run_claude() {
   timeout 3600 claude -p "$1" \
     --permission-mode bypassPermissions \
     --output-format text \
-    --max-turns 200
+    --max-turns 200 </dev/null
 }
 
 case "$mode" in
