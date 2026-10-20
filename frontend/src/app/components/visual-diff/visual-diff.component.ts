@@ -24,17 +24,20 @@ interface DiffSegment {
       @for (segment of segments(); track segment.index) {
         @switch (segment.type) {
           @case ('added') {
-            <span class="bg-success/15 text-success rounded ps-0.5 pe-0.5" data-type="added">
+            <ins
+              class="bg-success/15 text-success rounded ps-0.5 pe-0.5 no-underline"
+              data-type="added"
+            >
               {{ segment.text }}
-            </span>
+            </ins>
           }
           @case ('removed') {
-            <span
+            <del
               class="bg-danger/15 text-danger line-through rounded ps-0.5 pe-0.5"
               data-type="removed"
             >
               {{ segment.text }}
-            </span>
+            </del>
           }
           @default {
             <span data-type="unchanged">{{ segment.text }}</span>
@@ -82,10 +85,11 @@ export class VisualDiffComponent {
   readonly explanation = input<string>();
   readonly showActions = input<boolean>(false);
 
-  private vocabularyStore = inject(VocabularyStore);
-  private i18n = inject(I18nService);
-  private chatService = inject(ChatService);
-  private translationCache = inject(TranslationCacheService);
+  private readonly vocabStore = inject(VocabularyStore);
+  private readonly i18n = inject(I18nService);
+  private readonly chatService = inject(ChatService);
+  private readonly translationCache = inject(TranslationCacheService);
+  private readonly wordSegmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
 
   readonly isTranslating = signal(false);
   readonly translatedExplanation = signal<string | null>(null);
@@ -126,9 +130,10 @@ export class VisualDiffComponent {
     try {
       const wordToken = this.corrected().substring(0, 200);
       const translation = this.original().substring(0, 500);
-      const originalContext = this.explanation() ? this.explanation()!.substring(0, 1000) : undefined;
+      const explanation = this.explanation()?.trim();
+      const originalContext = explanation ? explanation.substring(0, 1000) : undefined;
 
-      await this.vocabularyStore.saveWord({
+      await this.vocabStore.saveWord({
         word_token: wordToken,
         translation: translation,
         original_context: originalContext,
@@ -141,47 +146,90 @@ export class VisualDiffComponent {
   }
 
   readonly segments = computed<DiffSegment[]>(() => {
-    const orig = this.original();
-    const corr = this.corrected();
+    const originalTokens = this.tokenise(this.original());
+    const correctedTokens = this.tokenise(this.corrected());
+    // User-authored text must not trigger a quadratic allocation on the UI thread.
+    // Preserve both complete texts when a word-level comparison exceeds this budget.
+    if ((originalTokens.length + 1) * (correctedTokens.length + 1) > 250_000) {
+      if (this.original() === this.corrected()) {
+        return [{ type: 'unchanged', text: this.corrected(), index: 0 }];
+      }
+      const fallback: DiffSegment[] = [];
+      if (this.original()) {
+        fallback.push({ type: 'removed', text: this.original(), index: 0 });
+      }
+      if (this.corrected()) {
+        fallback.push({ type: 'added', text: this.corrected(), index: fallback.length });
+      }
+      return fallback;
+    }
+    const lcs = this.buildLcsMatrix(originalTokens, correctedTokens);
+    const result: DiffSegment[] = [];
+    let originalIndex = 0;
+    let correctedIndex = 0;
+    let segmentIndex = 0;
 
-    // Universal tokenisation: use the native Intl.Segmenter (word granularity) per Rule 3.
-    const segmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
-    const origTokens = Array.from(segmenter.segment(orig)).map((s) => s.segment);
-    const corrTokens = Array.from(segmenter.segment(corr)).map((s) => s.segment);
+    while (originalIndex < originalTokens.length && correctedIndex < correctedTokens.length) {
+      const originalToken = originalTokens[originalIndex];
+      const correctedToken = correctedTokens[correctedIndex];
 
-    const lcsMatrix = Array(origTokens.length + 1)
-      .fill(0)
-      .map(() => Array(corrTokens.length + 1).fill(0));
+      if (this.tokensEqual(originalToken, correctedToken)) {
+        result.push({ type: 'unchanged', text: correctedToken, index: segmentIndex++ });
+        originalIndex++;
+        correctedIndex++;
+        continue;
+      }
 
-    for (let i = 1; i <= origTokens.length; i++) {
-      for (let j = 1; j <= corrTokens.length; j++) {
-        if (origTokens[i - 1].toLowerCase() === corrTokens[j - 1].toLowerCase()) {
-          lcsMatrix[i][j] = lcsMatrix[i - 1][j - 1] + 1;
-        } else {
-          lcsMatrix[i][j] = Math.max(lcsMatrix[i - 1][j], lcsMatrix[i][j - 1]);
-        }
+      if (lcs[originalIndex + 1][correctedIndex] >= lcs[originalIndex][correctedIndex + 1]) {
+        result.push({ type: 'removed', text: originalToken, index: segmentIndex++ });
+        originalIndex++;
+      } else {
+        result.push({ type: 'added', text: correctedToken, index: segmentIndex++ });
+        correctedIndex++;
       }
     }
 
-    let i = origTokens.length;
-    let j = corrTokens.length;
-    const lcsTokens: Omit<DiffSegment, 'index'>[] = [];
-
-    while (i > 0 || j > 0) {
-      if (i > 0 && j > 0 && origTokens[i - 1].toLowerCase() === corrTokens[j - 1].toLowerCase()) {
-        lcsTokens.push({ type: 'unchanged', text: corrTokens[j - 1] });
-        i--;
-        j--;
-      } else if (j > 0 && (i === 0 || lcsMatrix[i][j - 1] >= lcsMatrix[i - 1][j])) {
-        lcsTokens.push({ type: 'added', text: corrTokens[j - 1] });
-        j--;
-      } else if (i > 0 && (j === 0 || lcsMatrix[i][j - 1] < lcsMatrix[i - 1][j])) {
-        lcsTokens.push({ type: 'removed', text: origTokens[i - 1] });
-        i--;
-      }
+    while (originalIndex < originalTokens.length) {
+      result.push({
+        type: 'removed',
+        text: originalTokens[originalIndex++],
+        index: segmentIndex++,
+      });
     }
 
-    lcsTokens.reverse();
-    return lcsTokens.map((t, idx) => ({ ...t as DiffSegment, index: idx }));
+    while (correctedIndex < correctedTokens.length) {
+      result.push({
+        type: 'added',
+        text: correctedTokens[correctedIndex++],
+        index: segmentIndex++,
+      });
+    }
+
+    return result;
   });
+
+  private tokenise(text: string): string[] {
+    return Array.from(this.wordSegmenter.segment(text), ({ segment }) => segment);
+  }
+
+  private tokensEqual(left: string, right: string): boolean {
+    return left.toLowerCase() === right.toLowerCase();
+  }
+
+  private buildLcsMatrix(originalTokens: string[], correctedTokens: string[]): Uint32Array[] {
+    const matrix = Array.from(
+      { length: originalTokens.length + 1 },
+      () => new Uint32Array(correctedTokens.length + 1),
+    );
+
+    for (let i = originalTokens.length - 1; i >= 0; i--) {
+      for (let j = correctedTokens.length - 1; j >= 0; j--) {
+        matrix[i][j] = this.tokensEqual(originalTokens[i], correctedTokens[j])
+          ? matrix[i + 1][j + 1] + 1
+          : Math.max(matrix[i + 1][j], matrix[i][j + 1]);
+      }
+    }
+
+    return matrix;
+  }
 }
