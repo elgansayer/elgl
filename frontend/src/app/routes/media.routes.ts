@@ -2,18 +2,13 @@ import { Routes } from '@angular/router';
 
 export const mediaRoutes: Routes = [
   {
-    path: 'audio-rooms',
-    redirectTo: 'live/audio',
-    pathMatch: 'full',
-  },
-  {
     path: 'live/audio',
     loadComponent: () =>
       import('../components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
-    path: 'classrooms',
-    redirectTo: 'live/video',
+    path: 'audio-rooms',
+    redirectTo: 'live/audio',
     pathMatch: 'full',
   },
   {
@@ -23,6 +18,25 @@ export const mediaRoutes: Routes = [
         (m) => m.ClassroomsMarketplace,
       ),
     title: 'Video Classrooms - HelloTalk',
+  },
+  {
+    path: 'classrooms',
+    redirectTo: 'live/video',
+    pathMatch: 'full',
+  },
+  {
+    path: 'live/events',
+    loadComponent: () =>
+      import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
+    title: 'Events - HelloTalk',
+  },
+  {
+    path: 'live/events/calendar',
+    loadComponent: () =>
+      import('../components/events-calendar/events-calendar.component').then(
+        (m) => m.EventsCalendarComponent,
+      ),
+    title: 'Event Calendar - HelloTalk',
   },
   {
     path: 'video-call',
