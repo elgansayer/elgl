@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, computed, inject, resource } from '@angular/core';
+import { Component, computed, inject, resource, ChangeDetectionStrategy } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
