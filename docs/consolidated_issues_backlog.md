@@ -177,12 +177,15 @@
   - Introduce dynamic active state visualizations and micro-interactions (hover effects, unread notification badges)
   - Ensure error robustness during community creation and deletion for a smoother user experience
 
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448).
+
   - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
   - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
   - Add micro-interactions (hover effects) and unread notification badges.
   - Extract Communities list and creation form into separate components for scalability.
   - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
 - Dedicated Groups & Scheduled Events System.
+
 
 - Harden Centrifugo connection token endpoint and lock connection-token contract.
 
