@@ -322,8 +322,23 @@ export class CallsService {
     const roomName = `call_${uuidv4()}`;
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const apiSecret = this.configService.get<string>('LIVEKIT_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
     if (!apiKey || !apiSecret) {
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
+
+    if (env === 'production') {
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        apiSecret === 'test-livekit-secret' ||
+        apiSecret === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
     }
 
     // Create the room for the 1:1 call
@@ -464,8 +479,23 @@ export class CallsService {
     const roomName = `group_${uuidv4()}`;
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const apiSecret = this.configService.get<string>('LIVEKIT_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
     if (!apiKey || !apiSecret) {
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
+
+    if (env === 'production') {
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        apiSecret === 'test-livekit-secret' ||
+        apiSecret === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
     }
 
     // Create the room with a maximum participant limit

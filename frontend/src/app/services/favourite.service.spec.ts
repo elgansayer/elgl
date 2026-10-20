@@ -1,15 +1,15 @@
-import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { FavouriteService, AddFavouriteDto } from './favourite.service';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '../../environments/environment';
 import type { FavouriteRecord } from './chat.service';
+import { AddFavouriteDto, FavouriteService } from './favourite.service';
 
-describe.skip('FavouriteService', () => {
+describe('FavouriteService', () => {
   let service: FavouriteService;
   let httpMock: HttpTestingController;
-  const baseUrl = `${environment.apiUrl}/chat`;
+  const baseUrl = `${environment.apiUrl}/favourites`;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -31,12 +31,15 @@ describe.skip('FavouriteService', () => {
     expect(service).toBeTruthy();
   });
 
-  describe.skip('addFavourite', () => {
-    it('should POST to /chat/favourites with the dto', async () => {
-      const dto: AddFavouriteDto = { message_id: 'msg-1', note_text: 'nice phrase' };
+  describe('addFavourite', () => {
+    it('should POST to the canonical favourites endpoint with the dto', async () => {
+      const dto: AddFavouriteDto = {
+        message_id: 'msg-1',
+        note_text: 'nice phrase',
+      };
       const resultPromise = service.addFavourite(dto);
 
-      const req = httpMock.expectOne(`${baseUrl}/favourites`);
+      const req = httpMock.expectOne(baseUrl);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(dto);
       req.flush({ success: true });
@@ -49,7 +52,7 @@ describe.skip('FavouriteService', () => {
       const dto: AddFavouriteDto = { message_id: 'msg-2' };
       const resultPromise = service.addFavourite(dto);
 
-      const req = httpMock.expectOne(`${baseUrl}/favourites`);
+      const req = httpMock.expectOne(baseUrl);
       expect(req.request.body).toEqual({ message_id: 'msg-2' });
       req.flush({ success: true });
 
@@ -57,11 +60,11 @@ describe.skip('FavouriteService', () => {
     });
   });
 
-  describe.skip('removeFavourite', () => {
-    it('should DELETE to /chat/favourites/:id', async () => {
+  describe('removeFavourite', () => {
+    it('should DELETE the authenticated favourite id', async () => {
       const resultPromise = service.removeFavourite('fav-1');
 
-      const req = httpMock.expectOne(`${baseUrl}/favourites/fav-1`);
+      const req = httpMock.expectOne(`${baseUrl}/fav-1`);
       expect(req.request.method).toBe('DELETE');
       req.flush({ success: true });
 
@@ -70,25 +73,66 @@ describe.skip('FavouriteService', () => {
     });
   });
 
-  describe.skip('getFavourites', () => {
-    it('should GET from /chat/favourites', async () => {
-      const mockFavourites: FavouriteRecord[] = [
-        {
-          id: 'fav-1',
-          user_id: 'user-1',
-          item_type: 'message',
-          item_payload: { text_content: 'hello' } as any,
-          created_at: '2025-01-01T00:00:00Z',
-        },
-      ];
+  describe('getFavourites', () => {
+    it('keeps the legacy canonical favourites read available', async () => {
       const resultPromise = service.getFavourites();
 
-      const req = httpMock.expectOne(`${baseUrl}/favourites`);
+      const req = httpMock.expectOne(baseUrl);
       expect(req.request.method).toBe('GET');
-      req.flush(mockFavourites);
+      req.flush([]);
 
-      const result = await resultPromise;
-      expect(result).toEqual(mockFavourites);
+      await expect(resultPromise).resolves.toEqual([]);
+    });
+  });
+
+  describe('getStarredMessages', () => {
+    const mockFavourite: FavouriteRecord = {
+      id: 'fav-1',
+      user_id: 'user-1',
+      item_type: 'message',
+      item_payload: {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'user-2',
+        message_type: 'text',
+        text_content: 'hello',
+        is_read: false,
+        created_at: '2025-01-01T00:00:00Z',
+      },
+      created_at: '2025-01-01T00:00:00Z',
+    };
+
+    it('requests a bounded page with explicit limit and offset', async () => {
+      const resultPromise = service.getStarredMessages(25, 50);
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${baseUrl}/messages` &&
+          request.params.get('limit') === '25' &&
+          request.params.get('offset') === '50',
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({
+        items: [mockFavourite],
+        has_more: true,
+        next_offset: 75,
+      });
+
+      await expect(resultPromise).resolves.toEqual({
+        items: [mockFavourite],
+        has_more: true,
+        next_offset: 75,
+      });
+    });
+
+    it('rejects malformed pagination metadata instead of trusting the response', async () => {
+      const resultPromise = service.getStarredMessages();
+      const req = httpMock.expectOne(
+        (request) => request.url === `${baseUrl}/messages`,
+      );
+      req.flush({ items: [], has_more: true, next_offset: -1 });
+
+      await expect(resultPromise).rejects.toThrow('Invalid starred messages response');
     });
   });
 });

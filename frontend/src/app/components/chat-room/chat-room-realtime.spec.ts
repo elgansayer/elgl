@@ -76,6 +76,50 @@ describe('applyChatRoomRealtimeEvent', () => {
     expect(result.incomingMessageToMarkRead).toBeNull();
   });
 
+  it('rejects oversized and nested system-event params from realtime payloads', () => {
+    const oversized = applyChatRoomRealtimeEvent(
+      [],
+      {
+        message: {
+          ...systemMessage,
+          system_event: { type: 'announcement', message: 'x'.repeat(501) },
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+    const nested = applyChatRoomRealtimeEvent(
+      [],
+      {
+        message: {
+          ...systemMessage,
+          system_event: { type: 'announcement', metadata: { unsafe: true } },
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+
+    expect(oversized.messages).toEqual([]);
+    expect(nested.messages).toEqual([]);
+  });
+
+  it('rejects invalid system-event type names', () => {
+    const result = applyChatRoomRealtimeEvent(
+      [],
+      {
+        message: {
+          ...systemMessage,
+          system_event: { type: 'system.<script>' },
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+
+    expect(result.messages).toEqual([]);
+  });
+
   it('merges duplicate message events instead of rendering duplicate bubbles', () => {
     const updated = { ...baseMessage, text_content: 'edited' };
     const result = applyChatRoomRealtimeEvent(
