@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
@@ -535,7 +535,7 @@ export class ChatPageComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
-  private centrifugoService = inject(CentrifugoService);
+  private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);
 
@@ -577,7 +577,7 @@ export class ChatPageComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+        this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       }
     });
   }
@@ -585,7 +585,7 @@ export class ChatPageComponent implements OnInit {
   async selectRoom(room: ChatRoom) {
     // Unsubscribe previous room
     if (this.subscribedRoomId && this.subscribedRoomId !== room.id) {
-      this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       this.subscribedRoomId = null;
     }
 
@@ -598,7 +598,7 @@ export class ChatPageComponent implements OnInit {
       // Subscribe to real-time updates for this room (status updates, new messages, deletions)
       if (this.subscribedRoomId !== room.id) {
         this.subscribedRoomId = room.id;
-        this.centrifugoService.subscribe(`chat:${room.id}`, (data: unknown) => {
+        this.centrifugeService.subscribe(`chat:${room.id}`, (data: unknown) => {
           this.handleCentrifugoEvent(data as Record<string, unknown>);
         });
       }
