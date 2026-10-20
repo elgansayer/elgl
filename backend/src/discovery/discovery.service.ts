@@ -33,6 +33,8 @@ type DiscoveryUser = UserProfile & {
   available_time_end?: string;
   last_active_at?: string;
   coins_balance?: number;
+  match_reasons?: string[];
+  _matchScore?: number;
 };
 
 export interface DiscoveryResult<T = UserProfile[]> {
@@ -543,7 +545,15 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort));
+      return sanitiseDiscoveryData(
+        this.sortUsers(
+          enriched,
+          query.sort,
+          searchLat,
+          searchLon,
+          _currentUserProfile,
+        ),
+      );
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -1037,16 +1047,20 @@ export class DiscoveryService {
 
     // For best_match, promote partner of week first, then maintain db order
     if (sort === 'best_match') {
+      // In findByLanguagePair, we don't have current user profile handy, but we will sort based on what we can.
+      results.forEach((u) => {
+        const matchData = this.calculateMatchScore(null, u);
+        u.match_reasons = matchData.reasons;
+        u._matchScore = matchData.score;
+      });
       results.sort((a, b) => {
-        const aPoW = a.is_partner_of_week ? 1 : 0;
-        const bPoW = b.is_partner_of_week ? 1 : 0;
-        if (aPoW !== bPoW) return bPoW - aPoW;
-        const streakA = a.study_streak_days ?? 0;
-        const streakB = b.study_streak_days ?? 0;
-        if (streakB !== streakA) return streakB - streakA;
-        const ratioA = a.correction_ratio ?? 0;
-        const ratioB = b.correction_ratio ?? 0;
-        return ratioB - ratioA;
+        const aPow = a.is_partner_of_week ? 1 : 0;
+        const bPow = b.is_partner_of_week ? 1 : 0;
+        if (aPow !== bPow) return bPow - aPow;
+
+        const scoreA = a._matchScore ?? 0;
+        const scoreB = b._matchScore ?? 0;
+        return scoreB - scoreA;
       });
     }
 
@@ -1070,10 +1084,10 @@ export class DiscoveryService {
       return users.filter((u) => activeHostSet.has(u.id));
     } catch (err) {
       this.logger.error(
-        'Voice room active filter failed, returning unfiltered results',
+        'Voice room active filter failed, returning no active hosts',
         err,
       );
-      return users;
+      return [];
     }
   }
 
@@ -1201,27 +1215,122 @@ export class DiscoveryService {
     return result;
   }
 
+  private calculateMatchScore(
+    searcher: UserProfile | null,
+    candidate: DiscoveryUser,
+  ): { score: number; reasons: string[] } {
+    let score = 0;
+    const reasons: string[] = [];
+
+    // Helper: basic overlap check
+    const hasOverlap = (left?: string[] | null, right?: string[] | null) => {
+      if (!left || !right || left.length === 0 || right.length === 0)
+        return false;
+      const rightSet = new Set(right);
+      return left.some((l) => rightSet.has(l));
+    };
+
+    if (searcher) {
+      // A. Complementary Languages (Reciprocity)
+      const mutualMatch =
+        hasOverlap(candidate.native_languages, searcher.target_languages) &&
+        hasOverlap(candidate.target_languages, searcher.native_languages);
+      const oneWayMatch =
+        hasOverlap(candidate.native_languages, searcher.target_languages) ||
+        hasOverlap(candidate.target_languages, searcher.native_languages);
+
+      if (mutualMatch) {
+        score += 50;
+        reasons.push('language_exchange');
+      } else if (oneWayMatch) {
+        score += 20;
+        reasons.push('one_way_language_exchange');
+      }
+
+      // B. Proficiency Level Gap
+      if (
+        searcher.proficiency_level &&
+        candidate.proficiency_level &&
+        searcher.proficiency_level === candidate.proficiency_level
+      ) {
+        score += 10;
+        reasons.push('similar_proficiency');
+      }
+
+      // D. Interest Overlap
+      if (searcher.interests && candidate.interests) {
+        const searcherInterestsSet = new Set(searcher.interests);
+        let sharedInterests = 0;
+        for (const interest of candidate.interests) {
+          if (searcherInterestsSet.has(interest)) {
+            sharedInterests++;
+          }
+        }
+        if (sharedInterests > 0) {
+          score += sharedInterests * 10;
+          reasons.push('shared_interests');
+        }
+      }
+
+      // G. Learning Seriousness
+      if (searcher.is_serious_learner && candidate.study_streak_days) {
+        score += Math.min(candidate.study_streak_days, 50);
+        reasons.push('study_streak');
+      }
+    }
+
+    // F. Correction Behaviour (Helpfulness)
+    if (candidate.correction_ratio) {
+      score += candidate.correction_ratio * 40;
+      reasons.push('helpful_corrector');
+    }
+
+    // C. Timezone / Active Hours Overlap (proxy using recent activity)
+    if (candidate.last_active_at) {
+      const activeTime = Date.parse(candidate.last_active_at);
+      if (Number.isFinite(activeTime)) {
+        const ageMs = Math.max(0, Date.now() - activeTime);
+        if (ageMs <= 24 * 60 * 60 * 1000) {
+          // Active in last day
+          score += 10;
+          reasons.push('active_recently');
+        }
+      }
+    }
+
+    return { score, reasons };
+  }
+
   private sortUsers(
     users: UserProfile[],
     sort?: string,
     _searchLat?: number,
     _searchLon?: number,
+    searcherProfile?: UserProfile | null,
   ): UserProfile[] {
     if (!sort || !users.length) return users;
     const discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
       case 'best_match':
+        discoveryUsers.forEach((u) => {
+          if (searcherProfile) {
+            const matchData = this.calculateMatchScore(searcherProfile, u);
+            u.match_reasons = matchData.reasons;
+            u._matchScore = matchData.score;
+          } else {
+            const matchData = this.calculateMatchScore(null, u);
+            u.match_reasons = matchData.reasons;
+            u._matchScore = matchData.score;
+          }
+        });
         return discoveryUsers.sort((a, b) => {
           const aPow = a.is_partner_of_week ? 1 : 0;
           const bPow = b.is_partner_of_week ? 1 : 0;
           if (aPow !== bPow) return bPow - aPow;
-          const streakA = a.study_streak_days ?? 0;
-          const streakB = b.study_streak_days ?? 0;
-          if (streakB !== streakA) return streakB - streakA;
-          const ratioA = a.correction_ratio ?? 0;
-          const ratioB = b.correction_ratio ?? 0;
-          if (ratioB !== ratioA) return ratioB - ratioA;
-          return 0;
+
+          const scoreA = a._matchScore ?? 0;
+          const scoreB = b._matchScore ?? 0;
+          return scoreB - scoreA;
         });
       case 'online_now':
         return discoveryUsers.sort((a, b) => {
