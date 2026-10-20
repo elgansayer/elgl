@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
-  IsISO8601,
+  IsDateString,
   IsInt,
   IsObject,
   IsOptional,
@@ -13,20 +13,22 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+const MAX_FRAME_TEXT_LENGTH = 512;
+
 export class ClientErrorStackFrameDto {
   @IsOptional()
   @IsString()
-  @MaxLength(512)
+  @MaxLength(MAX_FRAME_TEXT_LENGTH)
   fileName?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(512)
+  @MaxLength(MAX_FRAME_TEXT_LENGTH)
   functionName?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(512)
+  @MaxLength(MAX_FRAME_TEXT_LENGTH)
   source?: string;
 
   @IsOptional()
@@ -38,7 +40,7 @@ export class ClientErrorStackFrameDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(10_000_000)
+  @Max(100_000)
   columnNumber?: number;
 }
 
@@ -49,17 +51,17 @@ export class ClientErrorDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(120)
   name?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(12000)
+  @MaxLength(12_000)
   stack?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(8000)
+  @MaxLength(4000)
   componentStack?: string;
 
   @IsOptional()
@@ -78,12 +80,12 @@ export class ClientErrorDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(20)
+  @ArrayMaxSize(30)
   @ValidateNested({ each: true })
   @Type(() => ClientErrorStackFrameDto)
   stackFrames?: ClientErrorStackFrameDto[];
 
   @IsOptional()
-  @IsISO8601()
+  @IsDateString({ strict: true })
   timestamp?: string;
 }

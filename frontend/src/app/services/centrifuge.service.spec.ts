@@ -139,6 +139,42 @@ describe('CentrifugeService', () => {
     expect(handler.mock.calls).toEqual([['first'], ['second']]);
   });
 
+  it('preserves the live-room channel and delivers each valid publication once', () => {
+    const handler = vi.fn();
+    service.subscribeLiveRoom('room-42', handler);
+    const subscription = mockCentrifuge.getSubscription('room_room-42');
+    const message = { type: 'text', content: 'fixture' };
+
+    subscription?.emit('publication', { data: null });
+    subscription?.emit('publication', { data: 'invalid' });
+    subscription?.emit('publication', { data: message });
+
+    expect(handler).toHaveBeenCalledExactlyOnceWith(message);
+    expect(service.events().at(-1)).toEqual({ channel: 'room_room-42', data: message });
+    service.unsubscribeLiveRoom('room-42');
+    expect(subscription?.unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('preserves the live-location channel and rejects incomplete publications', () => {
+    const handler = vi.fn();
+    service.subscribeLiveLocation('user-42', handler);
+    const subscription = mockCentrifuge.getSubscription('location_live_user-42');
+    const location = {
+      latitude: 51.5,
+      longitude: -0.12,
+      sharer_user_id: 'user-42',
+      updated_at: '2026-10-20T00:00:00Z',
+    };
+
+    subscription?.emit('publication', { data: null });
+    subscription?.emit('publication', { data: { latitude: 51.5 } });
+    subscription?.emit('publication', { data: location });
+
+    expect(handler).toHaveBeenCalledExactlyOnceWith(location);
+    service.unsubscribeLiveLocation('user-42');
+    expect(subscription?.unsubscribe).toHaveBeenCalledOnce();
+  });
+
   it('keeps desired subscriptions while no client exists and restores them on a new client', () => {
     const handler = vi.fn();
     (service as unknown as { centrifuge: MockCentrifuge | null }).centrifuge = null;

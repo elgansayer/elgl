@@ -11,10 +11,15 @@ const componentUrl = new URL(
   import.meta.url,
 );
 const auditUrl = new URL('../docs/moments-accessibility-audit.md', import.meta.url);
+const componentUrl = new URL(
+  '../frontend/src/app/components/moments-feed/moments-feed.component.ts',
+  import.meta.url,
+);
 
 const template = readFileSync(templateUrl, 'utf8');
 const component = readFileSync(componentUrl, 'utf8');
 const audit = readFileSync(auditUrl, 'utf8');
+const component = readFileSync(componentUrl, 'utf8');
 
 function buttonFor(clickExpression) {
   const buttons = [...template.matchAll(/<button\b[\s\S]*?<\/button>/g)].map((match) => match[0]);
@@ -24,8 +29,16 @@ function buttonFor(clickExpression) {
 }
 
 test('Moments exposes a single primary landmark and translated top-level navigation names', () => {
-  assert.equal((template.match(/<main\b/g) ?? []).length, 1, 'Moments should expose one main landmark');
-  assert.equal((template.match(/<h1\b/g) ?? []).length, 1, 'Moments should expose one page heading');
+  assert.equal(
+    (template.match(/<main\b/g) ?? []).length,
+    1,
+    'Moments should expose one main landmark',
+  );
+  assert.equal(
+    (template.match(/<h1\b/g) ?? []).length,
+    1,
+    'Moments should expose one page heading',
+  );
   assert.match(template, /\[attr\.aria-label\]="'nav\.profile' \| t"/);
   assert.match(template, /\[attr\.aria-label\]="'nav\.notifications' \| t"/);
   assert.match(template, /\[attr\.aria-label\]="'nav\.compose' \| t"/);
@@ -81,7 +94,11 @@ test('the accessibility audit records the exact current high-priority debt', () 
   ];
 
   for (const finding of findings) {
-    assert.equal(finding.present, true, `${finding.id} no longer matches the source; update the audit`);
+    assert.equal(
+      finding.present,
+      true,
+      `${finding.id} no longer matches the source; update the audit`,
+    );
     assert.match(audit, new RegExp(`\\b${finding.id}\\b`), `${finding.id} must be documented`);
   }
 
@@ -93,6 +110,16 @@ test('the accessibility audit records the exact current high-priority debt', () 
     findings.map(({ id }) => id).sort(),
     'The documented and executable accessibility debt baselines must match',
   );
+});
+
+test('the comment autocomplete delegates interaction semantics and handles IME safely', () => {
+  assert.match(template, /<hlm-autocomplete-search\b/);
+  assert.match(template, /<hlm-autocomplete-input\b/);
+  assert.match(template, /hlmAutocompleteList/);
+  assert.match(template, /<hlm-autocomplete-item\b/);
+  assert.doesNotMatch(template, /role="combobox"|aria-activedescendant/);
+  assert.match(component, /if \(event\.isComposing\) return;/);
+  assert.doesNotMatch(component, /event\.key === 'Arrow(?:Down|Up)'/);
 });
 
 test('the audit covers screen-reader, keyboard, zoom, RTL, privacy, and rollback review', () => {

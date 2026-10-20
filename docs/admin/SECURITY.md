@@ -91,27 +91,6 @@ Apply field-level redaction to personal, security and financial data based on ca
 - No sensitive payloads in logs.
 - Security headers and strict CSP for the portal.
 
-## Consumer-app admin route boundary
-
-The Angular admin guard is a defense-in-depth UX/privacy boundary. It is not an authorization substitute: every privileged backend read and mutation must still enforce the authenticated admin capability server-side.
-
-The frontend contract is intentionally fail-closed:
-
-- every consumer-app route whose path starts with `admin` is protected by `adminGuard`;
-- server-side rendering never activates an admin route;
-- when there is no access token, the client rejects admin navigation without probing a privileged endpoint;
-- the access probe is a real authenticated `GET /admin/users?page=1&pageSize=1` request with no mock-data fallback;
-- `401`, `403`, provider/network failures and unexpected access-check exceptions all redirect to `/discovery` rather than rendering privileged UI;
-- privileged mutations such as VIP changes, bans and warnings propagate backend failures instead of fabricating successful state.
-
-Route and service regression tests must be updated whenever a new `admin/*` surface is added. The route test deliberately enumerates current admin surfaces so a new unguarded route cannot be added silently.
-
-### Rollout and recovery
-
-This boundary has no schema, migration or configuration dependency and is safe to deploy independently of the backend. Existing server authorization remains authoritative during mixed-version rollout.
-
-If the frontend guard must be rolled back, revert the guard/service/test changes together. Do not weaken or bypass backend admin authorization as part of rollback. A backend authorization outage should continue to deny the consumer-app admin surface until the server can verify access again.
-
 ## Destructive actions
 
 For destructive/high-impact operations support as appropriate:
