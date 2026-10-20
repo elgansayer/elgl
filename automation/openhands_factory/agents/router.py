@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import threading
 import uuid
 from collections.abc import Mapping, Sequence
@@ -30,13 +29,11 @@ from openhands_factory.exceptions import (
     FactoryError,
     ProviderCapacityUnavailable,
 )
-from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
 
 LOGGER = logging.getLogger(__name__)
-DEFAULT_HOST_RESOURCE_SHARED_LIMIT = 2
 FALLBACK_FAILURES = {
     AgentFailureKind.PROVIDER_UNAVAILABLE,
     AgentFailureKind.PROVIDER_AUTH,
@@ -96,7 +93,6 @@ class AgentRouter:
         capacity_wait_seconds: int = 30,
         skip_busy_providers: bool = True,
         same_provider_retries: int = 1,
-        host_resource_slots: HostResourceGate | None = None,
     ) -> None:
         self.providers = {provider.name: provider for provider in providers}
         self.policy = policy
@@ -113,13 +109,6 @@ class AgentRouter:
         self.capacity_wait_seconds = capacity_wait_seconds
         self.skip_busy_providers = skip_busy_providers
         self.same_provider_retries = same_provider_retries
-        self.host_resource_slots = host_resource_slots
-        if self.host_resource_slots is None and capacity_store is not None:
-            self.host_resource_slots = HostResourceGate(
-                capacity_store.path.with_name("host-resource-gate.json"),
-                DEFAULT_HOST_RESOURCE_SHARED_LIMIT,
-                lease_seconds=capacity_store.max_lease_seconds,
-            )
         self._stopping = threading.Event()
         self._memory_breakers_lock = threading.Lock()
         self._review_capacity_lock = threading.Lock()
@@ -137,7 +126,7 @@ class AgentRouter:
             self._review_capacity_tasks.add(task_id)
 
     def release_review_capacity(self, task_id: str) -> None:
-        """Release a pull request review reservation after worker completion."""
+        """Release a pull request review reservation after its worker finishes."""
 
         with self._review_capacity_lock:
             self._review_capacity_tasks.discard(task_id)
@@ -167,20 +156,13 @@ class AgentRouter:
             return self._memory_breakers
         return self.health_store.load(defaults)
 
-    def _health(self, *, reserve_half_open: bool = True) -> dict[str, ProviderHealth]:
+    def _health(self) -> dict[str, ProviderHealth]:
         defaults = self._default_breakers()
         breakers = self._breakers()
         health: dict[str, ProviderHealth] = {}
         for name, provider in self.providers.items():
-            breaker = breakers[name]
-            if not reserve_half_open and breaker.state != "closed":
-                # Status/diagnostic snapshots are observational. A due open circuit
-                # must be leased by the routed operation that can immediately use
-                # the single half-open recovery probe, not by monitoring immediately
-                # before the scheduler dispatches workers.
-                health[name] = breaker.get_health()
-                continue
             if self.health_store is None:
+                breaker = breakers[name]
                 with self._memory_breakers_lock:
                     permitted = breaker.permits_call()
             else:
@@ -201,11 +183,16 @@ class AgentRouter:
                 health[name] = provider_health
                 continue
             if provider_health.status in {ProviderStatus.HEALTHY, ProviderStatus.DEGRADED}:
-                # A shallow CLI/auth health probe does not prove that the condition
-                # which opened the circuit (especially quota or rate-limit state)
-                # has recovered. Keep the circuit half-open until the actual routed
-                # provider operation records success or failure. This also preserves
-                # the single-probe lease across concurrent workers.
+                if breaker.state == "half-open":
+                    if self.health_store is not None:
+                        self.health_store.update(
+                            name,
+                            defaults,
+                            lambda item: item.record_success(),
+                        )
+                    else:
+                        with self._memory_breakers_lock:
+                            breaker.record_success()
                 health[name] = provider_health
                 continue
             failure_by_status = {
@@ -290,8 +277,8 @@ class AgentRouter:
         return None
 
     def health_snapshot(self) -> dict[str, ProviderHealth]:
-        """Return non-secret health without consuming a half-open recovery lease."""
-        return self._health(reserve_half_open=False)
+        """Return non-secret live provider health for startup and diagnostics."""
+        return self._health()
 
     def has_usable_provider(self) -> bool:
         return any(
@@ -345,10 +332,6 @@ class AgentRouter:
             "duration_seconds": round(duration, 3),
             "fallback_reason": result.fallback_reason,
         }
-        if result.captured_output_chars is not None:
-            entry["captured_output_chars"] = max(result.captured_output_chars, 0)
-        if result.output_truncated is not None:
-            entry["output_truncated"] = result.output_truncated
         if result.exit_code is not None:
             entry["exit_code"] = result.exit_code
         if result.failure is not None:
@@ -401,13 +384,7 @@ class AgentRouter:
             lease_seconds=timeout * (self.same_provider_retries + 1) + 300,
         )
 
-    def _record_metrics(
-        self,
-        result: AgentResult,
-        capacity_wait_seconds: float,
-        *,
-        request_prompt_chars: int | None = None,
-    ) -> None:
+    def _record_metrics(self, result: AgentResult, capacity_wait_seconds: float) -> None:
         if self.metrics_store is None or result.provider == "openhands":
             return
         failure = result.failure
@@ -429,9 +406,6 @@ class AgentRouter:
             duration_seconds=duration,
             capacity_wait_seconds=capacity_wait_seconds,
             failure_kind=failure.kind.value if failure is not None else None,
-            request_prompt_chars=request_prompt_chars,
-            captured_output_chars=result.captured_output_chars,
-            output_truncated=result.output_truncated,
         )
 
     def _release_capacity(self, provider: str, owner: str) -> None:
@@ -496,42 +470,6 @@ class AgentRouter:
         return result
 
     def run(
-        self,
-        request: AgentRequest,
-        job: Job,
-        exclude: set[str] | None = None,
-    ) -> AgentResult:
-        """Route one provider while holding the host-wide reader lease."""
-
-        gate = self.host_resource_slots
-        if gate is None:
-            return self._run_routed(request, job, exclude=exclude)
-        owner = (
-            f"shared:{os.getpid()}:{job.task.identifier}:{request.phase.value}:{uuid.uuid4().hex}"
-        )
-        if not gate.acquire_shared(owner):
-            raise ProviderCapacityUnavailable(
-                "Host resource capacity is full",
-                retry_after_seconds=max(self.capacity_wait_seconds, 1),
-            )
-        LOGGER.info(
-            "factory.host_resource.reader_acquired task=%s phase=%s owner=%s",
-            job.task.identifier,
-            request.phase.value,
-            owner,
-        )
-        try:
-            return self._run_routed(request, job, exclude=exclude)
-        finally:
-            gate.release_shared(owner)
-            LOGGER.info(
-                "factory.host_resource.reader_released task=%s phase=%s owner=%s",
-                job.task.identifier,
-                request.phase.value,
-                owner,
-            )
-
-    def _run_routed(
         self,
         request: AgentRequest,
         job: Job,
@@ -607,9 +545,6 @@ class AgentRouter:
                     self._record_metrics(
                         result,
                         capacity_wait_seconds if provider_attempt == 1 else 0,
-                        request_prompt_chars=(
-                            len(provider_request.system_prompt) + len(provider_request.prompt)
-                        ),
                     )
                     job.provider_history.append(self._history_entry(result))
                     if len(job.provider_history) > MAX_PROVIDER_HISTORY:
