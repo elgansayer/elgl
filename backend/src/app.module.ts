@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { validationSchema } from './config/validation.schema';
+import { validateEnvironment } from './config/environment.validation';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SharedLoggerModule } from './common/logger/logger.module';
@@ -80,13 +80,16 @@ import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
 import { LivekitModule } from './livekit/livekit.module';
+import { OpenApiFixtureFactoryController } from './mock/openapi-fixture-factory.controller';
+import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
+import { MockScenariosModule } from './mock/mock-scenarios.module';
+import { UserInterestsModule } from './modules/user-interests/user-interests.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validationSchema,
-      validationOptions: { allowUnknown: true, abortEarly: false },
+      validate: validateEnvironment,
     }),
     ScheduleModule.forRoot(),
 
@@ -177,6 +180,8 @@ import { LivekitModule } from './livekit/livekit.module';
     ReadingEngineModule,
     CloudflareModule,
     LearnerKnowledgeModule,
+    MockScenariosModule,
+    UserInterestsModule,
   ],
   controllers: [AppController],
   providers: [

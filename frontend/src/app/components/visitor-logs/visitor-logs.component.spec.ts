@@ -100,6 +100,8 @@ describe('VisitorLogsComponent', () => {
   async function settle(): Promise<void> {
     await fixture.whenStable();
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
   }
 
   it('loads visitor data and exposes visible and blurred counts', async () => {
@@ -121,7 +123,7 @@ describe('VisitorLogsComponent', () => {
     const banner = fixture.nativeElement.querySelector('.vip-banner') as HTMLElement | null;
     expect(banner).toBeTruthy();
     expect(banner?.textContent).toContain('common.vipStdLabel');
-    expect(banner?.querySelector('a')?.getAttribute('href')).toBe('/vip');
+    expect(banner?.querySelector('a')?.getAttribute('href')).toBe('/subscription');
   });
 
   it('uses server masking as an entitlement signal even if the profile appears VIP', async () => {

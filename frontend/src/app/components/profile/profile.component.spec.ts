@@ -93,72 +93,55 @@ describe('ProfileComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('en,ja');
-    expect(text).toContain('fr,ko');
+    expect(text).toContain('en, ja');
+    expect(text).toContain('fr, ko');
     expect(text).toContain('🔥 14d');
   });
 
-  it('should render saved learning goals as profile text', async () => {
-    const learningGoals = 'Become conversational before moving abroad.\nPractise pronunciation.';
-    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ learning_goals: learningGoals }));
+  it('should load and render the saved CEFR proficiency level', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ proficiency_level: 'C1' }));
 
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const section = fixture.nativeElement.querySelector(
-      '[aria-labelledby="learning-goals-heading"]',
-    ) as HTMLElement | null;
-    expect(section).not.toBeNull();
-    expect(section?.textContent).toContain('Learning goals');
-    expect(section?.textContent).toContain('Become conversational before moving abroad.');
-    expect(section?.textContent).toContain('Practise pronunciation.');
+    expect(fixture.componentInstance.proficiencyLevel()).toBe('C1');
+    expect(fixture.nativeElement.textContent).toContain('C1');
   });
 
-  it('should preload and persist learning goals from the profile editor', async () => {
+  it('should persist the selected CEFR proficiency level with profile updates', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ proficiency_level: 'A2' }));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.proficiencyLevel.set('B2');
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ proficiency_level: 'B2' }),
+    );
+  });
+
+  it('round-trips comma-separated learning goals through the array API contract', async () => {
     mockUserService.getMyProfile.mockResolvedValue(
-      makeProfile({ learning_goals: 'Practise for travel' }),
+      makeProfile({ learning_goals: ['conversation', 'grammar'] }),
     );
 
     fixture.detectChanges();
     await fixture.whenStable();
-    fixture.componentInstance.toggleEdit();
-    fixture.detectChanges();
 
-    const textarea = fixture.nativeElement.querySelector(
-      '#profile-learning-goals',
-    ) as HTMLTextAreaElement | null;
-    expect(textarea).not.toBeNull();
-    expect(textarea?.value).toBe('Practise for travel');
-
-    textarea!.value = 'Read novels without translation';
-    textarea!.dispatchEvent(new Event('input', { bubbles: true }));
-    fixture.detectChanges();
-
-    await fixture.componentInstance.saveProfile();
-
-    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ learning_goals: 'Read novels without translation' }),
+    expect(fixture.componentInstance.learningGoals()).toBe(
+      'conversation, grammar',
     );
-  });
 
-  it('should bound learning goals to 1000 characters before persistence', async () => {
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.componentInstance.toggleEdit();
-    fixture.detectChanges();
-
-    const textarea = fixture.nativeElement.querySelector(
-      '#profile-learning-goals',
-    ) as HTMLTextAreaElement;
-    textarea.value = 'x'.repeat(1200);
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.learningGoals()).toHaveLength(1000);
+    fixture.componentInstance.learningGoals.set('conversation, vocabulary,  ');
     await fixture.componentInstance.saveProfile();
+
     expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ learning_goals: 'x'.repeat(1000) }),
+      expect.objectContaining({
+        learning_goals: ['conversation', 'vocabulary'],
+      }),
     );
   });
 

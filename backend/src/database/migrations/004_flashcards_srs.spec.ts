@@ -52,7 +52,9 @@ describe('historical migration: 004_flashcards_srs (#971)', () => {
       /ALTER TABLE public\.flashcards ENABLE ROW LEVEL SECURITY/,
     );
     expect(sql).toMatch(/FOR SELECT[\s\S]*?USING \(auth\.uid\(\) = user_id\)/);
-    expect(sql).toMatch(/FOR INSERT[\s\S]*?WITH CHECK \(auth\.uid\(\) = user_id\)/);
+    expect(sql).toMatch(
+      /FOR INSERT[\s\S]*?WITH CHECK \(auth\.uid\(\) = user_id\)/,
+    );
     expect(sql).toMatch(/FOR UPDATE[\s\S]*?USING \(auth\.uid\(\) = user_id\)/);
     expect(sql).toMatch(/FOR DELETE[\s\S]*?USING \(auth\.uid\(\) = user_id\)/);
   });

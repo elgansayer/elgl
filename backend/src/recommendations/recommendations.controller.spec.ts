@@ -56,7 +56,9 @@ describe('RecommendationsController', () => {
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
-    controller = module.get<RecommendationsController>(RecommendationsController);
+    controller = module.get<RecommendationsController>(
+      RecommendationsController,
+    );
   });
 
   afterEach(() => {
@@ -137,7 +139,9 @@ describe('RecommendationsController', () => {
       const req = { user: { id: 'user-123' } };
       const result = await controller.getDaily(req);
       expect(result).toEqual(dtos);
-      expect(mockService.getDailyRecommendations).toHaveBeenCalledWith('user-123');
+      expect(mockService.getDailyRecommendations).toHaveBeenCalledWith(
+        'user-123',
+      );
     });
 
     it('should return empty array when no daily data cached', async () => {

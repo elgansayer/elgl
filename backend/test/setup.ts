@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { vi } from 'vitest';
 
 process.env.TRANSFER_SECRET = 'test-transfer-secret';

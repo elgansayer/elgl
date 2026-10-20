@@ -3,7 +3,7 @@ import { Component, inject, computed, viewChild, ErrorHandler } from '@angular/c
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
-import { FlashcardService } from '../../services/flashcard.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { showToast, showErrorToast } from '../../services/toast.service';
 import {
   SrsErrorBoundaryComponent,
@@ -83,7 +83,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
 })
 export class VocabularyDisplayComponent {
   private readonly store = inject(HobbyTagsStore);
-  private readonly flashcardService = inject(FlashcardService);
+  private readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
   private readonly errorHandler = inject(ErrorHandler);
 
@@ -136,7 +136,7 @@ export class VocabularyDisplayComponent {
     hobbyTagName: string;
   }): Promise<void> {
     try {
-      await this.flashcardService.createFlashcard({
+      await this.vocabStore.saveWord({
         word_token: item.word,
         original_context: this.i18n.translate('vocabDisplay.contextSentence', {
           tag: item.hobbyTagName,

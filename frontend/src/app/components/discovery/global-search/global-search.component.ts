@@ -82,7 +82,7 @@ export class GlobalSearchComponent {
       native_languages: this.nativeLanguages() || undefined,
       target_language: this.targetLanguage() || undefined,
       proficiency_level: this.level() || undefined,
-      has_audio_intro: this.hasAudioIntro(),
+      has_audio_intro: this.hasAudioIntro() ? true : undefined,
     });
   }
 

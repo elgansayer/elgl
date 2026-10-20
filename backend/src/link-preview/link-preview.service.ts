@@ -1,8 +1,8 @@
 import {
-  Injectable,
-  Logger,
   BadRequestException,
   Inject,
+  Injectable,
+  Logger,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -12,6 +12,7 @@ import { JSDOM } from 'jsdom';
 import * as dns from 'dns';
 import * as http from 'http';
 import * as https from 'https';
+import { createHash } from 'crypto';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import { isPrivateIp } from './ip-guard';
 import Redis from 'ioredis';
@@ -21,6 +22,9 @@ import Redis from 'ioredis';
  * than this are rejected so a malicious site cannot exhaust server memory.
  */
 const MAX_RESPONSE_BYTES = 5_000_000;
+const MAX_URL_LENGTH = 2_048;
+const CACHE_TTL_SECONDS = 3_600;
+const CACHE_PREFIX = 'link_preview:v2';
 
 const safeLookup = (
   hostname: string,
@@ -44,7 +48,7 @@ const safeLookup = (
       typeof address === 'string' ? address : address[0]?.address;
     if (candidate && isPrivateIp(candidate)) {
       callback(
-        new Error(`SSRF blocked: Private IP ${candidate} is not allowed.`),
+        new Error('SSRF blocked: resolved address is not publicly routable'),
         address,
         family,
       );
@@ -78,27 +82,47 @@ export class LinkPreviewService {
   }
 
   async getPreview(url: string): Promise<LinkPreview | null> {
-    this.validateUrl(url);
+    const parsed = this.validateUrl(url);
+    const normalizedUrl = parsed.href;
+    const cacheKey = this.cacheKey(normalizedUrl);
+    const descriptor = this.urlDescriptor(parsed);
 
-    const cacheKey = `link_preview:${url}`;
-    const cached = await this.redis.get(cacheKey);
-    if (cached) {
-      try {
-        return JSON.parse(cached) as LinkPreview;
-      } catch {
-        this.logger.warn(`Invalid link-preview cache entry for ${url}`);
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached) as LinkPreview;
+        } catch {
+          this.logger.warn(`Invalid link-preview cache entry (${descriptor})`);
+        }
       }
+    } catch {
+      // A cache outage must not turn a best-effort preview into a chat failure.
+      this.logger.warn(`Link-preview cache read unavailable (${descriptor})`);
     }
 
     try {
-      const preview = await this.fetchPreview(url);
+      const preview = await this.fetchPreview(normalizedUrl);
       if (preview) {
-        await this.redis.set(cacheKey, JSON.stringify(preview), 'EX', 3600);
+        try {
+          await this.redis.set(
+            cacheKey,
+            JSON.stringify(preview),
+            'EX',
+            CACHE_TTL_SECONDS,
+          );
+        } catch {
+          // The preview is still valid when Redis is unavailable.
+          this.logger.warn(
+            `Link-preview cache write unavailable (${descriptor})`,
+          );
+        }
       }
       return preview;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to fetch link preview for ${url}: ${message}`);
+      this.logger.error(
+        `Link-preview fetch failed (${descriptor}; ${this.errorKind(error)})`,
+      );
       if (error instanceof BadRequestException) {
         throw error;
       }
@@ -106,7 +130,11 @@ export class LinkPreviewService {
     }
   }
 
-  private validateUrl(raw: string): void {
+  private validateUrl(raw: string): URL {
+    if (raw.length > MAX_URL_LENGTH) {
+      throw new BadRequestException('URL is too long');
+    }
+
     let parsed: URL;
     try {
       parsed = new URL(raw);
@@ -114,6 +142,11 @@ export class LinkPreviewService {
       throw new BadRequestException('Malformed URL');
     }
 
+    this.validateExternalUrl(parsed);
+    return parsed;
+  }
+
+  private validateExternalUrl(parsed: URL): void {
     const protocol = parsed.protocol.toLowerCase();
     if (protocol !== 'http:' && protocol !== 'https:') {
       throw new BadRequestException(
@@ -126,13 +159,16 @@ export class LinkPreviewService {
     }
 
     if (parsed.port) {
-      if (protocol === 'http:' && parsed.port === '80') {
-        return;
+      const isDefaultPort =
+        (protocol === 'http:' && parsed.port === '80') ||
+        (protocol === 'https:' && parsed.port === '443');
+      if (!isDefaultPort) {
+        throw new BadRequestException('Custom ports are not allowed');
       }
-      if (protocol === 'https:' && parsed.port === '443') {
-        return;
-      }
-      throw new BadRequestException('Custom ports are not allowed');
+    }
+
+    if (this.isUnsafeLiteralHost(parsed.hostname)) {
+      throw new BadRequestException('Private network URLs are not allowed');
     }
   }
 
@@ -158,7 +194,7 @@ export class LinkPreviewService {
     const html = response.data ?? '';
     const $ = cheerio.load(html);
 
-    // Remove script/style/noscript content so it does not pollute textual fields
+    // Remove script/style/noscript content so it does not pollute textual fields.
     $('script, style, noscript').remove();
 
     const rawTitle =
@@ -170,18 +206,13 @@ export class LinkPreviewService {
 
     const title = this.sanitizeMetaContent(rawTitle);
     const description = this.sanitizeMetaContent(rawDescription);
-
-    let image = this.getMetaTag($, 'og:image') || '';
-    if (image) {
-      try {
-        image = new URL(image, url).href;
-      } catch {
-        image = '';
-      }
-    }
-
-    const siteName =
-      this.getMetaTag($, 'og:site_name') || new URL(url).hostname;
+    const image = this.sanitizeImageUrl(
+      this.getMetaTag($, 'og:image') || '',
+      url,
+    );
+    const siteName = this.sanitizeMetaContent(
+      this.getMetaTag($, 'og:site_name') || new URL(url).hostname,
+    );
 
     if (!title && !description && !image) {
       return null;
@@ -211,5 +242,51 @@ export class LinkPreviewService {
     });
     const $inner = cheerio.load(`<div>${sanitized}</div>`);
     return $inner('div').text().trim();
+  }
+
+  private sanitizeImageUrl(raw: string, pageUrl: string): string {
+    if (!raw) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(raw, pageUrl);
+      if (parsed.href.length > MAX_URL_LENGTH) {
+        return '';
+      }
+      this.validateExternalUrl(parsed);
+      return parsed.href;
+    } catch {
+      return '';
+    }
+  }
+
+  private isUnsafeLiteralHost(hostname: string): boolean {
+    const normalized = hostname
+      .toLowerCase()
+      .replace(/^\[/, '')
+      .replace(/\]$/, '');
+    return (
+      normalized === 'localhost' ||
+      normalized.endsWith('.localhost') ||
+      isPrivateIp(normalized)
+    );
+  }
+
+  private cacheKey(url: string): string {
+    const digest = createHash('sha256').update(url).digest('hex');
+    return `${CACHE_PREFIX}:${digest}`;
+  }
+
+  private urlDescriptor(url: URL): string {
+    const fingerprint = createHash('sha256')
+      .update(url.href)
+      .digest('hex')
+      .slice(0, 12);
+    return `${url.hostname}#${fingerprint}`;
+  }
+
+  private errorKind(error: unknown): string {
+    return error instanceof Error ? error.name : 'UnknownError';
   }
 }

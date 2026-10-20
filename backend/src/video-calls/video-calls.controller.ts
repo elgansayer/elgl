@@ -15,7 +15,6 @@ import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
   ApiBearerAuth,
-  ApiBody,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -24,6 +23,8 @@ import {
   CacheControlInterceptor,
   CACHE_NO_STORE,
 } from '../common/cache.interceptor';
+import { StartVideoCallDto } from './dto/start-video-call.dto';
+import { AcceptVideoCallDto } from './dto/accept-video-call.dto';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -42,16 +43,15 @@ export class VideoCallsController {
   @Post('start')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Start a new video call room',
+    summary: 'Start a new encrypted call room',
     description:
-      'Creates a new LiveKit video call room for the authenticated user. ' +
-      'Returns a LiveKit access token and the generated room name. ' +
-      'The room is configured with a 30-second empty timeout and a maximum of 2 participants. ' +
-      'When LiveKit is degraded, returns a standalone token with a degraded flag.',
+      'Creates a new two-participant LiveKit call room for the authenticated user and intended recipient. ' +
+      'The response includes short-lived E2EE key material delivered outside the LiveKit media plane. ' +
+      'The room is configured with a 30-second empty timeout and a maximum of 2 participants.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Video call room created successfully.',
+    description: 'Encrypted call room created successfully.',
     schema: {
       type: 'object',
       properties: {
@@ -63,12 +63,17 @@ export class VideoCallsController {
         roomName: {
           type: 'string',
           description: 'Generated LiveKit room name',
-          example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          example: 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890',
+        },
+        e2eeKey: {
+          type: 'string',
+          description:
+            'Ephemeral key material used by the clients for LiveKit media E2EE. Never persist or log this value.',
         },
         degraded: {
           type: 'boolean',
           description:
-            'Whether the response was served from a degraded fallback',
+            'Whether the LiveKit control-plane response used a degraded fallback',
           example: false,
         },
         degradationReason: {
@@ -79,37 +84,31 @@ export class VideoCallsController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'Invalid intended participant.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async startCall(@Req() req: AuthenticatedRequest) {
+  @ApiResponse({
+    status: 503,
+    description: 'Encrypted call key broker unavailable.',
+  })
+  async startCall(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: StartVideoCallDto,
+  ) {
     const userId = req.user!.id;
-    return this.videoCallsService.createRoom(userId);
+    return this.videoCallsService.createRoom(userId, body.remoteUserId);
   }
 
   @Post('accept')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Accept and join an existing video call room',
+    summary: 'Accept and join an encrypted call room',
     description:
-      'Generates a LiveKit access token for the authenticated user to join ' +
-      'an existing video call room identified by its room name. ' +
-      'When LiveKit is degraded, falls back to cached or standalone tokens.',
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['roomName'],
-      properties: {
-        roomName: {
-          type: 'string',
-          description: 'The LiveKit room name to join',
-          example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        },
-      },
-    },
+      'Generates a LiveKit access token only when the authenticated user is an intended participant ' +
+      'and returns the same short-lived E2EE key created for the call. Knowledge of a room name alone is insufficient.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Token generated successfully for joining the room.',
+    description: 'Encrypted call join material generated successfully.',
     schema: {
       type: 'object',
       properties: {
@@ -121,12 +120,17 @@ export class VideoCallsController {
         roomName: {
           type: 'string',
           description: 'The LiveKit room name',
-          example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          example: 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890',
+        },
+        e2eeKey: {
+          type: 'string',
+          description:
+            'Ephemeral key material used by the clients for LiveKit media E2EE. Never persist or log this value.',
         },
         degraded: {
           type: 'boolean',
           description:
-            'Whether the response was served from a degraded fallback',
+            'Whether the LiveKit control-plane response used a degraded fallback',
           example: false,
         },
         degradationReason: {
@@ -137,13 +141,22 @@ export class VideoCallsController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'Invalid room name.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Call unavailable or user is not a participant.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Encrypted call key broker unavailable.',
+  })
   acceptCall(
     @Req() req: AuthenticatedRequest,
-    @Body('roomName') roomName: string,
+    @Body() body: AcceptVideoCallDto,
   ) {
     const userId = req.user!.id;
-    return this.videoCallsService.joinRoom(userId, roomName);
+    return this.videoCallsService.joinRoom(userId, body.roomName);
   }
 
   @Get('health')

@@ -135,6 +135,12 @@ describe('ChatRoomComponent pre-send grammar review', () => {
     fixture.componentRef.setInput('id', 'room-1');
     fixture.detectChanges();
     await fixture.whenStable();
+    // initializeRoom() runs fire-and-forget from a constructor effect() and
+    // chains many sequential awaits (loadRoomDetails -> ... ->
+    // resolvePartnerLanguage) that aren't tracked by Angular's zoneless
+    // stability signal, so whenStable() alone can resolve before the chain
+    // finishes. Flush the microtask queue once more to let it settle.
+    await Promise.resolve();
   });
 
   afterEach(() => {

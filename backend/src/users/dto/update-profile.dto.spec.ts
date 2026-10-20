@@ -1,5 +1,4 @@
 import { validate } from 'class-validator';
-import { describe, expect, it } from 'vitest';
 import { UpdateProfileDto } from './update-profile.dto';
 
 describe('UpdateProfileDto', () => {
@@ -8,25 +7,45 @@ describe('UpdateProfileDto', () => {
     expect(dto).toBeDefined();
   });
 
-  async function learningGoalsErrors(value: unknown) {
-    const dto = Object.assign(new UpdateProfileDto(), { learning_goals: value });
-    return (await validate(dto)).filter((error) => error.property === 'learning_goals');
-  }
+  it.each(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'])(
+    'accepts the supported CEFR proficiency level %s',
+    async (proficiencyLevel) => {
+      const dto = Object.assign(new UpdateProfileDto(), {
+        proficiency_level: proficiencyLevel,
+      });
 
-  it('accepts free-text learning motivations up to 1000 characters', async () => {
-    expect(await learningGoalsErrors('I want to speak naturally with my partner.')).toEqual([]);
-    expect(await learningGoalsErrors('x'.repeat(1000))).toEqual([]);
-  });
+      const errors = await validate(dto);
 
-  it('rejects learning goals longer than 1000 characters', async () => {
-    const errors = await learningGoalsErrors('x'.repeat(1001));
-    expect(errors).toHaveLength(1);
-    expect(errors[0].constraints).toHaveProperty('maxLength');
-  });
+      expect(
+        errors.filter((error) => error.property === 'proficiency_level'),
+      ).toHaveLength(0);
+    },
+  );
 
-  it('rejects non-string learning goals payloads', async () => {
-    const errors = await learningGoalsErrors(['conversation', 'travel']);
-    expect(errors).toHaveLength(1);
-    expect(errors[0].constraints).toHaveProperty('isString');
+  it.each(['a1', 'B3', 'native', ''])(
+    'rejects an unsupported proficiency level %s',
+    async (proficiencyLevel) => {
+      const dto = Object.assign(new UpdateProfileDto(), {
+        proficiency_level: proficiencyLevel,
+      });
+
+      const errors = await validate(dto);
+
+      expect(
+        errors.some((error) => error.property === 'proficiency_level'),
+      ).toBe(true);
+    },
+  );
+
+  it('keeps proficiency level optional for unrelated profile updates', async () => {
+    const dto = Object.assign(new UpdateProfileDto(), {
+      display_name: 'Learner',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.some((error) => error.property === 'proficiency_level')).toBe(
+      false,
+    );
   });
 });
