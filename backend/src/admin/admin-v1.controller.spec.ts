@@ -6,7 +6,6 @@ import { AdminModerationQueryService } from './admin-moderation-query.service';
 import { AdminRoleInventoryService } from './admin-role-inventory.service';
 import { AdminService } from './admin.service';
 import { AdminSystemHealthService } from './admin-system-health.service';
-import { AdminUserDetailService } from './admin-user-detail.service';
 import { AdminV1Controller } from './admin-v1.controller';
 
 describe('AdminV1Controller', () => {
@@ -19,8 +18,6 @@ describe('AdminV1Controller', () => {
     const adminService = {
       listUsers: vi.fn(),
       getLoginHistory: vi.fn(),
-    };
-    const userDetailService = {
       getUser: vi.fn(),
     };
     const loginHistoryQuery = {
@@ -44,7 +41,6 @@ describe('AdminV1Controller', () => {
     const controller = new AdminV1Controller(
       authorization as unknown as AdminAuthorizationService,
       adminService as unknown as AdminService,
-      userDetailService as unknown as AdminUserDetailService,
       loginHistoryQuery as unknown as AdminLoginHistoryQueryService,
       audit as unknown as AdminAuditService,
       auditQuery as unknown as AdminAuditQueryService,
@@ -57,7 +53,6 @@ describe('AdminV1Controller', () => {
       controller,
       authorization,
       adminService,
-      userDetailService,
       loginHistoryQuery,
       audit,
       auditQuery,
@@ -315,12 +310,12 @@ describe('AdminV1Controller', () => {
     ).rejects.toThrow('audit unavailable');
   });
 
-  it('delegates bounded user inspection to AdminUserDetailService', async () => {
-    const { controller, userDetailService } = buildController();
+  it('delegates bounded user inspection to AdminService', async () => {
+    const { controller, adminService } = buildController();
     const expected = { id: 'user-1', display_name: 'Mika' };
-    userDetailService.getUser.mockResolvedValue(expected);
+    adminService.getUser.mockResolvedValue(expected);
 
     await expect(controller.getUser('user-1')).resolves.toEqual(expected);
-    expect(userDetailService.getUser).toHaveBeenCalledWith('user-1');
+    expect(adminService.getUser).toHaveBeenCalledWith('user-1');
   });
 });

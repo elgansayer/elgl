@@ -10,6 +10,7 @@ from threading import Semaphore
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+from filelock import FileLock
 from pydantic import SecretStr
 
 from openhands_factory.alerts import AlertService
@@ -27,13 +28,25 @@ from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestMatch, PullRequestStatus
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.jobs import JobStore
+from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
+from openhands_factory.pr_convergence import (
+    ConvergenceAction,
+    PullRequestCapacity,
+    PullRequestIdentity,
+    PullRequestRecord,
+    calculate_capacity,
+    convergence_supersessions,
+    resolve_pull_request,
+    stack_parent,
+)
 from openhands_factory.pr_lifecycle import (
     PullRequestLifecycleEvent,
     PullRequestLifecycleTracker,
 )
+from openhands_factory.pr_metrics import PullRequestMetricsStore
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
@@ -47,6 +60,8 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 CI_POLL_INTERVAL = timedelta(minutes=1)
+CONFLICTING_MERGE_STATES = {"DIRTY"}
+MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -65,6 +80,7 @@ CODE_MUTATING_AGENT_PHASES = {
 VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
     "the cypress binary is missing",
     "we expected the binary to be installed here",
+    "getaddrinfo eai_again",
     "no space left on device",
     "failed with exit 137",
     "failed with exit 143",
@@ -138,6 +154,20 @@ class FactoryPipeline:
             config.state_dir,
             config.github_repository,
             AlertService(config),
+        )
+        config.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self.pr_convergence_lock = FileLock(str(config.state_dir / "pr-convergence.lock"))
+        self.pr_metrics = PullRequestMetricsStore(
+            config.state_dir / "pull-request-metrics.json",
+            max_records=config.pull_request_history_limit,
+        )
+        self.pull_request_records: tuple[PullRequestRecord, ...] = ()
+        self.pull_request_capacity = calculate_capacity(
+            (),
+            max_open_pull_requests=config.max_open_pull_requests,
+            max_queued_ci=config.max_queued_ci,
+            lane_limits=config.lane_wip_limits,
+            component_limits=config.component_wip_limits,
         )
         self.prompt_dir = config.prompt_dir
         self.system_prompt = build_system_prompt(
@@ -351,9 +381,12 @@ class FactoryPipeline:
             self.github.ensure_factory_labels()
             self._reconcile_quarantine_labels()
             self.labels_ready = True
+        self._refresh_pull_request_inventory()
         if self.active_label_reconciliation_pending:
             self._reconcile_active_labels(protected_task_ids or set())
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
+        if self.config.maintenance_enabled:
+            tasks = MaintenanceController(self).tag_tasks(tasks)
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
         for job in jobs.values():
@@ -399,6 +432,49 @@ class FactoryPipeline:
             retired_jobs.append(job)
         self.jobs.save_reconciled_jobs(retired_jobs)
         return self.jobs.load()
+
+    def _calculate_pull_request_capacity(
+        self,
+        records: tuple[PullRequestRecord, ...],
+    ) -> PullRequestCapacity:
+        return calculate_capacity(
+            records,
+            max_open_pull_requests=self.config.max_open_pull_requests,
+            max_queued_ci=self.config.max_queued_ci,
+            lane_limits=self.config.lane_wip_limits,
+            component_limits=self.config.component_wip_limits,
+        )
+
+    def _refresh_pull_request_inventory(self) -> None:
+        """Converge proven duplicates, then publish capacity from fresh GitHub state."""
+
+        with self.pr_convergence_lock:
+            records = tuple(self.github.list_pull_requests(self.config.pull_request_history_limit))
+            supersessions = convergence_supersessions(records)
+            for supersession in supersessions:
+                self.github.supersede_pull_request(
+                    supersession.pull_request.number,
+                    canonical=supersession.canonical,
+                    reason=supersession.reason,
+                )
+                self.pr_metrics.record_supersession(
+                    supersession.pull_request.number,
+                    supersession.canonical,
+                    supersession.reason,
+                )
+            if supersessions:
+                records = tuple(
+                    self.github.list_pull_requests(self.config.pull_request_history_limit)
+                )
+            capacity = self._calculate_pull_request_capacity(records)
+            self.pr_metrics.observe_inventory(records, capacity)
+            self.pull_request_records = records
+            self.pull_request_capacity = capacity
+        if capacity.pause_new_dispatch:
+            LOGGER.warning(
+                "Factory WIP admission paused: %s",
+                "; ".join(capacity.blocked_reasons),
+            )
 
     def _reconcile_quarantine_labels(self) -> None:
         """Clear GitHub quarantine labels no longer backed by durable state.
@@ -499,8 +575,11 @@ class FactoryPipeline:
         try:
             # A sibling dispatch may have completed a transition while this worker
             # waited for the claim lock. Reload only after acquisition, so stale
-            # in-memory state can never repeat branch or PR creation.
-            job = self.jobs.load().get(task_id)
+            # in-memory state can never repeat branch or PR creation. The same locked
+            # read marks the attempt in flight and the write that commits its outcome
+            # clears the marker, so a worker that dies first leaves evidence the
+            # watchdog can tell apart from work that is merely queued.
+            job = self.jobs.begin_attempt(task_id)
             if job is None or job.state in TERMINAL_STATES:
                 return None
             self._copy_claim_metadata(job, claim)
@@ -519,8 +598,12 @@ class FactoryPipeline:
                 LOGGER.warning("Factory job %s deferred: %s", job.task.identifier, error)
             except Exception as error:
                 job.attempts += 1
+                if job.maintenance_recovery_id is not None:
+                    job.maintenance_recovery_failures += 1
                 job.last_error = str(error)[-2000:]
                 self._record_failure(job)
+            job.attempt_started_at = None
+            job.attempt_generation = None
             job.updated_at = datetime.now(UTC)
             self.jobs.save_job(job)
             if job.last_error and job.last_failure_fingerprint is not None:
@@ -631,6 +714,9 @@ class FactoryPipeline:
         prepare_attempt: Callable[[], None] | None = None,
         validate_output: Callable[[], None] | None = None,
         require_repository_change: bool = False,
+        timeout_seconds: int | None = None,
+        system_prompt_override: str | None = None,
+        read_only_reference: Path | None = None,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
 
@@ -693,7 +779,9 @@ class FactoryPipeline:
             task=job.task,
             prompt=prompt,
             cwd=worktree,
-            system_prompt=self.system_prompt,
+            system_prompt=system_prompt_override or self.system_prompt,
+            read_only_reference=read_only_reference,
+            timeout_seconds=timeout_seconds,
             prepare_attempt=(
                 prepare if prepare_attempt is not None or require_repository_change else None
             ),
@@ -713,7 +801,24 @@ class FactoryPipeline:
                 )
                 and isinstance(entry.get("provider"), str)
             }
-        result = self.router.run(request, job, exclude=excluded)
+        # Retain references while routing so bounded-history eviction cannot
+        # make new attempts disappear from convergence metrics.
+        history_before = list(job.provider_history)
+        previous_entries = {id(entry) for entry in history_before}
+        try:
+            result = self.router.run(request, job, exclude=excluded)
+        finally:
+            invocations = sum(id(entry) not in previous_entries for entry in job.provider_history)
+            if agent_phase is AgentPhase.CODE_REVIEW and job.pull_request is not None:
+                self.pr_metrics.record_reviewer_invocations(
+                    job.pull_request,
+                    invocations,
+                )
+            elif (
+                agent_phase in {AgentPhase.CI_REPAIR, AgentPhase.QUALITY_REPAIR}
+                and job.pull_request is not None
+            ):
+                self.pr_metrics.record_repair_invocations(job.pull_request, invocations)
 
         if agent_phase is AgentPhase.IMPLEMENTATION:
             job.implementation_provider = result.provider
@@ -730,6 +835,91 @@ class FactoryPipeline:
                     f"Agent provider '{result.provider}' failed: {result.failure.message}"
                 )
             raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
+
+    def _ensure_pull_request(
+        self,
+        job: Job,
+        workflow: GitWorkflow,
+        *,
+        title: str,
+        body: str,
+    ) -> ConvergenceAction:
+        """Create, update, or retire one PR under the sole convergence lock."""
+
+        if job.branch is None:
+            raise FactoryError("Job branch is missing")
+        touched_paths = workflow.changed_paths()
+        identity = PullRequestIdentity.for_task(
+            job.task,
+            branch=job.branch,
+            base_ref=self.config.base_branch,
+            change_fingerprint=workflow.committed_change_fingerprint(),
+            touched_paths=touched_paths,
+        )
+        marked_body = f"{body.rstrip()}\n\n{identity.markers()}\n"
+        with self.pr_convergence_lock:
+            records = tuple(self.github.list_pull_requests(self.config.pull_request_history_limit))
+            resolution = resolve_pull_request(identity, records)
+            if resolution.action is ConvergenceAction.BLOCKED:
+                canonical_note = (
+                    f" Canonical candidate: #{resolution.canonical.number}."
+                    if resolution.canonical is not None
+                    else ""
+                )
+                raise FactoryError(
+                    f"Pull-request convergence blocked: {resolution.reason}.{canonical_note}"
+                )
+
+            for duplicate in resolution.superseded:
+                self.github.supersede_pull_request(
+                    duplicate.number,
+                    canonical=(
+                        resolution.canonical.number if resolution.canonical is not None else None
+                    ),
+                    reason=resolution.reason,
+                )
+                self.pr_metrics.record_supersession(
+                    duplicate.number,
+                    resolution.canonical.number if resolution.canonical is not None else None,
+                    resolution.reason,
+                )
+
+            canonical = resolution.canonical
+            if resolution.action is ConvergenceAction.ALREADY_MERGED:
+                if canonical is None:
+                    raise FactoryError("Merged convergence result is missing its canonical PR")
+                workflow.delete_remote_branch(
+                    job.branch,
+                    job.head_sha or workflow.head_sha(),
+                )
+                job.pull_request = canonical.number
+                job.branch = canonical.head_ref
+                job.head_sha = canonical.head_sha
+                return resolution.action
+
+            if resolution.action is ConvergenceAction.CREATE:
+                job.pull_request = self.github.create_pull_request(
+                    job.branch,
+                    title,
+                    marked_body,
+                )
+                return resolution.action
+
+            if canonical is None or not canonical.factory_owned:
+                raise FactoryError("Only a Factory-owned PR branch can be updated in place")
+            current_branch = job.branch
+            current_head = job.head_sha or workflow.head_sha()
+            if canonical.head_sha != current_head or canonical.head_ref != current_branch:
+                workflow.sync_remote_branch(canonical.head_ref, canonical.head_sha)
+            if resolution.action is ConvergenceAction.REOPEN:
+                self.github.reopen_pull_request(canonical.number)
+            self.github.update_pull_request(canonical.number, title=title, body=marked_body)
+            if canonical.head_ref != current_branch:
+                workflow.delete_remote_branch(current_branch, current_head)
+            job.pull_request = canonical.number
+            job.branch = canonical.head_ref
+            job.head_sha = workflow.head_sha()
+            return resolution.action
 
     def _advance(self, job: Job, lease_owner: str) -> None:
         # Notification delivery is best-effort and never changes merge eligibility.
@@ -877,10 +1067,11 @@ class FactoryPipeline:
                 return
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
-                if job.quality_repairs >= 2:
+                if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                     raise FactoryError(f"Quality gate blocked: {findings[0].code}")
                 job.state = JobState.QUALITY_REPAIRING
                 return
+            job.quality_repairs = 0
             workflow.stage_all()
             workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
@@ -918,7 +1109,7 @@ class FactoryPipeline:
             if not findings and not job.review_findings:
                 job.state = JobState.VERIFYING
                 return
-            if job.quality_repairs >= 2:
+            if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 raise FactoryError("Quality repair limit exceeded")
 
             quality_finding_text = "\n".join(
@@ -961,10 +1152,7 @@ class FactoryPipeline:
                     job.changed_path_fingerprint or claim.changed_path_fingerprint
                 ),
             )
-            existing = next(
-                (match for match in matches if match.is_open_canonical),
-                None,
-            )
+            existing = next((match for match in matches if match.is_open_canonical), None)
             if existing is not None:
                 if existing.branch == job.branch:
                     self._bind_matched_pull_request(job, existing, lease_owner)
@@ -972,11 +1160,17 @@ class FactoryPipeline:
                 else:
                     self._attach_pull_request(job, worktree, existing, lease_owner)
                 return
-            job.pull_request = self.github.create_pull_request(
-                job.branch,
-                f"Fixes #{job.task.identifier}: {job.task.title}",
-                self._pull_request_body(job),
+            action = self._ensure_pull_request(
+                job,
+                workflow,
+                title=f"Fixes #{job.task.identifier}: {job.task.title}",
+                body=self._pull_request_body(job),
             )
+            if action is ConvergenceAction.ALREADY_MERGED:
+                job.state = JobState.MERGED
+                return
+            if job.pull_request is None:
+                raise FactoryError("Pull-request convergence did not select a PR")
             bound = self.tasks.bind_pull_request(
                 job.task.identifier,
                 lease_owner,
@@ -989,7 +1183,7 @@ class FactoryPipeline:
             self.github.add_comment(
                 job.pull_request,
                 (
-                    "OpenHands factory created this pull request. The factory will review the "
+                    "OpenHands factory selected this pull request. The factory will review the "
                     "same branch, repair verification failures, wait for required checks, and "
                     "merge only after the reviewed commit is still current."
                 ),
@@ -998,6 +1192,12 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
+            if job.pull_request is not None and stack_parent(job.task.body) is not None:
+                if self._stack_parent_pending(job) is not None:
+                    self.github.add_issue_labels(job.pull_request, ("factory-stack-blocked",))
+                    return
+                self.github.remove_issue_labels(job.pull_request, ("factory-stack-blocked",))
+
             if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
                 return
 
@@ -1100,10 +1300,25 @@ class FactoryPipeline:
                     "GitHub already reports the reviewed pull request as merged.",
                 )
                 job.state = JobState.MERGED
-            elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner)
-            elif status.merge_state_status == "BEHIND":
-                self._update_pull_request_branch(job, status)
+            elif self._recover_closed_pull_request(job, status):
+                return
+            elif (
+                status.mergeable == "CONFLICTING"
+                or status.merge_state_status in CONFLICTING_MERGE_STATES
+            ):
+                # A conflicting PR can still report pending checks, especially
+                # when CI never starts for an unmergeable head. Conflict evidence
+                # must win or the same PR is polled forever without repair.
+                job.state = JobState.REPAIRING
+            elif status.ci_required_failed:
+                job.state = JobState.REPAIRING
+            elif status.ci_required_pending:
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+                return
+            elif status.failed_checks - {"factory/independent-review"}:
+                job.state = JobState.REPAIRING
+            elif job.head_sha != status.head_sha or job.latest_verified_sha != status.head_sha:
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif status.failed_checks:
                 # A pending status can coexist with a terminal failure. In
                 # particular, the Factory's own review context stays pending while
@@ -1120,7 +1335,7 @@ class FactoryPipeline:
             elif (
                 status.checks_passed
                 and status.mergeable == "MERGEABLE"
-                and status.merge_state_status == "CLEAN"
+                and status.merge_state_status in {"CLEAN", "BEHIND"}
             ):
                 # Persist a visible queue transition before the merge attempt. The
                 # MERGE_QUEUED worker re-reads GitHub immediately before using an
@@ -1131,7 +1346,8 @@ class FactoryPipeline:
                     job,
                     "merge-queued",
                     (
-                        "All required checks passed, GitHub reports the reviewed head as clean "
+                        "All required checks passed, GitHub reports the reviewed head as "
+                        "non-conflicting "
                         "and mergeable, and the Factory queued an exact-head squash merge."
                     ),
                 )
@@ -1141,19 +1357,33 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REPAIRING:
-            if job.repair_attempts >= 5:
-                raise FactoryError("Repair limit exceeded")
             status = self._status(job)
             if status.state == "MERGED":
                 job.state = JobState.MERGED
                 return
-            if job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner)
+            if self._recover_closed_pull_request(job, status):
                 return
-            if not status.failed_checks and (
-                status.checks_pending
-                or (status.checks_passed and status.mergeable == "MERGEABLE")
-                or status.mergeable == "UNKNOWN"
+            if job.head_sha != status.head_sha:
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
+                return
+            base_conflict = (
+                status.mergeable == "CONFLICTING"
+                or status.merge_state_status in CONFLICTING_MERGE_STATES
+            )
+            stale_base = (
+                not base_conflict
+                and status.merge_state_status in {"BEHIND", "BLOCKED", "UNSTABLE", "UNKNOWN"}
+                and not workflow.contains_current_base()
+            )
+            if (
+                not base_conflict
+                and not stale_base
+                and not status.failed_checks
+                and (
+                    status.checks_pending
+                    or (status.checks_passed and status.mergeable == "MERGEABLE")
+                    or status.mergeable == "UNKNOWN"
+                )
             ):
                 job.state = JobState.CI_PENDING
                 job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
@@ -1163,15 +1393,36 @@ class FactoryPipeline:
             repair_context = (
                 "GitHub evidence for the current reviewed head:\n\n"
                 f"Failed checks:\n{evidence}\n"
-                f"Mergeability: {status.mergeable}"
+                f"Mergeability: {status.mergeable}\n"
+                f"Merge state: {status.merge_state_status or 'not reported'}"
             )
+            if job.last_error:
+                repair_context += (
+                    f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
+                )
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM
             # call if the worktree is still unchanged afterwards.
-            attempt_mechanical_repair(worktree)
-            mechanically_repaired = workflow.has_changes()
-            if not mechanically_repaired:
+            has_unmerged_paths = False
+            if base_conflict or stale_base:
+                has_unmerged_paths = workflow.merge_base_for_repair()
+                repair_context += (
+                    "\nThe current base branch has been merged into this isolated "
+                    "worktree. Resolve every unmerged path and preserve both intended "
+                    "behaviours before verification."
+                )
+            else:
+                attempt_mechanical_repair(worktree, workflow.changed_paths())
+            mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
+            if has_unmerged_paths or (
+                not (base_conflict or stale_base) and not mechanically_repaired
+            ):
+                # Bound generated repairs, not read-only status refreshes or
+                # deterministic fixes. A spent model budget must not hide a
+                # changed/merged head or block a clean current-base integration.
+                if job.repair_attempts >= 5:
+                    raise FactoryError("Repair limit exceeded")
                 self._run_agent(
                     job,
                     worktree,
@@ -1180,12 +1431,21 @@ class FactoryPipeline:
                     lease_owner=lease_owner,
                     require_repository_change=True,
                 )
-            verified_paths = self._verify(workflow)
+            verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
+            if verified_paths is None:
+                return
+            job.quality_repairs = 0
             workflow.stage_all()
             commit_subject = (
-                "fix: apply automatic formatting for"
-                if mechanically_repaired
-                else "fix: repair CI for"
+                "fix: resolve base conflicts for"
+                if base_conflict
+                else "fix: refresh current base for"
+                if stale_base
+                else (
+                    "fix: apply automatic formatting for"
+                    if mechanically_repaired
+                    else "fix: repair CI for"
+                )
             )
             workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
@@ -1222,7 +1482,8 @@ class FactoryPipeline:
                 job,
                 "merge-queued",
                 (
-                    "All required checks passed, GitHub reports the reviewed head as clean "
+                    "All required checks passed, GitHub reports the reviewed head as "
+                    "non-conflicting "
                     "and mergeable, and the Factory queued an exact-head squash merge."
                 ),
             )
@@ -1234,10 +1495,10 @@ class FactoryPipeline:
                     "GitHub confirmed that the reviewed pull request was merged.",
                 )
                 job.state = JobState.MERGED
+            elif self._recover_closed_pull_request(job, status):
+                return
             elif job.head_sha != status.head_sha:
-                self._refresh_pull_request_for_review(job, worktree, lease_owner)
-            elif status.merge_state_status == "BEHIND":
-                self._update_pull_request_branch(job, status)
+                self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif (
                 status.checks_pending
                 or status.mergeable == "UNKNOWN"
@@ -1247,7 +1508,7 @@ class FactoryPipeline:
             elif (
                 not status.checks_passed
                 or status.mergeable != "MERGEABLE"
-                or status.merge_state_status != "CLEAN"
+                or status.merge_state_status not in {"CLEAN", "BEHIND"}
             ):
                 job.state = JobState.REPAIRING
             else:
@@ -1267,7 +1528,7 @@ class FactoryPipeline:
                     )
                     job.state = JobState.MERGED
                 elif confirmed.head_sha != job.head_sha:
-                    self._refresh_pull_request_for_review(job, worktree, lease_owner)
+                    self._refresh_pull_request_for_review(job, worktree, lease_owner, confirmed)
             return
 
         if job.state is JobState.MERGED:
@@ -1437,22 +1698,41 @@ class FactoryPipeline:
             predecessor_pull_request=job.predecessor_pull_request,
         )
         self._copy_claim_metadata(job, bound)
+        self.router.observe_review_head(job)
         self.github.publish_review_pending(
             job.head_sha,
             detail="Factory pull request verification in progress",
         )
         self.github.add_comment(job.pull_request, comment)
         status = self._status(job)
-        if status.merge_state_status == "BEHIND":
+        # GitHub's aggregate state masks base staleness behind required-check
+        # failures or a missing Factory review. Inspect ancestry before spending
+        # verification or provider capacity on a head missing fixes from main.
+        local_base_is_stale = (
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
+            and not self._workflow(worktree).contains_current_base()
+        )
+        if status.merge_state_status == "BEHIND" or local_base_is_stale:
             # Verify the merge candidate, not a stale head. Otherwise old pull
             # requests miss fixes already on main and get sent through unnecessary
             # AI repair for failures the base branch has already resolved.
-            self._update_pull_request_branch(job, status)
-            job.state = JobState.CI_PENDING
+            if self._update_pull_request_branch(job, status):
+                job.state = JobState.CI_PENDING
             return
-        verified_paths = self._verify_or_schedule_quality_repair(
+        if (
+            status.mergeable == "CONFLICTING"
+            or status.merge_state_status in CONFLICTING_MERGE_STATES
+        ):
+            job.state = JobState.REPAIRING
+            return
+        if status.ci_required_pending:
+            job.state = JobState.CI_PENDING
+            job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+            return
+        verified_paths = self._verify_pull_request_for_review(
             job,
             self._workflow(worktree),
+            status,
         )
         if verified_paths is None:
             return
@@ -1502,6 +1782,7 @@ class FactoryPipeline:
         job: Job,
         worktree: Path,
         lease_owner: str,
+        known_status: PullRequestStatus | None = None,
     ) -> None:
         """Invalidate stale review provenance and rebuild at the current remote head."""
         if job.pull_request is None:
@@ -1533,14 +1814,36 @@ class FactoryPipeline:
 
         workflow.prepare_pull_request_worktree(worktree, job.branch)
         job.head_sha = self._workflow(worktree).head_sha()
+        self.router.observe_review_head(job)
         self.github.publish_review_pending(
             job.head_sha,
             detail="Factory pull request refresh in progress",
         )
         job.review_findings.clear()
-        verified_paths = self._verify_or_schedule_quality_repair(
+        status = known_status or self._status(job)
+        # BLOCKED/UNSTABLE do not imply that the branch contains current main.
+        local_base_is_stale = (
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
+            and not self._workflow(worktree).contains_current_base()
+        )
+        if status.merge_state_status == "BEHIND" or local_base_is_stale:
+            if self._update_pull_request_branch(job, status):
+                job.state = JobState.CI_PENDING
+            return
+        if (
+            status.mergeable == "CONFLICTING"
+            or status.merge_state_status in CONFLICTING_MERGE_STATES
+        ):
+            job.state = JobState.REPAIRING
+            return
+        if status.ci_required_pending:
+            job.state = JobState.CI_PENDING
+            job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+            return
+        verified_paths = self._verify_pull_request_for_review(
             job,
             self._workflow(worktree),
+            status,
         )
         if verified_paths is None:
             return
@@ -1561,13 +1864,37 @@ class FactoryPipeline:
         if status.state == "MERGED":
             job.state = JobState.MERGED
             return True
-        if job.head_sha == status.head_sha:
+        if self._recover_closed_pull_request(job, status):
+            return True
+        needs_base_refresh = status.merge_state_status == "BEHIND" or (
+            status.merge_state_status == "UNKNOWN"
+            and not self._workflow(worktree).contains_current_base()
+        )
+        needs_conflict_repair = (
+            status.mergeable == "CONFLICTING"
+            or status.merge_state_status in CONFLICTING_MERGE_STATES
+        )
+        if job.head_sha == status.head_sha and not (needs_base_refresh or needs_conflict_repair):
             return False
 
-        self._refresh_pull_request_for_review(job, worktree, lease_owner)
+        self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
         return True
 
-    def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> None:
+    def _recover_closed_pull_request(self, job: Job, status: PullRequestStatus) -> bool:
+        """Recover Factory-owned work without reopening external contributors' PRs."""
+
+        if status.state != "CLOSED":
+            return False
+        if job.task.source == "github-pull-request":
+            job.state = JobState.DONE
+            return True
+        if job.pull_request is None:
+            raise FactoryError("Closed pull request recovery is missing its pull request number")
+        self.github.reopen_pull_request(job.pull_request)
+        job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+        return True
+
+    def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> bool:
         """Refresh a behind head without weakening reviewed-SHA protection."""
 
         if job.pull_request is None:
@@ -1581,7 +1908,17 @@ class FactoryPipeline:
                 job.head_sha,
                 detail="Factory base branch update in progress",
             )
-        self.github.update_pull_request_branch(job.pull_request, status.head_sha)
+        try:
+            self.github.update_pull_request_branch(job.pull_request, status.head_sha)
+        except FactoryError as error:
+            if "merge conflict between base and head" not in str(error).lower():
+                raise
+            # GitHub often reports UNKNOWN until update-branch calculates the
+            # merge. Route its authoritative conflict result straight into the
+            # existing local conflict repair path instead of backing off first.
+            job.state = JobState.REPAIRING
+            return False
+        return True
 
     @staticmethod
     def _mark_latest_review_as_mutating(job: Job) -> None:
@@ -1599,6 +1936,23 @@ class FactoryPipeline:
             raise FactoryError("Pull request number is missing")
         return self.github.pull_request_status(job.pull_request)
 
+    def _stack_parent_pending(self, job: Job) -> int | None:
+        """Return the still-open stack-dependency PR number blocking full review.
+
+        Only an explicit Depends-On/Factory-Stack-Parent marker in the task body
+        creates a dependency; nothing here infers one from touched files or timing.
+        A parent that has merged or closed no longer blocks. A lookup failure (a
+        mistyped or deleted parent reference) propagates like any other GitHub
+        control-plane error rather than silently treating the child as unblocked,
+        so a broken dependency marker surfaces for repair instead of racing ahead.
+        """
+
+        parent = stack_parent(job.task.body)
+        if parent is None:
+            return None
+        status = self.github.pull_request_status(parent)
+        return parent if status.state == "OPEN" else None
+
     def _verify(self, workflow: GitWorkflow) -> set[Path]:
         changed = workflow.changed_paths()
         if not changed:
@@ -1610,19 +1964,22 @@ class FactoryPipeline:
         # before spending minutes in the host-wide verification slot.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
-        run_verification(shared)
-        if not exclusive:
-            return changed
-        if self.verification_slots is None:
-            run_verification(exclusive)
-            return changed
-        with self.verification_slots:
-            if self.host_resource_slots is None:
+        try:
+            run_verification(shared)
+            if not exclusive:
+                return changed
+            if self.verification_slots is None:
                 run_verification(exclusive)
-            else:
-                with self.host_resource_slots.exclusive():
+                return changed
+            with self.verification_slots:
+                if self.host_resource_slots is None:
                     run_verification(exclusive)
-        return changed
+                else:
+                    with self.host_resource_slots.exclusive():
+                        run_verification(exclusive)
+            return changed
+        finally:
+            workflow.discard_transient_build_metadata()
 
     def _verify_or_schedule_quality_repair(
         self,
@@ -1642,7 +1999,7 @@ class FactoryPipeline:
                 # retry policy backs off and retries the same verification without
                 # spending an agent call or introducing unrelated code churn.
                 raise
-            if job.quality_repairs >= 2:
+            if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 raise
             evidence = detail[-1800:]
             job.review_findings = [
@@ -1652,6 +2009,24 @@ class FactoryPipeline:
             job.state = JobState.QUALITY_REPAIRING
             return None
         return changed
+
+    def _verify_pull_request_for_review(
+        self,
+        job: Job,
+        workflow: GitWorkflow,
+        status: PullRequestStatus,
+    ) -> set[Path] | None:
+        """Reuse the protected exact-head CI result instead of running it twice."""
+        if status.head_sha == job.head_sha and status.ci_required_passed:
+            changed = workflow.changed_paths()
+            if not changed:
+                raise FactoryError("No changed paths were found")
+            LOGGER.info(
+                "Reused exact-head CI / required success for pull request %s",
+                job.pull_request,
+            )
+            return changed
+        return self._verify_or_schedule_quality_repair(job, workflow)
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
         # README.md deliberately excluded: it embeds the full feature-spec
@@ -1800,16 +2175,35 @@ class FactoryPipeline:
                 review_workflow.stage_all()
                 review_workflow.commit(f"docs: weekly architect gap analysis ({date_id})")
                 review_workflow.push(branch)
-                pull_request = self.github.create_pull_request(
-                    branch,
-                    f"docs: weekly gap analysis ({date_id})",
-                    "Automated ROADMAP/spec update from the weekly architect cycle. "
-                    "Independently reviewed like any other pull request before merging.",
+                job.branch = branch
+                job.head_sha = review_workflow.head_sha()
+                action = self._ensure_pull_request(
+                    job,
+                    review_workflow,
+                    title=f"docs: weekly gap analysis ({date_id})",
+                    body=(
+                        "Automated ROADMAP/spec update from the weekly architect cycle. "
+                        "Independently reviewed like any other pull request before merging."
+                    ),
                 )
+                if action is ConvergenceAction.ALREADY_MERGED:
+                    self._workflow(self.config.repository).remove_worktree(worktree)
+                    self._write_architect_state(
+                        {
+                            "last_attempt_at": attempted_at.isoformat(),
+                            "last_run_at": datetime.now(UTC).isoformat(),
+                            "next_attempt_at": None,
+                            "provider_history": job.provider_history,
+                            "convergence": "equivalent-change-already-merged",
+                        }
+                    )
+                    return
+                if job.pull_request is None or job.branch is None:
+                    raise FactoryError("Architect convergence did not select a pull request")
                 self.github.add_comment(
-                    pull_request,
+                    job.pull_request,
                     (
-                        "OpenHands factory architect opened this pull request from its weekly "
+                        "OpenHands factory architect selected this pull request for its weekly "
                         "gap analysis. It will be independently reviewed like any other pull "
                         "request before merging."
                     ),
@@ -1817,12 +2211,12 @@ class FactoryPipeline:
                 self.jobs.save_job(
                     Job(
                         task=Task(
-                            identifier=str(pull_request),
+                            identifier=str(job.pull_request),
                             title=f"docs: weekly gap analysis ({date_id})",
                             body="Automated ROADMAP/spec update from the weekly architect cycle.",
                             source="github-pull-request",
                             priority=10,
-                            pr_branch=branch,
+                            pr_branch=job.branch,
                         ),
                         provider_history=list(job.provider_history),
                     )
@@ -1841,6 +2235,10 @@ class FactoryPipeline:
                     "provider_history": job.provider_history,
                 }
             )
+
+    def run_maintenance_cycle(self) -> Job | None:
+        MaintenanceController(self).run()
+        return None
 
     def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
         """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.
