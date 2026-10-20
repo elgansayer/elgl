@@ -19,7 +19,7 @@ host proves all of the following:
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
 - root and Factory-state volumes both retain the configured free-space reserve;
-- one baseline GitHub ruleset requires pull requests and `CI / required` on `main`;
+- one baseline GitHub ruleset requires pull requests and non-strict `CI / required` on `main`;
 - `factory/independent-review` is required by either that ruleset or a review-only ruleset whose sole optional
   bypass is the exact repository-owner user in pull-request mode;
 - the baseline ruleset may use the same exact-owner, pull-request-only bypass, while role, team, app, deploy-key,
@@ -157,8 +157,12 @@ declares an explicit `Depends-On` stack parent stays a draft, withheld from inde
 merges. See [PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md) for the full contract and the metrics exposed
 through `hellotalk-factory metrics`.
 
-Durable execution states abandoned by a dead worker are recovered through the same timeout retry policy. Live
-futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated as abandoned work.
+An attempt abandoned by a dead worker is recovered through the same timeout retry policy once its durable in-flight
+marker outlives the maximum task duration. Age alone is never evidence: queued, unadmitted and backed-off work, an
+explicit future retry deadline, live futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated
+as abandoned work. `hellotalk-factory status` reports actual watchdog recoveries (`watchdog.recovered_total`)
+separately from queued age (`watchdog.oldest_queued_age_seconds`); see
+[AUDIT-2026-10-16-ABANDONED-ATTEMPT.md](AUDIT-2026-10-16-ABANDONED-ATTEMPT.md).
 
 ## Safety gates
 
@@ -185,7 +189,7 @@ Before a task branch can merge, the Factory preserves these controls:
 - atomic base updates and renewed verification/review when a head is behind `main`;
 - atomic `--match-head-commit` enforcement at the merge call;
 - literal success for `CI / required` and `factory/independent-review` in every autonomous merge;
-- a baseline ruleset requiring pull requests and strict `CI / required`;
+- a baseline ruleset requiring pull requests and non-strict `CI / required`;
 - an optional exact-owner, pull-request-only bypass on the baseline and review-only rulesets;
 - a review-only ruleset requiring `factory/independent-review`;
 - human `CHANGES_REQUESTED` review blocking;
