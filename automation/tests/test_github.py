@@ -2,14 +2,12 @@ import base64
 import json
 import os
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
-from openhands_factory.models import Task, changed_path_fingerprint
 from openhands_factory.repository_guard import ProcessResult
 
 

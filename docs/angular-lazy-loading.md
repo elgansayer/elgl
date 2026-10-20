@@ -22,6 +22,13 @@ The regression suite at `frontend/src/app/app.routes.lazy-loading.spec.ts` verif
 
 Run the normal frontend verification from `frontend/`:
 
+
+- no routed component is attached eagerly through `Route.component`;
+- representative non-critical product routes retain dynamic component or child-route loaders;
+- redirect-only routes do not accidentally acquire component loaders.
+
+Run the normal frontend verification from `frontend/`:
+
 ```ts
 provideRouter(routes, withComponentInputBinding());
 ```
@@ -520,6 +527,7 @@ For any PR adding or changing a routed feature, verify:
 `frontend/src/app/app.routes.lazy-loading.spec.ts` is the current executable minimum. It protects the most important structural rule: routed product components must not drift back to eager `Route.component` ownership.
 
 Run it through the normal frontend unit suite:
+
 
 
 ```bash

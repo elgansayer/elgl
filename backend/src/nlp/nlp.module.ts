@@ -15,7 +15,6 @@ import { PronunciationScoringService } from './pronunciation-scoring.service';
     NlpService,
     GrammarCheckService,
     GrammarExplanationService,
-    PronunciationScoringService,
     NlpRateLimiterGuard,
   ],
   exports: [NlpService],

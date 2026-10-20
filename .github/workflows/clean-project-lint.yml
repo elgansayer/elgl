@@ -53,8 +53,6 @@ jobs:
 
   lint-contract:
     name: lint contract guard
-    needs: impact
-    if: needs.impact.outputs.run_application == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -71,8 +69,7 @@ jobs:
 
   clean-lint:
     name: ${{ matrix.project }} / npm run lint clean tree
-    needs: [impact, lint-contract]
-    if: always() && needs.impact.outputs.run_application == 'true' && needs.lint-contract.result == 'success'
+    needs: lint-contract
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
