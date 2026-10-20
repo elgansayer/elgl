@@ -346,6 +346,31 @@ def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> N
     assert retry_at == 40.0
 
 
+def test_refresh_jobs_propagates_storage_pressure_mode() -> None:
+    calls: list[tuple[set[str], bool]] = []
+
+    def refresh(protected: set[str], *, storage_pressure: bool = False) -> dict[str, Job]:
+        calls.append((protected, storage_pressure))
+        return {"42": job("42", 0)}
+
+    pipeline = SimpleNamespace(
+        refresh=refresh,
+        jobs=SimpleNamespace(load=lambda: {}),
+    )
+
+    refreshed, retry_at = refresh_jobs(
+        pipeline,
+        set(),
+        10.0,
+        900,
+        storage_pressure=True,  # type: ignore[arg-type]
+    )
+
+    assert set(refreshed) == {"42"}
+    assert retry_at == 910.0
+    assert calls == [(set(), True)]
+
+
 def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None:
     attempts = 0
     heartbeats: list[str] = []
@@ -562,7 +587,7 @@ def test_check_stall_dispatches_investigation_once_threshold_elapsed(
     daemon.stall_since = datetime.now(UTC) - timedelta(minutes=21)
     daemon.stall_investigation_dispatched = False
     daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
-        run_stall_investigation=lambda reason, diagnostics: None
+        run_stall_investigation=lambda reason, diagnostics, provider_backed: None
     )
     monkeypatch.setattr(
         "openhands_factory.daemon.no_pr_progress_check",
@@ -587,9 +612,10 @@ def test_check_stall_dispatches_investigation_once_threshold_elapsed(
 
     assert daemon.stall_investigation_dispatched
     assert len(started_args) == 1
-    reason, diagnostics = started_args[0]
+    reason, diagnostics, provider_backed = started_args[0]
     assert "stalled for 21 minutes" in reason
     assert diagnostics == "diagnostics snapshot"
+    assert provider_backed is False
 
     # A second cycle within the same continuous stall must not dispatch again.
     daemon._check_stall()

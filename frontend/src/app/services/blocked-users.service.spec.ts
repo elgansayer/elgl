@@ -1,151 +1,188 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { SafetyService } from './safety.service';
 import { BlockedUsersService } from './blocked-users.service';
-
-class AuthServiceStub {
-  getAccessToken(): string | undefined {
-    return 'test-token';
-  }
-}
 
 describe('BlockedUsersService', () => {
   let service: BlockedUsersService;
-  let httpMock: HttpTestingController;
-  const baseUrl = `${environment.apiUrl || ''}/blocks`;
+  let http: HttpTestingController;
+  let getAccessToken: ReturnType<typeof vi.fn>;
+  let setBlockedUserLocal: ReturnType<typeof vi.fn>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    getAccessToken = vi.fn().mockReturnValue('session-token');
+    setBlockedUserLocal = vi.fn();
+
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        BlockedUsersService,
-        { provide: AuthService, useClass: AuthServiceStub },
+        { provide: AuthService, useValue: { getAccessToken } },
+        { provide: SafetyService, useValue: { setBlockedUserLocal } },
       ],
     });
 
-    httpMock = TestBed.inject(HttpTestingController);
+    http = TestBed.inject(HttpTestingController);
     service = TestBed.inject(BlockedUsersService);
-
-    const initialRequest = httpMock.expectOne(baseUrl);
-    expect(initialRequest.request.method).toBe('GET');
-    expect(initialRequest.request.headers.get('Authorization')).toBe('Bearer test-token');
-    initialRequest.flush([]);
-    await Promise.resolve();
   });
 
   afterEach(() => {
-    httpMock.verify();
+    http.verify();
   });
 
-  it('loads blocked-user details through the authenticated API', async () => {
-    const loadPromise = service.loadBlockedUsers();
-    const request = httpMock.expectOne(baseUrl);
+  function initialRequest() {
+    return http.expectOne(
+      (request) => request.url.endsWith('/blocks') && request.method === 'GET',
+    );
+  }
 
-    expect(request.request.method).toBe('GET');
-    expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
-    request.flush([
-      {
-        id: 'user-1',
-        display_name: 'Ada Lovelace',
-        native_language: 'English',
-        target_languages: ['French'],
-      },
-    ]);
+  function flushInitial(users: unknown[] = []): void {
+    initialRequest().flush(users);
+  }
 
-    await loadPromise;
+  it('loads blocked users using the current Supabase access token', async () => {
+    const request = initialRequest();
+    expect(request.request.headers.get('Authorization')).toBe('Bearer session-token');
+    expect(request.request.params.get('limit')).toBe('100');
+    expect(request.request.params.get('offset')).toBe('0');
+
+    request.flush([{ id: 'user-1', display_name: ' Ada ' }]);
+    await Promise.resolve();
+
     expect(service.blockedUsers()).toEqual([
       {
         id: 'user-1',
-        display_name: 'Ada Lovelace',
-        native_language: 'English',
-        target_languages: ['French'],
+        display_name: 'Ada',
+        avatar_url: undefined,
+        native_language: undefined,
+        target_languages: undefined,
       },
     ]);
     expect(service.error()).toBeNull();
     expect(service.isLoading()).toBe(false);
   });
 
-  it('distinguishes load failure from a successful empty list', async () => {
-    const loadPromise = service.loadBlockedUsers();
-    const request = httpMock.expectOne(baseUrl);
-    request.flush('unavailable', { status: 503, statusText: 'Service Unavailable' });
-
-    await loadPromise;
-    expect(service.blockedUsers()).toEqual([]);
-    expect(service.error()).toBe('Failed to load blocked users');
-    expect(service.isLoading()).toBe(false);
-  });
-
-  it('removes a user only after an authenticated unblock succeeds', async () => {
-    const loadPromise = service.loadBlockedUsers();
-    const loadRequest = httpMock.expectOne(baseUrl);
-    loadRequest.flush([{ id: 'user/1', display_name: 'Ada' }]);
-    await loadPromise;
-
-    const unblockPromise = service.unblockUser('user/1');
-    expect(service.unblockingUserIds().has('user/1')).toBe(true);
-
-    const request = httpMock.expectOne(`${baseUrl}/user%2F1`);
-    expect(request.request.method).toBe('DELETE');
-    expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
-    request.flush({});
-
-    await expect(unblockPromise).resolves.toBe(true);
-    expect(service.blockedUsers()).toEqual([]);
-    expect(service.unblockingUserIds().has('user/1')).toBe(false);
-    expect(service.unblockError()).toBe(false);
-  });
-
-  it('preserves the current list and exposes an error when unblock fails', async () => {
-    const loadPromise = service.loadBlockedUsers();
-    const loadRequest = httpMock.expectOne(baseUrl);
-    loadRequest.flush([{ id: 'user-1', display_name: 'Ada' }]);
-    await loadPromise;
-
-    const unblockPromise = service.unblockUser('user-1');
-    const request = httpMock.expectOne(`${baseUrl}/user-1`);
-    request.flush('failed', { status: 503, statusText: 'Service Unavailable' });
-
-    await expect(unblockPromise).resolves.toBe(false);
-    expect(service.blockedUsers()).toEqual([{ id: 'user-1', display_name: 'Ada' }]);
-    expect(service.unblockError()).toBe(true);
-    expect(service.unblockingUserIds().size).toBe(0);
-  });
-
-  it('suppresses duplicate concurrent unblock requests for the same user', async () => {
-    const first = service.unblockUser('user-1');
-    const second = service.unblockUser('user-1');
-
-    await expect(second).resolves.toBe(false);
-    const request = httpMock.expectOne(`${baseUrl}/user-1`);
-    request.flush({});
-    await expect(first).resolves.toBe(true);
-    httpMock.expectNone(`${baseUrl}/user-1`);
-  });
-
-  it('fails closed when no authenticated access token is available', async () => {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        BlockedUsersService,
-        { provide: AuthService, useValue: { getAccessToken: () => undefined } },
-      ],
-    });
-
-    httpMock = TestBed.inject(HttpTestingController);
-    service = TestBed.inject(BlockedUsersService);
+  it('loads full pages sequentially using bounded offsets', async () => {
+    const firstPage = initialRequest();
+    firstPage.flush(
+      Array.from({ length: 100 }, (_, index) => ({
+        id: `user-${index}`,
+        display_name: `User ${index}`,
+      })),
+    );
     await Promise.resolve();
 
-    httpMock.expectNone(baseUrl);
-    expect(service.error()).toBe('Failed to load blocked users');
+    const secondPage = http.expectOne(
+      (request) =>
+        request.url.endsWith('/blocks') &&
+        request.params.get('limit') === '100' &&
+        request.params.get('offset') === '100',
+    );
+    secondPage.flush([{ id: 'user-100', display_name: 'User 100' }]);
+    await Promise.resolve();
 
-    await expect(service.unblockUser('user-1')).resolves.toBe(false);
-    httpMock.expectNone(`${baseUrl}/user-1`);
-    expect(service.unblockError()).toBe(true);
+    expect(service.blockedUsers()).toHaveLength(101);
+  });
+
+  it('sanitises untrusted profile fields, unsafe avatars and duplicate rows', async () => {
+    initialRequest().flush([
+      {
+        id: 'user-1',
+        display_name: 'Ada',
+        avatar_url: 'javascript:alert(1)',
+        native_language: ' English ',
+        target_languages: [' French ', 42, 'German', 'Spanish', 'Italian'],
+      },
+      { id: 'user-1', display_name: 'Duplicate' },
+      { id: '', display_name: 'Invalid' },
+      null,
+    ]);
+    await Promise.resolve();
+
+    expect(service.blockedUsers()).toEqual([
+      {
+        id: 'user-1',
+        display_name: 'Ada',
+        avatar_url: undefined,
+        native_language: 'English',
+        target_languages: ['French', 'German', 'Spanish'],
+      },
+    ]);
+  });
+
+  it('retains previously loaded rows when a refresh fails', async () => {
+    flushInitial([{ id: 'user-1', display_name: 'Ada' }]);
+    await Promise.resolve();
+
+    const refresh = service.loadBlockedUsers();
+    http.expectOne((request) => request.url.endsWith('/blocks')).error(new ProgressEvent('error'));
+    await refresh;
+
+    expect(service.blockedUsers().map((user) => user.id)).toEqual(['user-1']);
+    expect(service.error()).toBe('Failed to load blocked users');
+  });
+
+  it('removes a user only after the server confirms the unblock', async () => {
+    flushInitial([{ id: 'user-1', display_name: 'Ada' }]);
+    await Promise.resolve();
+
+    const unblock = service.unblockUser('user-1');
+    expect(service.isUnblocking('user-1')).toBe(true);
+    const request = http.expectOne(
+      (candidate) => candidate.url.endsWith('/blocks/user-1') && candidate.method === 'DELETE',
+    );
+    expect(request.request.headers.get('Authorization')).toBe('Bearer session-token');
+    expect(service.blockedUsers()).toHaveLength(1);
+
+    request.flush({ success: true });
+    await unblock;
+
+    expect(service.blockedUsers()).toEqual([]);
+    expect(service.isUnblocking('user-1')).toBe(false);
+    expect(setBlockedUserLocal).toHaveBeenCalledWith('user-1', false);
+  });
+
+  it('keeps the blocked row and exposes a retryable failure when unblocking fails', async () => {
+    flushInitial([{ id: 'user-1', display_name: 'Ada' }]);
+    await Promise.resolve();
+
+    const unblock = service.unblockUser('user-1');
+    http.expectOne((request) => request.url.endsWith('/blocks/user-1')).flush({ success: false });
+
+    await expect(unblock).rejects.toThrow('Failed to unblock user');
+    expect(service.blockedUsers()).toHaveLength(1);
+    expect(service.unblockError()).toBe('Failed to unblock user');
+    expect(setBlockedUserLocal).not.toHaveBeenCalled();
+  });
+
+  it('suppresses concurrent duplicate unblock requests', async () => {
+    flushInitial([{ id: 'user-1' }]);
+    await Promise.resolve();
+
+    const first = service.unblockUser('user-1');
+    const second = service.unblockUser('user-1');
+    const requests = http.match(
+      (request) => request.url.endsWith('/blocks/user-1') && request.method === 'DELETE',
+    );
+    expect(requests).toHaveLength(1);
+
+    requests[0].flush({ success: true });
+    await Promise.all([first, second]);
+    expect(service.blockedUsers()).toEqual([]);
+  });
+
+  it('fails closed when the current session is unavailable', async () => {
+    flushInitial();
+    await Promise.resolve();
+    getAccessToken.mockReturnValue(null);
+
+    const refresh = service.loadBlockedUsers();
+    await refresh;
+
+    http.expectNone((request) => request.url.endsWith('/blocks'));
+    expect(service.error()).toBe('Failed to load blocked users');
+    expect(service.blockedUsers()).toEqual([]);
   });
 });

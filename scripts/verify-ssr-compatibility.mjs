@@ -19,7 +19,7 @@ const EXPECTED_CLIENT_ROUTES = new Set([
   'active-call',
   'video-call',
   'audio-rooms/**',
-  'device-transfer',
+  'settings/device-transfer',
 ]);
 
 const SSR_VISUAL_REPRESENTATIVES = [
