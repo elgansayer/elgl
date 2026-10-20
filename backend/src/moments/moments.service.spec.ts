@@ -687,19 +687,19 @@ describe('MomentsService', () => {
           return {
             select: vi
               .fn()
-              .mockResolvedValue({ data: [{ id: '1' }, { id: '2' }] }),
+              .mockResolvedValue({ count: 2 }),
           };
         }
         if (table === 'moment_comments') {
           return {
             select: vi.fn().mockReturnValue({
-              not: vi.fn().mockResolvedValue({ data: [{ id: 'c-1' }] }),
+              not: vi.fn().mockResolvedValue({ count: 1 }),
             }),
           };
         }
         if (table === 'translations') {
           return {
-            select: vi.fn().mockResolvedValue({ data: [{ id: 't-1' }] }),
+            select: vi.fn().mockResolvedValue({ count: 1 }),
           };
         }
         return mockQueryBuilder;
@@ -716,18 +716,18 @@ describe('MomentsService', () => {
           return {
             select: vi
               .fn()
-              .mockResolvedValue({ data: null, error: { message: 'boom' } }),
+              .mockResolvedValue({ count: null, error: { message: 'boom' } }),
           };
         }
         if (table === 'moment_comments') {
           return {
             select: vi.fn().mockReturnValue({
-              not: vi.fn().mockResolvedValue({ data: [] }),
+              not: vi.fn().mockResolvedValue({ count: 0 }),
             }),
           };
         }
         if (table === 'translations') {
-          return { select: vi.fn().mockResolvedValue({ data: [] }) };
+          return { select: vi.fn().mockResolvedValue({ count: 0 }) };
         }
         return mockQueryBuilder;
       });
@@ -1427,6 +1427,75 @@ describe('MomentsService', () => {
       expect(result[0].userVote).toBe('up');
     });
 
+    it('should start profile and vote lookups before either one resolves', async () => {
+      const comments = [{ id: 'c-1', user_id: 'u-1', text_content: 'Hi' }];
+      let profilesStarted = false;
+      let votesStarted = false;
+      let resolveProfiles: (value: { data: never[] }) => void = () => undefined;
+      let resolveVotes: (value: { data: never[] }) => void = () => undefined;
+      const profilesResult = new Promise<{ data: never[] }>((resolve) => {
+        resolveProfiles = resolve;
+      });
+      const votesResult = new Promise<{ data: never[] }>((resolve) => {
+        resolveVotes = resolve;
+      });
+      const profilesQuery = {
+        then: vi.fn(
+          (
+            onFulfilled: (value: { data: never[] }) => unknown,
+            onRejected?: (reason: unknown) => unknown,
+          ) => {
+            profilesStarted = true;
+            return profilesResult.then(onFulfilled, onRejected);
+          },
+        ),
+      };
+      const votesQuery = {
+        then: vi.fn(
+          (
+            onFulfilled: (value: { data: never[] }) => unknown,
+            onRejected?: (reason: unknown) => unknown,
+          ) => {
+            votesStarted = true;
+            return votesResult.then(onFulfilled, onRejected);
+          },
+        ),
+      };
+
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: comments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnValue(profilesQuery),
+          };
+        }
+        if (table === 'moment_comment_votes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnValue(votesQuery),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const resultPromise = service.getComments('m-1');
+      await vi.waitFor(() => {
+        expect(profilesStarted).toBe(true);
+        expect(votesStarted).toBe(true);
+      });
+
+      resolveProfiles({ data: [] });
+      resolveVotes({ data: [] });
+      await expect(resultPromise).resolves.toHaveLength(1);
+    });
+
     it('should return an empty array when there are no comments', async () => {
       mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
         select: vi.fn().mockReturnThis(),
@@ -1508,7 +1577,7 @@ describe('MomentsService', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
-          data: { user_id: 'author-1', text_content: 'old' },
+          data: { user_id: 'user-1', text_content: 'old' },
           error: null,
         }),
       }));
@@ -1516,6 +1585,23 @@ describe('MomentsService', () => {
       await expect(
         service.editMomentText('user-1', 'm-1', { textContent: 'New text' }),
       ).rejects.toThrow('You cannot edit this moment.');
+    });
+
+    it('should throw ForbiddenException if user is not the author', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { user_id: 'author-1', text_content: 'old' },
+          error: null,
+        }),
+      }));
+
+      await expect(
+        service.editMomentText('user-1', 'm-1', { textContent: 'New text' }),
+      ).rejects.toThrow(
+        new ForbiddenException('You can only edit your own Moments.'),
+      );
     });
 
     it('should update the text and return the hydrated moment', async () => {

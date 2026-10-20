@@ -17,8 +17,11 @@ CMD ["npm", "run", "start"]
 
 # Stage 3: Production Nginx serve
 FROM nginx:alpine AS production
-# Keep the OpenSSL runtime libraries above the Trivy-blocked CVE-2026-14456 floor.
-RUN apk add --no-cache 'libcrypto3>=3.5.8-r0' 'libssl3>=3.5.8-r0'
+# Keep security-sensitive Alpine runtime libraries above Trivy-blocked fixed-version floors.
+RUN apk add --no-cache \
+    'libcrypto3>=3.5.8-r0' \
+    'libssl3>=3.5.8-r0' \
+    'libexpat>=2.8.4-r0'
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 # Fallback SPA routing for Angular
 RUN echo 'server { listen 80; location / { root /usr/share/nginx/html; index index.html; try_files $uri $uri/ /index.html; } }' > /etc/nginx/conf.d/default.conf

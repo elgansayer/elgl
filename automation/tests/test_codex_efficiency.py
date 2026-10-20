@@ -42,15 +42,21 @@ def _reasoning_effort_for(phase: AgentPhase) -> tuple[str, tuple[str, ...]]:
     return setting, command
 
 
-def test_codex_keeps_max_reasoning_for_build_and_security_phases() -> None:
+def test_codex_keeps_max_reasoning_for_planning_and_architecture() -> None:
     for phase in (
         AgentPhase.PLANNING,
         AgentPhase.ARCHITECTURE,
-        AgentPhase.IMPLEMENTATION,
-        AgentPhase.SECURITY_REVIEW,
     ):
         setting, command = _reasoning_effort_for(phase)
         assert setting == 'model_reasoning_effort="max"', phase
+        assert "gpt-5.6-sol" in command
+
+
+def test_codex_uses_high_reasoning_for_implementation_and_security_review() -> None:
+    for phase in (AgentPhase.IMPLEMENTATION, AgentPhase.SECURITY_REVIEW):
+        setting, command = _reasoning_effort_for(phase)
+
+        assert setting == 'model_reasoning_effort="high"', phase
         assert "gpt-5.6-sol" in command
 
 
