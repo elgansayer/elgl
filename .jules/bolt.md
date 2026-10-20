@@ -20,6 +20,12 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-08 - [Memoize Chat Message Ownership]
+
+**Learning:** Angular 22 already uses its signal-aware change detection strategy by default, so explicit `OnPush` metadata is redundant. The chat message template reads message ownership repeatedly for layout, colour, bubble-tail, and delivery-state bindings, making that derived value a better optimization target.
+**Action:** Keep Angular's framework default and express repeatedly consumed derived template state as a `computed()` signal so it is cached until its signal dependencies change. Remove unused computed values so they do not expand the component's reactive API.
+
 ## 2026-09-08 - [Batch Archive Cleanup Queries with Promise.allSettled]
 
 **Learning:** Sequential awaits in GDPR archive cleanup add storage and database latency, while unbounded fan-out can overload Supabase and amplify provider failures.
@@ -426,6 +432,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
