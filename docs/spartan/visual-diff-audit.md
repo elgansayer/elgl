@@ -14,7 +14,7 @@ The component currently combines three kinds of ownership:
 
 There is no modal, menu, popover, combobox, route navigation, or selection state machine in this surface. No direct Spartan Brain primitive is required by the current product behaviour. The two existing actions are native buttons already backed by Spartan Helm. The migration work should therefore focus on product-facing Relay button ownership, action-state accessibility, and presentation consistency rather than adding a new Brain abstraction.
 
-The component does not inject `Router` and contains no navigation contract. It does not call an analytics service and has no analytics hook. Its external side effects are limited to translation through `ChatService`, translation caching through `TranslationCacheService`, flashcard creation through `FlashcardService`, and user feedback through the shared toast helper.
+The component does not inject `Router` and contains no navigation contract. It does not call an analytics service and has no analytics hook. Its external side effects are limited to translation through `ChatService`, translation caching through `TranslationCacheService`, flashcard creation through `VocabularyStore`, and user feedback through the shared toast helper.
 
 ## Inputs and integration contract
 
@@ -110,7 +110,7 @@ Do not solve these by introducing a generic Spartan state machine. They are feat
 
 ## Flashcard behaviour and side effects
 
-`createFlashcard()` sends this existing payload to `FlashcardService.createFlashcard()`:
+`createFlashcard()` sends this existing payload to `VocabularyStore.createFlashcard()`:
 
 ```ts
 {
@@ -122,7 +122,7 @@ Do not solve these by introducing a generic Spartan state machine. They are feat
 
 On a resolved promise, the component shows `correction.flashcardCreatedAlert`, falling back to `Flashcard created`. On rejection it logs and shows `error.general`, falling back to `Error`.
 
-`FlashcardService.createFlashcard()` posts to the `/flashcards` API when reachable. If the request fails, the service creates and caches a local degraded flashcard for offline use and resolves rather than rejecting. The visual diff therefore treats a locally queued/degraded flashcard as a successful service result and shows the success toast. That is the current service contract and must not be reinterpreted by this migration.
+`VocabularyStore.createFlashcard()` posts to the `/flashcards` API when reachable. If the request fails, the service creates and caches a local degraded flashcard for offline use and resolves rather than rejecting. The visual diff therefore treats a locally queued/degraded flashcard as a successful service result and shows the success toast. That is the current service contract and must not be reinterpreted by this migration.
 
 ### Flashcard migration risks
 
@@ -214,7 +214,7 @@ There is no direct analytics call or event emitted by this component.
 The component does perform persistence-affecting side effects through services:
 
 - translation results may be written to `TranslationCacheService`;
-- `FlashcardService.createFlashcard()` may persist through the backend or cache an offline/degraded card locally;
+- `VocabularyStore.createFlashcard()` may persist through the backend or cache an offline/degraded card locally;
 - toast feedback is emitted for translation failure and flashcard completion/failure.
 
 These boundaries must remain intact. A UI migration must not move navigation, analytics, cache ownership, or SRS persistence into a Relay primitive.
@@ -239,7 +239,7 @@ These boundaries must remain intact. A UI migration must not move navigation, an
 6. **Diff semantic regression.** Replacing spans with a shared visual primitive must not change whitespace preservation, token order, line wrapping, or the current `data-type` hooks before tests are active.
 7. **Algorithm scope creep.** Spartan migration is not an edit-distance rewrite. Keep tokenisation changes out unless separately specified.
 8. **Toast contract drift.** Do not replace shared toast feedback with silent failure merely because a button primitive changes.
-9. **Offline semantics drift.** A resolved degraded `FlashcardService` result is currently treated as success. UI work must not claim a network-only contract that the service does not have.
+9. **Offline semantics drift.** A resolved degraded `VocabularyStore` result is currently treated as success. UI work must not claim a network-only contract that the service does not have.
 10. **Design-preview overreach.** This audit changes no visual contract. #6641/#6642/#6644 should update the mapped design preview only when their implementation changes interaction or appearance.
 
 No prerequisite Spartan Brain capability is missing. The only possible shared primitive gap is a Relay icon-action/button wrapper that forwards accessible labels, busy state, native disabled semantics, and touch sizing. That gap should be confirmed across consumers before adding a new primitive.

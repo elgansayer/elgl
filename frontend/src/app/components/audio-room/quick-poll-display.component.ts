@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface PollViewData {
@@ -10,6 +10,7 @@ export interface PollViewData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-quick-poll-display',
   imports: [HlmButton, TranslatePipe],
   template: `
