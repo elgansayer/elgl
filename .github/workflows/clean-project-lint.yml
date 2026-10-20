@@ -33,23 +33,13 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          run_application=true
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
-            run_application=false
-            while IFS= read -r path; do
-              [ -z "$path" ] && continue
-              case "$path" in
-                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
-                  ;;
-                *)
-                  run_application=true
-                  ;;
-              esac
-            done <<< "$changed"
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" \
+              | bash scripts/classify-ci-impact.sh "$GITHUB_OUTPUT"
+          else
+            echo "run_application=true" >> "$GITHUB_OUTPUT"
+            echo "Clean project lint required: true"
           fi
-          echo "run_application=$run_application" >> "$GITHUB_OUTPUT"
-          echo "Clean project lint required: $run_application"
 
   lint-contract:
     name: lint contract guard

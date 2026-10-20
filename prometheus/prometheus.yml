@@ -1,5 +1,6 @@
 global:
   scrape_interval: 15s
+  scrape_timeout: 5s
   evaluation_interval: 15s
 
 # Alerting rules for the Tutor Profiles architecture (#2092) and any future
@@ -17,6 +18,7 @@ scrape_configs:
         labels:
           service: 'hellotalk-api'
     scrape_interval: 10s
+    scrape_timeout: 5s
 
   - job_name: 'centrifugo'
     metrics_path: '/metrics'
@@ -25,3 +27,4 @@ scrape_configs:
         labels:
           service: 'centrifugo'
     scrape_interval: 10s
+    scrape_timeout: 5s

@@ -6,25 +6,17 @@
   <div class="recommended-heading-row">
     <div>
       <h2 id="recommended-for-you-heading" class="recommended-heading">Recommended for You</h2>
-      <p class="recommended-subtitle">Language partners matched to your interests and learning activity.</p>
+      <p class="recommended-subtitle">
+        Language partners matched to your interests and learning activity.
+      </p>
     </div>
     @if (recommendations().length > 1) {
       <div class="recommended-controls">
-        <button
-          hlmBtn
-          type="button"
-          class="recommended-control"
-          (click)="scroll(-1)"
-        >
+        <button hlmBtn type="button" class="recommended-control" (click)="scroll(-1)">
           <span aria-hidden="true">←</span>
           <span class="sr-only">Previous recommendations</span>
         </button>
-        <button
-          hlmBtn
-          type="button"
-          class="recommended-control"
-          (click)="scroll(1)"
-        >
+        <button hlmBtn type="button" class="recommended-control" (click)="scroll(1)">
           <span aria-hidden="true">→</span>
           <span class="sr-only">Next recommendations</span>
         </button>
@@ -47,9 +39,14 @@
       </button>
     </div>
   } @else if (recommendations().length === 0) {
-    <div class="recommended-state" role="status">
-      <p>No recommendations yet. Add interests and learning languages to improve your matches.</p>
-    </div>
+    <app-empty-state
+      [icon]="'👋'"
+      [title]="'No recommendations yet'"
+      [description]="'Add interests and learning languages to improve your matches.'"
+      [actionLabel]="'Update Profile'"
+      (actionClicked)="router.navigate(['/profile'])"
+      class="col-span-full"
+    ></app-empty-state>
   } @else {
     <div
       #carousel
@@ -60,34 +57,89 @@
       (keydown)="onCarouselKeydown($event)"
     >
       @for (recommendation of recommendations(); track recommendation.id) {
-        <a
-          class="recommended-card"
-          [routerLink]="['/profile', recommendation.id]"
-          [attr.aria-label]="'View profile for ' + recommendation.display_name"
-        >
-          <div class="recommended-avatar" aria-hidden="true">
-            @if (recommendation.avatar_url) {
-              <img [src]="recommendation.avatar_url" alt="" loading="lazy" />
-            } @else {
-              <span>{{ recommendation.display_name.slice(0, 1).toUpperCase() }}</span>
-            }
-          </div>
-          <div class="recommended-card-body">
-            <div class="recommended-name-row">
-              <h3>{{ recommendation.display_name }}</h3>
-              <span class="recommended-language">{{ languageSummary(recommendation) }}</span>
-            </div>
-            <ul class="recommended-reasons">
-              @for (reason of recommendation.recommendation_reasons.slice(0, 3); track reason) {
-                <li>{{ reasonLabel(reason, recommendation) }}</li>
+        <article class="recommended-card">
+          <a
+            class="recommended-profile-link"
+            [routerLink]="['/profile', recommendation.id]"
+            [attr.aria-label]="'View profile for ' + recommendation.display_name"
+          >
+            <div class="recommended-avatar" aria-hidden="true">
+              @if (recommendation.avatar_url) {
+                <img [src]="recommendation.avatar_url" alt="" loading="lazy" />
+              } @else {
+                <span>{{ recommendation.display_name.slice(0, 1).toUpperCase() }}</span>
               }
-            </ul>
+            </div>
+            <div class="recommended-card-body">
+              <div class="recommended-name-row">
+                <h3>{{ recommendation.display_name }}</h3>
+                <span class="recommended-language">{{ languageSummary(recommendation) }}</span>
+              </div>
+              <ul class="recommended-reasons">
+                @for (reason of recommendation.recommendation_reasons.slice(0, 3); track reason) {
+                  <li>{{ reasonLabel(reason, recommendation) }}</li>
+                }
+              </ul>
+            </div>
+          </a>
+
+          <div class="recommended-quick-actions">
+            <button
+              hlmBtn
+              size="touch"
+              type="button"
+              class="recommended-action"
+              [disabled]="isActionPending(recommendation.id, 'message')"
+              [attr.aria-busy]="isActionPending(recommendation.id, 'message') ? 'true' : null"
+              [attr.aria-describedby]="
+                hasActionError(recommendation.id)
+                  ? 'recommended-action-error-' + recommendation.id
+                  : null
+              "
+              (click)="sendMessage(recommendation.id)"
+            >
+              {{ 'chat.sendMessage' | t }}
+            </button>
+            <button
+              hlmBtn
+              size="touch"
+              type="button"
+              class="recommended-action"
+              [disabled]="
+                isFollowing(recommendation.id) || isActionPending(recommendation.id, 'follow')
+              "
+              [attr.aria-busy]="isActionPending(recommendation.id, 'follow') ? 'true' : null"
+              [attr.aria-pressed]="isFollowing(recommendation.id)"
+              [attr.aria-describedby]="
+                hasActionError(recommendation.id)
+                  ? 'recommended-action-error-' + recommendation.id
+                  : null
+              "
+              (click)="followUser(recommendation.id)"
+            >
+              {{
+                (isFollowing(recommendation.id) ? 'userProfile.following' : 'userProfile.follow')
+                  | t
+              }}
+            </button>
           </div>
-        </a>
+
+          @if (hasActionError(recommendation.id)) {
+            <p
+              [id]="'recommended-action-error-' + recommendation.id"
+              class="recommended-action-error"
+              role="alert"
+            >
+              {{ 'common.error_generic' | t }}
+            </p>
+          }
+        </article>
       }
     </div>
     <div class="recommended-footer">
-      <a routerLink="/discovery" fragment="discovery-results" class="recommended-see-all">See all partners</a>
+      <a routerLink="/discovery" fragment="discovery-results" class="recommended-see-all"
+        >See all partners</a
+      >
     </div>
   }
 </section>

@@ -200,6 +200,26 @@ describe('ReadingEngineCacheService', () => {
     expect(patterns).toContain('reading:session:user:u1:*');
   });
 
+  it('starts every namespace invalidation and waits for all scans to complete', async () => {
+    let completeScan!: (value: [string, string[]]) => void;
+    const pendingScan = new Promise<[string, string[]]>((resolve) => {
+      completeScan = resolve;
+    });
+    redis.scan.mockReturnValue(pendingScan);
+    let completed = false;
+    const invalidation = service
+      .handleUserDataCleared({ userId: 'u1' })
+      .then(() => {
+        completed = true;
+      });
+    expect(redis.scan).toHaveBeenCalledTimes(6);
+    await Promise.resolve();
+    expect(completed).toBe(false);
+    completeScan(['0', []]);
+    await invalidation;
+    expect(completed).toBe(true);
+  });
+
   /* ---- TTL inference ---- */
 
   it('infers correct TTL per namespace', () => {

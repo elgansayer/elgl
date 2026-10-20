@@ -2,6 +2,8 @@
 
 Issue #841 is intentionally completed against the product that exists in the repository rather than inventing the missing reference implied by its truncated title. No authoritative external UI specification for “interface mirroring” is present in the codebase.
 
+Issue #1387 is implemented by the shared client-side translation cache and the per-message/per-Moment visibility state. A learner can hide and show an already translated string without making another provider request.
+
 ## User-facing contract
 
 Text messages expose language-learning actions through the shared message context menu. The chat surface currently supports:
@@ -12,61 +14,72 @@ Text messages expose language-learning actions through the shared message contex
 - Request correction: send an attributable correction-request message that replies to the source message.
 - Correction display: render original, corrected text, and optional explanation through `VisualDiffComponent`.
 
-The original message remains visible while a translation is shown, so the user can always recover the source text. Provider output is rendered with Angular text interpolation rather than trusted HTML.
+Moments use the same client-side translation-cache service before requesting a translation. Component-local visibility state controls whether the original or cached translated presentation is shown.
+
+The original content remains available while a translation is shown, so the user can always recover the source text. Provider output is rendered with Angular text interpolation rather than trusted HTML.
 
 ## Frontend ownership
 
 `ChatRoomComponent` owns per-message presentation state and delegates network operations to typed services:
 
 - `ChatService.translateText()` calls the authenticated NLP translation endpoint.
-- `TranslationCacheService` is an optional browser-side optimisation for translation results.
-- `VocabularyStore` owns the existing transliteration request path.
+- `TranslationCacheService` owns the shared browser-process cache for translation results.
+- `VocabularyStore` owns the existing transliteration and Moments translation request paths.
 - `ChatService.sendMessage()` owns correction and correction-request mutations.
 - `VisualDiffComponent` owns correction comparison presentation.
 - `LongPressContextMenuComponent` owns the accessible desktop/mobile message-action entry point.
 
 Do not add raw `fetch()` calls to message components for translation or correction. New language actions should reuse these boundaries or introduce one shared typed service when the existing boundary is insufficient.
 
-## Translation cache reliability
+## Translation cache contract
 
-Browser storage is not a correctness dependency. Private browsing, enterprise policy, storage quota exhaustion, or browser security settings can make `localStorage` throw synchronously.
+The translation cache is deliberately process-local and memory-only because chat and Moment text can contain sensitive personal content. It is a performance optimisation, never a source of truth.
 
-The translation cache therefore follows these rules:
+The cache follows these rules:
 
-1. A storage read failure is treated as a cache miss.
-2. A storage write failure never turns a successful translation into a failed action.
-3. Cache clearing and eviction are best-effort.
+1. Cache identity includes the exact source text and normalized target language.
+2. A hit is checked before another translation-provider request is made.
+3. Hiding a translation does not evict it, so showing it again does not make another API call.
 4. Entries expire after seven days.
-5. New entries persist their source text and target language alongside the cached value. This metadata is validated on read so a hash collision cannot surface a translation for different source text.
-6. Legacy entries containing only `value` and `timestamp` remain readable during migration.
+5. The cache is capped at 500 entries and uses least-recently-used eviction.
+6. Empty source, target-language, or translated values are not cached.
+7. Cache contents are not written to `localStorage`, `sessionStorage`, IndexedDB, cookies, or server persistence.
+8. A fresh application process starts with an empty cache. Losing the cache is always safe because the server/provider path remains authoritative.
 
-The server remains authoritative for a translation when no valid cached value exists.
+The process-local policy supersedes the older browser-storage cache design. There is no migration requirement: historical browser-cache data is disposable and is no longer read by `TranslationCacheService`.
 
 ## Failure and privacy behaviour
 
-- Authentication remains owned by `AuthService`/`ChatService`; translation code must not log access tokens.
-- Message text is sent only to the existing NLP translation endpoint when the user explicitly requests translation and no valid cache entry exists.
-- Cache failures are silent implementation details and must not produce a false “translation failed” state.
-- Provider failures leave the original message intact and are surfaced through the existing translated error/toast path.
+- Authentication remains owned by `AuthService` and typed API services; translation code must not log access tokens.
+- Source text is sent to the existing NLP translation endpoint only when the learner explicitly requests translation and no valid cache entry exists.
+- A cache miss is not an error and never changes the user-visible source text.
+- Provider failures leave the original content intact and must remain retryable rather than creating a successful cached translation.
 - Correction mutations remain normal chat messages, preserving sender attribution, source-room context, and the existing server authorization boundary.
 
 ## Accessibility and rendering
 
 - Original and translated strings are rendered as text, not HTML.
 - Message actions remain reachable through the shared context-menu interaction used by keyboard and touch users.
-- Translation is additive: it does not remove or replace the source text.
+- Translation is additive: it does not remove or destructively replace the source text.
 - Correction output uses semantic insertion/deletion presentation in `VisualDiffComponent` and must not communicate changes by colour alone.
 
 ## Verification
 
 Relevant automated coverage lives in:
 
-- `frontend/src/app/components/chat-room/chat-room.component.spec.ts` for translate/show-hide, transliteration, correction-prefill, and correction-request behaviour;
-- `frontend/src/app/services/translation-cache.service.spec.ts` for cache identity, expiry, legacy compatibility, malformed data, blocked storage, and quota failure behaviour;
+- `frontend/src/app/components/chat-room/chat-room.translation-corrections.spec.ts` for cache-first translation and repeated show/hide behavior without another provider request;
+- `frontend/src/app/services/translation-cache.service.spec.ts` for source/target identity, expiry, LRU bounds, memory-only privacy, and fresh-process behavior;
+- `scripts/translation-cache-contract.test.mjs` for the cross-surface contract that Chat and Moments keep the shared cache boundary and cache-first ordering;
 - `frontend/src/app/components/visual-diff/visual-diff.component.spec.ts` for correction rendering semantics.
 
-The normal frontend unit, static-analysis, production-build, design-governance, and repository CI checks are required before merge.
+Run the focused dependency-free contract with:
 
-## Rollback
+```sh
+node --test scripts/translation-cache-contract.test.mjs
+```
 
-This change does not alter an API, schema, route, or persisted server-side data shape. Reverting the cache hardening restores the previous browser cache implementation. Stored legacy and new cache entries are disposable and may be cleared at any time without data loss.
+The normal frontend unit, static-analysis, production-build, design-governance, and repository CI checks remain authoritative before merge.
+
+## Rollout and rollback
+
+This contract does not alter an API, schema, route, or persisted server-side data shape. Deployment is frontend-only. Rollback may revert the verification/documentation changes without data cleanup. The memory cache can always be discarded without user data loss; a rollback must not reintroduce persistent storage of private translated chat or Moment text without a separate privacy review.

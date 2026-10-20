@@ -95,12 +95,53 @@ test('requires the e2e config to constrain test discovery', () => {
 });
 
 test('requires Playwright ownership to stay in e2e/package.json', () => {
-  const violations = analyse({}, {
-    e2ePackageJson: JSON.stringify({ scripts: { test: 'vitest' }, devDependencies: {} }),
-  });
+  const violations = analyse(
+    {},
+    {
+      e2ePackageJson: JSON.stringify({ scripts: { test: 'vitest' }, devDependencies: {} }),
+    },
+  );
 
   assert.deepEqual(violations, [
     'e2e/package.json must own the canonical Playwright test script',
     'e2e/package.json must own the @playwright/test dependency',
+  ]);
+});
+
+test('rejects brittle conditional login helpers in non-authentication e2e specs', () => {
+  const violations = analyse({
+    'e2e/tests/adversarial/adversarial-chat-video.spec.ts': [
+      'async function loginIfNeeded(page) {',
+      '  await page.fill(\'input[name="email"]\', \'qa@example.test\');',
+      '}',
+      'await loginIfNeeded(page);',
+    ].join('\n'),
+  });
+
+  assert.deepEqual(violations, [
+    'e2e/tests/adversarial/adversarial-chat-video.spec.ts defines or calls loginIfNeeded; E2E specs must not conditionally scrape the login form',
+    'e2e/tests/adversarial/adversarial-chat-video.spec.ts targets the legacy input[name="email"] login selector outside an authentication spec',
+  ]);
+});
+
+test('allows login form selectors in dedicated authentication specs', () => {
+  assert.deepEqual(
+    analyse({
+      'e2e/tests/auth.spec.ts': 'await page.fill(\'input[name="email"]\', \'e2e@example.test\');',
+      'e2e/tests/auth-flows.spec.ts':
+        'await page.fill(\'input[name="email"]\', \'e2e@example.test\');',
+    }),
+    [],
+  );
+});
+
+test('rejects the legacy login selector in non-authentication specs even if the helper is renamed', () => {
+  const violations = analyse({
+    'e2e/tests/chat-messaging.spec.ts':
+      'await page.fill(\'input[name="email"]\', \'e2e@example.test\');',
+  });
+
+  assert.deepEqual(violations, [
+    'e2e/tests/chat-messaging.spec.ts targets the legacy input[name="email"] login selector outside an authentication spec',
   ]);
 });

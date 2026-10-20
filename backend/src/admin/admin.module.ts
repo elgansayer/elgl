@@ -14,12 +14,12 @@ import { AdminNetworkAbuseV1Controller } from './admin-network-abuse-v1.controll
 import { AdminNetworkAbuseService } from './admin-network-abuse.service';
 import { AdminOperationalEventsV1Controller } from './admin-operational-events-v1.controller';
 import { AdminOperationalEventsService } from './admin-operational-events.service';
+import { AdminRateLimitControlService } from './admin-rate-limit-control.service';
 import { AdminRoleAssignmentsService } from './admin-role-assignments.service';
 import { AdminRoleInventoryService } from './admin-role-inventory.service';
 import { AdminRolesV1Controller } from './admin-roles-v1.controller';
 import { AdminService } from './admin.service';
 import { AdminSystemHealthService } from './admin-system-health.service';
-import { AdminUserDetailService } from './admin-user-detail.service';
 import { AdminV1Controller } from './admin-v1.controller';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -42,11 +42,11 @@ import { NetworkAbuseGuard } from './guards/network-abuse.guard';
     AdminLoginHistoryQueryService,
     AdminModerationQueryService,
     AdminNetworkAbuseService,
+    AdminRateLimitControlService,
     AdminOperationalEventsService,
     AdminRoleAssignmentsService,
     AdminRoleInventoryService,
     AdminSystemHealthService,
-    AdminUserDetailService,
     AdminGuard,
     AdminCapabilityGuard,
     NetworkAbuseGuard,
