@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type Redis from 'ioredis-v6';
+import type Redis from 'ioredis';
 import { SupabaseService } from '../supabase/supabase.service';
 
 /** Redis cache key prefixes used by the matchmaking / discovery subsystem. */

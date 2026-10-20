@@ -47,6 +47,10 @@ export class GroupChatService {
     private readonly systemMessageService: SystemMessageService,
   ) {}
 
+  private getClient(): any {
+    return this.supabaseService.getClient();
+  }
+
   private throwDbError(error: DbError): never {
     const message = error?.message ?? 'group_operation_failed';
     if (
@@ -85,7 +89,7 @@ export class GroupChatService {
   }
 
   private async ensureMembership(userId: string, roomId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
       .select('room_id, chat_rooms!inner(type, is_deleted)')
@@ -101,7 +105,7 @@ export class GroupChatService {
   }
 
   private async ensureAdmin(userId: string, roomId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { data, error } = await supabase
       .from('chat_rooms')
       .select('id')
@@ -123,7 +127,7 @@ export class GroupChatService {
     }
     await this.assertNoBlockedMembers(userId, memberIds);
 
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { data: roomId, error } = await supabase.rpc('create_group_chat', {
       p_creator_id: userId,
       p_title: dto.name.trim(),
@@ -140,7 +144,7 @@ export class GroupChatService {
 
   async get(userId: string, roomId: string): Promise<GroupChatRecord> {
     await this.ensureMembership(userId, roomId);
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
 
     const [{ data: room, error }, { count, error: countError }] = await Promise.all([
       supabase
@@ -175,7 +179,7 @@ export class GroupChatService {
 
   async members(userId: string, roomId: string): Promise<GroupChatMember[]> {
     await this.ensureMembership(userId, roomId);
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
       .select(
@@ -205,7 +209,7 @@ export class GroupChatService {
     if (dto.avatarUrl !== undefined) updates['avatar_url'] = dto.avatarUrl.trim() || null;
 
     if (Object.keys(updates).length > 0) {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.getClient();
       const { data, error } = await supabase
         .from('chat_rooms')
         .update({ ...updates, updated_at: new Date().toISOString() })
@@ -232,7 +236,7 @@ export class GroupChatService {
   ): Promise<GroupChatMember[]> {
     const memberIds = [...new Set(dto.memberIds)].filter((id) => id !== userId);
     await this.assertNoBlockedMembers(userId, memberIds);
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { data, error } = await supabase.rpc('add_group_chat_members', {
       p_requester_id: userId,
       p_room_id: roomId,
@@ -250,7 +254,7 @@ export class GroupChatService {
   }
 
   async removeMember(userId: string, roomId: string, memberId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { error } = await supabase.rpc('remove_group_chat_member', {
       p_requester_id: userId,
       p_room_id: roomId,
@@ -269,7 +273,7 @@ export class GroupChatService {
     roomId: string,
     dto: TransferGroupChatAdminDto,
   ): Promise<GroupChatRecord> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { error } = await supabase.rpc('transfer_group_chat_admin', {
       p_requester_id: userId,
       p_room_id: roomId,
@@ -285,7 +289,7 @@ export class GroupChatService {
   }
 
   async leave(userId: string, roomId: string): Promise<{ deleted: boolean }> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.getClient();
     const { data, error } = await supabase.rpc('leave_group_chat', {
       p_user_id: userId,
       p_room_id: roomId,

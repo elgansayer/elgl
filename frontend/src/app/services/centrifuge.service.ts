@@ -42,8 +42,10 @@ export class CentrifugeService {
   private authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
   private subscriptions = new Map<string, Subscription>();
+  private readonly subscriptionHandlers = new Map<string, (data: unknown) => void>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private tokenRequest: TokenRequest | null = null;
 
   readonly events = signal<CentrifugeEvent[]>([]);
   readonly isConnected = signal<boolean>(false);
@@ -261,6 +263,7 @@ export class CentrifugeService {
   }
 
   subscribe(channel: string, onMessage: (data: unknown) => void): Subscription | null {
+    this.subscriptionHandlers.set(channel, onMessage);
     if (!this.centrifuge) return null;
     let sub = this.subscriptions.get(channel);
     if (!sub) {
@@ -278,7 +281,15 @@ export class CentrifugeService {
     return sub;
   }
 
+  listen(channel: string, onMessage: (data: unknown) => void): () => void {
+    this.subscribe(channel, onMessage);
+    return () => {
+      this.unsubscribe(channel);
+    };
+  }
+
   unsubscribe(channel: string): void {
+    this.subscriptionHandlers.delete(channel);
     const sub = this.subscriptions.get(channel);
     if (sub) {
       sub.unsubscribe();

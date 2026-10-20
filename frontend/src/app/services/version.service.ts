@@ -100,7 +100,6 @@ function safeUpdateUrl(value: unknown): string | null {
 export interface VersionInfo {
   current: string;
   latest: string;
-  minimumSupported?: string;
   updateUrl?: string;
   /** Optional for mixed-version compatibility with backends deployed before the policy field. */
   minimumSupported?: string;

@@ -28,7 +28,7 @@ export class StripeService {
       throw new Error('STRIPE_SECRET_KEY is required');
     }
     this.stripe = new Stripe(secretKey, {
-      apiVersion: '2026-07-29.dahlia',
+      apiVersion: '2023-10-16',
     });
   }
 
@@ -241,7 +241,7 @@ export class StripeService {
 
   private getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
     const currentSubscription =
-      invoice.parent?.subscription_details?.subscription;
+      (invoice as any).parent?.subscription_details?.subscription;
     const legacySubscription = (
       invoice as Stripe.Invoice & {
         subscription?: string | { id: string } | null;

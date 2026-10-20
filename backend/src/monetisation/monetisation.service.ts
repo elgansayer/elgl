@@ -72,7 +72,7 @@ export class MonetisationService {
     }
 
     this.stripe = new Stripe(secret, {
-      apiVersion: '2026-07-29.dahlia',
+      apiVersion: '2023-10-16',
     });
   }
 
@@ -801,7 +801,7 @@ export class MonetisationService {
         ? {
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             currentPeriodEnd: new Date(
-              item.current_period_end * 1000,
+              ((item as any).current_period_end ?? subscription.current_period_end) * 1000,
             ).toISOString(),
             nextBillingAmount:
               item.price?.unit_amount != null

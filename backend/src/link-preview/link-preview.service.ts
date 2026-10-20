@@ -14,7 +14,7 @@ import * as http from 'http';
 import * as https from 'https';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import { isPrivateIp } from './ip-guard';
-import type Redis from 'ioredis-v6';
+import type Redis from 'ioredis';
 
 /**
  * Maximum accepted HTML document size (bytes) for a scraped page. Pages larger

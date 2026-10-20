@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type Redis from 'ioredis-v6';
+import type Redis from 'ioredis';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { SupabaseService } from '../supabase/supabase.service';
 

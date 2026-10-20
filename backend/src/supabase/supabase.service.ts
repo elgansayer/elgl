@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import Redis from 'ioredis-v6';
+import Redis from 'ioredis';
 
 export type UsersRow = {
   id: string;
@@ -49,6 +49,7 @@ export type UsersRow = {
   available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
+  country?: string | null;
   mock_country?: string | null;
   mock_city?: string | null;
   privacy_hide_age?: boolean | null;
@@ -1443,6 +1444,12 @@ export interface Database {
       chat_rooms: {
         Row: {
           id: string;
+          type?: string | null;
+          is_deleted?: boolean | null;
+          topic?: string | null;
+          avatar_url?: string | null;
+          name?: string | null;
+          updated_at?: string | null;
           title: string | null;
           subtitle?: string | null;
           avatar?: string | null;
@@ -1459,6 +1466,12 @@ export interface Database {
         };
         Insert: Partial<{
           id?: string;
+          type?: string | null;
+          is_deleted?: boolean | null;
+          topic?: string | null;
+          avatar_url?: string | null;
+          name?: string | null;
+          updated_at?: string | null;
           title?: string | null;
           subtitle?: string | null;
           avatar?: string | null;
@@ -1475,6 +1488,12 @@ export interface Database {
         }>;
         Update: Partial<{
           id?: string;
+          type?: string | null;
+          is_deleted?: boolean | null;
+          topic?: string | null;
+          avatar_url?: string | null;
+          name?: string | null;
+          updated_at?: string | null;
           title?: string | null;
           subtitle?: string | null;
           avatar?: string | null;
@@ -1532,18 +1551,30 @@ export interface Database {
           user_id: string;
           room_id: string;
           is_locked: boolean;
+          is_archived?: boolean | null;
+          archived_at?: string | null;
+          role?: string | null;
+          joined_at?: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
+          is_archived?: boolean | null;
+          archived_at?: string | null;
+          role?: string | null;
+          joined_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
+          is_archived?: boolean | null;
+          archived_at?: string | null;
+          role?: string | null;
+          joined_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [
@@ -2305,6 +2336,51 @@ export interface Database {
         };
         Returns: void;
       };
+      create_group_chat: {
+        Args: {
+          p_creator_id: string;
+          p_title: string;
+          p_member_ids: string[];
+        };
+        Returns: string;
+      };
+      add_group_chat_members: {
+        Args: {
+          p_requester_id: string;
+          p_room_id: string;
+          p_member_ids: string[];
+        };
+        Returns: number;
+      };
+      remove_group_chat_member: {
+        Args: {
+          p_requester_id: string;
+          p_room_id: string;
+          p_member_id: string;
+        };
+        Returns: void;
+      };
+      transfer_group_chat_admin: {
+        Args: {
+          p_requester_id: string;
+          p_room_id: string;
+          p_new_admin_id: string;
+        };
+        Returns: void;
+      };
+      leave_group_chat: {
+        Args: {
+          p_user_id: string;
+          p_room_id: string;
+        };
+        Returns: boolean;
+      };
+      count_chat_unread: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number | string;
+      };
     };
     location_shares: {
       Row: LocationShareRow;
@@ -2338,8 +2414,6 @@ export class SupabaseService implements OnModuleDestroy {
     this.redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
-      // ioredis 6 defaults to RESP3; retain v5 response shapes for cache callers.
-      protocol: 2,
     });
     this.redisClient.on('error', (err) => {
       this.logger.error(

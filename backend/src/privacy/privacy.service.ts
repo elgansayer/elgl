@@ -567,7 +567,7 @@ export class PrivacyService {
       .filter((id): id is string => typeof id === 'string');
     const deckFlashcards: unknown[] = [];
     for (let batchOffset = 0; batchOffset < deckIds.length; batchOffset += 500) {
-      const batchPromises = [];
+      const batchPromises: Promise<unknown[]>[] = [];
       for (let i = 0; i < 5 && batchOffset + i * 100 < deckIds.length; i++) {
         const offset = batchOffset + i * 100;
         const ids = deckIds.slice(offset, offset + 100);
@@ -624,7 +624,9 @@ export class PrivacyService {
       decks,
       deck_flashcards: deckFlashcards,
       favourites,
-      coin_purchases: scrubCoinPurchasesForArchive(coinPurchases),
+      coin_purchases: scrubCoinPurchasesForArchive(
+        coinPurchases as Record<string, unknown>[],
+      ),
       escrow_transactions: scrubEscrowTransactionsForArchive(
         escrowTransactions,
         userId,

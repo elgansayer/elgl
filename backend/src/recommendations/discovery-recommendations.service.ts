@@ -276,7 +276,6 @@ export class DiscoveryRecommendationsService {
     try {
       const daily = await this.recommendationsService.getDailyRecommendations(
         userId,
-        blockedIds,
       );
       for (const recommendation of daily.slice(0, CANDIDATE_LIMIT)) {
         if (recommendation.id && recommendation.id !== userId) {

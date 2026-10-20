@@ -12,6 +12,7 @@ import { AdminModerationQueryService } from './admin-moderation-query.service';
 import { AdminMutationAuditInterceptor } from './admin-mutation-audit.interceptor';
 import { AdminNetworkAbuseV1Controller } from './admin-network-abuse-v1.controller';
 import { AdminNetworkAbuseService } from './admin-network-abuse.service';
+import { AdminRateLimitControlService } from './admin-rate-limit-control.service';
 import { AdminNetworkProviderV1Controller } from './admin-network-provider-v1.controller';
 import { AdminNetworkProviderService } from './admin-network-provider.service';
 import { AdminOperationalEventsV1Controller } from './admin-operational-events-v1.controller';
@@ -43,6 +44,7 @@ import { AdminGuard } from './guards/admin.guard';
     AdminLoginHistoryQueryService,
     AdminModerationQueryService,
     AdminNetworkAbuseService,
+    AdminRateLimitControlService,
     AdminNetworkProviderService,
     AdminOperationalEventsService,
     AdminRoleAssignmentsService,

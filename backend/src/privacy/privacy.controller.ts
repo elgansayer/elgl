@@ -26,22 +26,18 @@ export class PrivacyController {
   ) {}
 
   @Get('status')
+  @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 30, ttl: 60 * 1000 } })
   async getStatus(@CurrentUser() user: User | null) {
     if (!user) throw new UnauthorizedException();
+    const status = await this.privacyService.getStatus(user.id);
+    const deletion = await this.privacyLifecycleService.getAccountDeletionStatus(
+      user.id,
+    );
     return {
-      deletion: await this.privacyLifecycleService.getAccountDeletionStatus(
-        user.id,
-      ),
+      ...status,
+      deletion,
     };
-  }
-
-  @Get('status')
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 30, ttl: 60 * 60 * 1000 } })
-  async getStatus(@CurrentUser() user: User | null) {
-    if (!user) throw new UnauthorizedException();
-    return this.privacyService.getStatus(user.id);
   }
 
   @Post('request-archive')

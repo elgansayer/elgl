@@ -26,7 +26,6 @@ import {
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
-import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 
 @Injectable()
 export class NlpService {

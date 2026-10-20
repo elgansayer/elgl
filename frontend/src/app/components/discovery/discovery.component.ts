@@ -119,6 +119,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = this.seriousLearnerModeService.enabled;
+  readonly seriousModeSaving = this.seriousLearnerModeService.saving;
+  readonly seriousModeError = computed(() => this.seriousLearnerModeService.error() !== null);
   readonly seriousLearnerRelaxed = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
