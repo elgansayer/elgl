@@ -160,7 +160,6 @@ export class VideoCallsCacheInvalidationService {
       );
 
       const totalDeleted = deletionResults.reduce((acc, curr) => acc + curr, 0);
-
       if (totalDeleted > 0) {
         this.logger.log(
           `Bulk-invalidated ${totalDeleted} video-classroom cache key(s)`,
