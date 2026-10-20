@@ -29,11 +29,11 @@ describe('standalone route lazy-loading contract', () => {
 
   it('keeps representative non-critical product surfaces behind dynamic loaders', () => {
     const nonCriticalPaths = [
-      'community',
-      'vocabulary',
+      'chat/groups',
+      'learn/vocabulary',
       'discovery',
       'moments',
-      'community/events',
+      'live/events',
       'settings',
       'chat',
     ];

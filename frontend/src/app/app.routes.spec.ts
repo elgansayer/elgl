@@ -8,11 +8,11 @@ describe('App routes', () => {
     expect(routes.length).toBeGreaterThan(0);
   });
 
-  it('should include the root redirect to home', () => {
+  it('should include the root redirect to ai-conversation', () => {
     const root = routes.find((r) => r.path === '');
     expect(root).toBeDefined();
     if (root) {
-      expect(root.redirectTo).toBe('home');
+      expect(root.redirectTo).toBe('learn/ai-chat');
       expect(root.pathMatch).toBe('full');
     }
   });
@@ -22,7 +22,7 @@ describe('App routes', () => {
     const expected = [
       'home',
       'discovery',
-      'proficiency',
+      'learn/assessment/proficiency',
       'moments',
       'chat',
       'chat/:id',
@@ -31,10 +31,10 @@ describe('App routes', () => {
       'settings',
       'admin',
       'admin/moderation',
-      'milestones',
-      'study-buddy',
-      'events',
-      'events/calendar',
+      'profile/me/milestones',
+      'learn/study-buddy',
+      'live/events',
+      'live/events/calendar',
       'coin-economy',
     ];
     for (const p of expected) {
@@ -94,7 +94,7 @@ describe('App routes', () => {
   });
 
   it('should lazy-load milestones component route', () => {
-    const milestones = routes.find((r) => r.path === 'milestones');
+    const milestones = routes.find((r) => r.path === 'profile/me/milestones');
     expect(milestones).toBeDefined();
     if (milestones) {
       expect(milestones.loadComponent).toBeDefined();
@@ -106,7 +106,7 @@ describe('App routes', () => {
     const wildcard = routes[routes.length - 1];
 
     expect(wildcard?.path).toBe('**');
-    expect(wildcard?.redirectTo).toBe('home');
+    expect(wildcard?.redirectTo).toBe('learn/ai-chat');
     expect(routes.some((route) => route.path === wildcard?.redirectTo)).toBe(true);
   });
 });
