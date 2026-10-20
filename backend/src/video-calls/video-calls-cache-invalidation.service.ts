@@ -149,16 +149,16 @@ export class VideoCallsCacheInvalidationService {
     try {
       // ⚡ Bolt Optimization: Bulk cache invalidation via Promise.all
       // Eliminates N sequential roundtrips by grouping Redis operations concurrently
-      const deletionResults = await Promise.all(
-        VIDEO_CLASSROOM_CACHE_PATTERNS.map((pattern) => {
+      const deletionResults = await Promise.all(        VIDEO_CLASSROOM_CACHE_PATTERNS.map((pattern) => {
           if (pattern.endsWith(':*')) {
             const prefix = pattern.slice(0, -2);
             return this.deleteByScan(redis, prefix);
+          } else {
+            return redis.del(pattern);
           }
-          return redis.del(pattern);
         }),
       );
-
+      const totalDeleted = results.reduce((sum, count) => sum + count, 0);
       const totalDeleted = deletionResults.reduce((acc, curr) => acc + curr, 0);
       if (totalDeleted > 0) {
         this.logger.log(

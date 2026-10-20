@@ -183,6 +183,9 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
+**Learning:** In the backend `video-calls-cache-invalidation.service.ts`, the `invalidateAllVideoClassroomCaches` method sequentially iterated over cache patterns invoking `deleteByScan` or `redis.del` using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during bulk cache invalidation, unnecessarily stalling the event loop and compounding network latency.
+**Action:** When invalidating multiple independent cache keys or patterns within a method, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
 
 ## 2026-08-26 - [Optimize sequential LLM calls via bounded concurrent chunking]
 **Learning:** Generating daily tips iteratively inside a loop causes compounding network delays, particularly when waiting sequentially on the LLM proxy.
