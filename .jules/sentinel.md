@@ -111,6 +111,13 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-09-10 - Replace blocking Redis KEYS with SCAN
+
+**Vulnerability:** A blocking `KEYS` command was used in `SafetyCacheInvalidationService` to delete cache keys for recommendations and login history, posing a Denial of Service (DoS) risk by blocking the event loop on larger instances.
+**Learning:** Using `KEYS` in production can quickly cause performance degradation and denial-of-service in an application because it executes as a single, O(N) command blocking the Redis event loop for other concurrent operations.
+**Prevention:** Avoid `KEYS` commands in all production code paths, always use non-blocking iterator commands like `SCAN`, iterating over the dataset in batches.
+
 ## 2024-05-18 - Missing IDOR Check on Audio Intro Update
 **Vulnerability:** The `/audio-intro/:userId` PATCH endpoint lacked an authorization check to verify that the authenticated user's ID matched the requested `:userId` parameter, allowing any authenticated user to overwrite another user's audio intro.
 **Learning:** Even when `SupabaseAuthGuard` is present to ensure authentication, we must explicitly verify authorization (ownership) for parameterized endpoints using `@Req() req: { user: { id: string } }` or `@CurrentUser()`.
@@ -242,6 +249,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
