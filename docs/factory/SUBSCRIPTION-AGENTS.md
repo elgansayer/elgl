@@ -99,8 +99,8 @@ sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
 The production entry uses `command=agy`, `cli_variant=antigravity`, and the account-visible
-`model=gemini-3.1-pro-high` slug verified on 17 August 2026. The adapter passes the prompt on stdin, disables
-slash-command expansion, selects high effort, bounds print mode, enables the CLI sandbox, and auto-approves tool
+`model=gemini-3.8-flash-high` slug verified on 16 October 2026. The adapter passes the prompt in the argument
+vector, disables slash-command expansion, selects the model's encoded effort tier, bounds print mode, and auto-approves tool
 requests inside the Factory-controlled worktree. The outer Factory process runner still owns the final timeout
 and process-group termination. Recheck `agy models` before enabling Google because account entitlements can differ.
 

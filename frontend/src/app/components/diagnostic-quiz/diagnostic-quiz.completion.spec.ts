@@ -121,17 +121,17 @@ describe('DiagnosticQuizComponent completion contract', () => {
     const progress = fixture.nativeElement.querySelector('[role="progressbar"]');
 
     expect(component.currentQuestionNumber()).toBe(1);
-    expect(component.progressPercentage()).toBe(0);
+    expect(component.progressPercentage()).toBe(50);
     expect(progress.getAttribute('aria-valuemin')).toBe('0');
     expect(progress.getAttribute('aria-valuemax')).toBe('100');
-    expect(progress.getAttribute('aria-valuenow')).toBe('0');
+    expect(progress.getAttribute('aria-valuenow')).toBe('50');
 
     component.selectOption('q1', 'high');
     component.next();
     fixture.detectChanges();
 
     expect(component.currentQuestionNumber()).toBe(2);
-    expect(component.progressPercentage()).toBe(50);
-    expect(progress.getAttribute('aria-valuenow')).toBe('50');
+    expect(component.progressPercentage()).toBe(100);
+    expect(progress.getAttribute('aria-valuenow')).toBe('100');
   });
 });
