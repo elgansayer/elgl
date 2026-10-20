@@ -20,6 +20,47 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-07 - [Parallelize Multiple Redis Cache Invalidations in NestJS Services]
+**Learning:** Sequential `await` calls for independent `invalidateCache` methods in mutative admin API routes create unnecessary additive latency during actions like blocking or warning users, degrading performance.
+**Action:** Group independent, concurrent cache invalidations (e.g., user lists, blocks, login history) into a single `Promise.all` array to execute them in parallel and reduce request roundtrip times.
+
+## 2026-09-08 - [Memoize Chat Message Ownership]
+
+**Learning:** Angular 22 already uses its signal-aware change detection strategy by default, so explicit `OnPush` metadata is redundant. The chat message template reads message ownership repeatedly for layout, colour, bubble-tail, and delivery-state bindings, making that derived value a better optimization target.
+**Action:** Keep Angular's framework default and express repeatedly consumed derived template state as a `computed()` signal so it is cached until its signal dependencies change. Remove unused computed values so they do not expand the component's reactive API.
+
+## 2026-09-08 - [Batch Archive Cleanup Queries with Promise.allSettled]
+
+**Learning:** Sequential awaits in GDPR archive cleanup add storage and database latency, while unbounded fan-out can overload Supabase and amplify provider failures.
+**Action:** Process archive cleanup in bounded `Promise.allSettled` chunks. Preserve partial progress and report only privacy-safe aggregate failure counts.
+
+
+## 2026-09-09 - [Redis Invalidation DoS Fix]
+**Learning:** This codebase uses Redis cache tags and user lists. Using `redis.keys` with wildcards like `admin:users:list:*` runs blocking `KEYS` command which can freeze the Redis event loop, creating a DoS vulnerability or scaling bottleneck as the key count grows.
+**Action:** Always prefer `redis.scan` with `MATCH` using a cursor when invalidating or listing wildcard keys in Redis for scalable cache evictions.
+
+## 2026-09-15 - [Track Angular Loops by ID & Use OnPush]
+**Learning:** In Angular frontend components with frequent array updates (like real-time chat lists or messages), iterating with `@for (item of items(); track item)` tracks by object reference. When the array is replaced or items are updated immutably, Angular destroys and recreates the DOM elements, causing severe jank. Additionally, without `ChangeDetectionStrategy.OnPush`, Angular checks the entire component tree on every tick. Unawaited async tasks (like `void this.chatService.markMessageStatus`) are inherently non-blocking and do not suffer from sequential N+1 latency, so wrapping them in `Promise.all` is redundant.
+**Action:** Always use `track item.id` in `@for` loops to track by unique identifier. Apply `ChangeDetectionStrategy.OnPush` to components using Signals to prevent unnecessary re-renders. Avoid attempting to batch naturally concurrent unawaited operations.
+
+## 2024-05-18 - Missing Component Tests Force Slower Full Suite Testing
+**Learning:** Some heavily integrated UI components (like `chat-view.component.ts`) in this architecture completely lack dedicated unit tests. If you modify them during optimization passes, you cannot rely on targeted `--include` runs and are forced to execute the entire frontend test suite, which can be computationally expensive (90s+).
+**Action:** When scoping daily performance improvements in `chat-view`, anticipate a longer verification cycle. Future performance work might benefit from first refactoring and decoupling these heavy components to make localized testing feasible before optimizing their internals.
+
+
+## 2026-09-19 - [Optimize Angular @for loops with tracking by unique identifier]
+**Learning:** In the Angular frontend components (like `frontend/src/app/pages/chat/chat-page.component.ts`), using `@for` with object reference tracking (e.g. `track room` or `track msg`) causes unnecessary DOM recreations during state updates.
+**Action:** When optimizing Angular `@for` loops, always track items by their unique identifiers (e.g., `track item.id`) instead of object references to prevent unnecessary DOM re-renders and improve frontend performance.
+
+## 2026-09-19 - Avoid modifying `package-lock.json` unless explicitly resolving local dependencies
+**Learning:** Running `npm install` blindly, especially when Node.js versions mismatch (`nvm` not being set up by default), can strip out critical native or optional dependencies (like `sass-embedded`) from `package-lock.json`, breaking the build and introducing massive diff noise.
+**Action:** Always prefer `git restore --staged package-lock.json && git checkout package-lock.json` if a lockfile modification was inadvertently made while trying to resolve local missing dependencies or tools. Never commit `package-lock.json` updates without explicit instructions when making purely frontend component changes.
+
+## 2026-08-29 - [Optimize Angular @for loops with track .id]
+**Learning:** Tracking whole object references in Angular `@for` loops (e.g., `track msg` or `track room`) causes the framework to recreate DOM elements unnecessarily when the object reference changes (e.g., during state updates like appending a message).
+**Action:** Always use unique primitive identifiers like `track item.id` in `@for` loops for collections that update frequently.
+
 ## 2026-08-30 - [Optimize Angular @for Loops]
 **Learning:** In Angular 17+, using `@for` with `track item` where `item` is an object reference (e.g., `track room` or `track msg`) causes Angular to recreate the DOM nodes if the array is replaced with new object references, even if the actual item IDs are the same. This can lead to significant rendering jank in active views like chat lists or message histories where updates arrive via websockets.
 **Action:** Always track by a unique primitive identifier (e.g., `track room.id`) in `@for` loops to preserve DOM state across reference-breaking state updates.
@@ -395,6 +436,15 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
+
+
+
+
+
+
+
+
 
 
 

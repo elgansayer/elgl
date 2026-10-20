@@ -111,6 +111,34 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-09-07 - [Strict Secrets Validation in Production for VideoCallsService]
+
+**Vulnerability:** The VideoCallsService lacked strict environment secret validation, allowing it to potentially use default or known test keys for `LIVEKIT_API_KEY` and `LIVEKIT_SECRET` in a production environment if misconfigured.
+**Learning:** Services like audio rooms and general calls successfully fail-fast when encountering these known test keys. Video calls bypassed this explicit validation, representing a critical risk of silent insecure fallback.
+**Prevention:** Always apply strict fail-fast validation checks where `NODE_ENV === 'production'` alongside explicit validation for known development fallback credentials directly within the initialization.
+
+
+## 2026-09-09 - [Strict Secrets Validation for Video Calls]
+**Vulnerability:** LiveKit `LIVEKIT_API_KEY` and `LIVEKIT_SECRET` defaulted to insecure test values if missing in production within the VideoCallsService.
+**Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
+
+## 2026-09-10 - Replace blocking Redis KEYS with SCAN
+
+**Vulnerability:** A blocking `KEYS` command was used in `SafetyCacheInvalidationService` to delete cache keys for recommendations and login history, posing a Denial of Service (DoS) risk by blocking the event loop on larger instances.
+**Learning:** Using `KEYS` in production can quickly cause performance degradation and denial-of-service in an application because it executes as a single, O(N) command blocking the Redis event loop for other concurrent operations.
+**Prevention:** Avoid `KEYS` commands in all production code paths, always use non-blocking iterator commands like `SCAN`, iterating over the dataset in batches.
+
+## 2024-05-18 - Missing IDOR Check on Audio Intro Update
+**Vulnerability:** The `/audio-intro/:userId` PATCH endpoint lacked an authorization check to verify that the authenticated user's ID matched the requested `:userId` parameter, allowing any authenticated user to overwrite another user's audio intro.
+**Learning:** Even when `SupabaseAuthGuard` is present to ensure authentication, we must explicitly verify authorization (ownership) for parameterized endpoints using `@Req() req: { user: { id: string } }` or `@CurrentUser()`.
+**Prevention:** Always extract the authenticated user's ID and explicitly compare it against path parameters that identify resources, throwing a `ForbiddenException` if they do not match.
+
+## 2025-01-07 - Insecure Direct Object Reference (IDOR) in AudioIntroController
+**Vulnerability:** The PATCH `/audio-intro/:userId` endpoint allowed users to modify the audio intro of other users because it did not check if the authenticated user matched the requested `userId`.
+**Learning:** This vulnerability existed due to the assumption that since `SupabaseAuthGuard` is present, the request is secure. We need to explicitly check that the parameter ID and the authenticated user ID match when a request tries to mutate data associated with a specific user.
+**Prevention:** Always extract the user's ID via `@Req() req: { user: { id: string } }` (provided by `SupabaseAuthGuard`) and explicitly throw a `ForbiddenException` from `@nestjs/common` if it does not match the requested `userId`.
+
 ## 2024-05-18 - Fix IDOR in audio-intro update endpoint
 **Vulnerability:** Insecure Direct Object Reference (IDOR) in the `audio-intro` update endpoint allowing any authenticated user to update another user's audio intro.
 **Learning:** Some endpoints missed validating the requested `userId` parameter against the authenticated user's ID (`req.user.id`) provided by the `SupabaseAuthGuard`.
@@ -232,6 +260,11 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
+
+
+
+
 
 
 
