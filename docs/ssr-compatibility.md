@@ -235,9 +235,9 @@ Avoid:
 
 ```html
 @if (isBrowser) {
-  <button>...</button>
+<button>...</button>
 } @else {
-  <div>...</div>
+<div>...</div>
 }
 ```
 
@@ -269,7 +269,7 @@ The initial document must remain usable in:
 - LTR;
 - RTL.
 
-Do not create separate server theme classes with hard-coded colors. Relay semantic roles remain authoritative.
+Do not create separate server theme classes with hard-coded colours. Relay semantic roles remain authoritative.
 
 Where the server cannot know a browser-only preference, choose a deterministic safe initial state and transition without duplicating product DOM. Any anti-flash bootstrap in `index.html` must remain tiny, defensive, and free of private data.
 

@@ -82,9 +82,9 @@ Unchanged - Tailwind's stock 0.25rem-based scale.
 
 ## Shadow & Motion
 
-- **shadow-card:** `0 1px 2px rgb(var(--shadow-color-rgb) / 0.04), 0 4px 14px rgb(var(--shadow-color-rgb) / 0.08)`
-- **shadow-lift:** `0 12px 32px rgb(var(--shadow-color-rgb) / 0.16), 0 4px 10px rgb(var(--shadow-color-rgb) / 0.08)`
-- Both theme-aware via `--shadow-color-rgb` (near-ink in light mode, pure black in dark mode) -
+- **shadow-card:** `0 1px 2px rgb(var(--shadow-colour-rgb) / 0.04), 0 4px 14px rgb(var(--shadow-colour-rgb) / 0.08)`
+- **shadow-lift:** `0 12px 32px rgb(var(--shadow-colour-rgb) / 0.16), 0 4px 10px rgb(var(--shadow-colour-rgb) / 0.08)`
+- Both theme-aware via `--shadow-colour-rgb` (near-ink in light mode, pure black in dark mode) -
   much softer than the old heavy black-glow shadows, and nearly invisible in dark mode by design:
   dark-mode elevation reads primarily through the surface-lightness steps and a hairline border,
   not a shadow.
