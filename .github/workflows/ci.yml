@@ -7,12 +7,15 @@ on:
     branches: [main]
   merge_group:
     types: [checks_requested]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.sha }}
+  # A burst of serial Factory merges should test the newest integrated main,
+  # not consume runners validating every superseded intermediate push.
+  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -22,12 +25,20 @@ jobs:
     timeout-minutes: 5
     outputs:
       run_application: ${{ steps.impact.outputs.run_application }}
+      run_backend: ${{ steps.impact.outputs.run_backend }}
+      run_frontend: ${{ steps.impact.outputs.run_frontend }}
+      run_admin: ${{ steps.impact.outputs.run_admin }}
       run_factory: ${{ steps.impact.outputs.run_factory }}
+      run_governance: ${{ steps.impact.outputs.run_governance }}
+      run_database: ${{ steps.impact.outputs.run_database }}
     steps:
       - name: Checkout full history
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Verify impact classifier regression suite
+        run: bash scripts/classify-ci-impact.test.sh
 
       - name: Classify pull-request impact
         id: impact
@@ -35,42 +46,31 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          run_application=true
-          run_factory=true
 
           # Pushes and merge-queue candidates remain full health checks. Only PRs
-          # receive path-sensitive savings, and unknown/shared paths fail open to
-          # the full application matrix.
+          # receive path-sensitive savings. The shared classifier fails open for
+          # unknown paths and for an empty/unreadable pull-request diff.
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
-
-            run_application=false
-            while IFS= read -r path; do
-              [ -z "$path" ] && continue
-              case "$path" in
-                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
-                  ;;
-                *)
-                  run_application=true
-                  ;;
-              esac
-            done <<< "$changed"
-
-            run_factory=false
-            if grep -Eq '^(automation/|config/factory/|config/systemd/|\.github/workflows/ci\.yml$)' <<< "$changed"; then
-              run_factory=true
-            fi
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" \
+              | bash scripts/classify-ci-impact.sh "$GITHUB_OUTPUT"
+          else
+            {
+              echo "run_application=true"
+              echo "run_backend=true"
+              echo "run_frontend=true"
+              echo "run_admin=true"
+              echo "run_factory=true"
+              echo "run_governance=true"
+              echo "run_database=true"
+            } >> "$GITHUB_OUTPUT"
+            echo "Application verification required: true"
+            echo "Factory verification required: true"
           fi
 
-          echo "run_application=$run_application" >> "$GITHUB_OUTPUT"
-          echo "run_factory=$run_factory" >> "$GITHUB_OUTPUT"
-          echo "Application verification required: $run_application"
-          echo "Factory verification required: $run_factory"
-
-  application-checks:
-    name: ${{ matrix.directory }} / ${{ matrix.check }}
+  backend-checks:
+    name: backend / ${{ matrix.check }}
     needs: changes
-    if: needs.changes.outputs.run_application == 'true'
+    if: needs.changes.outputs.run_backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -79,36 +79,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - directory: backend
-            check: lint
+          - check: lint
             command: npm run lint:check
-          - directory: backend
-            check: build
+          - check: build
             command: npm run build
-          - directory: backend
-            check: unit
+          - check: unit
             command: mkdir -p test-results && npm run test:cov -- --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/unit.json
-          - directory: backend
-            check: e2e
+          - check: e2e
             command: mkdir -p test-results && npm run test:e2e -- --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/e2e.json
-          - directory: frontend
-            check: static-analysis
-            command: npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run lint:check
-          - directory: frontend
-            check: build
-            command: npm run build
-          - directory: frontend
-            check: unit
-            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
-          - directory: admin-portal
-            check: lint
-            command: npm run lint:check
-          - directory: admin-portal
-            check: build
-            command: npm run build
-          - directory: admin-portal
-            check: unit
-            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -118,21 +96,21 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: ${{ matrix.directory }}/package-lock.json
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
-        working-directory: ${{ matrix.directory }}
+        working-directory: backend
 
       - name: Run ${{ matrix.check }}
         id: application-check
         run: ${{ matrix.command }}
-        working-directory: ${{ matrix.directory }}
+        working-directory: backend
 
       - name: Summarize application check
         if: always()
         env:
-          CHECK_DIRECTORY: ${{ matrix.directory }}
+          CHECK_DIRECTORY: backend
           CHECK_NAME: ${{ matrix.check }}
           CHECK_OUTCOME: ${{ steps.application-check.outcome }}
         run: |
@@ -180,8 +158,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload backend coverage
-        if: success() && matrix.directory == 'backend' && matrix.check == 'unit'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: success() && matrix.check == 'unit'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: backend-coverage-${{ github.sha }}
           path: backend/coverage
@@ -189,26 +167,85 @@ jobs:
           retention-days: 14
 
       - name: Upload failed backend test report
-        if: failure() && matrix.directory == 'backend' && (matrix.check == 'unit' || matrix.check == 'e2e')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure() && (matrix.check == 'unit' || matrix.check == 'e2e')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: backend-${{ matrix.check }}-failure-report-${{ github.sha }}
           path: backend/test-results/${{ matrix.check }}.json
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload failed frontend unit report
-        if: failure() && matrix.directory == 'frontend' && matrix.check == 'unit'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  frontend-checks:
+    name: frontend / ${{ matrix.check }}
+    needs: changes
+    if: needs.changes.outputs.run_frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: static-analysis
+            command: npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run lint:check
+          - check: build
+            command: npm run build
+          - check: unit
+            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies without Cypress binary
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+        run: npm ci --legacy-peer-deps
+        working-directory: frontend
+      - name: Run ${{ matrix.check }}
+        run: ${{ matrix.command }}
+        working-directory: frontend
+      - name: Upload failed unit report
+        if: failure() && matrix.check == 'unit'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: frontend-unit-failure-report-${{ github.sha }}
           path: frontend/test-results/unit.json
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload failed admin portal unit report
-        if: failure() && matrix.directory == 'admin-portal' && matrix.check == 'unit'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  admin-checks:
+    name: admin-portal / ${{ matrix.check }}
+    needs: changes
+    if: needs.changes.outputs.run_admin == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: lint
+            command: npm run lint:check
+          - check: build
+            command: npm run build
+          - check: unit
+            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: admin-portal/package-lock.json
+      - run: npm ci --legacy-peer-deps
+        working-directory: admin-portal
+      - name: Run ${{ matrix.check }}
+        run: ${{ matrix.command }}
+        working-directory: admin-portal
+      - name: Upload failed unit report
+        if: failure() && matrix.check == 'unit'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: admin-portal-unit-failure-report-${{ github.sha }}
           path: admin-portal/test-results/unit.json
@@ -216,6 +253,8 @@ jobs:
           retention-days: 14
 
   constitution:
+    needs: changes
+    if: needs.changes.outputs.run_governance == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -230,6 +269,7 @@ jobs:
       - run: npm run check:constitution
       - run: npm run check:agent-ui-governance
       - run: npm run check:design-sync
+      - run: npm run check:design-coverage
       - name: Enforce Spartan ownership boundaries
         env:
           SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
@@ -241,7 +281,7 @@ jobs:
           npm run check:spartan-full-tree 2>&1 | tee test-results/spartan-full-tree.txt
       - name: Upload full-tree Spartan failure report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: spartan-full-tree-failure-${{ github.sha }}
           path: test-results/spartan-full-tree.txt
@@ -268,6 +308,8 @@ jobs:
 
   database:
     name: database / clean-reset
+    needs: changes
+    if: needs.changes.outputs.run_database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -354,7 +396,7 @@ jobs:
 
       - name: Upload Supabase startup failure log
         if: failure() && steps.changes.outputs.run_database == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: supabase-start-failure-${{ github.sha }}
           path: test-results/supabase-start.log
@@ -368,9 +410,52 @@ jobs:
       - name: Generate schema-derived TypeScript evidence
         if: steps.changes.outputs.run_database == 'true'
         run: |
-          npx --yes supabase@2.114.0 gen types typescript --local > test-results/database.types.ts
-          test -s test-results/database.types.ts
-          grep -q 'export type Database' test-results/database.types.ts
+          set -euo pipefail
+          max_attempts=3
+          postgres_meta_version="v0.97.0"
+          for attempt in $(seq 1 "$max_attempts"); do
+            attempt_log="test-results/supabase-typegen-attempt-${attempt}.log"
+            attempt_output="test-results/database.types.attempt-${attempt}.ts"
+            echo "Supabase type generation attempt ${attempt}/${max_attempts}"
+
+            if npx --yes supabase@2.114.0 gen types typescript --local > "$attempt_output" 2> "$attempt_log"; then
+              if ! test -s "$attempt_output" || ! grep -q 'export type Database' "$attempt_output"; then
+                echo "Supabase type generation returned malformed output; refusing to retry."
+                cat "$attempt_log"
+                exit 1
+              fi
+              mv "$attempt_output" test-results/database.types.ts
+              exit 0
+            fi
+
+            cat "$attempt_log"
+            rm -f "$attempt_output"
+
+            # The pinned Supabase CLI fetches postgres-meta from public ECR.
+            # Its anonymous data quota is occasionally exhausted for GitHub
+            # runners. Supabase publishes the byte-identical multi-arch image
+            # on GHCR, so seed the expected local tag before retrying.
+            if grep -Fq 'public.ecr.aws/supabase/postgres-meta' "$attempt_log" \
+              && grep -Eiq 'toomanyrequests|data limit exceeded' "$attempt_log"; then
+              mirror_image="ghcr.io/supabase/postgres-meta:${postgres_meta_version}"
+              expected_image="public.ecr.aws/supabase/postgres-meta:${postgres_meta_version}"
+              echo "Public ECR quota exhausted; seeding $expected_image from Supabase GHCR mirror."
+              docker pull "$mirror_image"
+              docker tag "$mirror_image" "$expected_image"
+            fi
+
+            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+              echo "Non-transient Supabase type-generation failure detected; refusing to retry."
+              exit 1
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Supabase type generation failed after ${max_attempts} transient attempts."
+              exit 1
+            fi
+
+            sleep $((attempt * 20))
+          done
 
       - name: Enforce generated Supabase type drift baseline
         if: steps.changes.outputs.run_database == 'true'
@@ -389,7 +474,7 @@ jobs:
 
       - name: Upload clean-database evidence
         if: steps.changes.outputs.run_database == 'true' && success()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: supabase-clean-reset-evidence-${{ github.sha }}
           path: |
@@ -413,7 +498,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Setup uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: '0.12.5'
           enable-cache: true
@@ -433,18 +518,24 @@ jobs:
   required-gate:
     name: CI / required
     if: always()
-    needs: [changes, application-checks, constitution, database, factory]
+    needs: [changes, backend-checks, frontend-checks, admin-checks, constitution, database, factory]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Summarize canonical CI groups
         env:
           IMPACT_RESULT: ${{ needs.changes.result }}
-          APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
+          BACKEND_RESULT: ${{ needs.backend-checks.result }}
+          FRONTEND_RESULT: ${{ needs.frontend-checks.result }}
+          ADMIN_RESULT: ${{ needs.admin-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
-          RUN_APPLICATION: ${{ needs.changes.outputs.run_application }}
+          RUN_BACKEND: ${{ needs.changes.outputs.run_backend }}
+          RUN_FRONTEND: ${{ needs.changes.outputs.run_frontend }}
+          RUN_ADMIN: ${{ needs.changes.outputs.run_admin }}
+          RUN_GOVERNANCE: ${{ needs.changes.outputs.run_governance }}
+          RUN_DATABASE: ${{ needs.changes.outputs.run_database }}
           RUN_FACTORY: ${{ needs.changes.outputs.run_factory }}
         run: |
           group_ok() {
@@ -459,9 +550,11 @@ jobs:
 
           failed=0
           [ "$IMPACT_RESULT" = "success" ] || failed=$((failed + 1))
-          group_ok "$APPLICATION_CHECKS_RESULT" "$RUN_APPLICATION" || failed=$((failed + 1))
-          group_ok "$CONSTITUTION_RESULT" true || failed=$((failed + 1))
-          group_ok "$DATABASE_RESULT" true || failed=$((failed + 1))
+          group_ok "$BACKEND_RESULT" "$RUN_BACKEND" || failed=$((failed + 1))
+          group_ok "$FRONTEND_RESULT" "$RUN_FRONTEND" || failed=$((failed + 1))
+          group_ok "$ADMIN_RESULT" "$RUN_ADMIN" || failed=$((failed + 1))
+          group_ok "$CONSTITUTION_RESULT" "$RUN_GOVERNANCE" || failed=$((failed + 1))
+          group_ok "$DATABASE_RESULT" "$RUN_DATABASE" || failed=$((failed + 1))
           group_ok "$FACTORY_RESULT" "$RUN_FACTORY" || failed=$((failed + 1))
 
           {
@@ -470,9 +563,11 @@ jobs:
             echo "| Group | Required for this PR | Result |"
             echo "| --- | --- | --- |"
             echo "| impact-classification | true | $IMPACT_RESULT |"
-            echo "| application-checks | $RUN_APPLICATION | $APPLICATION_CHECKS_RESULT |"
-            echo "| constitution | true | $CONSTITUTION_RESULT |"
-            echo "| database | true | $DATABASE_RESULT |"
+            echo "| backend | $RUN_BACKEND | $BACKEND_RESULT |"
+            echo "| frontend | $RUN_FRONTEND | $FRONTEND_RESULT |"
+            echo "| admin | $RUN_ADMIN | $ADMIN_RESULT |"
+            echo "| constitution | $RUN_GOVERNANCE | $CONSTITUTION_RESULT |"
+            echo "| database | $RUN_DATABASE | $DATABASE_RESULT |"
             echo "| factory | $RUN_FACTORY | $FACTORY_RESULT |"
             echo
             echo "Failing canonical groups: **$failed**"
@@ -481,11 +576,17 @@ jobs:
       - name: Require every relevant canonical CI group to pass
         env:
           IMPACT_RESULT: ${{ needs.changes.result }}
-          APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
+          BACKEND_RESULT: ${{ needs.backend-checks.result }}
+          FRONTEND_RESULT: ${{ needs.frontend-checks.result }}
+          ADMIN_RESULT: ${{ needs.admin-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
-          RUN_APPLICATION: ${{ needs.changes.outputs.run_application }}
+          RUN_BACKEND: ${{ needs.changes.outputs.run_backend }}
+          RUN_FRONTEND: ${{ needs.changes.outputs.run_frontend }}
+          RUN_ADMIN: ${{ needs.changes.outputs.run_admin }}
+          RUN_GOVERNANCE: ${{ needs.changes.outputs.run_governance }}
+          RUN_DATABASE: ${{ needs.changes.outputs.run_database }}
           RUN_FACTORY: ${{ needs.changes.outputs.run_factory }}
         run: |
           group_ok() {
@@ -500,17 +601,21 @@ jobs:
 
           failed=0
           [ "$IMPACT_RESULT" = "success" ] || failed=1
-          group_ok "$APPLICATION_CHECKS_RESULT" "$RUN_APPLICATION" || failed=1
-          group_ok "$CONSTITUTION_RESULT" true || failed=1
-          group_ok "$DATABASE_RESULT" true || failed=1
+          group_ok "$BACKEND_RESULT" "$RUN_BACKEND" || failed=1
+          group_ok "$FRONTEND_RESULT" "$RUN_FRONTEND" || failed=1
+          group_ok "$ADMIN_RESULT" "$RUN_ADMIN" || failed=1
+          group_ok "$CONSTITUTION_RESULT" "$RUN_GOVERNANCE" || failed=1
+          group_ok "$DATABASE_RESULT" "$RUN_DATABASE" || failed=1
           group_ok "$FACTORY_RESULT" "$RUN_FACTORY" || failed=1
 
           if [ "$failed" -ne 0 ]; then
             echo "Canonical CI did not fully pass for the relevant change groups."
             echo "impact-classification=$IMPACT_RESULT required=true"
-            echo "application-checks=$APPLICATION_CHECKS_RESULT required=$RUN_APPLICATION"
-            echo "constitution=$CONSTITUTION_RESULT required=true"
-            echo "database=$DATABASE_RESULT required=true"
+            echo "backend=$BACKEND_RESULT required=$RUN_BACKEND"
+            echo "frontend=$FRONTEND_RESULT required=$RUN_FRONTEND"
+            echo "admin=$ADMIN_RESULT required=$RUN_ADMIN"
+            echo "constitution=$CONSTITUTION_RESULT required=$RUN_GOVERNANCE"
+            echo "database=$DATABASE_RESULT required=$RUN_DATABASE"
             echo "factory=$FACTORY_RESULT required=$RUN_FACTORY"
             exit 1
           fi

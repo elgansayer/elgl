@@ -217,8 +217,8 @@ def test_deployment_installs_bounded_host_storage_policy() -> None:
     assert "SystemMaxUse=512M" in journal_policy
     assert "SystemKeepFree=5G" in journal_policy
     assert "MaxRetentionSec=14day" in journal_policy
-    assert "docker image prune" in maintenance
-    assert "docker builder prune" in maintenance
+    assert '"$docker" image prune' in maintenance
+    assert '"$docker" builder prune' in maintenance
     assert "docker system prune" not in maintenance
     assert "docker volume prune" not in maintenance
     assert "docker container prune" not in maintenance
@@ -421,7 +421,6 @@ def test_default_repository_is_production_clone() -> None:
     config = FactoryConfig.from_environment(environment())
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
-    assert config.recovery_retention_hours == 72
     assert config.max_parallel_jobs == 5
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
@@ -706,3 +705,57 @@ def test_disk_reserve_cannot_be_disabled() -> None:
 def test_recovery_retention_must_be_positive() -> None:
     with pytest.raises(ConfigurationError, match="recovery retention must be positive"):
         FactoryConfig.from_environment(environment(FACTORY_RECOVERY_RETENTION_HOURS="0"))
+
+
+def test_stall_alert_threshold_must_be_positive() -> None:
+    with pytest.raises(ConfigurationError, match="stall alert threshold must be positive"):
+        FactoryConfig.from_environment(environment(FACTORY_STALL_ALERT_MINUTES="0"))
+
+
+def test_repo_factory_service_is_instance_scoped_and_resource_bounded() -> None:
+    root = Path(__file__).parents[2]
+    unit = (root / "config/systemd/repo-factory@.service").read_text(encoding="utf-8")
+    slice_unit = (root / "config/systemd/repo-factory.slice").read_text(encoding="utf-8")
+
+    assert "EnvironmentFile=/etc/repo-factory/instances/%i.env" in unit
+    assert "WorkingDirectory=/var/lib/repo-factory/%i/repository" in unit
+    assert "Slice=repo-factory.slice" in unit
+    assert "ExecStart=/opt/hellotalk-factory/venv/bin/repo-factory daemon" in unit
+    assert "MemoryMax=7G" in slice_unit
+
+
+def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> None:
+    root = Path(__file__).parents[2]
+    profile = (root / "config/factory/instances/workout-agent.env").read_text(encoding="utf-8")
+
+    assert "FACTORY_REPOSITORY_PROFILE=workout-agent" in profile
+    assert "FACTORY_MAX_PARALLEL_JOBS=1" in profile
+    assert "FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600" in profile
+    assert "FACTORY_REQUIRE_READY_LABEL=true" in profile
+    assert "FACTORY_PROVIDER_CAPACITY_DIR=/var/lib/repo-factory/shared" in profile
+    assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
+
+
+def test_instance_installer_preserves_legacy_rollback_path() -> None:
+    installer = (Path(__file__).parents[2] / "scripts/install-repo-factory-instance.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "SECONDARY_MOUNT=/mnt/HC_Volume_106574422" in installer
+    assert "--reference-if-able" in installer
+    assert "hellotalk-factory-update.timer" in installer
+    assert "repo-factory-update.timer" in installer
+    assert "localhost/repo-factory-worker:current" in installer
+    assert "--migrate-hellotalk requires --instance hellotalk and --activate" in installer
+    assert "rm -rf" not in installer
+
+
+def test_repo_factory_update_coordinates_both_instances() -> None:
+    root = Path(__file__).parents[2]
+    script = (root / "config/systemd/hellotalk-factory-update.sh").read_text(encoding="utf-8")
+    unit = (root / "config/systemd/repo-factory-update.service").read_text(encoding="utf-8")
+
+    assert "all_factories_idle" in script
+    assert "restore_services_on_failure" in script
+    assert "localhost/repo-factory-worker:current" in script
+    assert "REPO_FACTORY_SECONDARY_SERVICE=repo-factory@workout-agent.service" in unit

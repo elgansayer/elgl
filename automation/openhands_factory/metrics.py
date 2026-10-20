@@ -78,6 +78,17 @@ class MetricsStore:
                     capacity_waited_calls=int(item.get("capacity_waited_calls", 0)),
                     estimated_cost_usd=float(item.get("estimated_cost_usd", 0)),
                     unknown_cost_calls=int(item.get("unknown_cost_calls", 0)),
+                    prompt_measured_calls=max(int(item.get("prompt_measured_calls", 0)), 0),
+                    total_request_prompt_chars=max(
+                        int(item.get("total_request_prompt_chars", 0)), 0
+                    ),
+                    max_request_prompt_chars=max(int(item.get("max_request_prompt_chars", 0)), 0),
+                    output_measured_calls=max(int(item.get("output_measured_calls", 0)), 0),
+                    total_captured_output_chars=max(
+                        int(item.get("total_captured_output_chars", 0)), 0
+                    ),
+                    max_captured_output_chars=max(int(item.get("max_captured_output_chars", 0)), 0),
+                    output_truncated_calls=max(int(item.get("output_truncated_calls", 0)), 0),
                     failure_counts=_restore_failure_counts(item.get("failure_counts")),
                 )
             except (TypeError, ValueError):
@@ -114,6 +125,9 @@ class MetricsStore:
         capacity_wait_seconds: float = 0,
         estimated_cost_usd: float | None = None,
         failure_kind: str | None = None,
+        request_prompt_chars: int | None = None,
+        captured_output_chars: int | None = None,
+        output_truncated: bool | None = None,
     ) -> None:
         provider_name = self._provider_name(provider)
         with self.lock:
@@ -138,6 +152,23 @@ class MetricsStore:
                 usage.unknown_cost_calls += 1
             else:
                 usage.estimated_cost_usd += estimated_cost_usd
+            if request_prompt_chars is not None:
+                measured_prompt_chars = max(request_prompt_chars, 0)
+                usage.prompt_measured_calls += 1
+                usage.total_request_prompt_chars += measured_prompt_chars
+                usage.max_request_prompt_chars = max(
+                    usage.max_request_prompt_chars,
+                    measured_prompt_chars,
+                )
+            if captured_output_chars is not None:
+                measured_output_chars = max(captured_output_chars, 0)
+                usage.output_measured_calls += 1
+                usage.total_captured_output_chars += measured_output_chars
+                usage.max_captured_output_chars = max(
+                    usage.max_captured_output_chars,
+                    measured_output_chars,
+                )
+                usage.output_truncated_calls += int(output_truncated is True)
             if not successful and failure_kind:
                 usage.failure_counts[failure_kind] = usage.failure_counts.get(failure_kind, 0) + 1
             atomic_write_json(

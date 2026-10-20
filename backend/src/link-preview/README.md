@@ -24,14 +24,13 @@ Returns a `LinkPreview` object:
 }
 ```
 
-When the scraped page exposes no title, description or safe image, the endpoint
+When the scraped page exposes no title, description or image, the endpoint
 returns `null`.
 
 ## How it works
 
 1. **URL validation:** only `http` and `https` protocols on the default ports
-   are accepted; embedded credentials, private literal hosts, localhost,
-   overlong URLs and custom ports are rejected.
+   are accepted; embedded credentials and custom ports are rejected.
 2. **SSRF protection:** every DNS lookup is wrapped in `safeLookup`, which
    rejects private, loopback, link-local and reserved addresses (see
    `ip-guard.ts`) before the request is sent.
@@ -53,6 +52,13 @@ returns `null`.
    non-reversible URL fingerprint. Full URLs, query strings and raw upstream
    error messages are not written to application logs.
 
+5. **Sanitisation:** scraped strings are run through a strict DOMPurify
+   configuration that allows no tags and no attributes, so page content can
+   never inject markup or scripts.
+6. **Caching:** successful previews are cached in Redis under
+   `link_preview:<url>` for one hour.
+
+
 ## Integration
 
 `ChatService.sendMessage` calls `LinkPreviewService.getPreview` for the first
@@ -67,6 +73,9 @@ render normally.
 Preview scraping is best effort for chat delivery. A cache outage does not
 prevent a fresh scrape, while invalid/unreachable external URLs follow the
 existing service error contract.
+
+`ChatMessage.link_preview` field.
+
 
 ## Tests
 
@@ -84,3 +93,9 @@ existing service error contract.
 The change is application-only and has no schema migration. A rollback can
 revert the service/tests/documentation commit. Redis entries using the `v2`
 hashed namespace naturally expire after one hour and require no cleanup.
+
+- `link-preview.service.spec.ts`: URL validation, caching, parsing,
+   sanitisation and error handling.
+- `link-preview.controller.spec.ts`: query parameter validation and service
+   delegation.
+

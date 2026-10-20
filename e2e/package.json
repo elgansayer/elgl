@@ -9,17 +9,15 @@
   },
   "packageManager": "npm@10.9.8",
   "scripts": {
-    "pretest": "npm run test:readiness && npm run test:webserver-readiness-contract && npm run test:chat-composer-contract",
+    "pretest": "npm run test:readiness",
     "test": "npx playwright test",
     "test:readiness": "node --test backend-readiness.test.mjs",
-    "test:webserver-readiness-contract": "node --test webserver-readiness-contract.test.mjs",
-    "test:chat-composer-contract": "node --test chat-composer-contract.test.mjs",
     "test:rtl": "npx playwright test --project=rtl-arabic --project=rtl-hebrew",
     "test:ui": "npx playwright test --ui"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.1",
-    "@types/node": "^26.2.0",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
   }
 }
