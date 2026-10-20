@@ -83,6 +83,12 @@ for masked_root in /mnt /srv /media; do
     /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
   fi
 done
+for container_socket in /run/containerd/containerd.sock /run/docker.sock \
+  /run/podman/podman.sock; do
+  if [ -S "$container_socket" ]; then
+    /usr/bin/mount --bind /dev/null "$container_socket"
+  fi
+done
 [ "$1" = -- ]
 shift
 
@@ -148,6 +154,7 @@ class ProcessResult:
     timed_out: bool
     output_truncated: bool
     duration_seconds: float
+    cancelled: bool = False
 
 
 @dataclass(frozen=True)
@@ -220,6 +227,7 @@ class AgentProcessRunner:
     """Run direct CLIs without a shell and terminate their process groups on stop."""
 
     _processes: ClassVar[set[subprocess.Popen[bytes]]] = set()
+    _cancelled_processes: ClassVar[set[subprocess.Popen[bytes]]] = set()
     _processes_lock = threading.Lock()
     _accepting_processes: ClassVar[bool] = True
 
@@ -340,6 +348,7 @@ class AgentProcessRunner:
     def terminate_all(cls) -> None:
         with cls._processes_lock:
             processes = tuple(cls._processes)
+            cls._cancelled_processes.update(processes)
         for process in processes:
             cls._terminate(process)
 
@@ -349,6 +358,7 @@ class AgentProcessRunner:
         with cls._processes_lock:
             cls._accepting_processes = False
             processes = tuple(cls._processes)
+            cls._cancelled_processes.update(processes)
         for process in processes:
             cls._terminate(process)
 
@@ -415,7 +425,9 @@ class AgentProcessRunner:
         capture = _CaptureBuffer(max_output_bytes)
         if process.stdout is None or process.stderr is None:
             self._terminate(process)
-            self._unregister(process)
+            with self._processes_lock:
+                self._cancelled_processes.discard(process)
+                self._processes.discard(process)
             raise RuntimeError("Agent process pipes were not created")
         readers = (
             threading.Thread(
@@ -455,7 +467,10 @@ class AgentProcessRunner:
                     process.stdin.close()
             for reader in readers:
                 reader.join(timeout=5)
-            self._unregister(process)
+            with self._processes_lock:
+                cancelled = process in self._cancelled_processes
+                self._cancelled_processes.discard(process)
+                self._processes.discard(process)
 
         exit_code = process.returncode if process.returncode is not None else 1
         if timed_out and exit_code == 0:
@@ -468,6 +483,7 @@ class AgentProcessRunner:
             timed_out=timed_out,
             output_truncated=capture.truncated,
             duration_seconds=time.monotonic() - started,
+            cancelled=cancelled,
         )
 
 
