@@ -11,7 +11,14 @@ const ACTIVE_DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_WEEK_MS = 7 * ACTIVE_DAY_MS;
 
 export type RecommendationReason =
-  'language_exchange' | 'shared_interests' | 'active_recently' | 'study_streak';
+  | 'complementary_languages'
+  | 'proficiency'
+  | 'timezone_overlap'
+  | 'interests'
+  | 'response_behaviour'
+  | 'correction_behaviour'
+  | 'learning_seriousness'
+  | 'conversation_compatibility';
 
 export interface DiscoveryRecommendationDto {
   id: string;
@@ -26,6 +33,9 @@ export interface DiscoveryRecommendationDto {
 interface CurrentUserSignals {
   nativeLanguages: string[];
   targetLanguages: string[];
+  proficiencyLevel?: string;
+  country?: string;
+  learningGoals: string[];
 }
 
 interface CandidateRow {
@@ -41,6 +51,10 @@ interface CandidateRow {
   is_serious_learner: boolean | null;
   study_streak_days: number | null;
   last_active_at: string | null;
+  correction_ratio: number | null;
+  proficiency_level: string | null;
+  country: string | null;
+  learning_goals: string | null;
 }
 
 interface InterestRow {
@@ -63,6 +77,14 @@ function normaliseLanguages(value: string[] | null | undefined): string[] {
         .map((language) => language.trim().toLowerCase())
         .filter(Boolean)
     : [];
+}
+
+function normaliseLearningGoals(value: string | null | undefined): string[] {
+  if (!value || typeof value !== 'string') return [];
+  return value
+    .split(',')
+    .map((g) => g.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 function hasOverlap(left: string[], right: string[]): boolean {
@@ -121,28 +143,52 @@ export function rankDiscoveryRecommendations(
     );
     const activityRank = getActivityRank(candidate, nowMs);
     const hasStudyStreak = (candidate.study_streak_days ?? 0) >= 7;
+    const candidateGoals = normaliseLearningGoals(candidate.learning_goals);
 
     let score = 0;
     const reasons: RecommendationReason[] = [];
 
     if (reciprocalLanguageMatch) {
       score += 50;
-      reasons.push('language_exchange');
+      reasons.push('complementary_languages');
     }
     if (sharedInterestCount > 0) {
       score += sharedInterestCount * 15;
-      reasons.push('shared_interests');
+      reasons.push('interests');
     }
     if (activityRank === 2) {
       score += 20;
-      reasons.push('active_recently');
+      reasons.push('response_behaviour');
     } else if (activityRank === 1) {
       score += 10;
-      reasons.push('active_recently');
+      reasons.push('response_behaviour');
     }
     if (hasStudyStreak || candidate.is_serious_learner === true) {
       score += 10;
-      reasons.push('study_streak');
+      reasons.push('learning_seriousness');
+    }
+    if ((candidate.correction_ratio ?? 0) >= 0.8) {
+      score += 10;
+      reasons.push('correction_behaviour');
+    }
+    if (
+      currentUser.proficiencyLevel &&
+      candidate.proficiency_level === currentUser.proficiencyLevel
+    ) {
+      score += 10;
+      reasons.push('proficiency');
+    }
+    if (
+      currentUser.country &&
+      candidate.country &&
+      candidate.country === currentUser.country
+    ) {
+      score += 10;
+      reasons.push('timezone_overlap');
+    }
+    if (hasOverlap(currentUser.learningGoals, candidateGoals)) {
+      score += 10;
+      reasons.push('conversation_compatibility');
     }
 
     if (score === 0) continue;
@@ -191,7 +237,7 @@ export class DiscoveryRecommendationsService {
 
     const { data: currentUser, error: currentUserError } = await supabase
       .from('users')
-      .select('native_languages, target_languages')
+      .select('native_languages, target_languages, proficiency_level, country, learning_goals')
       .eq('id', userId)
       .maybeSingle();
 
@@ -202,6 +248,9 @@ export class DiscoveryRecommendationsService {
     const currentSignals: CurrentUserSignals = {
       nativeLanguages: normaliseLanguages(currentUser['native_languages']),
       targetLanguages: normaliseLanguages(currentUser['target_languages']),
+      proficiencyLevel: typeof currentUser['proficiency_level'] === 'string' ? currentUser['proficiency_level'] : undefined,
+      country: typeof currentUser['country'] === 'string' ? currentUser['country'] : undefined,
+      learningGoals: normaliseLearningGoals(currentUser['learning_goals'] as string | undefined),
     };
 
     if (
@@ -211,6 +260,13 @@ export class DiscoveryRecommendationsService {
       return [];
     }
 
+    // Resolve the privacy boundary once and share the verified snapshot with
+    // the daily seed. This avoids duplicate block-table queries and guarantees
+    // every discovery tier is evaluated against the same graph.
+    const blockedIds = new Set(
+      await this.safetyService.getBlockedAndBlockerIds(userId),
+    );
+
     const candidateIds = new Set<string>();
     const sharedInterestCounts = new Map<string, number>();
 
@@ -218,8 +274,10 @@ export class DiscoveryRecommendationsService {
     // Cached profile data itself is never returned: all IDs are re-hydrated below
     // through the current privacy/deletion/block boundary before ranking.
     try {
-      const daily =
-        await this.recommendationsService.getDailyRecommendations(userId);
+      const daily = await this.recommendationsService.getDailyRecommendations(
+        userId,
+        blockedIds,
+      );
       for (const recommendation of daily.slice(0, CANDIDATE_LIMIT)) {
         if (recommendation.id && recommendation.id !== userId) {
           candidateIds.add(recommendation.id);
@@ -284,6 +342,7 @@ export class DiscoveryRecommendationsService {
           .neq('id', userId)
           .eq('privacy_hide_from_search', false)
           .eq('is_deletion_pending', false)
+          .is('scheduled_for_deletion_at', null)
           .overlaps('native_languages', currentSignals.targetLanguages)
           .overlaps('target_languages', currentSignals.nativeLanguages)
           .limit(CANDIDATE_LIMIT);
@@ -301,9 +360,6 @@ export class DiscoveryRecommendationsService {
 
     if (candidateIds.size === 0) return [];
 
-    const blockedIds = new Set(
-      await this.safetyService.getBlockedAndBlockerIds(userId),
-    );
     const boundedIds = Array.from(candidateIds)
       .filter(
         (candidateId) => candidateId !== userId && !blockedIds.has(candidateId),
@@ -315,12 +371,13 @@ export class DiscoveryRecommendationsService {
     const { data: candidates, error: candidatesError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, privacy_hide_from_search, privacy_hide_online_status, is_deletion_pending, is_deleted, is_serious_learner, study_streak_days, last_active_at',
+        'id, display_name, avatar_url, native_languages, target_languages, privacy_hide_from_search, privacy_hide_online_status, is_deletion_pending, is_deleted, is_serious_learner, study_streak_days, last_active_at, correction_ratio, proficiency_level, country, learning_goals',
       )
       .in('id', boundedIds)
       .eq('privacy_hide_from_search', false)
       .eq('is_deletion_pending', false)
       .eq('is_deleted', false)
+      .is('scheduled_for_deletion_at', null)
       .not('display_name', 'is', null)
       .not('native_languages', 'is', null)
       .not('target_languages', 'is', null)

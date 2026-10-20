@@ -1,0 +1,146 @@
+<!-- @dsCard group="Components" name="Distance slider" subtitle="Relay theme · responsive · accent-aware" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Relay - Distance slider</title>
+    <style>
+      :root {
+        --surface-100: 228 231 237;
+        --surface-500: 246 247 250;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --primary: 198 82 48;
+      }
+      .dark {
+        --surface-100: 46 52 68;
+        --surface-500: 18 21 28;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --primary: 255 122 82;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-primary));
+        font-family: system-ui, sans-serif;
+      }
+      .states {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: minmax(0, 390px) minmax(0, 720px);
+        align-items: start;
+        justify-content: center;
+      }
+      .label {
+        margin-block-end: 8px;
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .state {
+        min-inline-size: 0;
+        padding: 24px 16px;
+        border-radius: 20px;
+        background: rgb(var(--surface-500));
+      }
+      .dark {
+        color-scheme: dark;
+      }
+      .slider-label {
+        display: grid;
+        min-inline-size: 0;
+        gap: 6px;
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 20px;
+      }
+      .range-hit-area {
+        display: flex;
+        min-block-size: 44px;
+        align-items: center;
+      }
+      input[type='range'] {
+        inline-size: 100%;
+        block-size: 44px;
+        margin: 0;
+        cursor: pointer;
+        appearance: none;
+        background: transparent;
+        accent-color: rgb(var(--primary));
+      }
+      input[type='range']::-webkit-slider-runnable-track {
+        block-size: 6px;
+        border-radius: 3px;
+        background: rgb(var(--surface-100));
+      }
+      input[type='range']::-webkit-slider-thumb {
+        inline-size: 22px;
+        block-size: 22px;
+        margin-block-start: -8px;
+        border: 2px solid rgb(var(--surface-500));
+        border-radius: 50%;
+        appearance: none;
+        background: rgb(var(--primary));
+      }
+      input[type='range']::-moz-range-track {
+        block-size: 6px;
+        border-radius: 3px;
+        background: rgb(var(--surface-100));
+      }
+      input[type='range']::-moz-range-thumb {
+        inline-size: 22px;
+        block-size: 22px;
+        border: 2px solid rgb(var(--surface-500));
+        border-radius: 50%;
+        background: rgb(var(--primary));
+      }
+      input[type='range']:focus-visible {
+        outline: 3px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .long-copy {
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 900px) {
+        .states {
+          grid-template-columns: minmax(0, 390px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="states">
+      <section>
+        <div class="label">Light / 390px mobile</div>
+        <div class="state">
+          <label class="slider-label">
+            <span class="long-copy">Search radius: 50 km</span>
+            <span class="range-hit-area">
+              <input type="range" min="1" max="200" value="50" aria-label="Search radius: 50 km" />
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <div class="label">Dark / wide</div>
+        <div class="state dark">
+          <label class="slider-label">
+            <span class="long-copy">Search radius: 120 km</span>
+            <span class="range-hit-area">
+              <input type="range" min="1" max="200" value="120" aria-label="Search radius: 120 km" />
+            </span>
+          </label>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

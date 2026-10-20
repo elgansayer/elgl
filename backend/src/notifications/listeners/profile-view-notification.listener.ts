@@ -40,9 +40,16 @@ export class ProfileViewNotificationListener {
     }
 
     // Create in-app notification
-    if (shouldInApp) {
+    if (shouldInApp && payload.identityVisible) {
       await this.notificationsService
-        .createNotification(recipientId, payload.viewerId, 'profile_visit')
+        .createNotification(
+          recipientId,
+          payload.viewerId,
+          'profile_visit',
+          undefined,
+          undefined,
+          false,
+        )
         .catch((err: unknown) =>
           console.error(
             'Failed to create in-app profile view notification:',

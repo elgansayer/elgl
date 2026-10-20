@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Daily factory self-update: pull main, reinstall Python package, restart.
+# Change-aware factory self-update: refresh main, deploy changed runtime inputs.
 #
 # Safety contract:
 #   - Never restarts while active jobs are running (checked via daemon.json).
@@ -26,6 +26,7 @@ FACTORY_VENV=/opt/hellotalk-factory/venv
 RUNTIME_ROOT=/opt/hellotalk-factory
 REPO_RUNTIME_ROOT=/opt/repo-factory
 RUNTIME_SOURCE_SHA_FILE="$RUNTIME_ROOT/runtime-source.sha"
+DEPLOYED_RUNTIME_SHA_FILE="$RUNTIME_ROOT/deployed-runtime.sha"
 RUNTIME_MAINTENANCE="$RUNTIME_ROOT/scripts/maintain-factory-host-storage.sh"
 AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}
 AGENTS_CONFIG_SOURCE=config/factory/agents.production.json
@@ -50,6 +51,56 @@ if [ "$#" -gt 1 ]; then
 fi
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] factory-update: $*"; }
+
+runtime_inputs_match() {
+  # Compare immutable Git trees, not checkout timestamps. An absent/unreadable
+  # runtime marker or a Git error must take the conservative full-deploy path.
+  factory_git_read diff --quiet "$1" "$2" -- automation config/factory config/systemd scripts
+}
+
+candidate_ci_green() {
+  # This standard-library probe must work before the new package is installed.
+  # Inherit authentication privately, never through process arguments.
+  local GH_TOKEN=${GITHUB_TOKEN:-}
+  export GH_TOKEN
+  timeout "${GIT_TIMEOUT}s" \
+    runuser -u "$FACTORY_USER" --preserve-environment -- env \
+      HOME="$FACTORY_HOME" PATH=/usr/local/bin:/usr/bin:/bin \
+      "$FACTORY_VENV/bin/python" - "${GITHUB_REPOSITORY:-}" "$1" \
+      "${FACTORY_BASE_BRANCH:-main}" <<'PY'
+import json
+import re
+import subprocess
+import sys
+
+repository, commit, branch = sys.argv[1:]
+if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+    raise SystemExit(1)
+if not re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", commit):
+    raise SystemExit(1)
+try:
+    result = subprocess.run(
+        ["gh", "run", "list", "--repo", repository, "--workflow", "ci.yml",
+         "--branch", branch, "--event", "push", "--commit", commit, "--limit", "20",
+         "--json", "headSha,status,conclusion"],
+        capture_output=True, text=True, timeout=30, check=False,
+    )
+    if result.returncode:
+        raise SystemExit(1)
+    runs = json.loads(result.stdout)
+    if not isinstance(runs, list):
+        raise SystemExit(1)
+    # GitHub returns newest first: a pending/failed rerun beats an older success.
+    for run in runs:
+        if not isinstance(run, dict) or run.get("headSha") != commit:
+            continue
+        raise SystemExit(0 if run.get("status") == "completed"
+                         and run.get("conclusion") == "success" else 1)
+except (OSError, ValueError, subprocess.TimeoutExpired):
+    pass
+raise SystemExit(1)
+PY
+}
 
 validate_agents_config() {
   "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
@@ -118,6 +169,18 @@ factory_git_read() {
     git -C "$REPOSITORY" "$@"
 }
 
+factory_git_authenticated() {
+  # Keep the credential in the child environment, never in runuser/env argv.
+  # A function-local export also leaves the caller's GH_TOKEN unchanged.
+  local GH_TOKEN=${GITHUB_TOKEN:-}
+  export GH_TOKEN
+  timeout "${GIT_TIMEOUT}s" \
+    runuser -u "$FACTORY_USER" --preserve-environment -- env \
+      HOME="$FACTORY_HOME" PATH=/usr/local/bin:/usr/bin:/bin \
+      git -c credential.helper='!gh auth git-credential' \
+      -C "$REPOSITORY" "$@"
+}
+
 verify_commit_identity() {
   local actual commit=$1
   [[ "$commit" =~ ^[0-9a-f]{40,64}$ ]] || return 1
@@ -131,6 +194,16 @@ verify_commit_identity() {
 
 trusted_runtime_commit() {
   local branch head recorded tracking
+  # Maintenance must not promote a checkout advanced by another process into
+  # privileged runtime code. Prefer the last completed deployment, offline.
+  if [ -r "$DEPLOYED_RUNTIME_SHA_FILE" ]; then
+    read -r recorded < "$DEPLOYED_RUNTIME_SHA_FILE" || recorded=''
+    if verify_commit_identity "$recorded"; then
+      printf '%s\n' "$recorded"
+      return 0
+    fi
+    return 1
+  fi
   branch=$(factory_git_read symbolic-ref --quiet --short HEAD 2>/dev/null || true)
   head=$(factory_git_read rev-parse --verify HEAD 2>/dev/null || true)
   tracking=$(
@@ -236,14 +309,15 @@ install_runtime_file_from_commit() {
 
 record_runtime_commit() {
   local commit=$1
+  local destination=${2:-$RUNTIME_SOURCE_SHA_FILE}
   local temporary
-  if ! temporary=$(mktemp "${RUNTIME_SOURCE_SHA_FILE}.new.XXXXXX"); then
+  if ! temporary=$(mktemp "${destination}.new.XXXXXX"); then
     return 1
   fi
   if ! printf '%s\n' "$commit" > "$temporary" || \
     ! chown root:root "$temporary" || \
     ! chmod 0644 "$temporary" || \
-    ! mv -fT -- "$temporary" "$RUNTIME_SOURCE_SHA_FILE"; then
+    ! mv -fT -- "$temporary" "$destination"; then
     rm -f "$temporary"
     return 1
   fi
@@ -352,7 +426,11 @@ run_storage_maintenance() {
     log 'No verified runtime commit is available; refusing root maintenance refresh'
     return 1
   }
-  install_runtime_bundle "$commit" || return 1
+  # Maintenance must not overwrite newer updater/watchdog code or deployment
+  # provenance with an older package's bundle during a staged guard rollout.
+  install_runtime_file_from_commit \
+    "$commit" scripts/maintain-factory-host-storage.sh \
+    "$RUNTIME_MAINTENANCE" 0755 || return 1
   "$RUNTIME_MAINTENANCE" --apply --prune-containers
 }
 
@@ -409,14 +487,24 @@ done
 log 'Factory is idle'
 
 log 'Fetching origin/main'
-timeout "${GIT_TIMEOUT}s" \
-  runuser -u "$FACTORY_USER" -- env \
-    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
-    git -c credential.helper='!gh auth git-credential' \
-    -C "$REPOSITORY" fetch --quiet origin main
+factory_git_authenticated fetch --quiet origin main
 
 local_sha=$(factory_git_read rev-parse HEAD)
 remote_sha=$(factory_git_read rev-parse origin/main)
+if ! candidate_ci_green "$remote_sha"; then
+  log 'Candidate main has no successful canonical push CI - leaving running factories untouched'
+  exit 0
+fi
+verify_commit_identity "$local_sha" || {
+  log 'ERROR: current checkout identity could not be verified'
+  exit 1
+}
+# Bootstrap service-unit fixes before waiting for running jobs. A stale updater
+# unit can otherwise conflict with the two-minute health timers and be terminated
+# repeatedly before it ever reaches the post-pull installation step.
+log 'Refreshing verified current service units before drain'
+bootstrap_sha=$(trusted_runtime_commit) || exit 1
+install_service_configuration "$bootstrap_sha"
 config_is_current=false
 config_path=$(canonical_agents_config_path "$AGENTS_CONFIG" 2>/dev/null || true)
 if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
@@ -426,13 +514,24 @@ if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
   fi
 fi
 
-if [ "$local_sha" = "$remote_sha" ] && [ "$config_is_current" = true ]; then
+runtime_update_needed=true
+runtime_source_sha=
+if [ -r "$DEPLOYED_RUNTIME_SHA_FILE" ]; then
+  read -r runtime_source_sha < "$DEPLOYED_RUNTIME_SHA_FILE" || runtime_source_sha=''
+fi
+if [ "$config_is_current" = true ] && [ -n "$runtime_source_sha" ] && \
+  verify_commit_identity "$runtime_source_sha" && \
+  runtime_inputs_match "$runtime_source_sha" "$remote_sha"; then
+  runtime_update_needed=false
+fi
+
+if [ "$local_sha" = "$remote_sha" ] && [ "$runtime_update_needed" = false ]; then
   log "Already up to date at ${local_sha:0:12} with valid provider config - no restart needed"
   exit 0
 fi
 
 if [ "$local_sha" = "$remote_sha" ]; then
-  log "Repository is current at ${local_sha:0:12}, but provider config needs repair"
+  log "Repository is current at ${local_sha:0:12}, but runtime or provider config needs refresh"
 else
   log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
   merge_base=$(factory_git_read merge-base HEAD origin/main)
@@ -450,21 +549,41 @@ verify_commit_identity "$remote_sha" || {
   exit 1
 }
 
-log 'Stopping factory service'
-systemctl stop "$SERVICE" || true
-services_stopped=true
-if [ -n "$SECONDARY_SERVICE" ] && systemctl is-active --quiet "$SECONDARY_SERVICE"; then
-  secondary_was_active=true
-  systemctl stop "$SECONDARY_SERVICE" || true
+log 'Pausing new Factory scheduling while active jobs drain'
+pause_factories
+log "Waiting up to ${ACTIVE_JOB_WAIT_SECONDS}s for active jobs to drain"
+waited=0
+while ! all_factories_idle; do
+  if [ "$waited" -ge "$ACTIVE_JOB_WAIT_SECONDS" ]; then
+    log "Active jobs did not drain after ${ACTIVE_JOB_WAIT_SECONDS}s - resuming scheduling and deferring update"
+    exit 0
+  fi
+  sleep 15
+  waited=$((waited + 15))
+done
+log 'Factory is drained and ready to update'
+
+# CI can be rerun while we drain. Recheck before stopping services or pulling.
+if ! candidate_ci_green "$remote_sha"; then
+  log 'Candidate CI is no longer green - resuming scheduling without deployment'
+  exit 0
+fi
+
+if [ "$runtime_update_needed" = true ]; then
+  log 'Stopping factory service'
+  systemctl stop "$SERVICE" || true
+  services_stopped=true
+  if [ -n "$SECONDARY_SERVICE" ] && systemctl is-active --quiet "$SECONDARY_SERVICE"; then
+    secondary_was_active=true
+    systemctl stop "$SECONDARY_SERVICE" || true
+  fi
 fi
 
 if [ "$local_sha" != "$remote_sha" ]; then
-  log 'Pulling main'
-  timeout "${GIT_TIMEOUT}s" \
-    runuser -u "$FACTORY_USER" -- env \
-    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
-    git -c credential.helper='!gh auth git-credential' \
-    -C "$REPOSITORY" pull --ff-only origin main
+  log 'Fast-forwarding main to the verified candidate'
+  # Do not pull a mutable branch after a potentially long drain. Another owner
+  # merge may have moved it to an untested SHA since the candidate passed CI.
+  factory_git_read merge --ff-only "$remote_sha"
 fi
 
 pulled_sha=$(factory_git_read rev-parse HEAD)
@@ -473,6 +592,16 @@ if [ "$pulled_sha" != "$remote_sha" ] || ! verify_commit_identity "$pulled_sha";
   exit 1
 fi
 log "Deploying verified commit ${pulled_sha:0:12}"
+
+if [ "$runtime_update_needed" = false ]; then
+  log 'Application-only update: preserving running factories, Python package and worker image'
+  # The marker identifies the actually installed runtime, not the app checkout.
+  # Keeping it unchanged also detects a pending runtime update after a checkout
+  # was advanced separately or a previous deployment failed part-way through.
+  update_completed=true
+  resume_factories
+  exit 0
+fi
 
 log 'Refreshing root-owned Factory runtime scripts from verified Git blobs'
 if ! install_runtime_bundle "$pulled_sha"; then
@@ -488,7 +617,6 @@ runuser -u "$FACTORY_USER" -- env \
   HOME="$FACTORY_HOME" VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
-    --reinstall-package repo-factory \
     --project "$REPOSITORY/automation"
 runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
   "$FACTORY_VENV/bin/uv" cache prune || true
@@ -530,6 +658,7 @@ if systemctl is-active --quiet "$SERVICE"; then
     exit 1
   fi
   log "Factory restarted successfully at ${pulled_sha:0:12}"
+  record_runtime_commit "$pulled_sha" "$DEPLOYED_RUNTIME_SHA_FILE"
   update_completed=true
   if [ -n "$agents_config_backup" ] && [ "$agents_config_backup" != __absent__ ]; then
     rm -f -- "$agents_config_backup" || \

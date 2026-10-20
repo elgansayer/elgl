@@ -8,7 +8,6 @@ import { ProfileComponent } from './profile.component';
 import { UserService, UserProfile } from '../../services/user.service';
 import { I18nService } from '../../services/i18n.service';
 import { SafetyService } from '../../services/safety.service';
-import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
 
 describe('ProfileComponent', () => {
   let fixture: ComponentFixture<ProfileComponent>;
@@ -120,6 +119,28 @@ describe('ProfileComponent', () => {
 
     expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
       expect.objectContaining({ proficiency_level: 'B2' }),
+    );
+  });
+
+  it('round-trips comma-separated learning goals through the array API contract', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({ learning_goals: ['conversation', 'grammar'] }),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.learningGoals()).toBe(
+      'conversation, grammar',
+    );
+
+    fixture.componentInstance.learningGoals.set('conversation, vocabulary,  ');
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        learning_goals: ['conversation', 'vocabulary'],
+      }),
     );
   });
 

@@ -20,9 +20,11 @@ import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 
 import { ConfigurationService } from './core/config/configuration.service';
 import { routes } from './app.routes';
+import { eventDetailRoutes } from './routes/events.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
 import { retryInterceptor } from './interceptors/retry.interceptor';
+import { initialiseOfflineDiscoveryCache } from './services/offline-discovery-cache.service';
 
 export function initConfig(
   configService: ConfigurationService,
@@ -57,7 +59,7 @@ function initialiseDeepLinks(): () => void {
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter([...eventDetailRoutes, ...routes], withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptors([retryInterceptor])),
     provideClientHydration(),
     provideAnimations(),
@@ -80,6 +82,11 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: initialiseDeepLinks,
+      multi: true,
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initialiseOfflineDiscoveryCache,
       multi: true,
     },
   ],
