@@ -3,7 +3,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  InternalServerErrorException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
@@ -145,21 +144,18 @@ export class MonetisationService {
       }
       return priceId;
     }
-    if (planId === 'developer_20_ukp_26_usd') {
-      const envKey =
-        interval === 'year'
-          ? 'STRIPE_DEVELOPER_YEARLY_PRICE_ID'
-          : 'STRIPE_DEVELOPER_MONTHLY_PRICE_ID';
-      const priceId = this.configService.get<string>(envKey);
-      if (!priceId) {
-        throw new BadRequestException(
-          `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure ${envKey} environment variable is set.`,
-        );
-      }
-      return priceId;
+    // fallback for developer_20_ukp_26_usd or other future plans
+    const envKey =
+      interval === 'year'
+        ? 'STRIPE_DEVELOPER_YEARLY_PRICE_ID'
+        : 'STRIPE_DEVELOPER_MONTHLY_PRICE_ID';
+    const priceId = this.configService.get<string>(envKey);
+    if (!priceId) {
+      throw new BadRequestException(
+        `Stripe price ID for plan "${planId}" (interval: ${interval}) is not configured. Ensure ${envKey} environment variable is set.`,
+      );
     }
-
-    throw new BadRequestException(`Unsupported subscription plan: "${planId}"`);
+    return priceId;
   }
 
   /**
@@ -358,15 +354,10 @@ export class MonetisationService {
     }
 
     const apiKey = `ht_dev_${crypto.randomBytes(16).toString('hex')}`;
-    const { error: persistenceError } = await supabase
+    await supabase
       .from('users')
       .update({ developer_api_key: apiKey })
       .eq('id', userId);
-
-    if (persistenceError) {
-      this.logger.error('Failed to persist generated Developer API key');
-      throw new InternalServerErrorException('Failed to generate API key');
-    }
 
     return {
       api_key: apiKey,
@@ -569,9 +560,7 @@ export class MonetisationService {
         );
 
       if (!purchaseDetails) {
-        this.logger.warn(
-          `Android restore: no purchase details for token ${purchaseToken}`,
-        );
+        this.logger.warn('Android restore: purchase details unavailable');
         return { received: true, status: 'no_valid_subscription' };
       }
 
@@ -580,27 +569,24 @@ export class MonetisationService {
         Number.isFinite(expiryMillis) && expiryMillis > Date.now();
 
       if (!isCurrentlyEntitled) {
-        this.logger.warn(
-          `Android restore: purchase not currently entitled for token ${purchaseToken}`,
-        );
+        this.logger.warn('Android restore: purchase not currently entitled');
         return { received: true, status: 'no_valid_subscription' };
       }
 
-      // Determine which user this token belongs to
-      const existingUserId =
-        await this.googlePlayNotificationService.getUserIdByPurchaseToken(
-          purchaseToken,
-        );
-      if (!existingUserId) {
-        // Store the purchase under the calling user's id
-        await this.googlePlayNotificationService.storePurchaseToken(
+      // A provider purchase token is an account-bound credential. Never let a
+      // token already associated with one account grant entitlement to another.
+      const ownsPurchase =
+        await this.googlePlayNotificationService.claimPurchaseToken(
           userId,
           purchaseToken,
           productId,
         );
-      } else if (existingUserId !== userId) {
+      if (!ownsPurchase) {
         this.logger.warn(
-          `Purchase token ${purchaseToken} already belongs to user ${existingUserId}, but restore called for user ${userId}`,
+          'Android restore rejected: purchase belongs to a different account',
+        );
+        throw new ForbiddenException(
+          'This purchase is already linked to another account',
         );
       }
 

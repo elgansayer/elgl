@@ -149,7 +149,7 @@ export class ProfileComponent implements OnInit {
         this.privacyAboutInfo = this.sanitizePrivacyVisibility(data.privacy_about_info);
         this.privacyStatus = this.sanitizePrivacyVisibility(data.privacy_status);
         this.proficiencyLevel.set(data.proficiency_level || 'B1');
-        this.learningGoals.set(data.learning_goals || '');
+        this.learningGoals.set((data.learning_goals ?? []).join(', '));
         this.statusText = data.status_text || '';
         this.businessName = data.business_name || '';
         this.businessHours = data.business_hours || '';
@@ -282,7 +282,10 @@ export class ProfileComponent implements OnInit {
         status_text: this.statusText,
         profile_visibility: this.profileVisibility(),
         proficiency_level: this.proficiencyLevel(),
-        learning_goals: this.learningGoals(),
+        learning_goals: this.learningGoals()
+          .split(',')
+          .map((goal) => goal.trim())
+          .filter(Boolean),
         business_name: this.businessName,
         business_hours: this.businessHours,
         website_url: this.websiteUrl,

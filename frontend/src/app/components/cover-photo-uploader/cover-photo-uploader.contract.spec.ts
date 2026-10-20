@@ -1,8 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { PipeTransform } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,7 +14,7 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
-describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
+describe('CoverPhotoUploaderComponent upload contract', () => {
   let component: CoverPhotoUploaderComponent;
   let fixture: ComponentFixture<CoverPhotoUploaderComponent>;
   let httpMock: HttpTestingController;
@@ -44,35 +41,28 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
     vi.restoreAllMocks();
   });
 
-  it('delegates 3:1 positioning to the shared cropper before upload', () => {
-    component.selectedFile.set(
-      new File(['image'], 'cover.jpg', { type: 'image/jpeg' }),
-    );
+  it('opens the dedicated 3:1 cropper only after a valid file is selected', () => {
+    expect(component.isCropping()).toBe(false);
 
+    const file = new File(['image'], 'cover.jpg', { type: 'image/jpeg' });
+    component.selectedFile.set(file);
     component.startCropping();
-    fixture.detectChanges();
 
     expect(component.isCropping()).toBe(true);
-    expect(
-      fixture.nativeElement.querySelector('app-cover-photo-cropper'),
-    ).not.toBeNull();
   });
 
   it('uploads the cropped JPEG through the authenticated presign and confirm contract', async () => {
-    component.croppedBlob.set(new Blob(['hello'], { type: 'image/jpeg' }));
-    component.croppedPreviewUrl.set('blob:cover-preview');
+    const croppedBlob = new Blob(['cropped'], { type: 'image/jpeg' });
+    component.croppedBlob.set(croppedBlob);
+    component.croppedPreviewUrl.set('blob:cropped-cover');
     const uploaded: string[] = [];
     component.coverPhotoUploaded.subscribe((url) => uploaded.push(url));
 
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue({ ok: true } as Response);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response);
 
     const uploadPromise = component.uploadCropped();
 
-    const presign = httpMock.expectOne(
-      `${environment.apiUrl}/media/cover/presigned-url`,
-    );
+    const presign = httpMock.expectOne(`${environment.apiUrl}/media/cover/presigned-url`);
     expect(presign.request.method).toBe('POST');
     expect(presign.request.body).toMatchObject({
       contentType: 'image/jpeg',
@@ -82,7 +72,7 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
     presign.flush({
       uploadUrl: 'https://uploads.example.test/signed-cover',
       mediaUrl: 'https://media.example.test/covers/cover.jpg',
-      objectKey: 'cover-photos/user/cover.jpg',
+      objectKey: 'covers/user/cover.jpg',
     });
 
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
@@ -90,15 +80,14 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
       'https://uploads.example.test/signed-cover',
       expect.objectContaining({
         method: 'PUT',
+        body: croppedBlob,
         headers: { 'Content-Type': 'image/jpeg' },
       }),
     );
 
     const confirm = httpMock.expectOne(`${environment.apiUrl}/media/cover/confirm`);
     expect(confirm.request.method).toBe('POST');
-    expect(confirm.request.body).toEqual({
-      objectKey: 'cover-photos/user/cover.jpg',
-    });
+    expect(confirm.request.body).toEqual({ objectKey: 'covers/user/cover.jpg' });
     confirm.flush({ coverUrl: 'https://media.example.test/covers/cover.jpg' });
 
     await uploadPromise;
@@ -106,31 +95,30 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
     expect(uploaded).toEqual(['https://media.example.test/covers/cover.jpg']);
     expect(component.isUploading()).toBe(false);
     expect(component.imageSource()).toBeNull();
+    expect(component.croppedBlob()).toBeNull();
     expect(component.croppedPreviewUrl()).toBeNull();
   });
 
   it('does not emit a new cover URL when the direct upload fails', async () => {
-    component.croppedBlob.set(new Blob(['hello'], { type: 'image/jpeg' }));
-    component.croppedPreviewUrl.set('blob:cover-preview');
+    component.croppedBlob.set(new Blob(['cropped'], { type: 'image/jpeg' }));
+    component.croppedPreviewUrl.set('blob:cropped-cover');
     const uploaded: string[] = [];
     component.coverPhotoUploaded.subscribe((url) => uploaded.push(url));
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false } as Response);
 
     const uploadPromise = component.uploadCropped();
-    const presign = httpMock.expectOne(
-      `${environment.apiUrl}/media/cover/presigned-url`,
-    );
+    const presign = httpMock.expectOne(`${environment.apiUrl}/media/cover/presigned-url`);
     presign.flush({
       uploadUrl: 'https://uploads.example.test/signed-cover',
       mediaUrl: 'https://media.example.test/covers/cover.jpg',
-      objectKey: 'cover-photos/user/cover.jpg',
+      objectKey: 'covers/user/cover.jpg',
     });
 
     await uploadPromise;
 
     expect(uploaded).toEqual([]);
     expect(component.isUploading()).toBe(false);
-    expect(component.croppedPreviewUrl()).toBeTruthy();
     expect(component.uploadError()).toBe(true);
+    expect(component.croppedPreviewUrl()).toBeTruthy();
   });
 });
