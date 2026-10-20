@@ -1369,12 +1369,14 @@ def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
 
 
 @pytest.mark.parametrize("stale_base", [False, True])
+@pytest.mark.parametrize("repair_attempts", [0, 5])
 def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stale_base: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stale_base: bool, repair_attempts: int
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
+    job.repair_attempts = repair_attempts
     if stale_base:
         github.statuses = [replace(github.statuses[0], merge_state_status="BLOCKED")]
         monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: False)
@@ -1411,6 +1413,64 @@ def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
     assert agent_calls == []
     assert result.state is JobState.REVIEWING
     assert ("refresh current base" if stale_base else "automatic formatting") in committed[0]
+    assert result.repair_attempts == repair_attempts + 1
+
+
+def test_exhausted_repair_budget_still_blocks_another_model_start(tmp_path, monkeypatch):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("budget bypass")
+    )
+    result = pipeline.run_job("77")
+    assert result.last_error == "Repair limit exceeded"
+    assert result.repair_attempts == 5
+
+
+@pytest.mark.parametrize("status_kind", ["merged", "new-head", "green", "pending"])
+def test_exhausted_budget_cannot_hide_current_github_state(tmp_path, monkeypatch, status_kind):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    status = github.statuses[0]
+    if status_kind == "merged":
+        status = replace(status, state="MERGED")
+    elif status_kind == "new-head":
+        status = replace(status, head_sha="new-external-head")
+    else:
+        status = replace(
+            status,
+            failed_checks=frozenset(),
+            checks_passed=status_kind == "green",
+            checks_pending=status_kind == "pending",
+        )
+    github.statuses = [status]
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    refreshed = []
+
+    def refresh(current, worktree, owner, latest):
+        refreshed.append(latest.head_sha)
+        current.head_sha = latest.head_sha
+        current.state = JobState.CI_PENDING
+
+    monkeypatch.setattr(pipeline, "_refresh_pull_request_for_review", refresh)
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("unexpected model")
+    )
+    result = pipeline.run_job("77")
+    assert result.last_error is None
+    assert result.state == (JobState.MERGED if status_kind == "merged" else JobState.CI_PENDING)
+    assert result.repair_attempts == 5
+    assert refreshed == (["new-external-head"] if status_kind == "new-head" else [])
 
 
 def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
