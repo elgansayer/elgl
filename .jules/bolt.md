@@ -311,6 +311,11 @@
 ## 2024-05-24 - [Replaced sequential safety checks with Promise.all in chat.service.ts]
 **Learning:** Found sequential calls to `getBlockedAndBlockerIds` for sender and receiver in both `sendMessage` and `sendContact` functions of `chat.service.ts`. These independent queries cause unnecessary additive network latency.
 **Action:** Used `Promise.all` to fetch both `receiverBlockedIds` and `senderBlockedIds` concurrently to optimize the database query execution and reduce wait times.
+
+## 2026-08-23 - [Optimize Comment Mention Notification via Promise.all]
+**Learning:** Found sequential calls to `notificationPreferencesService.shouldSendNotification` and `notificationsService.createNotification` inside a `for...of` loop when sending mentions to multiple users in `comment-mention-notification.listener.ts`. These independent queries cause unnecessary additive network latency.
+**Action:** Replaced the sequential `for...of` loop with a concurrent `Promise.all` batch map over filtered recipients to optimize database query execution and reduce wait times.
+
 ## 2026-08-24 - Optimize joinChallenge with Promise.all
 **Learning:** Sequential, independent database queries in user-facing endpoints (like joining a challenge) add unnecessary network latency. The `joinChallenge` method sequentially fetched the challenge and then the existing participant.
 **Action:** Always group independent database lookups using a single concurrent `Promise.all` batch fetch to mitigate additive network latency. Remember to update the corresponding tests to mock the newly concurrent queries correctly (e.g. chaining `maybeSingle` mocks).
@@ -467,6 +472,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
