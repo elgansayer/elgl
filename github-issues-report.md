@@ -1,15 +1,17 @@
-Title: Implement Angular CDK Virtual Scrolling for Chat and Reading Views
+# 📋 Consolidated Product Backlog
 
-Description:
-A review of the frontend codebase shows that `@angular/cdk` is present in `package.json` (`^22.1.3`), but `cdk-virtual-scroll-viewport` is not implemented in data-heavy components such as `chat-page.component.ts` and `reading-engine.component.ts`. Without virtual scrolling, rendering large chat histories or extensive reading texts will cause severe DOM bloat, increased memory usage, and UI lag, ultimately degrading performance on mobile and desktop browsers.
+## Analysis of Open Issues
+- **Completed:** None of the issues are completed yet in the current source tree.
+- **Duplicates:** The CDK Virtual Scrolling issue in `github-issue-communities.md` is a duplicate of the one in `github-issues-report.md`.
+- **Overly granular / Parts of the same larger objective:** Issues 1 through 5 (Multi-Pane Layout, Active State Visualization, Micro-interactions, Sub-components Refactoring, Error Handling) are overly granular and form part of the same complete user outcome: a "Complete Responsive Communities Experience".
 
-Acceptance Criteria:
-- [ ] Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into the relevant Angular standalone components (e.g., `chat-page.component.ts`, `reading-engine.component.ts`).
-- [ ] Replace standard loops rendering chat messages with `<cdk-virtual-scroll-viewport>`.
-- [ ] Implement virtualised rendering or windowing in the reading components for extensive texts.
-- [ ] Ensure dynamic height recalculation works correctly for chat messages with varying content lengths (text, media, audio).
-- [ ] Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
-- [ ] Write or update unit tests to verify that the virtual scroller correctly limits the rendered DOM nodes to the visible viewport slice.
+## 👥 Communities & Groups
+- **Complete Responsive Communities Experience**
+  - Implement responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
+  - Implement active state styling using Angular signals and Tailwind.
+  - Add micro-interactions (hover effects) and unread notification badges.
+  - Extract Communities list and creation form into dedicated sub-components.
+  - Implement `try...catch` error handling and user feedback for community operations.
 
 Suggested Labels: bug, performance, tech-debt, ui
 # Issue 1: Implement Denser Multi-Pane Layout for Communities
@@ -140,3 +142,8 @@ When a user selects a room in `chat-page.component.ts`, the component loops thro
 
 ## Suggested Labels
 bug, performance, tech-debt
+
+## ⚙️ Platform & UI Architecture
+- **Optimize Data-Heavy Views**
+  - Implement virtual scrolling (`cdk-virtual-scroll-viewport`) for data-heavy chat and reading views to prevent DOM bloat and UI lag.
+

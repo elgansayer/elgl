@@ -30,7 +30,12 @@ export class UpdateSubscriptionDto {
 
   @IsString()
   status:
-    'active' | 'canceled' | 'expired' | 'on_hold' | 'grace_period' | 'revoked';
+    | 'active'
+    | 'canceled'
+    | 'expired'
+    | 'on_hold'
+    | 'grace_period'
+    | 'revoked';
 
   @IsOptional()
   @IsString()
