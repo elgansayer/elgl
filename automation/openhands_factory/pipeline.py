@@ -716,6 +716,7 @@ class FactoryPipeline:
         require_repository_change: bool = False,
         timeout_seconds: int | None = None,
         system_prompt_override: str | None = None,
+        read_only_reference: Path | None = None,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
 
@@ -779,6 +780,7 @@ class FactoryPipeline:
             prompt=prompt,
             cwd=worktree,
             system_prompt=system_prompt_override or self.system_prompt,
+            read_only_reference=read_only_reference,
             timeout_seconds=timeout_seconds,
             prepare_attempt=(
                 prepare if prepare_attempt is not None or require_repository_change else None
@@ -1355,8 +1357,6 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REPAIRING:
-            if job.repair_attempts >= 5:
-                raise FactoryError("Repair limit exceeded")
             status = self._status(job)
             if status.state == "MERGED":
                 job.state = JobState.MERGED
@@ -1418,6 +1418,11 @@ class FactoryPipeline:
             if has_unmerged_paths or (
                 not (base_conflict or stale_base) and not mechanically_repaired
             ):
+                # Bound generated repairs, not read-only status refreshes or
+                # deterministic fixes. A spent model budget must not hide a
+                # changed/merged head or block a clean current-base integration.
+                if job.repair_attempts >= 5:
+                    raise FactoryError("Repair limit exceeded")
                 self._run_agent(
                     job,
                     worktree,
@@ -1959,19 +1964,22 @@ class FactoryPipeline:
         # before spending minutes in the host-wide verification slot.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
-        run_verification(shared)
-        if not exclusive:
-            return changed
-        if self.verification_slots is None:
-            run_verification(exclusive)
-            return changed
-        with self.verification_slots:
-            if self.host_resource_slots is None:
+        try:
+            run_verification(shared)
+            if not exclusive:
+                return changed
+            if self.verification_slots is None:
                 run_verification(exclusive)
-            else:
-                with self.host_resource_slots.exclusive():
+                return changed
+            with self.verification_slots:
+                if self.host_resource_slots is None:
                     run_verification(exclusive)
-        return changed
+                else:
+                    with self.host_resource_slots.exclusive():
+                        run_verification(exclusive)
+            return changed
+        finally:
+            workflow.discard_transient_build_metadata()
 
     def _verify_or_schedule_quality_repair(
         self,
