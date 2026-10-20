@@ -102,6 +102,8 @@ export interface VersionInfo {
   latest: string;
   minimumSupported?: string;
   updateUrl?: string;
+  /** Optional for mixed-version compatibility with backends deployed before the policy field. */
+  minimumSupported?: string;
 }
 
 /**
