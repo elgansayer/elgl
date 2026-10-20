@@ -14,14 +14,9 @@ export const socialRoutes: Routes = [
       ),
   },
   {
-    path: 'profile/me',
+    path: 'profile',
     loadComponent: () =>
       import('../components/profile/profile.component').then((m) => m.ProfileComponent),
-  },
-  {
-    path: 'profile',
-    redirectTo: 'profile/me',
-    pathMatch: 'full',
   },
   {
     path: 'profile/:userId',
@@ -60,14 +55,14 @@ export const socialRoutes: Routes = [
       ),
   },
   {
-    path: 'profile/me/favourites',
-    loadComponent: () =>
-      import('../components/favourites/favourites.component').then((m) => m.FavouritesComponent),
-  },
-  {
     path: 'favourites',
     redirectTo: 'profile/me/favourites',
     pathMatch: 'full',
+  },
+  {
+    path: 'profile/me/favourites',
+    loadComponent: () =>
+      import('../components/favourites/favourites.component').then((m) => m.FavouritesComponent),
   },
   {
     path: 'leaderboard',
@@ -80,19 +75,25 @@ export const socialRoutes: Routes = [
       import('../components/hobby-tags/hobby-tags.component').then((m) => m.HobbyTagsComponent),
   },
   {
-    path: 'profile/me/stats',
-    loadComponent: () =>
-      import('../components/my-stats/my-stats.component').then((m) => m.MyStatsComponent),
-  },
-  {
     path: 'stats',
     redirectTo: 'profile/me/stats',
     pathMatch: 'full',
   },
   {
+    path: 'profile/me/stats',
+    loadComponent: () =>
+      import('../components/my-stats/my-stats.component').then((m) => m.MyStatsComponent),
+  },
+  {
     path: 'milestones',
-    redirectTo: 'profile/me/stats',
+    redirectTo: 'profile/me/milestones',
     pathMatch: 'full',
+  },
+  {
+    path: 'profile/me/milestones',
+    loadComponent: () =>
+      import('../components/milestone/milestone.component').then((m) => m.MilestoneComponent),
+    title: 'Milestones - HelloTalk',
   },
   {
     path: 'notifications',
@@ -113,8 +114,14 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'events/calendar',
-    redirectTo: 'live/events',
+    redirectTo: 'live/events/calendar',
     pathMatch: 'full',
+  },
+  {
+    path: 'events/:eventId',
+    loadComponent: () =>
+      import('../components/event-detail/event-detail.component').then((m) => m.EventDetailComponent),
+    title: 'Event - HelloTalk',
   },
   {
     path: 'language-parties',
@@ -130,8 +137,7 @@ export const socialRoutes: Routes = [
     path: 'business-profile',
     loadComponent: () =>
       import('../components/business-profile/business-profile.component').then(
-        (m) => m.BusinessProfileComponent,
-      ),
+        (m) => m.BusinessProfileComponent),
     title: 'Business Profile - HelloTalk',
   },
 ];

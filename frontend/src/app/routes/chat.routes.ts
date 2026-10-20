@@ -17,6 +17,11 @@ export const chatRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'groups',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
     path: 'chat/groups',
     loadComponent: () =>
       import('../components/groups-discovery/groups-discovery.component').then(
@@ -31,12 +36,27 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'groups/create',
-    redirectTo: 'chat/groups',
+    redirectTo: 'chat/groups/create',
     pathMatch: 'full',
   },
   {
     path: 'communities',
     redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community/language-parties',
+    redirectTo: 'chat/groups/language-parties',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community/language-islands',
+    redirectTo: 'chat/groups/language-islands',
     pathMatch: 'full',
   },
   {

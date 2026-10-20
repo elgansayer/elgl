@@ -28,7 +28,15 @@ export const mediaRoutes: Routes = [
     path: 'live/events',
     loadComponent: () =>
       import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
-    title: 'Live Events - HelloTalk',
+    title: 'Events - HelloTalk',
+  },
+  {
+    path: 'live/events/calendar',
+    loadComponent: () =>
+      import('../components/events-calendar/events-calendar.component').then(
+        (m) => m.EventsCalendarComponent,
+      ),
+    title: 'Event Calendar - HelloTalk',
   },
   {
     path: 'video-call',
