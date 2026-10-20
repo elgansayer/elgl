@@ -45,7 +45,9 @@ def test_only_current_head_build_output_is_restored(repository):
     assert git(repository, "diff", "--name-only") == "source.ts"
 
 
-@pytest.mark.parametrize("change", ["staged", "version", "code", "wrong-head", "executable"])
+@pytest.mark.parametrize(
+    "change", ["staged", "version", "code", "wrong-head", "executable", "line-endings"]
+)
 def test_meaningful_or_unproven_generated_file_changes_are_preserved(repository, change):
     generated = repository / RELATIVE
     content = metadata(git(repository, "rev-parse", "HEAD"))
@@ -55,7 +57,10 @@ def test_meaningful_or_unproven_generated_file_changes_are_preserved(repository,
         content += "export const customBehaviour = true;\n"
     elif change == "wrong-head":
         content = metadata("111111111111")
-    generated.write_text(content)
+    if change == "line-endings":
+        generated.write_bytes(content.replace("\n", "\r\n").encode())
+    else:
+        generated.write_text(content)
     if change == "staged":
         git(repository, "add", RELATIVE)
     elif change == "executable":
@@ -79,6 +84,18 @@ def test_symlink_and_untracked_metadata_are_not_restored(repository):
     content = metadata(git(repository, "rev-parse", "HEAD"))
     generated.write_text(content)
     assert not GitWorkflow(repository, "main").discard_transient_build_metadata()
+    assert generated.read_text() == content
+
+
+def test_metadata_through_a_symlinked_parent_is_preserved(repository):
+    generated = repository / RELATIVE
+    real_directory = repository / "real-generated"
+    generated.parent.rename(real_directory)
+    generated.parent.symlink_to(real_directory, target_is_directory=True)
+    content = metadata(git(repository, "rev-parse", "HEAD"))
+    generated.write_text(content)
+    assert not GitWorkflow(repository, "main").discard_transient_build_metadata()
+    assert generated.parent.is_symlink()
     assert generated.read_text() == content
 
 

@@ -232,6 +232,7 @@ class GitWorkflow:
             path.is_symlink()
             or not path.is_file()
             or not path.resolve().is_relative_to(self.repository.resolve())
+            or path.resolve().relative_to(self.repository.resolve()).as_posix() != relative
             or path.stat().st_size > 2048
             or path.stat().st_mode & 0o111
         ):
@@ -240,7 +241,7 @@ class GitWorkflow:
         if baseline.returncode:
             return False
         try:
-            current = path.read_text(encoding="utf-8")
+            current = path.read_bytes().decode("utf-8")
         except (OSError, UnicodeError):
             return False
         if current == baseline.stdout:
