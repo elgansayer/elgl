@@ -69,6 +69,7 @@ export interface UserProfile {
   last_active_at?: string;
   distance_metres?: number;
   scheduled_for_deletion_at?: string;
+  recommendation_reason?: string;
   // Business profile fields
   business_name?: string;
   business_hours?: string;
@@ -88,6 +89,9 @@ export interface UserProfile {
   away_message?: string;
   followers_count?: number;
   following_count?: number;
+  reply_rate?: number;
+  average_response_time?: number;
+  past_success_score?: number;
   ai_usage_count?: number; // Tracks AI usage for non-VIP users
   max_target_languages?: number; // Maximum target languages for non-VIP users
   location_spoofing_enabled?: boolean; // Indicates if location spoofing is enabled

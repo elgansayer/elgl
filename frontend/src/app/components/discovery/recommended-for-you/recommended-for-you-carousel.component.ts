@@ -1,3 +1,4 @@
+import { AppEmptyStateComponent } from '../../../components/primitives/empty-state/empty-state.component';
 import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -7,22 +8,20 @@ import {
   RecommendationsService,
 } from '../../../services/recommendations.service';
 import { StudyBuddiesService } from '../../../services/study-buddies.service';
-import { I18nService } from '../../../services/i18n.service';
 import { TranslatePipe } from '../../../services/translate.pipe';
 
 type RecommendationAction = 'follow' | 'message';
 
 @Component({
   selector: 'app-recommended-for-you-carousel',
-  imports: [RouterLink, HlmButton, TranslatePipe],
+  imports: [RouterLink, HlmButton, TranslatePipe, AppEmptyStateComponent],
   templateUrl: './recommended-for-you-carousel.component.html',
   styleUrls: ['./recommended-for-you-carousel.component.scss'],
 })
 export class RecommendedForYouCarouselComponent {
   private readonly recommendationsService = inject(RecommendationsService);
   private readonly studyBuddiesService = inject(StudyBuddiesService);
-  private readonly i18n = inject(I18nService);
-  private readonly router = inject(Router);
+  public readonly router = inject(Router);
   private loadRequestId = 0;
 
   @ViewChild('carousel') private carousel?: ElementRef<HTMLElement>;
@@ -138,32 +137,22 @@ export class RecommendedForYouCarouselComponent {
     }
   }
 
-  reasonLabel(
-    reason: RecommendationReason,
-    recommendation: DiscoveryRecommendation,
-  ): string {
+  reasonLabel(reason: RecommendationReason, recommendation: DiscoveryRecommendation): string {
     switch (reason) {
       case 'language_exchange':
-        return this.i18n.translate('discovery.recommendation.languageExchange');
+        return 'Language exchange match';
       case 'shared_interests':
-        return this.i18n.translate(
-          recommendation.shared_interest_count === 1
-            ? 'discovery.recommendation.sharedInterest'
-            : 'discovery.recommendation.sharedInterests',
-          { count: recommendation.shared_interest_count },
-        );
+        return recommendation.shared_interest_count === 1
+          ? '1 shared interest'
+          : `${recommendation.shared_interest_count} shared interests`;
       case 'active_recently':
-        return this.i18n.translate('discovery.recommendation.activeRecently');
+        return 'Recently active';
       case 'study_streak':
-        return this.i18n.translate('discovery.recommendation.activeLearner');
+        return 'Active learner';
       case 'proficiency_match':
-        return this.i18n.translate('discovery.recommendation.proficiencyMatch');
-      case 'availability_match':
-        return this.i18n.translate('discovery.recommendation.availabilityMatch');
-      case 'high_correction_ratio':
-        return this.i18n.translate('discovery.recommendation.helpfulCorrector');
-      case 'learning_goal_match':
-        return this.i18n.translate('discovery.recommendation.learningGoalMatch');
+        return 'Proficiency match';
+      case 'helpful_corrector':
+        return 'Helpful corrector';
     }
   }
 
@@ -178,11 +167,7 @@ export class RecommendedForYouCarouselComponent {
     return `${userId}:${action}`;
   }
 
-  private setActionPending(
-    userId: string,
-    action: RecommendationAction,
-    pending: boolean,
-  ): void {
+  private setActionPending(userId: string, action: RecommendationAction, pending: boolean): void {
     const key = this.actionKey(userId, action);
     this.pendingActions.update((current) => {
       const next = new Set(current);

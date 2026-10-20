@@ -7,37 +7,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       :root {
-        --surface-100: 228, 231, 237;
-        --surface-200: 253, 253, 254;
-        --surface-300: 241, 243, 247;
-        --surface-400: 233, 235, 241;
-        --surface-500: 246, 247, 250;
-        --surface-600: 219, 223, 230;
-        --text-primary: 18, 21, 28;
-        --text-secondary: 74, 81, 99;
-        --text-muted: 107, 113, 130;
-        --primary: 198, 82, 48;
-        --secondary: 26, 132, 120;
-        --warning: 161, 108, 9;
-        --on-fill: 255, 255, 255;
-        --shadow: 16, 19, 28;
-        --accent: 204, 72, 60;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 101 106 122;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --warning: 161 108 9;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
       }
       html.dark {
-        --surface-100: 46, 52, 68;
-        --surface-200: 30, 35, 48;
-        --surface-300: 35, 40, 56;
-        --surface-400: 25, 29, 40;
-        --surface-500: 18, 21, 28;
-        --surface-600: 13, 15, 21;
-        --text-primary: 243, 244, 247;
-        --text-secondary: 180, 186, 201;
-        --text-muted: 126, 132, 148;
-        --primary: 255, 122, 82;
-        --secondary: 53, 214, 192;
-        --warning: 242, 179, 61;
-        --on-fill: 18, 21, 28;
-        --shadow: 0, 0, 0;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 137 143 157;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --warning: 242 179 61;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
       }
       * {
         box-sizing: border-box;
@@ -376,7 +376,10 @@
     <div class="viewport">
       <div class="offline">You're offline · showing cached search results</div>
       <header>
-        <div class="header-row"><h2>Connect</h2><span aria-hidden="true">🔔</span></div>
+        <div class="header-row">
+          <h2>Connect</h2>
+          <span aria-hidden="true">🔔</span>
+        </div>
         <div class="filters">
           <button class="filter active">Nearby</button>
           <button class="filter">New today</button>
@@ -466,9 +469,10 @@
     </div>
 
     <p class="caption">
-      The Discovery visual contract includes separate profile links plus touch-sized Send Message and
-      Follow actions on recommended partner cards. Quick actions preserve card ordering, explainable
-      recommendation reasons, mobile horizontal scrolling, RTL-safe composition and light/dark parity.
+      The Discovery visual contract includes separate profile links plus touch-sized Send Message
+      and Follow actions on recommended partner cards. Quick actions preserve card ordering,
+      explainable recommendation reasons, mobile horizontal scrolling, RTL-safe composition and
+      light/dark parity.
     </p>
 
     <script>

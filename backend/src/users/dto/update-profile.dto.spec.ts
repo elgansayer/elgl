@@ -50,26 +50,26 @@ describe('UpdateProfileDto', () => {
     );
   });
 
-  it('accepts learning goals using the database array contract', async () => {
+  it('accepts the five-language transport ceiling used by Pro and Developer tiers', async () => {
     const dto = Object.assign(new UpdateProfileDto(), {
-      learning_goals: ['conversation', 'grammar'],
+      target_languages: ['ja', 'fr', 'es', 'de', 'it'],
     });
 
     const errors = await validate(dto);
 
-    expect(errors.some((error) => error.property === 'learning_goals')).toBe(
-      false,
-    );
+    expect(
+      errors.filter((error) => error.property === 'target_languages'),
+    ).toHaveLength(0);
   });
 
-  it('rejects the obsolete comma-separated learning-goals contract', async () => {
+  it('rejects more than five target languages before entitlement checks', async () => {
     const dto = Object.assign(new UpdateProfileDto(), {
-      learning_goals: 'conversation,grammar',
+      target_languages: ['ja', 'fr', 'es', 'de', 'it', 'pt'],
     });
 
     const errors = await validate(dto);
 
-    expect(errors.some((error) => error.property === 'learning_goals')).toBe(
+    expect(errors.some((error) => error.property === 'target_languages')).toBe(
       true,
     );
   });

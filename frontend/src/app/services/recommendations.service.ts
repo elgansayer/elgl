@@ -10,9 +10,7 @@ export type RecommendationReason =
   | 'active_recently'
   | 'study_streak'
   | 'proficiency_match'
-  | 'availability_match'
-  | 'high_correction_ratio'
-  | 'learning_goal_match';
+  | 'helpful_corrector';
 
 export interface DiscoveryRecommendation {
   id: string;

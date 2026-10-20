@@ -5,19 +5,16 @@ import {
   Delete,
   Body,
   Param,
-  Req,
   HttpCode,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { User } from '@supabase/supabase-js';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ShoppingService } from './shopping.service';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
-
-interface AuthenticatedRequest extends Request {
-  user: { id: string };
-}
 
 @Controller('shopping')
 export class ShoppingController {
@@ -38,28 +35,32 @@ export class ShoppingController {
 
   @Get('cart')
   @UseGuards(SupabaseAuthGuard)
-  getCart(@Req() req: AuthenticatedRequest) {
-    return this.cartService.getCart(req.user.id);
+  getCart(@CurrentUser() user: User | null) {
+    if (!user?.id) throw new UnauthorizedException();
+    return this.cartService.getCart(user.id);
   }
 
   @Post('cart')
   @UseGuards(SupabaseAuthGuard)
   @HttpCode(200)
-  addToCart(@Req() req: AuthenticatedRequest, @Body() dto: AddToCartDto) {
-    return this.cartService.addItem(req.user.id, dto.itemId, dto.quantity);
+  addToCart(@CurrentUser() user: User | null, @Body() dto: AddToCartDto) {
+    if (!user?.id) throw new UnauthorizedException();
+    return this.cartService.addItem(user.id, dto.itemId, dto.quantity);
   }
 
   @Delete('cart')
   @UseGuards(SupabaseAuthGuard)
   @HttpCode(200)
-  removeFromCart(@Req() req: AuthenticatedRequest, @Body() dto: AddToCartDto) {
-    return this.cartService.removeItem(req.user.id, dto.itemId, dto.quantity);
+  removeFromCart(@CurrentUser() user: User | null, @Body() dto: AddToCartDto) {
+    if (!user?.id) throw new UnauthorizedException();
+    return this.cartService.removeItem(user.id, dto.itemId, dto.quantity);
   }
 
   @Post('cart/checkout')
   @UseGuards(SupabaseAuthGuard)
   @HttpCode(200)
-  async checkout(@Req() req: AuthenticatedRequest) {
-    return this.cartService.checkout(req.user.id);
+  async checkout(@CurrentUser() user: User | null) {
+    if (!user?.id) throw new UnauthorizedException();
+    return this.cartService.checkout(user.id);
   }
 }

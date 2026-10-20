@@ -92,7 +92,7 @@ export class UpdateProfileDto {
   @IsArray()
   @IsString({ each: true })
   @ArrayMinSize(1)
-  @ArrayMaxSize(3)
+  @ArrayMaxSize(5)
   target_languages?: string[];
 
   @IsOptional()
