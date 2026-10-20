@@ -20,6 +20,10 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-18 - [Angular OnPush and @for Loop Optimization]
+**Learning:** Adding `ChangeDetectionStrategy.OnPush` to components using Signals, alongside updating `@for` loops to track by unique IDs (e.g., `track item.id`) rather than entire object references, significantly reduces unnecessary change detection cycles and DOM re-renders without adding complexity to the codebase.
+**Action:** Always prioritize applying `ChangeDetectionStrategy.OnPush` on components displaying dynamic lists, and ensure `@for` loops track by specific unique identifiers to leverage Angular's optimized rendering.
+
 
 ## 2026-09-18 - [Optimize Angular @for loops with explicit track by id]
 **Learning:** Tracking items by object reference (e.g., `track room` or `track msg`) instead of unique IDs in Angular's `@for` block can cause unnecessary DOM recreations during state updates.
@@ -453,6 +457,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
