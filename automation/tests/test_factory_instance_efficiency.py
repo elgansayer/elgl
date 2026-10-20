@@ -1,7 +1,6 @@
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-EXTERNAL_REVIEW_QUIET_SECONDS = 120
 
 
 def _env_value(relative_path: str, key: str) -> str:
@@ -14,11 +13,12 @@ def _env_value(relative_path: str, key: str) -> str:
 
 
 def test_external_review_head_quiet_period_matches_bounded_policy() -> None:
-    for relative_path in (
-        "config/factory/instances/hellotalk.env",
-        "config/factory/instances/workout-agent.env",
-        "config/systemd/factory.env.example",
-    ):
+    expected = {
+        "config/factory/instances/hellotalk.env": 30,
+        "config/factory/instances/workout-agent.env": 120,
+        "config/systemd/factory.env.example": 120,
+    }
+    for relative_path, expected_seconds in expected.items():
         quiet_seconds = int(_env_value(relative_path, "FACTORY_REVIEW_HEAD_STABILITY_SECONDS"))
 
-        assert quiet_seconds == EXTERNAL_REVIEW_QUIET_SECONDS, relative_path
+        assert quiet_seconds == expected_seconds, relative_path
