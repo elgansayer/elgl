@@ -28,6 +28,7 @@ const CACHE_PREFIX_USERS = 'admin:users:list:';
 const CACHE_PREFIX_BLOCKS = 'admin:blocks:list:';
 const CACHE_PREFIX_REPORTS = 'admin:reports:list:';
 const CACHE_PREFIX_LOGIN_HISTORY = 'admin:login-history:';
+const SCAN_BATCH_SIZE = 500;
 
 @Injectable()
 export class AdminService {
@@ -43,19 +44,16 @@ export class AdminService {
     return this.supabaseService.getRedisClient();
   }
 
-  private async deleteKeysByScan(
-    redis: Redis,
-    pattern: string,
-  ): Promise<number> {
+  private async deleteByScan(redis: Redis, prefix: string): Promise<number> {
     let cursor = '0';
     let deleted = 0;
     do {
       const [nextCursor, keys] = await redis.scan(
         cursor,
         'MATCH',
-        pattern,
+        `${prefix}*`,
         'COUNT',
-        100,
+        SCAN_BATCH_SIZE,
       );
       cursor = nextCursor;
       if (keys.length > 0) {
@@ -68,10 +66,7 @@ export class AdminService {
   private async invalidateUserListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const deleted = await this.deleteKeysByScan(
-        redis,
-        `${CACHE_PREFIX_USERS}*`,
-      );
+      const deleted = await this.deleteByScan(redis, CACHE_PREFIX_USERS);
       if (deleted > 0) {
         this.logger.info(`Invalidated ${deleted} admin user list cache key(s)`);
       }
@@ -83,10 +78,7 @@ export class AdminService {
   private async invalidateBlocksListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const deleted = await this.deleteKeysByScan(
-        redis,
-        `${CACHE_PREFIX_BLOCKS}*`,
-      );
+      const deleted = await this.deleteByScan(redis, CACHE_PREFIX_BLOCKS);
       if (deleted > 0) {
         this.logger.info(
           `Invalidated ${deleted} admin blocks list cache key(s)`,
@@ -100,10 +92,7 @@ export class AdminService {
   private async invalidateReportsListCaches(): Promise<void> {
     try {
       const redis = this.getRedis();
-      const deleted = await this.deleteKeysByScan(
-        redis,
-        `${CACHE_PREFIX_REPORTS}*`,
-      );
+      const deleted = await this.deleteByScan(redis, CACHE_PREFIX_REPORTS);
       if (deleted > 0) {
         this.logger.info(
           `Invalidated ${deleted} admin reports list cache key(s)`,
@@ -189,6 +178,21 @@ export class AdminService {
     return result;
   }
 
+  async getUser(userId: string): Promise<AdminUserSummary> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select(SUMMARY_COLUMNS)
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('User not found');
+    }
+
+    return data;
+  }
+
   async setVipStatus(
     userId: string,
     dto: ToggleVipDto,
@@ -224,8 +228,11 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateLoginHistoryCache(userId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateLoginHistoryCache(userId),
+    ]);
 
     return data;
   }
@@ -309,9 +316,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateBlocksListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateBlocksListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
@@ -338,9 +348,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateReportsListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateReportsListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {

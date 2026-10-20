@@ -27,19 +27,19 @@ export class RecommendationsMetricsAggregator {
       const redis = this.supabaseService.getRedisClient();
 
       // Count active daily recommendation cache entries (indicates
-      // the daily cron ran successfully)
-      let cursor = '0';
+      // the daily cron ran successfully) using SCAN
       let tier1SuccessCount = 0;
+      let cursor = '0';
       do {
-        const [nextCursor, elements] = await redis.scan(
+        const [nextCursor, keys] = await redis.scan(
           cursor,
           'MATCH',
           'recommendations:daily:*',
           'COUNT',
-          100,
+          500,
         );
         cursor = nextCursor;
-        tier1SuccessCount += elements.length;
+        tier1SuccessCount += keys.length;
       } while (cursor !== '0');
 
       // Use the tier_success_rate gauge to approximate tier-1 health:

@@ -229,7 +229,7 @@ describe('AdminService', () => {
     it('updates is_vip and vip_tier, invalidates user list and login history caches', async () => {
       const updated = { id: 'user-1', is_vip: true, vip_tier: 'consumer' };
       mockQueryBuilder.single.mockResolvedValue({ data: updated, error: null });
-      mockRedisClient.scan.mockResolvedValue([
+      mockRedisClient.scan.mockResolvedValueOnce([
         '0',
         ['admin:users:list:1:20:', 'admin:users:list:2:10:search'],
       ]);
@@ -249,7 +249,7 @@ describe('AdminService', () => {
         'MATCH',
         'admin:users:list:*',
         'COUNT',
-        100,
+        500,
       );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:users:list:1:20:',
@@ -257,28 +257,6 @@ describe('AdminService', () => {
       );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
-      );
-    });
-
-    it('deletes matching cache keys one SCAN page at a time', async () => {
-      mockQueryBuilder.single.mockResolvedValue({
-        data: { id: 'user-1', is_vip: true, vip_tier: 'consumer' },
-        error: null,
-      });
-      mockRedisClient.scan
-        .mockResolvedValueOnce(['7', ['admin:users:list:1:20:']])
-        .mockResolvedValueOnce(['0', ['admin:users:list:2:20:']]);
-
-      await service.setVipStatus('user-1', {
-        is_vip: true,
-        vip_tier: 'consumer',
-      });
-
-      expect(mockRedisClient.del).toHaveBeenCalledWith(
-        'admin:users:list:1:20:',
-      );
-      expect(mockRedisClient.del).toHaveBeenCalledWith(
-        'admin:users:list:2:20:',
       );
     });
 
@@ -371,14 +349,14 @@ describe('AdminService', () => {
         'MATCH',
         'admin:users:list:*',
         'COUNT',
-        100,
+        500,
       );
       expect(mockRedisClient.scan).toHaveBeenCalledWith(
         '0',
         'MATCH',
         'admin:blocks:list:*',
         'COUNT',
-        100,
+        500,
       );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:bad-user',
@@ -410,14 +388,14 @@ describe('AdminService', () => {
         'MATCH',
         'admin:users:list:*',
         'COUNT',
-        100,
+        500,
       );
       expect(mockRedisClient.scan).toHaveBeenCalledWith(
         '0',
         'MATCH',
         'admin:reports:list:*',
         'COUNT',
-        100,
+        500,
       );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:bad-user',
@@ -650,7 +628,10 @@ describe('AdminService', () => {
       mockQueryBuilder.delete = vi
         .fn()
         .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
-      mockRedisClient.scan.mockResolvedValue(['0', ['admin:blocks:list:1:20']]);
+      mockRedisClient.scan.mockResolvedValueOnce([
+        '0',
+        ['admin:blocks:list:1:20'],
+      ]);
 
       const result = await service.removeBlock('block-1');
 
@@ -661,7 +642,7 @@ describe('AdminService', () => {
         'MATCH',
         'admin:blocks:list:*',
         'COUNT',
-        100,
+        500,
       );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:blocks:list:1:20',

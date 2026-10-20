@@ -74,3 +74,4 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 logs/*.log
+reports/
