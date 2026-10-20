@@ -6,7 +6,7 @@ import {
   RecommendationsService,
 } from '../../../services/recommendations.service';
 import { I18nService } from '../../../services/i18n.service';
-import { StudyBuddiesService } from '../../../services/study-buddies.service';
+import { StudyBuddyService } from '../../../services/study-buddy.service';
 import { RecommendedForYouCarouselComponent } from './recommended-for-you-carousel.component';
 
 function recommendation(id: string, name = id): DiscoveryRecommendation {
@@ -54,7 +54,7 @@ describe('RecommendedForYouCarouselComponent', () => {
           useValue: { getDiscoveryRecommendations: getRecommendations },
         },
         {
-          provide: StudyBuddiesService,
+          provide: StudyBuddyService,
           useValue: {
             follow: followUser,
             getOrCreateChannel,

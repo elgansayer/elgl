@@ -59,14 +59,14 @@ backend/src/<feature>/
 
 4. **Service** - inject `SupabaseService` (`backend/src/supabase/supabase.service.ts`) for `getClient()` (Postgres/Auth) and `getRedisClient()` (rate limits/queues/cache). Throw NestJS HTTP exceptions (`BadRequestException`, `ForbiddenException`, `NotFoundException`) for expected failure paths rather than returning ambiguous nulls.
 
-5. **Tests** - add a `*.spec.ts` next to every controller/service (Vitest, mocking `SupabaseService`/`CentrifugoService`/`ConfigService` as needed). Per `AGENTS.md` Section 6, every controller/service/guard must have coverage for DTO validation, auth flows, and external-service mocks.
+5. **Tests** - add a `*.spec.ts` next to every controller/service (Vitest, mocking `SupabaseService`/`CentrifugeService`/`ConfigService` as needed). Per `AGENTS.md` Section 6, every controller/service/guard must have coverage for DTO validation, auth flows, and external-service mocks.
 
 6. **Verify** - run the `verification-gate` skill's backend steps (`npm run lint`, `npm test`, `npm run build` inside `backend/`) before considering the module done.
 
 ## Gotchas Found in This Codebase
 
 - Endpoints with money/coin/VIP-tier side effects must derive the amount/tier from a server-verified source, never from the request body. This exact mistake exists today in `economy.service.ts#purchaseCoins` and `monetisation.service.ts#upgradeUser` - do not copy that pattern (see `payment-webhook-security`).
-- `CentrifugoService.publish(channel, data)` swallows errors and returns `boolean` - check the return value if delivery matters for the feature.
+- `CentrifugeService.publish(channel, data)` swallows errors and returns `boolean` - check the return value if delivery matters for the feature.
 
 ---
 
