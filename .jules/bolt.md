@@ -21,6 +21,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-08-30 - [Optimize GDPR Archive Deck Flashcards Fetch with Bounded Concurrency]
+**Learning:** In the backend `privacy.service.ts`, sequentially fetching chunks of `deck_flashcards` using `this.fetchPaged` within a `for` loop during GDPR archive creation introduces N+1 latency, prolonging the data collection process. However, simply using an unbounded `Promise.all` over a large number of decks can exhaust database connection pools.
+**Action:** Replace the sequential chunk fetching with a bounded concurrency approach (e.g., chunking the array into smaller subsets of 5 concurrent requests) and resolve these subsets using `Promise.all` to balance speed and resource utilisation.
+
 ## 2026-09-03 - [Batch Redis Cache Invalidation Queries with Promise.all]
 **Learning:** Sequential `deleteByPattern` and `del` requests in NestJS event handlers block sequentially, creating N+1 latency across network calls to the Redis cache database.
 **Action:** When performing multiple cache invalidations in a single handler, gather all promises and resolve them concurrently using a single `Promise.all` array.
@@ -440,6 +444,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
