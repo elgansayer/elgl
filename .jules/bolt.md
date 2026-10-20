@@ -21,6 +21,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-24 - [Batch Redis Cache Invalidations with Promise.all]
+**Learning:** Sequential `await` calls to independent cache invalidation methods (like `redis.del()`) create additive network latency when clearing multiple related caches.
+**Action:** When invalidating multiple independent cache sets (e.g., `invalidateUserListCaches()`, `invalidateBlocksListCaches()`), group the method calls into a single concurrent `Promise.all` batch to improve execution speed.
+
 ## 2024-10-31 - [Batch Cache Invalidation Calls with Promise.all]
 **Learning:** Sequential cache invalidation `await` calls in NestJS services block sequentially, creating additive N+1 latency across network calls to Redis.
 **Action:** When invalidating multiple independent caches (e.g., user lists, blocks, login history), group all invalidation calls and resolve them concurrently using a single `Promise.all` array.
@@ -357,6 +361,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
