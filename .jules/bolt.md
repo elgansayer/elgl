@@ -20,6 +20,10 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-21 - [Optimize Archive Cleanup via Promise.allSettled]
+**Learning:** In the backend `privacy.service.ts` cronjob `purgeExpiredArchives`, sequentially iterating through expired archives and running `await supabase.storage.remove` followed by `await supabase.update` causes N+1 network latency during cleanup tasks.
+**Action:** Replace single sequential loop with bounded concurrent chunks using `Promise.allSettled` to improve throughput.
+
 
 ## 2026-09-22 - [Avoid Replacing IndexedDB store.put() Loops with .map()]
 **Learning:** Calling `store.put(item)` inside an IndexedDB transaction simply queues the requests synchronously. Replacing a `for...of` loop of `store.put()` calls with `.map()` does not change the concurrency model and actually degrades performance by allocating an unnecessary array of `IDBRequest` objects that are immediately discarded.
@@ -378,6 +382,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
