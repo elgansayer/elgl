@@ -269,6 +269,7 @@ jobs:
       - run: npm run check:constitution
       - run: npm run check:agent-ui-governance
       - run: npm run check:design-sync
+      - run: npm run check:design-coverage
       - name: Enforce Spartan ownership boundaries
         env:
           SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
