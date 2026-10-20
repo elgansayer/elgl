@@ -11,13 +11,10 @@ import {
   FlashcardContextMenuDirective,
   type FlashcardSelectionRequest,
 } from '../../services/flashcard-context-menu.directive';
-import { FlashcardService } from '../../services/flashcard.service';
 import { ChatService } from '../../services/chat.service';
 import { showErrorToast, showToast } from '../../services/toast.service';
 
 const FLASHCARD_TRANSLATION_MAX_LENGTH = 500;
-
-type SegmenterConstructor = typeof Intl.Segmenter;
 
 export interface TokenSegment {
   segment: string;
@@ -30,50 +27,6 @@ interface ParsedTokens {
   transliteration: string;
 }
 
-/**
- * Tokenises text with the browser's native word segmenter. If the API is not
- * available, or both the requested and default locale fail, the original text
- * is preserved as a non-interactive segment instead of crashing the message.
- */
-export function tokeniseText(
-  text: string,
-  language: string,
-  Segmenter?: SegmenterConstructor,
-): TokenSegment[] {
-  if (!text) return [];
-
-  // A caller may explicitly pass undefined to model browsers without
-  // Intl.Segmenter. Only fall back to the runtime implementation when the
-  // optional dependency was omitted entirely.
-  const resolvedSegmenter =
-    arguments.length >= 3
-      ? Segmenter
-      : typeof Intl === 'undefined'
-        ? undefined
-        : Intl.Segmenter;
-  if (!resolvedSegmenter) return [{ segment: text, isWordLike: false, index: 0 }];
-
-  const toTokens = (locale?: string): TokenSegment[] => {
-    const segmenter = new resolvedSegmenter(locale, { granularity: 'word' });
-    return [...segmenter.segment(text)].map((item) => ({
-      segment: item.segment,
-      isWordLike: item.isWordLike ?? false,
-      index: item.index,
-    }));
-  };
-
-  const locale = language.trim() || undefined;
-  try {
-    return toTokens(locale);
-  } catch {
-    try {
-      return toTokens();
-    } catch {
-      return [{ segment: text, isWordLike: false, index: 0 }];
-    }
-  }
-}
-
 @Component({
   selector: 'app-tokenised-text',
   imports: [FlashcardContextMenuDirective, ...HlmButtonImports, ...HlmDialogImports],
@@ -84,7 +37,6 @@ export function tokeniseText(
       [selectionContext]="text()"
       (flashcardSelection)="openFlashcardSelection($event)"
       class="inline leading-relaxed select-text font-medium text-base"
-      dir="auto"
     >
       @for (token of tokens(); track token.index) {
         <span
@@ -175,7 +127,6 @@ export class TokenisedTextComponent {
   readonly vocabStore = inject(VocabularyStore);
   readonly i18n = inject(I18nService);
   readonly transliterationService = inject(TransliterationService);
-  private readonly flashcardService = inject(FlashcardService);
   private readonly chatService = inject(ChatService);
   private readonly errorHandler = inject(ErrorHandler);
 
@@ -199,20 +150,25 @@ export class TokenisedTextComponent {
   });
 
   private readonly parsed = computed<ParsedTokens>(() => {
-    const text = this.text();
-    const language = this.language();
+    if (typeof Intl === 'undefined' || !Intl.Segmenter) {
+      throw new Error(this.i18n.translate('errors.intlSegmenterUnavailable'));
+    }
 
-    let transliteration = '';
-    try {
-      transliteration = this.transliterationService.transliterate(text, language);
-    } catch {
-      // Transliteration is progressive enhancement. Token rendering must remain
-      // available when a script provider or browser capability is unavailable.
+    const segments: TokenSegment[] = [];
+    const segmenter = new Intl.Segmenter(this.language(), { granularity: 'word' });
+    const rawSegments = segmenter.segment(this.text());
+
+    for (const item of rawSegments) {
+      segments.push({
+        segment: item.segment,
+        isWordLike: item.isWordLike ?? false,
+        index: item.index,
+      });
     }
 
     return {
-      tokens: tokeniseText(text, language),
-      transliteration,
+      tokens: segments,
+      transliteration: this.transliterationService.transliterate(this.text(), this.language()),
     };
   });
 
@@ -266,7 +222,7 @@ export class TokenisedTextComponent {
         throw new Error('Translation provider returned an invalid result');
       }
 
-      await this.flashcardService.createFlashcard({
+      await this.vocabStore.saveWord({
         word_token: selection.text,
         original_context: selection.context,
         translation,

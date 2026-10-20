@@ -1,5 +1,4 @@
 import { validationSchema } from './validation.schema';
-import { assertMockBackendActivationBoundary } from './mock-backend-mode';
 
 export const PRODUCTION_REQUIRED_ENV_KEYS = [
   'FRONTEND_URL',
@@ -147,7 +146,6 @@ export function validateEnvironment(
   const rawNodeEnv = rawConfig.NODE_ENV;
   const nodeEnv =
     typeof rawNodeEnv === 'string' ? rawNodeEnv.toLowerCase() : 'development';
-  const mockBackendMode = assertMockBackendActivationBoundary(rawConfig);
 
   if (nodeEnv === 'production') {
     assertRequiredProductionValues(rawConfig);
@@ -168,8 +166,5 @@ export function validateEnvironment(
     throw new Error(`Environment validation failed: ${details}`);
   }
 
-  return {
-    ...result.value,
-    MOCK_BACKEND_MODE: mockBackendMode,
-  };
+  return result.value;
 }

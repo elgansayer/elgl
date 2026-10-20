@@ -1,0 +1,516 @@
+<!-- @dsCard group="Features" name="__NAME__" subtitle="__SUBTITLE__" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · __NAME__</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="__ID__" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 101 106 122;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 137 143 157;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - __NAME__</h1>
+        <p>
+          Design-sync ID <code>__ID__</code> · every runtime surface in this area is one specimen
+          below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <!-- One specimen section per surface; its data-component attribute is the path under frontend/src/app. -->
+      <section class="specimen" data-component="components/example">
+        <header>
+          <h2>Example</h2>
+          <code>components/example</code>
+        </header>
+        <div class="body">…</div>
+        <footer>States shown: default · loading · error</footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>
