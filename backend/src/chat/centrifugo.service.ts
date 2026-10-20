@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
-import Redis from 'ioredis';
+import Redis from 'ioredis-v6';
 import { randomUUID } from 'crypto';
 
 /**
@@ -86,15 +86,11 @@ export class CentrifugoService implements OnModuleInit {
 
     const env = this.configService.get<string>('NODE_ENV') || 'development';
     if (env === 'production') {
-      if (!apiKey || apiKey === 'test-centrifugo-api-key') {
-        throw new Error(
-          'CENTRIFUGO_API_KEY must be securely configured in production',
-        );
+      if (!apiKey) {
+        throw new Error('CENTRIFUGO_API_KEY must be configured in production');
       }
-      if (!secret || secret === 'test-centrifugo-secret') {
-        throw new Error(
-          'CENTRIFUGO_SECRET must be securely configured in production',
-        );
+      if (!secret) {
+        throw new Error('CENTRIFUGO_SECRET must be configured in production');
       }
     }
 
@@ -108,6 +104,8 @@ export class CentrifugoService implements OnModuleInit {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
         enableOfflineQueue: false,
+        // ioredis 6 defaults to RESP3; retain v5 response shapes.
+        protocol: 2,
       });
       await this.redis.connect();
       // Pre-load the Lua script so we can call it by SHA digest (EVALSHA)

@@ -28,8 +28,6 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - REDIS_URL=redis://cache:6379
-      - CENTRIFUGO_URL=http://websocket:8000
     env_file:
       - .env
     ports:

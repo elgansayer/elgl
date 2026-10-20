@@ -19,7 +19,7 @@ host proves all of the following:
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
 - root and Factory-state volumes both retain the configured free-space reserve;
-- one baseline GitHub ruleset requires pull requests and non-strict `CI / required` on `main`;
+- one baseline GitHub ruleset requires pull requests and `CI / required` on `main`;
 - `factory/independent-review` is required by either that ruleset or a review-only ruleset whose sole optional
   bypass is the exact repository-owner user in pull-request mode;
 - the baseline ruleset may use the same exact-owner, pull-request-only bypass, while role, team, app, deploy-key,
@@ -191,7 +191,7 @@ Before a task branch can merge, the Factory preserves these controls:
 - atomic base updates and renewed verification/review when a head is behind `main`;
 - atomic `--match-head-commit` enforcement at the merge call;
 - literal success for `CI / required` and `factory/independent-review` in every autonomous merge;
-- a baseline ruleset requiring pull requests and non-strict `CI / required`;
+- a baseline ruleset requiring pull requests and strict `CI / required`;
 - an optional exact-owner, pull-request-only bypass on the baseline and review-only rulesets;
 - a review-only ruleset requiring `factory/independent-review`;
 - human `CHANGES_REQUESTED` review blocking;

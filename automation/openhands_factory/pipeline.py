@@ -1667,6 +1667,29 @@ class FactoryPipeline:
             ),
         )
 
+    def _review_needs_base_update(
+        self, job: Job, workflow: GitWorkflow, status: PullRequestStatus
+    ) -> bool:
+        # BEHIND is GitHub's explicit strict-base requirement. BLOCKED/UNKNOWN
+        # can instead mean that our own independent review is still missing.
+        if status.merge_state_status == "BEHIND":
+            return True
+        if status.merge_state_status not in {"UNKNOWN", "BLOCKED", "UNSTABLE"}:
+            return False
+        if (
+            not self.config.require_green_main_between_merges
+            and status.head_sha == job.head_sha
+            and status.ci_required_passed
+            and not status.ci_required_pending
+            and not status.ci_required_failed
+        ):
+            # Honour the configured non-strict policy: preserve an already
+            # tested head for independent review instead of invalidating its CI
+            # every time an unrelated actor advances main. Conflict handling and
+            # the exact-head review/merge gates still run below.
+            return False
+        return not workflow.contains_current_base()
+
     def _prepare_pull_request_for_review(
         self,
         job: Job,
@@ -1708,11 +1731,7 @@ class FactoryPipeline:
         # GitHub's aggregate state masks base staleness behind required-check
         # failures or a missing Factory review. Inspect ancestry before spending
         # verification or provider capacity on a head missing fixes from main.
-        local_base_is_stale = (
-            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
-            and not self._workflow(worktree).contains_current_base()
-        )
-        if status.merge_state_status == "BEHIND" or local_base_is_stale:
+        if self._review_needs_base_update(job, self._workflow(worktree), status):
             # Verify the merge candidate, not a stale head. Otherwise old pull
             # requests miss fixes already on main and get sent through unnecessary
             # AI repair for failures the base branch has already resolved.
@@ -1821,12 +1840,7 @@ class FactoryPipeline:
         )
         job.review_findings.clear()
         status = known_status or self._status(job)
-        # BLOCKED/UNSTABLE do not imply that the branch contains current main.
-        local_base_is_stale = (
-            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
-            and not self._workflow(worktree).contains_current_base()
-        )
-        if status.merge_state_status == "BEHIND" or local_base_is_stale:
+        if self._review_needs_base_update(job, self._workflow(worktree), status):
             if self._update_pull_request_branch(job, status):
                 job.state = JobState.CI_PENDING
             return

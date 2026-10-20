@@ -8,7 +8,6 @@ import { FavouriteService } from '../../services/favourite.service';
 import { I18nService } from '../../services/i18n.service';
 import { NlpService } from '../../services/nlp.service';
 import { SafetyService } from '../../services/safety.service';
-import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { ChatMessageComponent } from './chat-message.component';
 
