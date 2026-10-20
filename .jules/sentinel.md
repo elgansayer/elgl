@@ -111,6 +111,12 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-10-02 - Permissive CORS Configuration
+**Vulnerability:** Permissive CORS configuration with localhost fallback in non-production environments.
+**Learning:** Fallbacks to localhost in CORS configurations can inadvertently expose APIs if an environment is misconfigured or if non-production environments are exposed to the public internet.
+**Prevention:** Strictly require and validate origin variables (like `FRONTEND_URL`) across all environments without hardcoded fallbacks in application bootstrap code.
+
 ## 2026-10-06 - Remove hardcoded Firebase configuration placeholders
 **Vulnerability:** The service worker `frontend/src/firebase-messaging-sw.js` used a fallback of `|| 'YOUR_API_KEY'` which acts as an explicit invitation for developers to commit raw secret string literals into source control.
 **Learning:** Having placeholders for secrets directly in source files often leads to those placeholders being overwritten by the real secrets and committed.
@@ -168,4 +174,5 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
