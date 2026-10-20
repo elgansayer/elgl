@@ -41,7 +41,7 @@ def test_production_uses_subscription_first_phase_routing() -> None:
     assert config["routing_enabled"] is True
     assert providers["claude"]["enabled"] is True
     assert providers["codex"]["enabled"] is True
-    assert providers["opencode"]["enabled"] is True
+    assert providers["opencode"]["enabled"] is False
     assert providers["google"]["enabled"] is True
     assert providers["pi"]["enabled"] is True
     assert providers["openhands"]["enabled"] is False
@@ -49,22 +49,20 @@ def test_production_uses_subscription_first_phase_routing() -> None:
     assert providers["openhands"]["emergency_only"] is True
 
     expected = {
-        AgentPhase.PLANNING: ["claude", "codex", "google", "opencode", "pi"],
-        AgentPhase.ARCHITECTURE: ["claude", "codex", "google", "opencode", "pi"],
-        AgentPhase.IMPLEMENTATION: ["claude", "codex", "google", "opencode", "pi"],
-        AgentPhase.SECURITY_REVIEW: ["claude", "codex", "google", "opencode", "pi"],
-        AgentPhase.QUALITY_REPAIR: ["opencode", "google", "claude", "pi", "codex"],
-        AgentPhase.CODE_REVIEW: ["codex", "claude", "google", "opencode", "pi"],
-        AgentPhase.CI_REPAIR: ["opencode", "google", "claude", "pi", "codex"],
-        AgentPhase.GENERAL_ACTION: ["opencode", "google", "codex", "claude", "pi"],
+        AgentPhase.PLANNING: ["google", "claude", "codex", "pi"],
+        AgentPhase.ARCHITECTURE: ["google", "claude", "codex", "pi"],
+        AgentPhase.IMPLEMENTATION: ["google", "claude", "codex", "pi"],
+        AgentPhase.SECURITY_REVIEW: ["google", "claude", "codex", "pi"],
+        AgentPhase.QUALITY_REPAIR: ["google", "pi", "codex", "claude"],
+        AgentPhase.CODE_REVIEW: ["claude", "google", "codex", "pi"],
+        AgentPhase.CI_REPAIR: ["google", "pi", "claude", "codex"],
+        AgentPhase.GENERAL_ACTION: ["google", "pi", "claude", "codex"],
     }
     for phase, candidates in expected.items():
         assert routing[phase.value.replace("-", "_")] == candidates
         assert "openhands" not in candidates
 
-    # Keep bounded repair preferences cheap-first. Runtime history promotes Codex
-    # only after two real provider starts for that repair phase.
-    assert expected[AgentPhase.QUALITY_REPAIR][-1] == "codex"
+    # Keep Codex as the final repair route after the fast subscription tiers.
     assert expected[AgentPhase.CI_REPAIR][-1] == "codex"
 
 

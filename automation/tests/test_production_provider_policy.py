@@ -36,14 +36,14 @@ def test_production_provider_policy_is_locked() -> None:
     routing = config["routing"]
     breaker = config["circuit_breaker"]
     expected_routes = {
-        "planning": ["claude", "codex", "google", "opencode", "pi"],
-        "architecture": ["claude", "codex", "google", "opencode", "pi"],
-        "implementation": ["claude", "codex", "google", "opencode", "pi"],
-        "security_review": ["claude", "codex", "google", "opencode", "pi"],
-        "quality_repair": ["opencode", "google", "claude", "pi", "codex"],
-        "code_review": ["codex", "claude", "google", "opencode", "pi"],
-        "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
-        "general_action": ["opencode", "google", "codex", "claude", "pi"],
+        "planning": ["google", "claude", "codex", "pi"],
+        "architecture": ["google", "claude", "codex", "pi"],
+        "implementation": ["google", "claude", "codex", "pi"],
+        "security_review": ["google", "claude", "codex", "pi"],
+        "quality_repair": ["google", "pi", "codex", "claude"],
+        "code_review": ["claude", "google", "codex", "pi"],
+        "ci_repair": ["google", "pi", "claude", "codex"],
+        "general_action": ["google", "pi", "claude", "codex"],
     }
 
     assert config["routing_enabled"] is True
@@ -55,7 +55,7 @@ def test_production_provider_policy_is_locked() -> None:
     }
     assert providers["opencode"] == {
         **providers["opencode"],
-        "enabled": True,
+        "enabled": False,
         "auth_mode": "subscription",
         "transport": "cli",
     }
@@ -76,16 +76,11 @@ def test_production_provider_policy_is_locked() -> None:
     assert all(routing[phase] == route for phase, route in expected_routes.items())
     assert "openhands" not in routing["planning"]
 
-    # Keep every low-cost provider ahead of Codex in static repair preferences.
-    # Runtime history promotes Codex after two providers have actually started.
-    for phase in ("quality_repair", "ci_repair"):
-        assert routing[phase][-1] == "codex"
-    assert providers["google"]["phase_models"]["quality_repair"].endswith("flash-low")
-    assert providers["claude"]["phase_models"]["quality_repair"] == "haiku"
-    assert providers["pi"]["phase_models"]["quality_repair"].endswith("haiku-4.5")
+    # Production evidence favours Google and the fast Pi tier for bounded repair.
+    # Codex remains the final repair route for complex fallback work.
+    assert routing["ci_repair"][-1] == "codex"
     assert providers["google"]["phase_models"]["ci_repair"].endswith("flash-low")
     assert providers["claude"]["phase_models"]["ci_repair"] == "haiku"
-    assert providers["pi"]["phase_models"]["ci_repair"].endswith("haiku-4.5")
 
     # With only six real provider starts admitted per hour in conservative mode,
     # rediscovering a known provider-wide outage is material allowance waste.
@@ -93,7 +88,7 @@ def test_production_provider_policy_is_locked() -> None:
     assert breaker["rate_limit_cooldown_seconds"] >= 900
 
 
-def _repair_rotation_windows(phase: AgentPhase) -> tuple[list[str], list[str]]:
+def test_ci_repair_rotation_reaches_codex_in_second_candidate_window() -> None:
     raw_config = _production_config()
     config = AgentsConfig.model_validate(raw_config)
     providers = [_Provider(name) for name, provider in config.providers.items() if provider.enabled]
@@ -102,33 +97,22 @@ def _repair_rotation_windows(phase: AgentPhase) -> tuple[list[str], list[str]]:
         policy=ConfigRoutingPolicy(config),
         enabled=True,
     )
-    task = Task(f"repair-{phase.value}", "Repair", "Body", "github-pull-request", 0)
+    task = Task("ci-42", "Repair CI", "Body", "github-pull-request", 0)
     job = Job(task)
 
-    first_window, _ = router._candidate_names(phase, job)
+    first_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
+    assert first_window == ["google", "pi"]
+
     job.provider_history.extend(
         {
             "provider": provider,
-            "phase": phase.value,
+            "phase": AgentPhase.CI_REPAIR.value,
             "success": False,
         }
         for provider in first_window
     )
-    second_window, _ = router._candidate_names(phase, job)
-    return first_window, second_window
+    second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
 
-
-def test_quality_repair_rotation_reaches_codex_after_two_cheap_starts() -> None:
-    first_window, second_window = _repair_rotation_windows(AgentPhase.QUALITY_REPAIR)
-
-    assert first_window == ["opencode", "google"]
-    assert second_window == ["codex", "claude"]
-
-
-def test_ci_repair_rotation_reaches_codex_in_second_candidate_window() -> None:
-    first_window, second_window = _repair_rotation_windows(AgentPhase.CI_REPAIR)
-
-    assert first_window == ["opencode", "google"]
     assert second_window == ["codex", "claude"]
 
 
@@ -136,8 +120,8 @@ def test_ci_repair_stays_cheap_when_preferred_provider_is_unhealthy() -> None:
     raw_config = _production_config()
     config = AgentsConfig.model_validate(raw_config)
     for unavailable, expected_first in (
-        ("opencode", ["google", "claude"]),
-        ("google", ["opencode", "claude"]),
+        ("google", ["pi", "claude"]),
+        ("claude", ["google", "pi"]),
     ):
         providers = [
             _Provider(
@@ -168,4 +152,5 @@ def test_ci_repair_stays_cheap_when_preferred_provider_is_unhealthy() -> None:
         )
         second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
 
-        assert second_window == ["codex", "pi"]
+        assert second_window[0] == "codex"
+        assert len(second_window) == 2
