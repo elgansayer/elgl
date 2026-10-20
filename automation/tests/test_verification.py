@@ -33,7 +33,7 @@ def test_verification_stages_sources_before_masking_mnt() -> None:
     ) == Path("/media")
 
 
-def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> None:
+def test_every_change_runs_cross_cutting_governance_gate(tmp_path: Path) -> None:
     commands = commands_for(tmp_path, {Path("README.md")})
     names = {command.name for command in commands}
 
@@ -46,19 +46,13 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
     assert "design-sync-drift" in names
     assert "legacy-primitive-delta" in names
     assert "admin-audit-integrity" in names
-    assert "factory-format" in names
-    assert "factory-lint" in names
-    assert "factory-types" in names
-    assert "factory-tests" in names
-    assert "frontend-build" in names
-    assert "frontend-test" in names
+    assert "factory-format" not in names
+    assert "factory-tests" not in names
+    assert "frontend-build" not in names
+    assert "frontend-test" not in names
     assert "frontend-e2e" not in names
-    assert "backend-build" in names
-    assert "backend-test" in names
-    assert "backend-test:e2e" in names
-    assert "admin-lint:check" in names
-    assert "admin-build" in names
-    assert "admin-test" in names
+    assert "backend-build" not in names
+    assert "admin-build" not in names
     migration = next(command for command in commands if command.name == "migration-delta")
     assert migration.arguments == (
         "env",
@@ -67,63 +61,74 @@ def test_every_change_runs_full_repository_and_factory_gate(tmp_path: Path) -> N
         "scripts/check-migration-delta.mjs",
     )
     assert migration.directory == tmp_path
-    factory_format = next(command for command in commands if command.name == "factory-format")
-    assert factory_format.arguments == (
-        "uv",
-        "run",
-        "--frozen",
-        "ruff",
-        "format",
-        "--check",
-        ".",
-    )
-    factory_lint = next(command for command in commands if command.name == "factory-lint")
-    assert factory_lint.arguments == (
-        "uv",
-        "run",
-        "--frozen",
-        "ruff",
-        "check",
-        ".",
-    )
-    factory_types = next(command for command in commands if command.name == "factory-types")
-    assert factory_types.arguments == ("uv", "run", "--frozen", "mypy")
-    factory = next(command for command in commands if command.name == "factory-tests")
-    assert factory.arguments == ("uv", "run", "--frozen", "python", "-m", "pytest")
     assert all(command.workspace == tmp_path for command in commands)
-    assert all(
-        command.directory == tmp_path / "automation"
-        for command in (factory_format, factory_lint, factory_types, factory)
-    )
-    assert [command.name for command in commands].index("migration-delta") < [
-        command.name for command in commands
-    ].index("factory-tests")
     assert (
         next(command for command in commands if command.name == "spartan-boundaries").arguments[1]
         == "SPARTAN_BOUNDARY_BASE_SHA=origin/main"
     )
-    frontend_commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
-    frontend_e2e = next(command for command in frontend_commands if command.name == "frontend-e2e")
-    assert frontend_e2e.arguments[:2] == ("bash", "-lc")
-    script = frontend_e2e.arguments[2]
-    assert "npm start" in script
-    # A crashed dev server must fail fast with its own log, not silently burn
-    # the whole wait window and then fail a second, more confusing time inside
-    # npm run e2e against a server that was never coming up.
-    assert "kill -0" in script
-    assert "factory-angular-e2e.log" in script
-    assert frontend_e2e.arguments[-1] == "cypress/e2e/cypress-setup.cy.ts"
 
 
 def test_memory_heavy_and_fixed_port_frontend_commands_are_exclusive(tmp_path: Path) -> None:
-    commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
+    path = Path("frontend/src/app/app.ts")
+    (tmp_path / path).parent.mkdir(parents=True)
+    (tmp_path / path).touch()
+    commands = commands_for(tmp_path, {path})
     exclusive = {command.name for command in commands if command.exclusive}
     assert exclusive == {
         "frontend-lint:check",
         "frontend-build",
-        "frontend-test",
-        "frontend-e2e",
     }
+
+
+def test_local_unit_tests_run_only_directly_changed_specs(tmp_path: Path) -> None:
+    paths = {
+        Path("frontend/src/app/app.ts"),
+        Path("frontend/src/app/app.spec.ts"),
+        Path("backend/src/app.service.ts"),
+        Path("backend/src/app.service.spec.ts"),
+        Path("admin-portal/src/app/app.ts"),
+        Path("admin-portal/src/app/app.spec.ts"),
+    }
+    for path in paths:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    commands = commands_for(tmp_path, paths)
+
+    frontend_test = next(command for command in commands if command.name == "frontend-test")
+    backend_test = next(command for command in commands if command.name == "backend-test")
+    admin_test = next(command for command in commands if command.name == "admin-test")
+    assert frontend_test.arguments[-2:] == ("--include", "src/app/app.spec.ts")
+    assert backend_test.arguments == (
+        "npm",
+        "exec",
+        "--",
+        "vitest",
+        "run",
+        "src/app.service.spec.ts",
+        "--passWithNoTests",
+    )
+    assert admin_test.arguments[-2:] == ("--include", "src/app/app.spec.ts")
+
+
+def test_production_only_changes_defer_full_unit_suites_to_required_ci(tmp_path: Path) -> None:
+    paths = {
+        Path("frontend/src/app/app.ts"),
+        Path("backend/src/app.service.ts"),
+        Path("admin-portal/src/app/app.ts"),
+    }
+    for path in paths:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    names = {command.name for command in commands_for(tmp_path, paths)}
+
+    assert "frontend-build" in names
+    assert "backend-build" in names
+    assert "admin-build" in names
+    assert "frontend-test" not in names
+    assert "backend-test" not in names
+    assert "admin-test" not in names
 
 
 def test_frontend_e2e_runs_only_changed_cypress_specs(tmp_path: Path) -> None:
@@ -219,6 +224,8 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
+    assert "/run/containerd/containerd.sock /run/docker.sock" in sandbox_script
+    assert 'mount --bind /dev/null "$container_socket"' in sandbox_script
     assert "uv_cache=$service_home/.cache/uv" in sandbox_script
     assert "cypress_cache=$6" in sandbox_script
     assert 'mount --bind "$staging/uv-cache" /tmp/uv-cache' in sandbox_script
@@ -261,7 +268,10 @@ def test_uv_cache_mount_is_writable_not_read_only() -> None:
 
 
 def test_a_backend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
-    commands = commands_for(tmp_path, {Path("backend/src/quiz/quiz.service.ts")})
+    path = Path("backend/src/quiz/quiz.service.ts")
+    (tmp_path / path).parent.mkdir(parents=True)
+    (tmp_path / path).touch()
+    commands = commands_for(tmp_path, {path})
     names = {command.name for command in commands}
 
     assert "backend-lint:check" in names
@@ -285,6 +295,26 @@ def test_a_frontend_only_change_skips_the_other_workspaces(tmp_path: Path) -> No
     assert "factory-tests" not in names
 
 
+def test_mixed_workspace_targeted_commands_only_receive_local_paths(tmp_path: Path) -> None:
+    paths = {
+        Path("frontend/src/app/app.ts"),
+        Path("backend/src/app.service.ts"),
+        Path("admin-portal/src/app/app.ts"),
+    }
+    for path in paths:
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).touch()
+
+    commands = commands_for(tmp_path, paths)
+
+    frontend_lint = next(command for command in commands if command.name == "frontend-lint:check")
+    backend_lint = next(command for command in commands if command.name == "backend-lint:check")
+    admin_lint = next(command for command in commands if command.name == "admin-lint:check")
+    assert frontend_lint.arguments[-1] == "src/app/app.ts"
+    assert backend_lint.arguments[-1] == "src/app.service.ts"
+    assert admin_lint.arguments[-1] == "src/app/app.ts"
+
+
 def test_an_automation_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
     commands = commands_for(tmp_path, {Path("automation/openhands_factory/pipeline.py")})
     names = {command.name for command in commands}
@@ -296,18 +326,19 @@ def test_an_automation_only_change_skips_the_other_workspaces(tmp_path: Path) ->
     assert "admin-build" not in names
 
 
-def test_a_change_outside_every_workspace_falls_back_to_running_everything(
+def test_a_change_outside_every_workspace_runs_only_cross_cutting_checks(
     tmp_path: Path,
 ) -> None:
-    # A root-level or CI-workflow-only change can't be attributed to any one
-    # workspace - verifying nothing would be worse than verifying everything.
+    # Full required CI still runs before merge, so local preflight does not
+    # duplicate every workspace suite for a documentation-only change.
     commands = commands_for(tmp_path, {Path("AGENTS.md")})
     names = {command.name for command in commands}
 
-    assert "backend-build" in names
-    assert "frontend-build" in names
-    assert "admin-build" in names
-    assert "factory-tests" in names
+    assert "backend-build" not in names
+    assert "frontend-build" not in names
+    assert "admin-build" not in names
+    assert "factory-tests" not in names
+    assert "constitution" in names
 
 
 def test_workout_agent_backend_uses_python_native_gate(tmp_path: Path) -> None:
