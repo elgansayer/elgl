@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { ChatService } from '../../services/chat.service';
-import { FlashcardService } from '../../services/flashcard.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from './visual-diff.component';
@@ -10,18 +10,18 @@ import { VisualDiffComponent } from './visual-diff.component';
 describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
-  const createFlashcard = vi.fn();
+  const saveWord = vi.fn();
 
   beforeEach(async () => {
-    createFlashcard.mockReset();
-    createFlashcard.mockResolvedValue(undefined);
+    saveWord.mockReset();
+    saveWord.mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [VisualDiffComponent],
       providers: [
         {
-          provide: FlashcardService,
-          useValue: { createFlashcard },
+          provide: VocabularyStore,
+          useValue: { saveWord },
         },
         {
           provide: I18nService,
@@ -247,7 +247,7 @@ describe('VisualDiffComponent', () => {
 
     await component.createFlashcard();
 
-    expect(createFlashcard).toHaveBeenCalledWith({
+    expect(saveWord).toHaveBeenCalledWith({
       word_token: 'I went to the market yesterday.',
       translation: 'I goes to market yesterday.',
       original_context: 'Use the past tense here.',
@@ -261,7 +261,7 @@ describe('VisualDiffComponent', () => {
 
     await component.createFlashcard();
 
-    expect(createFlashcard).toHaveBeenCalledWith({
+    expect(saveWord).toHaveBeenCalledWith({
       word_token: 'c'.repeat(200),
       translation: 'o'.repeat(500),
       original_context: undefined,
@@ -275,7 +275,7 @@ describe('VisualDiffComponent', () => {
 
     await component.createFlashcard();
 
-    expect(createFlashcard).toHaveBeenCalledWith({
+    expect(saveWord).toHaveBeenCalledWith({
       word_token: 'Hello, world',
       translation: 'Hello world',
       original_context: 'e'.repeat(1000),
