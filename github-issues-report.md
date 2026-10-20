@@ -14,19 +14,25 @@
   - Implement `try...catch` error handling and user feedback for community operations.
 
 Suggested Labels: bug, performance, tech-debt, ui
-# Issue 1: Implement Denser Multi-Pane Layout for Communities
+
+# Issue 1: Revamp Communities UI and Navigation
 
 ## Title
-feat(ui): implement multi-pane layout for Communities navigation
+feat(ui): implement comprehensive multi-pane layout and interactions for Communities
 
 ## Description
-The current Communities UI in `communities.component.ts` employs basic grid layouts and standard lists, lacking clear spatial navigation between broad communities and their specific groups/channels. To align with modern real-time social paradigms like Discord and X, the interface should adopt a denser but highly readable multi-pane layout. This approach separates top-level communities from specific conversational groups, providing clear, persistent navigation and unmistakable active states.
+The current Communities UI lacks the structural complexity and interactive feedback required for a modern messaging application. To improve usability and scalability, the interface needs a comprehensive overhaul. This involves transitioning from a basic grid to a denser multi-pane layout (separating communities, groups, and content), adding distinct active states for navigation, introducing micro-interactions (hover effects, unread badges), and implementing robust error handling for user actions. To support these UI changes maintainably, the underlying component structure must also be refactored to extract forms and lists into dedicated sub-components.
 
 ## Acceptance Criteria
-*   Refactor the page using CSS Grid or Flexbox to create a responsive three-pane layout on desktop: a narrow left sidebar for Communities, a secondary sidebar for Groups within the selected community, and a main central area for the active chat/content.
-*   Implement an off-canvas drawer or a sliding pane view for mobile screens to ensure the complex navigation doesn't overwhelm smaller devices, possibly leveraging Angular animations for smooth pane transitions.
+*   **Layout:** Refactor to a responsive three-pane layout on desktop (Communities sidebar, Groups sidebar, Main content) and a drawer/sliding pane on mobile.
+*   **Refactoring:** Extract the community creation form and community list items into separate, reusable Angular components.
+*   **Visual Feedback:** Implement distinct active states using Angular signals and Tailwind (e.g., `bg-surface-300`, left border) for selected items.
+*   **Micro-interactions:** Add hover effects and unread notification badges to community list items.
+*   **Error Handling:** Implement `try...catch` blocks for asynchronous operations (create/delete) with appropriate user-facing notifications.
 
 ## Suggested Labels
+enhancement, ui/ux, refactoring
+
 enhancement, ui/ux, medium-priority
 
 
@@ -146,4 +152,5 @@ bug, performance, tech-debt
 ## ⚙️ Platform & UI Architecture
 - **Optimize Data-Heavy Views**
   - Implement virtual scrolling (`cdk-virtual-scroll-viewport`) for data-heavy chat and reading views to prevent DOM bloat and UI lag.
+
 
