@@ -1,6 +1,4 @@
-import { validate } from 'class-validator';
 import { UpdateProfileDto } from './update-profile.dto';
-import { PROFICIENCY_LEVELS } from '../proficiency-level';
 
 describe('UpdateProfileDto', () => {
   it('should be defined', () => {

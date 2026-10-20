@@ -13,6 +13,14 @@ export interface VoiceNoteUploadResponse {
   url: string;
 }
 
+interface PresignedMediaUploadResponse {
+  uploadUrl: string;
+  mediaUrl: string;
+  objectKey: string;
+}
+
+const MAX_VOICE_NOTE_BYTES = 10 * 1024 * 1024;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -33,18 +41,30 @@ export class MediaService {
     );
   }
 
-  async uploadVoiceNote(
-    blob: Blob,
-    format: 'ogg' | 'm4a' = 'ogg',
-  ): Promise<VoiceNoteUploadResponse> {
-    const formData = new FormData();
-    const filename = `voice_${Date.now()}.webm`;
-    formData.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }));
-    formData.append('format', format);
+  async uploadVoiceNote(blob: Blob): Promise<VoiceNoteUploadResponse> {
+    if (blob.size === 0 || blob.size > MAX_VOICE_NOTE_BYTES) {
+      throw new Error('Voice note is outside the supported upload size');
+    }
 
-    return firstValueFrom(
-      this.http.post<VoiceNoteUploadResponse>(`${this.baseUrl}/voice-note`, formData),
+    const contentType = blob.type || 'audio/webm';
+    const filename = `voice_${Date.now()}.${this.audioExtension(contentType)}`;
+    const presigned = await firstValueFrom(
+      this.http.post<PresignedMediaUploadResponse>(`${this.baseUrl}/voice-note/presigned-url`, {
+        filename,
+        contentType,
+      }),
     );
+
+    const uploadResponse = await fetch(presigned.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: blob,
+    });
+    if (!uploadResponse.ok) {
+      throw new Error('Voice note upload failed');
+    }
+
+    return { url: presigned.mediaUrl };
   }
 
   async markMediaAsViewed(mediaId: string): Promise<void> {
@@ -59,5 +79,23 @@ export class MediaService {
 
   async clearMediaCache(): Promise<void> {
     await this.supabaseService.clearOfflineCache();
+  }
+
+  private audioExtension(contentType: string): string {
+    switch (contentType.split(';', 1)[0].trim().toLowerCase()) {
+      case 'audio/ogg':
+        return 'ogg';
+      case 'audio/mp4':
+      case 'audio/x-m4a':
+        return 'm4a';
+      case 'audio/mpeg':
+        return 'mp3';
+      case 'audio/wav':
+        return 'wav';
+      case 'audio/aac':
+        return 'aac';
+      default:
+        return 'webm';
+    }
   }
 }

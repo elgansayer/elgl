@@ -56,6 +56,21 @@ def test_issue_admission_gate_survives_daemon_restart(tmp_path: Path) -> None:
     assert snapshot["next_available_at"] == (started + timedelta(hours=1)).isoformat()
 
 
+def test_future_issue_admission_is_clamped_to_current_clock(tmp_path: Path) -> None:
+    state_path = tmp_path / "issue-admissions.json"
+    current = datetime(2026, 8, 17, 10, 0, tzinfo=UTC)
+    future = current + timedelta(days=1)
+    skewed = IssueAdmissionGate(state_path, interval_seconds=3600, max_admissions=1)
+    assert skewed.admit("100", future)
+
+    corrected = IssueAdmissionGate(state_path, interval_seconds=3600, max_admissions=1)
+
+    assert corrected.available_slots(current) == 0
+    snapshot = corrected.snapshot(current)
+    assert snapshot["next_available_at"] == (current + timedelta(hours=1)).isoformat()
+    assert corrected.available_slots(current + timedelta(hours=1)) == 1
+
+
 def test_disabled_issue_admission_gate_preserves_historical_unlimited_mode(
     tmp_path: Path,
 ) -> None:

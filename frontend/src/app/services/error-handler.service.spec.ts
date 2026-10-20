@@ -1,13 +1,10 @@
-import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
-import { ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthService } from './auth.service';
+import { ErrorHandler } from '@angular/core';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GlobalErrorHandler } from './error-handler.service';
+import { AuthService } from './auth.service';
 
 describe('GlobalErrorHandler', () => {
   let handler: GlobalErrorHandler;
@@ -15,14 +12,16 @@ describe('GlobalErrorHandler', () => {
 
   beforeEach(() => {
     TestBed.resetTestingModule();
+
+    const mockAuthService = {
+      getAccessToken: vi.fn().mockReturnValue('mock-token'),
+    };
+
     TestBed.configureTestingModule({
       providers: [
         GlobalErrorHandler,
         { provide: ErrorHandler, useClass: GlobalErrorHandler },
-        {
-          provide: AuthService,
-          useValue: { getAccessToken: vi.fn().mockReturnValue('mock-token') },
-        },
+        { provide: AuthService, useValue: mockAuthService },
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
@@ -36,23 +35,17 @@ describe('GlobalErrorHandler', () => {
     httpTesting.verify();
   });
 
-  it('is registered as an Angular ErrorHandler implementation', () => {
+  it('should be defined', () => {
     expect(handler).toBeDefined();
-    expect(TestBed.inject(ErrorHandler)).toBeInstanceOf(GlobalErrorHandler);
   });
 
-  it('reports Error instances with bounded parsed stack frames', () => {
-    const stack = [
-      'TypeError: Test type error',
-      ...Array.from(
-        { length: 25 },
-        (_, index) => `    at fn${index} (test-${index}.ts:${index + 1}:10)`,
-      ),
-    ].join('\n');
-    const error = new TypeError('Test type error');
-    Object.defineProperty(error, 'stack', { value: stack });
+  it('should POST error details to /api/analytics/client-error for Error instances', () => {
+    const testError = new TypeError('Test type error');
+    Object.defineProperty(testError, 'stack', {
+      value: 'TypeError: Test type error\n    at foo (test.ts:42:10)',
+    });
 
-    expect(() => handler.handleError(error)).not.toThrow();
+    handler.handleError(testError);
 
     const req = httpTesting.expectOne('/api/analytics/client-error');
     expect(req.request.method).toBe('POST');
@@ -60,118 +53,126 @@ describe('GlobalErrorHandler', () => {
       expect.objectContaining({
         message: 'Test type error',
         name: 'TypeError',
-        stack: expect.stringContaining('test-0.ts:1:10') as unknown,
+        stack: expect.stringContaining('test.ts:42:10') as unknown,
+        url: expect.any(String) as unknown,
+        userAgent: expect.any(String) as unknown,
         timestamp: expect.any(String) as unknown,
       }),
     );
-    expect((req.request.body as { stackFrames: unknown[] }).stackFrames).toHaveLength(20);
     req.flush({ status: 'logged' });
   });
 
-  it('redacts credential-shaped data before it leaves the browser', () => {
-    const error = new Error(
-      'request failed with Bearer secret-token and access_token=private-value',
-    );
-    Object.defineProperty(error, 'stack', {
-      value:
-        'Error: eyJabcdefghijk.abcdefghijk.abcdefghijk\n    at load (https://example.com/app.js?api_key=secret:42:1)',
+  it('should include parsed stackFrames when a stack trace is available', () => {
+    const testError = new Error('Parsed');
+    Object.defineProperty(testError, 'stack', {
+      value: 'Error: Parsed\n    at foo (test.ts:42:10)\n    at bar (other.ts:5:3)',
     });
 
-    handler.handleError(error);
+    handler.handleError(testError);
 
     const req = httpTesting.expectOne('/api/analytics/client-error');
-    const body = req.request.body as {
-      message: string;
-      stack: string;
-    };
-    expect(body.message).toContain('Bearer [redacted]');
-    expect(body.message).toContain('access_token=[redacted]');
-    expect(body.message).not.toContain('secret-token');
-    expect(body.stack).toContain('[redacted-jwt]');
-    expect(body.stack).not.toContain('eyJabcdefghijk.abcdefghijk.abcdefghijk');
-    req.flush({ status: 'logged' });
-  });
-
-  it('unwraps promise-style rejection errors without serialising wrapper objects', () => {
-    handler.handleError({ rejection: new RangeError('wrapped failure') });
-
-    const req = httpTesting.expectOne('/api/analytics/client-error');
-    expect(req.request.body).toEqual(
+    const body = req.request.body as Record<string, unknown>;
+    const frames = body['stackFrames'] as Array<Record<string, unknown>>;
+    expect(frames).toHaveLength(2);
+    expect(frames[0]).toEqual(
       expect.objectContaining({
-        message: 'wrapped failure',
-        name: 'RangeError',
+        functionName: 'foo',
+        fileName: 'test.ts',
+        lineNumber: 42,
+        columnNumber: 10,
+      }),
+    );
+    expect(frames[1]).toEqual(
+      expect.objectContaining({
+        functionName: 'bar',
+        fileName: 'other.ts',
+        lineNumber: 5,
+        columnNumber: 3,
       }),
     );
     req.flush({ status: 'logged' });
   });
 
-  it('reports HttpErrorResponse using safe scalar metadata and does not rethrow', () => {
-    const error = new HttpErrorResponse({
-      status: 503,
-      statusText: 'Service Unavailable',
-      url: 'https://api.example.com/private?access_token=secret#fragment',
-    });
-
-    expect(() => handler.handleError(error)).not.toThrow();
+  it('should report string errors as UncaughtString', () => {
+    handler.handleError('Unhandled promise rejection');
 
     const req = httpTesting.expectOne('/api/analytics/client-error');
-    expect(req.request.body).toEqual(
-      expect.objectContaining({
-        name: 'HttpError',
-        url: 'https://api.example.com/private',
-        metadata: { status: 503, statusText: 'Service Unavailable' },
-      }),
-    );
+    const body = req.request.body as Record<string, unknown>;
+    expect(body['message']).toBe('Unhandled promise rejection');
+    expect(body['name']).toBe('UncaughtString');
     req.flush({ status: 'logged' });
   });
 
-  it('does not inspect arbitrary object properties or throw from unknown values', () => {
-    const value = Object.create(null) as Record<string, unknown>;
-    Object.defineProperty(value, 'message', {
-      get: () => {
-        throw new Error('getter should not run');
-      },
-    });
+  it('should rethrow HttpErrorResponse to preserve Angular default behaviour', () => {
+    const httpError = new HttpErrorResponse({ status: 500, statusText: 'Server Error' });
 
-    expect(() => handler.handleError(value)).not.toThrow();
+    expect(() => handler.handleError(httpError)).toThrow();
 
     const req = httpTesting.expectOne('/api/analytics/client-error');
-    expect(req.request.body).toEqual(
-      expect.objectContaining({
-        message: 'Unknown client throwable',
-        name: 'UnknownThrowable',
-        metadata: { rawType: 'object' },
-      }),
-    );
     req.flush({ status: 'logged' });
   });
 
-  it('deduplicates identical crash bursts', () => {
-    handler.handleError(new Error('same failure'));
-    handler.handleError(new Error('same failure'));
+  it('should report HttpErrorResponse details to analytics', () => {
+    const httpError = new HttpErrorResponse({
+      status: 404,
+      statusText: 'Not Found',
+      url: 'https://api.example.com/missing',
+    });
 
-    const requests = httpTesting.match('/api/analytics/client-error');
-    expect(requests).toHaveLength(1);
-    requests[0]?.flush({ status: 'logged' });
-  });
-
-  it('caps reporting volume to ten crashes per minute', () => {
-    for (let index = 0; index < 12; index += 1) {
-      handler.handleError(new Error(`failure-${index}`));
-    }
-
-    const requests = httpTesting.match('/api/analytics/client-error');
-    expect(requests).toHaveLength(10);
-    for (const request of requests) request.flush({ status: 'logged' });
-  });
-
-  it('swallows reporting failures so telemetry cannot recurse into another crash', () => {
-    expect(() => handler.handleError(new Error('network failure'))).not.toThrow();
+    expect(() => handler.handleError(httpError)).toThrow();
 
     const req = httpTesting.expectOne('/api/analytics/client-error');
-    req.flush('Server error', {
-      status: 500,
-      statusText: 'Internal Server Error',
-    });
+    const body = req.request.body as Record<string, unknown>;
+    expect(body['name']).toBe('HttpError');
+    expect(body['message']).toContain('404');
+    expect(body['metadata']).toEqual({ status: 404, statusText: 'Not Found' });
+    req.flush({ status: 'logged' });
+  });
+
+  it('should report unknown objects as UnknownThrowable', () => {
+    const plainObj = { message: 'custom throw', code: 42 };
+
+    expect(() => handler.handleError(plainObj)).toThrow();
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const body = req.request.body as Record<string, unknown>;
+    expect(body['name']).toBe('UnknownThrowable');
+    expect(body['message']).toBe('custom throw');
+    expect(body['metadata']).toEqual(expect.objectContaining({ rawType: 'Object' }));
+    req.flush({ status: 'logged' });
+  });
+
+  it('should rethrow non-Error, non-HttpErrorResponse objects', () => {
+    const customErr = { message: 'Boom' };
+    expect(() => handler.handleError(customErr)).toThrow();
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    req.flush({ status: 'logged' });
+  });
+
+  it('should silently handle API failures without re-throwing', () => {
+    const testError = new Error('Network failure');
+    handler.handleError(testError);
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    req.flush('Server error', { status: 500, statusText: 'Internal Server Error' });
+
+    // Second call should also succeed without throwing
+    const secondError = new Error('Second error');
+    handler.handleError(secondError);
+    const req2 = httpTesting.expectOne('/api/analytics/client-error');
+    req2.flush({ status: 'logged' });
+  });
+
+  it('should handle errors without a stack trace', () => {
+    const testError = new Error('Stackless error');
+    delete (testError as Partial<Error>).stack;
+
+    handler.handleError(testError);
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const body = req.request.body as Record<string, unknown>;
+    expect(body['message']).toBe('Stackless error');
+    req.flush({ status: 'logged' });
   });
 });

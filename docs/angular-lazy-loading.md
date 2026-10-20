@@ -1,28 +1,33 @@
-# Angular standalone lazy-loaded route integration
+# Angular standalone lazy loading
 
-Issues #1817 and #5535 define the repository contract for route-level code splitting. #1817 established the executable standalone lazy-loading baseline. #5535 defines how lazy route boundaries integrate with Angular 22, Spartan interaction primitives, Relay presentation, SSR/hydration, accessibility, themes, RTL and repository verification.
+Issue #1817 asked for Angular lazy loading of non-critical feature modules. The application now uses standalone Angular components rather than feature `NgModule` classes, so the production equivalent is route-level dynamic component loading with `loadComponent` and, where a route collection genuinely needs its own boundary, `loadChildren`.
 
-This document is authoritative for frontend route-loading architecture. It does not require feature `NgModule` classes. The application is standalone Angular, so lazy route integration is expressed with `loadComponent` and, when a route collection deserves its own chunk boundary, `loadChildren`.
+## Current contract
 
-## Goals
+`frontend/src/app/app.routes.ts` and the route collections under `frontend/src/app/routes/` must not attach routed components through the eager `component` property. Product surfaces such as Community, Vocabulary, Discovery, Moments, Events, Settings and Chat are loaded through dynamic import callbacks.
 
-Lazy loading in this repository must:
+This keeps routed component code out of the initial application bundle until navigation needs it while preserving the existing URL structure, redirects, guards and route titles. Shared shell code, services required during application bootstrap and redirect-only routes are not forced into artificial feature-module wrappers.
 
-- keep non-critical feature implementation out of the initial browser bundle;
-- preserve stable URLs, redirects, route parameters, route titles and authorization behavior;
-- preserve server rendering and hydration for routes that support them;
-- preserve light and dark theme behavior and the per-user `primary` Relay token;
-- preserve RTL, localisation, 390px mobile-first layout and high-zoom reflow;
-- keep Spartan Brain/Helm interaction ownership inside the feature or Relay primitive that uses it;
-- avoid duplicate route-specific UI implementations for themes, locales, screen sizes or render modes;
-- keep failure, loading and unauthorized behavior truthful rather than silently broadening access or rendering synthetic success state;
-- remain measurable and enforceable by tests rather than relying on review convention alone.
+## Why standalone routing
 
-## Current implementation audit
+The frontend engineering standard prohibits `NgModule`. Reintroducing feature modules only to satisfy older lazy-loading terminology would add a second architecture without improving code splitting. Standalone `loadComponent` is the canonical Angular boundary for routed screens in this repository.
 
-### Router bootstrap
+## Verification
 
-`frontend/src/app/app.config.ts` owns application-wide router setup:
+The regression suite at `frontend/src/app/app.routes.lazy-loading.spec.ts` verifies that:
+
+- no routed component is attached eagerly through `Route.component`;
+- representative non-critical product routes retain dynamic component or child-route loaders;
+- redirect-only routes do not accidentally acquire component loaders.
+
+Run the normal frontend verification from `frontend/`:
+
+
+- no routed component is attached eagerly through `Route.component`;
+- representative non-critical product routes retain dynamic component or child-route loaders;
+- redirect-only routes do not accidentally acquire component loaders.
+
+Run the normal frontend verification from `frontend/`:
 
 ```ts
 provideRouter(routes, withComponentInputBinding());
@@ -523,75 +528,18 @@ For any PR adding or changing a routed feature, verify:
 
 Run it through the normal frontend unit suite:
 
+
+
 ```bash
-cd frontend
 npm run test -- --watch=false
-```
-
-Also run the normal static and production checks:
-
-```bash
 npm run check:control-flow
 npm run check:rtl-logical
 npm run lint
 npm run build
 ```
 
-Repository CI remains authoritative for clean dependency installation, SSR compilation and the wider frontend contract.
-
-### Follow-up migration gate: #5536
-
-Issue #5536 should add the smallest migration-safe automated gate that can run cheaply on pull requests. It should at minimum detect newly introduced:
-
-1. eager routed `component` properties for feature screens;
-2. redirects that acquire component loaders;
-3. lazy-route imports that point through known eager feature barrels;
-4. route-level duplicate providers for application-owned theme/auth/i18n/realtime state where statically detectable;
-5. route configuration that introduces obvious theme, RTL or viewport-specific component selection;
-6. regressions in representative lazy route registrations.
-
-The gate should prefer changed-file or baseline-aware enforcement so historical route debt can be migrated deliberately without making unrelated PRs impossible to land.
-
-A rendered Claude Design preview is not required for #5535 because this issue defines architecture and changes no visual contract. A future route migration that changes a visible screen still follows the normal design-sync rules.
-
-## Expected failure modes
-
-A lazy-route verification failure should identify the route or source file and the violated ownership rule. Useful examples:
-
-```text
-Route "events" uses eager Route.component; use loadComponent or justify a bootstrap-critical exception.
-Redirect "message-filters" must not attach a component loader.
-Lazy route "example" selects a component from window.innerWidth; keep device composition inside the feature.
-```
-
-Do not emit user data, route query contents, tokens or full production URLs in CI diagnostics.
+The repository CI remains authoritative for clean dependency installation and production compilation.
 
 ## Rollout and rollback
 
-This architecture update changes documentation only. It does not modify routes, chunks, APIs, schema, persisted state, analytics or visual output.
-
-Future route migrations should land as focused changes with:
-
-1. route-contract tests;
-2. frontend unit/static/build verification;
-3. SSR/hydration verification when the render mode is affected;
-4. design-sync updates only when the visible contract changes;
-5. a rollback that restores the previous route loader without changing user data.
-
-If a new lazy boundary causes production navigation or chunk-loading problems, roll back the route boundary first. Do not disable authentication, SSR, hydration, accessibility checks or design-system ownership to keep the new chunk split.
-
-## Decision summary
-
-The canonical elgl frontend route-loading architecture is:
-
-```text
-standalone Angular route metadata
-  -> loadComponent for normal feature screens
-  -> loadChildren only for justified route-subtree boundaries
-  -> one semantic component tree across themes, locales, RTL and viewport sizes
-  -> Relay presentation
-  -> primitive-specific Spartan interaction ownership
-  -> server/client render mode chosen independently from chunk loading
-```
-
-This preserves Angular 22 standalone conventions while making performance boundaries compatible with the rest of the repository's accessibility, design, SSR, hydration, privacy and verification contracts.
+This change adds a regression contract and documentation only. It does not alter routes, API contracts, persisted state or deployment configuration. Rollback is a normal code revert. If a future route genuinely needs eager bootstrap ownership, document the performance reason and update the contract deliberately rather than bypassing the test.
