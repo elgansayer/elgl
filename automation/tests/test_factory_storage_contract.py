@@ -56,9 +56,26 @@ def test_host_maintenance_prunes_only_stale_factory_temp_quarantines() -> None:
     assert (
         "prune_uv_cache\n"
         "prune_cypress_cache\n"
+        "prune_repository_caches\n"
         "prune_factory_temp_quarantines\n"
         'if [ "$PRUNE_CONTAINERS" = true ]' in script
     )
+
+
+def test_host_maintenance_reclaims_only_reproducible_repository_outputs() -> None:
+    script = _read("scripts/maintain-factory-host-storage.sh")
+
+    assert 'filesystem_below_target "$FACTORY_REPOSITORY"' in script
+    assert 'repository=$(readlink -f -- "$FACTORY_REPOSITORY")' in script
+    assert 'case "$resolved" in' in script
+    assert 'find "$candidate" -xdev -depth -delete' in script
+    assert "frontend/dist" in script
+    assert "backend/coverage" in script
+    assert "admin-portal/.angular" in script
+    cleanup_start = script.index("prune_repository_caches()")
+    cleanup_end = script.index("prune_factory_temp_quarantines()")
+    repository_cleanup = script[cleanup_start:cleanup_end]
+    assert "node_modules" not in repository_cleanup
 
 
 def test_host_report_covers_every_relocated_provider_directory() -> None:
@@ -117,7 +134,7 @@ def test_storage_limits_are_visible_in_production_configuration() -> None:
 
     assert "FACTORY_RECOVERY_MAX_TOTAL_GIB=2" in example
     assert "FACTORY_RECOVERY_FREE_HEADROOM_GIB=1" in example
-    assert "FACTORY_STORAGE_FREE_HEADROOM_GIB=1" in example
+    assert "FACTORY_STORAGE_FREE_HEADROOM_GIB=5" in example
     assert "FACTORY_STORAGE_MAINTENANCE_INTERVAL_SECONDS=3600" in example
     assert "FACTORY_STORAGE_MAINTENANCE_TIMEOUT_SECONDS=75" in example
 

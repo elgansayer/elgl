@@ -277,7 +277,7 @@ Internally uses `Intl.Segmenter(language, { granularity: 'word' })` to parse tex
 
 ### 7.2 FlashcardReviewComponent
 
-Displays flashcards due for review with SM-2 quality scoring UI (0-5 rating). Communicates with `FlashcardService` for SRS updates.
+Displays flashcards due for review with SM-2 quality scoring UI (0-5 rating). Communicates with `VocabularyStore` for SRS updates.
 
 ### 7.3 FlashcardDeckComponent
 
