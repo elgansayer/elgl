@@ -557,7 +557,11 @@ run_storage_maintenance() {
     log 'No verified runtime commit is available; refusing root maintenance refresh'
     return 1
   }
-  install_runtime_bundle "$commit" || return 1
+  # Maintenance must not overwrite newer updater/watchdog code or deployment
+  # provenance with an older package's bundle during a staged guard rollout.
+  install_runtime_file_from_commit \
+    "$commit" scripts/maintain-factory-host-storage.sh \
+    "$RUNTIME_MAINTENANCE" 0755 || return 1
   "$RUNTIME_MAINTENANCE" --apply --prune-containers
 }
 
@@ -693,8 +697,10 @@ if [ "$runtime_update_needed" = true ]; then
 fi
 
 if [ "$local_sha" != "$remote_sha" ]; then
-  log 'Pulling main'
-  factory_git_authenticated pull --ff-only origin main
+  log 'Fast-forwarding main to the verified candidate'
+  # Do not pull a mutable branch after a potentially long drain. Another owner
+  # merge may have moved it to an untested SHA since the candidate passed CI.
+  factory_git_read merge --ff-only "$remote_sha"
 fi
 
 pulled_sha=$(factory_git_read rev-parse HEAD)

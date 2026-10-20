@@ -78,7 +78,7 @@ export class ChatBackupService {
     // ⚡ Bolt Optimization: Replaced sequential await loop with bounded concurrent chunks.
     // Process up to 10 insert requests concurrently to drastically reduce backup import latency
     // without exhausting database connection pools or hitting rate limits.
-    const chunks: typeof rows[] = [];
+    const chunks: (typeof rows)[] = [];
     for (let i = 0; i < rows.length; i += chunkSize) {
       chunks.push(rows.slice(i, i + chunkSize));
     }

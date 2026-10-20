@@ -106,7 +106,9 @@ describe('OfflineReadingService', () => {
   }
 
   afterEach(() => {
+    TestBed.resetTestingModule();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('no IndexedDB', () => {

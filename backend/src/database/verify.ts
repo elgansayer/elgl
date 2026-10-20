@@ -94,7 +94,9 @@ function verifyLiveKit(assertCheck: AssertCheckFn) {
     const lkApiKey = process.env.LIVEKIT_API_KEY;
 
     if (!lkSecret || !lkApiKey) {
-      throw new Error('LIVEKIT_SECRET and LIVEKIT_API_KEY must be configured in environment variables');
+      throw new Error(
+        'LIVEKIT_SECRET and LIVEKIT_API_KEY must be configured in environment variables',
+      );
     }
 
     const lkToken = jwt.sign(

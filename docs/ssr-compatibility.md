@@ -331,6 +331,11 @@ Do not instantiate `Audio`, `MediaRecorder`, `RTCPeerConnection`, or request med
 
 Routes whose primary function is a live device session may remain client-rendered as already documented by `app.routes.server.ts`.
 
+The existing device-transfer exception follows its canonical settings URL,
+`settings/device-transfer`, after route consolidation. It still loads the same
+device-transfer component and does not add a second client-only route or make
+the settings section client-only. The wildcard fallback remains server-rendered.
+
 ### 14.4 Notifications and service workers
 
 Registration and permission prompts are browser-only. The application must still server-render without `navigator.serviceWorker` or Notification APIs.

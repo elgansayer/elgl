@@ -860,10 +860,7 @@ export class UsersService {
           .status_visibility ?? 'public',
       profile_visibility:
         (privacyRecord.profile_visibility as
-          | 'everyone'
-          | 'vips_only'
-          | 'hidden'
-          | undefined) ?? 'everyone',
+          'everyone' | 'vips_only' | 'hidden' | undefined) ?? 'everyone',
     };
   }
 

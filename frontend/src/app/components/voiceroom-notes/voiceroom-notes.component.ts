@@ -63,7 +63,8 @@ export class VoiceroomNotesComponent {
 
       if (currentRoomId) {
         this.subscribedRoomId = currentRoomId;
-        this.centrifugo.subscribe('room_' + currentRoomId, (data: any) => {
+        this.centrifugo.subscribe('room_' + currentRoomId, (data: unknown) => {
+          if (typeof data !== 'object' || data === null || !('type' in data)) return;
           if (data.type === 'voice_room_note') {
             this.refreshCounter.update((value) => value + 1);
           } else if (data.type === 'voice_room_note_deleted') {

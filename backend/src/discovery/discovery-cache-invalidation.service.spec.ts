@@ -228,6 +228,7 @@ describe('DiscoveryCacheInvalidationService', () => {
         'discovery:recent_native',
         'discovery:spotlight',
       );
+      expect(mockRedis.del).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -334,6 +335,8 @@ describe('DiscoveryCacheInvalidationService', () => {
         'discovery:location_search:user:u3',
         'discovery:audio_intros:user:u3',
       );
+      expect(mockRedis.scan).toHaveBeenCalledTimes(6);
+      expect(mockRedis.del).toHaveBeenCalledTimes(2);
     });
 
     it('should not throw if no keys matched', async () => {

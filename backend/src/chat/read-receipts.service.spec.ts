@@ -163,10 +163,16 @@ describe('ReadReceiptsService', () => {
 
       await service.markAllAsRead(roomId, userId);
 
-      expect(updateChain.update).toHaveBeenCalledWith({ delivery_status: 'read' });
+      expect(updateChain.update).toHaveBeenCalledWith({
+        delivery_status: 'read',
+      });
       expect(updateChain.eq).toHaveBeenCalledWith('room_id', roomId);
       expect(updateChain.neq).toHaveBeenNthCalledWith(1, 'sender_id', userId);
-      expect(updateChain.neq).toHaveBeenNthCalledWith(2, 'delivery_status', 'read');
+      expect(updateChain.neq).toHaveBeenNthCalledWith(
+        2,
+        'delivery_status',
+        'read',
+      );
       expect(updateChain.select).toHaveBeenCalledWith('id');
 
       expect(publishMock).toHaveBeenCalledWith(`chat:${roomId}:receipts`, {

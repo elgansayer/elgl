@@ -93,7 +93,7 @@ export class LearnerKnowledgeService {
           .select('target_language, post_type, created_at')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .limit(3)
+          .limit(3),
       ).catch(() => ({ data: [] })),
     ]);
 

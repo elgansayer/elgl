@@ -685,9 +685,7 @@ describe('MomentsService', () => {
       mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'moments') {
           return {
-            select: vi
-              .fn()
-              .mockResolvedValue({ count: 2 }),
+            select: vi.fn().mockResolvedValue({ count: 2 }),
           };
         }
         if (table === 'moment_comments') {

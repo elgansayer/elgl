@@ -17,7 +17,7 @@
     "check:chat-reference-analysis": "node --test scripts/verify-chat-reference-analysis.test.mjs && node scripts/verify-chat-reference-analysis.mjs",
     "check:agent-ui-governance": "node scripts/check-agent-ui-governance.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
-    "check:design-sync-drift": "node scripts/check-design-sync-drift.mjs",
+    "check:design-sync-drift": "node --test scripts/check-design-sync-drift.test.mjs && node scripts/check-design-sync-drift.mjs",
     "check:design-coverage": "node --test scripts/design-sync/design-sync.test.mjs && node scripts/design-sync/check-full-coverage.mjs",
     "audit:design": "node scripts/design-sync/audit-design.mjs --write",
     "audit:design-render": "node scripts/design-sync/render-previews.mjs",

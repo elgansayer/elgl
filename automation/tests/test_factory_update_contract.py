@@ -88,7 +88,7 @@ def test_deployment_ci_gate_precedes_pause_and_rechecks_before_service_stop():
     pause = updater.index("log 'Pausing new Factory scheduling while active jobs drain'")
     second = updater.index('if ! candidate_ci_green "$remote_sha"; then', first + 1)
     stop = updater.index("log 'Stopping factory service'")
-    pull = updater.index("log 'Pulling main'")
+    pull = updater.index("log 'Fast-forwarding main to the verified candidate'")
     assert first < updater.index("log 'Refreshing verified current service units before drain'")
     assert first < pause < second < stop < pull
 
@@ -102,6 +102,75 @@ def test_maintenance_runtime_prefers_completed_deployment_without_network():
     assert "candidate_ci_green" not in function
 
 
+def test_maintenance_refreshes_only_its_helper_without_downgrading_the_guard(tmp_path):
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    function = updater.split("run_storage_maintenance() {", 1)[1].split("\n}\n", 1)[0]
+    helper = tmp_path / "maintenance-helper"
+    helper.write_text('#!/bin/bash\nprintf "%s\\n" "$*"\n')
+    helper.chmod(0o700)
+    result = subprocess.run(
+        [
+            "bash",
+            "-ec",
+            "trusted_runtime_commit() { echo verified-previous; }; "
+            'install_runtime_file_from_commit() { printf "%s\\n" "$*"; }; '
+            "install_runtime_bundle() { echo unsafe-bundle-refresh; return 99; }; "
+            'RUNTIME_MAINTENANCE="$1"; '
+            "run_storage_maintenance() {" + function + "\n}; run_storage_maintenance",
+            "_",
+            str(helper),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        f"verified-previous scripts/maintain-factory-host-storage.sh {helper} 0755",
+        "--apply --prune-containers",
+    ]
+
+
+def test_promotion_stays_on_approved_sha_when_main_moves_during_drain(tmp_path):
+    def git(*arguments):
+        return subprocess.check_output(["git", *arguments], cwd=tmp_path, text=True).strip()
+
+    git("init", "-q")
+    git("config", "user.name", "Fixture")
+    git("config", "user.email", "fixture@example.test")
+    git("commit", "--allow-empty", "-qm", "deployed")
+    deployed = git("rev-parse", "HEAD")
+    git("commit", "--allow-empty", "-qm", "approved")
+    approved = git("rev-parse", "HEAD")
+    git("commit", "--allow-empty", "-qm", "new unverified main")
+    unverified = git("rev-parse", "HEAD")
+    git("update-ref", "refs/remotes/origin/main", unverified)
+    git("switch", "--detach", deployed)
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    promotion = next(
+        line.strip()
+        for line in updater.splitlines()
+        if line.strip().startswith("factory_git_read merge --ff-only")
+    )
+    result = subprocess.run(
+        [
+            "bash",
+            "-ec",
+            'factory_git_read() { git "$@"; }; remote_sha="$1"; ' + promotion,
+            "_",
+            approved,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert git("rev-parse", "HEAD") == approved
+    assert git("rev-parse", "origin/main") == unverified
+
+
 def test_factory_updater_bounds_network_git_and_preserves_repository_ownership() -> None:
     updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text(
         encoding="utf-8"
@@ -109,7 +178,8 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
 
     assert updater.count('timeout "${GIT_TIMEOUT}s"') == 2
     assert "factory_git_authenticated fetch --quiet origin main" in updater
-    assert "factory_git_authenticated pull --ff-only origin main" in updater
+    assert 'factory_git_read merge --ff-only "$remote_sha"' in updater
+    assert "pull --ff-only origin main" not in updater
     # The generic factory_git_read and authenticated Git wrappers, uv sync, uv cache
     # prune, and the rootless worker image build all cross the privilege boundary
     # through runuser. This keeps Git reads and every network/package operation
@@ -118,8 +188,13 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     assert updater.count('runuser -u "$FACTORY_USER" -- env') == 4
     assert updater.count('runuser -u "$FACTORY_USER" --preserve-environment -- env') == 2
     assert "GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}" in updater
+    assert "--active --frozen --inexact --no-editable --extra development" in updater
     assert "git -c safe.directory=" not in updater
     assert 'git -C "$REPOSITORY" reset --hard' not in updater
+    assert "--reinstall-package repo-factory" in updater
+    assert 'readlink -f -- "$FACTORY_VENV"' in updater
+    assert 'chown -R "$FACTORY_USER:$FACTORY_USER" "$factory_venv_real"' in updater
+    assert 'test -x "$FACTORY_VENV/bin/repo-factory"' in updater
     assert "maintain-factory-host-storage.sh" in updater
     assert "restore_services_on_failure" in updater
     assert "Unknown state is not idle" in updater
