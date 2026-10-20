@@ -57,7 +57,7 @@
     "livekit-server-sdk": "^2.19.1",
     "nestjs-pino": "^4.6.1",
     "node-nlp": "npm:@nlpjs/language@5.0.0-alpha.5",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^10.0.9",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "prom-client": "^15.1.3",
