@@ -159,6 +159,8 @@ def test_provider_sandbox_restores_only_explicit_home_mounts(tmp_path: Path) -> 
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "for masked_root in /mnt /srv /media" in sandbox_script
+    assert "/run/containerd/containerd.sock /run/docker.sock" in sandbox_script
+    assert 'mount --bind /dev/null "$container_socket"' in sandbox_script
 
 
 def test_provider_sandbox_staging_does_not_mask_a_protected_source(tmp_path: Path) -> None:
@@ -287,6 +289,9 @@ def test_shutdown_terminates_registered_agent_processes(tmp_path: Path) -> None:
 
     assert not worker.is_alive()
     assert results and results[0].exit_code != 0
+    assert results[0].cancelled
+    assert classify_process_failure(results[0]).kind is AgentFailureKind.CANCELLED
+    assert AgentProcessRunner._cancelled_processes == set()
 
 
 def test_shutdown_gate_prevents_a_late_provider_process_start(tmp_path: Path) -> None:
@@ -305,6 +310,46 @@ def test_shutdown_gate_prevents_a_late_provider_process_start(tmp_path: Path) ->
         AgentProcessRunner.reset_shutdown()
 
     assert AgentProcessRunner._processes == set()
+
+
+def test_routing_leases_only_the_provider_that_actually_runs(tmp_path: Path) -> None:
+    preferred, recovering = Provider("preferred"), Provider("recovering")
+    store = AgentHealthStore(tmp_path / "health.json")
+    breaker = AgentCircuitBreaker("recovering", 1, 1)
+    breaker.record_failure(
+        AgentFailureKind.PROVIDER_TRANSPORT, datetime.now(UTC) - timedelta(minutes=5)
+    )
+    store.save({"recovering": breaker})
+    router = AgentRouter([preferred, recovering], health_store=store)
+    task = Task("canary", "Bounded routing", "", "issue", 1)
+    request = AgentRequest(AgentPhase.CODE_REVIEW, task, "review", tmp_path)
+    assert router.run(request, Job(task)).provider == "preferred"
+    assert store.load()["recovering"].state == "open"
+    assert recovering.calls == 0
+    assert router.run(request, Job(task), exclude={"preferred"}).provider == "recovering"
+    assert store.load()["recovering"].state == "closed"
+
+
+def test_cancelled_attempt_does_not_poison_provider_health_or_metrics(tmp_path: Path) -> None:
+    provider = Provider("cancelled")
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    router = AgentRouter([provider], metrics_store=metrics)
+    now = datetime.now(UTC)
+    result = AgentResult(
+        provider.name,
+        AgentPhase.CODE_REVIEW,
+        False,
+        now,
+        now,
+        -15,
+        None,
+        None,
+        failure=AgentFailure(AgentFailureKind.CANCELLED, "Factory requested cancellation"),
+    )
+    router._record_breaker(result)
+    router._record_metrics(result, 0)
+    assert router._breakers()[provider.name].consecutive_failures == 0
+    assert metrics.snapshot()["providers"] == []
 
 
 def test_terminate_reaps_process_after_direct_kill_fallback(
@@ -884,6 +929,14 @@ def test_metrics_restore_legacy_records_without_failure_counts(tmp_path: Path) -
     assert providers[0]["successes"] == 1
     assert providers[0]["failures"] == 2
     assert providers[0]["failure_counts"] == {}
+    assert providers[0]["successful_outputs_per_model_minute"] is None
+
+
+def test_metrics_measure_successes_per_total_model_minute(tmp_path: Path) -> None:
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    metrics.record("google", "current", successful=True, duration_seconds=30)
+    metrics.record("google", "current", successful=False, duration_seconds=90)
+    assert metrics.snapshot()["providers"][0]["successful_outputs_per_model_minute"] == 0.5
 
 
 def test_capacity_store_discards_malformed_and_expired_entries(tmp_path: Path) -> None:
