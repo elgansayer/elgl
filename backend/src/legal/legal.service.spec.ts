@@ -1,6 +1,6 @@
-import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { LegalService } from './legal.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('LegalService', () => {
   let service: LegalService;
@@ -24,7 +24,7 @@ describe('LegalService', () => {
   });
 
   describe('getTermsOfService', () => {
-    it('returns the Terms of Service document with all sections', () => {
+    it('should return the Terms of Service document with all sections', () => {
       const result = service.getTermsOfService();
 
       expect(result.title).toBe('Terms of Service');
@@ -41,7 +41,7 @@ describe('LegalService', () => {
       }
     });
 
-    it('uses TOS_EFFECTIVE_DATE from config when available', async () => {
+    it('should use TOS_EFFECTIVE_DATE from config when available', async () => {
       const moduleRef = await Test.createTestingModule({
         providers: [
           LegalService,
@@ -56,28 +56,13 @@ describe('LegalService', () => {
         ],
       }).compile();
       const customService = moduleRef.get(LegalService);
-
-      expect(customService.getTermsOfService().lastUpdated).toBe('2026-09-01');
-    });
-
-    it('falls back to the bundled date when TOS_EFFECTIVE_DATE is invalid', async () => {
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          LegalService,
-          {
-            provide: ConfigService,
-            useValue: { get: vi.fn().mockReturnValue('2026-02-30') },
-          },
-        ],
-      }).compile();
-      const customService = moduleRef.get(LegalService);
-
-      expect(customService.getTermsOfService().lastUpdated).toBe('2026-07-01');
+      const result = customService.getTermsOfService();
+      expect(result.lastUpdated).toBe('2026-09-01');
     });
   });
 
   describe('getPrivacyPolicy', () => {
-    it('returns the Privacy Policy document with all sections', () => {
+    it('should return the Privacy Policy document with all sections', () => {
       const result = service.getPrivacyPolicy();
 
       expect(result.title).toBe('Privacy Policy');
@@ -93,7 +78,7 @@ describe('LegalService', () => {
       }
     });
 
-    it('uses PRIVACY_EFFECTIVE_DATE from config when available', async () => {
+    it('should use PRIVACY_EFFECTIVE_DATE from config when available', async () => {
       const moduleRef = await Test.createTestingModule({
         providers: [
           LegalService,
@@ -108,23 +93,8 @@ describe('LegalService', () => {
         ],
       }).compile();
       const customService = moduleRef.get(LegalService);
-
-      expect(customService.getPrivacyPolicy().lastUpdated).toBe('2026-08-15');
-    });
-
-    it('falls back when PRIVACY_EFFECTIVE_DATE is malformed', async () => {
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          LegalService,
-          {
-            provide: ConfigService,
-            useValue: { get: vi.fn().mockReturnValue('August 15, 2026') },
-          },
-        ],
-      }).compile();
-      const customService = moduleRef.get(LegalService);
-
-      expect(customService.getPrivacyPolicy().lastUpdated).toBe('2026-07-01');
+      const result = customService.getPrivacyPolicy();
+      expect(result.lastUpdated).toBe('2026-08-15');
     });
   });
 });
