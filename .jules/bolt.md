@@ -20,6 +20,10 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-28 - [Optimize Supabase Counts with HEAD Requests]
+**Learning:** Using `.select('count(*) as ...')` still forces Supabase/PostgREST to generate a response body wrapping the integer.
+**Action:** When only a row count is needed, always use `.select('id', { count: 'exact', head: true })` and read from `response.count` to avoid downloading the payload entirely.
+
 
 ## 2026-09-28 - [Batch Independent Redis Operations]
 **Learning:** Sequential `await` calls for independent cache operations (e.g., clearing multiple Redis cache keys in admin controllers) create additive network latency that delays API responses.
@@ -335,6 +339,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
