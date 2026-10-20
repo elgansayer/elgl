@@ -28,6 +28,7 @@ const CACHE_PREFIX_USERS = 'admin:users:list:';
 const CACHE_PREFIX_BLOCKS = 'admin:blocks:list:';
 const CACHE_PREFIX_REPORTS = 'admin:reports:list:';
 const CACHE_PREFIX_LOGIN_HISTORY = 'admin:login-history:';
+const SCAN_BATCH_SIZE = 500;
 
 @Injectable()
 export class AdminService {
@@ -52,7 +53,7 @@ export class AdminService {
         'MATCH',
         `${prefix}*`,
         'COUNT',
-        500,
+        SCAN_BATCH_SIZE,
       );
       cursor = nextCursor;
       if (keys.length > 0) {
@@ -177,6 +178,21 @@ export class AdminService {
     return result;
   }
 
+  async getUser(userId: string): Promise<AdminUserSummary> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select(SUMMARY_COLUMNS)
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('User not found');
+    }
+
+    return data;
+  }
+
   async setVipStatus(
     userId: string,
     dto: ToggleVipDto,
@@ -212,8 +228,11 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateLoginHistoryCache(userId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateLoginHistoryCache(userId),
+    ]);
 
     return data;
   }
@@ -297,9 +316,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateBlocksListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateBlocksListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
@@ -326,9 +348,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateReportsListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateReportsListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {

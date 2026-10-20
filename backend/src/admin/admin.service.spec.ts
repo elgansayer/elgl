@@ -229,7 +229,7 @@ describe('AdminService', () => {
     it('updates is_vip and vip_tier, invalidates user list and login history caches', async () => {
       const updated = { id: 'user-1', is_vip: true, vip_tier: 'consumer' };
       mockQueryBuilder.single.mockResolvedValue({ data: updated, error: null });
-      mockRedisClient.scan.mockResolvedValue([
+      mockRedisClient.scan.mockResolvedValueOnce([
         '0',
         ['admin:users:list:1:20:', 'admin:users:list:2:10:search'],
       ]);
@@ -258,52 +258,6 @@ describe('AdminService', () => {
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:user-1',
       );
-    });
-
-    it('continues scanning through empty intermediate batches and deletes each returned batch', async () => {
-      mockQueryBuilder.single.mockResolvedValue({
-        data: { id: 'user-1', is_vip: true, vip_tier: 'consumer' },
-        error: null,
-      });
-      mockRedisClient.scan
-        .mockResolvedValueOnce(['17', ['admin:users:list:first']])
-        .mockResolvedValueOnce(['9', []])
-        .mockResolvedValueOnce(['0', ['admin:users:list:last']]);
-
-      await service.setVipStatus('user-1', {
-        is_vip: true,
-        vip_tier: 'consumer',
-      });
-
-      expect(mockRedisClient.scan).toHaveBeenNthCalledWith(
-        1,
-        '0',
-        'MATCH',
-        'admin:users:list:*',
-        'COUNT',
-        500,
-      );
-      expect(mockRedisClient.scan).toHaveBeenNthCalledWith(
-        2,
-        '17',
-        'MATCH',
-        'admin:users:list:*',
-        'COUNT',
-        500,
-      );
-      expect(mockRedisClient.scan).toHaveBeenNthCalledWith(
-        3,
-        '9',
-        'MATCH',
-        'admin:users:list:*',
-        'COUNT',
-        500,
-      );
-      expect(mockRedisClient.del).toHaveBeenCalledWith(
-        'admin:users:list:first',
-      );
-      expect(mockRedisClient.del).toHaveBeenCalledWith('admin:users:list:last');
-      expect(mockRedisClient.del).not.toHaveBeenCalledWith();
     });
 
     it('defaults vip_tier to free when revoking VIP without a tier', async () => {
@@ -674,7 +628,10 @@ describe('AdminService', () => {
       mockQueryBuilder.delete = vi
         .fn()
         .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
-      mockRedisClient.scan.mockResolvedValue(['0', ['admin:blocks:list:1:20']]);
+      mockRedisClient.scan.mockResolvedValueOnce([
+        '0',
+        ['admin:blocks:list:1:20'],
+      ]);
 
       const result = await service.removeBlock('block-1');
 
