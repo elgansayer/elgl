@@ -83,6 +83,24 @@ describe('AiConversationService', () => {
       expect(result[0].name).toBe('Ordering Coffee');
     });
 
+    it.each([
+      ['ordering-coffee', 'State price naturally'],
+      ['job-interview', 'End by saying you will be in touch'],
+      ['airport-checkin', 'Provide gate and boarding time'],
+      ['bank-account', 'Ask initial deposit amount'],
+      ['shopping', 'Mention prices'],
+      ['travel-directions', 'Mention walking time or bus numbers'],
+    ])(
+      'retains concrete task outcomes and short turns for %s',
+      async (scenarioId, task) => {
+        llmProxy.chatCompletion.mockResolvedValue('Please tell me more.');
+        await service.generateReply('user-1', 'Please continue', scenarioId);
+        const messages = llmProxy.chatCompletion.mock.calls[0][0];
+        expect(messages[0].content).toContain(task);
+        expect(messages[0].content).toContain('Keep replies 1-3 sentences');
+      },
+    );
+
     it('should have unique scenario IDs', () => {
       const result = service.getScenarios();
       const ids = result.map((s) => s.id);
@@ -224,6 +242,19 @@ describe('AiConversationService', () => {
       expect(messages[0].role).toBe('system');
       expect(messages[0].content).toContain(
         'You are a personalized, expert language tutor',
+      );
+    });
+
+    it('should include struggling knowledge items in the default system prompt', async () => {
+      llmProxy.chatCompletion.mockResolvedValue('Interesting!');
+
+      await service.generateReply('user-123', 'Tell me about yourself');
+
+      const messages = llmProxy.chatCompletion.mock.calls[0][0];
+      expect(messages[0].role).toBe('system');
+      expect(messages[0].content).toContain('gato');
+      expect(messages[0].content).toContain(
+        'The user has been struggling with the following concepts or vocabulary',
       );
     });
 
