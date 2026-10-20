@@ -2,6 +2,24 @@ name: Mock Backend Production Boundary
 
 on:
   pull_request:
+    # Start from every path, exclude Factory-only surfaces the verifier does not
+    # inspect, then re-include every production-artifact marker it recognizes.
+    # Ordering matters: later positive patterns re-include matches after `!`.
+    paths:
+      - '**'
+      - '!automation/**/*.py'
+      - '!automation/prompts/**'
+      - '!config/factory/**'
+      - '!config/systemd/**'
+      - '!docs/**'
+      - '**/*[Dd][Oo][Cc][Kk][Ee][Rr][Ff][Ii][Ll][Ee]*'
+      - '**/*[Dd][Oo][Cc][Kk][Ee][Rr][Ff][Ii][Ll][Ee]*/**'
+      - '**/*[Dd][Oo][Cc][Kk][Ee][Rr]-[Cc][Oo][Mm][Pp][Oo][Ss][Ee]*'
+      - '**/*[Dd][Oo][Cc][Kk][Ee][Rr]-[Cc][Oo][Mm][Pp][Oo][Ss][Ee]*/**'
+      - '**/*.[Pp][Rr][Oo][Dd][Uu][Cc][Tt][Ii][Oo][Nn]*'
+      - '**/*.[Pp][Rr][Oo][Dd][Uu][Cc][Tt][Ii][Oo][Nn]*/**'
+      - '**/*.[Pp][Rr][Oo][Dd].*'
+      - '**/*.[Pp][Rr][Oo][Dd].*/**'
   push:
     branches: [main]
 

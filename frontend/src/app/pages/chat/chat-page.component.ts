@@ -3,16 +3,14 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
-import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 
 interface AiChatMessage {
   id: string;
@@ -23,7 +21,15 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective, VisualDiffComponent, AppEmptyStateComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    FormsModule,
+    DatePipe,
+    TranslatePipe,
+    A11yClickableDirective,
+    VisualDiffComponent,
+  ],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -37,7 +43,8 @@ interface AiChatMessage {
           >
             {{ 'aiPartner.start' | t }}
           </button>
-          @for (room of rooms(); track room) {
+          <!-- ⚡ Bolt: Track rooms by unique ID instead of object reference to prevent unnecessary DOM recreation when real-time statuses change -->
+          @for (room of rooms(); track room.id) {
             <div
               (click)="selectRoom(room)"
               appA11yClickable
@@ -210,7 +217,8 @@ interface AiChatMessage {
 
               <!-- Messages (inline rendering to support correction UI) -->
               <div class="flex-1 overflow-y-auto p-4 space-y-4" #messagesContainer>
-                @for (msg of messages(); track msg) {
+                <!-- ⚡ Bolt: Track messages by unique ID instead of object reference to prevent entire list re-rendering on delivery status updates -->
+                @for (msg of messages(); track msg.id) {
                   <div
                     class="group flex gap-2"
                     [class.flex-row-reverse]="msg.sender_id === currentUserId()"
@@ -506,12 +514,9 @@ interface AiChatMessage {
 
           <!-- No room selected -->
           @if (!selectedRoom()) {
-            <app-empty-state
-              icon="💬"
-              [title]="'chat.emptyState' | t"
-              [actionLabel]="'discovery.startChat' | t"
-              (actionClicked)="navigateToDiscovery()"
-            />
+            <div class="flex-1 flex items-center justify-center text-text-muted">
+              {{ 'chat.emptyState' | t }}
+            </div>
           }
         }
       </main>
@@ -530,10 +535,9 @@ export class ChatPageComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
-  private centrifugoService = inject(CentrifugoService);
+  private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);
-  private router = inject(Router);
 
   rooms = signal<ChatRoom[]>([]);
   selectedRoom = signal<ChatRoom | null>(null);
@@ -573,7 +577,7 @@ export class ChatPageComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+        this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       }
     });
   }
@@ -581,7 +585,7 @@ export class ChatPageComponent implements OnInit {
   async selectRoom(room: ChatRoom) {
     // Unsubscribe previous room
     if (this.subscribedRoomId && this.subscribedRoomId !== room.id) {
-      this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       this.subscribedRoomId = null;
     }
 
@@ -594,7 +598,7 @@ export class ChatPageComponent implements OnInit {
       // Subscribe to real-time updates for this room (status updates, new messages, deletions)
       if (this.subscribedRoomId !== room.id) {
         this.subscribedRoomId = room.id;
-        this.centrifugoService.subscribe(`chat:${room.id}`, (data: unknown) => {
+        this.centrifugeService.subscribe(`chat:${room.id}`, (data: unknown) => {
           this.handleCentrifugoEvent(data as Record<string, unknown>);
         });
       }
@@ -836,10 +840,6 @@ export class ChatPageComponent implements OnInit {
     this.aiSelectedScenario.set(scenario);
     this.aiMessages.set([]);
     this.aiError.set('');
-  }
-
-  navigateToDiscovery(): void {
-    this.router.navigate(['/discovery']);
   }
 
   async sendAiMessage(): Promise<void> {
