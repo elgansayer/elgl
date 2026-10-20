@@ -1,10 +1,25 @@
 import { Component, input, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
+interface SafePreviewUrl {
+  href: string;
+  hostname: string;
+  displayAddress: string;
+}
+
+const LINK_PREVIEW_LIMITS = {
+  title: 300,
+  description: 1000,
+  siteName: 200,
+} satisfies Record<string, number>;
+
+// ⚡ Bolt: Use OnPush change detection since state is derived purely from signal inputs
 @Component({
   selector: 'app-link-preview-card',
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a
       [href]="sanitisedUrl()"

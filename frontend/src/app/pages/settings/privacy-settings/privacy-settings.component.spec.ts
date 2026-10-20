@@ -2,12 +2,9 @@ import { Location } from '@angular/common';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { By } from '@angular/platform-browser';
-import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { vi } from 'vitest';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
-import { PrivacyStatusService } from '../../../services/privacy-status.service';
 import { SafetyService } from '../../../services/safety.service';
 import { PrivacySettingsComponent } from './privacy-settings.component';
 
@@ -19,14 +16,6 @@ describe('PrivacySettingsComponent', () => {
   const addMutedWord = vi.fn<(word: string) => void>();
   const removeMutedWord = vi.fn<(word: string) => void>();
   const goBack = vi.fn();
-  const loadPrivacyStatus = vi.fn();
-  const setHideOnlineStatus = vi.fn();
-  const setHideVipStatus = vi.fn();
-
-  const privacyToggles = (): HlmCheckbox[] =>
-    fixture.debugElement
-      .queryAll(By.directive(HlmCheckbox))
-      .map((debugElement) => debugElement.componentInstance as HlmCheckbox);
 
   beforeEach(async () => {
     mutedWords.set([]);
@@ -34,12 +23,6 @@ describe('PrivacySettingsComponent', () => {
     addMutedWord.mockReset();
     removeMutedWord.mockReset();
     goBack.mockReset();
-    loadPrivacyStatus.mockReset();
-    setHideOnlineStatus.mockReset();
-    setHideVipStatus.mockReset();
-    loadPrivacyStatus.mockResolvedValue({ hideOnlineStatus: true, hideVipStatus: false });
-    setHideOnlineStatus.mockResolvedValue(undefined);
-    setHideVipStatus.mockResolvedValue(undefined);
 
     addMutedWord.mockImplementation((word) => {
       mutedWords.update((previous) => (previous.includes(word) ? previous : [...previous, word]));
@@ -61,14 +44,6 @@ describe('PrivacySettingsComponent', () => {
           useValue: {
             blockedUsers,
             loadBlockedUsers: vi.fn().mockResolvedValue(undefined),
-          },
-        },
-        {
-          provide: PrivacyStatusService,
-          useValue: {
-            load: loadPrivacyStatus,
-            setHideOnlineStatus,
-            setHideVipStatus,
           },
         },
         {
@@ -98,66 +73,89 @@ describe('PrivacySettingsComponent', () => {
     expect(component.hubNavItems.length).toBeGreaterThan(0);
   });
 
-  it('loads persisted status privacy controls', () => {
-    expect(loadPrivacyStatus).toHaveBeenCalledOnce();
-    expect(component.hideOnlineStatus()).toBe(true);
-    expect(component.hideVipStatus()).toBe(false);
-    expect(component.privacyControlsLoading()).toBe(false);
+  it('keeps the privacy hub destinations wired to the dedicated privacy routes', () => {
+    const expectedRoutes = [
+      '/settings/blocks',
+      '/settings/gdpr',
+      '/settings/account/deletion',
+      '/privacy',
+    ];
 
-    const toggles = privacyToggles();
-    expect(toggles).toHaveLength(2);
-    expect(toggles[0]?.checked()).toBe(true);
-    expect(toggles[1]?.checked()).toBe(false);
+    expect(component.hubNavItems.map((item) => item.route)).toEqual(expectedRoutes);
+
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>,
+    );
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(expectedRoutes);
   });
 
-  it('persists the hide-online setting and announces success', async () => {
-    await component.setHideOnlineStatus(false);
+  it('renders a title and description for every privacy hub destination', () => {
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>,
+    );
 
-    expect(setHideOnlineStatus).toHaveBeenCalledWith(false);
-    expect(component.hideOnlineStatus()).toBe(false);
-    expect(component.privacyControlsStatus()).toBe('privacy.success');
+    expect(links).toHaveLength(component.hubNavItems.length);
+    component.hubNavItems.forEach((item, index) => {
+      expect(links[index]?.textContent).toContain(item.titleKey);
+      expect(links[index]?.textContent).toContain(item.descriptionKey);
+    });
   });
 
-  it('persists the hide-VIP setting', async () => {
-    await component.setHideVipStatus(true);
-
-    expect(setHideVipStatus).toHaveBeenCalledWith(true);
-    expect(component.hideVipStatus()).toBe(true);
-    expect(component.privacyControlsStatus()).toBe('privacy.success');
-  });
-
-  it('rolls back a privacy toggle when persistence fails', async () => {
-    setHideVipStatus.mockRejectedValueOnce(new Error('network'));
-
-    await component.setHideVipStatus(true);
+  it('renders the blocked-user count in the blocked-users destination', () => {
+    component.blockedCount.set(3);
     fixture.detectChanges();
 
-    expect(component.hideVipStatus()).toBe(false);
-    expect(component.privacyControlsError()).toBe('privacy.error');
+    const blockedUsersLink = fixture.nativeElement.querySelector(
+      'a[href="/settings/blocks"]',
+    ) as HTMLAnchorElement | null;
+
+    expect(blockedUsersLink?.textContent).toContain('3');
+  });
+
+  it('loads and exposes the persisted profile visibility', () => {
+    expect(getProfileVisibility).toHaveBeenCalledOnce();
+    expect(component.profileVisibility()).toBe('everyone');
+    expect(component.profileVisibilityOptions.map((option) => option.value)).toEqual([
+      'everyone',
+      'vips_only',
+      'hidden',
+    ]);
+
+    const group = fixture.nativeElement.querySelector(
+      'hlm-radio-group[name="profile-visibility"]',
+    ) as HTMLElement | null;
+    expect(group).not.toBeNull();
+    expect(group?.getAttribute('aria-labelledby')).toBe('profile-visibility-heading');
+  });
+
+  it('persists a visibility change and reports success', async () => {
+    await component.updateProfileVisibility('vips_only');
+    fixture.detectChanges();
+
+    expect(updateProfileVisibility).toHaveBeenCalledWith('vips_only');
+    expect(component.profileVisibility()).toBe('vips_only');
+    expect(component.visibilitySaveSuccess()).toBe(true);
+    expect(component.visibilitySaveError()).toBe(false);
+  });
+
+  it('rolls back a failed visibility change', async () => {
+    updateProfileVisibility.mockRejectedValueOnce(new Error('offline'));
+
+    await component.updateProfileVisibility('hidden');
+    fixture.detectChanges();
+
+    expect(component.profileVisibility()).toBe('everyone');
+    expect(component.visibilitySaveError()).toBe(true);
+    expect(component.visibilitySaveSuccess()).toBe(false);
     const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
-    expect(alert?.textContent?.trim()).toBe('privacy.error');
+    expect(alert?.textContent).toContain('privacy.profileVisibility.saveError');
   });
 
-  it('shows a retryable unavailable state when controls fail to load', async () => {
-    loadPrivacyStatus.mockRejectedValueOnce(new Error('offline'));
-    await component.loadPrivacyControls();
-    fixture.detectChanges();
+  it('ignores invalid and unchanged visibility values', async () => {
+    await component.updateProfileVisibility('friends');
+    await component.updateProfileVisibility('everyone');
 
-    expect(component.privacyControlsError()).toBe('privacy.loadError');
-    const retry = Array.from(
-      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((button) => button.textContent?.trim() === 'Retry');
-    expect(retry).toBeDefined();
-  });
-
-  it('uses owned Spartan checkboxes with explicit descriptions and stable ids', () => {
-    const toggles = privacyToggles();
-
-    expect(toggles).toHaveLength(2);
-    expect(toggles[0]?.ariaDescribedby()).toBe('hide-online-description');
-    expect(toggles[1]?.ariaDescribedby()).toBe('hide-vip-description');
-    expect(toggles[0]?.inputId()).toBe('hide-online-status');
-    expect(toggles[1]?.inputId()).toBe('hide-vip-status');
+    expect(updateProfileVisibility).not.toHaveBeenCalled();
   });
 
   it('exposes a screen-reader name for the muted-word input and add action', () => {

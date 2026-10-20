@@ -1,10 +1,11 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, signal, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-quick-poll-form',
   imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
   template: `

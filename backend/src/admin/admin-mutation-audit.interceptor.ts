@@ -83,4 +83,35 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
       ),
     );
   }
+
+  private getReasonCode(
+    body: Record<string, unknown> | undefined,
+  ): AdminActionReasonCode | undefined {
+    const value = body?.reasonCode;
+    return typeof value === 'string' && ADMIN_REASON_CODES.has(value)
+      ? (value as AdminActionReasonCode)
+      : undefined;
+  }
+
+  private resolveTargetType(request: AdminRequest, targetId?: string): string {
+    if (request.params?.blockId) return 'block';
+    if (request.params?.assignmentId) return 'role-assignment';
+    if (request.params?.roleId) return 'admin-role';
+    const requestPath = `${request.baseUrl ?? ''}${request.path ?? ''}`;
+    if (targetId && /(?:^|\/)users(?:\/|$)/.test(requestPath)) {
+      return 'user';
+    }
+    return 'admin-resource';
+  }
+
+  private getResultCount(result: unknown): number | undefined {
+    if (Array.isArray(result)) return result.length;
+    if (!result || typeof result !== 'object') return undefined;
+
+    const candidate = result as Record<string, unknown>;
+    for (const key of ['users', 'reports', 'blocks', 'events', 'roles']) {
+      if (Array.isArray(candidate[key])) return candidate[key].length;
+    }
+    return undefined;
+  }
 }
