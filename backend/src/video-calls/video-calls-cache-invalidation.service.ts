@@ -69,14 +69,15 @@ export class VideoCallsCacheInvalidationService {
         totalDeleted += await redis.del(...targeted);
       }
 
-      // Always invalidate room lists (any mutation changes the list)
-      totalDeleted += await this.deleteByScan(redis, 'video:classroom:list');
-
-      // Also purge the host-dashboard aggregate
-      const deletedDashboardKeys = await redis.del(
-        'host:dashboard:active:video_rooms',
-      );
-      totalDeleted += deletedDashboardKeys;
+      // ⚡ Bolt Optimization: Group independent cache invalidations concurrently
+      // Replace sequential await calls with a single Promise.all block to eliminate additive latency
+      const [scannedDeleted, dashboardDeleted] = await Promise.all([
+        // Always invalidate room lists (any mutation changes the list)
+        this.deleteByScan(redis, 'video:classroom:list'),
+        // Also purge the host-dashboard aggregate
+        redis.del('host:dashboard:active:video_rooms'),
+      ]);
+      totalDeleted += scannedDeleted + dashboardDeleted;
 
       if (totalDeleted > 0) {
         this.logger.log(
@@ -146,17 +147,19 @@ export class VideoCallsCacheInvalidationService {
   async invalidateAllVideoClassroomCaches(): Promise<void> {
     const redis = this.getRedis();
     try {
-      let totalDeleted = 0;
+      // ⚡ Bolt Optimization: Bulk cache invalidation via Promise.all
+      // Eliminates N sequential roundtrips by grouping Redis operations concurrently
+      const deletionResults = await Promise.all(
+        VIDEO_CLASSROOM_CACHE_PATTERNS.map((pattern) => {
+          if (pattern.endsWith(':*')) {
+            const prefix = pattern.slice(0, -2);
+            return this.deleteByScan(redis, prefix);
+          }
+          return redis.del(pattern);
+        }),
+      );
 
-      for (const pattern of VIDEO_CLASSROOM_CACHE_PATTERNS) {
-        if (pattern.endsWith(':*')) {
-          const prefix = pattern.slice(0, -2);
-          totalDeleted += await this.deleteByScan(redis, prefix);
-        } else {
-          totalDeleted += await redis.del(pattern);
-        }
-      }
-
+      const totalDeleted = deletionResults.reduce((acc, curr) => acc + curr, 0);
       if (totalDeleted > 0) {
         this.logger.log(
           `Bulk-invalidated ${totalDeleted} video-classroom cache key(s)`,
