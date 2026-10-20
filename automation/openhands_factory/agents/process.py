@@ -76,17 +76,6 @@ while [ "$index" -lt "$mount_count" ]; do
   fi
   index=$((index + 1))
 done
-for masked_root in /mnt /srv /media; do
-  if [ "$masked_root" != "$sandbox_root" ] && [ -d "$masked_root" ]; then
-    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
-  fi
-done
-for container_socket in /run/containerd/containerd.sock /run/docker.sock \
-  /run/podman/podman.sock; do
-  if [ -S "$container_socket" ]; then
-    /usr/bin/mount --bind /dev/null "$container_socket"
-  fi
-done
 [ "$1" = -- ]
 shift
 
