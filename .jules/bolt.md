@@ -21,6 +21,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-09 - [Redis Invalidation DoS Fix]
+**Learning:** This codebase uses Redis cache tags and user lists. Using `redis.keys` with wildcards like `admin:users:list:*` runs blocking `KEYS` command which can freeze the Redis event loop, creating a DoS vulnerability or scaling bottleneck as the key count grows.
+**Action:** Always prefer `redis.scan` with `MATCH` using a cursor when invalidating or listing wildcard keys in Redis for scalable cache evictions.
+
 ## 2026-09-15 - [Track Angular Loops by ID & Use OnPush]
 **Learning:** In Angular frontend components with frequent array updates (like real-time chat lists or messages), iterating with `@for (item of items(); track item)` tracks by object reference. When the array is replaced or items are updated immutably, Angular destroys and recreates the DOM elements, causing severe jank. Additionally, without `ChangeDetectionStrategy.OnPush`, Angular checks the entire component tree on every tick. Unawaited async tasks (like `void this.chatService.markMessageStatus`) are inherently non-blocking and do not suffer from sequential N+1 latency, so wrapping them in `Promise.all` is redundant.
 **Action:** Always use `track item.id` in `@for` loops to track by unique identifier. Apply `ChangeDetectionStrategy.OnPush` to components using Signals to prevent unnecessary re-renders. Avoid attempting to batch naturally concurrent unawaited operations.
@@ -417,6 +421,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
