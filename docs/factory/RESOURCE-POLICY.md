@@ -95,7 +95,7 @@ For code and security review, providers that previously mutated the job are move
 
 ## Concurrency
 
-The daemon may retain multiple workers because many state transitions are cheap control-plane operations. Expensive agent execution is independently capped by `FACTORY_HOST_AGENT_CONCURRENCY`. HelloTalk uses three agent slots on the 8 GiB host; memory-heavy builds and browser verification still acquire the exclusive side of the host gate and cannot overlap those sessions.
+The daemon may retain multiple workers because many state transitions are cheap control-plane operations. Expensive agent execution is independently capped at two concurrent routes across implementation, planning, security, repair, review, and the architect cycle.
 
 Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 

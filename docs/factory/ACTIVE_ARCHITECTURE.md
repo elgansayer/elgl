@@ -202,14 +202,12 @@ following:
 - `factory/independent-review` is present and reports literal `SUCCESS`;
 - any duplicate rollup entry for either required context also reports literal `SUCCESS`;
 - every visible terminal check is allowed;
-- mergeability is non-conflicting (`CLEAN` or, under non-strict checks, `BEHIND`);
+- mergeability is clean;
 - no human review reports `CHANGES_REQUESTED`.
 
-The daemon is the primary autonomous merge authority. It re-reads the live conditions, binds the
+The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
 squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
-administrator bypass. It serialises merge execution. Production does not wait for a full push CI run between
-each merge because the active required-check policy is non-strict; the newest integrated `main` push is still
-fully tested and superseded push runs are cancelled. A baseline ruleset requires pull requests and `CI / required`. A second,
+administrator bypass. A baseline ruleset requires pull requests and strict `CI / required`. A second,
 review-only ruleset requires `factory/independent-review`. The exact repository-owner user may be the sole
 pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI, review, or both without
 permitting direct pushes. Factory automation still requires literal success from both statuses and never invokes

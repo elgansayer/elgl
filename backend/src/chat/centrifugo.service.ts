@@ -86,15 +86,11 @@ export class CentrifugoService implements OnModuleInit {
 
     const env = this.configService.get<string>('NODE_ENV') || 'development';
     if (env === 'production') {
-      if (!apiKey || apiKey === 'test-centrifugo-api-key') {
-        throw new Error(
-          'CENTRIFUGO_API_KEY must be securely configured in production',
-        );
+      if (!apiKey) {
+        throw new Error('CENTRIFUGO_API_KEY must be configured in production');
       }
-      if (!secret || secret === 'test-centrifugo-secret') {
-        throw new Error(
-          'CENTRIFUGO_SECRET must be securely configured in production',
-        );
+      if (!secret) {
+        throw new Error('CENTRIFUGO_SECRET must be configured in production');
       }
     }
 

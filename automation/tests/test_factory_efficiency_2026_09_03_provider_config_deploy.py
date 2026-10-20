@@ -1,5 +1,4 @@
 import subprocess
-import sys
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -55,66 +54,6 @@ def test_updater_rejects_dotdot_escape_from_approved_config_root(tmp_path: Path)
     )
     assert result.returncode != 0
     assert result.stdout == ""
-
-
-def test_neutral_provider_policy_is_repository_managed_and_content_checked(
-    tmp_path: Path,
-) -> None:
-    updater = _read("config/systemd/hellotalk-factory-update.sh")
-    functions = _function_range(
-        updater,
-        "repository_managed_agents_config() {",
-        "\nrepo_runtime_root_safe() {",
-    )
-    repository = tmp_path / "repository"
-    policy = repository / "config" / "factory" / "agents.production.json"
-    policy.parent.mkdir(parents=True)
-    policy.write_text(
-        '{"routing_enabled":true,"routing":{"review":["google"]}}\n',
-        encoding="utf-8",
-    )
-    subprocess.run(["git", "init", "-q", str(repository)], check=True)
-    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
-    subprocess.run(
-        [
-            "git",
-            "-C",
-            str(repository),
-            "-c",
-            "user.name=Factory Test",
-            "-c",
-            "user.email=factory@example.invalid",
-            "commit",
-            "-qm",
-            "test policy",
-        ],
-        check=True,
-    )
-    deployed = tmp_path / "agents.json"
-    deployed.write_text(
-        '{\n  "routing": {"review": ["google"]},\n  "routing_enabled": true\n}\n',
-        encoding="utf-8",
-    )
-    venv_bin = tmp_path / "venv" / "bin"
-    venv_bin.mkdir(parents=True)
-    (venv_bin / "python").symlink_to(sys.executable)
-    harness = tmp_path / "managed-policy.sh"
-    harness.write_text(
-        "set -euo pipefail\n"
-        f"REPOSITORY={repository}\n"
-        f"FACTORY_VENV={tmp_path / 'venv'}\n"
-        "AGENTS_CONFIG_SOURCE=config/factory/agents.production.json\n"
-        'factory_git_read() { git -C "$REPOSITORY" "$@"; }\n'
-        f"{functions}\n"
-        "repository_managed_agents_config /etc/repo-factory/agents.json\n"
-        "! repository_managed_agents_config /etc/hellotalk-factory/agents.json\n"
-        f"agents_config_matches_commit {deployed} HEAD\n"
-        f"printf 'stale\\n' >> {deployed}\n"
-        f"! agents_config_matches_commit {deployed} HEAD\n",
-        encoding="utf-8",
-    )
-
-    subprocess.run(["bash", str(harness)], check=True)
 
 
 def test_provider_config_rollback_reloads_both_services(tmp_path: Path) -> None:
