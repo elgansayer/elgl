@@ -4,12 +4,13 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from openhands_factory.agents.base import AgentFailureKind, ProviderHealth, ProviderStatus
 from openhands_factory.agents.health import AgentCircuitBreaker, AgentHealthStore
 from openhands_factory.cli import _provider_startup_checks
-from openhands_factory.config import AgentsConfig, FactoryConfig
+from openhands_factory.config import AgentsConfig, FactoryConfig, ProviderConfig
 from openhands_factory.doctor import (
     Check,
     agent_provider_checks,
@@ -20,6 +21,7 @@ from openhands_factory.doctor import (
     github_repository_access_check,
     job_health_checks,
     leaked_port_environment_check,
+    opencode_api_check,
     persistent_github_credentials_check,
     run_doctor,
     startup_security_checks,
@@ -68,6 +70,53 @@ def test_worker_terminal_probe_uses_small_nested_resource_limits(
     assert "--memory=256m" in calls[0]
     assert "--cpus=0.25" in calls[0]
     assert "--network=none" in calls[0]
+
+
+def test_disabled_legacy_api_cannot_break_online_diagnostics(tmp_path, monkeypatch):
+    factory_config = config(tmp_path)
+    factory_config.agents.providers = {
+        "opencode": ProviderConfig(enabled=False),
+        "openhands": ProviderConfig(enabled=False),
+    }
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Disabled providers must not consume API probes")
+
+    monkeypatch.setattr("openhands_factory.provider_profiles.validate_opencode", forbidden)
+    assert opencode_api_check(factory_config) is None
+
+
+@pytest.mark.parametrize("provider", ["opencode", "openhands"])
+@pytest.mark.parametrize("failure", ["http", "transport"])
+def test_api_failures_remain_diagnostics_without_echoing_request_secrets(
+    tmp_path, monkeypatch, provider, failure
+):
+    factory_config = config(tmp_path)
+    factory_config.agents.providers = {provider: ProviderConfig(enabled=True)}
+    request = httpx.Request("GET", "https://example.invalid/models?token=fixture-secret")
+
+    def unavailable(*args, **kwargs):
+        if failure == "http":
+            raise httpx.HTTPStatusError(
+                "fixture-secret", request=request, response=httpx.Response(401, request=request)
+            )
+        raise httpx.ConnectError("fixture-secret", request=request)
+
+    monkeypatch.setattr("openhands_factory.provider_profiles.validate_opencode", unavailable)
+    result = opencode_api_check(factory_config)
+    assert result is not None and not result.passed
+    assert result.name == "opencode-go-api"
+    assert "fixture-secret" not in result.detail
+    assert ("HTTP 401" if failure == "http" else "ConnectError") in result.detail
+
+
+def test_enabled_legacy_api_still_reports_success(tmp_path, monkeypatch):
+    factory_config = config(tmp_path)
+    monkeypatch.setattr(
+        "openhands_factory.provider_profiles.validate_opencode", lambda config: None
+    )
+    result = opencode_api_check(factory_config)
+    assert result is not None and result.passed
 
 
 def test_startup_security_rejects_an_active_competing_executor(
