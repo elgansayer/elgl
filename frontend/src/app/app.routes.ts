@@ -10,17 +10,11 @@ import { chatRoutes } from './routes/chat.routes';
 import { adminRoutes } from './routes/admin.routes';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'ai-conversation', pathMatch: 'full' },
+  { path: '', redirectTo: 'learn/ai-chat', pathMatch: 'full' },
   {
     path: 'home',
     loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent),
     title: 'Home - HelloTalk',
-  },
-  {
-    path: 'community',
-    loadComponent: () =>
-      import('./components/communities/communities.component').then((m) => m.CommunitiesComponent),
-    title: 'Communities - HelloTalk',
   },
   ...authRoutes,
   ...mediaRoutes,
@@ -30,5 +24,5 @@ export const routes: Routes = [
   ...settingsRoutes,
   ...chatRoutes,
   ...adminRoutes,
-  { path: '**', redirectTo: 'ai-conversation' },
+  { path: '**', redirectTo: 'learn/ai-chat' },
 ];
