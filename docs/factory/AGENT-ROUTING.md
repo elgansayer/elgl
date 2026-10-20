@@ -49,6 +49,15 @@ subscriptions start instead of waiting for the preferred provider's slot.
 | OpenCode Go  | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
 | OpenHands    | `gpt-5.6-sol`         | same                                                                                                                        | Emergency compatibility provider only                                                                                                                        |
 
+
+| Provider     | Coding default        | Reasoning and review override                                                                                               | Policy                                                                                                                                                       |
+| ------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claude Code  | `fable`               | `fable`                                                                                                                     | Current most capable generally available Claude coding model and stable CLI alias                                                                            |
+| Codex CLI    | `gpt-5.6-sol`         | `gpt-5.6-sol`, `max` effort                                                                                                 | Current OpenAI flagship for complex production and coding work                                                                                               |
+| Google agent | `gemini-3.1-pro-high` | same, `high` effort                                                                                                         | Strongest Google-native Pro reasoning tier exposed by the verified Antigravity catalogue                                                                     |
+| OpenCode Go  | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
+| OpenHands    | `gpt-5.6-sol`         | same                                                                                                                        | Emergency compatibility provider only                                                                                                                        |
+
 ## Model policy as of 2026-08-17
 
 | Provider     | Coding default        | Reasoning and review override                                                                                               | Policy                                                                                                                                                       |
@@ -58,6 +67,7 @@ subscriptions start instead of waiting for the preferred provider's slot.
 | Google agent | `gemini-3.1-pro-high` | same, `high` effort                                                                                                         | Strongest Google-native Pro reasoning tier exposed by the verified Antigravity catalogue                                                                     |
 | OpenCode Go  | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
 | OpenHands    | `gpt-5.6-sol`         | same                                                                                                                        | Emergency compatibility provider only                                                                                                                        |
+
 
 
 
