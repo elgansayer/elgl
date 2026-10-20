@@ -5,7 +5,9 @@ on:
     workflows: ['Dependency review']
     types: [completed]
   schedule:
-    - cron: '41 */6 * * *'
+    # Dependency Review completion already reconciles lanes immediately. Keep one
+    # daily backstop for missed events without allocating four healthy no-op runners.
+    - cron: '41 4 * * *'
   workflow_dispatch:
 
 concurrency:

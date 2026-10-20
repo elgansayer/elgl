@@ -56,4 +56,13 @@ class ConfigRoutingPolicy(RoutingPolicy):
             eligible = [name for name in eligible if name not in used] + [
                 name for name in eligible if name in used
             ]
+            # Keep bounded repair preference lists cheap-first even when a provider
+            # is unhealthy. Once two configured providers have actually started for
+            # this task, promote unused Codex into the next bounded candidate window
+            # so a difficult quality/CI repair can reach the flagship fallback inside
+            # the four-start per-task budget rather than waiting for a later window.
+            attempted = used.intersection(preferred)
+            if len(attempted) >= 2 and "codex" in eligible and "codex" not in attempted:
+                eligible.remove("codex")
+                eligible.insert(0, "codex")
         return [*eligible, *emergency]
