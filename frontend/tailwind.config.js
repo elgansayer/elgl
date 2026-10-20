@@ -103,13 +103,7 @@ module.exports = {
         // Arabic, Cyrillic, Devanagari, etc). Never apply `font-display` to
         // user-generated or translated content, only to guaranteed-Latin
         // product copy (headlines, streak numerals, onboarding).
-        display: [
-          '"Instrument Sans"',
-          'ui-sans-serif',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          'sans-serif',
-        ],
+        display: ['ui-sans-serif', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
       borderRadius: {
         app: '0.75rem', // controls: buttons, inputs - confident, not bubble-heavy
