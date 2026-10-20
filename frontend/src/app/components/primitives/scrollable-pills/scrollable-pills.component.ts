@@ -4,6 +4,8 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-scrollable-pills',
+  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [...HlmButtonImports],
   template: `
     <div
