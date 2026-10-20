@@ -59,8 +59,6 @@ jobs:
 
   playwright-discovery:
     name: e2e / playwright-discovery
-    needs: impact
-    if: needs.impact.outputs.run_e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

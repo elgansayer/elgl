@@ -7,17 +7,19 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from openhands_factory.agents.base import AgentPhase, AgentRequest, ProviderHealth, ProviderStatus
+from openhands_factory.agents.base import AgentRequest, ProviderHealth, ProviderStatus
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure
 from openhands_factory.agents.process import ProcessResult
 
-# Keep maximum reasoning for open-ended planning, architecture, implementation, and
-# security review, where broad exploration can materially improve the result or prevent
-# a missed vulnerability. Independent code review and general action retain a medium
+# Keep maximum reasoning for open-ended planning, architecture, and implementation.
+# Security review is a bounded checklist over an already-created diff and therefore
+# keeps a high reasoning tier without consuming the maximum thinking budget used for
+# open-ended build work. Independent code review and general action retain a medium
 # reasoning floor. Quality repair and CI repair are bounded by deterministic findings or
 # failed checks and always flow back through verification and re-review, so low effort
 # avoids spending maximum thinking allowance on every routine repair iteration.
 _REASONING_EFFORT_BY_PHASE: dict[AgentPhase, str] = {
+    AgentPhase.SECURITY_REVIEW: "high",
     AgentPhase.QUALITY_REPAIR: "low",
     AgentPhase.CODE_REVIEW: "medium",
     AgentPhase.CI_REPAIR: "low",
@@ -75,17 +77,13 @@ class CodexProvider(CLIProvider):
         prompt_path: Path | None,
     ) -> Sequence[str]:
         del prompt_path
-        reasoning_effort = _REASONING_EFFORT_BY_PHASE.get(
-            request.phase,
-            _DEFAULT_REASONING_EFFORT,
-        )
         command = [
             *self._prefix(),
             "exec",
             "-m",
             model,
             "-c",
-            f'model_reasoning_effort="{reasoning_effort}"',
+            'model_reasoning_effort="max"',
             # Codex applies workspace-write when --approve-for-me is selected.
             # Passing an explicit sandbox as well is rejected by current CLIs.
             "--approve-for-me",

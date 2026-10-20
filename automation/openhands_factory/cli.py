@@ -57,7 +57,7 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
 
 
 def parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser(prog="repo-factory")
+    result = argparse.ArgumentParser(prog="hellotalk-factory")
     subcommands = result.add_subparsers(dest="command", required=True)
     doctor = subcommands.add_parser("doctor")
     doctor.add_argument("--online", action="store_true")
@@ -222,9 +222,9 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "daemon":
-            from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
+            from openhands_factory.daemon import FactoryDaemon
 
-            return MainCiGatedFactoryDaemon(config).run()
+            return FactoryDaemon(config).run()
         if args.command in {"pause", "resume"}:
             from openhands_factory.daemon import set_paused
 

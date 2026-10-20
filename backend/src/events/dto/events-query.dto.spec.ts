@@ -26,71 +26,54 @@ describe('EventsQueryDto', () => {
   });
 
   it('should fail if category is invalid', async () => {
-    const dto: Record<string, unknown> = {
-      category: 'invalid_category',
-    };
-
-    const errors = await validateDto(dto);
+    const errors = await validateDto({ category: 'invalid_category' });
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('category');
   });
 
   it('should fail if status is invalid', async () => {
-    const dto: Record<string, unknown> = {
-      status: 'invalid_status',
-    };
-
-    const errors = await validateDto(dto);
+    const errors = await validateDto({ status: 'invalid_status' });
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('status');
   });
 
   it('should fail if from_date is not ISO8601', async () => {
-    const dto: Record<string, unknown> = {
-      from_date: 'not-a-date',
-    };
-
-    const errors = await validateDto(dto);
+    const errors = await validateDto({ from_date: 'not-a-date' });
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('from_date');
   });
 
   it('should fail if to_date is not ISO8601', async () => {
-    const dto: Record<string, unknown> = {
-      to_date: 'not-a-date',
-    };
-
-    const errors = await validateDto(dto);
+    const errors = await validateDto({ to_date: 'not-a-date' });
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('to_date');
   });
 
   it('should fail if page is less than 1', async () => {
-    const dto: Record<string, unknown> = {
-      page: 0,
-    };
-
-    const errors = await validateDto(dto);
+    const errors = await validateDto({ page: 0 });
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('page');
   });
 
   it('should fail if limit is less than 1', async () => {
-    const dto: Record<string, unknown> = {
-      limit: 0,
-    };
-
-    const errors = await validateDto(dto);
+    const errors = await validateDto({ limit: 0 });
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('limit');
   });
 
-  it('should fail if proficiency is invalid', async () => {
-    const dto: Record<string, unknown> = {
-      proficiency: 'Expert',
-    };
+  it('should fail if limit exceeds the public discovery maximum', async () => {
+    const errors = await validateDto({ limit: 101 });
+    expect(errors).toHaveLength(1);
+    expect(errors[0].property).toBe('limit');
+  });
 
-    const errors = await validateDto(dto);
+  it('should accept the maximum bounded limit', async () => {
+    const errors = await validateDto({ limit: 100 });
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should fail if proficiency is invalid', async () => {
+    const errors = await validateDto({ proficiency: 'Expert' });
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('proficiency');
   });
@@ -98,18 +81,13 @@ describe('EventsQueryDto', () => {
   it.each(['upcoming', 'past'])(
     'should validate status value "%s"',
     async (status) => {
-      const dto: Record<string, unknown> = {
-        status: status,
-      };
-
-      const errors = await validateDto(dto);
+      const errors = await validateDto({ status });
       expect(errors).toHaveLength(0);
     },
   );
 
   it('should fail if language_pair is not a string', async () => {
     const dto = { language_pair: 123 } as unknown as Partial<EventsQueryDto>;
-
     const errors = await validateDto(dto);
     expect(errors).toHaveLength(1);
     expect(errors[0].property).toBe('language_pair');
@@ -117,7 +95,6 @@ describe('EventsQueryDto', () => {
 
   it('should default page and limit when not provided', () => {
     const instance = plainToInstance(EventsQueryDto, {});
-
     expect(instance.page).toBe(1);
     expect(instance.limit).toBe(20);
   });

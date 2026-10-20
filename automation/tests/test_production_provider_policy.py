@@ -7,7 +7,6 @@ def test_production_provider_policy_is_locked() -> None:
     config = json.loads(path.read_text(encoding="utf-8"))
     providers = config["providers"]
     routing = config["routing"]
-    breaker = config["circuit_breaker"]
     expected_routes = {
         "planning": ["claude", "codex", "google", "opencode", "pi"],
         "architecture": ["claude", "codex", "google", "opencode", "pi"],
