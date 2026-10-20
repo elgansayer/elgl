@@ -8,7 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
+import { AiConversationService, Scenario } from './ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
 
@@ -21,7 +21,15 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective, VisualDiffComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    FormsModule,
+    DatePipe,
+    TranslatePipe,
+    A11yClickableDirective,
+    VisualDiffComponent,
+  ],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -35,7 +43,8 @@ interface AiChatMessage {
           >
             {{ 'aiPartner.start' | t }}
           </button>
-          @for (room of rooms(); track room) {
+          <!-- ⚡ Bolt: Track rooms by unique ID instead of object reference to prevent unnecessary DOM recreation when real-time statuses change -->
+          @for (room of rooms(); track room.id) {
             <div
               (click)="selectRoom(room)"
               appA11yClickable
@@ -208,7 +217,8 @@ interface AiChatMessage {
 
               <!-- Messages (inline rendering to support correction UI) -->
               <div class="flex-1 overflow-y-auto p-4 space-y-4" #messagesContainer>
-                @for (msg of messages(); track msg) {
+                <!-- ⚡ Bolt: Track messages by unique ID instead of object reference to prevent entire list re-rendering on delivery status updates -->
+                @for (msg of messages(); track msg.id) {
                   <div
                     class="group flex gap-2"
                     [class.flex-row-reverse]="msg.sender_id === currentUserId()"
@@ -255,7 +265,7 @@ interface AiChatMessage {
                       ) {
                         <div>
                           <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
-                          <p class="text-xs text-warning">✏️ Correction requested</p>
+                          <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
                         </div>
                       } @else {
                         <p>{{ msg.text_content }}</p>
@@ -857,7 +867,7 @@ export class ChatPageComponent implements OnInit {
 
     try {
       const scenarioId = this.aiSelectedScenario()?.id;
-      const { reply: response } = await this.aiConversationService.sendMessage(
+      const response = await this.aiConversationService.sendMessage(
         text,
         scenarioId,
         conversationHistory,

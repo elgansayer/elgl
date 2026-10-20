@@ -8,8 +8,6 @@ A pull request now advances through these observable states:
 
 ```text
 REVIEWING
-  -> stays draft with factory-stack-blocked while a declared Depends-On/
-     Factory-Stack-Parent PR is still open (see PR-CONVERGENCE-AND-WIP.md)
   -> factory review approves the exact head SHA
   -> factory/independent-review = success
   -> factory-reviewed label is applied
@@ -20,7 +18,7 @@ CI_PENDING
   -> every terminal check succeeds, is neutral, or is skipped
   -> no CHANGES_REQUESTED human review
   -> reviewed head SHA is still current
-  -> GitHub reports MERGEABLE and either CLEAN or non-strict BEHIND
+  -> GitHub reports CLEAN + MERGEABLE
 
 MERGE_QUEUED
   -> Telegram: MERGE_QUEUED
@@ -72,7 +70,7 @@ The Factory never merges merely because a PR has the `factory-reviewed` label. B
 - required Factory and CI checks have passed
 - checks are no longer pending
 - mergeability is `MERGEABLE`
-- merge state is `CLEAN`, or `BEHIND` when non-strict required checks permit the already-tested head
+- merge state is `CLEAN`
 - no `CHANGES_REQUESTED` decision is active
 
 The merge command uses `--match-head-commit <reviewed_sha>`. If a commit lands after review, GitHub rejects the stale merge and the Factory refreshes the PR through independent review again.

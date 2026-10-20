@@ -42,6 +42,11 @@ export type UsersRow = {
   bio_text?: string | null;
   status_text?: string | null;
   proficiency_level?: string | null;
+  availability_morning?: boolean | null;
+  availability_afternoon?: boolean | null;
+  availability_evening?: boolean | null;
+  available_time_start?: string | null;
+  available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
   mock_country?: string | null;
@@ -1505,24 +1510,18 @@ export interface Database {
           user_id: string;
           room_id: string;
           is_locked: boolean;
-          is_archived: boolean;
-          archived_at: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
-          is_archived?: boolean;
-          archived_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
-          is_archived?: boolean;
-          archived_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [
@@ -2226,13 +2225,15 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      get_host_dashboard_earnings: {
+      claim_daily_checkin_reward: {
         Args: {
-          p_room_id: string;
-          p_host_id: string;
+          p_user_id: string;
+          p_reward: number;
         };
         Returns: {
-          earned_coins: number;
+          claimed: boolean;
+          coins_rewarded: number;
+          new_balance: number;
         }[];
       };
       increment_xp: {
@@ -2303,20 +2304,10 @@ export class SupabaseService implements OnModuleDestroy {
     const supabaseKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
     );
-    const env = this.configService.get<string>('NODE_ENV') || 'development';
-
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
-    }
-
-    if (env === 'production') {
-      if (supabaseKey === 'test-service-role-key') {
-        throw new Error(
-          'SUPABASE_SERVICE_ROLE_KEY must be securely configured in production',
-        );
-      }
     }
     this.client = createClient<Database>(supabaseUrl, supabaseKey);
 

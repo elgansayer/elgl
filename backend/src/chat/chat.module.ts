@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SafetyModule } from '../safety/safety.module';
 import { LinkPreviewModule } from '../link-preview/link-preview.module';
 import { SpamDetectionModule } from '../spam-detection/spam-detection.module';
@@ -6,18 +7,16 @@ import { XpModule } from '../xp/xp.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { FavouritesModule } from '../favourites/favourites.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
+import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
-import { ChatForwardController } from './chat-forward.controller';
-import { ChatArchiveController } from './chat-archive.controller';
-import { ChatEditController } from './chat-edit.controller';
 import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
-import { ChatArchiveService } from './chat-archive.service';
 import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
@@ -30,10 +29,8 @@ import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
-import { MessageReactionsController } from './message-reactions.controller';
-import { MessageReactionsService } from './message-reactions.service';
-import { DirectConversationController } from './direct-conversations/direct-conversation.controller';
-import { DirectConversationService } from './direct-conversations/direct-conversation.service';
+import { DisappearingMessagesCleanupService } from './disappearing-messages-cleanup.service';
+import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
 
 @Module({
   imports: [
@@ -43,21 +40,18 @@ import { DirectConversationService } from './direct-conversations/direct-convers
     XpModule,
     LlmProxyModule,
     SupabaseModule,
+    FavouritesModule,
     CloudflareR2Module,
+    LearnerKnowledgeModule,
     forwardRef(() => UsersModule),
   ],
   controllers: [
     ChatController,
-    ChatForwardController,
-    ChatArchiveController,
-    ChatEditController,
     ChatMediaSendController,
     ChatSearchController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
-    MessageReactionsController,
-    DirectConversationController,
   ],
   providers: [
     CentrifugoService,
@@ -66,7 +60,6 @@ import { DirectConversationService } from './direct-conversations/direct-convers
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
-    ChatArchiveService,
     ChatMediaMessageService,
     ConversationStarterService,
     SystemMessageService,
@@ -74,8 +67,12 @@ import { DirectConversationService } from './direct-conversations/direct-convers
     ChatBackupService,
     QuickRepliesService,
     ChatSystemEventListener,
-    MessageReactionsService,
-    DirectConversationService,
+    DisappearingMessagesCleanupService,
+    DisappearingMessagesInterceptor,
+    {
+      provide: APP_INTERCEPTOR,
+      useExisting: DisappearingMessagesInterceptor,
+    },
   ],
   exports: [
     CentrifugoService,
@@ -83,12 +80,9 @@ import { DirectConversationService } from './direct-conversations/direct-convers
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
-    ChatArchiveService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
-    MessageReactionsService,
-    DirectConversationService,
   ],
 })
 export class ChatModule {}

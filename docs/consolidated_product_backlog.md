@@ -46,6 +46,7 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 - Make Nearby use explicit GPS location.
 - Complete persisted Serious Learner mode and standardise active Serious Learner filtering.
+- Audit and propose advanced partner discovery ranking signals.
 - Converge discovery error actions on Spartan.
 
 ## 🧠 Learning & AI Tools
@@ -58,13 +59,27 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Complete daily learning tip design sync and lock cultural tip accessibility contract.
 - Make daily login rewards atomic and lock database question bank contract.
 
+- Implement missing E2E test flows for Authentication, Chat Messaging, and Moment Creation
+- Exempt non-user-authored body fields from sanitization
+- Configure Angular Universal (SSR)
+- Audit RxJS subscriptions and migrate to Angular Signals where possible
+- Implement TimelineWorker backend job for fan-out processing
+- Agent workflow to check for security issues and vulnerabilities
+- Automated push notification reminders
+- Achievements service in NestJS
+- Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag
+
 ## 🛡️ Trust & Safety (Moderation)
+
 
 - Complete production Block Management and lock ban and warn moderation endpoints.
 - Enforce typed user-content sanitisation boundaries.
 - Add ASN hosting risk controls.
 
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, Error Handling, extracted components for scalability)
+
 ## ⚙️ Platform, UI Architecture & Automation
+
 
 - Align UI contracts with Spartan UI and Relay themes (desktop sidebars, confirm dialogs, developer dashboards).
 - Define 400 percent zoom reflow standard, enforce touch target sizing, and lock screen-reader naming contracts.

@@ -19,7 +19,7 @@ host proves all of the following:
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
 - root and Factory-state volumes both retain the configured free-space reserve;
-- one baseline GitHub ruleset requires pull requests and non-strict `CI / required` on `main`;
+- one baseline GitHub ruleset requires pull requests and `CI / required` on `main`;
 - `factory/independent-review` is required by either that ruleset or a review-only ruleset whose sole optional
   bypass is the exact repository-owner user in pull-request mode;
 - the baseline ruleset may use the same exact-owner, pull-request-only bypass, while role, team, app, deploy-key,
@@ -98,9 +98,7 @@ environments. The deployed Factory tree is read-only there too.
 
 See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md), [AGENT-ROUTING.md](AGENT-ROUTING.md),
 [SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), [MANUAL-MERGE.md](MANUAL-MERGE.md),
-[PR-MERGE-LIFECYCLE.md](PR-MERGE-LIFECYCLE.md),
-[PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md), [CONTROL-PANEL.md](CONTROL-PANEL.md), and
-[HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
+[CONTROL-PANEL.md](CONTROL-PANEL.md), and [HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
 
 ## Durable lifecycle
 
@@ -129,11 +127,11 @@ rotation. Persisted failure classes and deterministic jittered backoff remain au
 
 ### New-issue admission cadence
 
-Production admits up to four newly discovered GitHub issues per hour through:
+Production admits one newly discovered GitHub issue per hour through:
 
 ```text
 FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
-FACTORY_NEW_ISSUES_PER_INTERVAL=4
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
 ```
 
 This is a durable admission gate, not the daemon polling interval. The admission record survives daemon restarts
@@ -141,11 +139,14 @@ and prevents startup bursts. It applies only while an issue is in `DISCOVERED`; 
 verification, quality repair, PR creation, independent review, CI repair, merge polling, and incoming pull-request
 review continue whenever worker capacity is available. Setting the interval to `0` restores unlimited historical
 admission behaviour. Do not use `FACTORY_COOLDOWN_SECONDS=3600` for this purpose: that value controls source and
-health refresh cadence and would not reliably enforce bounded issue admission.
+health refresh cadence and would not reliably enforce one newly admitted issue per hour.
 
 All `jobs.json` read-modify-write operations use a cross-process lock, so daemon, doctor, watchdog, and operator
 commands cannot overwrite sibling transitions. Provider provenance is retained as the latest 500 attempts per
 job, preventing one difficult task from growing durable state without bound.
+
+Durable execution states abandoned by a dead worker are recovered through the same timeout retry policy. Live
+futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated as abandoned work.
 
 ### Pull-request convergence and WIP limits
 
@@ -163,6 +164,7 @@ explicit future retry deadline, live futures and polling-only `CI_PENDING` or `M
 as abandoned work. `hellotalk-factory status` reports actual watchdog recoveries (`watchdog.recovered_total`)
 separately from queued age (`watchdog.oldest_queued_age_seconds`); see
 [AUDIT-2026-10-16-ABANDONED-ATTEMPT.md](AUDIT-2026-10-16-ABANDONED-ATTEMPT.md).
+
 
 ## Safety gates
 
@@ -189,7 +191,7 @@ Before a task branch can merge, the Factory preserves these controls:
 - atomic base updates and renewed verification/review when a head is behind `main`;
 - atomic `--match-head-commit` enforcement at the merge call;
 - literal success for `CI / required` and `factory/independent-review` in every autonomous merge;
-- a baseline ruleset requiring pull requests and non-strict `CI / required`;
+- a baseline ruleset requiring pull requests and strict `CI / required`;
 - an optional exact-owner, pull-request-only bypass on the baseline and review-only rulesets;
 - a review-only ruleset requiring `factory/independent-review`;
 - human `CHANGES_REQUESTED` review blocking;
@@ -351,9 +353,7 @@ sudo scripts/maintain-factory-host-storage.sh
   concurrent worker transitions.
 - Isolated verification takes its tool path from the running Factory virtual environment's `sys.prefix`. This
   keeps the pinned `uv` executable available after privilege reduction without exposing host or provider paths.
-- `metrics` prints provider, model, phase, and typed failure outcomes without transcripts or credentials, plus a
-  `pull_requests` section with current WIP capacity and convergence/replay/CI-churn summary ratios (see
-  [PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md)).
+- `metrics` prints provider, model, phase, and typed failure outcomes without transcripts or credentials.
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact
   pause, resume, status, or restart comments from the separate `FACTORY_CONTROL_GITHUB_ACTORS` allowlist.

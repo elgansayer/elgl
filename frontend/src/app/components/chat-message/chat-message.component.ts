@@ -325,6 +325,14 @@ export class ChatMessageComponent {
     return parts;
   });
 
+  readonly isOwnMessage = computed(() => {
+    const currentUserId = this.currentUserId();
+    if (currentUserId != null) {
+      return this.message().sender_id === currentUserId;
+    }
+    return this.message().sender_id === this.authService.currentUser()?.id;
+  });
+
   constructor() {
     effect(() => {
       const senderId = this.message().sender_id;
@@ -347,13 +355,6 @@ export class ChatMessageComponent {
         void this.fetchTranscription(msg.media_url);
       }
     });
-  }
-
-  isOwnMessage(): boolean {
-    if (this.currentUserId() != null) {
-      return this.message().sender_id === this.currentUserId();
-    }
-    return this.message().sender_id === this.authService.currentUser()?.id;
   }
 
   cycleVoicePlaybackSpeed(): void {
@@ -392,7 +393,7 @@ export class ChatMessageComponent {
   async fetchTranscription(audioUrl: string): Promise<void> {
     this.voiceTranscribing.set(true);
     try {
-      const res = await fetch(`${environment.apiUrl}/nlp/transcribe-audio`, {
+      const res = await fetch(`${environment.apiUrl}/nlp/transcribe-voice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio_url: audioUrl }),
@@ -401,7 +402,7 @@ export class ChatMessageComponent {
         throw new Error('Transcription request failed');
       }
       const data = await res.json();
-      this.voiceTranscription.set(data.transcription || null);
+      this.voiceTranscription.set(data.original_text || null);
     } catch (err) {
       console.error('Transcription error:', err);
       this.voiceTranscription.set(null);

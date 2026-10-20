@@ -16,6 +16,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent),
     title: 'Home - HelloTalk',
   },
+  {
+    path: 'community',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
   ...authRoutes,
   ...mediaRoutes,
   ...learningRoutes,

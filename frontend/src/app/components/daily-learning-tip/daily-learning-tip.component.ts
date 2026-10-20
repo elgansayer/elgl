@@ -1,5 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, inject, resource } from '@angular/core';
-import { Component, computed, inject, resource, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
@@ -12,7 +11,6 @@ interface DailyTipResponse {
 
 @Component({
   selector: 'app-daily-learning-tip',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, AppCardComponent],
   template: `
     <app-card

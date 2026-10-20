@@ -9,11 +9,11 @@ export const chatRoutes: Routes = [
   {
     path: 'chat/:id',
     loadComponent: () =>
-      import('../pages/chat/chat-room-page.component').then((m) => m.ChatRoomPageComponent),
+      import('../components/chat-room/chat-room.component').then((m) => m.ChatRoomComponent),
   },
   {
-    path: 'chat-settings',
-    redirectTo: 'settings/chat',
+    path: 'groups',
+    redirectTo: 'chat/groups',
     pathMatch: 'full',
   },
   {
@@ -22,7 +22,7 @@ export const chatRoutes: Routes = [
       import('../components/groups-discovery/groups-discovery.component').then(
         (m) => m.GroupsDiscoveryComponent,
       ),
-    title: 'Groups Discovery - HelloTalk',
+    title: 'Group Chats - HelloTalk',
   },
   {
     path: 'groups',
@@ -30,9 +30,23 @@ export const chatRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'community/groups/create',
+    loadComponent: () =>
+      import('../components/create-group/create-group.component').then(
+        (m) => m.CreateGroupComponent,
+      ),
+    title: 'Create Group - HelloTalk',
+  },
+  {
     path: 'groups/create',
     redirectTo: 'chat/groups/create',
     pathMatch: 'full',
+  },
+  {
+    path: 'community/groups/create',
+    loadComponent: () =>
+      import('../components/create-group/create-group.component').then((m) => m.CreateGroupComponent),
+    title: 'Create Group - HelloTalk',
   },
   {
     path: 'communities',
@@ -42,6 +56,16 @@ export const chatRoutes: Routes = [
   {
     path: 'community',
     redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community/language-parties',
+    redirectTo: 'chat/groups/language-parties',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community/language-islands',
+    redirectTo: 'chat/groups/language-islands',
     pathMatch: 'full',
   },
   {
@@ -59,11 +83,6 @@ export const chatRoutes: Routes = [
   {
     path: 'message-filters',
     redirectTo: 'settings/message-filters',
-    pathMatch: 'full',
-  },
-  {
-    path: 'blocks',
-    redirectTo: 'settings/blocks',
     pathMatch: 'full',
   },
 ];

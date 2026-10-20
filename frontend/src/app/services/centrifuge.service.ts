@@ -13,16 +13,25 @@ const BASE_RECONNECT_DELAY_MS = 500;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 
 type ConnectionStatus =
-  | 'disconnected'
-  | 'connecting'
-  | 'reconnecting'
-  | 'connected'
-  | 'rate-limited'
-  | 'error';
+  'disconnected' | 'connecting' | 'reconnecting' | 'connected' | 'rate-limited' | 'error';
+
 
 interface TokenRequest {
   accessToken: string;
   promise: Promise<string>;
+}
+
+export interface CentrifugeEvent {
+  channel: string;
+  data: unknown;
+}
+
+export interface RoomLiveMessage {
+  type?: string;
+  content?: string;
+  sender_id?: string;
+  id?: string;
+  [key: string]: unknown;
 }
 
 @Injectable({
@@ -33,10 +42,7 @@ export class CentrifugeService {
   private readonly authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
   private readonly subscriptions = new Map<string, Subscription>();
-  /** Primary owner callback retained for backwards-compatible subscribe/unsubscribe. */
   private readonly subscriptionHandlers = new Map<string, (data: unknown) => void>();
-  /** Additive feature listeners which must not replace the room owner's callback. */
-  private readonly additiveHandlers = new Map<string, Set<(data: unknown) => void>>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private intentionallyDisconnected = false;
@@ -45,6 +51,7 @@ export class CentrifugeService {
   private clientGeneration = 0;
   private hasConnectedOnce = false;
 
+  readonly events = signal<CentrifugeEvent[]>([]);
   readonly isConnected = signal<boolean>(false);
   readonly connectionStatus = signal<ConnectionStatus>('disconnected');
 
@@ -105,18 +112,18 @@ export class CentrifugeService {
     this.subscriptions.clear();
   }
 
-  private createSubscription(channel: string): Subscription | null {
+  private createSubscription(
+    channel: string,
+    onMessage: (data: unknown) => void,
+  ): Subscription | null {
     if (!this.centrifuge) {
       return null;
     }
 
     const subscription = this.centrifuge.newSubscription(channel);
     subscription.on('publication', (ctx) => {
-      const primary = this.subscriptionHandlers.get(channel);
-      primary?.(ctx.data);
-      for (const handler of this.additiveHandlers.get(channel) ?? []) {
-        handler(ctx.data);
-      }
+      onMessage(ctx.data);
+      this.events.update((prev) => [...prev, { channel, data: ctx.data }]);
     });
     subscription.subscribe();
     this.subscriptions.set(channel, subscription);
@@ -125,24 +132,8 @@ export class CentrifugeService {
 
   private restoreSubscriptions(): void {
     this.clearActiveSubscriptions();
-    const channels = new Set([
-      ...this.subscriptionHandlers.keys(),
-      ...this.additiveHandlers.keys(),
-    ]);
-    for (const channel of channels) {
-      this.createSubscription(channel);
-    }
-  }
-
-  private cleanupSubscriptionIfUnused(channel: string): void {
-    if (this.subscriptionHandlers.has(channel)) return;
-    if ((this.additiveHandlers.get(channel)?.size ?? 0) > 0) return;
-
-    this.additiveHandlers.delete(channel);
-    const subscription = this.subscriptions.get(channel);
-    if (subscription) {
-      subscription.unsubscribe();
-      this.subscriptions.delete(channel);
+    for (const [channel, onMessage] of this.subscriptionHandlers.entries()) {
+      this.createSubscription(channel, onMessage);
     }
   }
 
@@ -310,38 +301,23 @@ export class CentrifugeService {
 
     const existing = this.subscriptions.get(channel);
     if (existing) {
+      existing.removeAllListeners('publication');
+      existing.on('publication', (ctx) => {
+        onMessage(ctx.data);
+      });
       return existing;
     }
 
-    return this.createSubscription(channel);
-  }
-
-  /**
-   * Adds an independent publication listener without replacing the channel's
-   * primary subscriber. The returned cleanup function removes only this listener.
-   */
-  listen(channel: string, onMessage: (data: unknown) => void): () => void {
-    const handlers = this.additiveHandlers.get(channel) ?? new Set<(data: unknown) => void>();
-    handlers.add(onMessage);
-    this.additiveHandlers.set(channel, handlers);
-
-    if (!this.subscriptions.has(channel)) {
-      this.createSubscription(channel);
-    }
-
-    return () => {
-      const current = this.additiveHandlers.get(channel);
-      current?.delete(onMessage);
-      if (current?.size === 0) {
-        this.additiveHandlers.delete(channel);
-      }
-      this.cleanupSubscriptionIfUnused(channel);
-    };
+    return this.createSubscription(channel, onMessage);
   }
 
   unsubscribe(channel: string): void {
     this.subscriptionHandlers.delete(channel);
-    this.cleanupSubscriptionIfUnused(channel);
+    const subscription = this.subscriptions.get(channel);
+    if (subscription) {
+      subscription.unsubscribe();
+      this.subscriptions.delete(channel);
+    }
   }
 
   async publish(channel: string, data: unknown): Promise<void> {
@@ -361,6 +337,96 @@ export class CentrifugeService {
     }
   }
 
+
+  /**
+   * Subscribes to a voice‑room channel and calls `callback` for every
+   * translated message. The handler receives the full payload, which now
+   * includes `original_text`, `translated_text`, and `detected_language`.
+   */
+  subscribeVoiceRoom(
+    roomId: string,
+    callback: (
+      data: {
+        original_text: string;
+        translated_text: string;
+        detected_language: string;
+      } & Record<string, unknown>,
+    ) => void,
+  ): void {
+    this.subscribe(`room_${roomId}`, (data: unknown) => {
+      if (this.isVoiceRoomPayload(data)) {
+        callback(data);
+      }
+    });
+  }
+
+  subscribeLiveRoom(
+    roomId: string,
+    callback: (data: RoomLiveMessage) => void,
+  ): void {
+    this.subscribe(`room_${roomId}`, (data: unknown) => {
+      if (this.isRoomMessage(data)) {
+        callback(data);
+      }
+    });
+  }
+
+  unsubscribeLiveRoom(roomId: string): void {
+    this.unsubscribe(`room_${roomId}`);
+  }
+
+  subscribeLiveLocation(
+    userId: string,
+    callback: (data: {
+      latitude: number;
+      longitude: number;
+      sharer_user_id: string;
+      updated_at: string;
+    }) => void,
+  ): void {
+    this.subscribe(`location_live_${userId}`, (data: unknown) => {
+      if (this.isLiveLocationPayload(data)) {
+        callback(data);
+      }
+    });
+  }
+
+  unsubscribeLiveLocation(userId: string): void {
+    this.unsubscribe(`location_live_${userId}`);
+  }
+
+  private isLiveLocationPayload(
+    data: unknown,
+  ): data is {
+    latitude: number;
+    longitude: number;
+    sharer_user_id: string;
+    updated_at: string;
+  } {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'latitude' in data &&
+      'longitude' in data &&
+      'sharer_user_id' in data &&
+      'updated_at' in data
+    );
+  }
+
+  private isRoomMessage(data: unknown): data is RoomLiveMessage {
+    return typeof data === 'object' && data !== null;
+  }
+
+  private isVoiceRoomPayload(
+    data: unknown,
+  ): data is {
+    original_text: string;
+    translated_text: string;
+    detected_language: string;
+  } {
+    return typeof data === 'object' && data !== null && 'original_text' in data;
+  }
+
   disconnect(): void {
     this.intentionallyDisconnected = true;
     this.clientGeneration += 1;
@@ -375,7 +441,6 @@ export class CentrifugeService {
     this.centrifuge = null;
     this.clearActiveSubscriptions();
     this.subscriptionHandlers.clear();
-    this.additiveHandlers.clear();
     client?.disconnect();
 
     this.isConnected.set(false);

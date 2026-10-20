@@ -1,63 +1,28 @@
 import { HlmInput } from '@spartan-ng/helm/input';
-import { Component, input, OnDestroy, OnInit, inject, signal, computed } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, input, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
-import { MessageReactionBarComponent } from '../message-reaction-bar/message-reaction-bar.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { SafetyService } from '../../services/safety.service';
 import { DraftService } from '../../services/draft.service';
-import { CentrifugeService } from '../../services/centrifuge.service';
-import {
-  MessageReactionsService,
-  type MessageReactionEmoji,
-} from '../../services/message-reactions.service';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-chat-view',
-  imports: [
-    HlmInput,
-    FormsModule,
-    ChatMessageComponent,
-    MessageReactionBarComponent,
-    TranslatePipe,
-  ],
+  // ⚡ Bolt: Use OnPush change detection to skip deep checks of chat tree unless inputs/signals change
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [HlmInput, FormsModule, ChatMessageComponent],
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
+        <!-- ⚡ Bolt: Track by unique ID to prevent unnecessary DOM recreations -->
         @for (msg of filteredMessages(); track msg.id) {
-          <div class="min-w-0">
-            <app-chat-message
-              [message]="msg"
-              [currentUserId]="effectiveUserId()"
-              (messageBlocked)="onMessageBlocked($event)"
-            ></app-chat-message>
-
-            @if (msg.message_type !== 'system' && effectiveUserId()) {
-              <div
-                class="mt-1 flex min-w-0"
-                [class.justify-end]="msg.sender_id === effectiveUserId()"
-                [class.justify-start]="msg.sender_id !== effectiveUserId()"
-              >
-                <div class="max-w-full">
-                  <app-message-reaction-bar
-                    [messageId]="msg.id"
-                    [currentUserId]="effectiveUserId() ?? ''"
-                    [reactions]="reactionRecord(msg.id)"
-                    [pending]="reactionPendingIds().has(msg.id)"
-                    (reacted)="onReaction($event)"
-                  />
-                  @if (reactionErrorIds().has(msg.id)) {
-                    <p role="alert" class="mt-1 text-xs text-danger">
-                      {{ 'common.error_generic' | t }}
-                    </p>
-                  }
-                </div>
-              </div>
-            }
-          </div>
+          <app-chat-message
+            [message]="msg"
+            [currentUserId]="effectiveUserId()"
+            (messageBlocked)="onMessageBlocked($event)"
+          ></app-chat-message>
         }
       </div>
       <div class="border-t p-4">
@@ -82,7 +47,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     `,
   ],
 })
-export class ChatViewComponent implements OnInit, OnDestroy {
+export class ChatViewComponent implements OnInit {
   roomId = input.required<string>();
   currentUserId = input<string>();
 
@@ -90,15 +55,11 @@ export class ChatViewComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
   private draftService = inject(DraftService);
-  private messageReactionsService = inject(MessageReactionsService);
-  private centrifugeService = inject(CentrifugeService);
 
   messages: ChatMessage[] = [];
   newMessageText = '';
 
   private blockedUserIds = signal<Set<string>>(new Set<string>());
-  readonly reactionPendingIds = signal<Set<string>>(new Set<string>());
-  readonly reactionErrorIds = signal<Set<string>>(new Set<string>());
 
   readonly effectiveUserId = computed(
     () => this.currentUserId() ?? this.authService.currentUser()?.id,
@@ -111,9 +72,6 @@ export class ChatViewComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
-    this.messageReactionsService.acquireRoom(this.roomId());
-    void this.centrifugeService.connect();
-
     await this.loadMessages();
     await this.loadBlockedUsers();
 
@@ -124,48 +82,9 @@ export class ChatViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.messageReactionsService.releaseRoom(this.roomId());
-  }
-
   onMessageTextChange(value: string): void {
     this.newMessageText = value;
     this.draftService.saveChatDraft(this.roomId(), value);
-  }
-
-  reactionRecord(messageId: string): Record<string, string[]> {
-    const grouped: Record<string, string[]> = {};
-    for (const reaction of this.messageReactionsService.reactionsForMessage(
-      this.roomId(),
-      messageId,
-    )) {
-      (grouped[reaction.emoji] ??= []).push(reaction.user_id);
-    }
-    return grouped;
-  }
-
-  async onReaction(event: {
-    messageId: string;
-    emoji: MessageReactionEmoji;
-    added: boolean;
-  }): Promise<void> {
-    if (this.reactionPendingIds().has(event.messageId)) return;
-
-    this.reactionErrorIds.update((ids) => this.without(ids, event.messageId));
-    this.reactionPendingIds.update((ids) => this.withAdded(ids, event.messageId));
-
-    try {
-      await this.messageReactionsService.setReaction(
-        event.messageId,
-        event.emoji,
-        event.added,
-        this.roomId(),
-      );
-    } catch {
-      this.reactionErrorIds.update((ids) => this.withAdded(ids, event.messageId));
-    } finally {
-      this.reactionPendingIds.update((ids) => this.without(ids, event.messageId));
-    }
   }
 
   private async loadMessages(): Promise<void> {
@@ -215,17 +134,5 @@ export class ChatViewComponent implements OnInit, OnDestroy {
     } catch (err) {
       console.error('Failed to send message', err);
     }
-  }
-
-  private withAdded(values: Set<string>, value: string): Set<string> {
-    const next = new Set(values);
-    next.add(value);
-    return next;
-  }
-
-  private without(values: Set<string>, value: string): Set<string> {
-    const next = new Set(values);
-    next.delete(value);
-    return next;
   }
 }

@@ -103,11 +103,6 @@ export const socialRoutes: Routes = [
       ),
   },
   {
-    path: 'notification-preferences',
-    redirectTo: 'settings/notification',
-    pathMatch: 'full',
-  },
-  {
     path: 'events',
     redirectTo: 'live/events',
     pathMatch: 'full',
@@ -124,9 +119,25 @@ export const socialRoutes: Routes = [
     title: 'Event - HelloTalk',
   },
   {
+    path: 'community/language-parties',
+    loadComponent: () =>
+      import('../components/language-parties/language-parties.component').then(
+        (m) => m.LanguagePartiesComponent,
+      ),
+    title: 'Language Parties - HelloTalk',
+  },
+  {
     path: 'language-parties',
     redirectTo: 'live/events',
     pathMatch: 'full',
+  },
+  {
+    path: 'community/language-islands',
+    loadComponent: () =>
+      import('../pages/language-islands/language-islands.component').then(
+        (m) => m.LanguageIslandsComponent,
+      ),
+    title: 'Language Islands - HelloTalk',
   },
   {
     path: 'language-islands',
@@ -134,10 +145,19 @@ export const socialRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'community/language-islands',
+    loadComponent: () =>
+      import('../pages/language-islands/language-islands.component').then(
+        (m) => m.LanguageIslandsComponent,
+      ),
+    title: 'Language Islands - HelloTalk',
+  },
+  {
     path: 'business-profile',
     loadComponent: () =>
       import('../components/business-profile/business-profile.component').then(
-        (m) => m.BusinessProfileComponent),
+        (m) => m.BusinessProfileComponent,
+      ),
     title: 'Business Profile - HelloTalk',
   },
 ];
