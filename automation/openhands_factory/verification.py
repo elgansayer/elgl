@@ -78,6 +78,12 @@ for masked_root in /mnt /srv /media; do
     /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
   fi
 done
+for container_socket in /run/containerd/containerd.sock /run/docker.sock \
+  /run/podman/podman.sock; do
+  if [ -S "$container_socket" ]; then
+    /usr/bin/mount --bind /dev/null "$container_socket"
+  fi
+done
 if [ -d "$state_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$state_dir"
 fi
@@ -386,8 +392,9 @@ def commands_for(
     # suite, so re-running them every retry was pure waste. The cross-cutting
     # governance checks (constitution, design-sync, migration-delta, etc.)
     # stay unconditional; they inspect the whole tree by design. GitHub's
-    # required CI remains the full-suite merge gate. This local pass is a fast
-    # preflight, so workspace lint and tests are narrowed to changed files.
+    # Required CI remains the authoritative merge gate and runs each affected
+    # workspace's full suite. This local pass is a fast preflight, so workspace
+    # lint and tests are narrowed to changed files.
     touches_automation = _touches(changed_paths, "automation")
     touches_frontend = _touches(changed_paths, "frontend")
     touches_frontend_directly = touches_frontend

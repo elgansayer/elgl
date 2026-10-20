@@ -1,10 +1,11 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, computed, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-split-screen-video',
   imports: [HlmButton, TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './split-screen-video.component.html',
