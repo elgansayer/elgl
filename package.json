@@ -17,7 +17,7 @@
     "check:chat-reference-analysis": "node --test scripts/verify-chat-reference-analysis.test.mjs && node scripts/verify-chat-reference-analysis.mjs",
     "check:agent-ui-governance": "node scripts/check-agent-ui-governance.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
-    "check:design-sync-drift": "node scripts/check-design-sync-drift.mjs",
+    "check:design-sync-drift": "node --test scripts/check-design-sync-drift.test.mjs && node scripts/check-design-sync-drift.mjs",
     "check:spartan-boundaries": "node scripts/verify-spartan-boundaries.mjs",
     "check:spartan-full-tree": "node scripts/report-full-tree-spartan-adoption.mjs --strict",
     "check:component-system": "node scripts/verify-component-system-convergence.mjs",
