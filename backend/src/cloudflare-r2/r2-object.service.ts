@@ -28,6 +28,15 @@ export class R2ObjectService {
       'CLOUDFLARE_R2_PUBLIC_URL',
     ).toString();
     this.serviceToken = this.readRequiredSecret('CLOUDFLARE_R2_SERVICE_TOKEN');
+
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+    if (env === 'production') {
+      if (this.serviceToken === 'test-r2-service-token-with-at-least-32-characters') {
+        throw new Error(
+          'CLOUDFLARE_R2_SERVICE_TOKEN must be securely configured in production',
+        );
+      }
+    }
     this.timeoutMs = this.readPositiveInteger(
       'CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS',
       DEFAULT_SOURCE_FETCH_TIMEOUT_MS,
