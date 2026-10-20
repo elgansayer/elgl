@@ -14,7 +14,7 @@ CYPRESS_CACHE=${FACTORY_CYPRESS_CACHE:-$FACTORY_HOME/.cache/Cypress}
 PRUNE_AGE=${FACTORY_CONTAINER_PRUNE_AGE:-168h}
 DOCKER_CACHE_LIMIT=${FACTORY_DOCKER_CACHE_LIMIT:-2GB}
 MINIMUM_FREE_GIB=${FACTORY_MINIMUM_FREE_DISK_GIB:-5}
-FREE_HEADROOM_GIB=${FACTORY_STORAGE_FREE_HEADROOM_GIB:-1}
+FREE_HEADROOM_GIB=${FACTORY_STORAGE_FREE_HEADROOM_GIB:-5}
 TEMP_QUARANTINE_ROOT=${FACTORY_TEMP_QUARANTINE_ROOT:-/var/tmp}
 TEMP_QUARANTINE_MAX_AGE_SECONDS=${FACTORY_TEMP_QUARANTINE_MAX_AGE_SECONDS:-86400}
 LOCK_FILE=${FACTORY_STORAGE_MAINTENANCE_LOCK:-/run/lock/hellotalk-factory-storage.lock}
@@ -220,6 +220,55 @@ prune_cypress_cache() {
   done
 
   log 'WARNING: Cypress cache is present but no installed Cypress CLI can prune it'
+}
+
+prune_repository_caches() {
+  local repository candidate resolved relative removed=0
+  filesystem_below_target "$FACTORY_REPOSITORY" || return 0
+  repository=$(readlink -f -- "$FACTORY_REPOSITORY") || return 0
+  if [ ! -d "$repository" ] || [ -L "$repository" ]; then
+    log "WARNING: repository cache root is not a real directory: $repository"
+    return 1
+  fi
+
+  for relative in \
+    .mypy_cache \
+    automation/.mypy_cache \
+    backend/coverage \
+    backend/dist \
+    frontend/.angular \
+    frontend/coverage \
+    frontend/dist \
+    frontend/playwright-report \
+    frontend/test-results \
+    admin-portal/.angular \
+    admin-portal/coverage \
+    admin-portal/dist; do
+    candidate="$repository/$relative"
+    [ -d "$candidate" ] || continue
+    if [ -L "$candidate" ]; then
+      log "WARNING: refusing symlinked repository cache: $candidate"
+      continue
+    fi
+    resolved=$(readlink -f -- "$candidate") || continue
+    case "$resolved" in
+      "$repository"/*) ;;
+      *)
+        log "WARNING: refusing repository cache outside checkout: $candidate"
+        continue
+        ;;
+    esac
+    if find "$candidate" -xdev -depth -delete; then
+      removed=$((removed + 1))
+    else
+      log "WARNING: failed to remove repository cache: $candidate"
+    fi
+    filesystem_below_target "$repository" || break
+  done
+
+  if [ "$removed" -gt 0 ]; then
+    log "Removed $removed reproducible repository cache(s) under storage pressure"
+  fi
 }
 
 prune_factory_temp_quarantines() {
@@ -454,6 +503,7 @@ if ! install_journal_policy; then
 fi
 prune_uv_cache
 prune_cypress_cache
+prune_repository_caches
 prune_factory_temp_quarantines
 if [ "$PRUNE_CONTAINERS" = true ]; then
   prune_docker_storage
