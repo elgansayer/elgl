@@ -20,6 +20,10 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-08-30 - [Optimize Angular @for Loops]
+**Learning:** In Angular 17+, using `@for` with `track item` where `item` is an object reference (e.g., `track room` or `track msg`) causes Angular to recreate the DOM nodes if the array is replaced with new object references, even if the actual item IDs are the same. This can lead to significant rendering jank in active views like chat lists or message histories where updates arrive via websockets.
+**Action:** Always track by a unique primitive identifier (e.g., `track room.id`) in `@for` loops to preserve DOM state across reference-breaking state updates.
+
 ## 2024-05-18 - Centrifugo Status Updates and Angular @for Tracking
 **Learning:** Real-time chat apps using Centrifugo for status updates (like delivery/read receipts) mutate the messages array frequently. If Angular's `@for` loop tracks items by object reference (`track msg`), every single real-time update forces a full DOM re-render of the entire chat list, causing severe scroll jank and main thread blocking.
 **Action:** Always verify that Angular `@for` loops in high-frequency update scenarios (like chat rooms or websockets) strictly track by a unique scalar identifier (`track msg.id`) rather than the object reference.
@@ -391,6 +395,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
