@@ -10,7 +10,6 @@ import {
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { TransliterationService } from '../../services/transliteration.service';
-import { FlashcardService } from '../../services/flashcard.service';
 import { ChatService } from '../../services/chat.service';
 
 class FailingLocaleSegmenter {
@@ -83,9 +82,6 @@ describe('TokenisedTextComponent', () => {
   const transliterationService = {
     transliterate: vi.fn(() => ''),
   };
-  const flashcardService = {
-    createFlashcard: vi.fn(),
-  };
   const chatService = {
     translateText: vi.fn(),
   };
@@ -103,7 +99,6 @@ describe('TokenisedTextComponent', () => {
         { provide: VocabularyStore, useValue: vocabStore },
         { provide: I18nService, useValue: i18n },
         { provide: TransliterationService, useValue: transliterationService },
-        { provide: FlashcardService, useValue: flashcardService },
         { provide: ChatService, useValue: chatService },
         { provide: ErrorHandler, useValue: errorHandler },
       ],

@@ -3,7 +3,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { StudyBuddiesService } from '../../services/study-buddies.service';
+import { StudyBuddyService } from '../../services/study-buddy.service';
 import { I18nService } from '../../services/i18n.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
@@ -46,7 +46,7 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 export class ExternalProfileComponent {
   readonly userId = input.required<string>();
 
-  private readonly studyBuddiesService = inject(StudyBuddiesService);
+  private readonly studyBuddiesService = inject(StudyBuddyService);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
   private readonly hapticFeedback = inject(HapticFeedbackService);
