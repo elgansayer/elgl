@@ -1,5 +1,17 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
+// ⚡ Bolt: Adding ChangeDetectionStrategy to reduce unnecessary main thread change detection overhead
+// This optimization prevents the component from being re-evaluated on every tick,
+// which is crucial for list items like chat messages that can exist in large numbers.
+import {
+  Component,
+  input,
+  output,
+  inject,
+  signal,
+  effect,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -18,6 +30,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
 @Component({
   selector: 'app-chat-message',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmButton,
     CommonModule,
@@ -312,6 +325,14 @@ export class ChatMessageComponent {
     return parts;
   });
 
+  readonly isOwnMessage = computed(() => {
+    const currentUserId = this.currentUserId();
+    if (currentUserId != null) {
+      return this.message().sender_id === currentUserId;
+    }
+    return this.message().sender_id === this.authService.currentUser()?.id;
+  });
+
   constructor() {
     effect(() => {
       const senderId = this.message().sender_id;
@@ -334,13 +355,6 @@ export class ChatMessageComponent {
         void this.fetchTranscription(msg.media_url);
       }
     });
-  }
-
-  isOwnMessage(): boolean {
-    if (this.currentUserId() != null) {
-      return this.message().sender_id === this.currentUserId();
-    }
-    return this.message().sender_id === this.authService.currentUser()?.id;
   }
 
   cycleVoicePlaybackSpeed(): void {
@@ -379,7 +393,7 @@ export class ChatMessageComponent {
   async fetchTranscription(audioUrl: string): Promise<void> {
     this.voiceTranscribing.set(true);
     try {
-      const res = await fetch(`${environment.apiUrl}/nlp/transcribe-audio`, {
+      const res = await fetch(`${environment.apiUrl}/nlp/transcribe-voice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio_url: audioUrl }),
@@ -388,7 +402,7 @@ export class ChatMessageComponent {
         throw new Error('Transcription request failed');
       }
       const data = await res.json();
-      this.voiceTranscription.set(data.transcription || null);
+      this.voiceTranscription.set(data.original_text || null);
     } catch (err) {
       console.error('Transcription error:', err);
       this.voiceTranscription.set(null);

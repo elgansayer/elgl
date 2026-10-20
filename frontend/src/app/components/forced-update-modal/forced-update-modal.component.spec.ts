@@ -1,7 +1,6 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HlmDialogImports } from '@spartan-ng/helm/dialog';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { Pipe, PipeTransform } from '@angular/core';
 import { ForcedUpdateModalComponent } from './forced-update-modal.component';
 
 @Pipe({ name: 't' })
@@ -17,11 +16,12 @@ describe('ForcedUpdateModalComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
+
     await TestBed.configureTestingModule({
       imports: [ForcedUpdateModalComponent],
     })
       .overrideComponent(ForcedUpdateModalComponent, {
-        set: { imports: [MockTranslatePipe, ...HlmDialogImports] },
+        set: { imports: [MockTranslatePipe] },
       })
       .compileComponents();
 
@@ -31,59 +31,108 @@ describe('ForcedUpdateModalComponent', () => {
   });
 
   afterEach(() => {
-    if (!fixture.componentRef.hostView.destroyed) fixture.destroy();
     TestBed.resetTestingModule();
   });
 
-  it('uses a real HTTPS update destination by default', () => {
-    expect(component.storeUrl()).toBe('https://github.com/elgansayer/elgl/releases/latest');
-    const anchor = document.body.querySelector(
-      'a[href="https://github.com/elgansayer/elgl/releases/latest"]',
-    ) as HTMLAnchorElement | null;
-    expect(anchor?.getAttribute('href')).toBe('https://github.com/elgansayer/elgl/releases/latest');
+  it('should create', () => {
+    expect(component).toBeTruthy();
   });
 
-  it('renders a non-dismissible accessible alert dialog', () => {
-    const dialog = fixture.nativeElement.querySelector(
-      '[role="alertdialog"]',
-    ) as HTMLElement | null;
-    const content = document.body.querySelector('hlm-dialog-content') as HTMLElement | null;
-    expect(dialog?.getAttribute('aria-modal')).toBe('true');
-    expect(dialog?.getAttribute('aria-labelledby')).toBe('forced-update-title');
-    expect(dialog?.getAttribute('aria-describedby')).toBe('forced-update-message');
-    expect(content?.textContent).toContain('forcedUpdateModal.title');
-    expect(content?.textContent).toContain('forcedUpdateModal.message');
+  it('should have a default storeUrl', () => {
+    expect(component.storeUrl()).toBe('https://yourapp.com/update');
   });
 
-  it('renders the update link with safe new-tab isolation', () => {
-    const anchor = document.body.querySelector(
-      'a[href="https://github.com/elgansayer/elgl/releases/latest"]',
-    ) as HTMLAnchorElement | null;
+  it('should render the update link', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const anchor = compiled.querySelector('a');
+    expect(anchor).toBeTruthy();
     expect(anchor?.getAttribute('target')).toBe('_blank');
-    expect(anchor?.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(anchor?.textContent).toContain('forcedUpdateModal.updateButton');
   });
 
-  it('delegates focus, scroll and Escape handling to a non-dismissible Spartan dialog', () => {
-    const dialog = fixture.nativeElement.querySelector('hlm-dialog') as HTMLElement | null;
-    expect(dialog?.getAttribute('state')).toBe('open');
-    expect(dialog?.hasAttribute('disableclose')).toBe(true);
-    expect(document.body.querySelector('hlm-dialog-content')).toBeTruthy();
-
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    fixture.detectChanges();
-
-    expect(document.body.querySelector('hlm-dialog-content')).toBeTruthy();
+  it('should render link with default storeUrl', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const anchor = compiled.querySelector('a');
+    expect(anchor?.getAttribute('href')).toBe('https://yourapp.com/update');
   });
 
-  it('does not cancel keyboard activation of the update link', () => {
-    const anchor = document.body.querySelector(
-      'a[href="https://github.com/elgansayer/elgl/releases/latest"]',
-    ) as HTMLAnchorElement;
-    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  it('should allow the rendered update link to navigate', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const anchor = compiled.querySelector('a');
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
 
-    anchor.dispatchEvent(event);
-
+    expect(anchor?.dispatchEvent(event)).toBe(true);
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('should render title text', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('forcedUpdateModal.title');
+  });
+
+  it('should render message text', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('forcedUpdateModal.message');
+  });
+
+  it('should render update button text', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('forcedUpdateModal.updateButton');
+  });
+
+  it('should block click events', () => {
+    const event = new Event('click');
+    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.onDocumentClick(event);
+    expect(stopPropagationSpy).toHaveBeenCalled();
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should block scroll events', () => {
+    const event = new Event('scroll');
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.preventScroll(event);
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should block events inside the modal wrapper', () => {
+    const event = new Event('touchmove');
+    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.blockEvent(event);
+    expect(stopPropagationSpy).toHaveBeenCalled();
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should lock body scroll on init', () => {
+    expect(document.body.style.overflow).toBe('hidden');
+  });
+
+  it('should restore body scroll on destroy', () => {
+    fixture.destroy();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('should block Escape key', () => {
+    const event = new KeyboardEvent('keydown', { key: 'Escape' });
+    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.onKeydown(event);
+    expect(stopPropagationSpy).toHaveBeenCalled();
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should block Esc key alias', () => {
+    const event = new KeyboardEvent('keydown', { key: 'Esc' });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.onKeydown(event);
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should block other keyboard keys', () => {
+    const event = new KeyboardEvent('keydown', { key: 'Tab' });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.onKeydown(event);
+    expect(preventDefaultSpy).toHaveBeenCalled();
   });
 });

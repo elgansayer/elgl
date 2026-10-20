@@ -10,7 +10,6 @@ import { HttpService } from '@nestjs/axios';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
 import Stripe from 'stripe';
-import { randomInt } from 'node:crypto';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
@@ -575,7 +574,7 @@ export class EconomyService {
     }
 
     // Grant between 5 and 10 coins
-    const reward = randomInt(5, 11);
+    const reward = Math.floor(Math.random() * 6) + 5;
     const { coins_balance } = await this.getBalance(userId);
     const newBalance = coins_balance + reward;
 
@@ -1216,27 +1215,6 @@ export class EconomyService {
     }
     const gift = giftData;
 
-    if (dto.room_id) {
-      const roomId = dto.room_id;
-      const roomResponse = await withExponentialBackoff(
-        () =>
-          supabase
-            .from('audio_rooms')
-            .select('host_id')
-            .eq('id', roomId)
-            .maybeSingle(),
-        'sendGift',
-        { logger: this.logger },
-      );
-      if (
-        roomResponse.error ||
-        !roomResponse.data ||
-        roomResponse.data.host_id !== dto.receiver_id
-      ) {
-        throw new BadRequestException();
-      }
-    }
-
     const { coins_balance: senderBalance } = await this.getBalance(senderId);
     if (senderBalance < gift.cost_coins) {
       throw new BadRequestException(
@@ -1349,34 +1327,8 @@ export class EconomyService {
       );
     }
 
-    // Profile display names enrich the real-time event after the gift has
-    // already been committed, so lookup failures must not fail the request.
-    const [senderProfileResult, receiverProfileResult] =
-      await Promise.allSettled([
-        this.usersService.getProfile(senderId),
-        this.usersService.getProfile(dto.receiver_id),
-      ]);
-    const senderProfile =
-      senderProfileResult.status === 'fulfilled'
-        ? senderProfileResult.value
-        : null;
-    const receiverProfile =
-      receiverProfileResult.status === 'fulfilled'
-        ? receiverProfileResult.value
-        : null;
-
-    const failedProfileLookupRoles: string[] = [];
-    if (senderProfileResult.status === 'rejected') {
-      failedProfileLookupRoles.push('sender');
-    }
-    if (receiverProfileResult.status === 'rejected') {
-      failedProfileLookupRoles.push('receiver');
-    }
-    if (failedProfileLookupRoles.length > 0) {
-      this.logger.warn(
-        `Gift profile enrichment failed for ${failedProfileLookupRoles.join(' and ')} lookup${failedProfileLookupRoles.length === 1 ? '' : 's'}`,
-      );
-    }
+    const senderProfile = await this.usersService.getProfile(senderId);
+    const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
 
     // Trim payload to only essential fields for real-time broadcast.
     // animation_url can be hundreds of bytes; send it only when populated.

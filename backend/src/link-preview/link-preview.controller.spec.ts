@@ -12,7 +12,7 @@ describe('LinkPreviewController', () => {
 
   beforeEach(() => vi.clearAllMocks());
 
-  it('requires Supabase authentication for the network scraper endpoint', () => {
+  it('requires Supabase authentication before allowing an external scrape', () => {
     const guards = Reflect.getMetadata(
       GUARDS_METADATA,
       LinkPreviewController,

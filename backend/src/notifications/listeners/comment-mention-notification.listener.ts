@@ -1,15 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
 import { MomentCommentEvent } from '../events/notification.events';
 
-const MAX_MENTION_RECIPIENTS = 10;
-
 @Injectable()
 export class CommentMentionNotificationListener {
-  private readonly logger = new Logger(CommentMentionNotificationListener.name);
-
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly notificationPreferencesService: NotificationPreferencesService,
@@ -17,55 +13,43 @@ export class CommentMentionNotificationListener {
 
   @OnEvent('moment.mention')
   async handleCommentMention(payload: MomentCommentEvent): Promise<void> {
-    const candidateRecipientIds = payload.mentionedUserIds?.length
+    // Use mentionedUserIds array if populated, otherwise fall back to momentAuthorId for backward compatibility
+    const recipientIds = payload.mentionedUserIds?.length
       ? payload.mentionedUserIds
       : payload.momentAuthorId
         ? [payload.momentAuthorId]
         : [];
 
-    const recipientIds = Array.from(new Set(candidateRecipientIds))
-      .filter(
-        (recipientId) => recipientId && recipientId !== payload.commenterId,
-      )
-      .slice(0, MAX_MENTION_RECIPIENTS);
+    for (const recipientId of recipientIds) {
+      // Guard against self-mentions (commenter mentioning themselves)
+      if (recipientId === payload.commenterId) {
+        continue;
+      }
 
-    await Promise.allSettled(
-      recipientIds.map(async (recipientId) => {
-        let shouldSend: boolean;
-        try {
-          shouldSend =
-            await this.notificationPreferencesService.shouldSendNotification(
-              recipientId,
-              'moment_comment',
-              'push',
-            );
-        } catch {
-          // Notification preferences are a privacy boundary. Fail closed when
-          // their authoritative state is unavailable and avoid logging user IDs
-          // or provider errors from a private comment-notification path.
-          this.logger.warn('comment_mention_preferences_unavailable');
-          return;
-        }
-
-        if (!shouldSend) {
-          return;
-        }
-
-        try {
-          await this.notificationsService.createNotification(
+      try {
+        const shouldSend =
+          await this.notificationPreferencesService.shouldSendNotification(
             recipientId,
-            payload.commenterId,
-            'mention_comment',
-            payload.momentId,
-            payload.commentPreview,
+            'moment_comment',
+            'push',
           );
-        } catch {
-          // A storage/provider failure for one mention must not prevent other
-          // mentioned recipients from being processed. Keep diagnostics free of
-          // user IDs, Moment IDs and comment text.
-          this.logger.warn('comment_mention_delivery_failed');
+        if (!shouldSend) {
+          continue;
         }
-      }),
-    );
+      } catch (err) {
+        console.error(
+          `Failed to check notification preferences for user ${recipientId}:`,
+          err,
+        );
+      }
+
+      await this.notificationsService.createNotification(
+        recipientId,
+        payload.commenterId,
+        'mention_comment',
+        payload.momentId,
+        payload.commentPreview,
+      );
+    }
   }
 }

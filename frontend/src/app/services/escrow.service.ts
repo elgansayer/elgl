@@ -16,6 +16,19 @@ import {
 // Re-export EscrowRow as EscrowTransaction for backward compatibility
 export type EscrowTransaction = EscrowRow;
 
+/** Wire contract returned by the backend escrow transaction endpoints. */
+export interface EscrowTransactionResponse {
+  id: string;
+  payer_id: string;
+  payee_id: string;
+  amount_coins: number;
+  status: EscrowRow['status'];
+  reason: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /**
  * Escrow Payments service.
  *
@@ -56,13 +69,20 @@ export class EscrowService {
     description: string;
     service_type?: string;
   }): Promise<EscrowCreateResult> {
+    const holdDto = {
+      payee_id: dto.partner_id,
+      amount_coins: dto.amount,
+      reason: dto.description,
+      metadata: dto.service_type ? { service_type: dto.service_type } : undefined,
+    };
+
     if (!this.network.isOnline()) {
       const key = `create_${Date.now()}_${crypto.randomUUID()}`;
       const op: EscrowOperation = {
         key,
-        endpoint: `${this.baseUrl}/create`,
+        endpoint: `${this.baseUrl}/hold`,
         method: 'POST',
-        payload: dto as unknown as Record<string, unknown>,
+        payload: holdDto as unknown as Record<string, unknown>,
         queued_at: new Date().toISOString(),
         retry_count: 0,
       };
@@ -81,7 +101,7 @@ export class EscrowService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     const result = await firstValueFrom(
-      this.http.post<EscrowCreateResult>(`${this.baseUrl}/create`, dto, { headers }),
+      this.http.post<EscrowCreateResult>(`${this.baseUrl}/hold`, holdDto, { headers }),
     );
     return result;
   }
@@ -96,7 +116,7 @@ export class EscrowService {
         key,
         endpoint: `${this.baseUrl}/release`,
         method: 'POST',
-        payload: { escrow_id: escrowId },
+        payload: { transaction_id: escrowId },
         queued_at: new Date().toISOString(),
         retry_count: 0,
       };
@@ -115,7 +135,11 @@ export class EscrowService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     return firstValueFrom(
-      this.http.post<EscrowReleaseResult>(`${this.baseUrl}/release`, { escrow_id: escrowId }, { headers }),
+      this.http.post<EscrowReleaseResult>(
+        `${this.baseUrl}/release`,
+        { transaction_id: escrowId },
+        { headers },
+      ),
     );
   }
 
@@ -129,7 +153,7 @@ export class EscrowService {
         key,
         endpoint: `${this.baseUrl}/refund`,
         method: 'POST',
-        payload: { escrow_id: escrowId, reason },
+        payload: { transaction_id: escrowId, reason },
         queued_at: new Date().toISOString(),
         retry_count: 0,
       };
@@ -148,25 +172,25 @@ export class EscrowService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     return firstValueFrom(
-      this.http.post<EscrowRefundResult>(`${this.baseUrl}/refund`, { escrow_id: escrowId, reason }, { headers }),
+      this.http.post<EscrowRefundResult>(
+        `${this.baseUrl}/refund`,
+        { transaction_id: escrowId, reason },
+        { headers },
+      ),
     );
   }
 
   /**
    * Opens a dispute for an escrow. Queues offline if needed.
    */
-  async disputeEscrow(
-    escrowId: string,
-    reason: string,
-    evidence?: string,
-  ): Promise<EscrowRow> {
+  async disputeEscrow(escrowId: string, reason: string, evidence?: string): Promise<EscrowRow> {
     if (!this.network.isOnline()) {
       const key = `dispute_${escrowId}_${Date.now()}`;
       const op: EscrowOperation = {
         key,
         endpoint: `${this.baseUrl}/dispute`,
         method: 'POST',
-        payload: { escrow_id: escrowId, reason, evidence },
+        payload: { transaction_id: escrowId, reason, evidence },
         queued_at: new Date().toISOString(),
         retry_count: 0,
       };
@@ -190,9 +214,45 @@ export class EscrowService {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    return firstValueFrom(
-      this.http.post<EscrowRow>(`${this.baseUrl}/dispute`, { escrow_id: escrowId, reason, evidence }, { headers }),
+    const result = await firstValueFrom(
+      this.http.post<EscrowTransactionResponse>(
+        `${this.baseUrl}/dispute`,
+        { transaction_id: escrowId, reason, evidence },
+        { headers },
+      ),
     );
+    return this.adaptTransaction(result);
+  }
+
+  /**
+   * Adapts a backend EscrowTransactionResponse to the frontend EscrowRow format.
+   */
+  private adaptTransaction(data: EscrowTransactionResponse): EscrowRow {
+    const metadata = data.metadata ?? {};
+    const serviceType = metadata['service_type'];
+    const disputeReason = metadata['dispute_reason'];
+    const disputeEvidence = metadata['dispute_evidence'];
+    const adminNote = metadata['admin_note'];
+    return {
+      id: data.id,
+      sender_id: data.payer_id,
+      receiver_id: data.payee_id,
+      amount: data.amount_coins,
+      status: data.status,
+      description: data.reason,
+      service_type:
+        serviceType === 'lesson' ||
+        serviceType === 'language_exchange' ||
+        serviceType === 'proofreading' ||
+        serviceType === 'translation'
+          ? serviceType
+          : 'other',
+      dispute_reason: typeof disputeReason === 'string' ? disputeReason : null,
+      dispute_evidence: typeof disputeEvidence === 'string' ? disputeEvidence : null,
+      admin_note: typeof adminNote === 'string' ? adminNote : null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
   }
 
   /**
@@ -209,10 +269,13 @@ export class EscrowService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     const result = await firstValueFrom(
-      this.http.get<EscrowRow>(`${this.baseUrl}/${escrowId}`, { headers }),
+      this.http.get<EscrowTransactionResponse>(`${this.baseUrl}/transactions/${escrowId}`, {
+        headers,
+      }),
     );
-    await this.offlineStore.cacheEscrows([result]);
-    return result;
+    const adapted = this.adaptTransaction(result);
+    await this.offlineStore.cacheEscrows([adapted]);
+    return adapted;
   }
 
   /**
@@ -232,11 +295,15 @@ export class EscrowService {
       }
       const params = status ? { status } : undefined;
       const result = await firstValueFrom(
-        this.http.get<EscrowRow[]>(this.baseUrl, { headers: httpHeaders, params }),
+        this.http.get<EscrowTransactionResponse[]>(`${this.baseUrl}/transactions`, {
+          headers: httpHeaders,
+          params,
+        }),
       );
-      await this.offlineStore.cacheEscrows(result);
-      this.escrows.set(result);
-      return result;
+      const adapted = result.map((t) => this.adaptTransaction(t));
+      await this.offlineStore.cacheEscrows(adapted);
+      this.escrows.set(adapted);
+      return adapted;
     } finally {
       this.loading.set(false);
     }

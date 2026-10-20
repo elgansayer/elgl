@@ -2,16 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LearnerKnowledgeService } from './learner-knowledge.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
+import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
+import { UsersService } from '../users/users.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('LearnerKnowledgeService', () => {
   let service: LearnerKnowledgeService;
   let flashcardsService: { getFlashcards: ReturnType<typeof vi.fn> };
   let hobbyTagsService: { getUserVocabulary: ReturnType<typeof vi.fn> };
+  let assessmentsService: { getQuestions: ReturnType<typeof vi.fn> };
   let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
   let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
+  let usersService: { getProfile: ReturnType<typeof vi.fn> };
+  let supabaseService: { getClient: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     flashcardsService = {
@@ -20,11 +26,27 @@ describe('LearnerKnowledgeService', () => {
     hobbyTagsService = {
       getUserVocabulary: vi.fn(),
     };
+    assessmentsService = {
+      getQuestions: vi.fn(),
+    };
     lessonsService = {
       listLessons: vi.fn(),
     };
     momentsService = {
       getLifetimeCounts: vi.fn(),
+    };
+    usersService = {
+      getProfile: vi.fn(),
+    };
+    const mockSupabaseClient = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: [] }),
+    };
+    supabaseService = {
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -32,8 +54,11 @@ describe('LearnerKnowledgeService', () => {
         LearnerKnowledgeService,
         { provide: FlashcardsService, useValue: flashcardsService },
         { provide: HobbyTagsService, useValue: hobbyTagsService },
+        { provide: AssessmentsService, useValue: assessmentsService },
         { provide: LessonsService, useValue: lessonsService },
         { provide: MomentsService, useValue: momentsService },
+        { provide: UsersService, useValue: usersService },
+        { provide: SupabaseService, useValue: supabaseService },
       ],
     }).compile();
 
@@ -106,11 +131,26 @@ describe('LearnerKnowledgeService', () => {
       lessonsService.listLessons.mockResolvedValue(mockLessons);
 
       hobbyTagsService.getUserVocabulary.mockResolvedValue([]);
+      assessmentsService.getQuestions.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 10,
         corrections: 2,
         translations: 5,
       });
+
+      const mockMoments = [
+        { post_type: 'moment', created_at: '2026-01-03T10:00:00Z' },
+        { post_type: 'question', created_at: '2026-01-04T10:00:00Z' },
+      ];
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: mockMoments }),
+      });
+
+      usersService.getProfile.mockResolvedValue({ proficiency_level: 'B1' });
 
       const profile = await service.getProfile('user1', 'es');
 
@@ -140,9 +180,9 @@ describe('LearnerKnowledgeService', () => {
       expect(newWord?.status).toBe('new');
 
       // Assert recent encounters
-      expect(profile.recentEncounters.length).toBe(2);
-      expect(profile.recentEncounters[0].topic).toBe('Lesson 1');
-      expect(profile.recentEncounters[0].source).toBe('lesson');
+      expect(profile.recentEncounters.length).toBe(3);
+      expect(profile.recentEncounters[0].topic).toBe('question');
+      expect(profile.recentEncounters[0].source).toBe('moment');
     });
 
     it('should handle service failures gracefully', async () => {
@@ -152,10 +192,21 @@ describe('LearnerKnowledgeService', () => {
       hobbyTagsService.getUserVocabulary.mockRejectedValue(
         new Error('Tags failed'),
       );
+      assessmentsService.getQuestions.mockRejectedValue(
+        new Error('Assessments failed'),
+      );
       lessonsService.listLessons.mockRejectedValue(new Error('Lessons failed'));
       momentsService.getLifetimeCounts.mockRejectedValue(
         new Error('Moments failed'),
       );
+      usersService.getProfile.mockRejectedValue(new Error('Users failed'));
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockRejectedValue(new Error('Supabase failed')),
+      });
 
       const profile = await service.getProfile('user2', 'fr');
 

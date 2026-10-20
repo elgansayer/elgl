@@ -2,8 +2,7 @@ import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, inject, output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { EventsService, Event } from '../../services/events.service';
@@ -11,24 +10,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-create-event-modal',
-  imports: [
-    HlmNativeSelect,
-    HlmTextarea,
-    HlmInput,
-    HlmButton,
-    ReactiveFormsModule,
-    TranslatePipe,
-    ...HlmDialogImports,
-  ],
+  imports: [HlmNativeSelect, HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   template: `
-    <hlm-dialog [state]="dialogState" (stateChanged)="onDialogStateChanged($event)">
-      <hlm-dialog-content
-        *hlmDialogPortal
-        [showCloseButton]="false"
-        class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-200 p-6 shadow-xl"
-        aria-labelledby="create-event-title"
-      >
-        <h2 id="create-event-title" class="mb-4 text-start text-lg font-semibold">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div class="max-w-md w-full rounded-2xl bg-surface-200 p-6 shadow-xl">
+        <h2 class="mb-4 text-start text-lg font-semibold">
           {{ 'events.createEvent' | t }}
         </h2>
 
@@ -127,7 +113,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
               id="locationInput"
               formControlName="location"
               type="text"
-              required
               class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
               [placeholder]="'events.wherePlaceholder' | t"
             />
@@ -160,24 +145,16 @@ import { TranslatePipe } from '../../services/translate.pipe';
               id="descriptionInput"
               formControlName="description"
               rows="3"
-              required
               class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
               [placeholder]="'events.descriptionPlaceholder' | t"
             ></textarea>
           </div>
-
-          @if (submitError()) {
-            <p role="alert" class="mb-3 text-sm text-danger">
-              {{ 'common.error' | t }}
-            </p>
-          }
 
           <!-- Action buttons -->
           <div class="flex justify-end gap-3">
             <button
               hlmBtn
               type="button"
-              [disabled]="isSubmitting()"
               (click)="dismiss.emit()"
               class="rounded-lg bg-surface-400 text-text-primary px-4 py-2 text-sm"
             >
@@ -186,16 +163,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <button
               hlmBtn
               type="submit"
-              [disabled]="eventForm.invalid || isSubmitting()"
-              [attr.aria-busy]="isSubmitting() ? 'true' : null"
+              [disabled]="eventForm.invalid"
               class="rounded-lg bg-accent text-on-fill px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
               {{ 'events.create' | t }}
             </button>
           </div>
         </form>
-      </hlm-dialog-content>
-    </hlm-dialog>
+      </div>
+    </div>
   `,
 })
 export class CreateEventModalComponent {
@@ -203,18 +179,14 @@ export class CreateEventModalComponent {
   private readonly eventsService = inject(EventsService);
 
   readonly eventForm = this.fb.group({
-    title: ['', [Validators.required, Validators.pattern(/\S/)]],
+    title: ['', Validators.required],
     date_time: ['', Validators.required],
     language_pair: [''],
-    category: ['audio_room', Validators.required],
-    location: ['', [Validators.required, Validators.pattern(/\S/)]],
+    category: ['audio_room'],
+    location: [''],
     max_participants: [null as number | null],
-    description: ['', [Validators.required, Validators.pattern(/\S/)]],
+    description: [''],
   });
-
-  readonly dialogState: HlmDialogState = 'open';
-  readonly isSubmitting = signal(false);
-  readonly submitError = signal(false);
 
   /** Emitted when the event is successfully created on the backend. */
   readonly created = output<Event>();
@@ -222,49 +194,27 @@ export class CreateEventModalComponent {
   /** Emitted when the user cancels the modal. */
   readonly dismiss = output<void>();
 
-  onDialogStateChanged(state: HlmDialogState): void {
-    if (state === 'closed' && !this.isSubmitting()) {
-      this.dismiss.emit();
-    }
-  }
-
   async onSubmit(): Promise<void> {
-    if (this.eventForm.invalid || this.isSubmitting()) {
-      this.eventForm.markAllAsTouched();
+    if (this.eventForm.invalid) {
       return;
     }
-
     const raw = this.eventForm.value;
-    const title = raw.title?.trim();
-    const location = raw.location?.trim();
-    const description = raw.description?.trim();
-
-    if (!title || !location || !description) {
-      this.eventForm.markAllAsTouched();
-      return;
-    }
-
-    this.isSubmitting.set(true);
-    this.submitError.set(false);
-
     try {
       const createdEvent = await firstValueFrom(
         this.eventsService.createEvent({
-          title,
+          title: raw.title!,
           date_time: raw.date_time!,
           language_pair: raw.language_pair || undefined,
-          category: raw.category!,
-          location,
+          category: raw.category || undefined,
+          location: raw.location || undefined,
           max_participants: raw.max_participants ?? undefined,
-          description,
+          description: raw.description || undefined,
         }),
       );
       this.created.emit(createdEvent);
       this.dismiss.emit();
-    } catch {
-      this.submitError.set(true);
-    } finally {
-      this.isSubmitting.set(false);
+    } catch (err) {
+      console.error('Failed to create event', err);
     }
   }
 }

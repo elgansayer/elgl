@@ -6,17 +6,11 @@ import {
   IsString,
   Matches,
   Max,
+  MaxLength,
   Min,
   ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-
-const transformOptionalBoolean = ({ value }: { value: unknown }): unknown => {
-  if (value === true || value === false) return value;
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return value;
-};
 
 export class SearchQueryDto {
   @ApiPropertyOptional({
@@ -126,11 +120,21 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Comma-separated interest tags. Partners matching any tag are returned via PostgreSQL array overlap query.',
-    example: 'sports,music,travel',
+      'Filter by one normalized interest tag. Partners whose interests array contains this tag are returned.',
+    example: 'photography',
+    maxLength: 50,
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.normalize('NFKC').trim().toLocaleLowerCase('en-US')
+      : value,
+  )
   @IsString()
+  @MaxLength(50)
+  @Matches(/^[^,\p{Cc}]+$/u, {
+    message: 'interests must be a single valid interest tag',
+  })
   interests?: string;
 
   @ApiPropertyOptional({
@@ -164,12 +168,13 @@ export class SearchQueryDto {
   age_max?: number;
 
   @ApiPropertyOptional({
-    description:
-      'Only return partners currently hosting a public active LiveKit audio room.',
+    description: 'Only return partners currently hosting a LiveKit audio room.',
     example: true,
   })
-  @ValidateIf((_query: SearchQueryDto, value: unknown) => value !== undefined)
-  @Transform(transformOptionalBoolean)
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
   @IsBoolean()
   voice_room_active?: boolean;
 
