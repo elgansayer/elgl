@@ -11,6 +11,21 @@ from openhands_factory.agents.base import AgentRequest, ProviderHealth, Provider
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure
 from openhands_factory.agents.process import ProcessResult
 
+# Pi exposes an explicit reasoning control, but the Factory previously forced
+# ``--thinking max`` for every phase. That is disproportionate for bounded
+# repair/review/control-plane work, especially because production already routes
+# those phases to Haiku. Preserve maximum reasoning for open-ended build work,
+# keep a strong security-review tier, and align the remaining bounded phases with
+# the effort policy already used by Claude/Codex.
+_THINKING_BY_PHASE: dict[AgentPhase, str] = {
+    AgentPhase.SECURITY_REVIEW: "high",
+    AgentPhase.QUALITY_REPAIR: "low",
+    AgentPhase.CODE_REVIEW: "medium",
+    AgentPhase.CI_REPAIR: "low",
+    AgentPhase.GENERAL_ACTION: "medium",
+}
+_DEFAULT_THINKING = "max"
+
 
 class PiProvider(CLIProvider):
     name = "pi"

@@ -4,20 +4,20 @@
 export const schemaCompatibilityShims = [
   {
     beforeSourceFile: '20260826220000_lesson_progress.sql',
-    name: 'materialize_legacy_lessons_before_progress',
+    name: 'materialize_lessons_before_lesson_progress',
     reason:
-      'The application and generated Supabase contract model public.lessons, but the surviving SQL migration corpus does not create it before lesson_progress adds its lesson foreign key.',
+      'The lesson progress migration references the production lessons table, but that table is absent from the surviving Supabase SQL corpus.',
     sql: `CREATE TABLE IF NOT EXISTS public.lessons (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
   content_json JSONB,
-  language_code VARCHAR(16) NOT NULL,
+  language_code TEXT NOT NULL,
   difficulty_level INTEGER,
   cover_image_url TEXT,
   audio_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 `,
   },
