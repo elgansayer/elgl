@@ -44,7 +44,7 @@ only what they resolve to changed - so no template touch was needed for this pha
 | `neon`                | `violet #8B6CF0` / `pink #E8578F` / `cyan #2FC6D9` / `blue #5B8DEF` / `orange #F0954A` | same (static)         | Decorative-only gamification accents (streaks, leaderboard, gift flourishes). **Not for text** - most of these fail on-fill text contrast; pair with a scrim or use as background only.                                                                                                                                                  |
 | `text-primary`        | `#12151C`                                                                              | `#F3F4F7`             |                                                                                                                                                                                                                                                                                                                                          |
 | `text-secondary`      | `#4A5163`                                                                              | `#B4BAC9`             |                                                                                                                                                                                                                                                                                                                                          |
-| `text-muted`          | `#6B7182`                                                                              | `#7E8494`             |                                                                                                                                                                                                                                                                                                                                          |
+| `text-muted`          | `#656A7A`                                                                              | `#898F9D`             |                                                                                                                                                                                                                                                                                                                                          |
 
 Every pairing above was contrast-audited: all text/surface and on-fill/fill combinations clear
 4.5:1 (WCAG AA) in both themes. `neon` is intentionally left as a static (non-branched) scale -
@@ -56,11 +56,20 @@ sizes; its `50-700` tint scale stays static.
 
 - **Body:** stays the platform-native system-UI stack (`font-sans`), deliberately - it's what
   reliably covers every script HelloTalk's users type in (CJK, Arabic, Cyrillic, Devanagari, etc).
-- **Display:** new `font-display` (`"Instrument Sans"`, self-hosted via Google Fonts import in
-  `styles.scss`) for headline/numeral contexts only - streak counters, onboarding hero text,
-  product-authored marketing copy. **Never** apply it to user-generated or translated content; the
+- **Display:** `font-display` prefers `"Instrument Sans"` when it is locally available, then uses
+  the shared system fallback chain. Production styles do not import remote fonts, so builds and
+  runtime rendering remain network-independent. Reserve it for headline/numeral contexts only -
+  streak counters, onboarding hero text, product-authored marketing copy. **Never** apply it to
+  user-generated or translated content; the
   risk of a Latin-only display face silently dropping non-Latin glyphs is real for a
   language-exchange app with a global user base.
+
+- **Display:** `font-display` uses the platform-native UI stack for headline and numeral contexts
+  such as streak counters, onboarding hero text, and product-authored marketing copy. Production
+  styles do not import remote fonts, keeping builds and first render deterministic without a
+  third-party network dependency. **Never** apply display styling to user-generated or translated
+  content so non-Latin glyph coverage remains reliable.
+
 - **Base size:** 16px, unchanged.
 - **Scale:** Tailwind's default `text-xs` .. `text-3xl` scale, unchanged.
 
@@ -82,9 +91,9 @@ Unchanged - Tailwind's stock 0.25rem-based scale.
 
 ## Shadow & Motion
 
-- **shadow-card:** `0 1px 2px rgb(var(--shadow-color-rgb) / 0.04), 0 4px 14px rgb(var(--shadow-color-rgb) / 0.08)`
-- **shadow-lift:** `0 12px 32px rgb(var(--shadow-color-rgb) / 0.16), 0 4px 10px rgb(var(--shadow-color-rgb) / 0.08)`
-- Both theme-aware via `--shadow-color-rgb` (near-ink in light mode, pure black in dark mode) -
+- **shadow-card:** `0 1px 2px rgb(var(--shadow-colour-rgb) / 0.04), 0 4px 14px rgb(var(--shadow-colour-rgb) / 0.08)`
+- **shadow-lift:** `0 12px 32px rgb(var(--shadow-colour-rgb) / 0.16), 0 4px 10px rgb(var(--shadow-colour-rgb) / 0.08)`
+- Both theme-aware via `--shadow-colour-rgb` (near-ink in light mode, pure black in dark mode) -
   much softer than the old heavy black-glow shadows, and nearly invisible in dark mode by design:
   dark-mode elevation reads primarily through the surface-lightness steps and a hairline border,
   not a shadow.

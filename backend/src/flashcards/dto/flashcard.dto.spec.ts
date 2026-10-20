@@ -72,6 +72,38 @@ describe('CreateFlashcardDto', () => {
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
+
+  it('should reject non-HTTP pronunciation URLs', async () => {
+    const dto = plainToInstance(CreateFlashcardDto, {
+      word_token: 'bonjour',
+      translation: 'hello',
+      pronunciation_url: 'javascript:alert(1)',
+    });
+
+    const errors = await validate(dto);
+    expect(errors.some((error) => error.property === 'pronunciation_url')).toBe(
+      true,
+    );
+  });
+
+  it('should enforce bounded user-controlled text fields', async () => {
+    const dto = plainToInstance(CreateFlashcardDto, {
+      word_token: 'x'.repeat(201),
+      translation: 'y'.repeat(501),
+      original_context: 'z'.repeat(1001),
+      definition: 'd'.repeat(1001),
+    });
+
+    const errors = await validate(dto);
+    expect(errors.map((error) => error.property)).toEqual(
+      expect.arrayContaining([
+        'word_token',
+        'translation',
+        'original_context',
+        'definition',
+      ]),
+    );
+  });
 });
 
 describe('UpdateSrsDto', () => {
