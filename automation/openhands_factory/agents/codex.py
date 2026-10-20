@@ -7,11 +7,13 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from openhands_factory.agents.base import AgentRequest, ProviderHealth, ProviderStatus
+from openhands_factory.agents.base import AgentPhase, AgentRequest, ProviderHealth, ProviderStatus
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure
 from openhands_factory.agents.process import ProcessResult
 
-# Keep maximum reasoning for open-ended planning, architecture, and implementation.
+# Keep maximum reasoning for open-ended planning and architecture. Implementation
+# uses high effort to bound latency; deterministic verification and independent
+# review still judge the resulting code before it can merge.
 # Security review is a bounded checklist over an already-created diff and therefore
 # keeps a high reasoning tier without consuming the maximum thinking budget used for
 # open-ended build work. Independent code review retains a medium reasoning floor.
@@ -20,6 +22,7 @@ from openhands_factory.agents.process import ProcessResult
 # low effort because the current production caller is best-effort stall diagnosis over
 # already-gathered deterministic host evidence, not a merge-critical engineering phase.
 _REASONING_EFFORT_BY_PHASE: dict[AgentPhase, str] = {
+    AgentPhase.IMPLEMENTATION: "high",
     AgentPhase.SECURITY_REVIEW: "high",
     AgentPhase.QUALITY_REPAIR: "low",
     AgentPhase.CODE_REVIEW: "medium",
@@ -78,13 +81,17 @@ class CodexProvider(CLIProvider):
         prompt_path: Path | None,
     ) -> Sequence[str]:
         del prompt_path
+        reasoning_effort = _REASONING_EFFORT_BY_PHASE.get(
+            request.phase,
+            _DEFAULT_REASONING_EFFORT,
+        )
         command = [
             *self._prefix(),
             "exec",
             "-m",
             model,
             "-c",
-            'model_reasoning_effort="max"',
+            f'model_reasoning_effort="{reasoning_effort}"',
             # Codex applies workspace-write when --approve-for-me is selected.
             # Passing an explicit sandbox as well is rejected by current CLIs.
             "--approve-for-me",
