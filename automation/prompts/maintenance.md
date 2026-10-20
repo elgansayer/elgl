@@ -17,6 +17,14 @@ component is not application throughput.
 Prefer a common-cause repair over separate edits to dozens of affected PRs.
 Consult the supplied maintenance programme and recent outcomes. Choose one
 unfinished, evidenced item; do not repeatedly propose an already completed change.
+The recent_maintenance feedback includes proposed changes, acceptance criteria,
+canary evidence and bounded 24-hour baseline/outcome counts where available.
+An absent outcome is unmeasured, not a win. A canary-failed, canary-delayed or
+canary-obsolete result is not a healed incident. Before/after counts are
+observational: concurrent work and different windows prevent causal claims.
+Unknown components are not verified application merges. Reuse a prior strategy
+only when its source applicability and regression test are established; do not
+repeat a failed strategy without new evidence explaining why it should now work.
 Provider usage is lifetime evidence for the named model and phase, not proof that
 the current route or an old, retired model is currently unhealthy.
 
