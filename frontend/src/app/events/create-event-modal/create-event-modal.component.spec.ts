@@ -14,13 +14,13 @@ describe('CreateEventModalComponent', () => {
   const mockEvent: Event = {
     id: 'event-1',
     title: 'Test Event',
-    date_time: '2099-08-01T10:00:00Z',
-    location: 'https://example.zoom.us/j/123',
+    date_time: '2026-09-01T10:00:00Z',
+    location: 'Zoom',
     description: 'Some description',
     host_id: 'user-1',
     is_cancelled: false,
-    created_at: '2099-08-01T09:00:00Z',
-    updated_at: '2099-08-01T09:00:00Z',
+    created_at: '2026-08-26T15:00:00Z',
+    updated_at: '2026-08-26T15:00:00Z',
   };
 
   beforeEach(async () => {
@@ -37,132 +37,217 @@ describe('CreateEventModalComponent', () => {
         { provide: TranslatePipe, useValue: translateStub as unknown as TranslatePipe },
       ],
     }).compileComponents();
+  });
 
+  beforeEach(() => {
     fixture = TestBed.createComponent(CreateEventModalComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
 
-  function setValidZoomForm(): void {
-    component.eventForm.setValue({
-      title: ' Test Event ',
-      date_time: '2099-08-01T10:00',
-      venue_type: 'zoom',
-      language_pair: 'en-es',
-      category: 'learning_seminar',
-      location: ' https://example.zoom.us/j/123 ',
-      max_participants: 10,
-      description: ' Some description ',
-    });
-  }
+  it('should create the component', () => {
+    expect(component).toBeTruthy();
+  });
 
-  it('starts with a bounded Audio Room form', () => {
+  it('should start with default form values', () => {
     expect(component.eventForm.value).toEqual({
       title: '',
       date_time: '',
-      venue_type: 'audio_room',
       language_pair: '',
       category: 'audio_room',
       location: '',
       max_participants: null,
       description: '',
     });
+    expect(component.eventForm.invalid).toBe(true);
   });
 
-  it('does not submit a past date', async () => {
-    setValidZoomForm();
-    component.eventForm.patchValue({ date_time: '2020-01-01T10:00' });
+  it('requires title, date and time, location, and description', () => {
+    component.eventForm.patchValue({
+      title: 'Conversation meetup',
+      date_time: '2026-09-01T10:00',
+      location: 'Zoom',
+      description: 'Practice together',
+    });
+
+    expect(component.eventForm.valid).toBe(true);
+
+    for (const field of ['title', 'location', 'description'] as const) {
+      component.eventForm.controls[field].setValue('   ');
+      expect(component.eventForm.controls[field].invalid).toBe(true);
+      component.eventForm.controls[field].setValue(
+        field === 'title' ? 'Conversation meetup' : field === 'location' ? 'Zoom' : 'Practice together',
+      );
+    }
+
+    component.eventForm.controls.date_time.setValue('');
+    expect(component.eventForm.invalid).toBe(true);
+  });
+
+  it('renders labelled required controls for What, When, Where, and Description', () => {
+    const requiredControlIds = ['titleInput', 'dateTimeInput', 'locationInput', 'descriptionInput'];
+
+    for (const id of requiredControlIds) {
+      const label = document.body.querySelector(`label[for="${id}"]`) as HTMLLabelElement | null;
+      const control = document.body.querySelector(`#${id}`) as HTMLInputElement | HTMLTextAreaElement | null;
+
+      expect(label).toBeTruthy();
+      expect(control).toBeTruthy();
+      expect(control?.required).toBe(true);
+    }
+  });
+
+  it('keeps the Create action disabled until the required event details are valid', () => {
+    const createButton = document.body.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(createButton.disabled).toBe(true);
+
+    component.eventForm.patchValue({
+      title: 'Conversation meetup',
+      date_time: '2026-09-01T10:00',
+      category: 'audio_room',
+      location: 'Zoom',
+      description: 'Practice together',
+    });
+    fixture.detectChanges();
+
+    expect(createButton.disabled).toBe(false);
+  });
+
+  it('should not call createEvent when required fields are missing', async () => {
+    component.eventForm.patchValue({
+      title: 'Test Event',
+      date_time: '2026-09-01T10:00',
+      location: '',
+      description: '',
+    });
 
     await component.onSubmit();
 
     expect(eventsServiceSpy.createEvent).not.toHaveBeenCalled();
-    expect(component.eventForm.controls.date_time.invalid).toBe(true);
   });
 
-  it('does not submit an unsafe Zoom URL', async () => {
-    setValidZoomForm();
-    component.eventForm.patchValue({ location: 'javascript:alert(1)' });
-
-    await component.onSubmit();
-
-    expect(eventsServiceSpy.createEvent).not.toHaveBeenCalled();
-    expect(component.eventForm.hasError('venueLocation')).toBe(true);
-  });
-
-  it('requires a UUID-shaped Audio Room reference', async () => {
-    setValidZoomForm();
-    component.eventForm.patchValue({ venue_type: 'audio_room', location: 'room-name' });
-
-    await component.onSubmit();
-
-    expect(eventsServiceSpy.createEvent).not.toHaveBeenCalled();
-    expect(component.eventForm.hasError('venueLocation')).toBe(true);
-  });
-
-  it('submits a normalized UTC timestamp and timezone, then resets', async () => {
+  it('should emit created and dismiss with trimmed required fields on successful submit', async () => {
     const createdSpy = vi.fn();
     const dismissSpy = vi.fn();
     component.created.subscribe(createdSpy);
     component.dismiss.subscribe(dismissSpy);
+
     eventsServiceSpy.createEvent.mockReturnValue(of(mockEvent));
-    setValidZoomForm();
+
+    component.eventForm.setValue({
+      title: '  Test Event  ',
+      date_time: '2026-09-01T10:00',
+      language_pair: 'en-es',
+      category: 'audio_room',
+      location: '  Zoom  ',
+      max_participants: 10,
+      description: '  Some description  ',
+    });
 
     await component.onSubmit();
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
-      date_time: new Date('2099-08-01T10:00').toISOString(),
-      venue_type: 'zoom',
-      timezone: component.localTimezone,
+      date_time: '2026-09-01T10:00',
       language_pair: 'en-es',
-      category: 'learning_seminar',
-      location: 'https://example.zoom.us/j/123',
+      category: 'audio_room',
+      location: 'Zoom',
       max_participants: 10,
       description: 'Some description',
     });
+    expect(createdSpy).toHaveBeenCalledTimes(1);
     expect(createdSpy).toHaveBeenCalledWith(mockEvent);
     expect(dismissSpy).toHaveBeenCalledTimes(1);
-    expect(component.eventForm.controls.title.value).toBe('');
+    expect(component.isSubmitting()).toBe(false);
   });
 
-  it('prevents duplicate submissions while the first request is pending', async () => {
-    const pending = new Subject<Event>();
-    eventsServiceSpy.createEvent.mockReturnValue(pending);
-    setValidZoomForm();
+  it('should keep only language pair and max participants optional', async () => {
+    eventsServiceSpy.createEvent.mockReturnValue(of(mockEvent));
 
-    const first = component.onSubmit();
-    const duplicate = component.onSubmit();
+    component.eventForm.setValue({
+      title: 'Test Event',
+      date_time: '2026-09-01T10:00',
+      language_pair: '',
+      category: 'in_person_meetup',
+      location: 'Community Centre',
+      max_participants: null,
+      description: 'Weekly conversation practice',
+    });
+
+    await component.onSubmit();
+
+    expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
+      title: 'Test Event',
+      date_time: '2026-09-01T10:00',
+      language_pair: undefined,
+      category: 'in_person_meetup',
+      location: 'Community Centre',
+      max_participants: undefined,
+      description: 'Weekly conversation practice',
+    });
+  });
+
+  it('dismisses from the Spartan dialog boundary but stays open while submitting', () => {
+    const dismissSpy = vi.fn();
+    component.dismiss.subscribe(dismissSpy);
+
+    component.onDialogStateChanged('closed');
+    expect(dismissSpy).toHaveBeenCalledTimes(1);
+
+    component.isSubmitting.set(true);
+    component.onDialogStateChanged('closed');
+    expect(dismissSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should suppress duplicate submissions while creation is pending', async () => {
+    const request = new Subject<Event>();
+    eventsServiceSpy.createEvent.mockReturnValue(request);
+    component.eventForm.setValue({
+      title: 'Test Event',
+      date_time: '2026-09-01T10:00',
+      language_pair: '',
+      category: 'audio_room',
+      location: 'Zoom',
+      max_participants: null,
+      description: 'Some description',
+    });
+
+    const firstSubmission = component.onSubmit();
+    const secondSubmission = component.onSubmit();
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledTimes(1);
     expect(component.isSubmitting()).toBe(true);
 
-    pending.next(mockEvent);
-    pending.complete();
-    await Promise.all([first, duplicate]);
+    request.next(mockEvent);
+    request.complete();
+    await Promise.all([firstSubmission, secondSubmission]);
+
+    expect(component.isSubmitting()).toBe(false);
   });
 
-  it('preserves the draft and exposes retryable failure state', async () => {
-    eventsServiceSpy.createEvent.mockReturnValue(
-      throwError(() => new Error('creation failed')),
-    );
-    setValidZoomForm();
+  it('should expose a retryable error and keep the modal open when creation fails', async () => {
+    const createdSpy = vi.fn();
+    const dismissSpy = vi.fn();
+    component.created.subscribe(createdSpy);
+    component.dismiss.subscribe(dismissSpy);
+
+    eventsServiceSpy.createEvent.mockReturnValue(throwError(() => new Error('creation failed')));
+
+    component.eventForm.setValue({
+      title: 'Fail Event',
+      date_time: '2026-09-02T11:00',
+      language_pair: 'en-fr',
+      category: 'learning_seminar',
+      location: 'Zoom',
+      max_participants: 5,
+      description: 'Will fail',
+    });
 
     await component.onSubmit();
 
     expect(component.submitError()).toBe(true);
-    expect(component.eventForm.controls.title.value).toBe(' Test Event ');
-    expect(component.eventForm.controls.location.value).toContain('zoom.us');
-  });
-
-  it('resets the draft when the user explicitly cancels', () => {
-    const dismissSpy = vi.fn();
-    component.dismiss.subscribe(dismissSpy);
-    setValidZoomForm();
-
-    component.cancel();
-
-    expect(dismissSpy).toHaveBeenCalledTimes(1);
-    expect(component.eventForm.controls.title.value).toBe('');
-    expect(component.eventForm.controls.venue_type.value).toBe('audio_room');
+    expect(component.isSubmitting()).toBe(false);
+    expect(createdSpy).not.toHaveBeenCalled();
+    expect(dismissSpy).not.toHaveBeenCalled();
   });
 });

@@ -227,9 +227,11 @@ export class UpdateProfileDto {
   proficiency_level?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  learning_goals?: string;
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(100, { each: true })
+  learning_goals?: string[];
 
   @IsOptional()
   @IsString()

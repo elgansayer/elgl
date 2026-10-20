@@ -123,9 +123,7 @@ export class DiscoveryController {
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
-    if (profile?.is_serious_learner === true) {
-      query.serious_learner_mode = true;
-    }
+    this.applySeriousLearnerMode(profile, query);
     const result = await this.discoveryService.searchPartnersWithDegradation(
       user.id,
       profile,
@@ -194,6 +192,7 @@ export class DiscoveryController {
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
+    this.applySeriousLearnerMode(profile, query);
     const result = await this.discoveryService.getAudioIntros(
       user.id,
       profile,
@@ -389,13 +388,25 @@ export class DiscoveryController {
       };
     }
     const profile = await this.usersService.getProfile(user.id);
-    if (profile?.is_serious_learner === true) {
-      query.serious_learner_mode = true;
-    }
+    this.applySeriousLearnerMode(profile, query);
     return this.discoveryService.searchPartnersWithDegradation(
       user.id,
       profile,
       query,
     );
+  }
+
+  private applySeriousLearnerMode(
+    profile: UserProfile | null,
+    query: SearchQueryDto,
+  ): void {
+    // The product mode is a persisted user preference. Do not conflate it with
+    // is_serious_learner, which is an earned/behavioural qualification signal.
+    if (profile?.serious_learner_mode !== true) return;
+
+    query.serious_learner_mode = true;
+    // Set this before DiscoveryService builds its Supabase query so both
+    // spatial and non-spatial paths consistently keep the high-intent cohort.
+    query.serious_learner_only = true;
   }
 }

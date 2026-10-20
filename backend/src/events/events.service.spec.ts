@@ -123,23 +123,39 @@ describe('EventsService', () => {
         status: 'attending',
       };
 
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          delete: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null }),
-            }),
-          }),
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({ data: mockRsvp }),
-            }),
-          }),
+      const upsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: mockRsvp, error: null }),
         }),
+      });
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnValue({ upsert }),
       });
 
       const result = await service.createRsvp('user123', 'event1', 'attending');
       expect(result).toEqual(mockRsvp);
+      expect(upsert).toHaveBeenCalledWith(mockRsvp, {
+        onConflict: 'event_id,user_id',
+      });
+    });
+
+    it('propagates an atomic upsert failure instead of reporting success', async () => {
+      const error = new Error('RSVP database unavailable');
+      const upsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: null, error }),
+        }),
+      });
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnValue({ upsert }),
+      });
+      await expect(
+        service.createRsvp('user123', 'event1', 'interested'),
+      ).rejects.toBe(error);
+      expect(upsert).toHaveBeenCalledWith(
+        { event_id: 'event1', user_id: 'user123', status: 'interested' },
+        { onConflict: 'event_id,user_id' },
+      );
     });
   });
 

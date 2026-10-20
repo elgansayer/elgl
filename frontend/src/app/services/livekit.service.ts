@@ -147,8 +147,8 @@ export class LivekitService {
     const room = this.createRoom(roomOptions);
     this.room = room;
 
-    const iceServersToUse = tokenResult.iceServers && tokenResult.iceServers.length > 0 
-      ? tokenResult.iceServers 
+    const iceServersToUse = tokenResult.iceServers && tokenResult.iceServers.length > 0
+      ? tokenResult.iceServers
       : [
           { urls: 'stun:stun.l.google.com:19302' },
           {

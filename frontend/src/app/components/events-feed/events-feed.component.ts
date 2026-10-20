@@ -1,14 +1,13 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AppSelectComponent } from '../primitives/select/select.component';
+import { EventRsvpControlsComponent } from '../event-rsvp-controls/event-rsvp-controls.component';
 import { EventsService, Event } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 
 const PAGE_SIZE = 20;
 
@@ -18,39 +17,16 @@ const PAGE_SIZE = 20;
     HlmButton,
     HlmRadio,
     HlmRadioGroup,
-    ...HlmDialogImports,
     CommonModule,
     TranslatePipe,
     DatePipe,
     AppSelectComponent,
-    CreateEventModalComponent,
+    EventRsvpControlsComponent,
   ],
   template: `
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">{{ 'events.title' | t }}</h1>
+    <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
 
-      <hlm-dialog>
-        <button hlmBtn hlmDialogTrigger type="button" size="touch">
-          {{ 'events.createTitle' | t }}
-        </button>
-        <hlm-dialog-content class="sm:max-w-xl">
-          <app-create-event-modal
-            (created)="onEventCreated($event)"
-            (dismiss)="createEventClose.click()"
-          />
-          <button
-            #createEventClose
-            hlmBtn
-            hlmDialogClose
-            type="button"
-            tabindex="-1"
-            aria-hidden="true"
-            class="sr-only"
-          ></button>
-        </hlm-dialog-content>
-      </hlm-dialog>
-    </div>
-
+    <!-- Filter bar -->
     <div class="flex gap-2 mb-4 items-center flex-wrap">
       <hlm-radio-group
         name="events-status"
@@ -88,6 +64,7 @@ const PAGE_SIZE = 20;
       </div>
     </div>
 
+    <!-- Event list -->
     @if (isLoading() && events().length === 0) {
       <p role="status">{{ 'loading' | t }}</p>
     } @else if (error() && events().length === 0) {
@@ -113,6 +90,12 @@ const PAGE_SIZE = 20;
                 {{ 'events.hosted_by' | t: { name: event.host_name } }}
               </p>
             }
+            <app-event-rsvp-controls
+              [eventId]="event.id"
+              [eventTitle]="event.title"
+              [maxParticipants]="event.max_participants"
+              [mutable]="canRsvp(event)"
+            />
           </div>
         }
       </div>
@@ -182,17 +165,8 @@ export class EventsFeedComponent implements OnInit {
     void this.loadEvents(true);
   }
 
-  onEventCreated(event: Event): void {
-    if (this.status() !== 'upcoming' || event.is_cancelled) return;
-    const languagePair = this.languagePair();
-    if (languagePair && event.language_pair !== languagePair) return;
-
-    this.events.update((current) =>
-      [...current.filter((candidate) => candidate.id !== event.id), event].sort(
-        (left, right) =>
-          new Date(left.date_time).getTime() - new Date(right.date_time).getTime(),
-      ),
-    );
+  canRsvp(event: Event): boolean {
+    return !event.is_cancelled && Date.parse(event.date_time) > Date.now();
   }
 
   private languageDisplayName(code: string, displayNames: Intl.DisplayNames | undefined): string {

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EventsController } from './events.controller';
-import { EventCreationPolicyService } from './event-creation-policy.service';
 import { EventsService } from './events.service';
+import { EventsCalendarQueryService } from './events-calendar-query.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AudioRoomsModule } from '../audio-rooms/audio-rooms.module';
@@ -9,7 +9,7 @@ import { AudioRoomsModule } from '../audio-rooms/audio-rooms.module';
 @Module({
   imports: [SupabaseModule, NotificationsModule, AudioRoomsModule],
   controllers: [EventsController],
-  providers: [EventsService, EventCreationPolicyService],
+  providers: [EventsService, EventsCalendarQueryService],
   exports: [EventsService],
 })
 export class EventsModule {}
