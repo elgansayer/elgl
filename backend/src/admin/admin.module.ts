@@ -12,6 +12,8 @@ import { AdminModerationQueryService } from './admin-moderation-query.service';
 import { AdminMutationAuditInterceptor } from './admin-mutation-audit.interceptor';
 import { AdminNetworkAbuseV1Controller } from './admin-network-abuse-v1.controller';
 import { AdminNetworkAbuseService } from './admin-network-abuse.service';
+import { AdminNetworkProviderV1Controller } from './admin-network-provider-v1.controller';
+import { AdminNetworkProviderService } from './admin-network-provider.service';
 import { AdminOperationalEventsV1Controller } from './admin-operational-events-v1.controller';
 import { AdminOperationalEventsService } from './admin-operational-events.service';
 import { AdminRoleAssignmentsService } from './admin-role-assignments.service';
@@ -32,6 +34,7 @@ import { NetworkAbuseGuard } from './guards/network-abuse.guard';
     AdminRolesV1Controller,
     AdminOperationalEventsV1Controller,
     AdminNetworkAbuseV1Controller,
+    AdminNetworkProviderV1Controller,
   ],
   providers: [
     AdminService,
@@ -41,6 +44,7 @@ import { NetworkAbuseGuard } from './guards/network-abuse.guard';
     AdminLoginHistoryQueryService,
     AdminModerationQueryService,
     AdminNetworkAbuseService,
+    AdminNetworkProviderService,
     AdminOperationalEventsService,
     AdminRoleAssignmentsService,
     AdminRoleInventoryService,
