@@ -177,6 +177,10 @@
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
 
+## 2024-11-20 - [Optimize sequential cache invalidations via Promise.all]
+**Learning:** In the backend admin service, sequential cache invalidations using `await` introduced unnecessary additive network latency.
+**Action:** Group independent network operations like cache invalidations into a single `Promise.all` batch to mitigate additive latency.
+
 ## 2026-08-25 - [Optimize Chunked Database Inserts via Bounded Promise.allSettled]
 **Learning:** In the backend `chat-backup.service.ts`, importing large backups by splitting them into chunks and iterating sequentially with `await` introduces compounding N+1 network latency. Sequential I/O inside a loop degrades performance on large batch jobs. However, blindly wrapping all requests in an unbounded `Promise.all` can overwhelm database connection pools.
 **Action:** When inserting large sets of data in chunks, push the chunk insertion promises into an array and execute them using a bounded concurrent approach (e.g., batching into chunks of 10) with `Promise.allSettled` instead of sequentially awaiting each one in a `for` loop. Throw the reason on rejection to maintain error handling logic. Wrap Supabase queries in `Promise.resolve` before attaching `.then` or `.catch` to avoid TS2339 build errors.
@@ -303,6 +307,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
