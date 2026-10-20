@@ -1,4 +1,3 @@
-import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
@@ -10,15 +9,12 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 import { SafetyService } from '../../../services/safety.service';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
+import { MutedWordsApiService } from '../../../services/muted-words-api.service';
 import {
   isProfileVisibility,
   ProfileVisibility,
   ProfileVisibilityService,
 } from '../../../services/profile-visibility.service';
-import {
-  PresencePrivacyService,
-  PresencePrivacySettings,
-} from '../../../services/presence-privacy.service';
 
 interface HubNavItem {
   readonly icon: string;
@@ -33,13 +29,10 @@ interface ProfileVisibilityOption {
   readonly descriptionKey: string;
 }
 
-type PresencePrivacyKey = keyof PresencePrivacySettings;
-
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
   imports: [
-    HlmCheckbox,
     HlmInput,
     HlmButton,
     HlmRadio,
@@ -52,9 +45,9 @@ type PresencePrivacyKey = keyof PresencePrivacySettings;
 })
 export class PrivacySettingsComponent {
   private safetyService = inject(SafetyService);
+  private mutedWordsApi = inject(MutedWordsApiService);
   private blockedUsersService = inject(BlockedUsersService);
   private profileVisibilityService = inject(ProfileVisibilityService);
-  private presencePrivacyService = inject(PresencePrivacyService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
@@ -65,9 +58,9 @@ export class PrivacySettingsComponent {
   readonly isVisibilitySaving = signal(false);
   readonly visibilitySaveError = signal(false);
   readonly visibilitySaveSuccess = signal(false);
-  readonly presencePrivacySaving = signal<PresencePrivacyKey | null>(null);
-  readonly presencePrivacySaveError = signal(false);
-  readonly presencePrivacySaveSuccess = signal(false);
+  readonly mutedWordsLoading = signal(true);
+  readonly mutedWordsSaving = signal(false);
+  readonly mutedWordsError = signal(false);
 
   readonly mutedWords = this.safetyService.mutedWords;
   readonly blockedUsers = this.blockedUsersService.blockedUsers;
@@ -77,16 +70,6 @@ export class PrivacySettingsComponent {
   });
   readonly profileVisibility = linkedSignal(
     () => this.profileVisibilityResource.value() ?? 'everyone',
-  );
-
-  readonly presencePrivacyResource = resource({
-    loader: () => this.presencePrivacyService.getPresencePrivacy(),
-  });
-  readonly hideOnlineStatus = linkedSignal(
-    () => this.presencePrivacyResource.value()?.privacy_hide_online_status ?? false,
-  );
-  readonly hideVipStatus = linkedSignal(
-    () => this.presencePrivacyResource.value()?.privacy_hide_vip_status ?? false,
   );
 
   readonly profileVisibilityOptions: readonly ProfileVisibilityOption[] = [
@@ -136,12 +119,34 @@ export class PrivacySettingsComponent {
 
   constructor() {
     this.loadCounts();
+    void this.loadMutedWords();
   }
 
   private loadCounts(): void {
     this.blockedUsersService.loadBlockedUsers().then(() => {
       this.blockedCount.set(this.blockedUsers().length);
     });
+  }
+
+  private syncMutedWords(words: readonly string[]): void {
+    this.safetyService.clearMutedWords();
+    for (const word of words) {
+      this.safetyService.addMutedWord(word);
+    }
+  }
+
+  async loadMutedWords(): Promise<void> {
+    this.mutedWordsLoading.set(true);
+    this.mutedWordsError.set(false);
+    try {
+      this.syncMutedWords(await this.mutedWordsApi.list());
+    } catch {
+      // Keep the account-scoped local cache active while offline. It is a fallback,
+      // not the source of truth, so a visible retry state remains on screen.
+      this.mutedWordsError.set(true);
+    } finally {
+      this.mutedWordsLoading.set(false);
+    }
   }
 
   async updateProfileVisibility(value: string): Promise<void> {
@@ -176,54 +181,43 @@ export class PrivacySettingsComponent {
     this.profileVisibilityResource.reload();
   }
 
-  async updatePresencePrivacy(key: PresencePrivacyKey, value: boolean): Promise<void> {
-    if (this.presencePrivacySaving()) {
+  retryMutedWordsLoad(): void {
+    void this.loadMutedWords();
+  }
+
+  async addMutedWord(): Promise<void> {
+    if (this.mutedWordsSaving()) return;
+    const word = this.mutedWordInput().normalize('NFKC').trim().toLowerCase();
+    if (!word || word.length > 64) return;
+    if (this.mutedWords().includes(word)) {
+      this.mutedWordInput.set('');
       return;
     }
 
-    const target =
-      key === 'privacy_hide_online_status' ? this.hideOnlineStatus : this.hideVipStatus;
-    const previous = target();
-    if (value === previous) {
-      return;
-    }
-
-    target.set(value);
-    this.presencePrivacySaving.set(key);
-    this.presencePrivacySaveError.set(false);
-    this.presencePrivacySaveSuccess.set(false);
-
-    const update: Partial<PresencePrivacySettings> =
-      key === 'privacy_hide_online_status'
-        ? { privacy_hide_online_status: value }
-        : { privacy_hide_vip_status: value };
-
+    this.mutedWordsSaving.set(true);
+    this.mutedWordsError.set(false);
     try {
-      await this.presencePrivacyService.updatePresencePrivacy(update);
-      this.presencePrivacySaveSuccess.set(true);
+      const words = await this.mutedWordsApi.add(word);
+      this.syncMutedWords(words);
+      this.mutedWordInput.set('');
     } catch {
-      target.set(previous);
-      this.presencePrivacySaveError.set(true);
+      this.mutedWordsError.set(true);
     } finally {
-      this.presencePrivacySaving.set(null);
+      this.mutedWordsSaving.set(false);
     }
   }
 
-  retryPresencePrivacyLoad(): void {
-    this.presencePrivacySaveError.set(false);
-    this.presencePrivacySaveSuccess.set(false);
-    this.presencePrivacyResource.reload();
-  }
-
-  addMutedWord(): void {
-    const word = this.mutedWordInput().trim().toLowerCase();
-    if (!word) return;
-    this.safetyService.addMutedWord(word);
-    this.mutedWordInput.set('');
-  }
-
-  removeMutedWord(word: string): void {
-    this.safetyService.removeMutedWord(word);
+  async removeMutedWord(word: string): Promise<void> {
+    if (this.mutedWordsSaving()) return;
+    this.mutedWordsSaving.set(true);
+    this.mutedWordsError.set(false);
+    try {
+      this.syncMutedWords(await this.mutedWordsApi.remove(word));
+    } catch {
+      this.mutedWordsError.set(true);
+    } finally {
+      this.mutedWordsSaving.set(false);
+    }
   }
 
   goBack(): void {

@@ -34,6 +34,8 @@ export interface UserProfile {
   study_streak_days: number;
   correction_ratio: number;
   is_serious_learner: boolean;
+  /** User preference for the focused Serious Learner product mode. */
+  serious_learner_mode?: boolean;
   privacy_hide_age: boolean;
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;

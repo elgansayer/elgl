@@ -38,13 +38,13 @@ export class ModerationQueueComponent {
   readonly isOnline = this.offlineStorage.isOnline;
 
   readonly type = signal<'moment' | 'profile'>('profile');
-  readonly status = signal<ModerationItem['status'] | undefined>(undefined);
+  readonly status = signal<string | undefined>(undefined);
 
   readonly items = resource({
     params: () => ({ type: this.type(), status: this.status() }),
     loader: (param: {
-      request?: { type?: string; status?: ModerationItem['status'] };
-      params?: { type?: string; status?: ModerationItem['status'] };
+      request?: { type?: string; status?: string };
+      params?: { type?: string; status?: string };
     }) => {
       const request = param.request ?? param.params;
       if (!request) return this.moderationService.getItems('profile');
@@ -64,7 +64,7 @@ export class ModerationQueueComponent {
     this.analysisResult.set(null);
   }
 
-  setStatus(newStatus: ModerationItem['status'] | ''): void {
+  setStatus(newStatus: string): void {
     this.status.set(newStatus || undefined);
     // Clear analysis when switching status filter
     this.analysisResult.set(null);

@@ -105,6 +105,7 @@ export class LanguageChallengesService {
     ]);
 
     const { data: challenge, error: fetchError } = challengeRes;
+    const { data: existing } = existingRes;
 
     if (fetchError || !challenge) {
       throw new NotFoundException('Challenge not found');

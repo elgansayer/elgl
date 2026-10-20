@@ -16,7 +16,11 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
-from openhands_factory.issue_admission import DurableAdmissionGate, ReviewAdmissionGate
+from openhands_factory.issue_admission import (
+    DurableAdmissionGate,
+    ReviewAdmissionGate,
+    ReviewHeadStabilityGate,
+)
 from openhands_factory.models import Job
 
 MAX_PROVIDER_CANDIDATES_PER_PHASE = 2
@@ -47,6 +51,19 @@ def _positive_int_environment(name: str, default: int) -> int:
         raise ValueError(f"{name} must be an integer") from error
     if value <= 0:
         raise ValueError(f"{name} must be positive")
+    return value
+
+
+def _non_negative_int_environment(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError(f"{name} must be an integer") from error
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative")
     return value
 
 
@@ -136,6 +153,7 @@ class ConservativeAgentRouter(AgentRouter):
             )
         )
         self._review_admission: ReviewAdmissionGate | None = None
+        self._review_head_stability: ReviewHeadStabilityGate | None = None
         self._agent_route_admission: DurableAdmissionGate | None = None
         self._agent_routes_per_task_interval = AGENT_ROUTES_PER_TASK_PER_INTERVAL
         if self.conservative_enabled:
@@ -159,6 +177,13 @@ class ConservativeAgentRouter(AgentRouter):
                 max_admissions=_positive_int_environment(
                     "FACTORY_REVIEWS_PER_INTERVAL",
                     REVIEWS_PER_INTERVAL,
+                ),
+            )
+            self._review_head_stability = ReviewHeadStabilityGate(
+                state_dir / "review-head-stability.json",
+                quiet_seconds=_non_negative_int_environment(
+                    "FACTORY_REVIEW_HEAD_STABILITY_SECONDS",
+                    0,
                 ),
             )
             self._agent_route_admission = DurableAdmissionGate(
@@ -371,6 +396,10 @@ class ConservativeAgentRouter(AgentRouter):
             # even though it cannot start a provider in this scheduling attempt.
             self._ensure_task_route_available(job, now)
             if request.phase is AgentPhase.CODE_REVIEW:
+                # External/provider-managed heads may publish several commits in a
+                # burst. Let the exact SHA settle before spending a subscription-backed
+                # review. Factory-owned issue PRs are intentionally not delayed.
+                self._ensure_review_head_stable(job, now)
                 if not self._review_slots.acquire(blocking=False):
                     raise ProviderCapacityUnavailable(
                         "Independent review concurrency is full",

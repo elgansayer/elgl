@@ -5,10 +5,16 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
 export interface MessageFilters {
+  enabled?: boolean;
+  allow_everyone?: boolean;
   age_min?: number;
   age_max?: number;
   allowed_genders?: string[];
   allowed_native_languages?: string[];
+  same_native_language?: boolean;
+  same_target_language?: boolean;
+  same_gender?: boolean;
+  same_age?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

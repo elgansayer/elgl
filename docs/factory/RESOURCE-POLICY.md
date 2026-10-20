@@ -19,9 +19,9 @@ The production Factory deliberately limits admission of expensive AI work so a l
 | Concurrent agent executions overall | 3 on the HelloTalk host | Durable host resource gate shared by repository instances |
 
 | Provider candidates per phase | 2 | Preferred provider plus at most one fallback |
-| Same-provider transient retry | 0 under conservative policy | Defer/re-route instead of immediately spending twice on one provider |
+| Same-provider transient retry | Existing routing policy, currently 1 | Base `AgentRouter` bounded retry policy |
 
-The existing production environment controls issue intake and the independent AI-route budget:
+The existing production environment already sets:
 
 ```text
 FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
@@ -34,7 +34,11 @@ FACTORY_REVIEWS_PER_INTERVAL=60
 
 ```
 
-Issue intake and agent-route admission are intentionally separate. One admitted issue can require implementation, security review, independent code review and a bounded repair. Limiting only new issues therefore does not bound subscription consumption.
+Those values continue to control issue intake. The conservative agent router adds the PR-review, global concurrency, and provider-cascade limits independently of the daemon worker count.
+
+## What counts as a PR review
+
+The hourly review budget is consumed only when the Factory enters the AI-backed `CODE_REVIEW` phase. Cheap deterministic work does not consume the review budget, including:
 
 Six route starts/hour leaves enough budget for a healthy issue path plus the two-review lane while retaining recovery capacity. Each route can use the preferred provider and at most one distinct fallback. The conservative policy disables immediate same-provider retries, so a single provider-side transient failure cannot double-spend the same subscription before fallback. The next durable scheduler transition may revisit a provider after health/circuit state changes.
 
@@ -53,7 +57,7 @@ The Factory also bounds provider input before invocation:
 
 These are deterministic character limits, not claimed token counts. Subscription CLIs do not expose one portable tokenizer or exact remaining-quota API. Oversized untrusted text keeps its beginning and end with an explicit omission marker, which preserves the issue summary and trailing acceptance/verification details without forwarding unlimited release notes, logs or generated prose to every provider.
 
-`README.md` remains excluded from unconditional implementation context. `AGENTS.md` is included only inside the shared context budget, while task-specific source inspection remains the agent's responsibility inside the worktree.
+`README.md` remains excluded from unconditional implementation context. `AGENTS.md` and `TODO.md` are included only inside the shared context budget, while task-specific source inspection remains the agent's responsibility inside the worktree.
 
 ## What counts as an AI-backed route
 
@@ -69,38 +73,39 @@ The global route budget is consumed immediately before entering the provider-neu
 
 Cheap deterministic work does not consume an AI-route admission, including:
 
+
 - GitHub status polling
 - mergeability checks
 - merge-queue progression
 - provider health probes
 - worktree bookkeeping
-- deterministic verification/quality checks
+- deterministic quality checks
 - mechanical CI formatting/auto-fix attempts
 
-Admission is persisted before provider execution. A daemon crash therefore does not reset the hourly allowance and immediately replay the expensive boundary.
+A review admission key includes both PR number and head SHA. The same SHA cannot be admitted repeatedly inside the one-hour window. A changed head SHA is a new review candidate, subject to the remaining hourly budget.
 
-## What counts as a PR review
-
-The hourly review budget is consumed only when the Factory enters the AI-backed `CODE_REVIEW` phase. It is a narrower limit layered on top of the global route budget.
-
-A review admission key includes both PR number and head SHA. The same SHA cannot be admitted repeatedly inside the one-hour window. A changed head SHA is a new review candidate, subject to the remaining hourly and global route budgets.
+The admission is persisted before the provider call. If the daemon crashes, restarting it does not reset the hourly allowance and immediately spend another review.
 
 ## Provider fallback budget
 
 The provider-neutral router still filters disabled, unhealthy, rate-limited, quota-exhausted, unsupported, or unavailable providers before selection. The conservative wrapper then keeps only two eligible candidates for a phase.
 
+That means a provider-side failure can use one fallback, but a single difficult task cannot cascade across every authenticated subscription in one Factory transition.
+
 That means a provider-side failure can use one fallback, but a single difficult task cannot cascade across every authenticated subscription in one Factory transition. Immediate same-provider retry is disabled by the conservative wrapper even when the underlying general routing configuration allows one.
+
 
 For code and security review, providers that previously mutated the job are moved behind independent providers before the two-candidate cap is applied. This preserves cross-provider review where possible.
 
 ## Concurrency
 
-The daemon may retain multiple workers because many state transitions are cheap control-plane operations. Expensive agent execution is independently capped by `FACTORY_HOST_AGENT_CONCURRENCY`. HelloTalk uses three agent slots on the 8 GiB host; memory-heavy builds and browser verification still acquire the exclusive side of the host gate and cannot overlap those sessions.
+The daemon may retain multiple workers because many state transitions are cheap control-plane operations. Expensive agent execution is independently capped at two concurrent calls across implementation, planning, security, repair, review, and the architect cycle.
 
 Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 
-Independent code review has a three-agent concurrency cap for HelloTalk. WIP pressure switches the scheduler to review-only mode so all available slots converge existing PRs instead of adding more issue work.
+Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 
+Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 
 The semaphores live on the shared router instance used by daemon workers and the architect executor. The host-level Factory lock already prevents a second daemon from owning the same repository concurrently.
 
@@ -108,15 +113,11 @@ The semaphores live on the shared router instance used by daemon workers and the
 
 Resource exhaustion is reported as `ProviderCapacityUnavailable`, not as a task failure. Existing pipeline behaviour therefore defers the job with `next_attempt_at` instead of incrementing task-failure attempts or quarantining the issue.
 
-Admission gates intentionally behave conservatively. Once an AI route or review SHA has been admitted, a provider crash or daemon restart does not refund that slot. This favors predictable quota use over aggressive retry throughput.
-
-When a gate is exhausted, the router now calculates the next persisted admission expiry rather than hot-looping every minute where that timestamp is available.
+The review admission gate intentionally behaves conservatively. Once a review SHA has been admitted, a provider crash or daemon restart does not refund that slot. This favors predictable quota use over aggressive retry throughput.
 
 ## Why the limits are outside the GitHub queue size
 
 Limiting only `FACTORY_MAX_PARALLEL_JOBS` is insufficient. One worker can trigger provider retries/fallbacks, while other workers may only be polling CI or merging already-reviewed PRs. The resource policy limits the actual AI-backed boundary instead of unnecessarily slowing cheap deterministic state transitions.
-
-Likewise, `1 issue/hour` alone is not a token or allowance budget because one issue can fan out into several AI phases. The route gate is the Factory's enforceable subscription-consumption control.
 
 ## Operator visibility
 
@@ -124,8 +125,7 @@ Durable admission state is stored under the Factory state directory:
 
 ```text
 issue-admissions.json
-agent-route-admissions.json
 review-admissions.json
 ```
 
-None of these files contains provider credentials, prompts, model transcripts, or GitHub tokens. They contain only admission identifiers and timestamps.
+Neither file contains provider credentials, prompts, model transcripts, or GitHub tokens. They contain only task/review admission identifiers and timestamps.

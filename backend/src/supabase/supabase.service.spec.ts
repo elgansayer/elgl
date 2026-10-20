@@ -3,13 +3,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from './supabase.service';
 import { createClient } from '@supabase/supabase-js';
-import Redis from 'ioredis';
+import Redis from 'ioredis-v6';
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(),
 }));
 
-vi.mock('ioredis');
+vi.mock('ioredis-v6');
 
 describe('SupabaseService', () => {
   let service: SupabaseService;
@@ -82,6 +82,7 @@ describe('SupabaseService', () => {
       expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
+        protocol: 2,
       });
       expect(mockRedisInstance.on).toHaveBeenCalledWith(
         'error',
@@ -97,6 +98,7 @@ describe('SupabaseService', () => {
       expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
+        protocol: 2,
       });
     });
 

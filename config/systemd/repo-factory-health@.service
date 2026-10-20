@@ -8,7 +8,7 @@ EnvironmentFile=/etc/repo-factory/common.env
 EnvironmentFile=/etc/repo-factory/instances/%i.env
 EnvironmentFile=/etc/hellotalk-factory/runtime.env
 Environment=HOME=/home/dev
-ExecStart=/bin/bash -c 'exec 9>/run/lock/repo-factory-update.lock; /usr/bin/flock --shared --nonblock 9 || exit 0; exec /bin/bash /opt/repo-factory/repo-factory-watchdog.sh "$@"' factory-health %i
+ExecStart=/bin/bash /opt/repo-factory/repo-factory-watchdog.sh %i
 UMask=0077
 PrivateTmp=true
 ProtectHome=false
