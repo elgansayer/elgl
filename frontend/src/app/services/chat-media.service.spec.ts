@@ -72,6 +72,54 @@ describe('ChatMediaService', () => {
     });
   });
 
+  it('uses the HD image profile and requests an HD image ticket', async () => {
+    const original = new File(['original'], 'photo.png', { type: 'image/png' });
+    const prepared = new File(['prepared'], 'photo.jpg', { type: 'image/jpeg' });
+    compressImage.mockResolvedValue(prepared);
+
+    const uploadPromise = service.upload(original, 'hd');
+    await Promise.resolve();
+
+    expect(compressImage).toHaveBeenCalledWith(original, 2560, 2560, 0.9);
+    const presign = httpMock.expectOne(`${environment.apiUrl}/media/chat/presigned-url`);
+    expect(presign.request.body).toEqual({
+      filename: 'photo.jpg',
+      contentType: 'image/jpeg',
+      quality: 'hd',
+      sizeBytes: prepared.size,
+    });
+    presign.flush({
+      uploadUrl: 'https://upload.example/hd-object',
+      mediaUrl: 'https://cdn.example/hd-object.jpg',
+      objectKey: 'chat-media/user/image/hd/hd-object.jpg',
+      mediaKind: 'image',
+      quality: 'hd',
+      maxBytes: 15 * 1024 * 1024,
+    });
+
+    await Promise.resolve();
+    const put = httpMock.expectOne('https://upload.example/hd-object');
+    expect(put.request.body).toBe(prepared);
+    put.flush('ok');
+
+    await expect(uploadPromise).resolves.toEqual({
+      url: 'https://cdn.example/hd-object.jpg',
+      objectKey: 'chat-media/user/image/hd/hd-object.jpg',
+      kind: 'image',
+      quality: 'hd',
+    });
+  });
+
+  it('does not request an R2 upload ticket when image compression fails', async () => {
+    const original = new File(['original'], 'photo.png', { type: 'image/png' });
+    compressImage.mockRejectedValue(new Error('Image compression is unavailable in this browser'));
+
+    await expect(service.upload(original, 'standard')).rejects.toThrow(
+      'Image compression is unavailable in this browser',
+    );
+    httpMock.expectNone(`${environment.apiUrl}/media/chat/presigned-url`);
+  });
+
   it('keeps HD video bytes intact and asks for an HD ticket', async () => {
     const video = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
     const uploadPromise = service.upload(video, 'hd');
