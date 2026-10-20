@@ -52,23 +52,19 @@ describe('ShoppingController', () => {
       { itemId: 'rose', name: 'Rose', quantity: 1, unitPrice: 10 },
     ];
     vi.mocked(cartService.getCart).mockReturnValue(expected);
-    const req = { user: { id: 'user-1' } } as Parameters<
-      ShoppingController['getCart']
-    >[0];
+    const user = { id: 'user-1' } as any;
 
-    expect(controller.getCart(req)).toEqual(expected);
+    expect(controller.getCart(user)).toEqual(expected);
     expect(cartService.getCart).toHaveBeenCalledWith('user-1');
   });
 
   it('uses the authenticated user id for cart mutations', async () => {
-    const req = { user: { id: 'user-1' } } as Parameters<
-      ShoppingController['addToCart']
-    >[0];
+    const user = { id: 'user-1' } as any;
     const dto = { itemId: 'rose', quantity: 2 };
 
-    controller.addToCart(req, dto);
-    controller.removeFromCart(req, dto);
-    await controller.checkout(req);
+    controller.addToCart(user, dto);
+    controller.removeFromCart(user, dto);
+    await controller.checkout(user);
 
     expect(cartService.addItem).toHaveBeenCalledWith('user-1', 'rose', 2);
     expect(cartService.removeItem).toHaveBeenCalledWith('user-1', 'rose', 2);

@@ -74,11 +74,14 @@ import { PasswordResetModule } from './password-reset/password-reset.module';
 import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
-import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
 import { LivekitModule } from './livekit/livekit.module';
+import { OpenApiFixtureFactoryController } from './mock/openapi-fixture-factory.controller';
+import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
+import { MockScenariosModule } from './mock/mock-scenarios.module';
+import { UserInterestsModule } from './modules/user-interests/user-interests.module';
 
 @Module({
   imports: [
@@ -168,14 +171,15 @@ import { LivekitModule } from './livekit/livekit.module';
     EmailModule,
     PasswordResetModule,
     LinkedAccountsModule,
-    AssessmentsModule,
     AnalyticsModule,
     MetricsModule,
     ReadingEngineModule,
     CloudflareModule,
     LearnerKnowledgeModule,
+    MockScenariosModule,
+    UserInterestsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, OpenApiFixtureFactoryController],
   providers: [
     AppService,
     {
@@ -184,6 +188,7 @@ import { LivekitModule } from './livekit/livekit.module';
       useClass: ThrottlerGuard,
     },
     AnkiiIntegrationService,
+    OpenApiFixtureFactoryRegistry,
   ],
 })
 export class AppModule {}

@@ -2190,9 +2190,14 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      count_chat_unread: {
-        Args: { p_user_id: string };
-        Returns: number | string;
+      get_host_dashboard_earnings: {
+        Args: {
+          p_room_id: string;
+          p_host_id: string;
+        };
+        Returns: {
+          earned_coins: number;
+        }[];
       };
       increment_xp: {
         Args: { user_id: string; amount: number };
