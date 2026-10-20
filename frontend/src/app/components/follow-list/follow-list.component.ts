@@ -60,7 +60,6 @@ import { AuthService } from '../../services/auth.service';
                     class="shrink-0 rounded-full"
                     (click)="toggleFollow(user)"
                     [disabled]="isPending(user.id)"
-                    [attr.aria-busy]="isPending(user.id) || null"
                     [class.bg-primary]="!user.is_followed_by_me"
                     [class.text-on-fill]="!user.is_followed_by_me"
                     [attr.aria-pressed]="user.is_followed_by_me"

@@ -14,10 +14,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
-import { ChatMediaSendController } from './chat-media-send.controller';
-import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
-import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -47,8 +44,6 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
   ],
   controllers: [
     ChatController,
-    ChatMediaSendController,
-    ChatSearchController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
@@ -60,7 +55,6 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
-    ChatMediaMessageService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,

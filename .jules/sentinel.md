@@ -1,3 +1,8 @@
+## 2026-08-21 - [Livekit Insecure Direct Object Reference (IDOR)]
+**Vulnerability:** Livekit connection tokens were generated based on `participant_identity` provided in the HTTP request body (`LivekitTokenDto`) rather than securely deriving the identity from the authenticated user's session token.
+**Learning:** Even when endpoints are protected by `SupabaseAuthGuard`, relying on client-provided IDs in the request body for security-critical operations (like generating access tokens) allows malicious authenticated users to spoof identities and gain unauthorized access (IDOR).
+**Prevention:** Always extract the user identity directly from the authenticated request context (e.g., `req.user.id`) for authorization and token generation, never trust client-provided IDs for self-identification.
+
 ## 2026-08-05 - [Add Helmet and secure CORS]
 
 **Vulnerability:** Missing secure HTTP headers and overly permissive CORS policy.
@@ -268,6 +273,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 

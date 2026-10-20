@@ -135,37 +135,25 @@
     </main>
   </div>
 
-  <!-- Coin-funded AI launcher renders only for /chat/:roomId. -->
-  <app-conversation-analysis-launcher />
-
   <!-- Mobile Bottom Navigation Bar -->
   <nav
     class="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-surface-200 border-t border-surface-100 pb-safe"
-    role="navigation"
-    [attr.aria-label]="'nav.mainNav' | t"
   >
     <div class="flex justify-around items-center h-[60px]">
       <a
         routerLink="/chat"
         routerLinkActive="text-primary"
-        ariaCurrentWhenActive="page"
         [routerLinkActiveOptions]="{ exact: false }"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
-        [attr.aria-label]="
-          ('nav.helloTalk' | t) +
-          (unreadCounter.tabCount('chat') > 0
-            ? ', ' + unreadCounter.tabCount('chat') + ' ' + ('chatList.filterUnread' | t)
-            : '')
-        "
+        [attr.aria-label]="'nav.helloTalk' | t"
       >
         <div class="relative">
-          <span class="text-2xl leading-none" aria-hidden="true">💬</span>
+          <span class="text-2xl leading-none">💬</span>
           @if (unreadCounter.tabCount('chat') > 0) {
             <span
-              aria-hidden="true"
               class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.badgeText('chat') }}
+              {{ unreadCounter.tabCount('chat') > 99 ? '99+' : unreadCounter.tabCount('chat') }}
             </span>
           }
         </div>
@@ -175,23 +163,18 @@
       <a
         routerLink="/moments"
         routerLinkActive="text-primary"
-        ariaCurrentWhenActive="page"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
-        [attr.aria-label]="
-          ('nav.moments' | t) +
-          (unreadCounter.tabCount('moments') > 0
-            ? ', ' + unreadCounter.tabCount('moments') + ' ' + ('chatList.filterUnread' | t)
-            : '')
-        "
+        [attr.aria-label]="'nav.moments' | t"
       >
         <div class="relative">
-          <span class="text-2xl leading-none" aria-hidden="true">⭕</span>
+          <span class="text-2xl leading-none">⭕</span>
           @if (unreadCounter.tabCount('moments') > 0) {
             <span
-              aria-hidden="true"
               class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.badgeText('moments') }}
+              {{
+                unreadCounter.tabCount('moments') > 99 ? '99+' : unreadCounter.tabCount('moments')
+              }}
             </span>
           }
         </div>
@@ -201,23 +184,20 @@
       <a
         routerLink="/discovery"
         routerLinkActive="text-primary"
-        ariaCurrentWhenActive="page"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
-        [attr.aria-label]="
-          ('nav.connect' | t) +
-          (unreadCounter.tabCount('discovery') > 0
-            ? ', ' + unreadCounter.tabCount('discovery') + ' ' + ('chatList.filterUnread' | t)
-            : '')
-        "
+        [attr.aria-label]="'nav.connect' | t"
       >
         <div class="relative">
-          <span class="text-2xl leading-none" aria-hidden="true">🌍</span>
+          <span class="text-2xl leading-none">🌍</span>
           @if (unreadCounter.tabCount('discovery') > 0) {
             <span
-              aria-hidden="true"
               class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.badgeText('discovery') }}
+              {{
+                unreadCounter.tabCount('discovery') > 99
+                  ? '99+'
+                  : unreadCounter.tabCount('discovery')
+              }}
             </span>
           }
         </div>
@@ -227,23 +207,20 @@
       <a
         routerLink="/audio-rooms"
         routerLinkActive="text-primary"
-        ariaCurrentWhenActive="page"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
-        [attr.aria-label]="
-          ('nav.liveRooms' | t) +
-          (unreadCounter.tabCount('audioRooms') > 0
-            ? ', ' + unreadCounter.tabCount('audioRooms') + ' ' + ('chatList.filterUnread' | t)
-            : '')
-        "
+        [attr.aria-label]="'nav.liveRooms' | t"
       >
         <div class="relative">
-          <span class="text-2xl leading-none" aria-hidden="true">🎙️</span>
+          <span class="text-2xl leading-none">🎙️</span>
           @if (unreadCounter.tabCount('audioRooms') > 0) {
             <span
-              aria-hidden="true"
               class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.badgeText('audioRooms') }}
+              {{
+                unreadCounter.tabCount('audioRooms') > 99
+                  ? '99+'
+                  : unreadCounter.tabCount('audioRooms')
+              }}
             </span>
           }
         </div>
@@ -253,23 +230,18 @@
       <a
         routerLink="/profile"
         routerLinkActive="text-primary"
-        ariaCurrentWhenActive="page"
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
-        [attr.aria-label]="
-          ('nav.profile' | t) +
-          (unreadCounter.tabCount('profile') > 0
-            ? ', ' + unreadCounter.tabCount('profile') + ' ' + ('chatList.filterUnread' | t)
-            : '')
-        "
+        [attr.aria-label]="'nav.profile' | t"
       >
         <div class="relative">
-          <span class="text-2xl leading-none" aria-hidden="true">👤</span>
+          <span class="text-2xl leading-none">👤</span>
           @if (unreadCounter.tabCount('profile') > 0) {
             <span
-              aria-hidden="true"
               class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.badgeText('profile') }}
+              {{
+                unreadCounter.tabCount('profile') > 99 ? '99+' : unreadCounter.tabCount('profile')
+              }}
             </span>
           }
         </div>

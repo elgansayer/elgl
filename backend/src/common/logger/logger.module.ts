@@ -18,7 +18,6 @@ const LOGGER_CONTEXTS = [
   'DecksService',
   'DiscoveryCacheInvalidationService',
   'DiscoveryRateLimiterGuard',
-  'DiscoveryRecommendationsService',
   'DiscoveryService',
   'EconomyExceptionFilter',
   'EconomyRateLimiterGuard',
