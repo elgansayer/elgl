@@ -43,6 +43,33 @@ describe('primary navigation unread contract', () => {
     }
   });
 
+  it('suppresses zero-count badges while keeping compact badge text visual-only', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`@if (unreadCounter.tabCount('${tab}') > 0) {`);
+      expect(navigation).toContain(`{{ unreadCounter.badgeText('${tab}') }}`);
+    }
+
+    expect(navigation.match(/aria-hidden="true"/g)?.length ?? 0).toBeGreaterThanOrEqual(
+      PRIMARY_TABS.length * 2,
+    );
+    expect(desktopTemplate).toContain('@if (unreadCounter.tabCount(item.tab) > 0) {');
+    expect(desktopTemplate).toContain('{{ unreadCounter.badgeText(item.tab) }}');
+    expect(desktopTemplate).toContain('aria-hidden="true"');
+  });
+
+  it('announces the full unread count instead of the visually capped badge value', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`unreadCounter.tabCount('${tab}') + ' ' +`);
+    }
+
+    expect(desktopTemplate).toContain('{{ unreadCounter.tabCount(item.tab) }}');
+    expect(desktopTemplate).toContain("{{ 'chatList.filterUnread' | t }}");
+  });
+
   it('binds desktop navigation badges to the same shared service', () => {
     expect(desktopTemplate).toContain('unreadCounter.tabCount(item.tab)');
     expect(desktopTemplate).toContain('unreadCounter.badgeText(item.tab)');
