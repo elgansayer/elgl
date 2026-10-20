@@ -24,6 +24,8 @@ fi
 
 backup="$TARGET.backup.$(date -u +%Y%m%dT%H%M%SZ)"
 cp -a "$TARGET" "$backup"
+chown root:root "$backup"
+chmod 0600 "$backup"
 temporary=$(mktemp "${TARGET}.repair.XXXXXX")
 trap 'rm -f "$temporary"' EXIT
 

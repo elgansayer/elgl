@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 interface SystemEventConfig {
@@ -83,6 +83,8 @@ const DEFAULT_CONFIG: SystemEventConfig = {
 
 @Component({
   selector: 'app-chat-system-bubble',
+  // Opt-in to OnPush change detection to avoid unnecessary re-renders in chat lists
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     <div
