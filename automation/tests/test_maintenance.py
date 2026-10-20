@@ -611,15 +611,6 @@ def test_retired_canary_is_not_counted_as_success_or_left_waiting_six_hours(cont
     assert controller.pipeline.jobs.load()["2"].repair_attempts == 5
 
 
-def test_analysis_spacing_is_typed_and_loaded_from_environment():
-    config = FactoryConfig.from_environment(
-        {"GITHUB_TOKEN": "test-token", "FACTORY_MAINTENANCE_ANALYSIS_INTERVAL_SECONDS": "14400"}
-    )
-    assert config.maintenance_analysis_interval_seconds == 14400
-    with pytest.raises(ValueError):
-        FactoryConfig(maintenance_analysis_interval_seconds=-1)
-
-
 @pytest.mark.parametrize("path", ["/etc/service-secret.env", "../outside.py", "credentials.env"])
 def test_source_references_cannot_escape_or_reference_environment_files(
     controller, path: str

@@ -2009,6 +2009,31 @@ def test_successful_transition_resets_previous_failures(
     assert advanced.last_error is None
 
 
+@pytest.mark.parametrize("failed", [False, True])
+def test_verification_always_cleans_only_transient_build_metadata(tmp_path, monkeypatch, failed):
+    pipeline = FactoryPipeline(config(tmp_path), github=GitHub(), conversations=Conversations())
+    workflow = GitWorkflow(tmp_path, "main")
+    events = []
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("frontend/x.ts")})
+    monkeypatch.setattr("openhands_factory.pipeline.commands_for", lambda *args: [])
+    monkeypatch.setattr(
+        GitWorkflow, "discard_transient_build_metadata", lambda workflow: events.append("cleanup")
+    )
+
+    def verify(commands):
+        events.append("verification")
+        if failed:
+            raise VerificationFailed("known validation failure")
+
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", verify)
+    if failed:
+        with pytest.raises(VerificationFailed, match="known validation failure"):
+            pipeline._verify(workflow)
+    else:
+        assert pipeline._verify(workflow) == {Path("frontend/x.ts")}
+    assert events == ["verification", "cleanup"]
+
+
 def test_verify_only_serializes_the_exclusive_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
