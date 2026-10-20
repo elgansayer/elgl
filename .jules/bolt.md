@@ -187,3 +187,7 @@
 ## 2026-10-17 - [Optimize main thread via OnPush change detection]
 **Learning:** In the Angular frontend, proactively configure components that render static data or rely entirely on signals/observables to use `changeDetection: ChangeDetectionStrategy.OnPush`. Many structural or stateless components currently default to the default change detection strategy, leading to unnecessary main thread checks during heavy user interaction.
 **Action:** When creating or reviewing Angular components that use `signal`s or `computed` exclusively for reactive state, add `changeDetection: ChangeDetectionStrategy.OnPush` to their `@Component` decorator to reduce change detection overhead.
+## 2026-10-18 - [Optimize bulk cache invalidation via Promise.all mapping]
+
+**Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
+**Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.

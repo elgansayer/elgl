@@ -22,6 +22,7 @@ from openhands_factory.maintenance import (
     MaintenancePlan,
     collect_incidents,
     error_identity,
+    maintenance_feedback,
     runtime_signature,
     validate_proposal,
 )
@@ -35,8 +36,10 @@ class GitHub:
         self.issues: list[Task] = []
         self.created: list[tuple[str, str, tuple[str, ...]]] = []
         self.merged = False
+        self.collect_calls = 0
 
     def collect_open_issues(self) -> list[Task]:
+        self.collect_calls += 1
         return self.issues
 
     def create_issue(self, title: str, body: str, labels: tuple[str, ...]) -> int:
@@ -109,8 +112,9 @@ def controller(tmp_path: Path) -> MaintenanceController:
 
     def run_agent(job, scratch, phase, prompt, **kwargs):
         pipeline.calls += 1
-        assert phase == "maintenance"
+        assert phase == "planning"
         assert kwargs["timeout_seconds"] == 180
+        assert kwargs["read_only_reference"] == config.repository.resolve()
         assert "Untrusted diagnostic data" in prompt
         kwargs["prepare_attempt"]()
         (scratch / ".factory-maintenance.json").write_text(json.dumps(pipeline.plan))
@@ -125,6 +129,15 @@ def make_due(controller: MaintenanceController) -> None:
     state = controller.state()
     state["next_run_at"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
     atomic_write_json(controller.path, state)
+
+
+def test_reference_prompt_and_snapshot_use_the_mounted_canonical_path(controller, tmp_path):
+    source = controller.config.repository
+    alias = tmp_path / "repository-alias"
+    alias.symlink_to(source, target_is_directory=True)
+    controller.config.repository = alias
+    controller.run()
+    assert controller.state()["records"][0]["baseline"]["repository_path"] == str(source.resolve())
 
 
 def ready_recovery(controller: MaintenanceController) -> dict[str, object]:
@@ -162,11 +175,131 @@ def test_one_deduplicated_repair_with_durable_schedule_and_daily_report(controll
     assert "regression test" in pipeline.github.created[0][1]
     assert controller.state()["analyses_today"] == 1
     assert len(controller.state()["reports"]) == 1
+    record = controller.records()[0]
+    assert record["change"] == pipeline.plan["change"]
+    assert record["acceptance_criteria"] == pipeline.plan["acceptance_criteria"]
     controller.run()
     make_due(controller)
     controller.run()
     assert pipeline.calls == 1
     assert len(pipeline.github.created) == 1
+
+
+def test_planner_receives_measured_outcomes_without_recursive_history(controller):
+    baseline = {
+        "observed_at": "2026-10-18T00:00:00+00:00",
+        "throughput": {
+            "rolling_throughput": {
+                "24h": {
+                    "merged_pr_count": 2,
+                    "merged_pr_count_by_component": {"unknown": 2},
+                }
+            }
+        },
+        "jobs_by_state": {"repairing": 12},
+        "recent_maintenance": [{"recursive": "must not be copied"}],
+        "provider_usage_lifetime": [{"irrelevant": "must not be copied"}],
+    }
+    outcome = {
+        **baseline,
+        "observed_at": "2026-10-19T00:00:00+00:00",
+        "jobs_by_state": {"repairing": 8},
+    }
+    record = {
+        "key": "experiment",
+        "status": "measured",
+        "change": "targeted repair",
+        "acceptance_criteria": ["verified source and new-head canary"],
+        "baseline": baseline,
+        "outcome": outcome,
+    }
+    atomic_write_json(controller.path, {"records": [record]})
+    feedback = controller.snapshot(controller.pipeline.jobs.load())["recent_maintenance"][0]
+    assert feedback["change"] == "targeted repair"
+    assert feedback["acceptance_criteria"] == record["acceptance_criteria"]
+    measurement = feedback["measurement"]
+    assert measurement["baseline"]["jobs_by_state"] == {"repairing": 12}
+    assert measurement["outcome"]["jobs_by_state"] == {"repairing": 8}
+    assert measurement["outcome"]["merged_pr_count_by_component_24h"] == {"unknown": 2}
+    assert "not causal proof" in measurement["interpretation"]
+    assert "must not be copied" not in json.dumps(feedback)
+
+
+@pytest.mark.parametrize(
+    "status", ["observing", "canary-failed", "canary-delayed", "canary-obsolete"]
+)
+def test_feedback_preserves_unverified_outcomes_and_legacy_records(status):
+    feedback = maintenance_feedback({"key": "old", "status": status})
+    assert feedback["status"] == status
+    assert feedback["change"] is None
+    assert feedback["acceptance_criteria"] == []
+    assert feedback["canary_verified_sha"] is None
+    assert feedback["measurement"]["baseline"] is None
+    assert feedback["measurement"]["outcome"] is None
+
+
+def test_feedback_bounds_and_redacts_historical_model_text():
+    feedback = maintenance_feedback(
+        {
+            "diagnosis": "token=fixture-secret " + "x" * 4000,
+            "change": "token=fixture-secret",
+            "acceptance_criteria": ["token=fixture-secret"] * 20,
+            "outcome": {
+                "jobs_by_state": {"valid": 1, "bad": True, "negative": -1},
+                "throughput": {"rolling_throughput": {"24h": {"merged_pr_count": True}}},
+            },
+        }
+    )
+    assert "fixture-secret" not in json.dumps(feedback)
+    assert len(feedback["diagnosis"]) <= 2000
+    assert len(feedback["acceptance_criteria"]) == 6
+    assert feedback["measurement"]["outcome"]["jobs_by_state"] == {"valid": 1}
+    assert feedback["measurement"]["outcome"]["merged_pr_count_24h"] is None
+
+
+@pytest.mark.parametrize(
+    "status", ["measuring", "recovered", "canary-failed", "canary-delayed", "canary-obsolete"]
+)
+def test_incident_outcomes_are_measured_once_without_relabelling_failed_canaries(
+    controller, status
+):
+    record = {
+        "key": "old",
+        "status": status,
+        "deployed_at": (datetime.now(UTC) - timedelta(hours=25)).isoformat(),
+    }
+    atomic_write_json(
+        controller.path,
+        {
+            "records": [record],
+            "analysis_day": datetime.now(UTC).date().isoformat(),
+            "analyses_today": controller.config.maintenance_daily_limit,
+        },
+    )
+    controller.run()
+    measured = controller.records()[0]
+    assert measured["status"] == ("measured" if status == "measuring" else status)
+    assert measured["outcome"]["jobs_by_state"] == {"repairing": 3}
+    first_measurement = measured["measured_at"]
+    assert controller.pipeline.calls == 0
+    make_due(controller)
+    controller.run()
+    assert controller.records()[0]["measured_at"] == first_measurement
+
+
+def test_outcome_is_not_measured_before_a_full_day_after_deployment(controller):
+    atomic_write_json(
+        controller.path,
+        {
+            "records": [
+                {"key": "new", "status": "recovered", "deployed_at": datetime.now(UTC).isoformat()}
+            ],
+            "analysis_day": datetime.now(UTC).date().isoformat(),
+            "analyses_today": controller.config.maintenance_daily_limit,
+        },
+    )
+    controller.run()
+    assert "outcome" not in controller.records()[0]
 
 
 def test_only_controller_recorded_issue_receives_maintenance_admission(controller) -> None:
@@ -238,6 +371,7 @@ def test_daily_budget_blocks_model_work_but_keeps_reports(controller) -> None:
     controller.run()
     assert controller.pipeline.calls == 0
     assert controller.state()["reports"]
+    assert controller.pipeline.github.collect_calls == 0
 
 
 @pytest.mark.parametrize("plan", [{}, {"action": "execute-host-command"}])
@@ -491,12 +625,111 @@ def test_manual_recovery_proposals_are_rejected(controller, change: str) -> None
         validate_proposal(plan, controller.config.repository)
 
 
-def test_repair_requires_source_evidence_but_observation_does_not(controller) -> None:
+@pytest.mark.parametrize("action", ["repair", "observe"])
+def test_every_assessment_requires_source_access_proof(controller, action) -> None:
     plan = MaintenancePlan.model_validate({**controller.pipeline.plan, "source_evidence": []})
+    plan.action = action
     with pytest.raises(FactoryError, match="tracked-source evidence"):
         validate_proposal(plan, controller.config.repository)
-    plan.action = "observe"
-    validate_proposal(plan, controller.config.repository)
+
+
+def test_analysis_spacing_keeps_checks_running_without_spending_every_slot_at_midnight(controller):
+    controller.config.maintenance_analysis_interval_seconds = 14400
+    controller.pipeline.plan["action"] = "observe"
+    controller.run()
+    first_run = controller.state()["last_run_at"]
+    make_due(controller)
+    controller.run()
+    assert controller.pipeline.calls == 1
+    assert controller.state()["last_run_at"] != first_run
+    assert controller.state()["next_analysis_at"] > controller.state()["next_run_at"]
+    assert controller.pipeline.github.collect_calls == 0
+
+
+def test_busy_capacity_does_not_start_the_analysis_spacing_clock(controller):
+    controller.config.maintenance_analysis_interval_seconds = 14400
+    original = controller.pipeline._run_agent
+
+    def busy(*args, **kwargs):
+        raise ProviderCapacityUnavailable("busy", retry_after_seconds=30)
+
+    controller.pipeline._run_agent = busy
+    with pytest.raises(ProviderCapacityUnavailable):
+        controller.run()
+    assert controller.state().get("last_analysis_at") is None
+    assert controller.state()["analyses_today"] == 0
+    controller.pipeline._run_agent = original
+    make_due(controller)
+    controller.run()
+    assert controller.pipeline.calls == 1
+
+
+def test_unchanged_observation_is_not_new_evidence_but_a_changed_head_is(controller):
+    controller.pipeline.plan["action"] = "observe"
+    controller.run()
+    state = controller.state()
+    state["records"][0]["created_at"] = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+    atomic_write_json(controller.path, state)
+    controller.pipeline.plan["affected_task_ids"] = []
+    make_due(controller)
+    controller.run()
+    assert controller.records()[-1]["key"].startswith("throughput-experiment-")
+    jobs = controller.pipeline.jobs.load()
+    jobs["1"].head_sha = "new-evidence-head"
+    controller.pipeline.jobs.save(jobs)
+    controller.pipeline.plan["affected_task_ids"] = ["1", "2", "3"]
+    make_due(controller)
+    controller.run()
+    assert controller.records()[-1]["key"] == "offline-font-verification"
+
+
+def test_last_daily_slot_is_reserved_for_the_improvement_programme(controller):
+    atomic_write_json(
+        controller.path,
+        {"analysis_day": datetime.now(UTC).date().isoformat(), "analyses_today": 3},
+    )
+    controller.pipeline.plan.update({"action": "observe", "affected_task_ids": []})
+    controller.run()
+    assert controller.records()[0]["key"].startswith("throughput-experiment-")
+    assert controller.state()["analyses_today"] == 4
+
+
+def test_historical_watchdog_messages_do_not_imply_a_current_crash(controller):
+    jobs = controller.pipeline.jobs.load()
+    for job in jobs.values():
+        job.last_error = "Watchdog recovered abandoned reviewing attempt"
+    controller.pipeline.jobs.save(jobs)
+    atomic_write_json(
+        controller.config.state_dir / "daemon.json", {"watchdog": {"recovered_total": 0}}
+    )
+    controller.pipeline.plan.update({"action": "observe", "affected_task_ids": []})
+    controller.run()
+    assert controller.records()[0]["key"].startswith("throughput-experiment-")
+
+
+def test_a_canonical_claim_alias_is_not_a_recovery_canary(controller):
+    record = ready_recovery(controller)
+    record["affected"] = {"1": record["affected"]["1"]}
+    atomic_write_json(controller.path, {"records": [record]})
+    jobs = controller.pipeline.jobs.load()
+    jobs["1"].canonical_task_id = "99"
+    controller.pipeline.jobs.save(jobs)
+    assert controller.apply_recoveries(set()) == []
+    assert controller.records()[0]["status"] == "obsolete"
+    assert controller.pipeline.jobs.load()["1"].repair_attempts == 5
+
+
+def test_retired_canary_is_not_counted_as_success_or_left_waiting_six_hours(controller):
+    ready_recovery(controller)
+    assert controller.apply_recoveries(set()) == ["1"]
+    jobs = controller.pipeline.jobs.load()
+    jobs["1"].state = JobState.DONE
+    jobs["1"].canonical_task_id = "99"
+    controller.pipeline.jobs.save(jobs)
+    assert controller.apply_recoveries(set()) == []
+    assert controller.records()[0]["status"] == "canary-obsolete"
+    assert controller.records()[0]["canary_canonical_task"] == "99"
+    assert controller.pipeline.jobs.load()["2"].repair_attempts == 5
 
 
 @pytest.mark.parametrize("path", ["/etc/service-secret.env", "../outside.py", "credentials.env"])
