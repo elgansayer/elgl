@@ -79,6 +79,8 @@ def parser() -> argparse.ArgumentParser:
     subcommands.add_parser("pause")
     subcommands.add_parser("resume")
     subcommands.add_parser("metrics")
+    maintenance = subcommands.add_parser("maintenance")
+    maintenance.add_argument("action", choices=("show",))
     dashboard = subcommands.add_parser("dashboard")
     dashboard.add_argument("action", choices=("show", "sync"))
     dashboard.add_argument("--force", action="store_true")
@@ -237,6 +239,9 @@ def main(arguments: list[str] | None = None) -> int:
                     read_json(config.state_dir / "daemon.json", {"status": "unknown"}), indent=2
                 )
             )
+            return 0
+        if args.command == "maintenance":
+            print(json.dumps(read_json(config.state_dir / "maintenance.json", {}), indent=2))
             return 0
         if args.command == "metrics":
             from openhands_factory.pr_metrics import PullRequestMetricsStore
