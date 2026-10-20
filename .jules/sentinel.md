@@ -112,6 +112,11 @@
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
 
+## 2026-09-09 - [Strict Secrets Validation for Video Calls]
+**Vulnerability:** LiveKit `LIVEKIT_API_KEY` and `LIVEKIT_SECRET` defaulted to insecure test values if missing in production within the VideoCallsService.
+**Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
+
 ## 2026-09-10 - Replace blocking Redis KEYS with SCAN
 
 **Vulnerability:** A blocking `KEYS` command was used in `SafetyCacheInvalidationService` to delete cache keys for recommendations and login history, posing a Denial of Service (DoS) risk by blocking the event loop on larger instances.
@@ -249,6 +254,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
