@@ -25,7 +25,7 @@ Lazy loading in this repository must:
 `frontend/src/app/app.config.ts` owns application-wide router setup:
 
 ```ts
-provideRouter(routes, withComponentInputBinding())
+provideRouter(routes, withComponentInputBinding());
 ```
 
 The same application config owns global HTTP, hydration, animations, translation, service-worker and error-handling providers. Lazy features must not duplicate those providers merely because their code is loaded later.
@@ -274,7 +274,7 @@ A lazy chunk must behave exactly like an eagerly available screen once loaded.
 ### Theme parity
 
 - use Relay semantic tokens;
-- do not hardcode product colors inside lazy feature templates;
+- do not hardcode product colours inside lazy feature templates;
 - do not create separate dark-theme route components;
 - preserve the user's dynamic primary accent by consuming the `primary` token;
 - ensure loading and error states also use semantic tokens.
@@ -424,9 +424,7 @@ Before:
 ```ts
 import { exampleRoutes } from './routes/example.routes';
 
-export const routes: Routes = [
-  ...exampleRoutes,
-];
+export const routes: Routes = [...exampleRoutes];
 ```
 
 After, only when the extra boundary is justified:
@@ -435,8 +433,7 @@ After, only when the extra boundary is justified:
 export const routes: Routes = [
   {
     path: 'example',
-    loadChildren: () =>
-      import('./routes/example.routes').then((m) => m.exampleRoutes),
+    loadChildren: () => import('./routes/example.routes').then((m) => m.exampleRoutes),
   },
 ];
 ```
@@ -451,14 +448,13 @@ Prohibited:
 loadComponent: () =>
   theme.isDark()
     ? import('./example-dark.component').then((m) => m.ExampleDarkComponent)
-    : import('./example-light.component').then((m) => m.ExampleLightComponent)
+    : import('./example-light.component').then((m) => m.ExampleLightComponent);
 ```
 
 Required:
 
 ```ts
-loadComponent: () =>
-  import('./example.component').then((m) => m.ExampleComponent)
+loadComponent: () => import('./example.component').then((m) => m.ExampleComponent);
 ```
 
 The component consumes Relay semantic tokens so both themes share one semantic tree.
@@ -471,7 +467,7 @@ Prohibited:
 loadComponent: () =>
   window.innerWidth < 768
     ? import('./example-mobile.component').then((m) => m.ExampleMobileComponent)
-    : import('./example-desktop.component').then((m) => m.ExampleDesktopComponent)
+    : import('./example-desktop.component').then((m) => m.ExampleDesktopComponent);
 ```
 
 Required: one routed feature component with responsive composition. This preserves SSR/hydration, focus, state and URL behavior.

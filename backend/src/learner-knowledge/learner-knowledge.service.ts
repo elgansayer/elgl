@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
-import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
+import { UsersService } from '../users/users.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 export interface CEFRLevel {
   level: string;
@@ -52,12 +52,12 @@ export class LearnerKnowledgeService {
   private readonly logger = new Logger(LearnerKnowledgeService.name);
 
   constructor(
-    private readonly supabaseService: SupabaseService,
     private readonly flashcardsService: FlashcardsService,
     private readonly hobbyTagsService: HobbyTagsService,
-    private readonly assessmentsService: AssessmentsService,
     private readonly lessonsService: LessonsService,
     private readonly momentsService: MomentsService,
+    private readonly usersService: UsersService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   async getProfile(
@@ -69,84 +69,98 @@ export class LearnerKnowledgeService {
     );
 
     const supabase = this.supabaseService.getClient();
+    // Fetch data from various sources
+    const [
+      flashcards,
+      vocabulary,
+      lessons,
+      momentsCounts,
+      userProfile,
+      recentMomentsResponse,
+    ] = await Promise.all([
+      this.flashcardsService
+        .getFlashcards(userId, undefined, 20)
+        .catch(() => []),
+      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
+      this.lessonsService.listLessons().catch(() => []), // Placeholder
+      this.momentsService
+        .getLifetimeCounts(userId)
+        .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+      this.usersService.getProfile(userId).catch(() => null),
+      Promise.resolve(
+        supabase
+          .from('moments')
+          .select('target_language, post_type, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(3),
+      ).catch(() => ({ data: [] })),
+    ]);
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('learner_knowledge_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('language', language)
-      .maybeSingle();
-
-    if (profileError) {
-      this.logger.error(`Error fetching profile for ${userId}: ${profileError.message}`);
-    }
-
-    const { data: itemsData, error: itemsError } = await supabase
-      .from('knowledge_items')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('language', language);
-
-    if (itemsError) {
-      this.logger.error(`Error fetching knowledge items for ${userId}: ${itemsError.message}`);
-    }
-
-    const { data: encountersData, error: encountersError } = await supabase
-      .from('recent_encounters')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('language', language)
-      .order('encountered_at', { ascending: false })
-      .limit(10);
-
-    if (encountersError) {
-      this.logger.error(`Error fetching recent encounters for ${userId}: ${encountersError.message}`);
-    }
+    const { data: recentMoments } = recentMomentsResponse || { data: [] };
 
     const knowledgeItems = new Map<string, KnowledgeItem>();
-    if (itemsData) {
-      for (const item of itemsData) {
-        knowledgeItems.set(item.item_id, {
-          id: item.item_id,
-          type: item.item_type as KnowledgeItem['type'],
-          status: item.status as KnowledgeItem['status'],
-          confidenceScore: Number(item.confidence_score),
-          errorFrequency: Number(item.error_frequency),
-          sourceIds: item.source_ids || {},
-          lastEncounteredAt: new Date(item.last_encountered_at),
-        });
+
+    // Process flashcards to populate knowledge items
+    (flashcards as Flashcard[]).forEach((f) => {
+      let status: KnowledgeItem['status'] = 'new';
+      if (f.repetitions > 5 && (f.srs_level || 0) > 3) {
+        status = 'known';
+      } else if (f.repetitions > 0 && f.easiness_factor < 2.0) {
+        status = 'struggling';
+      } else if (f.repetitions > 0) {
+        status = 'learning';
       }
-    }
 
-    const recentEncounters: RecentEncounter[] = encountersData
-      ? encountersData.map((e) => ({
-          topic: e.topic,
-          source: e.source as RecentEncounter['source'],
-          timestamp: new Date(e.encountered_at),
-        }))
-      : [];
+      knowledgeItems.set(`vocab:${f.word_token}`, {
+        id: `vocab:${f.word_token}`,
+        type: 'vocabulary',
+        status,
+        confidenceScore: f.easiness_factor,
+        errorFrequency: status === 'struggling' ? 0.5 : 0, // Mocked
+        sourceIds: { flashcardId: f.id },
+        lastEncounteredAt: new Date(f.next_review_at), // Using next_review_at as a proxy for last encountered
+      });
+    });
 
+    // Extract recent encounters from lessons
+    const recentEncounters: RecentEncounter[] = lessons
+      .slice(0, 3)
+      .map((l: any) => ({
+        topic: l.title || 'Unknown Topic',
+        source: 'lesson',
+        timestamp: new Date(l.created_at || Date.now()),
+      }));
+
+    // Add recent encounters from moments
+    (recentMoments || []).forEach((m: any) => {
+      recentEncounters.push({
+        topic: m.post_type || 'Unknown Topic',
+        source: 'moment',
+        timestamp: new Date(m.created_at || Date.now()),
+      });
+    });
+    recentEncounters.sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+    );
+
+    const level = userProfile?.proficiency_level || 'beginner';
+
+    // Synthesize the profile
     return {
       userId,
       language,
-      overallProficiency: { level: profileData?.overall_proficiency || 'A1' },
+      overallProficiency: { level },
       skills: {
-        speaking: Number(profileData?.speaking_score || 0),
-        listening: Number(profileData?.listening_score || 0),
-        reading: Number(profileData?.reading_score || 0),
-        writing: Number(profileData?.writing_score || 0),
-        grammar: Number(profileData?.grammar_score || 0),
-        vocabulary: Number(profileData?.vocabulary_score || 0),
+        speaking: 0.5,
+        listening: 0.6,
+        reading: 0.7,
+        writing: 0.4,
+        grammar: 0.5,
+        vocabulary: 0.6,
       },
       knowledgeItems,
-      recentEncounters,
+      recentEncounters: recentEncounters.slice(0, 3),
     };
-  }
-
-  async updateProfile(userId: string, language: string): Promise<void> {
-    this.logger.debug(`Recalculating and updating unified learner profile for user ${userId} in ${language}`);
-
-    // Future implementation: Fetch data from flashcardsService, hobbyTagsService, etc.
-    // and upsert the aggregated stats into the learner_knowledge_profiles and knowledge_items tables.
   }
 }

@@ -61,6 +61,37 @@ class OrderedPolicy:
         return self.names
 
 
+@pytest.mark.parametrize("configured", [None, "1", "2", "3"])
+def test_global_admission_respects_configured_host_capacity(
+    monkeypatch: pytest.MonkeyPatch, configured: str | None
+) -> None:
+    monkeypatch.delenv("FACTORY_HOST_AGENT_CONCURRENCY", raising=False)
+    if configured is not None:
+        monkeypatch.setenv("FACTORY_HOST_AGENT_CONCURRENCY", configured)
+    router = ConservativeAgentRouter([Provider("first")], enabled=True)
+    expected = int(configured) if configured is not None else 2
+    for _ in range(expected):
+        assert router._global_agent_slots.acquire(blocking=False)
+    assert not router._global_agent_slots.acquire(blocking=False)
+    for _ in range(expected):
+        router._global_agent_slots.release()
+
+
+def test_configured_admission_does_not_override_shared_host_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FACTORY_HOST_AGENT_CONCURRENCY", "3")
+    gate = HostResourceGate(tmp_path / "host-resource-gate.json", shared_limit=1)
+    assert gate.acquire_shared("other-factory")
+    provider = Provider("first")
+    router = ConservativeAgentRouter([provider], enabled=True, host_resource_slots=gate)
+    task = Task("42", "Bounded admission", "", "github-issue", 0)
+    with pytest.raises(ProviderCapacityUnavailable, match="Host resource capacity"):
+        router.run(AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path), Job(task))
+    assert provider.calls == 0
+    gate.release_shared("other-factory")
+
+
 def review_request(tmp_path: Path, identifier: str, sha: str) -> tuple[AgentRequest, Job]:
     task = Task(identifier, f"PR {identifier}", "Body", "github-pull-request", 0)
     job = Job(task, pull_request=int(identifier), head_sha=sha)

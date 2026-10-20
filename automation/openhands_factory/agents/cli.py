@@ -128,7 +128,9 @@ def classify_process_failure(result: ProcessResult) -> AgentFailure:
     combined = redact_agent_output(f"{result.stderr}\n{result.stdout}").strip()
     lowered = combined.lower()
     retry_after = extract_retry_after_seconds(lowered)
-    if result.timed_out:
+    if result.cancelled:
+        kind = AgentFailureKind.CANCELLED
+    elif result.timed_out:
         kind = AgentFailureKind.PROVIDER_TIMEOUT
     elif result.exit_code in {126, 127}:
         kind = AgentFailureKind.PROVIDER_UNAVAILABLE
@@ -408,7 +410,7 @@ class CLIProvider:
         summary = stdout[-4000:] or stderr[-4000:] or None
         failure = (
             None
-            if result.exit_code == 0 and not result.timed_out
+            if result.exit_code == 0 and not result.timed_out and not result.cancelled
             else classify_process_failure(result)
         )
         return AgentResult(
@@ -423,8 +425,6 @@ class CLIProvider:
             failure=failure,
             transport=self.transport,
             model=model,
-            captured_output_chars=len(result.stdout) + len(result.stderr),
-            output_truncated=result.output_truncated,
         )
 
 

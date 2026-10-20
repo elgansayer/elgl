@@ -493,23 +493,29 @@ export class PrivacyService {
       .map((deck) => deck.id)
       .filter((id): id is string => typeof id === 'string');
     const deckFlashcards: unknown[] = [];
-    for (let offset = 0; offset < deckIds.length; offset += 100) {
-      const ids = deckIds.slice(offset, offset + 100);
-      const chunk = await this.fetchPaged(
-        'deck_flashcards',
-        async (from, to) => {
-          const result = await supabase
-            .from('deck_flashcards')
-            .select('*')
-            .in('deck_id', ids)
-            .order('added_at', { ascending: false })
-            .range(from, to);
-          return { data: result.data as unknown[] | null, error: result.error };
-        },
-      );
-      deckFlashcards.push(...chunk);
-      if (deckFlashcards.length > MAX_ROWS_PER_DATASET) {
-        throw new Error('dataset_too_large');
+    for (let batchOffset = 0; batchOffset < deckIds.length; batchOffset += 500) {
+      const batchPromises = [];
+      for (let i = 0; i < 5 && batchOffset + i * 100 < deckIds.length; i++) {
+        const offset = batchOffset + i * 100;
+        const ids = deckIds.slice(offset, offset + 100);
+        batchPromises.push(
+          this.fetchPaged('deck_flashcards', async (from, to) => {
+            const result = await supabase
+              .from('deck_flashcards')
+              .select('*')
+              .in('deck_id', ids)
+              .order('added_at', { ascending: false })
+              .range(from, to);
+            return { data: result.data as unknown[] | null, error: result.error };
+          }),
+        );
+      }
+      const chunks = await Promise.all(batchPromises);
+      for (const chunk of chunks) {
+        deckFlashcards.push(...chunk);
+        if (deckFlashcards.length > MAX_ROWS_PER_DATASET) {
+          throw new Error('dataset_too_large');
+        }
       }
     }
 
