@@ -12,11 +12,6 @@ export const chatRoutes: Routes = [
       import('../pages/chat/chat-room-page.component').then((m) => m.ChatRoomPageComponent),
   },
   {
-    path: 'chat-settings',
-    redirectTo: 'settings/chat',
-    pathMatch: 'full',
-  },
-  {
     path: 'groups',
     redirectTo: 'chat/groups',
     pathMatch: 'full',

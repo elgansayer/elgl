@@ -20,6 +20,36 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2024-05-18 - Centrifugo Status Updates and Angular @for Tracking
+**Learning:** Real-time chat apps using Centrifugo for status updates (like delivery/read receipts) mutate the messages array frequently. If Angular's `@for` loop tracks items by object reference (`track msg`), every single real-time update forces a full DOM re-render of the entire chat list, causing severe scroll jank and main thread blocking.
+**Action:** Always verify that Angular `@for` loops in high-frequency update scenarios (like chat rooms or websockets) strictly track by a unique scalar identifier (`track msg.id`) rather than the object reference.
+
+
+## 2026-09-20 - [Batch Supabase Queries with Promise.all in Moderation Service]
+**Learning:** Sequential database queries in `analyseUserForDatingBehaviour` create unnecessary N+1 latency, despite being independent queries on `users` and `moments`.
+**Action:** Always wrap independent database fetch operations in a single concurrent `Promise.all` batch array, especially when compiling composite data for analysis.
+
+## 2026-09-21 - [Optimize Archive Cleanup via Promise.allSettled]
+**Learning:** In the backend `privacy.service.ts` cronjob `purgeExpiredArchives`, sequentially iterating through expired archives and running `await supabase.storage.remove` followed by `await supabase.update` causes N+1 network latency during cleanup tasks.
+**Action:** Replace single sequential loop with bounded concurrent chunks using `Promise.allSettled` to improve throughput.
+
+
+## 2026-09-22 - [Avoid Replacing IndexedDB store.put() Loops with .map()]
+**Learning:** Calling `store.put(item)` inside an IndexedDB transaction simply queues the requests synchronously. Replacing a `for...of` loop of `store.put()` calls with `.map()` does not change the concurrency model and actually degrades performance by allocating an unnecessary array of `IDBRequest` objects that are immediately discarded.
+**Action:** Retain `for...of` loops for queuing operations inside IndexedDB transactions instead of attempting to "parallelise" them with `.map()`.
+
+## 2026-08-30 - [IDBRequest Overhead in Promise.all]
+**Learning:** Calling `store.put(item)` inside an IndexedDB transaction queues the requests synchronously. Replacing a `for...of` loop of `store.put()` calls with `.map()` (to try to use Promise.all) does not make the queueing concurrent. It instead degrades performance by allocating an unnecessary array of IDBRequest objects.
+**Action:** Reverted the Promise.all IDB optimization and replaced it with a direct synchronous `for...of` loop executing `store.put()`, wrapping the block in a single Promise resolved by `transaction.oncomplete`.
+
+## 2026-09-23 - [Bound Promise.all when batching API requests]
+**Learning:** Replacing sequential `await` loops with unconstrained `Promise.all` mapping can cause race conditions or exceed request rate limits (e.g., Supabase storage removals and database updates inside `purgeExpiredArchives`).
+**Action:** When migrating sequential operations to concurrent mapping, enforce concurrency bounds (e.g. `chunkSize = 10`) and process the chunks in a loop before awaiting the next chunk.
+
+
+## 2026-09-24 - [Optimize User Profile Counters via Promise.all]
+**Learning:** Sequential Supabase count queries for `followers` and `following` introduce significant N+1 latency in user profile lookups.
+**Action:** Always fetch independent user stat aggregations concurrently via `Promise.all` in NestJS service methods.
 
 ## 2026-09-24 - [Batch Redis Cache Invalidations with Promise.all]
 **Learning:** Sequential `await` calls to independent cache invalidation methods (like `redis.del()`) create additive network latency when clearing multiple related caches.
@@ -361,6 +391,13 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
+
+
+
+
+
+
 
 
 

@@ -111,6 +111,21 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2024-05-18 - Fix IDOR in audio-intro update endpoint
+**Vulnerability:** Insecure Direct Object Reference (IDOR) in the `audio-intro` update endpoint allowing any authenticated user to update another user's audio intro.
+**Learning:** Some endpoints missed validating the requested `userId` parameter against the authenticated user's ID (`req.user.id`) provided by the `SupabaseAuthGuard`.
+**Prevention:** Always verify that the requested entity matches the authenticated user ID extracted from the request context before performing modifications.
+
+## 2026-09-23 - [Strict Secrets Validation in Production for Video Calls]
+**Vulnerability:** The VideoCallsService lacked validation to prevent fallback insecure default development values for LIVEKIT_API_KEY and LIVEKIT_SECRET from being used in production.
+**Learning:** Hardcoded development credentials for external service APIs represent a critical vulnerability in production as they allow silent initialization into an insecure state if environment variables are missing.
+**Prevention:** Always apply strict fail-fast validation checks where NODE_ENV === 'production' alongside explicit validation for known development fallback credentials, directly within the module or service initialization.
+
+## 2026-09-24 - [Fix IDOR in LiveKit Token Generation]
+**Vulnerability:** The `/api/livekit/token` endpoint trusted the user-supplied `participant_identity` from the request body to generate a LiveKit token. This allowed an authenticated attacker to mint an access token for any other user (IDOR) and potentially eavesdrop or impersonate them in a room.
+**Learning:** Never trust client-provided identifiers for token generation or sensitive actions when an authoritative, authenticated identity (e.g., from a JWT or session) is available. Trusting user input for identity leads directly to IDOR.
+**Prevention:** Always extract the authenticated user from the request context (e.g., via the `@CurrentUser()` decorator) and strictly use that server-validated identity (`user.id`) for generating access tokens or performing authorization checks.
+
 ## 2026-09-25 - IDOR in Moment Text Editing
 **Vulnerability:** Insecure Direct Object Reference (IDOR) allowed any user to edit the text of any moment created by others. The check for whether the editor was the author of the moment (`userId === momentAuthorId`) was missing in `editMomentText`.
 **Learning:** Security checks that verify if a user is *blocked* by the author were present, creating a false sense of security that authorization was handled, while the most basic ownership check was omitted.
@@ -217,6 +232,9 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
+
+
 
 
 

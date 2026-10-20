@@ -29,11 +29,6 @@ export const settingsRoutes: Routes = [
     title: 'Notification Settings - HelloTalk',
   },
   {
-    path: 'settings/notification-customization',
-    redirectTo: 'settings/notification',
-    pathMatch: 'full',
-  },
-  {
     path: 'settings/message-filters',
     loadComponent: () =>
       import('../pages/settings/message-filter-settings/message-filter-settings.component').then(
@@ -48,11 +43,6 @@ export const settingsRoutes: Routes = [
         (m) => m.AppearanceSettingsComponent,
       ),
     title: 'Appearance - HelloTalk',
-  },
-  {
-    path: 'language',
-    redirectTo: 'settings/language',
-    pathMatch: 'full',
   },
   {
     path: 'settings/language',

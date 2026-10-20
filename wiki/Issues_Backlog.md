@@ -9,6 +9,12 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Complete group chat features for 2-19 members, and group participant drawer.
 - Add message privacy filters.
 
+## 👥 Communities & Group Chat
+
+- Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
+- Dedicated Groups & Scheduled Events System.
+- Complete Responsive Communities Experience:
+
 ## 👥 Communities & Groups
 
 - Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
@@ -16,6 +22,7 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Complete Responsive Communities Experience (Ref: PR #8448).
 
 - Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448):
+
   - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
   - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
   - Add micro-interactions (hover effects) and unread notification badges.
@@ -74,6 +81,8 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Integrate diagnostic tools: Dynamic diagnostic quiz component for new sign-ups and custom Angular `ErrorHandler` logging client crashes to backend analytics.
 - Optimize app infrastructure and UX: Web Vitals audits (e.g., `loading=lazy`), offline support via IndexedDB, client-side image compression, and WebSocket connection rate limiting.
 - Develop universal connectivity features: In-App Sharing, External Deep Linking Engine, and End-to-end encrypted voice calls.
+- Optimize performance for data-heavy views by implementing virtual scrolling (Angular CDK) in Chat and Reading screens.
+
 
 - Align UI contracts with Spartan UI and Relay themes (desktop sidebars, confirm dialogs, developer dashboards).
 - Define 400 percent zoom reflow standard, enforce touch target sizing, and lock screen-reader naming contracts.
@@ -87,4 +96,5 @@ _Organized by complete user outcomes rather than individual technical chores._
   - Ensure dynamic height recalculation works correctly for chat messages with varying content lengths (text, media, audio).
   - Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
   - Write or update unit tests to verify that the virtual scroller correctly limits the rendered DOM nodes to the visible viewport slice.
+
 

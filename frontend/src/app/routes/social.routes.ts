@@ -103,11 +103,6 @@ export const socialRoutes: Routes = [
       ),
   },
   {
-    path: 'notification-preferences',
-    redirectTo: 'settings/notification',
-    pathMatch: 'full',
-  },
-  {
     path: 'events',
     redirectTo: 'live/events',
     pathMatch: 'full',
