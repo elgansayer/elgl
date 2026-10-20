@@ -118,11 +118,17 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2025-02-23 - IDOR in Safety Controller User Endpoints
+**Vulnerability:** Found IDOR vulnerabilities in endpoints (`GET blocked-ids/:userId`, `GET blocker-ids/:userId`) where users could read blocked ID lists for arbitrary users.
+**Learning:** Endpoints that fetch user-specific data using `@Param('userId')` were missing authorization checks against the authenticated user's ID.
+**Prevention:** Always extract the authenticated user's ID via `@Req() req: { user: { id: string } }` and explicitly throw a `ForbiddenException` from `@nestjs/common` if it does not match the requested `userId` parameter in endpoints.
+
 ## 2026-09-08 - Strict Environment Secret Validation for VideoCallsService
 
 **Vulnerability:** Missing strict environment secret validation allowed insecure defaults or missing keys (e.g. `LIVEKIT_API_KEY` and `LIVEKIT_SECRET`) to pass unnoticed into production for `VideoCallsService`.
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical media endpoints if not explicitly validated during app startup.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
+
 
 ## 2026-09-07 - [Strict Secrets Validation in Production for VideoCallsService]
 
