@@ -217,8 +217,8 @@ def test_deployment_installs_bounded_host_storage_policy() -> None:
     assert "SystemMaxUse=512M" in journal_policy
     assert "SystemKeepFree=5G" in journal_policy
     assert "MaxRetentionSec=14day" in journal_policy
-    assert "docker image prune" in maintenance
-    assert "docker builder prune" in maintenance
+    assert '"$docker" image prune' in maintenance
+    assert '"$docker" builder prune' in maintenance
     assert "docker system prune" not in maintenance
     assert "docker volume prune" not in maintenance
     assert "docker container prune" not in maintenance

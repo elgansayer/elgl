@@ -107,6 +107,11 @@
     },
     {
       "id": "spartan.component-system",
+      "nonVisualFollowupAudit": {
+        "pullRequest": 9469,
+        "designSync": "not-required",
+        "reason": "Remove duplicate changeDetection metadata and its unused import from empty-state and scrollable-pills. Angular's existing default change detection is retained. No template, style, token, layout or interaction change, and no preview or Claude Design approval is claimed."
+      },
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
