@@ -346,6 +346,20 @@
           </p>
         </div>
 
+        @if (profile()?.learning_goals) {
+          <section
+            class="mt-4 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3"
+            aria-labelledby="learning-goals-heading"
+          >
+            <h3 id="learning-goals-heading" class="text-xs font-semibold uppercase text-text-secondary">
+              Learning goals
+            </h3>
+            <p class="mt-2 whitespace-pre-wrap break-words text-sm text-text-primary">
+              {{ profile()?.learning_goals }}
+            </p>
+          </section>
+        }
+
         <!-- Read‑only privacy control display -->
         <div class="mt-4 grid grid-cols-2 gap-2 text-xs text-text-secondary">
           <div>
@@ -756,6 +770,26 @@
             [rows]="4"
             [placeholder]="'profile.bioPlaceholder' | t"
           />
+
+          <div class="mt-4">
+            <label
+              for="profile-learning-goals"
+              class="block text-xs font-semibold uppercase text-text-secondary mb-2"
+            >
+              Learning goals
+            </label>
+            <app-textarea
+              textareaId="profile-learning-goals"
+              [value]="learningGoals()"
+              (valueChange)="learningGoals.set($event.slice(0, 1000))"
+              [rows]="4"
+              placeholder="Describe why you are learning and what you want to achieve"
+            />
+            <div class="mt-1 flex flex-wrap justify-between gap-2 text-xs text-text-secondary">
+              <span>Share your motivations so compatible language partners can understand your goals.</span>
+              <span aria-live="polite">{{ learningGoals().length }} / 1000</span>
+            </div>
+          </div>
 
           <div class="mt-4 grid gap-2 sm:grid-cols-2">
             <div>

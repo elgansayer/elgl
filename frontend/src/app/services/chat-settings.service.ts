@@ -4,17 +4,11 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
-export type ChatTextSize = 'small' | 'medium' | 'large';
-
 export interface ChatSettings {
   autoTranslate: boolean;
   readReceipts: boolean;
   enterToSend: boolean;
-  textSize: ChatTextSize;
-}
-
-function isChatTextSize(value: unknown): value is ChatTextSize {
-  return value === 'small' || value === 'medium' || value === 'large';
+  textSize: 'small' | 'medium' | 'large';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -26,42 +20,40 @@ export class ChatSettingsService {
   readonly autoTranslate = signal<boolean>(false);
   readonly readReceipts = signal<boolean>(false);
   readonly enterToSend = signal<boolean>(false);
-  readonly textSize = signal<ChatTextSize>('medium');
+  readonly textSize = signal<'small' | 'medium' | 'large'>('medium');
   readonly loaded = signal<boolean>(false);
 
-  async loadSettings(): Promise<boolean> {
+  async loadSettings(): Promise<void> {
     try {
       const headers = this.auth.getBearerHeaders();
       const result = await firstValueFrom(this.http.get<ChatSettings>(this.baseUrl, { headers }));
-      this.autoTranslate.set(result.autoTranslate === true);
-      this.readReceipts.set(result.readReceipts === true);
-      this.enterToSend.set(result.enterToSend === true);
-      this.textSize.set(isChatTextSize(result.textSize) ? result.textSize : 'medium');
+      this.autoTranslate.set(result.autoTranslate);
+      this.readReceipts.set(result.readReceipts);
+      this.enterToSend.set(result.enterToSend);
+      this.textSize.set(result.textSize ?? 'medium');
       this.loaded.set(true);
-      return true;
     } catch {
-      // Preserve the safe in-memory defaults. Callers that have a local cache can keep it active.
+      // fallback to defaults
+      this.autoTranslate.set(false);
+      this.readReceipts.set(false);
+      this.enterToSend.set(false);
+      this.textSize.set('medium');
       this.loaded.set(true);
-      return false;
     }
   }
 
   async updateSetting(
     key: keyof ChatSettings,
-    value: boolean | ChatTextSize,
-  ): Promise<boolean> {
-    if (key === 'textSize' && !isChatTextSize(value)) return false;
-
+    value: boolean | 'small' | 'medium' | 'large',
+  ): Promise<void> {
     const previous = this.getLocal(key);
     this.setLocal(key, value);
     try {
       const headers = this.auth.getBearerHeaders();
       await firstValueFrom(this.http.put(this.baseUrl, { [key]: value }, { headers }));
-      return true;
     } catch {
-      // Revert optimistic state and let the caller surface a retryable failure when needed.
+      // revert on failure
       this.setLocal(key, previous);
-      return false;
     }
   }
 
@@ -72,7 +64,9 @@ export class ChatSettingsService {
     this.textSize.set('medium');
   }
 
-  private getLocal(key: keyof ChatSettings): boolean | ChatTextSize {
+  private getLocal(
+    key: keyof ChatSettings,
+  ): boolean | 'small' | 'medium' | 'large' {
     switch (key) {
       case 'autoTranslate':
         return this.autoTranslate();
@@ -85,7 +79,10 @@ export class ChatSettingsService {
     }
   }
 
-  private setLocal(key: keyof ChatSettings, value: boolean | ChatTextSize): void {
+  private setLocal(
+    key: keyof ChatSettings,
+    value: boolean | 'small' | 'medium' | 'large',
+  ): void {
     switch (key) {
       case 'autoTranslate':
         this.autoTranslate.set(Boolean(value));
@@ -97,7 +94,7 @@ export class ChatSettingsService {
         this.enterToSend.set(Boolean(value));
         break;
       case 'textSize':
-        if (isChatTextSize(value)) {
+        if (value === 'small' || value === 'medium' || value === 'large') {
           this.textSize.set(value);
         }
         break;

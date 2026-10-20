@@ -24,6 +24,7 @@ import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
 import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
+import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import { GrammarCheckService } from './grammar-check.service';
 import { GrammarExplanationService } from './grammar-explanation.service';
 import {
@@ -41,8 +42,6 @@ export class NlpController {
   constructor(
     private readonly nlpService: NlpService,
     private readonly usersService: UsersService,
-    private readonly grammarCheckService: GrammarCheckService,
-    private readonly grammarExplanationService: GrammarExplanationService,
   ) {}
 
   /**
@@ -101,8 +100,11 @@ export class NlpController {
   ): Promise<GrammarCheckResult | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
-    return await this.grammarCheckService.check(dto);
+    return await this.nlpService.grammarCheck(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
   }
 
   /**
@@ -122,8 +124,11 @@ export class NlpController {
   } | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
-    return await this.grammarExplanationService.explain(dto);
+    return await this.nlpService.explainGrammar(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
   }
 
   /**
@@ -213,11 +218,18 @@ export class NlpController {
   /**
    * Audio transcription: mutation (counts toward rate limit), no-store.
    */
-  @Post('transcribe-audio')
+  @Post('transcribe-voice')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
-  async transcribeAudio(
-    @Body() dto: TranscribeAudioDto,
-  ): Promise<{ transcription: string; language: string }> {
-    return await this.nlpService.transcribeAudio(dto);
+  async transcribeVoice(@Body() dto: TranscribeVoiceDto): Promise<{
+    original_text: string;
+    detected_language: string;
+    confidence: number;
+  }> {
+    const result = await this.nlpService.transcribeVoiceOnly(dto);
+    return {
+      original_text: result.original_text,
+      detected_language: result.detected_language,
+      confidence: result.confidence,
+    };
   }
 }

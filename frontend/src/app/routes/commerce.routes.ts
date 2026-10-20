@@ -2,11 +2,6 @@ import { Routes } from '@angular/router';
 
 export const commerceRoutes: Routes = [
   {
-    path: 'vip',
-    loadComponent: () => import('../pages/vip/vip.component').then((m) => m.VipComponent),
-    title: 'VIP Subscription - HelloTalk',
-  },
-  {
     path: 'subscription',
     loadComponent: () =>
       import('../pages/subscription/subscription-page.component').then(
@@ -31,7 +26,7 @@ export const commerceRoutes: Routes = [
     title: 'Subscription Cancelled - HelloTalk',
   },
   {
-    path: 'my-subscription',
+    path: 'settings/subscription',
     loadComponent: () =>
       import('../pages/my-subscription/my-subscription.component').then(
         (m) => m.MySubscriptionComponent,

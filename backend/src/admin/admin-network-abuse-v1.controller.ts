@@ -15,6 +15,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
@@ -50,6 +51,7 @@ export class AdminNetworkAbuseV1Controller {
   ) {}
 
   @Post('reputation')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.read')
   @ApiOperation({
     summary: 'Inspect coarse, privacy-minimized network reputation signals',
@@ -83,8 +85,11 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Post('impact')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.read')
-  @ApiOperation({ summary: 'Preview the observed impact of a proposed CIDR block' })
+  @ApiOperation({
+    summary: 'Preview the observed impact of a proposed CIDR block',
+  })
   async impact(
     @Body() input: AdminNetworkImpactDto,
     @Req() req: AdminAuthRequest,
@@ -162,7 +167,69 @@ export class AdminNetworkAbuseV1Controller {
     }
   }
 
+  @Get('rate-limits')
+  @RequireAdminCapabilities('security.network.read')
+  @ApiOperation({ summary: 'List active emergency network throttles' })
+  async listRateLimits(
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitControl[]> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.list();
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limits.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'success',
+        operation: 'list-rate-limits',
+        resultCount: result.length,
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limits.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'failed',
+        operation: 'list-rate-limits',
+      });
+      throw error;
+    }
+  }
+
+  @Post('rate-limits/inspect')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @RequireAdminCapabilities('security.network.read')
+  @ApiOperation({
+    summary: 'Inspect the active emergency throttle for a network request',
+    description:
+      'Accepts the IP only in the request body and returns a coarse network plus bounded counter state. Raw IPs are not written to audit records.',
+  })
+  async inspectRateLimit(
+    @Body() input: AdminNetworkRateLimitInspectDto,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitInspection> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.inspect(input.ip, input.scope);
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'success',
+        operation: 'inspect-rate-limit',
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'failed',
+        operation: 'inspect-rate-limit',
+      });
+      throw error;
+    }
+  }
+
   @Post('blocks')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   @ApiOperation({ summary: 'Create a temporary scoped network block' })
   async createBlock(
@@ -197,6 +264,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Delete('blocks/:id')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   async revokeBlock(
     @Param('id') id: string,
@@ -225,7 +293,80 @@ export class AdminNetworkAbuseV1Controller {
     }
   }
 
+  @Post('rate-limits')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @RequireAdminCapabilities('security.network.manage')
+  @ApiOperation({
+    summary: 'Create a temporary stricter network rate limit',
+    description:
+      'Emergency throttles can only add stricter limits. They never bypass or raise existing application security limits.',
+  })
+  async createRateLimit(
+    @Body() input: CreateAdminNetworkRateLimitDto,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitControl> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.create(actorUserId, input);
+      await this.audit.record({
+        actorUserId,
+        action: 'security.network.rate_limit.create',
+        capabilityKey: 'security.network.manage',
+        targetType: 'network-rate-limit',
+        targetId: result.id,
+        reasonCode: input.reasonCode,
+        operatorNote: input.operatorNote,
+        outcome: 'success',
+        correlationId: this.correlationId(req),
+        metadata: {
+          source: 'admin-v1',
+          operation: 'create-network-rate-limit',
+        },
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.create',
+        capabilityKey: 'security.network.manage',
+        outcome: 'failed',
+        operation: 'create-network-rate-limit',
+      });
+      throw error;
+    }
+  }
+
+  @Delete('rate-limits/:id')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @RequireAdminCapabilities('security.network.manage')
+  async revokeRateLimit(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitControl> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.revoke(actorUserId, id);
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.revoke',
+        capabilityKey: 'security.network.manage',
+        outcome: 'success',
+        operation: 'revoke-network-rate-limit',
+        targetId: id,
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.revoke',
+        capabilityKey: 'security.network.manage',
+        outcome: 'failed',
+        operation: 'revoke-network-rate-limit',
+        targetId: id,
+      });
+      throw error;
+    }
+  }
+
   @Post('allowlist')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   async createAllowlist(
     @Body() input: CreateAdminNetworkAllowlistDto,
@@ -233,7 +374,10 @@ export class AdminNetworkAbuseV1Controller {
   ): Promise<AdminNetworkAllowlistEntry> {
     const actorUserId = this.actor(req);
     try {
-      const result = await this.networkAbuse.createAllowlist(actorUserId, input);
+      const result = await this.networkAbuse.createAllowlist(
+        actorUserId,
+        input,
+      );
       await this.record(req, actorUserId, {
         action: 'security.network.allowlist.create',
         capabilityKey: 'security.network.manage',
@@ -254,6 +398,7 @@ export class AdminNetworkAbuseV1Controller {
   }
 
   @Delete('allowlist/:id')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @RequireAdminCapabilities('security.network.manage')
   async revokeAllowlist(
     @Param('id') id: string,

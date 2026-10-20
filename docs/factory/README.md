@@ -148,6 +148,24 @@ job, preventing one difficult task from growing durable state without bound.
 Durable execution states abandoned by a dead worker are recovered through the same timeout retry policy. Live
 futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated as abandoned work.
 
+### Pull-request convergence and WIP limits
+
+A single locked owner decides whether a task branch opens a new pull request, updates an existing one in place, or
+adopts an already-merged equivalent; duplicate and superseded pull requests are detected and closed automatically.
+New-issue admission and the weekly Architect cycle pause whenever configured open-PR, queued-CI, lane, or component
+WIP limits are exceeded, and resume automatically once the next refresh shows capacity again. A pull request that
+declares an explicit `Depends-On` stack parent stays a draft, withheld from independent review, until that parent
+merges. See [PR-CONVERGENCE-AND-WIP.md](PR-CONVERGENCE-AND-WIP.md) for the full contract and the metrics exposed
+through `hellotalk-factory metrics`.
+
+An attempt abandoned by a dead worker is recovered through the same timeout retry policy once its durable in-flight
+marker outlives the maximum task duration. Age alone is never evidence: queued, unadmitted and backed-off work, an
+explicit future retry deadline, live futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated
+as abandoned work. `hellotalk-factory status` reports actual watchdog recoveries (`watchdog.recovered_total`)
+separately from queued age (`watchdog.oldest_queued_age_seconds`); see
+[AUDIT-2026-10-16-ABANDONED-ATTEMPT.md](AUDIT-2026-10-16-ABANDONED-ATTEMPT.md).
+
+
 ## Safety gates
 
 Before a task branch can merge, the Factory preserves these controls:

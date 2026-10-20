@@ -42,6 +42,11 @@ export type UsersRow = {
   bio_text?: string | null;
   status_text?: string | null;
   proficiency_level?: string | null;
+  availability_morning?: boolean | null;
+  availability_afternoon?: boolean | null;
+  availability_evening?: boolean | null;
+  available_time_start?: string | null;
+  available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
   mock_country?: string | null;
@@ -1464,6 +1469,42 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      message_reactions: {
+        Row: {
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        }>;
+        Update: Partial<{
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'message_reactions_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_reactions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       chat_room_members: {
         Row: {
           user_id: string;
@@ -2184,6 +2225,17 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      claim_daily_checkin_reward: {
+        Args: {
+          p_user_id: string;
+          p_reward: number;
+        };
+        Returns: {
+          claimed: boolean;
+          coins_rewarded: number;
+          new_balance: number;
+        }[];
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;

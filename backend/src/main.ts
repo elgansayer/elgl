@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { json, urlencoded, Request, Response } from 'express';
 import helmet from 'helmet';
+import { SanitiseHtmlPipe } from './common/pipes/sanitise-html.pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
@@ -47,6 +48,7 @@ async function bootstrap() {
     credentials: true,
   });
   app.useGlobalPipes(
+    new SanitiseHtmlPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,
