@@ -414,6 +414,40 @@
                         [explanation]="comment.correction_payload.explanation"
                         [showActions]="true"
                       ></app-visual-diff>
+                      @if (comment.user_id !== authService.currentUser()?.id) {
+                        <div
+                          class="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-secondary"
+                          role="group"
+                          [attr.aria-label]="'moments.correctBtn' | t"
+                        >
+                          <button
+                            hlmBtn
+                            type="button"
+                            variant="ghost"
+                            class="min-h-11 min-w-11 gap-1 rounded-full px-3"
+                            [class.text-primary]="comment.userVote === 'up'"
+                            [attr.aria-pressed]="comment.userVote === 'up'"
+                            [attr.aria-label]="('moments.correctBtn' | t) + ' 👍'"
+                            (click)="voteOnCorrection(moment.id, comment, 'up')"
+                          >
+                            <span aria-hidden="true">👍</span>
+                            <span>{{ comment.upVotes ?? 0 }}</span>
+                          </button>
+                          <button
+                            hlmBtn
+                            type="button"
+                            variant="ghost"
+                            class="min-h-11 min-w-11 gap-1 rounded-full px-3"
+                            [class.text-danger]="comment.userVote === 'down'"
+                            [attr.aria-pressed]="comment.userVote === 'down'"
+                            [attr.aria-label]="('moments.correctBtn' | t) + ' 👎'"
+                            (click)="voteOnCorrection(moment.id, comment, 'down')"
+                          >
+                            <span aria-hidden="true">👎</span>
+                            <span>{{ comment.downVotes ?? 0 }}</span>
+                          </button>
+                        </div>
+                      }
                     }
                   </div>
                 }

@@ -1,3 +1,8 @@
+## 2026-08-21 - [Livekit Insecure Direct Object Reference (IDOR)]
+**Vulnerability:** Livekit connection tokens were generated based on `participant_identity` provided in the HTTP request body (`LivekitTokenDto`) rather than securely deriving the identity from the authenticated user's session token.
+**Learning:** Even when endpoints are protected by `SupabaseAuthGuard`, relying on client-provided IDs in the request body for security-critical operations (like generating access tokens) allows malicious authenticated users to spoof identities and gain unauthorized access (IDOR).
+**Prevention:** Always extract the user identity directly from the authenticated request context (e.g., `req.user.id`) for authorization and token generation, never trust client-provided IDs for self-identification.
+
 ## 2026-08-05 - [Add Helmet and secure CORS]
 
 **Vulnerability:** Missing secure HTTP headers and overly permissive CORS policy.
@@ -66,6 +71,12 @@
 **Vulnerability:** Monetisation service `EconomyService` relied on weak development fallback values for critical secrets (`STRIPE_SECRET_KEY`) when environment variables were missing.
 **Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, avoiding startup crashes but preventing secure operations.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`sk_test_123`), preventing the backend from initializing insecurely.
+
+## 2024-08-24 - Fail-Secure Initialization for LiveKit Secrets
+**Vulnerability:** LiveKit API Key and Secret were missing strict production validation in several services (`audio-rooms.module.ts`, `transcript-egress.service.ts`, `audio-rooms.service.ts`, `calls.service.ts`), allowing fallback values to potentially be used in production environments.
+**Learning:** Services that instantiate third-party clients (like LiveKit `RoomServiceClient`) must apply the same fail-fast/fail-secure secret validation pattern as the centralised config, throwing errors if development keys are used in production.
+**Prevention:** Apply a uniform pattern across the codebase checking `NODE_ENV === 'production'` alongside explicit matching of known default/test dummy secret values before passing them to external SDKs.
+
 ## 2026-08-25 - [Fail-Fast SUPABASE_SERVICE_ROLE_KEY in Production]
 **Vulnerability:** The SupabaseService could initialize using a well-known test default for `SUPABASE_SERVICE_ROLE_KEY` (e.g., `test-service-role-key`) if the environment variable was missing in a production environment, putting backend service authentication at risk.
 **Learning:** Even though environment validation exists at the configuration module boundary, relying solely on global schemas is insufficient defense-in-depth. A missing production environment variable could still silently fall back to test defaults in the validation schema before injection.
@@ -107,6 +118,18 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2025-02-23 - IDOR in Safety Controller User Endpoints
+**Vulnerability:** Found IDOR vulnerabilities in endpoints (`GET blocked-ids/:userId`, `GET blocker-ids/:userId`) where users could read blocked ID lists for arbitrary users.
+**Learning:** Endpoints that fetch user-specific data using `@Param('userId')` were missing authorization checks against the authenticated user's ID.
+**Prevention:** Always extract the authenticated user's ID via `@Req() req: { user: { id: string } }` and explicitly throw a `ForbiddenException` from `@nestjs/common` if it does not match the requested `userId` parameter in endpoints.
+
+## 2026-09-08 - Strict Environment Secret Validation for VideoCallsService
+
+**Vulnerability:** Missing strict environment secret validation allowed insecure defaults or missing keys (e.g. `LIVEKIT_API_KEY` and `LIVEKIT_SECRET`) to pass unnoticed into production for `VideoCallsService`.
+**Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical media endpoints if not explicitly validated during app startup.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
+
+
 ## 2026-09-07 - [Strict Secrets Validation in Production for VideoCallsService]
 
 **Vulnerability:** The VideoCallsService lacked strict environment secret validation, allowing it to potentially use default or known test keys for `LIVEKIT_API_KEY` and `LIVEKIT_SECRET` in a production environment if misconfigured.
@@ -256,6 +279,9 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
+
+
 
 
 

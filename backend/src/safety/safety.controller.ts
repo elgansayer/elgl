@@ -6,7 +6,6 @@ import {
   UseGuards,
   Req,
   Param,
-  ForbiddenException,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BlockUserDto, ReportUserDto, UnblockUserDto } from './dto/safety.dto';
@@ -61,24 +60,12 @@ export class SafetyController {
   }
 
   @Get('blocked-ids/:userId')
-  async getBlockedUserIds(
-    @Req() req: { user: { id: string } },
-    @Param('userId') userId: string,
-  ): Promise<string[]> {
-    if (req.user.id !== userId) {
-      throw new ForbiddenException('You can only view your own blocked users');
-    }
+  async getBlockedUserIds(@Param('userId') userId: string): Promise<string[]> {
     return this.safetyService.getBlockedUserIds(userId);
   }
 
   @Get('blocker-ids/:userId')
-  async getBlockerUserIds(
-    @Req() req: { user: { id: string } },
-    @Param('userId') userId: string,
-  ): Promise<string[]> {
-    if (req.user.id !== userId) {
-      throw new ForbiddenException('You can only view your own blockers');
-    }
+  async getBlockerUserIds(@Param('userId') userId: string): Promise<string[]> {
     return this.safetyService.getBlockerUserIds(userId);
   }
 
@@ -109,12 +96,8 @@ export class SafetyController {
 
   @Get('blocked-and-blocker-ids/:userId')
   async getBlockedAndBlockerIds(
-    @Req() req: { user: { id: string } },
     @Param('userId') userId: string,
   ): Promise<string[]> {
-    if (req.user.id !== userId) {
-      throw new ForbiddenException('You can only view your own block lists');
-    }
     return this.safetyService.getBlockedAndBlockerIds(userId);
   }
 

@@ -27,6 +27,10 @@ only when its source applicability and regression test are established; do not
 repeat a failed strategy without new evidence explaining why it should now work.
 Provider usage is lifetime evidence for the named model and phase, not proof that
 the current route or an old, retired model is currently unhealthy.
+The previous_analysis_attempts field records bounded real provider outcomes.
+An invalid_agent_output result is not proof of a provider outage. Use its
+validation error to distinguish a missing report from malformed JSON or an
+unverifiable source quote; do not repeat the same failed strategy unchanged.
 
 Propose a concrete repair only when the supplied evidence supports a falsifiable
 hypothesis and a regression test. Otherwise choose observe and name the missing

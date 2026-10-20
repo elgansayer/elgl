@@ -24,7 +24,7 @@ from openhands_factory.agents.process import (
 class GoogleAgentProvider(CLIProvider):
     name = "google"
     default_command = "agy"
-    default_model = "gemini-3.8-flash-high"
+    default_model = "gemini-3.1-pro-high"
     default_credential_paths = (".gemini",)
     default_runtime_paths = (".local/bin", ".npm-global")
     minimum_antigravity_version = (1, 1, 1)

@@ -249,39 +249,6 @@ agents_config_metadata_current() {
   [ "$(stat -Lc '%u:%g:%a' -- "$parent")" = "0:${factory_gid}:750" ]
 }
 
-repository_managed_agents_config() {
-  [ "$1" = /etc/repo-factory/agents.json ]
-}
-
-agents_config_matches_commit() {
-  local config=$1 commit=$2 expected_blob expected_config result
-  expected_blob=$(factory_git_read rev-parse "${commit}:${AGENTS_CONFIG_SOURCE}") || return 1
-  expected_config=$(mktemp /tmp/repo-factory-agents-compare.XXXXXX) || return 1
-  if ! factory_git_read cat-file blob "$expected_blob" > "$expected_config"; then
-    rm -f -- "$expected_config"
-    return 1
-  fi
-  if "$FACTORY_VENV/bin/python" - "$config" "$expected_config" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-try:
-    actual = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    expected = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-except (OSError, UnicodeError, json.JSONDecodeError):
-    raise SystemExit(1)
-raise SystemExit(0 if actual == expected else 1)
-PY
-  then
-    result=0
-  else
-    result=$?
-  fi
-  rm -f -- "$expected_config"
-  return "$result"
-}
-
 repo_runtime_root_safe() {
   [ -d "$REPO_RUNTIME_ROOT" ] || return 1
   [ ! -L "$REPO_RUNTIME_ROOT" ] || return 1

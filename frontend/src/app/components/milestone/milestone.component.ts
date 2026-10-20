@@ -69,11 +69,16 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
           size="touch"
           type="submit"
           [disabled]="!newTitle().trim() || creating()"
+          [attr.aria-busy]="creating() ? 'true' : null"
           class="min-h-11 w-full rounded-app bg-primary text-on-fill transition-colors hover:bg-primary/90 sm:w-fit"
         >
           {{ 'milestones.addBtn' | t }}
         </button>
       </form>
+
+      @if (mutationError()) {
+        <p class="mt-4 text-danger" role="alert">{{ 'common.error' | t }}</p>
+      }
 
       @if (milestonesData.isLoading()) {
         <p class="mt-4 text-text-secondary" role="status">{{ 'common.loading' | t }}</p>
@@ -101,6 +106,8 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
                       size="touch"
                       type="button"
                       (click)="complete(ms.id)"
+                      [disabled]="isMutating(ms.id)"
+                      [attr.aria-busy]="isMutating(ms.id) ? 'true' : null"
                       [attr.aria-label]="'milestones.completeBtn' | t"
                       class="min-h-11 w-full rounded-app bg-primary text-on-fill sm:w-auto"
                     >
@@ -116,6 +123,8 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
                     variant="outline"
                     type="button"
                     (click)="remove(ms.id)"
+                    [disabled]="isMutating(ms.id)"
+                    [attr.aria-busy]="isMutating(ms.id) ? 'true' : null"
                     [attr.aria-label]="'milestones.removeBtn' | t"
                     class="min-h-11 w-full text-danger sm:w-auto"
                   >
@@ -140,6 +149,8 @@ export class MilestoneComponent {
   readonly newTitle = signal('');
   readonly newDescription = signal('');
   readonly creating = signal(false);
+  readonly mutationError = signal(false);
+  private readonly pendingMilestoneIds = signal<ReadonlySet<string>>(new Set<string>());
 
   protected milestonesData = resource({
     loader: async (): Promise<{ milestones: Milestone[]; progress: MilestoneProgress }> => {
@@ -154,29 +165,68 @@ export class MilestoneComponent {
   readonly milestones = computed(() => this.milestonesData.value()?.milestones ?? []);
   readonly progress = computed(() => this.milestonesData.value()?.progress ?? EMPTY_PROGRESS);
 
+  isMutating(id: string): boolean {
+    return this.pendingMilestoneIds().has(id);
+  }
+
   async addMilestone(event: Event): Promise<void> {
     event.preventDefault();
     const title = this.newTitle().trim();
-    if (!title) return;
+    if (!title || this.creating()) return;
 
+    this.mutationError.set(false);
     this.creating.set(true);
     try {
       await this.milestoneService.createMilestone(title, this.newDescription().trim() || undefined);
       this.newTitle.set('');
       this.newDescription.set('');
       this.milestonesData.reload();
+    } catch {
+      this.mutationError.set(true);
     } finally {
       this.creating.set(false);
     }
   }
 
   async complete(id: string): Promise<void> {
-    await this.milestoneService.markCompleted(id);
-    this.milestonesData.reload();
+    if (this.isMutating(id)) return;
+
+    this.mutationError.set(false);
+    this.setMutationPending(id, true);
+    try {
+      await this.milestoneService.markCompleted(id);
+      this.milestonesData.reload();
+    } catch {
+      this.mutationError.set(true);
+    } finally {
+      this.setMutationPending(id, false);
+    }
   }
 
   async remove(id: string): Promise<void> {
-    await this.milestoneService.deleteMilestone(id);
-    this.milestonesData.reload();
+    if (this.isMutating(id)) return;
+
+    this.mutationError.set(false);
+    this.setMutationPending(id, true);
+    try {
+      await this.milestoneService.deleteMilestone(id);
+      this.milestonesData.reload();
+    } catch {
+      this.mutationError.set(true);
+    } finally {
+      this.setMutationPending(id, false);
+    }
+  }
+
+  private setMutationPending(id: string, pending: boolean): void {
+    this.pendingMilestoneIds.update((current) => {
+      const next = new Set(current);
+      if (pending) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
   }
 }

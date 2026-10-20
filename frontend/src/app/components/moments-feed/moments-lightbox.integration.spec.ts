@@ -19,7 +19,7 @@ const lightboxTemplate = readFileSync(
 );
 
 describe('Moments lightbox integration', () => {
-  it('registers the shared LightboxComponent on the Moments surface', () => {
+  it('registers the existing LightboxComponent on the Moments surface', () => {
     expect(feedComponentSource).toContain(
       "import { LightboxComponent } from '../lightbox/lightbox.component';",
     );
@@ -68,6 +68,18 @@ describe('Moments lightbox integration', () => {
   it('announces current position and exposes indicator selection semantically', () => {
     expect(lightboxTemplate).toContain('aria-live="polite"');
     expect(lightboxTemplate).toContain('[attr.aria-current]="i === currentIndex() ? \'true\' : null"');
+  });
+
+  it('keeps gallery indicators touch-sized and respects reduced motion', () => {
+    expect(lightboxTemplate).toContain(
+      'size="icon-touch"\n            (click)="goTo(i, $event)"',
+    );
+    expect(lightboxTemplate).toContain(
+      'transition-all duration-300 ease-out motion-reduce:transition-none',
+    );
+    expect(lightboxTemplate).toContain(
+      'transition-colors duration-200 motion-reduce:transition-none',
+    );
   });
 
   it('renders explicit image loading and unavailable states', () => {

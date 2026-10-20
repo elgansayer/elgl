@@ -2,6 +2,13 @@ import { Routes } from '@angular/router';
 
 export const socialRoutes: Routes = [
   {
+    path: 'discovery/audio-intros',
+    loadComponent: () =>
+      import('../discovery/audio-intro-feed/audio-intro-feed.component').then(
+        (m) => m.AudioIntroFeedComponent,
+      ),
+  },
+  {
     path: 'discovery',
     loadComponent: () =>
       import('../components/discovery/discovery.component').then((m) => m.DiscoveryComponent),
@@ -145,10 +152,19 @@ export const socialRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'community/language-islands',
+    loadComponent: () =>
+      import('../pages/language-islands/language-islands.component').then(
+        (m) => m.LanguageIslandsComponent,
+      ),
+    title: 'Language Islands - HelloTalk',
+  },
+  {
     path: 'business-profile',
     loadComponent: () =>
       import('../components/business-profile/business-profile.component').then(
-        (m) => m.BusinessProfileComponent),
+        (m) => m.BusinessProfileComponent,
+      ),
     title: 'Business Profile - HelloTalk',
   },
 ];
