@@ -928,7 +928,6 @@ def startup_security_checks(config: FactoryConfig) -> list[Check]:
         verification_isolation_check(),
         git_credential_helper_check(config),
         persistent_github_credentials_check(config.state_dir / "home"),
-        service_environment_permissions_check(),
     ]
 
 

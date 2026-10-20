@@ -110,16 +110,10 @@
 .search-results {
   max-height: 15rem;
   margin-block-start: 0.5rem;
-  padding: 0;
   overflow-y: auto;
   border: 1px solid rgb(var(--surface-100-rgb));
   border-radius: var(--radius);
   background: rgb(var(--surface-200-rgb));
-  list-style: none;
-}
-.search-result-row {
-  margin: 0;
-  padding: 0;
 }
 .search-result-item {
   display: flex;
@@ -137,7 +131,7 @@
   text-align: start;
   transition: background-color var(--app-motion-fast) var(--app-ease-standard);
 }
-.search-result-row:last-child .search-result-item {
+.search-result-item:last-child {
   border-block-end: 0;
 }
 .search-result-item:hover:not(:disabled) {
