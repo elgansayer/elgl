@@ -1,5 +1,4 @@
-import { Component, ChangeDetectionStrategy, effect, inject, resource, signal } from '@angular/core';
-import { Component, effect, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, effect, inject, resource, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
@@ -13,7 +12,6 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
 
 @Component({
   selector: 'app-home',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterModule,
     StudyStreakWidgetComponent,

@@ -245,7 +245,8 @@ export class ReadingEngineCacheService {
       ReadingEngineCacheNamespace.TRANSLATION,
       ReadingEngineCacheNamespace.SESSION,
     ];
-    // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to drastically reduce network latency during bulk cache invalidation.    await Promise.all(
+    // Invalidate independent namespaces concurrently and await all operations.
+    await Promise.all(
       prefixes.map((ns) =>
         this.deletePattern(this.buildUserPattern(ns, payload.userId)),
       ),

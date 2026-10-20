@@ -33,6 +33,8 @@ type DiscoveryUser = UserProfile & {
   available_time_end?: string;
   last_active_at?: string;
   coins_balance?: number;
+  match_reasons?: string[];
+  _matchScore?: number;
 };
 
 export interface DiscoveryResult<T = UserProfile[]> {
@@ -543,7 +545,15 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort, searchLat, searchLon, _currentUserProfile));
+      return sanitiseDiscoveryData(
+        this.sortUsers(
+          enriched,
+          query.sort,
+          searchLat,
+          searchLon,
+          _currentUserProfile,
+        ),
+      );
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -1038,18 +1048,18 @@ export class DiscoveryService {
     // For best_match, promote partner of week first, then maintain db order
     if (sort === 'best_match') {
       // In findByLanguagePair, we don't have current user profile handy, but we will sort based on what we can.
-      results.forEach(u => {
+      results.forEach((u) => {
         const matchData = this.calculateMatchScore(null, u);
-        (u as any).match_reasons = matchData.reasons;
-        (u as any)._matchScore = matchData.score;
+        u.match_reasons = matchData.reasons;
+        u._matchScore = matchData.score;
       });
       results.sort((a, b) => {
         const aPow = a.is_partner_of_week ? 1 : 0;
         const bPow = b.is_partner_of_week ? 1 : 0;
         if (aPow !== bPow) return bPow - aPow;
 
-        const scoreA = (a as any)._matchScore ?? 0;
-        const scoreB = (b as any)._matchScore ?? 0;
+        const scoreA = a._matchScore ?? 0;
+        const scoreB = b._matchScore ?? 0;
         return scoreB - scoreA;
       });
     }
@@ -1214,9 +1224,10 @@ export class DiscoveryService {
 
     // Helper: basic overlap check
     const hasOverlap = (left?: string[] | null, right?: string[] | null) => {
-      if (!left || !right || left.length === 0 || right.length === 0) return false;
+      if (!left || !right || left.length === 0 || right.length === 0)
+        return false;
       const rightSet = new Set(right);
-      return left.some(l => rightSet.has(l));
+      return left.some((l) => rightSet.has(l));
     };
 
     if (searcher) {
@@ -1237,7 +1248,11 @@ export class DiscoveryService {
       }
 
       // B. Proficiency Level Gap
-      if (searcher.proficiency_level && candidate.proficiency_level && searcher.proficiency_level === candidate.proficiency_level) {
+      if (
+        searcher.proficiency_level &&
+        candidate.proficiency_level &&
+        searcher.proficiency_level === candidate.proficiency_level
+      ) {
         score += 10;
         reasons.push('similar_proficiency');
       }
@@ -1275,7 +1290,8 @@ export class DiscoveryService {
       const activeTime = Date.parse(candidate.last_active_at);
       if (Number.isFinite(activeTime)) {
         const ageMs = Math.max(0, Date.now() - activeTime);
-        if (ageMs <= 24 * 60 * 60 * 1000) { // Active in last day
+        if (ageMs <= 24 * 60 * 60 * 1000) {
+          // Active in last day
           score += 10;
           reasons.push('active_recently');
         }
@@ -1296,16 +1312,15 @@ export class DiscoveryService {
     const discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
       case 'best_match':
-        discoveryUsers.forEach(u => {
+        discoveryUsers.forEach((u) => {
           if (searcherProfile) {
             const matchData = this.calculateMatchScore(searcherProfile, u);
-            // We use standard type casting to inject reasons
-            (u as any).match_reasons = matchData.reasons;
-            (u as any)._matchScore = matchData.score;
+            u.match_reasons = matchData.reasons;
+            u._matchScore = matchData.score;
           } else {
             const matchData = this.calculateMatchScore(null, u);
-            (u as any).match_reasons = matchData.reasons;
-            (u as any)._matchScore = matchData.score;
+            u.match_reasons = matchData.reasons;
+            u._matchScore = matchData.score;
           }
         });
         return discoveryUsers.sort((a, b) => {
@@ -1313,8 +1328,8 @@ export class DiscoveryService {
           const bPow = b.is_partner_of_week ? 1 : 0;
           if (aPow !== bPow) return bPow - aPow;
 
-          const scoreA = (a as any)._matchScore ?? 0;
-          const scoreB = (b as any)._matchScore ?? 0;
+          const scoreA = a._matchScore ?? 0;
+          const scoreB = b._matchScore ?? 0;
           return scoreB - scoreA;
         });
       case 'online_now':

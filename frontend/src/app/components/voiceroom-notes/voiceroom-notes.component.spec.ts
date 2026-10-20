@@ -69,6 +69,22 @@ describe('VoiceroomNotesComponent', () => {
 
   afterEach(() => httpMock.verify());
 
+  it('ignores malformed realtime publications without crashing or reloading notes', async () => {
+    fixture.detectChanges();
+    httpMock.expectOne(notesUrl('room-1')).flush([]);
+    await fixture.whenStable();
+    const realtime = TestBed.inject(CentrifugeService);
+    const listener = vi.mocked(realtime.subscribe).mock.calls[0]?.[1];
+    expect(listener).toBeDefined();
+    if (!listener) throw new Error('Expected a room subscription');
+    expect(() => {
+      for (const payload of [null, undefined, 42, 'invalid', {}, { type: false }])
+        listener(payload);
+    }).not.toThrow();
+    fixture.detectChanges();
+    httpMock.expectNone(notesUrl('room-1'));
+  });
+
   it('should load notes from the fully-prefixed backend URL on init', async () => {
     fixture.detectChanges();
 

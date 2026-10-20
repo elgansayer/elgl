@@ -160,7 +160,8 @@ export class DiscoveryProfileDto {
   last_active_at?: string | null;
 
   @ApiProperty({
-    description: 'Reasons explaining why this user was recommended in the match ranking',
+    description:
+      'Reasons explaining why this user was recommended in the match ranking',
     example: ['language_exchange', 'shared_interests', 'active_recently'],
     type: [String],
     nullable: true,

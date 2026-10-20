@@ -6,7 +6,6 @@ import {
   FLASHCARD_CONTEXT_MAX_LENGTH,
   FLASHCARD_SELECTION_MAX_LENGTH,
 } from '../../services/flashcard-context-menu.directive';
-import { FlashcardService } from '../../services/flashcard.service';
 import { I18nService } from '../../services/i18n.service';
 import { TransliterationService } from '../../services/transliteration.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -38,7 +37,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
           provide: VocabularyStore,
           useValue: {
             getWordStatus: () => ({ colorClass: '', colourClass: '' }),
-            saveWord
+            saveWord,
           },
         },
         { provide: I18nService, useValue: i18n },
