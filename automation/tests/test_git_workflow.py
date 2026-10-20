@@ -110,7 +110,9 @@ def test_changed_paths_includes_untracked_files(tmp_path: Path) -> None:
     repository.mkdir()
     runner = Runner(
         [
+            ProcessResult(1, "", ""),
             ProcessResult(0, "src/existing.py\n", ""),
+            ProcessResult(0, "src/local_edit.py\n", ""),
             ProcessResult(0, "src/new_file.py\n", ""),
         ]
     )
@@ -118,9 +120,70 @@ def test_changed_paths_includes_untracked_files(tmp_path: Path) -> None:
 
     paths = workflow.changed_paths()
 
-    assert paths == {Path("src/existing.py"), Path("src/new_file.py")}
-    assert runner.calls[0] == ("git", "diff", "--name-only", "origin/main")
-    assert runner.calls[1] == ("git", "ls-files", "--others", "--exclude-standard")
+    assert paths == {
+        Path("src/existing.py"),
+        Path("src/local_edit.py"),
+        Path("src/new_file.py"),
+    }
+    assert runner.calls[0] == ("git", "rev-parse", "-q", "--verify", "MERGE_HEAD")
+    assert runner.calls[1] == ("git", "diff", "--name-only", "origin/main...HEAD")
+    assert runner.calls[2] == ("git", "diff", "--name-only", "HEAD")
+    assert runner.calls[3] == ("git", "ls-files", "--others", "--exclude-standard")
+
+
+def test_changed_paths_excludes_changes_only_on_newer_base(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ("git", *arguments),
+            cwd=repository,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Factory Test")
+    git("config", "user.email", "factory-test@example.invalid")
+    (repository / "shared.txt").write_text("base\n", encoding="utf-8")
+    git("add", "shared.txt")
+    git("commit", "-m", "test: seed repository")
+    git("switch", "-c", "task")
+    (repository / "task.txt").write_text("task\n", encoding="utf-8")
+    git("add", "task.txt")
+    git("commit", "-m", "test: add task change")
+    git("switch", "main")
+    (repository / "base-only.txt").write_text("base only\n", encoding="utf-8")
+    git("add", "base-only.txt")
+    git("commit", "-m", "test: advance base")
+    git("update-ref", "refs/remotes/origin/main", "HEAD")
+    git("switch", "task")
+    (repository / "shared.txt").write_text("local edit\n", encoding="utf-8")
+    (repository / "untracked.txt").write_text("new\n", encoding="utf-8")
+
+    paths = GitWorkflow(repository, "main").changed_paths()
+
+    assert paths == {Path("task.txt"), Path("shared.txt"), Path("untracked.txt")}
+    assert Path("base-only.txt") not in paths
+
+
+def test_changed_paths_uses_base_tree_during_conflict_repair(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "merge-head\n", ""),
+            ProcessResult(0, "src/resolved.py\n", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+
+    paths = GitWorkflow(repository, "main", runner).changed_paths()
+
+    assert paths == {Path("src/resolved.py")}
+    assert runner.calls[1] == ("git", "diff", "--name-only", "origin/main")
 
 
 def test_change_fingerprint_detects_additional_edits_in_an_already_dirty_tree(
@@ -491,7 +554,9 @@ def test_committed_change_fingerprint_uses_resulting_blobs_and_deletion_markers(
     repository.mkdir()
     runner = Runner(
         [
+            ProcessResult(1, "", ""),
             ProcessResult(0, "automation/changed.py\nautomation/deleted.py\n", ""),
+            ProcessResult(0, "", ""),
             ProcessResult(0, "", ""),
             ProcessResult(0, "blob-changed\n", ""),
             ProcessResult(1, "", "missing path"),
