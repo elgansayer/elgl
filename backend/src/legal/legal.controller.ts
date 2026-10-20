@@ -1,7 +1,8 @@
 import { Controller, Get, Header } from '@nestjs/common';
 import { LegalService } from './legal.service';
 
-const PUBLIC_LEGAL_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=86400';
+const PUBLIC_LEGAL_CACHE_CONTROL =
+  'public, max-age=300, stale-while-revalidate=86400';
 
 @Controller('legal')
 export class LegalController {

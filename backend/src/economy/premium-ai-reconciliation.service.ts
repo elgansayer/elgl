@@ -22,7 +22,8 @@ export class PremiumAiReconciliationService {
 
   @Cron('*/5 * * * *')
   async refundStaleRuns(): Promise<void> {
-    const client = this.supabaseService.getClient() as unknown as PremiumAiRpcClient;
+    const client =
+      this.supabaseService.getClient() as unknown as PremiumAiRpcClient;
     const { data, error } = await client.rpc('refund_stale_premium_ai_runs', {
       p_limit: 100,
     });

@@ -196,7 +196,9 @@ describe('AdminAuditService', () => {
       }),
     ).resolves.toBeUndefined();
 
-    const logged = errorLog.mock.calls.map((call) => String(call[0])).join('\n');
+    const logged = errorLog.mock.calls
+      .map((call) => String(call[0]))
+      .join('\n');
     expect(logged).toContain('admin_audit_retention_failed');
     expect(logged).not.toContain('retention unavailable');
   });

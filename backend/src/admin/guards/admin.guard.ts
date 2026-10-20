@@ -63,16 +63,15 @@ export class AdminGuard implements CanActivate {
         ? rawCorrelationId
         : undefined;
     const routePath = request.route?.path ?? request.path ?? '';
-    const action =
-      `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
-        0,
-        160,
-      );
 
     try {
       await this.audit.record({
         actorUserId,
-        action,
+        action:
+          `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
+            0,
+            160,
+          ),
         targetType: 'admin-resource',
         outcome,
         correlationId,

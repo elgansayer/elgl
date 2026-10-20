@@ -150,7 +150,9 @@ export class LegalService {
       return configured;
     }
 
-    this.logger.warn(`Ignoring invalid ${configKey}; using bundled legal effective date`);
+    this.logger.warn(
+      `Ignoring invalid ${configKey}; using bundled legal effective date`,
+    );
     return DEFAULT_EFFECTIVE_DATE;
   }
 

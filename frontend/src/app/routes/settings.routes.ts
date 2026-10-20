@@ -2,6 +2,14 @@ import { Routes } from '@angular/router';
 
 export const settingsRoutes: Routes = [
   {
+    path: 'settings/chat',
+    loadComponent: () =>
+      import('../pages/chat-settings/chat-settings.component').then(
+        (m) => m.ChatSettingsComponent,
+      ),
+    title: 'Chat Settings - HelloTalk',
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('../components/settings/settings.component').then((m) => m.SettingsComponent),
@@ -21,14 +29,6 @@ export const settingsRoutes: Routes = [
     title: 'Notification Settings - HelloTalk',
   },
   {
-    path: 'settings/notification-customization',
-    loadComponent: () =>
-      import('../components/notification-customization/notification-customization.component').then(
-        (m) => m.NotificationCustomizationComponent,
-      ),
-    title: 'Notification Customisation - HelloTalk',
-  },
-  {
     path: 'settings/message-filters',
     loadComponent: () =>
       import('../pages/settings/message-filter-settings/message-filter-settings.component').then(
@@ -45,12 +45,33 @@ export const settingsRoutes: Routes = [
     title: 'Appearance - HelloTalk',
   },
   {
+    path: 'settings/language',
+    loadComponent: () =>
+      import('../pages/language-settings/language-settings.component').then(
+        (m) => m.LanguageSettingsComponent,
+      ),
+    title: 'Language Settings - HelloTalk',
+  },
+  {
     path: 'settings/privacy',
     loadComponent: () =>
       import('../pages/settings/privacy-settings/privacy-settings.component').then(
         (m) => m.PrivacySettingsComponent,
       ),
     title: 'Privacy Settings - HelloTalk',
+  },
+  {
+    path: 'settings/blocks',
+    loadComponent: () =>
+      import('../pages/block-management/block-management.component').then(
+        (m) => m.BlockManagementComponent,
+      ),
+    title: 'Blocked Users - HelloTalk',
+  },
+  {
+    path: 'settings/blocked-users',
+    redirectTo: 'settings/blocks',
+    pathMatch: 'full',
   },
   {
     path: 'settings/backup-restore',
@@ -67,13 +88,13 @@ export const settingsRoutes: Routes = [
     title: 'Linked Accounts - HelloTalk',
   },
   {
-    path: 'data-storage',
+    path: 'settings/data-storage',
     loadComponent: () =>
       import('../pages/data-storage/data-storage.component').then((m) => m.DataStorageComponent),
     title: 'Data & Storage - HelloTalk',
   },
   {
-    path: 'device-transfer',
+    path: 'settings/device-transfer',
     loadComponent: () =>
       import('../components/device-transfer/device-transfer.component').then(
         (m) => m.DeviceTransferComponent,
@@ -81,12 +102,12 @@ export const settingsRoutes: Routes = [
     title: 'Device Transfer - HelloTalk',
   },
   {
-    path: 'gdpr',
+    path: 'settings/gdpr',
     loadComponent: () => import('../components/gdpr/gdpr.component').then((m) => m.GdprComponent),
     title: 'Personal Data - HelloTalk',
   },
   {
-    path: 'account/deletion',
+    path: 'settings/account/deletion',
     loadComponent: () =>
       import('../components/account-deletion/account-deletion.component').then(
         (m) => m.AccountDeletionComponent,
@@ -94,7 +115,7 @@ export const settingsRoutes: Routes = [
     title: 'Account Deletion - HelloTalk',
   },
   {
-    path: 'version',
+    path: 'settings/version',
     loadComponent: () =>
       import('../components/version-check/version-check.component').then(
         (m) => m.VersionCheckComponent,

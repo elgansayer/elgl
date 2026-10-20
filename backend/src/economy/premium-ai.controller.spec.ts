@@ -61,9 +61,9 @@ describe('PremiumAiController', () => {
       runConversationAnalysis,
     } as unknown as PremiumAiService);
 
-    await expect(
-      controller.conversationAnalysis(user, dto),
-    ).resolves.toEqual(result);
+    await expect(controller.conversationAnalysis(user, dto)).resolves.toEqual(
+      result,
+    );
     expect(runConversationAnalysis).toHaveBeenCalledWith(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       dto,

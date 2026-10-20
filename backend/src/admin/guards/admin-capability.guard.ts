@@ -87,16 +87,15 @@ export class AdminCapabilityGuard implements CanActivate {
       SAFE_TARGET_ID.test(candidateTargetId)
         ? candidateTargetId
         : undefined;
-    const action =
-      `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
-        0,
-        160,
-      );
 
     try {
       await this.audit.record({
         actorUserId,
-        action,
+        action:
+          `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
+            0,
+            160,
+          ),
         capabilityKey,
         targetType: targetId ? 'admin-resource' : undefined,
         targetId,

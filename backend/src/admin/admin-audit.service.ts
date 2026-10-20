@@ -112,9 +112,7 @@ export class AdminAuditService {
     try {
       const { error } = await rpcClient.rpc('prune_admin_audit_events');
       if (error) {
-        throw error instanceof Error
-          ? error
-          : new Error('Admin audit retention failed');
+        throw new Error('Admin audit retention RPC failed');
       }
     } catch (error) {
       this.logger.error(

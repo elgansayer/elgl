@@ -37,13 +37,17 @@ describe('LearningLessonsController', () => {
   it('loads one lesson for an authenticated learner', async () => {
     const user = { id: 'user-1' } as User;
 
-    await expect(controller.get(user, 'lesson-1')).resolves.toEqual({ id: 'lesson-1' });
+    await expect(controller.get(user, 'lesson-1')).resolves.toEqual({
+      id: 'lesson-1',
+    });
     expect(service.getLesson).toHaveBeenCalledWith('lesson-1');
   });
 
   it('fails closed when the auth guard supplies no user', async () => {
     await expect(controller.list(null)).rejects.toThrow(UnauthorizedException);
-    await expect(controller.get(null, 'lesson-1')).rejects.toThrow(UnauthorizedException);
+    await expect(controller.get(null, 'lesson-1')).rejects.toThrow(
+      UnauthorizedException,
+    );
     expect(service.listLessons).not.toHaveBeenCalled();
     expect(service.getLesson).not.toHaveBeenCalled();
   });
