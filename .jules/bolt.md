@@ -20,6 +20,10 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2024-05-18 - Missing Component Tests Force Slower Full Suite Testing
+**Learning:** Some heavily integrated UI components (like `chat-view.component.ts`) in this architecture completely lack dedicated unit tests. If you modify them during optimization passes, you cannot rely on targeted `--include` runs and are forced to execute the entire frontend test suite, which can be computationally expensive (90s+).
+**Action:** When scoping daily performance improvements in `chat-view`, anticipate a longer verification cycle. Future performance work might benefit from first refactoring and decoupling these heavy components to make localized testing feasible before optimizing their internals.
+
 
 ## 2026-09-19 - [Optimize Angular @for loops with tracking by unique identifier]
 **Learning:** In the Angular frontend components (like `frontend/src/app/pages/chat/chat-page.component.ts`), using `@for` with object reference tracking (e.g. `track room` or `track msg`) causes unnecessary DOM recreations during state updates.
@@ -408,6 +412,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
