@@ -9,7 +9,10 @@ The application was audited through the lens of language-learning pedagogy rathe
 - **Streaks:** Streaks are tied to the matchmaking algorithm ("Serious Learner" toggle), effectively incentivizing consistent practice.
 - **AI Conversations:** AI conversational bots are natively integrated into the chat interface. This closes the loop for low-anxiety active production.
 
+### Weaknesses and Gaps (Updated)
+
 ### Weaknesses and Gaps
+
 - **Assessments:** There is no mention of structured initial assessments or periodic progress assessments, beyond individual pronunciation scoring. Users lack a quantifiable measure of their overall proficiency journey.
 - **Lessons:** The app offers video broadcasts ("Stream Replays") and "lesson cards" (as seen in frontend design files), but lacks a clear integration between interactive lessons and the SRS vocabulary system.
 
