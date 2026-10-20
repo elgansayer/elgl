@@ -8,6 +8,22 @@ Scope: implementation and caller review. No timed usability study, tone assessme
 
 `VisualDiffComponent` uses Intl.Segmenter for multilingual token boundaries. That API does not guarantee minimal edits or fast rendering for arbitrary input lengths. PR #7632 bounds the proposed LCS implementation and adds long-input regressions; algorithm and performance claims must match the version actually deployed. Test CJK, Thai, punctuation, repeated words, whitespace and large messages.
 
+- **Extremely fast to create**:
+  - _Correction Modal_: Initializes with the original text automatically (`correctedText.set(this.originalText())`). The user only needs to edit the part that is wrong rather than retyping the entire sentence.
+  - _Chat Room_: The inline correction form also pre-fills the original text.
+- **Easy to understand**:
+  - Both surfaces rely on `VisualDiffComponent` which uses `Intl.Segmenter` to render word-level diffs with distinct visual markers (green background for additions, red strikethrough for removals).
+  - The live diff preview updates instantly as the user types.
+- **Non-judgemental**:
+  - The UI uses terms like "Ghost Original" and "Corrected Sentence". Explanations are marked as `(optional)`.
+- **Translatable**:
+  - All static UI strings in both surfaces use the translation pipe (`| t`) relying on `I18nService`.
+  - The actual user-provided explanation text is stored as a raw string and currently lacks an explicit "Translate" button inline within the diff rendering.
+- **Reusable as learning material (SRS / Examples)**:
+  - The `VisualDiffComponent` includes a `showActions` flag. When enabled, it renders a "➕ Create Flashcard" button.
+  - Clicking this button invokes `VocabularyStore.saveWord()` using the corrected text as the target word, the original text as the translation, and the explanation as context.
+
+
 ## Translation and reuse
 
 Static UI text uses the translation infrastructure. Explanation translation and flashcard creation are conditional component behaviours: callers must pass the explanation and enable the relevant action. Inspect each caller in chat messages, chat rooms, Moments, the correction modal and Favourites independently. Do not infer complete coverage from VisualDiff's API alone.

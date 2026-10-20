@@ -73,16 +73,18 @@ export class MomentsService {
 
     // ⚡ Bolt Optimization: Replace sequential awaits with Promise.all mapped concurrent operations
     const [
-      { data: momentsData, error: momentsError },
-      { data: correctionsData, error: correctionsError },
-      { data: translationsData, error: translationsError },
+      { count: momentsCount, error: momentsError },
+      { count: correctionsCount, error: correctionsError },
+      { count: translationsCount, error: translationsError },
     ] = await Promise.all([
-      supabase.from('moments').select('id'),
+      supabase.from('moments').select('id', { count: 'exact', head: true }),
       supabase
         .from('moment_comments')
-        .select('id')
+        .select('id', { count: 'exact', head: true })
         .not('correction_payload', 'is', null),
-      supabase.from('translations').select('id'),
+      supabase
+        .from('translations')
+        .select('id', { count: 'exact', head: true }),
     ]);
 
     if (momentsError || correctionsError || translationsError) {
@@ -92,9 +94,9 @@ export class MomentsService {
     }
 
     return {
-      translations: translationsData?.length ?? 0,
-      corrections: correctionsData?.length ?? 0,
-      moments: momentsData?.length ?? 0,
+      translations: translationsCount ?? 0,
+      corrections: correctionsCount ?? 0,
+      moments: momentsCount ?? 0,
     };
   }
   constructor(
@@ -308,11 +310,11 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    // 1) Get blocked+blocker user IDs (bidirectional)
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
-
-    // 2) Get current user's native language for targeted visibility routing
-    const profile = await this.usersService.getProfile(userId);
+    // 1 & 2) ⚡ Bolt Optimization: Fetch blocked IDs and profile concurrently
+    const [blockedIds, profile] = await Promise.all([
+      this.safetyService.getBlockedAndBlockerIds(userId),
+      this.usersService.getProfile(userId),
+    ]);
     const userNativeLang = profile?.native_languages?.[0] ?? null;
 
     let moments: MomentRecord[] = [];
@@ -1171,6 +1173,10 @@ export class MomentsService {
 
     const momentAuthorId = (momentData as unknown as { user_id: string })
       .user_id;
+
+    if (userId !== momentAuthorId) {
+      throw new ForbiddenException('You can only edit your own Moments.');
+    }
 
     // Check if the editor is blocked by the moment author
     const blockedIds =
