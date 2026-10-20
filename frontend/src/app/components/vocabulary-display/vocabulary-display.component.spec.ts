@@ -10,7 +10,6 @@ import * as toastService from '../../services/toast.service';
 
 describe.skip('VocabularyDisplayComponent', () => {
   const mockSaveWord = vi.fn().mockResolvedValue({});
-  const mockVocabStore = { saveWord: mockSaveWord };
   const mockI18n = {
     translate: vi.fn((key: string, params?: Record<string, string>) => {
       if (key === 'vocabDisplay.contextSentence') return `Vocabulary from hobby: ${params?.['tag'] ?? ''}`;
@@ -37,7 +36,7 @@ describe.skip('VocabularyDisplayComponent', () => {
       imports: [VocabularyDisplayComponent],
       providers: [
         { provide: HobbyTagsStore, useValue: mockStore },
-        { provide: VocabularyStore, useValue: mockVocabStore },
+        { provide: VocabularyStore, useValue: { saveWord: mockSaveWord } },
         { provide: I18nService, useValue: mockI18n },
         { provide: ErrorHandler, useValue: mockErrorHandler },
       ],

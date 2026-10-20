@@ -37,7 +37,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
           provide: VocabularyStore,
           useValue: {
             getWordStatus: () => ({ colorClass: '', colourClass: '' }),
-            saveWord,
+            saveWord
           },
         },
         { provide: I18nService, useValue: i18n },
