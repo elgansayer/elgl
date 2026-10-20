@@ -1,7 +1,7 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import {
-  Component,
+  Component, ChangeDetectionStrategy,
   ElementRef,
   afterNextRender,
   output,
@@ -15,9 +15,13 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;
-const CANVAS_BACKGROUND = '#1e1e1e';
+// The raster is user-created content rather than product chrome. Keep a stable paper surface
+// across themes so the default black brush remains legible and exported PNGs do not change
+// appearance when the viewer switches between light and dark UI themes.
+const CANVAS_BACKGROUND = '#ffffff';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-doodle-pad',
   imports: [
     HlmButton,

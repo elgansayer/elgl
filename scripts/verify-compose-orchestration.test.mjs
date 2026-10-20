@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const composeFiles = ['docker-compose.yml', 'docker-compose.dev.yml'];
@@ -100,4 +100,67 @@ test('every core service retains health and network contracts', () => {
 
   assert.match(serviceBlock(readCompose('docker-compose.yml'), 'web'), /80:80/);
   assert.match(serviceBlock(readCompose('docker-compose.dev.yml'), 'web'), /4200:4200/);
+});
+
+test('production monitoring endpoints stay operator-only and bounded', () => {
+  const production = readCompose('docker-compose.prod.yml');
+  const prometheus = serviceBlock(production, 'prometheus');
+  const grafana = serviceBlock(production, 'grafana');
+  const websocket = serviceBlock(production, 'websocket');
+  const datadog = serviceBlock(production, 'datadog');
+
+  assert.match(prometheus, /127\.0\.0\.1:\$\{PROMETHEUS_PORT:-9090\}:9090/);
+  assert.match(prometheus, /--storage\.tsdb\.retention\.time=\$\{PROMETHEUS_RETENTION_TIME:-15d\}/);
+  assert.match(prometheus, /--storage\.tsdb\.retention\.size=\$\{PROMETHEUS_RETENTION_SIZE:-5GB\}/);
+  assert.doesNotMatch(prometheus, /--web\.enable-lifecycle/);
+  assert.match(prometheus, /prometheus\.yml:\/etc\/prometheus\/prometheus\.yml:ro/);
+
+  assert.match(grafana, /127\.0\.0\.1:\$\{GRAFANA_PORT:-3001\}:3000/);
+  assert.match(
+    grafana,
+    /GF_SECURITY_ADMIN_PASSWORD=\$\{GRAFANA_ADMIN_PASSWORD:\?GRAFANA_ADMIN_PASSWORD must be set in production\}/,
+  );
+  assert.match(grafana, /GF_USERS_ALLOW_SIGN_UP=false/);
+  assert.match(grafana, /GF_AUTH_ANONYMOUS_ENABLED=false/);
+  assert.match(grafana, /GF_SECURITY_DISABLE_GRAVATAR=true/);
+
+  assert.doesNotMatch(websocket, /8001:8001/);
+  assert.match(websocket, /expose:\n      - '8001'/);
+
+  assert.match(serviceBlock(production, 'api'), /localhost:3000\/api\/health/);
+  assert.match(datadog, /api:3000\/api\/health/);
+  assert.match(datadog, /api:3000\/api\/metrics/);
+});
+
+test('Prometheus scrapes the NestJS and Centrifugo metrics endpoints with bounded timeouts', () => {
+  const prometheusConfig = readFileSync(
+    new URL('../prometheus/prometheus.yml', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(prometheusConfig, /scrape_timeout: 5s/);
+  assert.match(prometheusConfig, /job_name: 'hellotalk-nestjs'/);
+  assert.match(prometheusConfig, /metrics_path: '\/api\/metrics'/);
+  assert.match(prometheusConfig, /targets: \['api:3000'\]/);
+  assert.match(prometheusConfig, /job_name: 'centrifugo'/);
+  assert.match(prometheusConfig, /metrics_path: '\/metrics'/);
+  assert.match(prometheusConfig, /targets: \['websocket:8001'\]/);
+});
+
+test('Grafana provisions exactly one immutable Prometheus datasource', () => {
+  const datasourceConfig = readFileSync(
+    new URL('../grafana/datasources/datasources.yml', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(datasourceConfig, /name: Prometheus/);
+  assert.match(datasourceConfig, /uid: prometheus/);
+  assert.match(datasourceConfig, /url: http:\/\/prometheus:9090/);
+  assert.match(datasourceConfig, /isDefault: true/);
+  assert.match(datasourceConfig, /editable: false/);
+  assert.equal(
+    existsSync(new URL('../grafana/datasources/prometheus.yml', import.meta.url)),
+    false,
+    'duplicate Prometheus datasource provisioning must not be reintroduced',
+  );
 });

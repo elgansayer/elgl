@@ -1,0 +1,231 @@
+<!-- @dsCard group="Components" name="Doodle pad" subtitle="Relay drawing surface · 390px / desktop · light / dark" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Doodle pad · Relay + Spartan</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 1rem;
+        background: Canvas;
+        color: CanvasText;
+      }
+      main {
+        display: grid;
+        gap: 1rem;
+        max-inline-size: 72rem;
+        margin-inline: auto;
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+        gap: 1rem;
+        align-items: start;
+      }
+      .viewport {
+        inline-size: 100%;
+        padding: 1rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: color-mix(in srgb, CanvasText 4%, Canvas);
+      }
+      .viewport.mobile {
+        max-inline-size: 390px;
+      }
+      .viewport.desktop {
+        max-inline-size: 48rem;
+      }
+      .viewport.light {
+        color-scheme: light;
+      }
+      .viewport.dark {
+        color-scheme: dark;
+      }
+      .card {
+        display: grid;
+        gap: 1rem;
+        inline-size: 100%;
+        padding: 1rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 0.75rem;
+        background: Canvas;
+        color: CanvasText;
+        box-shadow: 0 12px 32px color-mix(in srgb, CanvasText 15%, transparent);
+      }
+      .header,
+      .actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+      .header {
+        align-items: flex-start;
+        padding-block-end: 0.75rem;
+        border-block-end: 1px solid ButtonBorder;
+      }
+      .close,
+      .secondary,
+      .primary,
+      .brush {
+        min-block-size: 44px;
+        border-radius: 0.75rem;
+        padding: 0.6rem 0.85rem;
+        font: inherit;
+      }
+      .close {
+        min-inline-size: 44px;
+        border: 0;
+        background: transparent;
+        color: color-mix(in srgb, CanvasText 65%, Canvas);
+      }
+      .frame {
+        padding: 0.5rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 0.75rem;
+        background: color-mix(in srgb, CanvasText 7%, Canvas);
+      }
+      .paper {
+        inline-size: 100%;
+        aspect-ratio: 3 / 2;
+        border-radius: 0.75rem;
+        background: white;
+        box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+      }
+      .tools {
+        display: grid;
+        gap: 1rem;
+        padding-block-start: 1rem;
+        border-block-start: 1px solid ButtonBorder;
+      }
+      fieldset {
+        min-inline-size: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      legend {
+        margin-block-end: 0.5rem;
+        color: color-mix(in srgb, CanvasText 65%, Canvas);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .choices {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .swatch {
+        display: grid;
+        place-items: center;
+        inline-size: 44px;
+        block-size: 44px;
+        border: 2px solid ButtonBorder;
+        border-radius: 999px;
+        background: Canvas;
+      }
+      .swatch.selected,
+      .brush.selected {
+        border-color: Highlight;
+        outline: 2px solid color-mix(in srgb, Highlight 35%, transparent);
+      }
+      .dot {
+        inline-size: 28px;
+        block-size: 28px;
+        border: 1px solid ButtonBorder;
+        border-radius: 999px;
+      }
+      .brush {
+        border: 1px solid ButtonBorder;
+        background: color-mix(in srgb, CanvasText 6%, Canvas);
+        color: CanvasText;
+        font-weight: 700;
+      }
+      .brush.selected,
+      .primary {
+        background: Highlight;
+        color: HighlightText;
+      }
+      .secondary {
+        border: 1px solid ButtonBorder;
+        background: transparent;
+        color: CanvasText;
+      }
+      .secondary.danger {
+        color: LinkText;
+      }
+      .primary {
+        border: 1px solid Highlight;
+        font-weight: 700;
+      }
+      button:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 3px;
+      }
+      .action-group {
+        display: grid;
+        gap: 0.75rem;
+      }
+      @media (min-width: 40rem) {
+        .card {
+          padding: 1.5rem;
+        }
+        .tools {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .actions,
+        .action-group {
+          display: flex;
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Doodle pad</h1>
+        <p>Relay semantic chrome with stable paper content and accent-aware selection.</p>
+      </header>
+      <div class="preview-grid">
+        <section class="viewport mobile light" aria-label="Light theme, 390 pixel mobile doodle pad">
+          <article class="card">
+            <div class="header"><h2>Doodle</h2><button class="close" type="button" aria-label="Cancel doodle">×</button></div>
+            <div class="frame"><div class="paper" role="img" aria-label="Doodle drawing surface"></div></div>
+            <div class="tools">
+              <fieldset><legend>Colour</legend><div class="choices"><span class="swatch selected"><span class="dot" style="background:#000"></span></span><span class="swatch"><span class="dot" style="background:#ef4444"></span></span><span class="swatch"><span class="dot" style="background:#3b82f6"></span></span></div></fieldset>
+              <fieldset><legend>Brush</legend><div class="choices"><button class="brush" type="button">2px</button><button class="brush selected" type="button">4px</button><button class="brush" type="button">8px</button></div></fieldset>
+            </div>
+            <div class="actions"><button class="secondary danger" type="button">Clear</button><div class="action-group"><button class="secondary" type="button">Cancel</button><button class="primary" type="button">Send</button></div></div>
+          </article>
+        </section>
+        <section class="viewport desktop dark" aria-label="Dark theme, desktop doodle pad">
+          <article class="card">
+            <div class="header"><h2>おえかき</h2><button class="close" type="button" aria-label="キャンセル">×</button></div>
+            <div class="frame"><div class="paper" role="img" aria-label="おえかきキャンバス"></div></div>
+            <div class="tools">
+              <fieldset><legend>いろ</legend><div class="choices"><span class="swatch selected"><span class="dot" style="background:#000"></span></span><span class="swatch"><span class="dot" style="background:#10b981"></span></span><span class="swatch"><span class="dot" style="background:#8b5cf6"></span></span></div></fieldset>
+              <fieldset><legend>ブラシ</legend><div class="choices"><button class="brush" type="button">2px</button><button class="brush selected" type="button">4px</button><button class="brush" type="button">14px</button></div></fieldset>
+            </div>
+            <div class="actions"><button class="secondary danger" type="button">クリア</button><div class="action-group"><button class="secondary" type="button">キャンセル</button><button class="primary" type="button">送信</button></div></div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
