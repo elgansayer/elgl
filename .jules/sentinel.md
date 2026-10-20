@@ -111,6 +111,11 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2024-05-18 - Fix IDOR in audio-intro update endpoint
+**Vulnerability:** Insecure Direct Object Reference (IDOR) in the `audio-intro` update endpoint allowing any authenticated user to update another user's audio intro.
+**Learning:** Some endpoints missed validating the requested `userId` parameter against the authenticated user's ID (`req.user.id`) provided by the `SupabaseAuthGuard`.
+**Prevention:** Always verify that the requested entity matches the authenticated user ID extracted from the request context before performing modifications.
+
 ## 2026-09-23 - [Strict Secrets Validation in Production for Video Calls]
 **Vulnerability:** The VideoCallsService lacked validation to prevent fallback insecure default development values for LIVEKIT_API_KEY and LIVEKIT_SECRET from being used in production.
 **Learning:** Hardcoded development credentials for external service APIs represent a critical vulnerability in production as they allow silent initialization into an insecure state if environment variables are missing.
@@ -227,6 +232,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
