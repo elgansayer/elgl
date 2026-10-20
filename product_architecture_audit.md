@@ -88,6 +88,26 @@ This report outlines the user-facing routes, capabilities, overlaps, redundancie
 - `/community`: Communities component
 - `/ai-conversation`: Default redirect route
 
+### Auth & Legal Routes (`auth.routes.ts`)
+- `/onboarding`: Onboarding wizard
+- `/forgot-password`: Forgot password
+- `/reset-password`: Reset password
+- `/change-password`: Change password
+- `/lock`: App Lock
+- `/terms`: Terms of Service
+- `/privacy`: Privacy Policy
+- `/support`: Support Centre
+- Redundancies/Redirects: `/help` -> `/support`, `/help-about` -> `/support`
+
+### Admin & Core App Routes (`app.routes.ts`, `admin.routes.ts`)
+- `/home`: Home component
+- `/admin`: Admin Portal
+- `/admin/lessons`: Lesson Management
+- `/admin/moderation`: Moderation Queue
+- `/admin/blocks`: Block Management
+- `/admin/users`: Admin Users
+- `/developer`: Developer Dashboard
+
 ## 2. Identified Redundancies, Overlaps, and Contradictions
 - **Community vs Groups vs Communities:** There is a top-level `/community` route handling 'Communities' but also a `/groups` route for 'Groups Discovery'. It is unclear how a 'Group' differs from a 'Community'. The redirect `/groups/create` -> `/community/groups/create` suggests they overlap conceptually.
 - **Events vs Language Parties / Islands:** Social routes contain `/events`, but also redirect `/language-parties` and `/language-islands` into `/community/...`. This splinters 'happenings' across Social and Community.
@@ -95,6 +115,11 @@ This report outlines the user-facing routes, capabilities, overlaps, redundancie
 - **Vocabulary Management:** `/vocabulary` vs `/decks` vs `/review` vs `/suggest-flashcards`. There's potential to consolidate these into a single Vocabulary Hub rather than separate top-level routes.
 - **Settings Splat:** Too many legacy top-level routes (e.g., `/blocks`, `/language`, `/gdpr`, `/data-storage`, `/device-transfer`) exist merely to redirect to `/settings/...`. While not harmful, it shows legacy architectural sprawl. Furthermore, there are scattered settings routes like `/chat-settings` -> `/settings/chat`, `/message-filters` -> `/settings/message-filters`.
 - **Profile & Stats:** `/profile`, `/stats`, `/milestones` are all separate top-level social routes when they conceptually belong to a unified user profile view.
+- **Home vs Default Route:** Root `/` redirects to `/ai-conversation`, but there is a `/home` route. It's unclear what the primary landing experience should be.
+- **Support Redundancies:** `/help` and `/help-about` both redirect to `/support`.
+
+## 3. Consolidated Product Information Architecture
+We propose collapsing the scattered routes into distinct Core Pillars.
 - **Support & Help:** `/help`, `/help-about` all redirect to `/support`, showing fragmented entry points.
 - **Subscriptions & VIP:** `/vip` and `/my-subscription` both redirect to subscription related routes.
 
@@ -123,6 +148,8 @@ We propose collapsing the scattered routes into distinct Core Pillars to ensure 
 
 ### Pillar 4: Learning & AI (The Classroom)
 **Purpose:** Structured study, AI assistance, and vocabulary building.
+- `/learn` (Dashboard, potentially consolidating `/home`)
+  - `/learn/lessons` (Structured Quests & Lessons)
 - `/learn` (Dashboard, consolidating `/lessons` and `/quests`)
   - `/learn/ai-chat` (AI Conversation)
   - `/learn/read` (LingQ Engine)
@@ -142,6 +169,19 @@ We propose collapsing the scattered routes into distinct Core Pillars to ensure 
 ### Pillar 6: Commerce, Subscriptions & Settings
 **Purpose:** Account configuration, monetization, and virtual economy.
 - `/shop` (Coins, Stickers, Escrow)
+- `/subscription` (VIP Status)
+- `/settings` (All configurations cleanly scoped under this path)
+
+### Pillar 7: Auth, Legal & Support
+**Purpose:** Authentication flows, legal documents, and user assistance.
+- `/auth` (Consolidating Onboarding, Password Management, and App Lock)
+- `/legal` (Consolidating Terms and Privacy)
+- `/support` (Help and Support Centre)
+
+### Pillar 8: Admin & Platform Management
+**Purpose:** System administration, moderation, and developer tools.
+- `/admin` (Portal for Users, Moderation, Blocks, and Lessons)
+- `/developer` (Developer Dashboard)
 - `/subscription` (VIP Status and Management)
 - `/settings` (All configurations cleanly scoped under this path: Account, Privacy, Notifications, Chat/Filters, Language, App/Device, GDPR)
 
