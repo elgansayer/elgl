@@ -22,7 +22,8 @@ export class MatchmakingExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const user = (request as unknown as Record<string, unknown>).user as
-      { id: string } | undefined;
+      | { id: string }
+      | undefined;
 
     const status =
       exception instanceof HttpException
