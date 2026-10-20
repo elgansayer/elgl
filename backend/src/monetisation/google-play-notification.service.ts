@@ -285,8 +285,18 @@ export class GooglePlayNotificationService {
         return;
       }
 
+      const claimed = await this.claimPurchaseToken(
+        extractedUserId,
+        purchaseToken,
+        subscriptionId,
+      );
+      if (!claimed) {
+        this.logger.warn(
+          'Google Play purchase claim rejected: token belongs to a different account',
+        );
+        return;
+      }
       userId = extractedUserId;
-      await this.storePurchaseToken(userId, purchaseToken, subscriptionId);
     }
 
     const tier = this.mapSubscriptionIdToTier(subscriptionId);
@@ -379,11 +389,11 @@ export class GooglePlayNotificationService {
     return row?.user_id || null;
   }
 
-  public async storePurchaseToken(
+  public async claimPurchaseToken(
     userId: string,
     purchaseToken: string,
     subscriptionId: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const supabase = this.supabaseService.getClient();
 
     const { error } = await supabase.from('google_play_purchases').upsert(
@@ -395,15 +405,17 @@ export class GooglePlayNotificationService {
       },
       {
         onConflict: 'purchase_token',
-        ignoreDuplicates: false,
+        ignoreDuplicates: true,
       },
     );
 
     if (error) {
-      this.logger.error(
-        `Failed to store Google Play purchase: ${(error as Error).message}`,
-      );
+      this.logger.error('Failed to claim Google Play purchase');
+      return false;
     }
+
+    const ownerId = await this.getUserIdByPurchaseToken(purchaseToken);
+    return ownerId === userId;
   }
 
   private mapSubscriptionIdToTier(subscriptionId: string): string {

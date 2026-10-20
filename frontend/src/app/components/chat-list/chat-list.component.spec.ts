@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ChatListComponent } from './chat-list.component';
 import { ChatService } from '../../services/chat.service';
-import { ChatPinsService } from '../../services/chat-pins.service';
 import { GroupsService } from '../../services/groups.service';
 import * as toast from '../../services/toast.service';
 import { provideRouter } from '@angular/router';
@@ -19,28 +19,10 @@ describe('ChatListComponent', () => {
     unlockChat: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
   };
-  let mockChatPinsService: {
-    getPinnedRoomIds: ReturnType<typeof vi.fn>;
-    setPinned: ReturnType<typeof vi.fn>;
-  };
   let mockGroupsService: {
     getDiscoverableGroups: ReturnType<typeof vi.fn>;
     joinGroup: ReturnType<typeof vi.fn>;
   };
-
-  const preview = (id: string, isPinned = false, lastMessageAt = '2026-08-22T20:00:00Z') => ({
-    id,
-    title: `Room ${id}`,
-    subtitle: 'Language practice',
-    avatar: '',
-    isOnline: false,
-    isPinned,
-    isVip: false,
-    flagEmoji: null,
-    lastMessageText: 'Hello',
-    lastMessageAt,
-    unreadCount: 0,
-  });
 
   beforeEach(async () => {
     mockChatService = {
@@ -52,13 +34,7 @@ describe('ChatListComponent', () => {
       unlockChat: vi.fn().mockResolvedValue(undefined),
       getMessages: vi.fn().mockResolvedValue([]),
     };
-    mockChatPinsService = {
-      getPinnedRoomIds: vi.fn().mockResolvedValue([]),
-      setPinned: vi.fn().mockImplementation(async (roomId: string, isPinned: boolean) => ({
-        room_id: roomId,
-        is_pinned: isPinned,
-      })),
-    };
+
     mockGroupsService = {
       getDiscoverableGroups: vi.fn().mockResolvedValue([]),
       joinGroup: vi.fn().mockResolvedValue({ success: true }),
@@ -68,7 +44,6 @@ describe('ChatListComponent', () => {
       imports: [ChatListComponent],
       providers: [
         { provide: ChatService, useValue: mockChatService },
-        { provide: ChatPinsService, useValue: mockChatPinsService },
         { provide: GroupsService, useValue: mockGroupsService },
         provideRouter([]),
       ],
@@ -77,7 +52,6 @@ describe('ChatListComponent', () => {
     fixture = TestBed.createComponent(ChatListComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -155,56 +129,66 @@ describe('ChatListComponent', () => {
     expect(toast.toastsSignal().length).toBeGreaterThan(0);
   });
 
-  describe('priority pins', () => {
-    it('sorts pinned chats ahead of newer unpinned chats while keeping relative recency order', () => {
-      component.previews.set([
-        preview('newest', false, '2026-08-22T23:00:00Z'),
-        preview('pinned-new', true, '2026-08-22T22:00:00Z'),
-        preview('pinned-old', true, '2026-08-22T21:00:00Z'),
-      ]);
+  it('filters chat previews using the server-owned online flag', () => {
+    component.previews.set([
+      {
+        id: 'online-room',
+        title: 'Online partner',
+        subtitle: '',
+        avatar: '',
+        isOnline: true,
+        isPinned: false,
+        isVip: false,
+        flagEmoji: null,
+        lastMessageText: '',
+        lastMessageAt: null,
+        unreadCount: 0,
+      },
+      {
+        id: 'offline-room',
+        title: 'Offline partner',
+        subtitle: '',
+        avatar: '',
+        isOnline: false,
+        isPinned: false,
+        isVip: false,
+        flagEmoji: null,
+        lastMessageText: '',
+        lastMessageAt: null,
+        unreadCount: 0,
+      },
+    ]);
 
-      expect(component.regularAndPinnedPreviews().map((room) => room.id)).toEqual([
-        'pinned-new',
-        'pinned-old',
-        'newest',
-      ]);
-    });
+    component.selectedFilter.set('online');
 
-    it('pins a chat only after the server confirms the mutation', async () => {
-      const room = preview('room-1');
-      component.previews.set([room]);
-      const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as unknown as Event;
+    expect(component.filteredPreviews().map((preview) => preview.id)).toEqual(['online-room']);
+  });
 
-      await component.toggleRoomPin(event, room);
+  it('renders a visible online label in addition to the decorative status dot', () => {
+    component.isLoading.set(false);
+    component.previews.set([
+      {
+        id: 'online-room',
+        title: 'Online partner',
+        subtitle: '',
+        avatar: '',
+        isOnline: true,
+        isPinned: false,
+        isVip: false,
+        flagEmoji: null,
+        lastMessageText: '',
+        lastMessageAt: null,
+        unreadCount: 0,
+      },
+    ]);
+    fixture.detectChanges();
 
-      expect(mockChatPinsService.setPinned).toHaveBeenCalledWith('room-1', true);
-      expect(component.previews()[0].isPinned).toBe(true);
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(event.stopPropagation).toHaveBeenCalled();
-      expect(component.isPinPending('room-1')).toBe(false);
-    });
+    const onlineLabel = fixture.debugElement.query(By.css('span.text-success'));
+    const decorativeDot = fixture.debugElement.query(By.css('span.bg-success[aria-hidden="true"]'));
 
-    it('unpins a chat without changing its state when the request fails', async () => {
-      const room = preview('room-1', true);
-      component.previews.set([room]);
-      mockChatPinsService.setPinned.mockRejectedValueOnce(new Error('network error'));
-      const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as unknown as Event;
-
-      await component.toggleRoomPin(event, room);
-
-      expect(component.previews()[0].isPinned).toBe(true);
-      expect(toast.toastsSignal().some((item) => item.type === 'error')).toBe(true);
-    });
-
-    it('does not let unavailable pin state inherit the legacy room-wide pin value', async () => {
-      mockChatPinsService.getPinnedRoomIds.mockRejectedValueOnce(new Error('unavailable'));
-      component.previews.set([preview('room-1', true)]);
-
-      await component.ngOnInit();
-
-      expect(component.pinStateUnavailable()).toBe(true);
-      expect(component.previews().every((room) => !room.isPinned)).toBe(true);
-    });
+    expect(onlineLabel).toBeTruthy();
+    expect(onlineLabel.nativeElement.textContent.trim().length).toBeGreaterThan(0);
+    expect(decorativeDot).toBeTruthy();
   });
 
   describe('toggleRoomLock', () => {

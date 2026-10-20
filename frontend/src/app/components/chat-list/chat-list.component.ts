@@ -2,14 +2,14 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
-import { ChatPinsService } from '../../services/chat-pins.service';
+import { ChatFolderService } from '../../services/chat-folder.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
@@ -32,6 +32,7 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmInput,
     HlmButton,
@@ -47,7 +48,7 @@ interface ChatRoomPreview {
 })
 export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
-  private readonly chatPinsService = inject(ChatPinsService);
+  private readonly chatFolderService = inject(ChatFolderService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly unreadCounter = inject(UnreadCounterService);
@@ -58,16 +59,16 @@ export class ChatListComponent implements OnInit {
   readonly selectedLabel = signal<string | null>(null);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
-  readonly pinPendingRoomIds = signal<Set<string>>(new Set());
-  readonly pinStateUnavailable = signal<boolean>(false);
 
   /** Active tab: 'chats' | 'groups' */
   readonly activeTab = signal<'chats' | 'groups'>('chats');
   readonly groups = signal<ChatGroup[]>([]);
 
-  // ---------- Locked chat state ----------
+  // ---------- Private per-user chat folders ----------
   readonly lockedRoomIds = signal<string[]>([]);
+  readonly archivedRoomIds = signal<string[]>([]);
   readonly showLocked = signal<boolean>(false);
+  readonly showArchived = signal<boolean>(false);
 
   switchTab(tab: 'chats' | 'groups'): void {
     this.activeTab.set(tab);
@@ -82,16 +83,27 @@ export class ChatListComponent implements OnInit {
   }
 
   readonly regularAndPinnedPreviews = computed(() => {
-    const lockedIds = this.lockedRoomIds();
-    return [...this.filteredPreviews()]
-      .filter((preview) => !lockedIds.includes(preview.id))
-      .sort((a, b) => Number(b.isPinned) - Number(a.isPinned));
-  });
-  readonly lockedPreviews = computed(() => {
-    const lockedIds = this.lockedRoomIds();
-    return this.previews().filter((p) => lockedIds.includes(p.id));
+    const lockedIds = new Set(this.lockedRoomIds());
+    const archivedIds = new Set(this.archivedRoomIds());
+    return this.filteredPreviews().filter(
+      (preview) => !lockedIds.has(preview.id) && !archivedIds.has(preview.id),
+    );
   });
 
+  readonly archivedPreviews = computed(() => {
+    const archivedIds = new Set(this.archivedRoomIds());
+    const lockedIds = new Set(this.lockedRoomIds());
+    return this.filteredPreviews().filter(
+      (preview) => archivedIds.has(preview.id) && !lockedIds.has(preview.id),
+    );
+  });
+
+  readonly lockedPreviews = computed(() => {
+    const lockedIds = new Set(this.lockedRoomIds());
+    return this.previews().filter((preview) => lockedIds.has(preview.id));
+  });
+
+  // --------------------------------------------------------------------
   notImplemented(): void {
     notImplementedToast();
   }
@@ -102,26 +114,6 @@ export class ChatListComponent implements OnInit {
       this.labels.set(labels);
     } catch (error) {
       console.error('Failed to load labels:', error);
-    }
-  }
-
-  async addLabel(label: string): Promise<void> {
-    try {
-      await this.chatService.addLabel(label);
-      showToast(this.i18n.translate('chatList.labelAdded'), 'success');
-    } catch (error) {
-      console.error('Failed to add label:', error);
-      showToast(this.i18n.translate('chatList.labelAddFailed'), 'error');
-    }
-  }
-
-  async removeLabel(label: string): Promise<void> {
-    try {
-      await this.chatService.removeLabel(label);
-      showToast(this.i18n.translate('chatList.labelRemoved'), 'success');
-    } catch (error) {
-      console.error('Failed to remove label:', error);
-      showToast(this.i18n.translate('chatList.labelRemoveFailed'), 'error');
     }
   }
 
@@ -180,100 +172,22 @@ export class ChatListComponent implements OnInit {
     );
   });
 
-  readonly pinnedPreviews = computed(() =>
-    this.filteredPreviews().filter((preview) => preview.isPinned),
-  );
-  readonly regularPreviews = computed(() =>
-    this.filteredPreviews().filter((preview) => !preview.isPinned),
-  );
-
   async ngOnInit(): Promise<void> {
     await this.loadPreviews();
-    await Promise.all([this.loadPinnedRooms(), this.loadLockedRooms(), this.loadLabels()]);
+    await Promise.all([this.loadLockedRooms(), this.loadArchivedRooms(), this.loadLabels()]);
   }
 
   async loadPreviews(): Promise<void> {
     this.isLoading.set(true);
     try {
       const rooms = await this.chatService.getRooms();
-
-      const previewList = await Promise.all(
-        rooms.map(async (room) => {
-          const messages = await this.loadRoomMessages(room.id);
-          return this.toPreview(room, messages);
-        }),
-      );
-
-      previewList.sort((a, b) => {
-        if (!a.lastMessageAt && !b.lastMessageAt) return 0;
-        if (!a.lastMessageAt) return 1;
-        if (!b.lastMessageAt) return -1;
-        return b.lastMessageAt.localeCompare(a.lastMessageAt);
-      });
-
-      this.previews.set(previewList);
-      const totalChatUnread = previewList.reduce((sum, p) => sum + p.unreadCount, 0);
-      this.unreadCounter.setChatUnread(totalChatUnread);
+      const previewList = await this.toPreviews(rooms);
+      this.setPreviews(previewList);
     } catch (error) {
       console.error('Failed to load chat rooms:', error);
       this.previews.set([]);
     } finally {
       this.isLoading.set(false);
-    }
-  }
-
-  private async loadPinnedRooms(): Promise<void> {
-    try {
-      const ids = new Set(await this.chatPinsService.getPinnedRoomIds());
-      this.previews.update((previews) =>
-        previews.map((preview) => ({ ...preview, isPinned: ids.has(preview.id) })),
-      );
-      this.pinStateUnavailable.set(false);
-    } catch (error) {
-      console.error('Failed to load pinned chats:', error);
-      this.previews.update((previews) =>
-        previews.map((preview) => ({ ...preview, isPinned: false })),
-      );
-      this.pinStateUnavailable.set(true);
-    }
-  }
-
-  isPinPending(roomId: string): boolean {
-    return this.pinPendingRoomIds().has(roomId);
-  }
-
-  pinActionLabel(preview: ChatRoomPreview): string {
-    const action = this.i18n.translate(
-      preview.isPinned ? 'moments.unpinBtn' : 'moments.pinBtn',
-    );
-    return `${action} ${preview.title}`;
-  }
-
-  async toggleRoomPin(event: Event, preview: ChatRoomPreview): Promise<void> {
-    event.preventDefault();
-    event.stopPropagation();
-    if (this.isPinPending(preview.id)) return;
-
-    const desiredPinned = !preview.isPinned;
-    this.pinPendingRoomIds.update((ids) => new Set(ids).add(preview.id));
-
-    try {
-      await this.chatPinsService.setPinned(preview.id, desiredPinned);
-      this.previews.update((previews) =>
-        previews.map((room) =>
-          room.id === preview.id ? { ...room, isPinned: desiredPinned } : room,
-        ),
-      );
-      this.pinStateUnavailable.set(false);
-    } catch (error) {
-      console.error('Failed to update pinned chat:', error);
-      showToast(this.i18n.translate('common.error_generic'), 'error');
-    } finally {
-      this.pinPendingRoomIds.update((ids) => {
-        const next = new Set(ids);
-        next.delete(preview.id);
-        return next;
-      });
     }
   }
 
@@ -286,19 +200,70 @@ export class ChatListComponent implements OnInit {
     }
   }
 
+  private async loadArchivedRooms(): Promise<void> {
+    try {
+      const rooms = await this.chatFolderService.getArchivedRooms();
+      this.archivedRoomIds.set(rooms.map((room) => room.id));
+      await this.mergeFolderRooms(rooms);
+    } catch (error) {
+      console.error('Failed to load archived chats:', error);
+      this.archivedRoomIds.set([]);
+    }
+  }
+
+  async toggleArchivedFolder(): Promise<void> {
+    this.showArchived.update((shown) => !shown);
+  }
+
   async toggleLockedFolder(): Promise<void> {
     if (this.showLocked()) {
       this.showLocked.set(false);
       return;
     }
+
+    // Locked chats are the hidden folder and are deliberately fetched only
+    // after the local app-unlock flow succeeds.
     await this.authService.unlockApp();
-    if (!this.authService.appLocked()) {
+    if (this.authService.appLocked()) return;
+
+    try {
+      const rooms = await this.chatFolderService.getHiddenRooms();
+      this.lockedRoomIds.set(rooms.map((room) => room.id));
+      await this.mergeFolderRooms(rooms);
       this.showLocked.set(true);
+    } catch (error) {
+      console.error('Failed to reveal hidden chats:', error);
+      showToast(this.i18n.translate('chatList.folderLoadFailed'), 'error');
     }
   }
 
   isRoomLocked(roomId: string): boolean {
     return this.lockedRoomIds().includes(roomId);
+  }
+
+  isRoomArchived(roomId: string): boolean {
+    return this.archivedRoomIds().includes(roomId);
+  }
+
+  async toggleRoomArchive(event: Event, roomId: string): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const wasArchived = this.isRoomArchived(roomId);
+    try {
+      if (wasArchived) {
+        await this.chatFolderService.unarchiveRoom(roomId);
+        this.archivedRoomIds.update((ids) => ids.filter((id) => id !== roomId));
+        showToast(this.i18n.translate('chatList.chatUnarchived'), 'success');
+      } else {
+        await this.chatFolderService.archiveRoom(roomId);
+        this.archivedRoomIds.update((ids) => [...new Set([...ids, roomId])]);
+        showToast(this.i18n.translate('chatList.chatArchived'), 'success');
+      }
+    } catch (error) {
+      console.error('Failed to update chat archive status:', error);
+      showToast(this.i18n.translate('chatList.archiveActionFailed'), 'error');
+    }
   }
 
   async toggleRoomLock(event: Event, roomId: string): Promise<void> {
@@ -313,13 +278,44 @@ export class ChatListComponent implements OnInit {
         showToast(this.i18n.translate('chatList.chatUnlocked'), 'success');
       } else {
         await this.chatService.lockChat(roomId);
-        this.lockedRoomIds.update((ids) => [...ids, roomId]);
+        this.lockedRoomIds.update((ids) => [...new Set([...ids, roomId])]);
         showToast(this.i18n.translate('chatList.chatLocked'), 'success');
       }
     } catch (error) {
       console.error('Failed to update chat lock status:', error);
       showToast(this.i18n.translate('chatList.lockActionFailed'), 'error');
     }
+  }
+
+  private async mergeFolderRooms(rooms: ChatRoom[]): Promise<void> {
+    const existingIds = new Set(this.previews().map((preview) => preview.id));
+    const missingRooms = rooms.filter((room) => !existingIds.has(room.id));
+    if (missingRooms.length === 0) return;
+
+    const folderPreviews = await this.toPreviews(missingRooms);
+    this.setPreviews([...this.previews(), ...folderPreviews]);
+  }
+
+  private async toPreviews(rooms: ChatRoom[]): Promise<ChatRoomPreview[]> {
+    return Promise.all(
+      rooms.map(async (room) => {
+        const messages = await this.loadRoomMessages(room.id);
+        return this.toPreview(room, messages);
+      }),
+    );
+  }
+
+  private setPreviews(previews: ChatRoomPreview[]): void {
+    const unique = Array.from(new Map(previews.map((preview) => [preview.id, preview])).values());
+    unique.sort((a, b) => {
+      if (!a.lastMessageAt && !b.lastMessageAt) return 0;
+      if (!a.lastMessageAt) return 1;
+      if (!b.lastMessageAt) return -1;
+      return b.lastMessageAt.localeCompare(a.lastMessageAt);
+    });
+    this.previews.set(unique);
+    const totalChatUnread = unique.reduce((sum, preview) => sum + preview.unreadCount, 0);
+    this.unreadCounter.setChatUnread(totalChatUnread);
   }
 
   private async loadRoomMessages(roomId: string): Promise<ChatMessage[]> {
@@ -345,7 +341,7 @@ export class ChatListComponent implements OnInit {
       subtitle: room.subtitle,
       avatar: room.avatar,
       isOnline: room.is_online,
-      isPinned: false,
+      isPinned: room.is_pinned,
       isVip: room.is_vip ?? false,
       flagEmoji: this.getFlagEmoji(room.native_languages),
       lastMessageText: this.toMessagePreview(lastMessage),

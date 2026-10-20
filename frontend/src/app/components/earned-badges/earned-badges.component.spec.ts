@@ -90,4 +90,25 @@ describe('EarnedBadgesComponent', () => {
     expect(noneBadge).toBeTruthy();
     expect((noneBadge as HTMLElement).textContent?.trim()).toBe('badges.none');
   });
+
+  it('keeps earned statuses read-only without native or synthetic interactive semantics', () => {
+    badgesSignal.set({ isVip: true, isSeriousLearner: true });
+    fixture.detectChanges();
+
+    const interactiveSelector = [
+      'button',
+      'a',
+      'input',
+      'select',
+      'textarea',
+      '[role="button"]',
+      '[role="link"]',
+      '[role="checkbox"]',
+      '[role="radio"]',
+      '[tabindex]',
+      '[aria-pressed]',
+    ].join(',');
+
+    expect(fixture.nativeElement.querySelectorAll(interactiveSelector)).toHaveLength(0);
+  });
 });

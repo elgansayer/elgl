@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from './ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
+import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
 
 interface AiChatMessage {
   id: string;
@@ -20,7 +21,15 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective],
+  imports: [
+    HlmInput,
+    HlmButton,
+    FormsModule,
+    DatePipe,
+    TranslatePipe,
+    A11yClickableDirective,
+    VisualDiffComponent,
+  ],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -34,7 +43,8 @@ interface AiChatMessage {
           >
             {{ 'aiPartner.start' | t }}
           </button>
-          @for (room of rooms(); track room) {
+          <!-- ⚡ Bolt: Track rooms by unique ID instead of object reference to prevent unnecessary DOM recreation when real-time statuses change -->
+          @for (room of rooms(); track room.id) {
             <div
               (click)="selectRoom(room)"
               appA11yClickable
@@ -207,7 +217,8 @@ interface AiChatMessage {
 
               <!-- Messages (inline rendering to support correction UI) -->
               <div class="flex-1 overflow-y-auto p-4 space-y-4" #messagesContainer>
-                @for (msg of messages(); track msg) {
+                <!-- ⚡ Bolt: Track messages by unique ID instead of object reference to prevent entire list re-rendering on delivery status updates -->
+                @for (msg of messages(); track msg.id) {
                   <div
                     class="group flex gap-2"
                     [class.flex-row-reverse]="msg.sender_id === currentUserId()"
@@ -243,25 +254,18 @@ interface AiChatMessage {
                           </button>
                         </div>
                       } @else if (msg.message_type === 'correction' && msg.correction_payload) {
-                        <div class="space-y-1">
-                          <p class="text-xs line-through opacity-70">
-                            {{ msg.correction_payload.original }}
-                          </p>
-                          <p class="text-success font-medium">
-                            {{ msg.correction_payload.corrected }}
-                          </p>
-                          @if (msg.correction_payload.explanation) {
-                            <p class="text-xs text-text-muted mt-1 italic">
-                              {{ msg.correction_payload.explanation }}
-                            </p>
-                          }
-                        </div>
+                        <app-visual-diff
+                          [original]="msg.correction_payload.original"
+                          [corrected]="msg.correction_payload.corrected"
+                          [explanation]="msg.correction_payload.explanation"
+                          [showActions]="true"
+                        ></app-visual-diff>
                       } @else if (
                         msg.message_type === 'correction_request' && msg.correction_request_payload
                       ) {
                         <div>
                           <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
-                          <p class="text-xs text-warning">✏️ Correction requested</p>
+                          <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
                         </div>
                       } @else {
                         <p>{{ msg.text_content }}</p>
@@ -531,7 +535,7 @@ export class ChatPageComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
-  private centrifugoService = inject(CentrifugoService);
+  private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);
 
@@ -573,7 +577,7 @@ export class ChatPageComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+        this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       }
     });
   }
@@ -581,7 +585,7 @@ export class ChatPageComponent implements OnInit {
   async selectRoom(room: ChatRoom) {
     // Unsubscribe previous room
     if (this.subscribedRoomId && this.subscribedRoomId !== room.id) {
-      this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       this.subscribedRoomId = null;
     }
 
@@ -594,7 +598,7 @@ export class ChatPageComponent implements OnInit {
       // Subscribe to real-time updates for this room (status updates, new messages, deletions)
       if (this.subscribedRoomId !== room.id) {
         this.subscribedRoomId = room.id;
-        this.centrifugoService.subscribe(`chat:${room.id}`, (data: unknown) => {
+        this.centrifugeService.subscribe(`chat:${room.id}`, (data: unknown) => {
           this.handleCentrifugoEvent(data as Record<string, unknown>);
         });
       }

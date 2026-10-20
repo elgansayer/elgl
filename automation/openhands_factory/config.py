@@ -435,9 +435,29 @@ class FactoryConfig(BaseModel):
     provider_slot_wait_seconds: int = 30
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
+    # archive_worktree() writes a full worktree copy into recovery_dir on every
+    # crash-recovery path with nothing that ever deletes them; left unpruned,
+    # these silently consume the disk-space reserve minimum_free_disk_gib
+    # protects, permanently pausing scheduling with no further log output
+    # once the check has already failed once (it only logs on state changes).
+    recovery_retention_hours: float = 72
     max_no_pr_hours: float = 6
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
+    maintenance_enabled: bool = False
+    maintenance_interval_seconds: int = Field(default=1800, ge=300, le=86400)
+    maintenance_daily_limit: int = Field(default=4, ge=1, le=24)
+    maintenance_analysis_interval_seconds: int = Field(default=0, ge=0, le=86400)
+    maintenance_analysis_timeout_seconds: int = Field(default=180, ge=30, le=600)
+    maintenance_peer_states: list[Path] = Field(default_factory=list)
+
+    @field_validator("maintenance_peer_states")
+    @classmethod
+    def safe_maintenance_peers(cls, value: list[Path]) -> list[Path]:
+        if len(value) > 8 or any(not path.is_absolute() for path in value):
+            raise ValueError("maintenance peer states require at most eight absolute paths")
+        return value
+
     # Quarantine (after FACTORY_MAX_CONSECUTIVE_FAILURES repeated identical
     # failures) is a bounded cooldown, not a dead end: a fully autonomous
     # deployment with no operator triage step needs a task to come back and
@@ -519,6 +539,8 @@ class FactoryConfig(BaseModel):
             raise ValueError("budgets cannot be negative")
         if self.minimum_free_disk_gib < 1:
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
+        if self.recovery_retention_hours <= 0:
+            raise ValueError("recovery retention must be positive")
         if self.factory_architecture != EXPECTED_FACTORY_ARCHITECTURE:
             raise ValueError(
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
@@ -642,9 +664,26 @@ class FactoryConfig(BaseModel):
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
+                recovery_retention_hours=float(env.get("FACTORY_RECOVERY_RETENTION_HOURS", "72")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
+                maintenance_enabled=boolean("FACTORY_MAINTENANCE_ENABLED", False),
+                maintenance_interval_seconds=int(
+                    env.get("FACTORY_MAINTENANCE_INTERVAL_SECONDS", "1800")
+                ),
+                maintenance_daily_limit=int(env.get("FACTORY_MAINTENANCE_DAILY_LIMIT", "4")),
+                maintenance_analysis_interval_seconds=int(
+                    env.get("FACTORY_MAINTENANCE_ANALYSIS_INTERVAL_SECONDS", "0")
+                ),
+                maintenance_analysis_timeout_seconds=int(
+                    env.get("FACTORY_MAINTENANCE_ANALYSIS_TIMEOUT_SECONDS", "180")
+                ),
+                maintenance_peer_states=[
+                    Path(value)
+                    for value in env.get("FACTORY_MAINTENANCE_PEER_STATES", "").split(",")
+                    if value
+                ],
                 quarantine_recovery_minutes=int(
                     env.get("FACTORY_QUARANTINE_RECOVERY_MINUTES", "30")
                 ),
