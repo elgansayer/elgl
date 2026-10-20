@@ -51,7 +51,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         new_issue_slots: int | None = None,
         review_first: bool = True,
         review_lane_max_concurrent: int = 1,
-        review_only: bool = False,
     ) -> list[Job]:
         batch = original(
             jobs,
@@ -61,7 +60,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             new_issue_slots,
             review_first,
             review_lane_max_concurrent,
-            review_only,
         )
         if not any(job.state is JobState.MERGE_QUEUED for job in batch):
             return batch
@@ -105,14 +103,12 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
     ) -> list[Task]:
         """Refresh the large issue backlog only when admission can consume it.
 
-        Pull requests refresh before issues on every normal control-plane cycle. While
-        pull-request capacity pauses new issue dispatch, or the new-issue admission
-        window is full, durable cached issue tasks are sufficient because the scheduler
-        cannot admit another discovered issue anyway. The first refresh with both PR
-        capacity and issue admission available performs a full GitHub issue scan before
+        Pull requests still refresh on every normal control-plane cycle. While the
+        new-issue admission window is full, durable cached issue tasks are sufficient
+        because the scheduler cannot admit another discovered issue anyway. The first
+        refresh with an available admission performs a full GitHub issue scan before
         scheduling, so stale or closed backlog entries cannot consume the newly-opened
-        slot. Disabling issue admission limits preserves the original full-scan behaviour
-        whenever pull-request capacity is available.
+        slot. Disabling issue admission limits preserves the original full-scan behavior.
         """
 
         pull_request_capacity = getattr(self.pipeline, "pull_request_capacity", None)
@@ -142,7 +138,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             new_issue_slots: int | None = None,
             review_first: bool = True,
             review_lane_max_concurrent: int = 1,
-            review_only: bool = False,
         ) -> list[Job]:
             return self._gated_select_batch(
                 original_select,
@@ -153,7 +148,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
                 new_issue_slots,
                 review_first,
                 review_lane_max_concurrent,
-                review_only,
             )
 
         def gated_merge_pull_request(pull_request: int, expected_head_sha: str) -> None:

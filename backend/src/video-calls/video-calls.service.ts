@@ -53,6 +53,7 @@ export class VideoCallsService {
           'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
         );
       }
+
       if (
         apiKey === 'test-livekit-api-key' ||
         apiKey === 'dev_livekit_key_test_value_123' ||

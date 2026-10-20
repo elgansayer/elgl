@@ -325,6 +325,7 @@
 - Build a Pro subscription tier (Tandem Pro clone) offering unlimited translations, advanced visitor logs, nearby members visibility, and ad-free browsing.
 - Make Nearby use explicit GPS location.
 - Complete persisted Serious Learner mode and standardise active Serious Learner filtering.
+- Audit and propose advanced partner discovery ranking signals.
 - Converge discovery error actions on Spartan.
 
 ## 🧠 Learning & AI Tools
