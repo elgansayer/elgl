@@ -147,6 +147,10 @@
 **Learning:** Endpoints mapped by `userId` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
 **Prevention:** Always extract the authenticated user ID via `@Req() req: { user: { id: string } }` (or similar decorators like `CurrentUser`) and assert it matches the target resource ID with a `ForbiddenException` or `UnauthorizedException`.
 
+## 2026-10-11 - [Admin Authorization ID Extraction Fallback]
+**Vulnerability:** The Admin API `banUser` and `warnUser` endpoints relied solely on `req.user.sub` to extract the admin's user ID for auditing and blocking actions. Depending on the `SupabaseAuthGuard` implementation and JWT structure, the user ID might be mapped to `req.user.id` instead of `sub`, leading to an undefined user ID being passed to the `AdminService` without failing fast.
+**Learning:** Hardcoding a specific property name for authenticated user IDs when multiple representations exist in the request context (e.g., `id` and `sub`) can lead to authorization bypass or unexpected application state. Furthermore, failing to validate the presence of the extracted ID before initiating destructive actions like bans introduces a risk.
+**Prevention:** Update authentication interfaces (like `AuthRequest`) to reflect the union of possible ID properties. In controller handlers, explicitly extract the ID using a nullish coalescing operator (`req.user.id ?? req.user.sub`) and immediately throw an `UnauthorizedException` if the resolved ID is falsy before passing it to services.
 ## 2026-10-12 - Improper Authentication Extraction in NestJS Controllers
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
