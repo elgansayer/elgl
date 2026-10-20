@@ -18,7 +18,7 @@ export class CartController {
 
   @Get()
   getCart(@CurrentUser() user: User | null) {
-    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    if (!user?.id) throw new UnauthorizedException();
     return this.cartService.getCart(user.id);
   }
 
@@ -27,7 +27,7 @@ export class CartController {
     @CurrentUser() user: User | null,
     @Body() body: { itemId: string; quantity?: number },
   ) {
-    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    if (!user?.id) throw new UnauthorizedException();
     return this.cartService.addItem(user.id, body.itemId, body.quantity ?? 1);
   }
 
@@ -36,7 +36,7 @@ export class CartController {
     @CurrentUser() user: User | null,
     @Body() body: { itemId: string; quantity?: number },
   ) {
-    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    if (!user?.id) throw new UnauthorizedException();
     return this.cartService.removeItem(
       user.id,
       body.itemId,
@@ -46,7 +46,7 @@ export class CartController {
 
   @Post('checkout')
   async checkout(@CurrentUser() user: User | null) {
-    if (!user?.id) throw new UnauthorizedException('User not authenticated');
+    if (!user?.id) throw new UnauthorizedException();
     return this.cartService.checkout(user.id);
   }
 }

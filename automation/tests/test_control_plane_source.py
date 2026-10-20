@@ -43,26 +43,26 @@ def test_production_uses_subscription_first_phase_routing() -> None:
     assert providers["codex"]["enabled"] is True
     assert providers["opencode"]["enabled"] is False
     assert providers["google"]["enabled"] is True
-    assert providers["pi"]["enabled"] is False
+    assert providers["pi"]["enabled"] is True
     assert providers["openhands"]["enabled"] is False
     assert providers["openhands"]["transport"] == "openhands-sdk"
     assert providers["openhands"]["emergency_only"] is True
 
     expected = {
-        AgentPhase.PLANNING: ["google", "claude", "codex"],
-        AgentPhase.ARCHITECTURE: ["google", "claude", "codex"],
-        AgentPhase.IMPLEMENTATION: ["google", "claude", "codex"],
-        AgentPhase.SECURITY_REVIEW: ["google", "claude", "codex"],
-        AgentPhase.QUALITY_REPAIR: ["google", "codex", "claude"],
-        AgentPhase.CODE_REVIEW: ["claude", "google", "codex"],
-        AgentPhase.CI_REPAIR: ["google", "claude", "codex"],
-        AgentPhase.GENERAL_ACTION: ["google", "claude", "codex"],
+        AgentPhase.PLANNING: ["google", "claude", "codex", "pi"],
+        AgentPhase.ARCHITECTURE: ["google", "claude", "codex", "pi"],
+        AgentPhase.IMPLEMENTATION: ["google", "claude", "codex", "pi"],
+        AgentPhase.SECURITY_REVIEW: ["google", "claude", "codex", "pi"],
+        AgentPhase.QUALITY_REPAIR: ["google", "pi", "codex", "claude"],
+        AgentPhase.CODE_REVIEW: ["claude", "google", "codex", "pi"],
+        AgentPhase.CI_REPAIR: ["google", "pi", "claude", "codex"],
+        AgentPhase.GENERAL_ACTION: ["google", "pi", "claude", "codex"],
     }
     for phase, candidates in expected.items():
         assert routing[phase.value.replace("-", "_")] == candidates
         assert "openhands" not in candidates
 
-    # Keep the two evidence-backed subscriptions ahead of the last-resort route.
+    # Keep Codex as the final repair route after the fast subscription tiers.
     assert expected[AgentPhase.CI_REPAIR][-1] == "codex"
 
 
