@@ -20,6 +20,11 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-18 - [Optimize Angular @for loops with explicit track by id]
+**Learning:** Tracking items by object reference (e.g., `track room` or `track msg`) instead of unique IDs in Angular's `@for` block can cause unnecessary DOM recreations during state updates.
+**Action:** When iterating over objects with unique identifiers (like `id`), always use `track item.id` instead of `track item` to improve rendering performance and minimize change detection overhead.
+
 ## 2026-08-30 - [Overlap Independent Bulk Queries in getComments]
 **Learning:** `getComments` issues two fixed-count bulk queries after loading comments. Running those independent lookups sequentially adds their network latencies even though neither result depends on the other.
 **Action:** Start independent bulk lookups together with `Promise.all` when their combined request load is bounded and partial results are not required.
@@ -448,6 +453,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
