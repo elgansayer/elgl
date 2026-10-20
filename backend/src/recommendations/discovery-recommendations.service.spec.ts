@@ -17,9 +17,13 @@ function candidate(id: string, overrides: Partial<Candidate> = {}): Candidate {
     is_serious_learner: false,
     study_streak_days: 0,
     last_active_at: '2026-08-21T09:00:00Z',
-    correction_ratio: 0,
-    proficiency_level: 'B1',
-    country: 'FR',
+    proficiency_level: null,
+    availability_morning: false,
+    availability_afternoon: false,
+    availability_evening: false,
+    available_time_start: null,
+    available_time_end: null,
+    correction_ratio: null,
     learning_goals: null,
     ...overrides,
   };
@@ -29,9 +33,6 @@ describe('rankDiscoveryRecommendations', () => {
   const current = {
     nativeLanguages: ['en'],
     targetLanguages: ['ja'],
-    proficiencyLevel: 'B1',
-    country: 'FR',
-    learningGoals: ['fluency'],
   };
 
   it('ranks reciprocal language, mutual interests and recent activity together', () => {
@@ -56,9 +57,9 @@ describe('rankDiscoveryRecommendations', () => {
     ]);
     expect(result[0].recommendation_reasons).toEqual(
       expect.arrayContaining([
-        'complementary_languages',
-        'interests',
-        'response_behaviour',
+        'language_exchange',
+        'shared_interests',
+        'active_recently',
       ]),
     );
     expect(result[0]).not.toHaveProperty('last_active_at');
@@ -82,8 +83,8 @@ describe('rankDiscoveryRecommendations', () => {
     ]);
     const hidden = result.find((item) => item.id === 'hidden-active');
     const visible = result.find((item) => item.id === 'visible-active');
-    expect(hidden?.recommendation_reasons).not.toContain('response_behaviour');
-    expect(visible?.recommendation_reasons).toContain('response_behaviour');
+    expect(hidden?.recommendation_reasons).not.toContain('active_recently');
+    expect(visible?.recommendation_reasons).toContain('active_recently');
   });
 
   it('filters hidden, deleted, deletion-pending and incomplete profiles', () => {
@@ -126,7 +127,7 @@ describe('rankDiscoveryRecommendations', () => {
 
   it('keeps sparse but complete profiles when a mutual-interest signal exists', () => {
     const result = rankDiscoveryRecommendations(
-      { nativeLanguages: ['en'], targetLanguages: ['fr'], learningGoals: [], country: 'FR', proficiencyLevel: 'B1' },
+      { nativeLanguages: ['en'], targetLanguages: ['fr'] },
       [
         candidate('shared-only', {
           native_languages: ['ja'],
@@ -139,6 +140,162 @@ describe('rankDiscoveryRecommendations', () => {
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0].recommendation_reasons).toEqual(['interests', 'proficiency', 'timezone_overlap']);
+    expect(result[0].recommendation_reasons).toEqual(['shared_interests']);
+  });
+
+  it('explains proficiency, availability, correction, and goal matches', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        proficiencyLevel: 'B1',
+        availabilityEvening: true,
+        availableTimeStart: '18:00',
+        availableTimeEnd: '20:00',
+        learningGoals: ['conversation'],
+      },
+      [
+        candidate('multidimensional-match', {
+          proficiency_level: 'B1',
+          availability_evening: true,
+          available_time_start: '19:00',
+          available_time_end: '21:00',
+          correction_ratio: 0.81,
+          learning_goals: ['Conversation'],
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).toEqual(
+      expect.arrayContaining([
+        'proficiency_match',
+        'availability_match',
+        'high_correction_ratio',
+        'learning_goal_match',
+      ]),
+    );
+  });
+
+  it('does not award new signals when profile data is missing or mismatched', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        proficiencyLevel: 'B1',
+        availabilityMorning: true,
+        learningGoals: ['grammar'],
+      },
+      [
+        candidate('language-only', {
+          proficiency_level: 'A2',
+          availability_evening: true,
+          correction_ratio: 0.79,
+          learning_goals: ['conversation'],
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    for (const reason of [
+      'proficiency_match',
+      'availability_match',
+      'high_correction_ratio',
+      'learning_goal_match',
+    ]) {
+      expect(result[0].recommendation_reasons).not.toContain(reason);
+    }
+  });
+
+  it('treats malformed proficiency values as neutral', () => {
+    const result = rankDiscoveryRecommendations(
+      { ...current, proficiencyLevel: '   ' },
+      [candidate('malformed-proficiency', { proficiency_level: '   ' })],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).not.toContain('proficiency_match');
+  });
+
+  it('uses the repository-wide inclusive high-correction threshold', () => {
+    const result = rankDiscoveryRecommendations(
+      current,
+      [candidate('threshold', { correction_ratio: 0.8 })],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).toContain('high_correction_ratio');
+  });
+
+  it('requires overlapping preferred clock windows rather than endpoint-only contact', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        availableTimeStart: '10:00',
+        availableTimeEnd: '12:00',
+      },
+      [
+        candidate('adjacent', {
+          available_time_start: '12:00',
+          available_time_end: '14:00',
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).not.toContain(
+      'availability_match',
+    );
+  });
+
+  it('matches overlapping overnight windows', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        availableTimeStart: '23:00',
+        availableTimeEnd: '02:00',
+      },
+      [
+        candidate('overnight', {
+          available_time_start: '01:00',
+          available_time_end: '03:00',
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    expect(result[0].recommendation_reasons).toContain('availability_match');
+  });
+
+  it('treats malformed and zero-duration windows as neutral', () => {
+    const result = rankDiscoveryRecommendations(
+      {
+        ...current,
+        availableTimeStart: '10:00',
+        availableTimeEnd: '12:00',
+      },
+      [
+        candidate('malformed', {
+          available_time_start: 'not-a-time',
+          available_time_end: '11:00',
+        }),
+        candidate('zero-duration', {
+          available_time_start: '11:00',
+          available_time_end: '11:00',
+        }),
+      ],
+      new Map(),
+      NOW,
+    );
+
+    for (const recommendation of result) {
+      expect(recommendation.recommendation_reasons).not.toContain(
+        'availability_match',
+      );
+    }
   });
 });
