@@ -202,6 +202,10 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+## 2026-10-10 - [Optimize discovery cache invalidation via Promise.all]
+**Learning:** In the backend `discovery-cache-invalidation.service.ts`, event listeners like `handleUserProfileUpdated` sequentially executed `this.deleteByPattern()` and `this.getRedis().del()` using `await` inside a loop or sequence. Since these deletes are completely independent (matching different cache namespaces or keys), awaiting them sequentially unnecessarily compounded Redis network roundtrip delays, slowing down the processing of high-volume events like profile updates or cache purges.
+**Action:** When executing multiple independent cache deletions or invalidations (e.g., across different patterns or namespaces), always wrap the promises in `Promise.all` to execute them concurrently. Furthermore, consolidate multiple exact key deletions into a single variadic `.del(key1, key2, ...)` call to minimize network overhead.
+
 ## 2024-05-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In both the `video-calls-cache-invalidation.service.ts` and `safety-cache-invalidation.service.ts` services, cache invalidation methods sequentially iterated over cache patterns invoking `await redis.del()` or `await redis.scan()` inside a `for...of` loop. This causes N separate sequential roundtrips to Redis, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns, replace sequential `await` loops with a concurrent `Promise.all` mapping. Summing up deleted counts using a `reduce` handles the aggregation efficiently.
@@ -238,6 +242,7 @@
 ## 2026-08-25 - [Optimize sequential delete-then-insert with upsert]
 **Learning:** In `backend/src/events/events.service.ts`, `createRsvp` first issued a `delete()` to remove any existing RSVP, followed sequentially by an `insert()`. This structure causes two independent roundtrips over the network, compounding database latency on write operations.
 **Action:** When a table has a unique constraint covering the targeted identifiers (like `UNIQUE (event_id, user_id)`), replace sequential `delete` and `insert` calls with a single atomic `.upsert()` specifying the constraint fields in `onConflict`. This optimizes both network overhead and database operation efficiency.
+
 
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, the `invalidateAllVideoClassroomCaches` method sequentially iterated over cache patterns invoking `deleteByScan` or `redis.del` using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during bulk cache invalidation, unnecessarily stalling the event loop and compounding network latency.
