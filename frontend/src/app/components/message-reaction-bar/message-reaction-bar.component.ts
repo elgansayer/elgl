@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import {
   MESSAGE_REACTION_EMOJIS,
@@ -6,6 +6,7 @@ import {
 } from '../../services/message-reactions.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-message-reaction-bar',
   imports: [...HlmButtonImports],
   template: `
