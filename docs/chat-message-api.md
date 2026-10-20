@@ -27,7 +27,7 @@ Nested payloads use `class-transformer` plus `@ValidateNested`, so malformed nes
 
 ## Persistence and realtime behavior
 
-On the accepted path, `ChatService.sendMessage` performs the existing safety/message-filter and spam checks, inserts the row into `chat_messages`, enriches supported messages, and calls `CentrifugoService.publish()` with the saved message. Notifications, mentions, XP, away replies, and receipt handling remain downstream of the persisted message.
+On the accepted path, `ChatService.sendMessage` performs the existing safety/message-filter and spam checks, inserts the row into `chat_messages`, enriches supported messages, and calls `CentrifugeService.publish()` with the saved message. Notifications, mentions, XP, away replies, and receipt handling remain downstream of the persisted message.
 
 A database insert failure aborts the request before Centrifugo publication. Centrifugo publication itself currently returns a boolean and logs sanitized transport failures; it is deliberately best-effort so an already-persisted message is not deleted merely because realtime transport is temporarily unavailable. Clients recover authoritative state from message history after reconnecting. This PR does not attempt a distributed transaction between Postgres and Centrifugo.
 
@@ -36,7 +36,7 @@ A database insert failure aborts the request before Centrifugo publication. Cent
 - Sender identity is server-derived from the authenticated Supabase user.
 - The request body cannot select a different `sender_id` because that field is not part of the DTO and non-whitelisted fields are rejected.
 - The existing block, first-message privacy-filter, and spam checks continue to run before persistence.
-- Centrifugo API credentials remain server-side. `CentrifugoService` logs the channel and sanitized error message on transport failure, not request authorization headers or message content.
+- Centrifugo API credentials remain server-side. `CentrifugeService` logs the channel and sanitized error message on transport failure, not request authorization headers or message content.
 - No new persisted fields or retention category are introduced. Message deletion/retention behavior remains the existing `chat_messages` policy.
 
 ## Failure semantics
