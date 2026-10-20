@@ -21,6 +21,15 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-28 - [Batch Independent Redis Operations]
+**Learning:** Sequential `await` calls for independent cache operations (e.g., clearing multiple Redis cache keys in admin controllers) create additive network latency that delays API responses.
+**Action:** Identify sequences of independent asynchronous cache or database operations and batch them using `Promise.all` to resolve them concurrently, significantly reducing overall latency.
+
+## 2026-09-29 - [Batch Redis Invalidations using Promise.all]
+**Learning:** Sequential `await` calls on independent backend operations, such as calling `this.deletePattern()` iteratively inside a `for...of` loop in a NestJS event handler (like `handleUserDataCleared`), cause additive N+1 network latency against Redis.
+**Action:** Replace `for...of` loops performing sequential independent network calls with `.map()` and `Promise.all()` to fire the operations concurrently. This reduces total waiting time to roughly the longest single operation instead of the sum.
+
+
 ## 2026-09-11 - [Start Independent User Statistics Queries Together]
 **Learning:** Awaiting the user lookup before starting four independent statistics queries added one avoidable network-latency interval to successful requests.
 **Action:** Start the five independent queries in one `Promise.all`. This preserves the query count while removing the separate user-lookup wait from the successful request's critical path.
@@ -176,6 +185,44 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+
+## 2026-08-22 - [Optimize daily tip generation via Bounded Concurrency]
+
+**Learning:** In the backend `daily-tip.service.ts`, the cron job generating daily tips sequentially awaited LLM API proxy calls (`await this.llmProxyService.proxyMessage()`) in a `for...of` loop over all users. This creates severe and compounding network latency bottlenecks during batch notifications.
+**Action:** Replaced sequential API requests with a bounded concurrent approach using `Promise.allSettled` over small chunks (e.g. 10 users). This mitigates N sequential API calls into concurrent batches without overwhelming upstream services or violating rate limits, while preserving fail-safe execution.
+
+## 2026-08-22 - [Optimize sequential cache invalidations via Promise.all]
+
+**Learning:** In `backend/src/admin/admin.service.ts`, methods like `setVipStatus`, `banUser`, and `warnUser` perform sequential `await` calls for independent cache invalidation operations (e.g., `await this.invalidateUserListCaches(); await this.invalidateLoginHistoryCache(...)`). This introduces unnecessary additive network latency.
+**Action:** When performing multiple independent cache invalidations, group the `await` calls into a single concurrent `Promise.all` array to execute them concurrently and mitigate network latency.
+
+## 2026-09-30 - Cache Invalidation Latency
+**Learning:** Sequential await calls for cache invalidation (like Redis del or pattern scan deletions) add significant network latency, particularly when user actions trigger bulk cache clears across multiple namespaces.
+**Action:** Group independent cache invalidation promises and resolve them concurrently using Promise.all to collapse the network roundtrips into a single wait time.
+
+## 2026-08-30 - [Optimize bulk cache invalidations via Promise.all]
+**Learning:** In the backend `video-calls-cache-invalidation.service.ts` (and similar invalidation services), iterating sequentially through cache pattern arrays using `await redis.del()` inside a `for...of` loop forces each invalidation to wait for the previous roundtrip. This additive latency drastically degrades performance during bulk resets.
+**Action:** Always map pattern arrays into an array of concurrent promises, resolving them together via `Promise.all`. This effectively batches the network calls and minimizes the overall blocking time, ensuring O(1) latency overhead regardless of the pattern count.
+
+
+## 2024-11-20 - [Optimize sequential cache invalidations via Promise.all]
+**Learning:** In the backend admin service, sequential cache invalidations using `await` introduced unnecessary additive network latency.
+**Action:** Group independent network operations like cache invalidations into a single `Promise.all` batch to mitigate additive latency.
+
+## 2026-08-25 - [Optimize Chunked Database Inserts via Bounded Promise.allSettled]
+**Learning:** In the backend `chat-backup.service.ts`, importing large backups by splitting them into chunks and iterating sequentially with `await` introduces compounding N+1 network latency. Sequential I/O inside a loop degrades performance on large batch jobs. However, blindly wrapping all requests in an unbounded `Promise.all` can overwhelm database connection pools.
+**Action:** When inserting large sets of data in chunks, push the chunk insertion promises into an array and execute them using a bounded concurrent approach (e.g., batching into chunks of 10) with `Promise.allSettled` instead of sequentially awaiting each one in a `for` loop. Throw the reason on rejection to maintain error handling logic. Wrap Supabase queries in `Promise.resolve` before attaching `.then` or `.catch` to avoid TS2339 build errors.
+
+## 2024-05-28 - [Optimize Sequential Cache Invalidation via Promise.all]
+
+**Learning:** In the backend `admin.service.ts`, several administrative actions (e.g., `setVipStatus`, `banUser`, `warnUser`) performed cache invalidation by sequentially awaiting multiple independent Redis invalidation methods (like `invalidateUserListCaches` and `invalidateLoginHistoryCache`). Executing these network operations sequentially incurs additive network latency for the API response.
+**Action:** Group independent cache invalidations or sequential network operations into a single concurrent `Promise.all` batch fetch to significantly reduce latency and speed up API response times.
+
+## 2024-10-03 - [Optimize Sequential Cache Invalidations via Promise.all]
+
+**Learning:** In the backend `admin.service.ts`, sequential calls to `await this.invalidate...Caches()` were being made at the end of mutation methods (e.g., `setVipStatus`, `banUser`, `warnUser`). These operations independently delete keys from Redis, and executing them sequentially introduces unnecessary additive network latency.
+**Action:** When making multiple independent cache invalidation calls or other independent network operations (e.g., `invalidateUserListCaches()`), group the sequential `await` calls into a single `Promise.all` batch fetch to mitigate additive network latency.
+
 ## 2026-10-06 - Stream Cancellation Resource Leak
 **Learning:** In Node.js `fetch` implementations, calling `response.body.cancel()` sequentially after `response.arrayBuffer()` throws a 'ReadableStream is locked' error. Furthermore, sequential awaits on stream cleanups delay socket reuse.
 **Action:** Execute stream cleanups (`arrayBuffer()` and `body.cancel()`) concurrently using `Promise.allSettled()` to prevent the lock error and expedite connection pool release.
@@ -288,6 +335,16 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -24,6 +24,38 @@ describe('StudyBuddiesService', () => {
     expect(service).toBeTruthy();
   });
 
+  describe('follow', () => {
+    it('should POST targetUserId to follow endpoint', async () => {
+      const promise = service.follow('user-1');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/study-buddies/follow');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ targetUserId: 'user-1' });
+      req.flush({});
+      await expect(promise).resolves.toBeUndefined();
+    });
+  });
+
+  describe('unfollow', () => {
+    it('should DELETE with body targetUserId from unfollow endpoint', async () => {
+      const promise = service.unfollow('user-1');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/study-buddies/unfollow');
+      expect(req.request.method).toBe('DELETE');
+      expect(req.request.body).toEqual({ targetUserId: 'user-1' });
+      req.flush({});
+      await expect(promise).resolves.toBeUndefined();
+    });
+  });
+
+  describe('getOrCreateChannel', () => {
+    it('should GET channel with partnerId', async () => {
+      const promise = service.getOrCreateChannel('user-1');
+      const req = httpMock.expectOne('http://127.0.0.1:3000/api/study-buddies/channel?partnerId=user-1');
+      expect(req.request.method).toBe('GET');
+      req.flush({ channel: 'channel-1' });
+      await expect(promise).resolves.toEqual({ channel: 'channel-1' });
+    });
+  });
+
   describe('requestBuddy', () => {
     it('should POST the dto to the request endpoint', async () => {
       const requestPromise = service.requestBuddy({

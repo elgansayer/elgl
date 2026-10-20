@@ -172,12 +172,21 @@
 - Dedicated Groups & Scheduled Events System.
 - Complete Responsive Communities Experience (Ref: PR #8448):
 
+- Complete Responsive Communities Experience
+  - Deliver responsive three-pane layout and mobile drawer view for seamless navigation between broad communities and specific groups
+  - Introduce dynamic active state visualizations and micro-interactions (hover effects, unread notification badges)
+  - Ensure error robustness during community creation and deletion for a smoother user experience
+
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448).
+
   - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
   - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
   - Add micro-interactions (hover effects) and unread notification badges.
   - Extract Communities list and creation form into separate components for scalability.
   - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
 - Dedicated Groups & Scheduled Events System.
+
+
 - Harden Centrifugo connection token endpoint and lock connection-token contract.
 
 ## 📰 Moments & Social Feed
@@ -520,6 +529,9 @@
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
+- Ensure Performance and Scalability for Data-Heavy Views
+  - Implement Angular CDK Virtual Scrolling for Chat and Reading views to prevent DOM bloat, memory leaks, and UI lag when handling extensive chat histories or large reading texts
+
 - Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag.
 - Implement missing E2E test flows for Authentication, Chat Messaging, and Moment Creation.
 - Exempt non-user-authored body fields from sanitization.
@@ -565,3 +577,4 @@
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
+

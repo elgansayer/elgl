@@ -11,6 +11,10 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 ## 👥 Communities & Groups
 
+- Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
+- Dedicated Groups & Scheduled Events System.
+- Complete Responsive Communities Experience (Ref: PR #8448).
+
 - Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448):
   - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
   - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
@@ -18,6 +22,7 @@ _Organized by complete user outcomes rather than individual technical chores._
   - Extract Communities list and creation form into separate components for scalability.
   - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
 - Harden Centrifugo connection token endpoint and lock connection-token contract.
+
 
 ## 📰 Moments & Social Feed
 
@@ -66,6 +71,10 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 ## ⚙️ Platform, UI Architecture & Automation
 
+- Integrate diagnostic tools: Dynamic diagnostic quiz component for new sign-ups and custom Angular `ErrorHandler` logging client crashes to backend analytics.
+- Optimize app infrastructure and UX: Web Vitals audits (e.g., `loading=lazy`), offline support via IndexedDB, client-side image compression, and WebSocket connection rate limiting.
+- Develop universal connectivity features: In-App Sharing, External Deep Linking Engine, and End-to-end encrypted voice calls.
+
 - Align UI contracts with Spartan UI and Relay themes (desktop sidebars, confirm dialogs, developer dashboards).
 - Define 400 percent zoom reflow standard, enforce touch target sizing, and lock screen-reader naming contracts.
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
@@ -78,3 +87,4 @@ _Organized by complete user outcomes rather than individual technical chores._
   - Ensure dynamic height recalculation works correctly for chat messages with varying content lengths (text, media, audio).
   - Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
   - Write or update unit tests to verify that the virtual scroller correctly limits the rendered DOM nodes to the visible viewport slice.
+
