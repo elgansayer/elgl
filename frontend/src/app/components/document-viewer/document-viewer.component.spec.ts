@@ -1,24 +1,12 @@
-import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DocumentViewerComponent } from './document-viewer.component';
-
-@Component({
-  imports: [DocumentViewerComponent],
-  template: `
-    <app-document-viewer title="Terms">
-      <a href="#retention">Retention details</a>
-      <button type="button">Caller action</button>
-    </app-document-viewer>
-  `,
-})
-class ProjectedContentHostComponent {}
 
 describe('DocumentViewerComponent', () => {
   let fixture: ComponentFixture<DocumentViewerComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DocumentViewerComponent, ProjectedContentHostComponent],
+      imports: [DocumentViewerComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DocumentViewerComponent);
