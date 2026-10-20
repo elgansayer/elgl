@@ -115,11 +115,11 @@ describe('DoodlePadComponent', () => {
     return event;
   }
 
-  it('initialises the drawing surface at the canonical raster size on neutral paper', () => {
+  it('initialises the drawing surface at the canonical raster size', () => {
     expect(component).toBeTruthy();
     expect(canvasEl.width).toBe(600);
     expect(canvasEl.height).toBe(400);
-    expect(mockCtx.fillStyle).toBe('#ffffff');
+    expect(mockCtx.fillStyle).toBe('#1e1e1e');
     expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 600, 400);
     expect(mockCtx.lineCap).toBe('round');
     expect(mockCtx.lineJoin).toBe('round');
@@ -283,7 +283,7 @@ describe('DoodlePadComponent', () => {
     component.clearCanvas();
 
     expect(mockCtx.closePath).toHaveBeenCalled();
-    expect(mockCtx.fillStyle).toBe('#ffffff');
+    expect(mockCtx.fillStyle).toBe('#1e1e1e');
     expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 600, 400);
   });
 

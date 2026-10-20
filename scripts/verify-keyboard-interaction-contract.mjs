@@ -45,7 +45,7 @@ export function scanKeyboardInteractionSource(source) {
     ...collectRegex(
       source,
       'deprecated-key-api',
-      /\b(?:keyCode|which)\b/g,
+      /\bkeyCode\b|\.\s*which\b|\[\s*['"]which['"]\s*\]|\bwhich\b(?=\s*[,}:=])/g,
       GUIDANCE['deprecated-key-api'],
     ),
     ...collectRegex(

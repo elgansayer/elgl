@@ -16,7 +16,7 @@ The browser should request a new token when establishing or re-establishing its 
 
 ## Configuration and secrets
 
-Production requires `CENTRIFUGO_API_KEY` and `CENTRIFUGO_SECRET`; `CentrifugoService` fails startup when either credential is absent in production. `CENTRIFUGO_URL` points at the Centrifugo instance. Redis is used for distributed connection-rate limiting when available.
+Production requires `CENTRIFUGO_API_KEY` and `CENTRIFUGO_SECRET`; `CentrifugeService` fails startup when either credential is absent in production. `CENTRIFUGO_URL` points at the Centrifugo instance. Redis is used for distributed connection-rate limiting when available.
 
 Do not log connection JWTs, the signing secret, API keys, Supabase access tokens, or Authorization headers. Issue/token diagnostics should identify the operation and failure class without credential material.
 
