@@ -1,0 +1,1038 @@
+<!-- @dsCard group="Features" name="Auth &amp; access" subtitle="password reset · change · policy · social sign-in · device lock · version / forced update" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Auth &amp; access</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.auth-access" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 101 106 122;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 137 143 157;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      .auth-card {
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 20px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 8px 20px rgb(var(--shadow) / 0.1);
+      }
+      .auth-card h3 {
+        margin: 0;
+        font:
+          700 20px/1.25 'Instrument Sans',
+          sans-serif;
+      }
+      .auth-card.centered {
+        text-align: center;
+        align-items: stretch;
+      }
+      .link-btn {
+        align-self: center;
+        background: none;
+        border: 0;
+        min-height: 44px;
+        padding: 0 12px;
+        color: rgb(var(--primary));
+        font: 600 14px/1 inherit;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        cursor: pointer;
+      }
+      .msg {
+        margin: 0;
+        font-size: 13px;
+        text-align: center;
+      }
+      .msg.ok {
+        color: rgb(var(--success));
+      }
+      .msg.bad {
+        color: rgb(var(--danger));
+      }
+      .rules {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+      }
+      .rules li {
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+      }
+      .rules .pass {
+        color: rgb(var(--success));
+      }
+      .rules .fail {
+        color: rgb(var(--danger));
+      }
+      .rules b {
+        inline-size: 1em;
+        text-align: center;
+      }
+      .btn.duet-btn {
+        background: linear-gradient(90deg, rgb(var(--primary)), rgb(var(--secondary)));
+      }
+      .social {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .social .btn {
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+        justify-content: center;
+      }
+      .social svg {
+        inline-size: 20px;
+        block-size: 20px;
+        flex: none;
+      }
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .divider::before,
+      .divider::after {
+        content: '';
+        flex: 1;
+        border-block-start: 1px solid rgb(var(--surface-700));
+      }
+      .lock-glyph {
+        inline-size: 64px;
+        block-size: 64px;
+        margin-inline: auto;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        background: rgb(var(--primary) / 0.12);
+      }
+      .kv {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+      }
+      .kv span:last-child {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .blocking-scrim {
+        background: rgb(0 0 0 / 0.7);
+        border-radius: 16px;
+        padding: 28px 14px;
+        position: relative;
+      }
+      .blocking-scrim .dialog {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border-radius: 24px;
+        padding: 24px 18px;
+      }
+      .blocking-scrim .dialog h3 {
+        margin: 0;
+        font:
+          800 20px/1.25 'Instrument Sans',
+          sans-serif;
+      }
+      .blocking-scrim .ghost-app {
+        position: absolute;
+        inset-block-start: 8px;
+        inset-inline-start: 12px;
+        font-size: 11px;
+        color: rgb(255 255 255 / 0.75);
+      }
+      .pill-btn {
+        border-radius: 999px;
+        align-self: center;
+      }
+      .spinner {
+        inline-size: 14px;
+        block-size: 14px;
+        border-radius: 999px;
+        border: 2px solid rgb(var(--on-fill) / 0.4);
+        border-block-start-color: rgb(var(--on-fill));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .spinner {
+          animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      }
+      .w60 {
+        inline-size: 60%;
+      }
+      .w45 {
+        inline-size: 45%;
+      }
+      .self-start {
+        align-self: flex-start;
+      }
+      .flush {
+        margin: 0;
+      }
+      .big-glyph {
+        font-size: 44px;
+      }
+      .gap-note {
+        font-size: 11px;
+        color: rgb(var(--warning));
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Auth &amp; access</h1>
+        <p>
+          Design-sync ID <code>feature.auth-access</code> · every runtime surface in this area is
+          one specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <section class="specimen" data-component="components/forgot-password">
+        <header>
+          <h2>Forgot password</h2>
+          <code>components/forgot-password</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Request link · sent</span>
+          <div class="auth-card">
+            <h3>Forgot password?</h3>
+            <label class="field"
+              >Email
+              <input type="email" value="maria@example.com" autocomplete="email" />
+            </label>
+            <p class="msg ok" role="status">If that email exists, we've sent a reset link.</p>
+            <button class="btn block" type="button">Send reset link</button>
+            <button class="link-btn" type="button">Back to home</button>
+          </div>
+          <span class="state-label">Request link · sending (disabled)</span>
+          <div class="auth-card">
+            <label class="field"
+              >Email
+              <input type="email" value="maria@example.com" />
+            </label>
+            <button class="btn block" type="button" disabled aria-busy="true">
+              <span class="spinner" aria-hidden="true"></span>Sending…
+            </button>
+          </div>
+          <span class="state-label">?token= · new password · error</span>
+          <div class="auth-card">
+            <label class="field invalid"
+              >New password
+              <input type="password" value="hunter22!" aria-invalid="true" />
+              <span class="hint">At least 8 characters</span>
+            </label>
+            <p class="msg bad" role="alert">
+              Failed to reset password. The token may be invalid or expired.
+            </p>
+            <button class="btn block" type="button">Reset password</button>
+          </div>
+          <span class="state-label">日本語 · ja</span>
+          <div class="auth-card" lang="ja">
+            <h3>パスワードをお忘れの方</h3>
+            <label class="field"
+              >メールアドレス<input type="email" value="yuki@example.jp"
+            /></label>
+            <button class="btn block" type="button">リセットリンクを送信</button>
+          </div>
+        </div>
+        <footer>
+          States shown: request · sending · sent · token reset · error · ja.
+          <span class="gap-note"
+            >en.json lacks <code>forgot_password.*</code> keys - English copy above is the intended
+            source text.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/reset-password">
+        <header>
+          <h2>Reset password</h2>
+          <code>components/reset-password</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Default</span>
+          <div class="auth-card">
+            <h3>Reset Password</h3>
+            <label class="field"
+              >New Password<input type="password" value="" placeholder="••••••••"
+            /></label>
+            <button class="btn block" type="button" disabled>Submit</button>
+            <button class="link-btn" type="button">Back to Home</button>
+          </div>
+          <span class="state-label">Submitting</span>
+          <div class="auth-card">
+            <label class="field"
+              >New Password<input type="password" value="correct-horse-9"
+            /></label>
+            <button class="btn block" type="button" disabled aria-busy="true">
+              <span class="spinner" aria-hidden="true"></span>Please wait...
+            </button>
+          </div>
+          <span class="state-label">Success · error</span>
+          <div class="auth-card">
+            <p class="msg ok" role="status">Password has been reset successfully.</p>
+            <p class="msg bad" role="alert">
+              Failed to reset password. The token may be invalid or expired.
+            </p>
+          </div>
+          <span class="state-label">العربية · RTL</span>
+          <div class="auth-card" lang="ar" dir="rtl">
+            <h3>إعادة تعيين كلمة المرور</h3>
+            <label class="field">كلمة المرور الجديدة<input type="password" value="" /></label>
+            <p class="msg ok">تم إعادة تعيين كلمة المرور بنجاح.</p>
+            <button class="link-btn" type="button">العودة إلى الصفحة الرئيسية</button>
+          </div>
+        </div>
+        <footer>States shown: empty/disabled · submitting · success · error · ar RTL</footer>
+      </section>
+
+      <section class="specimen" data-component="components/password-policy-reset">
+        <header>
+          <h2>Password policy reset</h2>
+          <code>components/password-policy-reset</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Partially valid</span>
+          <div class="auth-card">
+            <h3>Reset your password</h3>
+            <label class="field">Current password<input type="password" value="oldpass12" /></label>
+            <label class="field">New password<input type="password" value="tide2026" /></label>
+            <ul class="rules">
+              <li class="pass"><b aria-hidden="true">✓</b>At least 8 characters</li>
+              <li class="pass"><b aria-hidden="true">✓</b>Contains a number</li>
+              <li class="fail"><b aria-hidden="true">✗</b>Contains a symbol</li>
+            </ul>
+            <label class="field">Confirm password<input type="password" value="tide2025" /></label>
+            <div class="rules">
+              <span class="fail"><b aria-hidden="true">✗</b> Passwords match</span>
+            </div>
+            <button class="btn block duet-btn" type="button" disabled>Reset password</button>
+          </div>
+          <span class="state-label">All rules pass · success</span>
+          <div class="auth-card">
+            <ul class="rules">
+              <li class="pass"><b aria-hidden="true">✓</b>At least 8 characters</li>
+              <li class="pass"><b aria-hidden="true">✓</b>Contains a number</li>
+              <li class="pass"><b aria-hidden="true">✓</b>Contains a symbol</li>
+              <li class="pass"><b aria-hidden="true">✓</b>Passwords match</li>
+            </ul>
+            <button class="btn block duet-btn" type="button">Reset password</button>
+            <div class="alert success" role="status">Your password has been updated.</div>
+          </div>
+          <span class="state-label">Error</span>
+          <div class="alert error" role="alert">
+            We couldn't update your password. Check your current password and try again.
+          </div>
+        </div>
+        <footer>
+          States shown: live rule checklist · mismatch · valid · success · error. Ember→Tide duet
+          CTA. <span class="gap-note"><code>password.*</code> keys missing from en/ja/ar.</span>
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/change-password">
+        <header>
+          <h2>Change password</h2>
+          <code>components/change-password</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Default</span>
+          <div class="auth-card">
+            <h3>Change password</h3>
+            <label class="field">Current password<input type="password" value="••••••••" /></label>
+            <label class="field">New password<input type="password" value="" /></label>
+            <button class="btn block" type="button" disabled>Submit</button>
+            <button class="link-btn" type="button">Back to settings</button>
+          </div>
+          <span class="state-label">Submitting · result</span>
+          <div class="auth-card">
+            <button class="btn block" type="button" disabled aria-busy="true">
+              <span class="spinner" aria-hidden="true"></span>Please wait...
+            </button>
+            <p class="msg ok" role="status">Password changed.</p>
+            <p class="msg bad" role="alert">Couldn't change your password. Try again.</p>
+          </div>
+        </div>
+        <footer>
+          States shown: default/disabled · submitting · success · error.
+          <span class="gap-note"
+            >en <code>auth.changePassword.title</code> is a placeholder ("Title"); success/error
+            keys missing.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/social-login-buttons">
+        <header>
+          <h2>Social login buttons</h2>
+          <code>components/social-login-buttons</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Default · outline pills, 44px touch</span>
+          <div class="social">
+            <button class="btn" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Continue with Google
+            </button>
+            <button class="btn" type="button">
+              <svg viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" />
+                <path
+                  d="M13.6 21v-6.7h2.3l.4-2.7h-2.7V9.9c0-.8.3-1.3 1.4-1.3h1.4V6.2c-.3 0-1.1-.1-2-.1-2 0-3.3 1.2-3.3 3.4v2.1H8.8v2.7h2.3V21z"
+                  fill="#fff"
+                />
+              </svg>
+              Continue with Facebook
+            </button>
+            <button class="btn" type="button">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M17.57 12.63c-.03-2.06 1.68-3.06 1.75-3.11-.95-1.4-2.44-1.59-2.97-1.61-1.27-.13-2.47.74-3.11.74-.64 0-1.64-.72-2.69-.7-1.38.02-2.66.8-3.37 2.04-1.44 2.49-.37 6.19 1.03 8.22.68.99 1.5 2.11 2.57 2.07 1.03-.04 1.42-.67 2.67-.67 1.25 0 1.6.67 2.68.65 1.11-.02 1.81-1 2.47-1.99.78-1.13 1.11-2.23 1.12-2.29-.02-.01-2.16-.83-2.19-3.29zm-1.83-5.41c.56-.68.95-1.63.84-2.58-.81.03-1.8.54-2.38 1.22-.52.61-.98 1.59-.85 2.52.9.07 1.82-.46 2.39-1.16z"
+                />
+              </svg>
+              Continue with Apple
+            </button>
+          </div>
+          <div class="divider">or</div>
+          <span class="state-label">日本語 · long-label wrap</span>
+          <div class="social" lang="ja">
+            <button class="btn" type="button">Googleで続ける</button>
+          </div>
+        </div>
+        <footer>
+          States shown: default · ja. Emits <code>loginProvider</code> (google|facebook|apple).
+          <span class="gap-note"
+            >en labels are placeholders ("Login google") - intended copy shown.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/device-lock">
+        <header>
+          <h2>Device lock</h2>
+          <code>components/device-lock</code> · route <code>/lock</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Locked</span>
+          <div class="auth-card centered">
+            <div class="lock-glyph" aria-hidden="true">🔒</div>
+            <h3>Unlock app</h3>
+            <p class="secondary" role="status" aria-live="polite">
+              Confirm your identity to continue.
+            </p>
+            <button class="btn block" type="button">Unlock</button>
+          </div>
+          <span class="state-label">Unlocking (busy)</span>
+          <div class="auth-card centered">
+            <button class="btn block" type="button" disabled aria-busy="true">
+              <span class="spinner" aria-hidden="true"></span>Unlock
+            </button>
+          </div>
+          <span class="state-label">Failed</span>
+          <div class="auth-card centered">
+            <h3>Unlock app</h3>
+            <p class="msg bad" role="status">Something went wrong. Please try again.</p>
+            <button class="btn block" type="button">Unlock</button>
+          </div>
+        </div>
+        <footer>
+          States shown: locked · busy · failed (status live region). Full-width CTA at 390px,
+          intrinsic on wide.
+          <span class="gap-note">en <code>deviceLock.title/message</code> are placeholders.</span>
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/version-check">
+        <header>
+          <h2>Version check</h2>
+          <code>components/version-check</code> · <code>/settings/version</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Loading</span>
+          <div class="card stack">
+            <div class="title">App version</div>
+            <div class="skeleton pulse w60"></div>
+            <div class="skeleton pulse w45"></div>
+          </div>
+          <span class="state-label">Update available</span>
+          <div class="card stack">
+            <div class="title">App version</div>
+            <div class="kv"><span>Current version</span><span>4.18.2</span></div>
+            <div class="kv"><span>Latest version</span><span>4.19.0</span></div>
+            <span class="badge success self-start">Update available</span>
+            <button class="btn block" type="button">Download update</button>
+            <button class="btn secondary-btn block" type="button">Check for updates</button>
+          </div>
+          <span class="state-label">Up to date · error</span>
+          <div class="card stack">
+            <div class="kv"><span>Current version</span><span>4.19.0</span></div>
+            <p class="secondary flush">You're up to date.</p>
+            <div class="alert error" role="alert">Failed to fetch version</div>
+          </div>
+        </div>
+        <footer>
+          States shown: loading · update available · up to date · error.
+          <span class="gap-note"
+            >Error string is hardcoded English in code;
+            <code>loading/latestVersion/updateAvailable/upToDate</code> keys missing.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/forced-update-modal">
+        <header>
+          <h2>Forced update modal</h2>
+          <code>components/forced-update-modal</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Blocking · cannot dismiss (Esc suppressed)</span>
+          <div class="blocking-scrim">
+            <span class="ghost-app" aria-hidden="true">App content locked behind overlay</span>
+            <div class="dialog" role="dialog" aria-modal="true" aria-label="Update required">
+              <div class="big-glyph" aria-hidden="true">⚠️</div>
+              <h3>Update required</h3>
+              <p class="secondary flush">
+                A new version of the app is available. Please update to continue.
+              </p>
+              <a class="btn pill-btn" href="#">Update now</a>
+            </div>
+          </div>
+          <span class="state-label">العربية · RTL</span>
+          <div class="blocking-scrim" dir="rtl" lang="ar">
+            <div class="dialog">
+              <h3>التحديث مطلوب</h3>
+              <p class="secondary flush">يتوفر إصدار جديد من التطبيق. يرجى التحديث للمتابعة.</p>
+              <a class="btn pill-btn" href="#">تحديث الآن</a>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: blocking en · ar RTL. Scroll locked, no close affordance.
+          <span class="gap-note"
+            >Code uses <code>text-white</code>/<code>hover:bg-primary-dark</code>; Relay should be
+            <code>text-on-fill</code>. <code>forcedUpdateModal.*</code> missing from en.</span
+          >
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>

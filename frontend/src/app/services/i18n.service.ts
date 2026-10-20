@@ -60,6 +60,12 @@ export class I18nService {
   ];
 
   private readonly baseDictionary: Record<string, string> = {
+    // Forced update gate
+    'forcedUpdateModal.title': 'Update required',
+    'forcedUpdateModal.message':
+      'A new version of the app is available. Please update to continue.',
+    'forcedUpdateModal.updateButton': 'Update now',
+
     // Top App Navigation & Header
     'app.title': 'HelloTalk',
     'shop.title': 'Shop',
@@ -456,6 +462,15 @@ export class I18nService {
     'discovery.interestAny': 'Any interest',
     'discovery.interestsHint': 'Find partners with shared hobbies',
     'discovery.sharedInterests': 'Shared interests: {{interests}}',
+    'discovery.recommendation.languageExchange': 'Language exchange match',
+    'discovery.recommendation.sharedInterest': '{{count}} shared interest',
+    'discovery.recommendation.sharedInterests': '{{count}} shared interests',
+    'discovery.recommendation.activeRecently': 'Recently active',
+    'discovery.recommendation.activeLearner': 'Active learner',
+    'discovery.recommendation.proficiencyMatch': 'Similar proficiency',
+    'discovery.recommendation.availabilityMatch': 'Similar time preferences',
+    'discovery.recommendation.helpfulCorrector': 'Helpful corrector',
+    'discovery.recommendation.learningGoalMatch': 'Shared learning goal',
     'common.showMore': 'Show more',
     'common.showLess': 'Show less',
     // ---- Matchmaking algorithm labels ----
@@ -1217,6 +1232,7 @@ export class I18nService {
     'review.completeTitle': 'Review Complete!',
     'review.completeDesc': 'Great job! Come back regularly to keep your vocabulary fresh.',
     'review.restart': 'Start Again',
+    'review.practiceInAiConversationBtn': 'Practice in AI Conversation',
 
     // SRS Tour (ngx-joyride onboarding tooltips)
     'srsTour.startBtn': '🎓 Take the tour',
@@ -1544,6 +1560,10 @@ export class I18nService {
     'wordModal.saveLearningBtn': '🟡 Save to learning',
     'wordModal.markKnownBtn': '⚪ Mark known',
     'wordModal.resetBtn': 'Reset to new (Level 0 / Blue)',
+    'wordModal.srsLabel': 'Spaced Repetition',
+    'wordModal.learningBtn': 'Learning',
+    'wordModal.knownBtn': 'Known',
+    'wordModal.reviewFlashcardsBtn': 'Review Flashcards',
 
     // Voice Recorder
     'voiceRecorder.title': '🎙️ Voice Note Recorder',
@@ -1553,6 +1573,8 @@ export class I18nService {
     'voiceRecorder.stopBtn': '⏹️ Stop recording',
     'voiceRecorder.sendBtn': '📤 Send voice note',
     'voiceRecorder.uploadingBtn': '⏳ Uploading to Cloudflare R2...',
+    'voiceRecorder.uploadError':
+      'Voice note upload failed. Your recording is still available to retry.',
 
     // Audio Player
     'audioPlayer.groupLabel': 'Audio player',

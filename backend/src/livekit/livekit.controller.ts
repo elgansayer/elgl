@@ -4,11 +4,11 @@ import {
   Body,
   UseGuards,
   UseInterceptors,
-  Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import { LivekitService } from './livekit.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
@@ -85,12 +85,13 @@ export class LivekitController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getToken(
-    @Req() req: AuthenticatedRequest,
+    @CurrentUser() user: User | null,
     @Body() dto: LivekitTokenDto,
   ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not identified');
+    if (!user?.id) {
+      throw new UnauthorizedException('User identity not found');
     }
-    return this.livekitService.generateToken(req.user.id, dto.room_name);
+
+    return this.livekitService.generateToken(user.id, dto.room_name);
   }
 }

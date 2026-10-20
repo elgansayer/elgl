@@ -130,8 +130,23 @@ export class AudioRoomsService implements OnModuleInit {
 
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const secretKey = this.configService.get<string>('LIVEKIT_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
     if (!apiKey || !secretKey) {
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
+
+    if (env === 'production') {
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        secretKey === 'test-livekit-secret' ||
+        secretKey === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
     }
 
     this.apiKey = apiKey;
@@ -1594,8 +1609,11 @@ export class AudioRoomsService implements OnModuleInit {
     roomId: string,
     dto: SendReactionDto,
   ): Promise<{ emojiId: string; animationUrl: string }> {
-    const room = await this.getRoom(roomId);
-    const profile = await this.usersService.getProfile(userId);
+    // ⚡ Bolt Optimization: Replace sequential database queries with concurrent Promise.all execution
+    const [room, profile] = await Promise.all([
+      this.getRoom(roomId),
+      this.usersService.getProfile(userId),
+    ]);
     if (!profile?.is_vip) {
       throw new ForbiddenException(
         'Only Pro members can send exclusive reactions.',
