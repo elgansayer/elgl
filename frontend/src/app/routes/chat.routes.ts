@@ -17,7 +17,7 @@ export const chatRoutes: Routes = [
     pathMatch: 'full',
   },
   {
-    path: 'groups',
+    path: 'chat/groups',
     loadComponent: () =>
       import('../components/groups-discovery/groups-discovery.component').then(
         (m) => m.GroupsDiscoveryComponent,
@@ -25,13 +25,23 @@ export const chatRoutes: Routes = [
     title: 'Groups Discovery - HelloTalk',
   },
   {
+    path: 'groups',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
     path: 'groups/create',
-    redirectTo: 'community/groups/create',
+    redirectTo: 'chat/groups/create',
     pathMatch: 'full',
   },
   {
     path: 'communities',
-    redirectTo: 'community',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
+    path: 'community',
+    redirectTo: 'chat/groups',
     pathMatch: 'full',
   },
   {
