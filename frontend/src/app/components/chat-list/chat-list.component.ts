@@ -2,7 +2,7 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -34,6 +34,7 @@ type ArchiveState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-chat-list',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmInput,
     HlmButton,
@@ -124,26 +125,6 @@ export class ChatListComponent implements OnInit {
     }
   }
 
-  async addLabel(label: string): Promise<void> {
-    try {
-      await this.chatService.addLabel(label);
-      showToast(this.i18n.translate('chatList.labelAdded'), 'success');
-    } catch (error) {
-      console.error('Failed to add label:', error);
-      showToast(this.i18n.translate('chatList.labelAddFailed'), 'error');
-    }
-  }
-
-  async removeLabel(label: string): Promise<void> {
-    try {
-      await this.chatService.removeLabel(label);
-      showToast(this.i18n.translate('chatList.labelRemoved'), 'success');
-    } catch (error) {
-      console.error('Failed to remove label:', error);
-      showToast(this.i18n.translate('chatList.labelRemoveFailed'), 'error');
-    }
-  }
-
   async assignLabelToRoom(roomId: string, label: string): Promise<void> {
     try {
       await this.chatService.assignLabelToRoom(roomId, label);
@@ -198,13 +179,6 @@ export class ChatListComponent implements OnInit {
         preview.lastMessageText.toLowerCase().includes(query),
     );
   });
-
-  readonly pinnedPreviews = computed(() =>
-    this.filteredPreviews().filter((preview) => preview.isPinned),
-  );
-  readonly regularPreviews = computed(() =>
-    this.filteredPreviews().filter((preview) => !preview.isPinned),
-  );
 
   async ngOnInit(): Promise<void> {
     await Promise.all([
