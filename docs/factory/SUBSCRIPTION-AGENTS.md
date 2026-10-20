@@ -38,12 +38,10 @@ sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   claude auth status --json
 ```
 
-The adapter uses `claude -p` in non-interactive mode with subscription-backed aliases: Opus for planning and
-architecture, Sonnet for implementation and merge-critical reviews, and Haiku for bounded repair and general work.
-Fable is intentionally excluded because it requires separately purchased usage credits even for an authenticated
-Claude Pro account. The adapter applies a Factory-enforced phase timeout, safe mode, no session persistence, and
-text output. Safe mode preserves authentication and built-in tools while disabling personal and repository
-customisations such as hooks, plugins, MCP servers, and `CLAUDE.md` auto-discovery. Repository-owned Factory policy uses Claude's
+The adapter uses `claude -p` in non-interactive mode, model `fable`, maximum effort, a Factory-enforced phase
+timeout, safe mode, no session persistence, and text output. Safe mode preserves authentication and built-in
+tools while disabling personal and repository customisations such as hooks, plugins, MCP servers, and
+`CLAUDE.md` auto-discovery. Repository-owned Factory policy uses Claude's
 `--append-system-prompt` channel, while untrusted task text uses stdin. A failed `auth status --json` reports
 `AUTH_REQUIRED` without starting a coding job.
 
@@ -99,8 +97,8 @@ sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
 The production entry uses `command=agy`, `cli_variant=antigravity`, and the account-visible
-`model=gemini-3.1-pro-high` slug verified on 17 August 2026. The adapter passes the prompt on stdin, disables
-slash-command expansion, selects high effort, bounds print mode, enables the CLI sandbox, and auto-approves tool
+`model=gemini-3.8-flash-high` slug verified on 16 October 2026. The adapter passes the prompt in the argument
+vector, disables slash-command expansion, selects the model's encoded effort tier, bounds print mode, and auto-approves tool
 requests inside the Factory-controlled worktree. The outer Factory process runner still owns the final timeout
 and process-group termination. Recheck `agy models` before enabling Google because account entitlements can differ.
 
