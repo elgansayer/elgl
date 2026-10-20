@@ -11,10 +11,7 @@ import { DraftService } from '../../services/draft.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import {
   MessageReactionsService,
-  parseMessageReactionPublication,
-  type MessageReaction,
   type MessageReactionEmoji,
-  type MessageReactionState,
 } from '../../services/message-reactions.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -95,13 +92,11 @@ export class ChatViewComponent implements OnInit, OnDestroy {
   private draftService = inject(DraftService);
   private messageReactionsService = inject(MessageReactionsService);
   private centrifugeService = inject(CentrifugeService);
-  private realtimeChannel: string | null = null;
 
   messages: ChatMessage[] = [];
   newMessageText = '';
 
   private blockedUserIds = signal<Set<string>>(new Set<string>());
-  private readonly reactionRows = signal<Record<string, MessageReaction[]>>({});
   readonly reactionPendingIds = signal<Set<string>>(new Set<string>());
   readonly reactionErrorIds = signal<Set<string>>(new Set<string>());
 
@@ -116,14 +111,11 @@ export class ChatViewComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
-    this.realtimeChannel = `chat:${this.roomId()}`;
-    this.centrifugeService.subscribe(this.realtimeChannel, (publication) => {
-      this.applyReactionPublication(publication);
-    });
+    this.messageReactionsService.acquireRoom(this.roomId());
     void this.centrifugeService.connect();
 
     await this.loadMessages();
-    await Promise.all([this.loadBlockedUsers(), this.loadReactions()]);
+    await this.loadBlockedUsers();
 
     // Restore chat draft for this room
     const draft = this.draftService.loadChatDraft(this.roomId());
@@ -133,9 +125,7 @@ export class ChatViewComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.realtimeChannel) {
-      this.centrifugeService.unsubscribe(this.realtimeChannel);
-    }
+    this.messageReactionsService.releaseRoom(this.roomId());
   }
 
   onMessageTextChange(value: string): void {
@@ -145,7 +135,10 @@ export class ChatViewComponent implements OnInit, OnDestroy {
 
   reactionRecord(messageId: string): Record<string, string[]> {
     const grouped: Record<string, string[]> = {};
-    for (const reaction of this.reactionRows()[messageId] ?? []) {
+    for (const reaction of this.messageReactionsService.reactionsForMessage(
+      this.roomId(),
+      messageId,
+    )) {
       (grouped[reaction.emoji] ??= []).push(reaction.user_id);
     }
     return grouped;
@@ -162,12 +155,12 @@ export class ChatViewComponent implements OnInit, OnDestroy {
     this.reactionPendingIds.update((ids) => this.withAdded(ids, event.messageId));
 
     try {
-      const state = await this.messageReactionsService.setReaction(
+      await this.messageReactionsService.setReaction(
         event.messageId,
         event.emoji,
         event.added,
+        this.roomId(),
       );
-      this.applyReactionState(state);
     } catch {
       this.reactionErrorIds.update((ids) => this.withAdded(ids, event.messageId));
     } finally {
@@ -175,34 +168,11 @@ export class ChatViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  private applyReactionPublication(value: unknown): void {
-    const state = parseMessageReactionPublication(value);
-    if (state) this.applyReactionState(state);
-  }
-
-  private applyReactionState(state: MessageReactionState): void {
-    this.reactionRows.update((rows) => ({
-      ...rows,
-      [state.message_id]: state.reactions,
-    }));
-  }
-
   private async loadMessages(): Promise<void> {
     try {
       this.messages = await this.chatService.getMessages(this.roomId());
     } catch (err) {
       console.error('Failed to load messages', err);
-    }
-  }
-
-  private async loadReactions(): Promise<void> {
-    if (!this.effectiveUserId()) return;
-    try {
-      const state = await this.messageReactionsService.getRoomReactions(this.roomId());
-      this.reactionRows.set(state.reactions);
-    } catch {
-      // Messages remain usable when the reaction sub-resource is unavailable.
-      this.reactionRows.set({});
     }
   }
 

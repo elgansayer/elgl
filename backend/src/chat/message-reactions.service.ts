@@ -51,7 +51,7 @@ export class MessageReactionsService {
       .from('chat_messages')
       .select('id')
       .eq('room_id', roomId)
-      .eq('is_deleted', false)
+      .eq('is_deleted_for_everyone', false)
       .order('created_at', { ascending: false })
       .limit(MessageReactionsService.ROOM_MESSAGE_LIMIT);
 
@@ -107,11 +107,11 @@ export class MessageReactionsService {
     const supabase = this.supabaseService.getClient();
     const { data: message, error: messageError } = await supabase
       .from('chat_messages')
-      .select('id, room_id, is_deleted')
+      .select('id, room_id, is_deleted_for_everyone')
       .eq('id', messageId)
       .single();
 
-    if (messageError || !message || message.is_deleted) {
+    if (messageError || !message || message.is_deleted_for_everyone) {
       throw new NotFoundException('Message not found');
     }
 
@@ -166,16 +166,19 @@ export class MessageReactionsService {
     roomId: string,
     operation: 'load' | 'update',
   ): Promise<void> {
-    const { data: membership, error: membershipError } = await this.supabaseService
-      .getClient()
-      .from('chat_room_members')
-      .select('user_id')
-      .eq('room_id', roomId)
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: membership, error: membershipError } =
+      await this.supabaseService
+        .getClient()
+        .from('chat_room_members')
+        .select('user_id')
+        .eq('room_id', roomId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
     if (membershipError) {
-      this.logger.warn(`Message reaction membership ${operation} lookup failed`);
+      this.logger.warn(
+        `Message reaction membership ${operation} lookup failed`,
+      );
       throw new InternalServerErrorException(
         `Unable to ${operation} reactions`,
       );

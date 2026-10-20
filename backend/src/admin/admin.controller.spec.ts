@@ -15,10 +15,13 @@ function createMockContext(): {
   response: Record<string, unknown>;
 } {
   const setHeader = vi.fn();
-  const response = { setHeader };
+  const removeHeader = vi.fn();
+  const request = { headers: {} };
+  const response = { setHeader, removeHeader };
 
   const executionContext = {
     switchToHttp: () => ({
+      getRequest: () => request,
       getResponse: () => response,
     }),
   } as ExecutionContext;

@@ -13,7 +13,11 @@ describe('MessageReactionsService', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
-        data: { id: 'message-1', room_id: 'room-1', is_deleted: false },
+        data: {
+          id: 'message-1',
+          room_id: 'room-1',
+          is_deleted_for_everyone: false,
+        },
         error: null,
       }),
     };
@@ -45,7 +49,11 @@ describe('MessageReactionsService', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({
-        data: { id: 'message-1', room_id: 'room-1', is_deleted: false },
+        data: {
+          id: 'message-1',
+          room_id: 'room-1',
+          is_deleted_for_everyone: false,
+        },
         error: null,
       }),
     };
@@ -141,16 +149,16 @@ describe('MessageReactionsService', () => {
       { publish: vi.fn() } as unknown as CentrifugoService,
     );
 
-    await expect(
-      service.getRoomReactions('user-1', 'room-1'),
-    ).resolves.toEqual({
-      reactions: {
-        'message-1': [
-          { user_id: 'user-1', emoji: '👍' },
-          { user_id: 'user-2', emoji: '👍' },
-        ],
+    await expect(service.getRoomReactions('user-1', 'room-1')).resolves.toEqual(
+      {
+        reactions: {
+          'message-1': [
+            { user_id: 'user-1', emoji: '👍' },
+            { user_id: 'user-2', emoji: '👍' },
+          ],
+        },
       },
-    });
+    );
     expect(messageQuery.limit).toHaveBeenCalledWith(100);
     expect(reactionQuery.in).toHaveBeenCalledWith('message_id', [
       'message-1',

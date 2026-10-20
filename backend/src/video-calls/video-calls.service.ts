@@ -10,8 +10,18 @@ import {
   VideoCallsDegradationService,
   DegradationMarker,
 } from './video-calls-degradation.service';
+import { VideoCallsEncryptionService } from './video-calls-encryption.service';
 import { LivekitService, IceServer } from '../livekit/livekit.service';
 import { MetricsService } from '../metrics/metrics.service';
+
+export interface EncryptedVideoCallResponse {
+  token: string;
+  roomName: string;
+  e2eeKey: string;
+  iceServers: IceServer[];
+  degraded?: boolean;
+  degradationReason?: string;
+}
 
 @Injectable()
 export class VideoCallsService {
@@ -22,6 +32,7 @@ export class VideoCallsService {
   constructor(
     private configService: ConfigService,
     private degradationService: VideoCallsDegradationService,
+    private encryptionService: VideoCallsEncryptionService,
     private livekitService: LivekitService,
     private readonly metricsService: MetricsService,
   ) {
@@ -35,6 +46,16 @@ export class VideoCallsService {
           'LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured in production',
         );
       }
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        secret === 'test-livekit-secret' ||
+        secret === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
     }
 
     this.roomService = new RoomServiceClient(
@@ -44,13 +65,10 @@ export class VideoCallsService {
     );
   }
 
-  async createRoom(userId: string): Promise<{
-    token: string;
-    roomName: string;
-    iceServers: IceServer[];
-    degraded?: boolean;
-    degradationReason?: string;
-  }> {
+  async createRoom(
+    userId: string,
+    remoteUserId: string,
+  ): Promise<EncryptedVideoCallResponse> {
     const roomName = `video_${uuidv4()}`;
     const marker: DegradationMarker = {
       degraded: false,
@@ -99,6 +117,15 @@ export class VideoCallsService {
       marker,
     );
 
+    // The media server must never receive the key. Persist it only in the
+    // authenticated application signalling plane with the same TTL as the
+    // LiveKit token, and fail closed if that secure key broker is unavailable.
+    const e2eeKey = await this.encryptionService.createSession(
+      roomName,
+      userId,
+      remoteUserId,
+    );
+
     if (marker.degraded) {
       this.logger.warn(
         `createRoom degraded for user ${userId}: ${marker.reason}`,
@@ -113,6 +140,7 @@ export class VideoCallsService {
 
     return {
       ...result,
+      e2eeKey,
       iceServers: this.livekitService.buildIceServers(),
       degraded: marker.degraded,
       degradationReason: marker.reason,
@@ -122,13 +150,14 @@ export class VideoCallsService {
   async joinRoom(
     userId: string,
     roomName: string,
-  ): Promise<{
-    token: string;
-    roomName: string;
-    iceServers: IceServer[];
-    degraded?: boolean;
-    degradationReason?: string;
-  }> {
+  ): Promise<EncryptedVideoCallResponse> {
+    // Authorize against the encrypted call session before minting a LiveKit
+    // token. This prevents knowledge of a room UUID from becoming admission.
+    const e2eeKey = await this.encryptionService.getKeyForParticipant(
+      roomName,
+      userId,
+    );
+
     const marker: DegradationMarker = {
       degraded: false,
       fallbackSource: 'none',
@@ -182,6 +211,7 @@ export class VideoCallsService {
 
     return {
       ...result,
+      e2eeKey,
       iceServers: this.livekitService.buildIceServers(),
       degraded: marker.degraded,
       degradationReason: marker.reason,

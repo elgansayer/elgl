@@ -926,7 +926,38 @@ def startup_security_checks(config: FactoryConfig) -> list[Check]:
         verification_isolation_check(),
         git_credential_helper_check(config),
         persistent_github_credentials_check(config.state_dir / "home"),
+        service_environment_permissions_check(),
     ]
+
+
+def service_environment_permissions_check(
+    roots: tuple[Path, ...] = (Path("/etc/repo-factory"), Path("/etc/hellotalk-factory")),
+    *,
+    owner_uid: int = 0,
+) -> Check:
+    """Inspect metadata only; systemd reads secrets before dropping privileges."""
+    unsafe: list[str] = []
+    for root in roots:
+        for pattern in ("common.env", "runtime.env", "factory.env", "factory.env.backup*"):
+            try:
+                paths = list(root.glob(pattern))
+            except PermissionError:
+                continue  # An inaccessible parent already hides these files from workers.
+            for path in paths:
+                try:
+                    metadata = path.stat()
+                except PermissionError:
+                    continue
+                except OSError:
+                    unsafe.append(f"{path.name}: unreadable metadata")
+                    continue
+                if metadata.st_uid != owner_uid or metadata.st_mode & 0o077:
+                    unsafe.append(f"{path.name}: owner-only access required")
+    return Check(
+        "service-environment-permissions",
+        not unsafe,
+        "; ".join(unsafe[:5]) if unsafe else "service environments and backups are private",
+    )
 
 
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
@@ -973,10 +1004,18 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
             )
         )
     checks.extend(disk_space_checks(config))
-    for script in (
-        config.repository / "scripts/verify-constitution.mjs",
-        config.repository / "scripts/check-conflict-markers.mjs",
-    ):
+    scripts = (
+        (
+            config.repository / "tools/check_openhands_control_plane.py",
+            config.repository / "tools/test_openhands_control_plane.py",
+        )
+        if config.repository_profile == "workout-agent"
+        else (
+            config.repository / "scripts/verify-constitution.mjs",
+            config.repository / "scripts/check-conflict-markers.mjs",
+        )
+    )
+    for script in scripts:
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
     checks.append(leaked_port_environment_check())
     checks.append(daemon_health_check(config))
@@ -994,12 +1033,17 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
                 checks.append(Check("opencode-go-api", True, config.opencode_model))
             except (RuntimeError, ValueError) as error:
                 checks.append(Check("opencode-go-api", False, str(error)))
+    systemd_unit = (
+        config.prompt_dir.parents[1] / "config/systemd/repo-factory@.service"
+        if config.repository_profile == "workout-agent"
+        else config.repository / "config/systemd/hellotalk-factory.service"
+    )
     try:
         systemd = subprocess.run(
             (
                 "systemd-analyze",
                 "verify",
-                str(config.repository / "config/systemd/hellotalk-factory.service"),
+                str(systemd_unit),
             ),
             capture_output=True,
             text=True,

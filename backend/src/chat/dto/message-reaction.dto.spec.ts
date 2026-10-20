@@ -1,14 +1,20 @@
 import { validate } from 'class-validator';
-import { MESSAGE_REACTION_EMOJIS, SetMessageReactionDto } from './message-reaction.dto';
+import {
+  MESSAGE_REACTION_EMOJIS,
+  SetMessageReactionDto,
+} from './message-reaction.dto';
 
 describe('SetMessageReactionDto', () => {
-  it.each(MESSAGE_REACTION_EMOJIS)('accepts supported emoji %s', async (emoji) => {
-    const dto = new SetMessageReactionDto();
-    dto.emoji = emoji;
-    dto.active = true;
+  it.each(MESSAGE_REACTION_EMOJIS)(
+    'accepts supported emoji %s',
+    async (emoji) => {
+      const dto = new SetMessageReactionDto();
+      dto.emoji = emoji;
+      dto.active = true;
 
-    await expect(validate(dto)).resolves.toHaveLength(0);
-  });
+      await expect(validate(dto)).resolves.toHaveLength(0);
+    },
+  );
 
   it('rejects arbitrary emoji values', async () => {
     const dto = Object.assign(new SetMessageReactionDto(), {

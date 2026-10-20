@@ -3,6 +3,25 @@
 // manifest. Historical source migrations remain byte-for-byte unchanged.
 export const schemaCompatibilityShims = [
   {
+    beforeSourceFile: '20260826220000_lesson_progress.sql',
+    name: 'materialize_lessons_before_lesson_progress',
+    reason:
+      'The lesson progress migration references the production lessons table, but that table is absent from the surviving Supabase SQL corpus.',
+    sql: `CREATE TABLE IF NOT EXISTS public.lessons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  content_json JSONB,
+  language_code TEXT NOT NULL,
+  difficulty_level INTEGER,
+  cover_image_url TEXT,
+  audio_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+`,
+  },
+  {
     beforeSourceFile: '20260808030000_create_moment_comment_votes.sql',
     name: 'converge_moment_comment_votes_vote_column',
     reason:

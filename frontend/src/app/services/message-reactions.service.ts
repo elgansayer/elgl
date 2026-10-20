@@ -25,6 +25,10 @@ export interface RoomReactionState {
 const SUPPORTED_REACTION_EMOJIS = new Set<string>(MESSAGE_REACTION_EMOJIS);
 const MAX_REALTIME_REACTION_ROWS = 600;
 
+function isSupportedReactionEmoji(value: unknown): value is MessageReactionEmoji {
+  return typeof value === 'string' && SUPPORTED_REACTION_EMOJIS.has(value);
+}
+
 function parseReactionRows(value: unknown): MessageReaction[] | null {
   if (!Array.isArray(value) || value.length > MAX_REALTIME_REACTION_ROWS) return null;
 
@@ -38,12 +42,11 @@ function parseReactionRows(value: unknown): MessageReaction[] | null {
       typeof row.user_id !== 'string' ||
       row.user_id.length === 0 ||
       row.user_id.length > 128 ||
-      typeof row.emoji !== 'string' ||
-      !SUPPORTED_REACTION_EMOJIS.has(row.emoji)
+      !isSupportedReactionEmoji(row.emoji)
     ) {
       return null;
     }
-    rows.push({ user_id: row.user_id, emoji: row.emoji as MessageReactionEmoji });
+    rows.push({ user_id: row.user_id, emoji: row.emoji });
   }
   return rows;
 }

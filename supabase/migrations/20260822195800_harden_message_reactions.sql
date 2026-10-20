@@ -33,7 +33,7 @@ CREATE POLICY message_reactions_member_select
         ON membership.room_id = message.room_id
       WHERE message.id = message_reactions.message_id
         AND membership.user_id = auth.uid()
-        AND COALESCE(message.is_deleted, false) = false
+        AND COALESCE(message.is_deleted_for_everyone, false) = false
     )
   );
 
@@ -53,7 +53,7 @@ CREATE POLICY message_reactions_owner_insert
         ON membership.room_id = message.room_id
       WHERE message.id = message_reactions.message_id
         AND membership.user_id = auth.uid()
-        AND COALESCE(message.is_deleted, false) = false
+        AND COALESCE(message.is_deleted_for_everyone, false) = false
     )
   );
 
@@ -71,7 +71,7 @@ CREATE POLICY message_reactions_owner_delete
         ON membership.room_id = message.room_id
       WHERE message.id = message_reactions.message_id
         AND membership.user_id = auth.uid()
-        AND COALESCE(message.is_deleted, false) = false
+        AND COALESCE(message.is_deleted_for_everyone, false) = false
     )
   );
 

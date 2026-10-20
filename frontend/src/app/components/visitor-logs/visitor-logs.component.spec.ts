@@ -36,7 +36,7 @@ describe('VisitorLogsComponent', () => {
   const mockVisitors: VisitorLog[] = [
     {
       id: 'visit-1',
-      created_at: new Date().toISOString(),
+      created_at: '2026-08-24T09:00:00.000Z',
       is_blurred: false,
       visitor: {
         id: 'v-1',
@@ -48,7 +48,7 @@ describe('VisitorLogsComponent', () => {
     },
     {
       id: 'visit-2',
-      created_at: new Date().toISOString(),
+      created_at: '2026-08-24T09:01:00.000Z',
       is_blurred: true,
       visitor: {
         id: 'v-2',
@@ -67,9 +67,7 @@ describe('VisitorLogsComponent', () => {
     };
     i18nService = {
       translate: vi.fn((key: string, params?: Record<string, unknown>) => {
-        if (params && 'count' in params) {
-          return `${key}:${params['count']}`;
-        }
+        if (params && 'count' in params) return `${key}:${params['count']}`;
         return key;
       }),
     };
@@ -109,7 +107,7 @@ describe('VisitorLogsComponent', () => {
     await settle();
 
     expect(component.profile()).toEqual(mockProfile);
-    expect(component.visitors()).toEqual(mockVisitors);
+    expect(component.visitors()).toHaveLength(2);
     expect(component.visibleVisitorsCount()).toBe(1);
     expect(component.blurredVisitorsCount()).toBe(1);
     expect(component.isLoading()).toBe(false);
@@ -142,12 +140,16 @@ describe('VisitorLogsComponent', () => {
     expect(fixture.nativeElement.querySelector('.vip-banner')).toBeFalsy();
   });
 
-  it('does not render masked visitor identity or avatar URLs into the DOM', async () => {
+  it('discards masked visitor identity before storing or rendering it', async () => {
     createComponent(mockProfile, [mockVisitors[1]!]);
     await settle();
 
+    const stored = JSON.stringify(component.visitors());
     const html = fixture.nativeElement.innerHTML as string;
     const text = fixture.nativeElement.textContent as string;
+    expect(stored).not.toContain('Bob Secret');
+    expect(stored).not.toContain('bob-secret.jpg');
+    expect(stored).not.toContain('"v-2"');
     expect(text).not.toContain('Bob Secret');
     expect(html).not.toContain('bob-secret.jpg');
     expect(fixture.nativeElement.querySelector('.visitor-card--blurred')).toBeTruthy();
@@ -158,6 +160,7 @@ describe('VisitorLogsComponent', () => {
     await settle();
 
     expect(fixture.nativeElement.textContent).toContain('Alice');
+    expect(fixture.nativeElement.textContent).toContain('fr');
     const image = fixture.nativeElement.querySelector('.visitor-avatar') as HTMLImageElement | null;
     expect(image?.getAttribute('src')).toBe('https://example.com/alice.jpg');
   });
@@ -200,13 +203,16 @@ describe('VisitorLogsComponent', () => {
     createComponent();
     await settle();
 
-    expect(component.filteredVisitors()).toHaveLength(2);
+    const toggle = fixture.nativeElement.querySelector('.visitor-toggle-btn') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).toBe('visitors.hideBlurredBtn');
+
     component.toggleHideBlurred();
     fixture.detectChanges();
 
     expect(component.filteredVisitors()).toHaveLength(1);
     expect(fixture.nativeElement.textContent).toContain('Alice');
     expect(fixture.nativeElement.querySelector('.visitor-card--blurred')).toBeFalsy();
+    expect(toggle.getAttribute('aria-label')).toBe('visitors.showAllBtn');
   });
 
   it('labels the page and reports loading state semantically', () => {

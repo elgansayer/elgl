@@ -1,15 +1,21 @@
 import {
+  Body,
   Controller,
-  Post,
   Delete,
+  ForbiddenException,
   Get,
   Param,
-  Body,
-  UseGuards,
+  Post,
   Req,
+  UseGuards,
 } from '@nestjs/common';
-import { FavouritesService } from './favourites.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { AddFavouriteDto } from '../chat/dto/add-favourite.dto';
+import { FavouritesService } from './favourites.service';
+
+interface AuthenticatedRequest {
+  user: { id: string };
+}
 
 @Controller('favourites')
 @UseGuards(SupabaseAuthGuard)
@@ -18,22 +24,37 @@ export class FavouritesController {
 
   @Post()
   async addFavourite(
-    @Req() req: { user: { id: string } },
-    @Body() dto: { message_id: string; note_text?: string },
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: AddFavouriteDto,
   ): Promise<unknown> {
     return this.favouritesService.addFavourite(req.user.id, dto);
   }
 
   @Delete(':id')
   async removeFavourite(
-    @Req() req: { user: { id: string } },
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
     return this.favouritesService.removeFavourite(req.user.id, id);
   }
 
+  @Get()
+  async getMyFavourites(@Req() req: AuthenticatedRequest) {
+    return this.favouritesService.getUserFavourites(req.user.id);
+  }
+
+  /**
+   * Compatibility route for older clients. Never allow the URL parameter to
+   * widen the authenticated user's read scope.
+   */
   @Get('user/:userId')
-  async getUserFavourites(@Param('userId') userId: string) {
-    return this.favouritesService.getUserFavourites(userId);
+  async getUserFavourites(
+    @Req() req: AuthenticatedRequest,
+    @Param('userId') userId: string,
+  ) {
+    if (req.user.id !== userId) {
+      throw new ForbiddenException('You can only read your own favourites');
+    }
+    return this.favouritesService.getUserFavourites(req.user.id);
   }
 }

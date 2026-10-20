@@ -41,11 +41,28 @@ class MockSubscription {
 
 class MockCentrifuge {
   state = 'connected';
-  on = vi.fn();
-  connect = vi.fn();
-  disconnect = vi.fn();
-  publish = vi.fn();
-  private subs = new Map<string, MockSubscription>();
+  connect = vi.fn(() => {
+    this.state = 'connecting';
+  });
+  disconnect = vi.fn(() => {
+    this.state = 'disconnected';
+  });
+  publish = vi.fn().mockResolvedValue(undefined);
+  private readonly subs = new Map<string, MockSubscription>();
+  private readonly listeners = new Map<string, Array<(...args: unknown[]) => void>>();
+
+  on(event: string, cb: (...args: unknown[]) => void): this {
+    const existing = this.listeners.get(event) ?? [];
+    existing.push(cb);
+    this.listeners.set(event, existing);
+    return this;
+  }
+
+  emit(event: string, ctx: unknown = {}): void {
+    for (const cb of this.listeners.get(event) ?? []) {
+      cb(ctx);
+    }
+  }
 
   newSubscription(channel: string): MockSubscription {
     const sub = new MockSubscription();
@@ -86,6 +103,8 @@ describe('CentrifugeService', () => {
   });
 
   afterEach(() => {
+    service.disconnect();
+    vi.restoreAllMocks();
     vi.useRealTimers();
     httpMock.verify();
   });
@@ -107,6 +126,39 @@ describe('CentrifugeService', () => {
 
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledWith({ hello: 'world' });
+  });
+
+  it('delivers publications to the primary handler and additive listeners without replacing either', () => {
+    const primary = vi.fn();
+    const additive = vi.fn();
+    const sub = service.subscribe('chat:room-1', primary) as unknown as MockSubscription;
+
+    const unlisten = service.listen('chat:room-1', additive);
+    expect(sub.listenerCount('publication')).toBe(1);
+
+    sub.emit('publication', { data: 'hello' });
+    expect(primary).toHaveBeenCalledWith('hello');
+    expect(additive).toHaveBeenCalledWith('hello');
+
+    unlisten();
+    sub.emit('publication', { data: 'after' });
+    expect(primary).toHaveBeenLastCalledWith('after');
+    expect(additive).toHaveBeenCalledTimes(1);
+    expect(sub.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('keeps the channel subscribed for additive listeners when the primary owner unsubscribes', () => {
+    const primary = vi.fn();
+    const additive = vi.fn();
+    service.listen('chat:room-1', additive);
+    const sub = service.subscribe('chat:room-1', primary) as unknown as MockSubscription;
+
+    service.unsubscribe('chat:room-1');
+    expect(sub.unsubscribe).not.toHaveBeenCalled();
+
+    sub.emit('publication', { data: 'reaction' });
+    expect(primary).not.toHaveBeenCalled();
+    expect(additive).toHaveBeenCalledWith('reaction');
   });
 
   it('only calls the message handler once per publication', () => {
@@ -179,6 +231,107 @@ describe('CentrifugeService', () => {
     httpMock.expectNone(`${environment.apiUrl}/chat/token`);
     expect(service.isConnected()).toBe(false);
     expect(service.connectionStatus()).toBe('disconnected');
+  });
+
+  it('deduplicates concurrent connection initialisation and token requests', async () => {
+    (service as unknown as { centrifuge: MockCentrifuge | null }).centrifuge = null;
+    const replacement = new MockCentrifuge();
+    replacement.state = 'disconnected';
+    const createClient = vi.fn().mockReturnValue(replacement);
+    (service as unknown as { createClient: typeof createClient }).createClient = createClient;
+
+    const first = service.connect();
+    const second = service.connect();
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/chat/token`);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer token');
+    request.flush({ token: '  connection-token  ' });
+
+    await Promise.all([first, second]);
+
+    expect(createClient).toHaveBeenCalledOnce();
+    expect(createClient).toHaveBeenCalledWith('connection-token');
+    expect(replacement.connect).toHaveBeenCalledOnce();
+  });
+
+  it('uses the current auth session when refreshing a connection token', async () => {
+    const tokenFetcher = service as unknown as { fetchConnectionToken: () => Promise<string> };
+
+    const first = tokenFetcher.fetchConnectionToken();
+    const firstRequest = httpMock.expectOne(`${environment.apiUrl}/chat/token`);
+    expect(firstRequest.request.headers.get('Authorization')).toBe('Bearer token');
+    firstRequest.flush({ token: 'centrifugo-one' });
+    await expect(first).resolves.toBe('centrifugo-one');
+
+    authService.getAccessToken.mockReturnValue('new-supabase-token');
+    const second = tokenFetcher.fetchConnectionToken();
+    const secondRequest = httpMock.expectOne(`${environment.apiUrl}/chat/token`);
+    expect(secondRequest.request.headers.get('Authorization')).toBe('Bearer new-supabase-token');
+    secondRequest.flush({ token: 'centrifugo-two' });
+    await expect(second).resolves.toBe('centrifugo-two');
+  });
+
+  it('ignores a token response that completes after an intentional disconnect', async () => {
+    (service as unknown as { centrifuge: MockCentrifuge | null }).centrifuge = null;
+    const createClient = vi.fn();
+    (service as unknown as { createClient: typeof createClient }).createClient = createClient;
+
+    const connecting = service.connect();
+    const request = httpMock.expectOne(`${environment.apiUrl}/chat/token`);
+
+    service.disconnect();
+    request.flush({ token: 'stale-connection-token' });
+    await connecting;
+
+    expect(createClient).not.toHaveBeenCalled();
+    expect(service.isConnected()).toBe(false);
+    expect(service.connectionStatus()).toBe('disconnected');
+  });
+
+  it('exposes connecting, connected and reconnecting states from the client lifecycle', async () => {
+    (service as unknown as { centrifuge: MockCentrifuge | null }).centrifuge = null;
+    const replacement = new MockCentrifuge();
+    replacement.state = 'disconnected';
+    (service as unknown as { createClient: () => MockCentrifuge }).createClient = () => replacement;
+
+    const connecting = service.connect();
+    expect(service.connectionStatus()).toBe('connecting');
+    httpMock.expectOne(`${environment.apiUrl}/chat/token`).flush({ token: 'connection-token' });
+    await connecting;
+
+    replacement.state = 'connected';
+    replacement.emit('connected');
+    expect(service.isConnected()).toBe(true);
+    expect(service.connectionStatus()).toBe('connected');
+
+    replacement.state = 'connecting';
+    replacement.emit('connecting');
+    expect(service.isConnected()).toBe(false);
+    expect(service.connectionStatus()).toBe('reconnecting');
+  });
+
+  it('honours Retry-After when the initial connection token endpoint rate limits', async () => {
+    vi.useFakeTimers();
+    (service as unknown as { centrifuge: MockCentrifuge | null }).centrifuge = null;
+
+    const connecting = service.connect();
+    httpMock.expectOne(`${environment.apiUrl}/chat/token`).flush(
+      { message: 'rate limited' },
+      {
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: { 'Retry-After': '2' },
+      },
+    );
+    await connecting;
+
+    expect(service.connectionStatus()).toBe('rate-limited');
+    await vi.advanceTimersByTimeAsync(1_999);
+    httpMock.expectNone(`${environment.apiUrl}/chat/token`);
+
+    await vi.advanceTimersByTimeAsync(1);
+    httpMock.expectOne(`${environment.apiUrl}/chat/token`).flush({ token: 'retry-token' });
+    await Promise.resolve();
   });
 
   it('cancels scheduled reconnects and blocks new ones after an intentional disconnect', async () => {

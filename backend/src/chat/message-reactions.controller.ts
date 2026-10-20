@@ -13,7 +13,10 @@ export class MessageReactionsController {
 
   @Get('room/:roomId/reactions')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
-  async getRoomReactions(@CurrentUser() user: User, @Param('roomId') roomId: string) {
+  async getRoomReactions(
+    @CurrentUser() user: User,
+    @Param('roomId') roomId: string,
+  ) {
     return this.reactionsService.getRoomReactions(user.id, roomId);
   }
 

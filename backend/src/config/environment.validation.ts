@@ -1,4 +1,5 @@
 import { validationSchema } from './validation.schema';
+import { assertMockBackendActivationBoundary } from './mock-backend-mode';
 
 export const PRODUCTION_REQUIRED_ENV_KEYS = [
   'FRONTEND_URL',
@@ -65,6 +66,7 @@ const PLACEHOLDER_PATTERNS = [
   /^test-/i,
   /^sk_test(?:_|$)/i,
   /^whsec_test(?:_|$)/i,
+  /-change-in-prod$/i,
   /example\.supabase\.co/i,
   /\.example\.(?:com|org|net)$/i,
 ] as const;
@@ -99,6 +101,19 @@ function assertNoProductionPlaceholders(config: Record<string, unknown>): void {
   if (placeholders.length > 0) {
     throw new Error(
       `Production environment contains placeholder values for: ${placeholders.join(', ')}`,
+    );
+  }
+}
+
+function assertNoProductionPadding(config: Record<string, unknown>): void {
+  const padded = PRODUCTION_REQUIRED_ENV_KEYS.filter((key) => {
+    const value = config[key];
+    return typeof value === 'string' && value !== value.trim();
+  });
+
+  if (padded.length > 0) {
+    throw new Error(
+      `Production environment contains surrounding whitespace for: ${padded.join(', ')}`,
     );
   }
 }
@@ -146,9 +161,11 @@ export function validateEnvironment(
   const rawNodeEnv = rawConfig.NODE_ENV;
   const nodeEnv =
     typeof rawNodeEnv === 'string' ? rawNodeEnv.toLowerCase() : 'development';
+  const mockBackendMode = assertMockBackendActivationBoundary(rawConfig);
 
   if (nodeEnv === 'production') {
     assertRequiredProductionValues(rawConfig);
+    assertNoProductionPadding(rawConfig);
     assertNoProductionPlaceholders(rawConfig);
   }
 
@@ -166,5 +183,8 @@ export function validateEnvironment(
     throw new Error(`Environment validation failed: ${details}`);
   }
 
-  return result.value;
+  return {
+    ...result.value,
+    MOCK_BACKEND_MODE: mockBackendMode,
+  };
 }

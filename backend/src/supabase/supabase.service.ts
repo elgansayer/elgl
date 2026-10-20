@@ -1464,23 +1464,65 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      message_reactions: {
+        Row: {
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        }>;
+        Update: Partial<{
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'message_reactions_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_reactions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       chat_room_members: {
         Row: {
           user_id: string;
           room_id: string;
           is_locked: boolean;
+          is_archived: boolean;
+          archived_at: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [
@@ -2184,6 +2226,15 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_host_dashboard_earnings: {
+        Args: {
+          p_room_id: string;
+          p_host_id: string;
+        };
+        Returns: {
+          earned_coins: number;
+        }[];
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;
@@ -2252,10 +2303,20 @@ export class SupabaseService implements OnModuleDestroy {
     const supabaseKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
     );
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
+    }
+
+    if (env === 'production') {
+      if (supabaseKey === 'test-service-role-key') {
+        throw new Error(
+          'SUPABASE_SERVICE_ROLE_KEY must be securely configured in production',
+        );
+      }
     }
     this.client = createClient<Database>(supabaseUrl, supabaseKey);
 

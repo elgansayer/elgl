@@ -91,6 +91,18 @@ describe('LightboxComponent', () => {
     expect(component.currentIndex()).toBe(0);
   });
 
+  it('re-clamps the active index when the image collection shrinks', () => {
+    setup(['a', 'b', 'c'], 2);
+    expect(component.currentIndex()).toBe(2);
+
+    fixture.componentRef.setInput('images', ['a']);
+    fixture.detectChanges();
+
+    expect(component.currentIndex()).toBe(0);
+    expect(component.hasPrevious()).toBe(false);
+    expect(component.hasNext()).toBe(false);
+  });
+
   it('moves forward and backward without crossing gallery bounds', () => {
     setup(['a', 'b', 'c'], 0);
 
@@ -152,6 +164,40 @@ describe('LightboxComponent', () => {
     expect(component.currentIndex()).toBe(0);
   });
 
+  it('does not consume keyboard navigation that cannot move past gallery bounds', () => {
+    setup(['a', 'b'], 0);
+
+    const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
+    const home = new KeyboardEvent('keydown', { key: 'Home', cancelable: true });
+    component.handleKeyDown(left);
+    component.handleKeyDown(home);
+
+    expect(left.defaultPrevented).toBe(false);
+    expect(home.defaultPrevented).toBe(false);
+    expect(component.currentIndex()).toBe(0);
+
+    component.goTo(1);
+    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+    const end = new KeyboardEvent('keydown', { key: 'End', cancelable: true });
+    component.handleKeyDown(right);
+    component.handleKeyDown(end);
+
+    expect(right.defaultPrevented).toBe(false);
+    expect(end.defaultPrevented).toBe(false);
+    expect(component.currentIndex()).toBe(1);
+  });
+
+  it('respects keyboard events already handled by nested controls', () => {
+    setup(['a', 'b', 'c'], 1);
+
+    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+    right.preventDefault();
+    component.handleKeyDown(right);
+
+    expect(right.defaultPrevented).toBe(true);
+    expect(component.currentIndex()).toBe(1);
+  });
+
   it('does not consume unrelated keys or Escape, which belongs to Spartan Dialog', () => {
     setup(['a', 'b'], 0);
     const closed = vi.fn();
@@ -176,6 +222,16 @@ describe('LightboxComponent', () => {
     const rightPreventDefault = pointerUp(240, 96, 2);
     expect(rightPreventDefault).toHaveBeenCalledTimes(1);
     expect(component.currentIndex()).toBe(1);
+  });
+
+  it('accepts a horizontal swipe exactly at the gesture distance threshold', () => {
+    setup(['a', 'b', 'c'], 1);
+
+    pointerDown(200, 100);
+    const preventDefault = pointerUp(152, 100);
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(component.currentIndex()).toBe(2);
   });
 
   it('ignores short and predominantly vertical gestures', () => {
