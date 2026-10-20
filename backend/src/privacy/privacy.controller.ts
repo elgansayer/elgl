@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -12,13 +13,28 @@ import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PrivacyService } from './privacy.service';
+import { PrivacyLifecycleService } from './privacy-lifecycle.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Controller('privacy')
 @UseGuards(SupabaseAuthGuard)
 export class PrivacyController {
-  constructor(private readonly privacyService: PrivacyService) {}
+  constructor(
+    private readonly privacyService: PrivacyService,
+    private readonly privacyLifecycleService: PrivacyLifecycleService,
+  ) {}
+
+  @Get('status')
+  @Throttle({ default: { limit: 30, ttl: 60 * 1000 } })
+  async getStatus(@CurrentUser() user: User | null) {
+    if (!user) throw new UnauthorizedException();
+    return {
+      deletion: await this.privacyLifecycleService.getAccountDeletionStatus(
+        user.id,
+      ),
+    };
+  }
 
   @Post('request-archive')
   @HttpCode(HttpStatus.OK)

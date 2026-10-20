@@ -27,6 +27,22 @@ test('rejects deprecated numeric keyboard APIs', () => {
   ]);
 });
 
+test('does not mistake ordinary prose for a deprecated keyboard property', () => {
+  assert.deepEqual(
+    violationRules('/** The handler receives the full payload, which now includes translations. */'),
+    [],
+  );
+});
+
+test('still rejects optional, bracket and destructured deprecated property access', () => {
+  for (const source of [
+    'event?.which', 'event["which"]', "event['keyCode']",
+    'const { which } = event;', 'const { which: code } = event;',
+  ]) {
+    assert.deepEqual(violationRules(source), ['deprecated-key-api'], source);
+  }
+});
+
 test('rejects synthetic button Enter or Space emulation but not native buttons', () => {
   assert.deepEqual(
     violationRules('<div role="button" tabindex="0" (keydown.enter)="save()">Save</div>'),

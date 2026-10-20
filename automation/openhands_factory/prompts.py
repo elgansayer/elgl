@@ -76,18 +76,7 @@ def build_task_prompt(
     # untrusted task data it's warning about, not up in the stable prefix.
     stable_sections = [
         template,
-        (
-            "Factory-owned full verification (do not run this entire list inside the provider "
-            "session; use it as acceptance constraints and run only focused checks needed for "
-            "your edits. The Factory executes the authoritative full gate after this session "
-            "returns):\n" + "\n".join(verification_commands)
-        ),
-        (
-            "Provider check budget: do not run repository-wide commands such as `npm run lint`, "
-            "`npm test`, or `npm run build`. Run only checks scoped to edited files or directly "
-            "related specs, for example `npm exec -- eslint <edited files>` or a named test file. "
-            "The Factory owns the full gate after the provider returns."
-        ),
+        "Required verification:\n" + "\n".join(verification_commands),
     ]
     bounded_body = _bounded_text(task.body, MAX_TASK_BODY_CHARS)
     task_sections = [
@@ -119,28 +108,12 @@ def build_phase_prompt(prompt_dir: Path, phase: str, task: Task, extra: str = ""
     instructions = (prompt_dir / f"{phase}.md").read_text(encoding="utf-8")
     if phase == "architect":
         closing = "Work only in the assigned worktree."
-    elif phase == "review":
-        closing = (
-            "Inspect AGENTS.md and the associated production and test files. Work only in the "
-            "assigned worktree. Change repository-tracked files only when required to correct a "
-            "blocking acceptance, correctness, security, or verification defect. Do not perform "
-            "non-blocking cleanup, style edits, refactors, speculative improvements, or unrelated "
-            "optimizations during independent review. If no blocking defect exists, leave tracked "
-            "files unchanged. The Factory will follow any blocking repair with authoritative full "
-            "verification and a fresh independent review of the resulting head; run only focused "
-            "checks needed for the repair inside this provider session. Do not run repository-wide "
-            "commands such as `npm run lint`, `npm test`, or `npm run build`; target only edited "
-            "files and directly related specs."
-        )
     else:
         closing = (
             "Inspect AGENTS.md and the associated production and test files. Work only in the "
             "assigned worktree. If defects are found, correct them and update tests. If no defects "
-            "are found, leave the worktree unchanged. Run only focused checks needed for your "
-            "changes. Do not run the full Factory verification gate inside this provider session; "
-            "the orchestrator runs it after the session returns. Do not run repository-wide "
-            "commands such as `npm run lint`, `npm test`, or `npm run build`; target only edited "
-            "files and directly related specs."
+            "are found, leave the worktree unchanged. Run the applicable verification commands "
+            "before finishing."
         )
     bounded_body = _bounded_text(task.body, PHASE_TASK_BODY_LIMITS[phase])
     bounded_extra = _bounded_text(extra, MAX_PHASE_EXTRA_CHARS)
