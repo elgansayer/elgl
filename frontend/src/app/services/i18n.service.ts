@@ -241,6 +241,10 @@ export class I18nService {
     'audioIntro.pause': 'Pause',
     'audioIntro.recording': 'Recording... {{seconds}}s remaining',
     'audioIntro.errorLoading': 'Could not load your audio introduction.',
+    'discovery.audioIntroFeed.title': 'Audio introductions',
+    'discovery.audioIntroFeed.languagePair': '{{native}} → {{target}}',
+    'discovery.audioIntroFeed.resultCount': 'Audio introduction results: {{count}}',
+    'discovery.audioIntroFeed.noAudioIntros': 'No audio introductions available.',
     'audioIntro.microphoneError': 'Microphone access denied or unavailable.',
     'audioIntro.uploadError': 'Could not upload your recording.',
 
@@ -2301,13 +2305,15 @@ export class I18nService {
       'Download a copy of all your data. This may include profile info, moments, chat history, and more.',
     'gdpr.requestArchiveBtn': 'Request My Data Archive',
     'gdpr.archiveSuccess':
-      'Your data archive request has been submitted. You will receive an email when ready.',
+      'Your data archive is being prepared. Return here to download it when it is ready.',
     'gdpr.deleteSection': 'Delete My Account',
     'gdpr.deleteInfo':
       'Permanently delete your account and all associated data. This action is irreversible after a 30-day grace period.',
-    'gdpr.deleteConfirmLabel': 'I understand that this action is irreversible.',
+    'gdpr.deleteConfirmLabel':
+      'I understand that my account will be permanently deleted after the 30-day grace period.',
     'gdpr.deleteAccountBtn': 'Delete My Account',
-    'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
+    'gdpr.deleteSuccess':
+      'Account deletion scheduled. You can cancel during the 30-day grace period.',
     'gdpr.cancelDeletionSection': 'Cancel Account Deletion',
     'gdpr.cancelDeletionInfo':
       'Your account is currently scheduled for deletion. You can cancel this request during the 30-day grace period.',
@@ -2386,6 +2392,28 @@ export class I18nService {
     'settings.messageFiltersSection': 'Message Filters',
     'settings.messageFiltersDescription':
       'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
+    'settings.messageFilters.title': 'Message filters',
+    'settings.messageFilters.description': 'Control who can start a direct conversation with you',
+    'settings.messageFilters.subtitle':
+      'These rules do not interrupt established conversations or group chats.',
+    'settings.messageFilters.everyone': 'Everyone',
+    'settings.messageFilters.everyoneHint': 'Allow anyone to start a direct conversation.',
+    'settings.messageFilters.matchingProfile': 'Matching profile',
+    'settings.messageFilters.sameNativeLanguage': 'Same native language',
+    'settings.messageFilters.sameTargetLanguage': 'Same target language',
+    'settings.messageFilters.sameGender': 'Same gender',
+    'settings.messageFilters.sameAge': 'Same age',
+    'settings.messageFilters.gender': 'Allowed genders',
+    'settings.messageFilters.genderHint': 'Leave empty to allow every gender.',
+    'settings.messageFilters.ageRange': 'Age range',
+    'settings.messageFilters.ageMin': 'Minimum age',
+    'settings.messageFilters.ageMax': 'Maximum age',
+    'settings.messageFilters.allowedNativeLanguages': 'Allowed native languages',
+    'settings.messageFilters.allowedNativeLanguagesHint':
+      'Leave empty to allow every native language.',
+    'settings.messageFilters.invalidAgeRange': 'Minimum age cannot exceed maximum age.',
+    'settings.messageFilters.saveError': 'Message filters could not be saved. Try again.',
+    'settings.messageFilters.saved': 'Message filters saved.',
     'settings.age': 'Age',
     'settings.ageMinPlaceholder': 'Min',
     'settings.ageMaxPlaceholder': 'Max',

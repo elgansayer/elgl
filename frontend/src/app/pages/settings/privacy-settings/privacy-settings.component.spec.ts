@@ -5,10 +5,6 @@ import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
-import {
-  ProfileVisibility,
-  ProfileVisibilityService,
-} from '../../../services/profile-visibility.service';
 import { SafetyService } from '../../../services/safety.service';
 import { PrivacySettingsComponent } from './privacy-settings.component';
 
@@ -20,8 +16,6 @@ describe('PrivacySettingsComponent', () => {
   const addMutedWord = vi.fn<(word: string) => void>();
   const removeMutedWord = vi.fn<(word: string) => void>();
   const goBack = vi.fn();
-  const getProfileVisibility = vi.fn<() => Promise<ProfileVisibility>>();
-  const updateProfileVisibility = vi.fn<(value: ProfileVisibility) => Promise<void>>();
 
   beforeEach(async () => {
     mutedWords.set([]);
@@ -29,10 +23,6 @@ describe('PrivacySettingsComponent', () => {
     addMutedWord.mockReset();
     removeMutedWord.mockReset();
     goBack.mockReset();
-    getProfileVisibility.mockReset();
-    updateProfileVisibility.mockReset();
-    getProfileVisibility.mockResolvedValue('everyone');
-    updateProfileVisibility.mockResolvedValue(undefined);
 
     addMutedWord.mockImplementation((word) => {
       mutedWords.update((previous) => (previous.includes(word) ? previous : [...previous, word]));
@@ -55,10 +45,6 @@ describe('PrivacySettingsComponent', () => {
             blockedUsers,
             loadBlockedUsers: vi.fn().mockResolvedValue(undefined),
           },
-        },
-        {
-          provide: ProfileVisibilityService,
-          useValue: { getProfileVisibility, updateProfileVisibility },
         },
         {
           provide: I18nService,

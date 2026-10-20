@@ -6,6 +6,8 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
+import { DISCOVERY_CACHE_NO_STORE } from './cache.interceptor';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 
 vi.mock('./sanitise-discovery.helper', () => ({
@@ -28,6 +30,8 @@ describe('DiscoveryController', () => {
               data: [],
               marker: { degraded: false, fallbackSource: 'none' as const },
             }),
+            getAudioIntros: vi.fn().mockResolvedValue([]),
+            getPartnerOfWeekIds: vi.fn().mockResolvedValue([]),
           },
         },
         {
@@ -68,6 +72,42 @@ describe('DiscoveryController', () => {
     expect(controller).toBeDefined();
   });
 
+  describe('privacy-safe cache partitioning', () => {
+    const cacheDirectiveFor = (
+      method:
+        | 'findPartners'
+        | 'findPartnersWithDegradation'
+        | 'getPartnerOfWeek'
+        | 'getAudioIntros'
+        | 'getRecentNativeSpeakers'
+        | 'getSpotlight'
+        | 'findByLanguagePair'
+        | 'searchByLocation',
+    ): Record<string, string> => {
+      const interceptors = Reflect.getMetadata(
+        INTERCEPTORS_METADATA,
+        DiscoveryController.prototype[method],
+      ) as Array<{ directive: Record<string, string> }>;
+      return interceptors[0].directive;
+    };
+
+    it.each([
+      'findPartners',
+      'findPartnersWithDegradation',
+      'getPartnerOfWeek',
+      'getAudioIntros',
+      'getRecentNativeSpeakers',
+      'getSpotlight',
+      'findByLanguagePair',
+      'searchByLocation',
+    ] as const)(
+      'does not HTTP-cache privacy-sensitive %s responses',
+      (method) => {
+        expect(cacheDirectiveFor(method)).toEqual(DISCOVERY_CACHE_NO_STORE);
+      },
+    );
+  });
+
   describe('findPartners', () => {
     it('should return empty array if user is not provided', async () => {
       const result = await controller.findPartners(null, {});
@@ -101,6 +141,116 @@ describe('DiscoveryController', () => {
         discoveryService.searchPartnersWithDegradation,
       ).toHaveBeenCalledWith('user-1', mockProfile, query);
       expect(result).toEqual(mockPartners);
+    });
+
+    it('should enable the algorithmic filter when serious learner mode is requested', async () => {
+      const mockProfile: any = { id: 'user-1', is_serious_learner: false };
+      const query: any = { serious_learner_mode: true };
+
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+
+      await controller.findPartners({ id: 'user-1' } as any, query);
+
+      expect(query.serious_learner_only).toBe(true);
+      expect(
+        discoveryService.searchPartnersWithDegradation,
+      ).toHaveBeenCalledWith(
+        'user-1',
+        mockProfile,
+        expect.objectContaining({
+          serious_learner_mode: true,
+          serious_learner_only: true,
+        }),
+      );
+    });
+
+    it('should enable the algorithmic filter for profiles enrolled in serious learner mode', async () => {
+      const mockProfile: any = { id: 'user-1', is_serious_learner: true };
+      const query: any = {};
+
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+
+      await controller.findPartners({ id: 'user-1' } as any, query);
+
+      expect(query.serious_learner_mode).toBe(true);
+      expect(query.serious_learner_only).toBe(true);
+    });
+
+    it('should not force the algorithmic filter for ordinary discovery', async () => {
+      const mockProfile: any = { id: 'user-1', is_serious_learner: false };
+      const query: any = {};
+
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+
+      await controller.findPartners({ id: 'user-1' } as any, query);
+
+      expect(query.serious_learner_mode).toBeUndefined();
+      expect(query.serious_learner_only).toBeUndefined();
+    });
+  });
+
+  describe('getPartnerOfWeek', () => {
+    it('returns no IDs without an authenticated viewer', async () => {
+      await expect(controller.getPartnerOfWeek(null)).resolves.toEqual([]);
+      expect(discoveryService.getPartnerOfWeekIds).not.toHaveBeenCalled();
+    });
+
+    it('passes the authenticated viewer to privacy revalidation', async () => {
+      (discoveryService.getPartnerOfWeekIds as Mock).mockResolvedValue([
+        'partner-1',
+      ]);
+
+      await expect(
+        controller.getPartnerOfWeek({ id: 'viewer-1' } as any),
+      ).resolves.toEqual(['partner-1']);
+      expect(discoveryService.getPartnerOfWeekIds).toHaveBeenCalledWith(
+        'viewer-1',
+      );
+    });
+  });
+
+  describe('getAudioIntros', () => {
+    it('should apply the same serious learner filter to audio-intro discovery', async () => {
+      const mockProfile: any = { id: 'user-1', is_serious_learner: true };
+      const query: any = {};
+
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+
+      await controller.getAudioIntros({ id: 'user-1' } as any, query);
+
+      expect(query.serious_learner_mode).toBe(true);
+      expect(query.serious_learner_only).toBe(true);
+      expect(discoveryService.getAudioIntros).toHaveBeenCalledWith(
+        'user-1',
+        mockProfile,
+        expect.objectContaining({
+          serious_learner_mode: true,
+          serious_learner_only: true,
+        }),
+      );
+    });
+  });
+
+  describe('findPartnersWithDegradation', () => {
+    it('should normalize serious learner mode before degradation-aware search', async () => {
+      const mockProfile: any = { id: 'user-1', is_serious_learner: false };
+      const query: any = { serious_learner_mode: true };
+
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+
+      await controller.findPartnersWithDegradation(
+        { id: 'user-1' } as any,
+        query,
+      );
+
+      expect(query.serious_learner_only).toBe(true);
+      expect(
+        discoveryService.searchPartnersWithDegradation,
+      ).toHaveBeenCalledWith(
+        'user-1',
+        mockProfile,
+        expect.objectContaining({ serious_learner_only: true }),
+      );
     });
   });
 });

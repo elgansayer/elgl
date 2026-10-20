@@ -9,12 +9,7 @@ describe('VideoCallsController', () => {
   let controller: VideoCallsController;
   let videoCallsService: VideoCallsService;
 
-  const mockUser = {
-    id: '11111111-1111-4111-8111-111111111111',
-    email: 'test@hellotalk.com',
-  };
-  const remoteUserId = '22222222-2222-4222-8222-222222222222';
-  const roomName = 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890';
+  const mockUser = { id: 'user-1', email: 'test@hellotalk.com' };
 
   const mockDegradationService = {
     getAllBreakerStates: vi.fn().mockReturnValue(new Map()),
@@ -56,83 +51,86 @@ describe('VideoCallsController', () => {
   });
 
   describe('startCall', () => {
-    it('should bind room creation to the authenticated caller and intended recipient', async () => {
-      const mockResponse = {
-        token: 'livekit-token',
-        roomName,
-        e2eeKey: 'ephemeral-key',
-      };
+    it('should create a room and return the sanitised response', async () => {
+      const mockResponse = { token: 'livekit-token', roomName: 'video_abc123' };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
-      const result = await controller.startCall(req, { remoteUserId });
+      const result = await controller.startCall(req);
 
-      expect(videoCallsService.createRoom).toHaveBeenCalledWith(
-        mockUser.id,
-        remoteUserId,
-      );
+      expect(videoCallsService.createRoom).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockResponse);
     });
 
-    it('should return encryption and degraded state from the service unchanged', async () => {
+    it('should return degraded flag from the service', async () => {
       const mockResponse = {
         token: 'fallback-token',
-        roomName,
-        e2eeKey: 'ephemeral-key',
+        roomName: 'video_abc123',
         degraded: true,
         degradationReason: 'Service livekit failed: timeout',
       };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
-      const result = await controller.startCall(req, { remoteUserId });
+      const result = await controller.startCall(req);
 
       expect(result).toEqual(mockResponse);
-      expect(result.e2eeKey).toBe('ephemeral-key');
       expect(result.degraded).toBe(true);
     });
 
     it('should propagate errors from the service', async () => {
       (videoCallsService.createRoom as Mock).mockRejectedValue(
-        new Error('Encrypted calls unavailable'),
+        new Error('LiveKit unavailable'),
       );
 
       const req = { user: mockUser } as any;
 
-      await expect(controller.startCall(req, { remoteUserId })).rejects.toThrow(
-        'Encrypted calls unavailable',
+      await expect(controller.startCall(req)).rejects.toThrow(
+        'LiveKit unavailable',
       );
     });
   });
 
   describe('acceptCall', () => {
-    it('should request join material for the authenticated participant', async () => {
-      const mockResponse = {
-        token: 'livekit-join-token',
-        roomName,
-        e2eeKey: 'same-ephemeral-key',
-      };
+    it('should join a room and return the sanitised response', async () => {
+      const mockResponse = { token: 'livekit-join-token', roomName: 'room-1' };
       (videoCallsService.joinRoom as Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
-      const result = await controller.acceptCall(req, { roomName });
+      const result = await controller.acceptCall(req, 'room-1');
 
       expect(videoCallsService.joinRoom).toHaveBeenCalledWith(
-        mockUser.id,
-        roomName,
+        'user-1',
+        'room-1',
       );
       expect(result).toEqual(mockResponse);
     });
 
-    it('should propagate authorization and availability errors from the service', async () => {
+    it('should pass sanitised room name to the service', async () => {
+      (videoCallsService.joinRoom as Mock).mockResolvedValue({
+        token: 'tok',
+        roomName: 'clean-room',
+      });
+
+      const req = { user: mockUser } as any;
+      const result = await controller.acceptCall(req, 'clean-room');
+
+      expect(videoCallsService.joinRoom).toHaveBeenCalledWith(
+        'user-1',
+        'clean-room',
+      );
+      expect(result).toEqual({ token: 'tok', roomName: 'clean-room' });
+    });
+
+    it('should propagate errors from the service', async () => {
       (videoCallsService.joinRoom as Mock).mockRejectedValue(
-        new Error('Call is unavailable'),
+        new Error('Room not found'),
       );
 
       const req = { user: mockUser } as any;
 
-      await expect(controller.acceptCall(req, { roomName })).rejects.toThrow(
-        'Call is unavailable',
+      await expect(controller.acceptCall(req, 'no-room')).rejects.toThrow(
+        'Room not found',
       );
     });
   });

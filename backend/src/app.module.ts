@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { validateEnvironment } from './config/environment.validation';
+import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SharedLoggerModule } from './common/logger/logger.module';
@@ -89,7 +89,8 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: validateEnvironment,
+      validationSchema,
+      validationOptions: { allowUnknown: true, abortEarly: false },
     }),
     ScheduleModule.forRoot(),
 

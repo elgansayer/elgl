@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, inject, output, signal } from '@angular/core';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import {
   ChatMediaQuality,
   ChatMediaService,
@@ -9,12 +10,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
-const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime';
+const ACCEPTED_MEDIA =
+  'image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime';
 
 @Component({
   selector: 'app-chat-media-picker',
   imports: [
     CommonModule,
+    HlmCheckbox,
     TranslatePipe,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
@@ -78,11 +81,10 @@ const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,vid
           <span class="block text-sm font-bold text-text-primary">HD quality</span>
           <span class="block text-xs text-text-secondary">Higher quality, larger upload</span>
         </span>
-        <input
-          type="checkbox"
-          class="h-5 w-5 accent-primary"
+        <hlm-checkbox
+          class="h-5 w-5"
           [checked]="quality() === 'hd'"
-          (change)="onQualityChanged($event)"
+          (checkedChange)="onQualityChanged($event)"
           aria-label="Send in HD quality"
         />
       </label>
@@ -154,8 +156,7 @@ export class ChatMediaPickerComponent implements OnDestroy {
     this.error.set(null);
   }
 
-  onQualityChanged(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  onQualityChanged(checked: boolean): void {
     this.quality.set(checked ? 'hd' : 'standard');
     this.error.set(null);
   }
@@ -170,7 +171,11 @@ export class ChatMediaPickerComponent implements OnDestroy {
       const uploaded = await this.chatMedia.upload(file, this.quality());
       this.uploaded.emit(uploaded);
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+      this.error.set(
+        error instanceof Error
+          ? error.message
+          : 'Upload failed. Please try again.',
+      );
     } finally {
       this.isUploading.set(false);
     }

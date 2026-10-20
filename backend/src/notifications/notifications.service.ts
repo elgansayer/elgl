@@ -21,8 +21,6 @@ export interface LegacyNotificationPreferences {
   updatedAt: string;
 }
 
-export type PushDispatchResult = 'sent' | 'suppressed' | 'retry';
-
 type UpdatePreferencesInput = Partial<
   Omit<LegacyNotificationPreferences, 'userId' | 'updatedAt'>
 > &
@@ -105,11 +103,9 @@ export class NotificationsService {
       data?: Record<string, string>;
       category?: 'direct_messages' | 'groups' | 'likes' | 'voice_rooms';
     },
-  ): Promise<PushDispatchResult> {
+  ): Promise<void> {
     try {
-      // Respect per-category push toggle and badge toggle. Suppression is a
-      // terminal outcome for callers such as event reminders: retrying a user
-      // preference every minute would be both wasteful and surprising.
+      // Respect per‑category push toggle and badge toggle
       let pushEnabled = true;
       let badgeEnabled = true;
       if (payload.category) {
@@ -124,7 +120,7 @@ export class NotificationsService {
         console.log(
           `Push disabled for category '${payload.category}' for user ${userId}, skipping`,
         );
-        return 'suppressed';
+        return;
       }
 
       const supabase = this.supabaseService.getClient();
@@ -133,22 +129,16 @@ export class NotificationsService {
         .select('fcm_token')
         .eq('user_id', userId);
 
-      if (error) {
-        console.warn(`Could not load push tokens for user ${userId}`);
-        return 'retry';
-      }
-      if (!tokens || tokens.length === 0) {
+      if (error || !tokens || tokens.length === 0) {
         console.warn(`No push tokens found for user ${userId}`);
-        return 'suppressed';
+        return;
       }
 
       const fcmTokens = tokens.map((t: { fcm_token: string }) => t.fcm_token);
       const badgeCount = badgeEnabled ? 1 : 0;
-      const sent = await this.sendFcmBatch(fcmTokens, payload, badgeCount);
-      return sent ? 'sent' : 'retry';
+      await this.sendFcmBatch(fcmTokens, payload, badgeCount);
     } catch (err) {
       console.error(`Failed to send push notification to user ${userId}:`, err);
-      return 'retry';
     }
   }
 
@@ -161,13 +151,13 @@ export class NotificationsService {
       data?: Record<string, string>;
     },
     badgeCount?: number,
-  ): Promise<boolean> {
+  ): Promise<void> {
     let firebaseAdmin: FirebaseAdmin;
     try {
       firebaseAdmin = await import('firebase-admin');
     } catch {
       console.warn('firebase-admin not installed, skipping push notification');
-      return false;
+      return;
     }
 
     if (!firebaseAdmin.apps.length) {
@@ -184,11 +174,11 @@ export class NotificationsService {
           console.warn(
             'Invalid FIREBASE_SERVICE_ACCOUNT config, skipping push',
           );
-          return false;
+          return;
         }
       } else {
         console.warn('Firebase not configured, skipping push notification');
-        return false;
+        return;
       }
     }
 
@@ -248,11 +238,8 @@ export class NotificationsService {
             .in('fcm_token', invalidTokens);
         }
       }
-
-      return response.successCount > 0;
     } catch (err) {
       console.error('FCM batch send failed:', err);
-      return false;
     }
   }
 
@@ -271,6 +258,7 @@ export class NotificationsService {
       | 'system',
     entityId?: string,
     message?: string,
+    dispatchPush = true,
   ): Promise<void> {
     if (recipientId === actorId) return;
 
@@ -309,7 +297,7 @@ export class NotificationsService {
         system: message || 'You have a new system alert',
       };
 
-      // Determine notification category for push-toggle check
+      // Determine notification category for push‑toggle check
       let pushCategory:
         'direct_messages' | 'groups' | 'likes' | 'voice_rooms' | undefined;
       switch (type) {
@@ -331,13 +319,15 @@ export class NotificationsService {
           break;
       }
 
-      await this.sendPushNotification(recipientId, {
-        type,
-        title: titleMap[type] || 'New Notification',
-        body: bodyMap[type] || 'You have a new alert',
-        data: { actorId, entityId: entityId || '' },
-        category: pushCategory,
-      });
+      if (dispatchPush) {
+        await this.sendPushNotification(recipientId, {
+          type,
+          title: titleMap[type] || 'New Notification',
+          body: bodyMap[type] || 'You have a new alert',
+          data: { actorId, entityId: entityId || '' },
+          category: pushCategory,
+        });
+      }
     } catch (err) {
       console.error(`Failed to create notification for ${recipientId}:`, err);
     }
