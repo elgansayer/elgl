@@ -84,10 +84,8 @@ class MaintenancePlan(BaseModel):
 
 
 def validate_proposal(plan: MaintenancePlan, repository: Path) -> None:
-    if plan.action == "observe":
-        return
     proposed = " ".join([plan.change, *plan.acceptance_criteria]).casefold()
-    if any(
+    if plan.action == "repair" and any(
         marker in proposed
         for marker in (
             "dead-letter",
@@ -102,7 +100,7 @@ def validate_proposal(plan: MaintenancePlan, repository: Path) -> None:
     ):
         raise FactoryError("Maintenance proposals must preserve automatic bounded recovery")
     if not plan.source_evidence:
-        raise FactoryError("Maintenance repair requires exact tracked-source evidence")
+        raise FactoryError("Maintenance assessment requires exact tracked-source evidence")
     root = repository.resolve()
     for evidence in plan.source_evidence:
         relative = Path(evidence.path)
@@ -159,6 +157,16 @@ class Incident:
     key: str
     jobs: tuple[Job, ...]
 
+    def fingerprint(self) -> str:
+        # Retry counters and wall-clock age are not new diagnostic evidence.
+        payload = {
+            "count": len(self.jobs),
+            "jobs": [
+                (job.task.identifier, job.head_sha, error_identity(job)) for job in self.jobs[:20]
+            ],
+        }
+        return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
     def evidence(self) -> list[dict[str, object]]:
         return [
             {
@@ -190,6 +198,69 @@ def collect_incidents(jobs: dict[str, Job]) -> list[Incident]:
         ),
         key=lambda incident: (-len(incident.jobs), incident.key),
     )
+
+
+def measurement_summary(value: object) -> dict[str, object] | None:
+    """Bounded observational evidence, without recursively copying prior plans."""
+    if not isinstance(value, dict):
+        return None
+    throughput = value.get("throughput")
+    rolling = throughput.get("rolling_throughput") if isinstance(throughput, dict) else None
+    window = rolling.get("24h") if isinstance(rolling, dict) else None
+    window = window if isinstance(window, dict) else {}
+    components = window.get("merged_pr_count_by_component")
+    components = components if isinstance(components, dict) else {}
+    states = value.get("jobs_by_state")
+    states = states if isinstance(states, dict) else {}
+
+    def counts(items: dict[object, object]) -> dict[str, int]:
+        return {
+            key[:80]: count
+            for key, count in list(items.items())[:40]
+            if isinstance(key, str) and type(count) is int and count >= 0
+        }
+
+    merged = window.get("merged_pr_count")
+    return {
+        "observed_at": value.get("observed_at"),
+        "merged_pr_count_24h": merged if type(merged) is int and merged >= 0 else None,
+        "merged_pr_count_by_component_24h": counts(components),
+        "jobs_by_state": counts(states),
+    }
+
+
+def maintenance_feedback(record: dict[str, object]) -> dict[str, object]:
+    """Never promote observations, failed canaries or unknown attribution to success."""
+    feedback = {
+        key: record.get(key)
+        for key in (
+            "key",
+            "status",
+            "issue",
+            "created_at",
+            "deployed_at",
+            "completed_at",
+            "canary_task",
+            "canary_verified_sha",
+            "canary_canonical_task",
+        )
+    }
+    for key in ("diagnosis", "change"):
+        value = record.get(key)
+        feedback[key] = redact_agent_output(value)[:2000] if isinstance(value, str) else None
+    criteria = record.get("acceptance_criteria")
+    feedback["acceptance_criteria"] = (
+        [redact_agent_output(item)[:1000] for item in criteria[:6] if isinstance(item, str)]
+        if isinstance(criteria, list)
+        else []
+    )
+    feedback["measurement"] = {
+        "interpretation": "observational before/after, not causal proof or acceptance verification",
+        "baseline": measurement_summary(record.get("baseline")),
+        "outcome": measurement_summary(record.get("outcome")),
+        "attribution": "Unknown components must not count as verified application throughput",
+    }
+    return feedback
 
 
 class MaintenanceController:
@@ -290,7 +361,7 @@ class MaintenanceController:
         return {
             "observed_at": datetime.now(UTC).isoformat(),
             "repository": self.config.github_repository,
-            "repository_path": str(self.config.repository),
+            "repository_path": str(self.config.repository.resolve()),
             "runtime_signature": self.runtime_signature,
             "jobs_by_state": dict(Counter(job.state.value for job in jobs.values())),
             # Actual recoveries by the running daemon generation, apart from queued age.
@@ -303,10 +374,7 @@ class MaintenanceController:
                 for name, provider in self.config.agents.providers.items()
                 if provider.enabled
             },
-            "recent_maintenance": [
-                {key: record.get(key) for key in ("key", "status", "diagnosis")}
-                for record in self.records()[-10:]
-            ],
+            "recent_maintenance": [maintenance_feedback(record) for record in self.records()[-10:]],
             "programme": read_json(
                 self.pipeline.prompt_dir.parent.parent
                 / "config/factory/maintenance-programme.json",
@@ -346,7 +414,8 @@ class MaintenanceController:
         )
         # Persist the scheduling lease before model/network work, including failures.
         atomic_write_json(self.path, state)
-        open_tasks = self.pipeline.github.collect_open_issues()
+        issue_inventory_loaded = any(record.get("status") == "repairing" for record in records)
+        open_tasks = self.pipeline.github.collect_open_issues() if issue_inventory_loaded else []
         open_ids = {task.identifier for task in open_tasks}
         for record in records:
             if record.get("status") == "repairing" and str(record.get("issue")) not in open_ids:
@@ -366,10 +435,22 @@ class MaintenanceController:
             if record.get("status") == "awaiting-deployment" and self.deployment_ready():
                 record["status"] = "canary-ready" if record.get("affected") else "measuring"
                 record["deployed_at"] = now.isoformat()
-            if record.get("status") == "measuring":
+            if (
+                record.get("status")
+                in {
+                    "measuring",
+                    "recovered",
+                    "canary-failed",
+                    "canary-delayed",
+                    "canary-obsolete",
+                }
+                and "outcome" not in record
+            ):
                 deployed_at = timestamp(record.get("deployed_at"))
                 if deployed_at is not None and now - deployed_at >= timedelta(hours=24):
-                    record.update({"status": "measured", "outcome": snapshot})
+                    record.update({"outcome": snapshot, "measured_at": now.isoformat()})
+                    if record.get("status") == "measuring":
+                        record["status"] = "measured"
         if any(
             record.get("status")
             in {"repairing", "awaiting-deployment", "canary-ready", "canary", "recovering"}
@@ -383,22 +464,63 @@ class MaintenanceController:
             state.update({"analysis_day": today, "analyses_today": 0})
         used = int(str(state.get("analyses_today", 0)))
         if used >= self.config.maintenance_daily_limit:
+            state["next_analysis_at"] = (
+                now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            ).isoformat()
+            atomic_write_json(self.path, state)
             return
+        previous_analysis = state.get("last_analysis_at")
+        last_analysis = timestamp(previous_analysis)
+        if last_analysis is not None:
+            next_analysis = last_analysis + timedelta(
+                seconds=self.config.maintenance_analysis_interval_seconds
+            )
+            if next_analysis > now:
+                state["next_analysis_at"] = next_analysis.isoformat()
+                atomic_write_json(self.path, state)
+                return
+        incidents = collect_incidents(jobs)
+        watchdog = snapshot.get("watchdog")
+        if isinstance(watchdog, dict) and watchdog.get("recovered_total") == 0:
+            incidents = [item for item in incidents if item.key != "abandoned-attempt-scheduling"]
+        by_key = {item.key: item for item in incidents}
         handled = set()
         for record in records:
             observed = timestamp(record.get("completed_at") or record.get("created_at"))
+            current = by_key.get(str(record.get("key")))
+            unchanged_observation = (
+                record.get("status") == "observing"
+                and current is not None
+                and record.get("evidence_fingerprint") == current.fingerprint()
+            )
             cooldown = (
                 timedelta(days=7)
-                if record.get("status") in {"recovered", "measured"}
+                if record.get("status") in {"recovered", "measured"} or unchanged_observation
                 else timedelta(hours=6)
             )
-            if observed is not None and now - observed < cooldown:
+            if (observed is not None and now - observed < cooldown) or record.get(
+                "key"
+            ) == f"throughput-experiment-{today}":
                 handled.add(str(record.get("key")))
-        incident = next((item for item in collect_incidents(jobs) if item.key not in handled), None)
+        # Reserve the final daily analysis for the improvement programme instead
+        # of spending every slot restating known incident families.
+        incident = (
+            next((item for item in incidents if item.key not in handled), None)
+            if used < self.config.maintenance_daily_limit - 1
+            else None
+        )
         key = incident.key if incident else f"throughput-experiment-{today}"
         if key in handled:
             return
-        state.update({"analyses_today": used + 1, "last_analysis_at": now.isoformat()})
+        state.update(
+            {
+                "analyses_today": used + 1,
+                "last_analysis_at": now.isoformat(),
+                "next_analysis_at": (
+                    now + timedelta(seconds=self.config.maintenance_analysis_interval_seconds)
+                ).isoformat(),
+            }
+        )
         atomic_write_json(self.path, state)
         evidence = incident.evidence() if incident else []
         scratch = self.config.worktree_dir / "maintenance-analysis"
@@ -432,14 +554,18 @@ class MaintenanceController:
             self.pipeline._run_agent(
                 analysis_job,
                 scratch,
-                "maintenance",
+                # Diagnosis and falsifiable experiment design need the planning
+                # route, not the catch-all cheap general-action model.
+                "planning",
                 prompt,
                 prepare_attempt=clear,
                 validate_output=validate,
                 timeout_seconds=self.config.maintenance_analysis_timeout_seconds,
+                read_only_reference=self.config.repository.resolve(),
                 system_prompt_override=(
                     "You are a bounded Factory maintenance planner. Write only inside "
-                    f"your assigned scratch directory. You may read {self.config.repository} "
+                    "your assigned scratch directory. You may read "
+                    f"{self.config.repository.resolve()} "
                     "as a read-only reference to check existing code. Never read secrets, "
                     "provider homes, other state or logs. Never execute operational commands, "
                     "run tests, modify the repository, contact GitHub, alter safeguards, "
@@ -452,11 +578,16 @@ class MaintenanceController:
             state["last_error"] = redact_agent_output(str(error))[-1000:]
             if isinstance(error, ProviderCapacityUnavailable) and not analysis_job.provider_history:
                 state["analyses_today"] = used
+                if previous_analysis is None:
+                    state.pop("last_analysis_at", None)
+                else:
+                    state["last_analysis_at"] = previous_analysis
                 retry = min(
                     self.config.maintenance_interval_seconds,
                     max(30, error.retry_after_seconds or 300),
                 )
                 state["next_run_at"] = (now + timedelta(seconds=retry)).isoformat()
+                state["next_analysis_at"] = state["next_run_at"]
             atomic_write_json(self.path, state)
             raise
         state.pop("last_error", None)
@@ -466,6 +597,8 @@ class MaintenanceController:
         title = f"fix(factory): {key}{suffix}"[:150]
         issue = None
         if plan.action == "repair":
+            if not issue_inventory_loaded:
+                open_tasks = self.pipeline.github.collect_open_issues()
             existing = next((item for item in open_tasks if item.title == title), None)
             body = self._issue_body(plan, key, evidence, snapshot)
             body += f"\nFactory-Task-Key: maintenance:{key}:{episode}\n"
@@ -482,6 +615,9 @@ class MaintenanceController:
             "created_at": now.isoformat(),
             "baseline": snapshot,
             "diagnosis": redact_agent_output(plan.diagnosis),
+            "change": redact_agent_output(plan.change),
+            "acceptance_criteria": [redact_agent_output(item) for item in plan.acceptance_criteria],
+            "evidence_fingerprint": incident.fingerprint() if incident else None,
             "affected": {
                 job.task.identifier: {"error": error_identity(job), "head": job.head_sha}
                 for job in incident.jobs
@@ -573,6 +709,15 @@ class MaintenanceController:
                             }
                         )
                         changed = True
+                    elif canary.state in TERMINAL:
+                        record.update(
+                            {
+                                "status": "canary-obsolete",
+                                "completed_at": datetime.now(UTC).isoformat(),
+                                "canary_canonical_task": canary.canonical_task_id,
+                            }
+                        )
+                        changed = True
                     elif (
                         started := timestamp(record.get("canary_started_at"))
                     ) is not None and datetime.now(UTC) - started > timedelta(hours=6):
@@ -590,6 +735,7 @@ class MaintenanceController:
                     and (job := jobs.get(identifier)) is not None
                     and identifier not in previously
                     and job.state not in TERMINAL
+                    and job.canonical_task_id in {None, job.task.identifier}
                     and job.head_sha == expected.get("head")
                     and error_identity(job) == expected.get("error")
                 ]

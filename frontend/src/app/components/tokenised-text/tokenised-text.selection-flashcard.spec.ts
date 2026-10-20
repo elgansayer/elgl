@@ -22,12 +22,12 @@ class I18nStub {
 }
 
 describe('TokenisedTextComponent selection flashcards', () => {
-  const createFlashcard = vi.fn();
+  const saveWord = vi.fn();
   const translateText = vi.fn();
   let i18n: I18nStub;
 
   beforeEach(async () => {
-    createFlashcard.mockReset().mockResolvedValue({ id: 'card-1' });
+    saveWord.mockReset().mockResolvedValue({ id: 'card-1' });
     translateText.mockReset().mockResolvedValue({ translated_text: 'hello brave world' });
     i18n = new I18nStub();
 
@@ -38,11 +38,11 @@ describe('TokenisedTextComponent selection flashcards', () => {
           provide: VocabularyStore,
           useValue: {
             getWordStatus: () => ({ colorClass: '', colourClass: '' }),
+            saveWord
           },
         },
         { provide: I18nService, useValue: i18n },
         { provide: TransliterationService, useValue: { transliterate: () => '' } },
-        { provide: FlashcardService, useValue: { createFlashcard } },
         { provide: ChatService, useValue: { translateText } },
       ],
     }).compileComponents();
@@ -63,7 +63,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
     await component.createSelectionFlashcard();
 
     expect(translateText).toHaveBeenCalledWith('brave', 'en');
-    expect(createFlashcard).toHaveBeenCalledWith({
+    expect(saveWord).toHaveBeenCalledWith({
       word_token: 'brave',
       original_context: 'Hola brave mundo',
       translation: 'hello brave world',
@@ -96,7 +96,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
 
     expect(component.flashcardSelection()).toBeNull();
     expect(translateText).not.toHaveBeenCalled();
-    expect(createFlashcard).not.toHaveBeenCalled();
+    expect(saveWord).not.toHaveBeenCalled();
   });
 
   it('defensively bounds persisted source context to the API contract', () => {
@@ -126,7 +126,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
 
     await component.createSelectionFlashcard();
 
-    expect(createFlashcard).not.toHaveBeenCalled();
+    expect(saveWord).not.toHaveBeenCalled();
     expect(component.flashcardSelection()?.text).toBe('hola');
     expect(component.flashcardError()).toBe(true);
     expect(component.flashcardCreating()).toBe(false);
@@ -151,7 +151,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
 
     resolveTranslation({ translated_text: 'hello' });
     await Promise.all([first, second]);
-    expect(createFlashcard).toHaveBeenCalledTimes(1);
+    expect(saveWord).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the Spartan action open and retryable when translation fails', async () => {
@@ -163,7 +163,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
 
     await component.createSelectionFlashcard();
 
-    expect(createFlashcard).not.toHaveBeenCalled();
+    expect(saveWord).not.toHaveBeenCalled();
     expect(component.flashcardSelection()?.text).toBe('hola');
     expect(component.flashcardError()).toBe(true);
     expect(component.flashcardCreating()).toBe(false);

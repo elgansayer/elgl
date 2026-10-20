@@ -81,6 +81,7 @@ The deep immersion reading and vocabulary acquisition system integrated througho
 - **Desktop Web Platform:** A browser-based version of the chat interface, syncing seamlessly with the mobile app via QR code login. Designed for faster typing and keyboard-optimised workflows.
 - **Cloud Chat Backups:** Syncing the local message database to the cloud to persist message histories across devices.
 
+
 ## 8. VIP Premium Monetisation & Virtual Economy
 
 The logic enforced by NestJS to drive subscriptions across tiers and power the in-app economy.
