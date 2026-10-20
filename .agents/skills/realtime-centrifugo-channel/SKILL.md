@@ -28,7 +28,7 @@ await this.centrifugoService.publish(channel, data);
 
 `publish()` POSTs to the Centrifugo HTTP API (`{CENTRIFUGO_URL}/api`) with `Authorization: apikey {CENTRIFUGO_API_KEY}` and returns `boolean` (catches and logs errors rather than throwing) - always check the return value if delivery is important to the feature, and consider persisting the event to Supabase first so it's recoverable even if the publish fails.
 
-Connection tokens are minted via `CentrifugoService.generateConnectionToken(userId)`, signing a JWT with `CENTRIFUGO_SECRET` and a `sub` claim equal to the Supabase user id, exposed through `POST /chat/token` (`SupabaseAuthGuard`-protected). Do not mint a token for a channel/user the caller doesn't own or isn't authorised to join (e.g. verify room membership before minting a `room_{id}` presence token).
+Connection tokens are minted via `CentrifugeService.generateConnectionToken(userId)`, signing a JWT with `CENTRIFUGO_SECRET` and a `sub` claim equal to the Supabase user id, exposed through `POST /chat/token` (`SupabaseAuthGuard`-protected). Do not mint a token for a channel/user the caller doesn't own or isn't authorised to join (e.g. verify room membership before minting a `room_{id}` presence token).
 
 ## Payload Contract (`SPEC.md` Section 3 - extend this table, don't invent an ad hoc shape)
 
