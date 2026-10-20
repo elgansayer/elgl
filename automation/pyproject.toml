@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.32.0"]
+requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
 
 [project]
@@ -10,17 +10,17 @@ requires-python = ">=3.12"
 dependencies = [
   "filelock==3.32.5",
   "httpx==0.28.1",
-  "openhands-sdk==1.44.1",
-  "openhands-tools==1.44.1",
-  "pydantic==2.13.5",
+  "openhands-sdk==1.55.1",
+  "openhands-tools==1.55.1",
+  "pydantic==2.14.1",
 ]
 
 [project.optional-dependencies]
 development = [
-  "mypy==2.3.1",
+  "mypy==2.4.0",
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
-  "ruff==0.16.6",
+  "ruff==0.17.1",
 ]
 
 [project.scripts]
@@ -33,6 +33,7 @@ packages = ["openhands_factory"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
