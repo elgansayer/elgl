@@ -1,7 +1,8 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, effect, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-distance-slider',
   imports: [TranslatePipe],
   template: `
