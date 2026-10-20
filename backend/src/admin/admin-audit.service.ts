@@ -105,27 +105,24 @@ export class AdminAuditService {
     const rpcClient = client as unknown as {
       rpc?: (
         functionName: string,
-      ) => Promise<{ data: unknown; error?: unknown }>;
+      ) => Promise<{ data: unknown; error: unknown }>;
     };
     if (typeof rpcClient.rpc !== 'function') return;
 
     try {
       const { error } = await rpcClient.rpc('prune_admin_audit_events');
       if (error) {
-        this.logRetentionFailure(error);
+        throw new Error('Admin audit retention RPC failed');
       }
     } catch (error) {
-      this.logRetentionFailure(error);
+      this.logger.error(
+        JSON.stringify({
+          event: 'admin_audit_retention_failed',
+          errorType:
+            error instanceof Error ? error.name : 'AuditRetentionError',
+        }),
+      );
     }
-  }
-
-  private logRetentionFailure(error: unknown): void {
-    this.logger.error(
-      JSON.stringify({
-        event: 'admin_audit_retention_failed',
-        errorType: error instanceof Error ? error.name : 'AuditRetentionError',
-      }),
-    );
   }
 
   private sanitizeMetadata(

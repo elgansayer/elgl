@@ -77,15 +77,10 @@ export class AdminService {
    * session.
    */
   async checkAdminAccess(): Promise<boolean> {
-    const token = this.authService.getAccessToken();
-    if (!token) {
-      return false;
-    }
-
     try {
       await firstValueFrom(
         this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: this.getHeaders(),
           params: new HttpParams().set('page', '1').set('pageSize', '1'),
         }),
       );

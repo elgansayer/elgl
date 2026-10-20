@@ -154,4 +154,30 @@ describe('DistanceSliderComponent', () => {
     expect(label.contains(input)).toBe(true);
     expect(input.id).toBe('');
   });
+
+  it('keeps the translated label and native control fluid at the mobile baseline', () => {
+    const label: HTMLLabelElement = fixture.nativeElement.querySelector('label');
+    const labelText: HTMLSpanElement = label.querySelector('span')!;
+    const controlHitArea: HTMLSpanElement = label.querySelector('span.relative')!;
+    const input = slider();
+
+    expect(label.classList.contains('min-w-0')).toBe(true);
+    expect(labelText.classList.contains('break-words')).toBe(true);
+    expect(labelText.classList.contains('whitespace-nowrap')).toBe(false);
+    expect(controlHitArea.classList.contains('min-h-11')).toBe(true);
+    expect(input.classList.contains('h-11')).toBe(true);
+    expect(input.classList.contains('w-full')).toBe(true);
+  });
+
+  it('uses only Relay semantic colour tokens for the track and thumb', () => {
+    const styles = (
+      DistanceSliderComponent as unknown as { ɵcmp: { styles: string[] } }
+    ).ɵcmp.styles.join('\n');
+
+    expect(styles).toContain('rgb(var(--surface-100-rgb))');
+    expect(styles).toContain('rgb(var(--surface-500-rgb))');
+    expect(styles).toContain('rgb(var(--color-primary-rgb))');
+    expect(styles).not.toContain('--color-surface');
+    expect(styles).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  });
 });

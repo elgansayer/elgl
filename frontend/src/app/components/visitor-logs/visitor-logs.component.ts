@@ -4,7 +4,6 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService, VisitorLog, UserProfile } from '../../services/user.service';
-import { normalizeVisitorLogs } from './visitor-logs.model';
 
 @Component({
   selector: 'app-visitor-logs',
@@ -13,7 +12,7 @@ import { normalizeVisitorLogs } from './visitor-logs.model';
   styleUrls: ['./visitor-logs.component.scss'],
 })
 export class VisitorLogsComponent {
-  private readonly userService = inject(UserService);
+  private userService = inject(UserService);
 
   readonly visitors = signal<VisitorLog[]>([]);
   readonly profile = signal<UserProfile | null>(null);
@@ -22,19 +21,16 @@ export class VisitorLogsComponent {
   readonly hideBlurred = signal<boolean>(false);
 
   readonly visibleVisitorsCount = computed(
-    () => this.visitors().filter((visitor) => !visitor.is_blurred).length,
+    () => this.visitors().filter((v) => !v.is_blurred).length,
   );
   readonly blurredVisitorsCount = computed(
-    () => this.visitors().filter((visitor) => visitor.is_blurred).length,
+    () => this.visitors().filter((v) => v.is_blurred).length,
   );
   readonly filteredVisitors = computed(() =>
-    this.hideBlurred() ? this.visitors().filter((visitor) => !visitor.is_blurred) : this.visitors(),
+    this.hideBlurred() ? this.visitors().filter((v) => !v.is_blurred) : this.visitors(),
   );
   readonly showUpgrade = computed(
     () => this.profile()?.is_vip === false || this.blurredVisitorsCount() > 0,
-  );
-  readonly hideBlurredLabelKey = computed(() =>
-    this.hideBlurred() ? 'visitors.showAllBtn' : 'visitors.hideBlurredBtn',
   );
 
   constructor() {
@@ -54,9 +50,7 @@ export class VisitorLogsComponent {
       this.profile.set(profileResult.status === 'fulfilled' ? profileResult.value : null);
 
       if (visitorsResult.status === 'fulfilled') {
-        // Treat the API payload as untrusted at the rendering boundary. In particular,
-        // discard any identity fields accidentally returned for server-masked rows.
-        this.visitors.set(normalizeVisitorLogs(visitorsResult.value));
+        this.visitors.set(visitorsResult.value);
       } else {
         this.visitors.set([]);
         this.loadError.set(true);

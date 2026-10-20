@@ -41,29 +41,27 @@ def test_production_uses_subscription_first_phase_routing() -> None:
     assert config["routing_enabled"] is True
     assert providers["claude"]["enabled"] is True
     assert providers["codex"]["enabled"] is True
-    assert providers["opencode"]["enabled"] is False
+    assert providers["opencode"]["enabled"] is True
     assert providers["google"]["enabled"] is True
-    assert providers["pi"]["enabled"] is False
+    assert providers["pi"]["enabled"] is True
     assert providers["openhands"]["enabled"] is False
     assert providers["openhands"]["transport"] == "openhands-sdk"
     assert providers["openhands"]["emergency_only"] is True
 
     expected = {
-        AgentPhase.PLANNING: ["google", "claude", "codex"],
-        AgentPhase.ARCHITECTURE: ["google", "claude", "codex"],
-        AgentPhase.IMPLEMENTATION: ["google", "claude", "codex"],
-        AgentPhase.SECURITY_REVIEW: ["google", "claude", "codex"],
-        AgentPhase.QUALITY_REPAIR: ["google", "codex", "claude"],
-        AgentPhase.CODE_REVIEW: ["claude", "google", "codex"],
-        AgentPhase.CI_REPAIR: ["google", "claude", "codex"],
-        AgentPhase.GENERAL_ACTION: ["google", "claude", "codex"],
+        AgentPhase.PLANNING: ["claude", "codex", "google", "opencode", "pi"],
+        AgentPhase.ARCHITECTURE: ["claude", "codex", "google", "opencode", "pi"],
+        AgentPhase.IMPLEMENTATION: ["claude", "codex", "google", "opencode", "pi"],
+        AgentPhase.SECURITY_REVIEW: ["claude", "codex", "google", "opencode", "pi"],
+        AgentPhase.QUALITY_REPAIR: ["codex", "claude", "google", "opencode", "pi"],
+        AgentPhase.CODE_REVIEW: ["codex", "claude", "google", "opencode", "pi"],
+        AgentPhase.CI_REPAIR: ["codex", "claude", "google", "opencode", "pi"],
+        AgentPhase.GENERAL_ACTION: ["opencode", "google", "codex", "claude", "pi"],
     }
     for phase, candidates in expected.items():
         assert routing[phase.value.replace("-", "_")] == candidates
+        assert candidates[-1] == "pi"
         assert "openhands" not in candidates
-
-    # Keep the two evidence-backed subscriptions ahead of the last-resort route.
-    assert expected[AgentPhase.CI_REPAIR][-1] == "codex"
 
 
 def test_active_architecture_matches_provider_neutral_boundary() -> None:
