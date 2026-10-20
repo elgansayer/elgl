@@ -1,8 +1,9 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-voip-active-call',
   imports: [HlmButton, TranslatePipe],
   templateUrl: './voip-active-call.component.html',
