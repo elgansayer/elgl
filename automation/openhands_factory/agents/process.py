@@ -41,18 +41,20 @@ state_dir=$3
 log_dir=$4
 service_home=$5
 mount_count=$6
-shift 6
+sandbox_root=$7
+shift 7
 
 /usr/bin/mount --make-rprivate /
-/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs /mnt
+/usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
+staging=$sandbox_root/factory-provider
 for name in workspace repository credentials; do
-  /usr/bin/mkdir -p "/mnt/factory-provider/$name"
+  /usr/bin/mkdir -p "$staging/$name"
 done
-/usr/bin/mount --bind "$workspace" /mnt/factory-provider/workspace
-/usr/bin/mount --bind "$repository" /mnt/factory-provider/repository
-/usr/bin/mount -o remount,bind,ro /mnt/factory-provider/repository
+/usr/bin/mount --bind "$workspace" "$staging/workspace"
+/usr/bin/mount --bind "$repository" "$staging/repository"
+/usr/bin/mount -o remount,bind,ro "$staging/repository"
 
-manifest=/mnt/factory-provider/mounts
+manifest=$staging/mounts
 : > "$manifest"
 index=0
 while [ "$index" -lt "$mount_count" ]; do
@@ -61,7 +63,7 @@ while [ "$index" -lt "$mount_count" ]; do
   shift 2
   source=$service_home/$relative
   if [ -e "$source" ]; then
-    staged=/mnt/factory-provider/credentials/$index
+    staged=$staging/credentials/$index
     if [ -d "$source" ]; then
       /usr/bin/mkdir -p "$staged"
     else
@@ -75,6 +77,17 @@ while [ "$index" -lt "$mount_count" ]; do
     /usr/bin/printf '%s|%s|%s\n' "$index" "$mode" "$relative" >> "$manifest"
   fi
   index=$((index + 1))
+done
+for masked_root in /mnt /srv /media; do
+  if [ "$masked_root" != "$sandbox_root" ] && [ -d "$masked_root" ]; then
+    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$masked_root"
+  fi
+done
+for container_socket in /run/containerd/containerd.sock /run/docker.sock \
+  /run/podman/podman.sock; do
+  if [ -S "$container_socket" ]; then
+    /usr/bin/mount --bind /dev/null "$container_socket"
+  fi
 done
 [ "$1" = -- ]
 shift
@@ -103,12 +116,12 @@ fi
 /usr/bin/chmod 700 "$service_home"
 /usr/bin/mkdir -p "$workspace" "$repository"
 if [ "$repository" != "$workspace" ]; then
-  /usr/bin/mount --bind /mnt/factory-provider/repository "$repository"
+  /usr/bin/mount --bind "$staging/repository" "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
-/usr/bin/mount --bind /mnt/factory-provider/workspace "$workspace"
+/usr/bin/mount --bind "$staging/workspace" "$workspace"
 while IFS='|' read -r index mode relative; do
-  staged=/mnt/factory-provider/credentials/$index
+  staged=$staging/credentials/$index
   target=$service_home/$relative
   /usr/bin/mkdir -p "$(/usr/bin/dirname "$target")"
   if [ -d "$staged" ]; then
@@ -141,6 +154,7 @@ class ProcessResult:
     timed_out: bool
     output_truncated: bool
     duration_seconds: float
+    cancelled: bool = False
 
 
 @dataclass(frozen=True)
@@ -213,11 +227,32 @@ class AgentProcessRunner:
     """Run direct CLIs without a shell and terminate their process groups on stop."""
 
     _processes: ClassVar[set[subprocess.Popen[bytes]]] = set()
+    _cancelled_processes: ClassVar[set[subprocess.Popen[bytes]]] = set()
     _processes_lock = threading.Lock()
     _accepting_processes: ClassVar[bool] = True
 
     def __init__(self, *, isolate_processes: bool = True) -> None:
         self.isolate_processes = isolate_processes
+
+    @staticmethod
+    def _sandbox_root(
+        protected_paths: Sequence[Path],
+        *,
+        candidates: Sequence[Path] = (Path("/mnt"), Path("/srv"), Path("/media")),
+    ) -> Path:
+        resolved_paths = tuple(path.resolve() for path in protected_paths)
+        for candidate in candidates:
+            resolved_candidate = candidate.resolve()
+            if not candidate.is_dir():
+                continue
+            if any(
+                protected.is_relative_to(resolved_candidate)
+                or resolved_candidate.is_relative_to(protected)
+                for protected in resolved_paths
+            ):
+                continue
+            return resolved_candidate
+        raise ValueError("No safe provider sandbox staging root is available")
 
     def _launch_command(
         self,
@@ -236,6 +271,7 @@ class AgentProcessRunner:
         protected_paths = (cwd, repository, state_dir, log_dir, service_home)
         if any(path.resolve() == Path("/") for path in protected_paths):
             raise ValueError("Provider isolation paths must not resolve to the filesystem root")
+        sandbox_root = self._sandbox_root(protected_paths)
         mount_arguments: list[str] = []
         service_home_resolved = service_home.resolve()
         for mount in home_mounts:
@@ -263,6 +299,7 @@ class AgentProcessRunner:
             str(log_dir.resolve()),
             str(service_home.resolve()),
             str(len(home_mounts)),
+            str(sandbox_root),
             *mount_arguments,
             "--",
             *command,
@@ -311,6 +348,7 @@ class AgentProcessRunner:
     def terminate_all(cls) -> None:
         with cls._processes_lock:
             processes = tuple(cls._processes)
+            cls._cancelled_processes.update(processes)
         for process in processes:
             cls._terminate(process)
 
@@ -320,6 +358,7 @@ class AgentProcessRunner:
         with cls._processes_lock:
             cls._accepting_processes = False
             processes = tuple(cls._processes)
+            cls._cancelled_processes.update(processes)
         for process in processes:
             cls._terminate(process)
 
@@ -386,7 +425,9 @@ class AgentProcessRunner:
         capture = _CaptureBuffer(max_output_bytes)
         if process.stdout is None or process.stderr is None:
             self._terminate(process)
-            self._unregister(process)
+            with self._processes_lock:
+                self._cancelled_processes.discard(process)
+                self._processes.discard(process)
             raise RuntimeError("Agent process pipes were not created")
         readers = (
             threading.Thread(
@@ -426,7 +467,10 @@ class AgentProcessRunner:
                     process.stdin.close()
             for reader in readers:
                 reader.join(timeout=5)
-            self._unregister(process)
+            with self._processes_lock:
+                cancelled = process in self._cancelled_processes
+                self._cancelled_processes.discard(process)
+                self._processes.discard(process)
 
         exit_code = process.returncode if process.returncode is not None else 1
         if timed_out and exit_code == 0:
@@ -439,6 +483,7 @@ class AgentProcessRunner:
             timed_out=timed_out,
             output_truncated=capture.truncated,
             duration_seconds=time.monotonic() - started,
+            cancelled=cancelled,
         )
 
 
