@@ -175,8 +175,8 @@ sudo -u "$FACTORY_USER" env HOME="$FACTORY_HOME" bash -c \
     --file "$1/Containerfile" "$1"' _ "$FACTORY_ROOT/build-context"
 
 printf 'XDG_RUNTIME_DIR=/run/user/%s\n' "$factory_uid" > "$FACTORY_CONFIG/runtime.env"
-chown root:"$FACTORY_USER" "$FACTORY_CONFIG/runtime.env"
-chmod 0640 "$FACTORY_CONFIG/runtime.env"
+chown root:root "$FACTORY_CONFIG/runtime.env"
+chmod 0600 "$FACTORY_CONFIG/runtime.env"
 install -o root -g "$FACTORY_USER" -m 0640 \
   "$REPOSITORY_SOURCE/config/factory/agents.production.json" \
   "$FACTORY_CONFIG/agents.example.json"
