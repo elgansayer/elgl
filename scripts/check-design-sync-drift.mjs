@@ -21,7 +21,19 @@ function git(...args) {
 let changed;
 let baseManifest;
 try {
-  changed = git('diff', '--name-only', `${base}...HEAD`)
+  // A synthetic merge checkout may contain main commits newer than the PR
+  // event's base. Scope ownership to the immutable PR head, not others' changes.
+  let diffHead = 'HEAD';
+  if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
+    const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+    const head = event.pull_request?.head?.sha;
+    if (typeof head !== 'string' || !/^[0-9a-f]{40}$/.test(head)) {
+      throw new Error('Missing valid pull-request head identity');
+    }
+    git('merge-base', '--is-ancestor', head, 'HEAD');
+    diffHead = head;
+  }
+  changed = git('diff', '--name-only', `${base}...${diffHead}`)
     .split('\n')
     .map((path) => path.trim())
     .filter(Boolean);

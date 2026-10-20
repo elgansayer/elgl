@@ -10,6 +10,7 @@ describe('FavouritesController', () => {
     addFavourite: ReturnType<typeof vi.fn>;
     removeFavourite: ReturnType<typeof vi.fn>;
     getUserFavourites: ReturnType<typeof vi.fn>;
+    getStarredMessages: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -17,6 +18,11 @@ describe('FavouritesController', () => {
       addFavourite: vi.fn().mockResolvedValue({ success: true }),
       removeFavourite: vi.fn().mockResolvedValue({ success: true }),
       getUserFavourites: vi.fn().mockResolvedValue([]),
+      getStarredMessages: vi.fn().mockResolvedValue({
+        items: [],
+        has_more: false,
+        next_offset: null,
+      }),
     };
     controller = new FavouritesController(
       service as unknown as FavouritesService,
@@ -26,6 +32,17 @@ describe('FavouritesController', () => {
   it('reads the authenticated user favourites without a user id parameter', async () => {
     await expect(controller.getMyFavourites(request)).resolves.toEqual([]);
     expect(service.getUserFavourites).toHaveBeenCalledWith('user-1');
+  });
+
+  it('retrieves a bounded starred-message page for the authenticated user', async () => {
+    await expect(
+      controller.getStarredMessages(request, { limit: 25, offset: 50 }),
+    ).resolves.toEqual({
+      items: [],
+      has_more: false,
+      next_offset: null,
+    });
+    expect(service.getStarredMessages).toHaveBeenCalledWith('user-1', 25, 50);
   });
 
   it('keeps the legacy user route owner-scoped', async () => {
