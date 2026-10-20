@@ -176,6 +176,13 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+## 2026-10-06 - Stream Cancellation Resource Leak
+**Learning:** In Node.js `fetch` implementations, calling `response.body.cancel()` sequentially after `response.arrayBuffer()` throws a 'ReadableStream is locked' error. Furthermore, sequential awaits on stream cleanups delay socket reuse.
+**Action:** Execute stream cleanups (`arrayBuffer()` and `body.cancel()`) concurrently using `Promise.allSettled()` to prevent the lock error and expedite connection pool release.
+## 2026-10-06 - Stream Cancellation Resource Leak
+**Learning:** In Node.js `fetch` implementations, calling `response.body.cancel()` sequentially after `response.arrayBuffer()` throws a 'ReadableStream is locked' error. Furthermore, sequential awaits on stream cleanups delay socket reuse.
+**Action:** Execute stream cleanups (`arrayBuffer()` and `body.cancel()`) concurrently using `Promise.allSettled()` to prevent the lock error and expedite connection pool release.
+
 ## 2026-10-06 - Retry Mechanism N+1 False Positive
 **Learning:** Static analysis tools may incorrectly flag sequential HTTP requests inside a `for` loop as an N+1 query performance issue. In the context of an exponential backoff retry mechanism (like `fetchWithExponentialBackoff`), sequential execution is fundamentally required. Converting these requests to execute concurrently with `Promise.all` would break the retry logic and potentially flood the downstream service. Additionally, fully consuming the response body (e.g., via `await response.arrayBuffer()`) on failed requests is critical in Node/Undici to release the socket back to the connection pool for keep-alive; optimizing this away by only calling `.cancel()` can lead to socket exhaustion regressions.
 **Action:** Always evaluate the functional context of a loop before attempting to parallelize its I/O operations. For retry loops, prioritize sequential execution and explicit socket cleanup (keep-alive) over static analysis warnings about N+1 queries.
@@ -242,5 +249,6 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
