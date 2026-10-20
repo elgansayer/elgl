@@ -89,9 +89,13 @@ class GitWorkflow:
         *,
         external_branch: str | None = None,
         github_token: str | None = None,
+        worktree_root: Path | None = None,
+        recovery_root: Path | None = None,
     ) -> None:
         self.repository = repository
         self.base_branch = base_branch
+        self.worktree_root = (worktree_root or repository.parent).resolve()
+        self.recovery_root = (recovery_root or repository.parent).resolve()
         self.runner: ProcessRunner
         if runner is None and github_token is not None:
             self.runner = partial(
@@ -300,7 +304,10 @@ class GitWorkflow:
             destination = worktree / relative
             if source.is_dir() and not destination.exists():
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                os.symlink(source, destination, target_is_directory=True)
+                # The configured repository may itself be a symlink. Verification
+                # exposes its resolved path inside the isolated mount namespace,
+                # so dependency links must target that same reachable identity.
+                os.symlink(source.resolve(), destination, target_is_directory=True)
 
     def create_branch(self, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
@@ -318,12 +325,32 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Commit failed: {result.stderr}")
 
     def changed_paths(self) -> set[Path]:
-        result = self.runner(
-            ("git", "diff", "--name-only", f"origin/{self.base_branch}"), self.repository
+        remote_base = f"origin/{self.base_branch}"
+        merging = self.runner(("git", "rev-parse", "-q", "--verify", "MERGE_HEAD"), self.repository)
+        if merging.returncode not in {0, 1}:
+            raise RepositorySafetyError(f"Could not inspect merge state: {merging.stderr}")
+
+        # A two-dot diff against a newer base compares the two tip trees. On a
+        # long-running branch it therefore reports every unrelated file changed
+        # on main since the branch started, causing broad lint and test runs for
+        # work the task never touched. Use the merge-base delta for committed
+        # branch work and add local edits separately. During a conflict repair,
+        # the uncommitted merge result already contains the current base, so the
+        # direct base comparison remains the accurate task delta.
+        comparisons = (
+            [("git", "diff", "--name-only", remote_base)]
+            if merging.returncode == 0
+            else [
+                ("git", "diff", "--name-only", f"{remote_base}...HEAD"),
+                ("git", "diff", "--name-only", "HEAD"),
+            ]
         )
-        if result.returncode != 0:
-            raise RepositorySafetyError(f"Could not inspect changes: {result.stderr}")
-        paths = {Path(line) for line in result.stdout.splitlines() if line.strip()}
+        paths: set[Path] = set()
+        for arguments in comparisons:
+            result = self.runner(arguments, self.repository)
+            if result.returncode != 0:
+                raise RepositorySafetyError(f"Could not inspect changes: {result.stderr}")
+            paths.update(Path(line) for line in result.stdout.splitlines() if line.strip())
         # `git diff` never reports untracked files, only modifications to tracked
         # ones - but has_changes() (git status --porcelain) counts a new untracked
         # file as a change too. Without this, a task whose only output is a new
@@ -417,18 +444,110 @@ class GitWorkflow:
             digest.update(object_hash.stdout.strip().encode("ascii"))
         return digest.hexdigest()
 
+    def committed_change_fingerprint(self) -> str:
+        """Identify the resulting blobs for the branch diff, independent of rebases."""
+
+        paths = self.changed_paths()
+        if not paths:
+            raise RepositorySafetyError("No changed paths were found")
+        digest = hashlib.sha256()
+        for path in sorted(paths):
+            relative = path.as_posix()
+            digest.update(relative.encode("utf-8"))
+            digest.update(b"\0")
+            result = self.runner(("git", "rev-parse", f"HEAD:{relative}"), self.repository)
+            if result.returncode == 0:
+                digest.update(result.stdout.strip().encode("ascii"))
+            else:
+                digest.update(b"<deleted>")
+            digest.update(b"\0")
+        return digest.hexdigest()
+
     def push(self, branch: str) -> None:
         ensure_push_target(branch, self.base_branch, extra_allowed=self.external_branch)
         result = _run_with_lock_retry(
-            self.runner, ("git", "push", "--set-upstream", "origin", branch), self.repository
+            self.runner,
+            (
+                "git",
+                "push",
+                "--set-upstream",
+                "origin",
+                f"HEAD:refs/heads/{branch}",
+            ),
+            self.repository,
         )
         if result.returncode != 0:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
 
+    def sync_remote_branch(self, branch: str, expected_head_sha: str) -> None:
+        """Replace a Factory branch only while its inspected remote head is unchanged."""
+
+        ensure_push_target(branch, self.base_branch)
+        reference = f"refs/heads/{branch}"
+        remote = self.runner(("git", "ls-remote", "--heads", "origin", reference), self.repository)
+        if remote.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect remote branch: {remote.stderr}")
+        current_sha = ""
+        for line in remote.stdout.splitlines():
+            sha, separator, observed_ref = line.partition("\t")
+            if separator and observed_ref == reference:
+                current_sha = sha
+                break
+        if current_sha and current_sha != expected_head_sha:
+            raise RepositorySafetyError(
+                f"Remote branch {branch} moved after pull-request inspection"
+            )
+        result = _run_with_lock_retry(
+            self.runner,
+            (
+                "git",
+                "push",
+                f"--force-with-lease={reference}:{current_sha}",
+                "origin",
+                f"HEAD:{reference}",
+            ),
+            self.repository,
+        )
+        if result.returncode != 0:
+            raise RepositorySafetyError(f"Could not update canonical PR branch: {result.stderr}")
+
+    def delete_remote_branch(self, branch: str, expected_head_sha: str) -> None:
+        """Delete an exact Factory branch tip after another PR becomes canonical."""
+
+        ensure_push_target(branch, self.base_branch)
+        reference = f"refs/heads/{branch}"
+        remote = self.runner(("git", "ls-remote", "--heads", "origin", reference), self.repository)
+        if remote.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect remote branch: {remote.stderr}")
+        current_sha = ""
+        for line in remote.stdout.splitlines():
+            sha, separator, observed_ref = line.partition("\t")
+            if separator and observed_ref == reference:
+                current_sha = sha
+                break
+        if not current_sha:
+            return
+        if current_sha != expected_head_sha:
+            raise RepositorySafetyError(f"Remote branch {branch} moved before cleanup")
+        result = _run_with_lock_retry(
+            self.runner,
+            (
+                "git",
+                "push",
+                f"--force-with-lease={reference}:{expected_head_sha}",
+                "origin",
+                f":{reference}",
+            ),
+            self.repository,
+        )
+        if result.returncode != 0:
+            raise RepositorySafetyError(f"Could not delete duplicate branch: {result.stderr}")
+
     def remove_worktree(self, worktree: Path, *, force: bool = False) -> None:
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to remove a worktree outside the factory root")
         arguments = ["git", "worktree", "remove"]
         if force:
@@ -440,11 +559,16 @@ class GitWorkflow:
 
     def archive_worktree(self, worktree: Path, recovery_root: Path) -> Path:
         """Copy a dirty worktree before it is retired during durable recovery."""
-        resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
         resolved_recovery = recovery_root.resolve()
-        if not resolved_worktree.is_relative_to(resolved_root):
+        if resolved_worktree == self.worktree_root or not resolved_worktree.is_relative_to(
+            self.worktree_root
+        ):
             raise RepositorySafetyError("Refusing to archive a worktree outside the factory root")
+        if resolved_recovery == self.recovery_root or not resolved_recovery.is_relative_to(
+            self.recovery_root
+        ):
+            raise RepositorySafetyError("Refusing to archive outside the factory recovery root")
         if resolved_recovery == resolved_worktree or resolved_recovery.is_relative_to(
             resolved_worktree
         ):

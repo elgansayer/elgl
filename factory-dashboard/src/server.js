@@ -17,6 +17,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = parseInt(process.env.PORT) || 3100;
 const GH_TOKEN = process.env.GH_TOKEN || '';
+const DASHBOARD_USER = process.env.DASHBOARD_USER || 'admin';
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD;
+
+if (!DASHBOARD_PASSWORD || DASHBOARD_PASSWORD.length < 16) {
+  console.error('CRITICAL: DASHBOARD_PASSWORD must be at least 16 characters.');
+  process.exit(1);
+}
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
