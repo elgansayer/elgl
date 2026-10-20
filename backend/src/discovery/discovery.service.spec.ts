@@ -1071,7 +1071,7 @@ describe('DiscoveryService', () => {
   // Sort algorithms
   // ---------------------------------------------------------------------------
   describe('sort algorithms', () => {
-    it('best_match: promotes partner-of-week first, then study streak, then correction ratio', async () => {
+    it('best_match: promotes partner-of-week first, then calculates match score', async () => {
       mockRedisClient.get.mockResolvedValue(JSON.stringify(['partner-c']));
       const partners = [
         { id: 'partner-a', study_streak_days: 3, correction_ratio: 0.9 },
@@ -1084,11 +1084,8 @@ describe('DiscoveryService', () => {
         sort: 'best_match',
       });
 
-      // The new fallback sorting formula is:
-      // a: min(50, 3*2) + (0.9 * 40) = 6 + 36 = 42
-      // b: min(50, 10*2) + (0.5 * 40) = 20 + 20 = 40
-      // c: 1000 + ... => winner
-      // order: c, a, b
+      // partner-a has score 36 (0.9 * 40)
+      // partner-b has score 20 (0.5 * 40)
       expect(result.map((u) => u.id)).toEqual([
         'partner-c',
         'partner-a',
