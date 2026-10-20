@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" fill="none" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="message-accent" x1="54" y1="35" x2="178" y2="128" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D6613F"/>
+      <stop offset="1" stop-color="#2F9487"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="120" cy="134" rx="72" ry="10" fill="#12151C" opacity=".06"/>
+  <circle cx="120" cy="78" r="61" fill="#D6613F" opacity=".08"/>
+  <path d="M58 50c0-9.94 8.06-18 18-18h78c9.94 0 18 8.06 18 18v31c0 9.94-8.06 18-18 18h-42l-22 17 5-17H76c-9.94 0-18-8.06-18-18V50Z" fill="#FFFFFF" fill-opacity=".94" stroke="#778199" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M104 77c0-8.84 7.16-16 16-16h51c8.84 0 16 7.16 16 16v22c0 8.84-7.16 16-16 16h-23l16 13-24-13h-20c-8.84 0-16-7.16-16-16V77Z" fill="#FFFFFF" fill-opacity=".96" stroke="url(#message-accent)" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="85" cy="66" r="4" fill="#D6613F"/>
+  <circle cx="101" cy="66" r="4" fill="#D6613F" opacity=".72"/>
+  <circle cx="117" cy="66" r="4" fill="#D6613F" opacity=".45"/>
+  <circle cx="127" cy="89" r="4" fill="#2F9487"/>
+  <circle cx="143" cy="89" r="4" fill="#2F9487" opacity=".72"/>
+  <circle cx="159" cy="89" r="4" fill="#2F9487" opacity=".45"/>
+  <path d="M42 72h10M47 67v10M188 48l7-7M192 52h9" stroke="#778199" stroke-width="2.5" stroke-linecap="round" opacity=".75"/>
+  <path d="m48 104 4 4 7-8" stroke="#2F9487" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

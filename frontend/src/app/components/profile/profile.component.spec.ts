@@ -93,9 +93,56 @@ describe('ProfileComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('en,ja');
-    expect(text).toContain('fr,ko');
+    expect(text).toContain('en, ja');
+    expect(text).toContain('fr, ko');
     expect(text).toContain('🔥 14d');
+  });
+
+  it('should load and render the saved CEFR proficiency level', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ proficiency_level: 'C1' }));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.proficiencyLevel()).toBe('C1');
+    expect(fixture.nativeElement.textContent).toContain('C1');
+  });
+
+  it('should persist the selected CEFR proficiency level with profile updates', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ proficiency_level: 'A2' }));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.proficiencyLevel.set('B2');
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ proficiency_level: 'B2' }),
+    );
+  });
+
+  it('round-trips comma-separated learning goals through the array API contract', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({ learning_goals: ['conversation', 'grammar'] }),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.learningGoals()).toBe(
+      'conversation, grammar',
+    );
+
+    fixture.componentInstance.learningGoals.set('conversation, vocabulary,  ');
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        learning_goals: ['conversation', 'vocabulary'],
+      }),
+    );
   });
 
   it('should bind the saved audio intro to the profile audio player', async () => {

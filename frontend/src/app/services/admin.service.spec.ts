@@ -67,21 +67,18 @@ describe('AdminService', () => {
     expect(result.total).toBe(1);
   });
 
-  it('falls back to mock data only on network errors (status 0), propagates HTTP errors', async () => {
-    // Network error (status 0) - should fall back to mock data
+  it('fails closed when the user list cannot be loaded', async () => {
     const networkPromise = service.listUsers('', 1, 20);
-    const netReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
-    netReq.error(new ProgressEvent('network error'));
+    const networkReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
+    networkReq.error(new ProgressEvent('network error'));
 
-    const netResult = await networkPromise;
-    expect(netResult.users.length).toBeGreaterThan(0);
+    await expect(networkPromise).rejects.toBeTruthy();
 
-    // HTTP error (status 403) - should propagate
-    const httpPromise = service.listUsers('', 1, 20);
-    const httpReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
-    httpReq.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+    const forbiddenPromise = service.listUsers('', 1, 20);
+    const forbiddenReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
+    forbiddenReq.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
 
-    await expect(httpPromise).rejects.toBeTruthy();
+    await expect(forbiddenPromise).rejects.toBeTruthy();
   });
 
   it('sends a PATCH request to toggle VIP status', async () => {
@@ -117,5 +114,23 @@ describe('AdminService', () => {
 
     const result = await promise;
     expect(result.length).toBe(1);
+  });
+
+  it('fails closed when sensitive login history cannot be loaded', async () => {
+    const promise = service.getLoginHistory('user-1');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/login-history`);
+    req.error(new ProgressEvent('network error'));
+
+    await expect(promise).rejects.toBeTruthy();
+  });
+
+  it('fails closed when the global block list cannot be loaded', async () => {
+    const promise = service.listAllBlocks(1, 20);
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/admin/blocks?page=1&pageSize=20`);
+    req.error(new ProgressEvent('network error'));
+
+    await expect(promise).rejects.toBeTruthy();
   });
 });
