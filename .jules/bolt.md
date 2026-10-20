@@ -20,6 +20,10 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-19 - Avoid modifying `package-lock.json` unless explicitly resolving local dependencies
+**Learning:** Running `npm install` blindly, especially when Node.js versions mismatch (`nvm` not being set up by default), can strip out critical native or optional dependencies (like `sass-embedded`) from `package-lock.json`, breaking the build and introducing massive diff noise.
+**Action:** Always prefer `git restore --staged package-lock.json && git checkout package-lock.json` if a lockfile modification was inadvertently made while trying to resolve local missing dependencies or tools. Never commit `package-lock.json` updates without explicit instructions when making purely frontend component changes.
+
 ## 2026-08-29 - [Optimize Angular @for loops with track .id]
 **Learning:** Tracking whole object references in Angular `@for` loops (e.g., `track msg` or `track room`) causes the framework to recreate DOM elements unnecessarily when the object reference changes (e.g., during state updates like appending a message).
 **Action:** Always use unique primitive identifiers like `track item.id` in `@for` loops for collections that update frequently.
@@ -399,6 +403,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
