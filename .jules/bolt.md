@@ -184,9 +184,14 @@
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
 
+## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
+**Learning:** In the backend `safety-cache-invalidation.service.ts` and `video-calls-cache-invalidation.service.ts`, the `invalidateTrustAndSafetyCaches` and `invalidateAllVideoClassroomCaches` methods sequentially iterated over cache namespaces, invoking Redis commands (like `deleteByScan` or `del`) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during invalidation, unnecessarily stalling the event loop and compounding network latency.
+**Action:** When invalidating multiple independent cache keys or patterns within a single method, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+
 ## 2026-10-17 - [Optimize main thread via OnPush change detection]
 **Learning:** In the Angular frontend, proactively configure components that render static data or rely entirely on signals/observables to use `changeDetection: ChangeDetectionStrategy.OnPush`. Many structural or stateless components currently default to the default change detection strategy, leading to unnecessary main thread checks during heavy user interaction.
 **Action:** When creating or reviewing Angular components that use `signal`s or `computed` exclusively for reactive state, add `changeDetection: ChangeDetectionStrategy.OnPush` to their `@Component` decorator to reduce change detection overhead.
+
 ## 2026-10-18 - [Optimize bulk cache invalidation via Promise.all mapping]
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
