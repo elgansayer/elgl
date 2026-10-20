@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
-        <!-- ⚡ Bolt: Track by unique primitive ID to prevent complete DOM teardown on new messages -->
+        <!-- ⚡ Bolt: Track by unique ID to prevent unnecessary DOM recreations -->
         @for (msg of filteredMessages(); track msg.id) {
           <app-chat-message
             [message]="msg"
