@@ -25,12 +25,12 @@ export class AudioIntroController {
   @UseGuards(SupabaseAuthGuard)
   @Patch(':userId')
   async updateAudioIntro(
+    @Req() req: { user: { id: string } },
     @Param('userId') userId: string,
     @Body() dto: UpdateAudioIntroDto,
-    @Req() req: { user: { id: string } },
   ) {
     if (req.user.id !== userId) {
-      throw new ForbiddenException('You can only update your own audio intro');
+      throw new ForbiddenException();
     }
     return this.audioIntroService.updateAudioIntro(userId, dto.audio_url);
   }
