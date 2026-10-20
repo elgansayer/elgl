@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/preflight.css' layer(base);
@@ -58,7 +57,7 @@ legacy comma-separated value (silently drops the whole declaration). */
 
     --text-primary-rgb: 18 21 28;
     --text-secondary-rgb: 74 81 99;
-    --text-muted-rgb: 107 113 130; /* darkened from initial pass to clear 4.5:1 vs surface-500 */
+    --text-muted-rgb: 101 106 122; /* clears 4.5:1 on surface-200..500 (cards and headers too, not only the page) */
 
     --color-primary-rgb: 198 82 48; /* Ember - darkened from initial pass so on-fill(paper) text clears 4.5:1 */
     --color-primary: #c65230;
@@ -87,7 +86,7 @@ legacy comma-separated value (silently drops the whole declaration). */
 
     --text-primary-rgb: 243 244 247;
     --text-secondary-rgb: 180 186 201;
-    --text-muted-rgb: 126 132 148;
+    --text-muted-rgb: 137 143 157; /* clears 4.5:1 on surface-200..500 */
 
     --color-primary-rgb: 255 122 82; /* Ember, brighter for dark bg */
     --color-primary: #ff7a52;
@@ -119,7 +118,9 @@ legacy comma-separated value (silently drops the whole declaration). */
     padding-inline-end: env(safe-area-inset-right);
   }
 
-  input, textarea, [contenteditable="true"] {
+  input,
+  textarea,
+  [contenteditable='true'] {
     @apply select-text;
     -webkit-user-select: text;
     user-select: text;

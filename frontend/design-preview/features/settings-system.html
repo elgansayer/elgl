@@ -1,0 +1,1247 @@
+<!-- @dsCard group="Features" name="Settings &amp; system" subtitle="12 surfaces · account/GDPR · device transfer · theme · text size · language · legal · sidebar · confirm · errors · diff" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Settings &amp; system</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.settings-system" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 101 106 122;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 137 143 157;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      .wide {
+        grid-column: 1 / -1;
+        max-width: 100% !important;
+      }
+      .divider {
+        border: 0;
+        border-block-start: 1px solid rgb(var(--surface-100));
+        margin: 4px 0;
+      }
+      .seg {
+        display: flex;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 12px;
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-200));
+      }
+      .seg button {
+        flex: 1;
+        min-height: 36px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: rgb(var(--text-secondary));
+        font: 600 13px/1 inherit;
+      }
+      .seg button[aria-checked='true'] {
+        background: rgb(var(--primary) / 0.15);
+        color: rgb(var(--primary));
+      }
+      .range {
+        appearance: none;
+        inline-size: 96px;
+        block-size: 4px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        accent-color: rgb(var(--primary));
+      }
+      .code-box {
+        background: rgb(var(--surface-300));
+        border-radius: 12px;
+        padding: 12px;
+        font:
+          12px/1.4 ui-monospace,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .lang-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .lang-tile {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 16px;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-300) / 0.6);
+        color: rgb(var(--text-primary));
+        text-align: start;
+        font: inherit;
+      }
+      .lang-tile.on {
+        background: rgb(var(--primary) / 0.1);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .lang-tile .flag {
+        font-size: 22px;
+      }
+      .check {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-size: 13px;
+      }
+      .check input {
+        inline-size: 20px;
+        block-size: 20px;
+        accent-color: rgb(var(--danger));
+        margin: 0;
+      }
+      .toc a {
+        color: rgb(var(--text-primary));
+        text-decoration: underline;
+        text-underline-offset: 4px;
+        font-size: 13px;
+        min-block-size: 32px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .toc ol {
+        margin: 6px 0 0;
+        padding-inline-start: 18px;
+      }
+      .side {
+        display: grid;
+        grid-template-columns: 256px 1fr;
+        min-block-size: 520px;
+      }
+      .side nav {
+        background: rgb(var(--surface-200));
+        border-inline-end: 1px solid rgb(var(--surface-100));
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .side nav a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        color: rgb(var(--text-secondary));
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .side nav a[aria-current='page'] {
+        background: rgb(var(--surface-100));
+        color: rgb(var(--primary));
+      }
+      .side nav a .ico {
+        font-size: 20px;
+      }
+      .side nav .count {
+        margin-inline-start: auto;
+        background: rgb(var(--danger));
+        color: rgb(var(--on-fill));
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 999px;
+        min-inline-size: 18px;
+        text-align: center;
+      }
+      .side nav .section {
+        padding: 16px 16px 4px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgb(var(--text-muted));
+      }
+      .side .canvas {
+        padding: 24px;
+        display: grid;
+        place-items: center;
+        color: rgb(var(--text-muted));
+        font-size: 13px;
+      }
+      @media (max-width: 640px) {
+        .side {
+          grid-template-columns: 1fr;
+        }
+      }
+      ins.add {
+        background: rgb(var(--success) / 0.15);
+        color: rgb(var(--success));
+        text-decoration: none;
+        border-radius: 4px;
+        padding-inline: 2px;
+      }
+      del.rem {
+        background: rgb(var(--danger) / 0.15);
+        color: rgb(var(--danger));
+        border-radius: 4px;
+        padding-inline: 2px;
+      }
+      .center {
+        text-align: center;
+        align-items: center;
+      }
+      .mono {
+        font:
+          11px/1.4 ui-monospace,
+          monospace;
+        color: rgb(var(--text-muted));
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Settings &amp; system</h1>
+        <p>
+          Design-sync ID <code>feature.settings-system</code> · every runtime surface in this area
+          is one specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <!-- Desktop sidebar: full-width specimen (lg+ only in runtime) -->
+      <section
+        class="specimen wide"
+        data-component="components/desktop-sidebar"
+        style="max-width: 100%"
+      >
+        <header>
+          <h2>Desktop sidebar</h2>
+          <code>components/desktop-sidebar</code>
+        </header>
+        <div class="side">
+          <nav aria-label="Main navigation">
+            <span
+              class="title display"
+              style="
+                padding: 0 16px 12px;
+                font-size: 18px;
+                color: rgb(var(--primary));
+                font-weight: 800;
+              "
+              >HelloTalk</span
+            >
+            <a href="#" aria-current="page"
+              ><span class="ico" aria-hidden="true">💬</span>HelloTalk<span
+                class="count"
+                aria-hidden="true"
+                >12</span
+              ><span hidden>12 Unread</span></a
+            >
+            <a href="#"
+              ><span class="ico" aria-hidden="true">⭕</span>Moments<span
+                class="count"
+                aria-hidden="true"
+                >3</span
+              ></a
+            >
+            <a href="#"><span class="ico" aria-hidden="true">🌍</span>Connect</a>
+            <a href="#"><span class="ico" aria-hidden="true">🎙️</span>Live Rooms</a>
+            <a href="#"
+              ><span class="ico" aria-hidden="true">👤</span>Me<span
+                class="count"
+                aria-hidden="true"
+                >99+</span
+              ></a
+            >
+            <span class="section">Coin economy</span>
+            <a href="#"><span class="ico" aria-hidden="true">🛍️</span>Shop</a>
+            <a href="#"><span class="ico" aria-hidden="true">🏷️</span>Sticker Store</a>
+            <a href="#"><span class="ico" aria-hidden="true">👑</span>VIP</a>
+            <a href="#" style="margin-block-start: auto"
+              ><span class="ico" aria-hidden="true">⚙️</span>Settings</a
+            >
+          </nav>
+          <div class="canvas">
+            Routed content · sidebar is <code>hidden lg:flex</code>, 256px, <code>border-e</code>
+          </div>
+        </div>
+        <footer>
+          States shown: active route (<code>aria-current="page"</code>) · unread badges incl. 99+ ·
+          coin-economy group · settings pinned to bottom. Runtime issue: <code>nav.*</code> strings
+          already contain emoji (e.g. "💬 HelloTalk") and the template prepends
+          <code>item.icon</code>, so icons render twice; <code>nav.shop</code>,
+          <code>nav.stickerStore</code>, <code>nav.vip</code>,
+          <code>coinEco.sectionTitle</code> have no English string.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/account-deletion">
+        <header>
+          <h2>Account deletion</h2>
+          <code>components/account-deletion</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Default</span>
+          <div class="stack">
+            <h3 class="title" style="font-size: 18px; margin: 0">Delete account</h3>
+            <p class="secondary" style="margin: 0">
+              Your account and data are removed after a 30-day grace period. You can restore it any
+              time before then.
+            </p>
+            <button class="btn danger block" type="button">Delete my account</button>
+          </div>
+          <hr class="divider" />
+          <div class="stack">
+            <h3 class="title" style="font-size: 16px; margin: 0">Export your data</h3>
+            <p class="secondary" style="margin: 0">
+              Download a copy of your profile, moments and chats.
+            </p>
+            <button class="btn block" type="button">Export data</button>
+            <p class="secondary" style="color: rgb(var(--success)); margin: 0" role="status">
+              Export started - we'll email you a download link.
+            </p>
+          </div>
+          <span class="state-label">Deletion scheduled</span>
+          <div class="card stack">
+            <p style="margin: 0; font-size: 13px; color: rgb(var(--warning))">
+              Your account is scheduled for deletion on 19 Nov 2026.
+            </p>
+            <button class="btn secondary-btn block" type="button">Restore account</button>
+          </div>
+          <span class="state-label">Error</span>
+          <p style="margin: 0; font-size: 13px; color: rgb(var(--danger))" role="alert">
+            Something went wrong. Please try again.
+          </p>
+        </div>
+        <footer>
+          States shown: default · export success · scheduled (restore) · error. Buttons disable
+          while <code>isLoading()</code>. Runtime issue: <code>account_deletion.*</code> English
+          strings are placeholders ("Delete Button", "Title") - copy above is the intended wording.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/gdpr">
+        <header>
+          <h2>Personal Data &amp; GDPR</h2>
+          <code>components/gdpr</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <button class="icon-btn" type="button" aria-label="Back">←</button>
+            <h3 class="title grow" style="font-size: 17px; margin: 0">Personal Data &amp; GDPR</h3>
+          </div>
+          <p class="secondary" style="margin: 0">
+            Manage your personal data and account settings according to GDPR.
+          </p>
+          <div class="card stack">
+            <span class="title">Request My Data Archive</span>
+            <p class="muted" style="margin: 0">
+              Download a copy of all your data. This may include profile info, moments, chat
+              history, and more.
+            </p>
+            <button class="btn tide block" type="button">Request My Data Archive</button>
+            <p class="muted" style="color: rgb(var(--success)); margin: 0" role="status">
+              Your data archive request has been submitted. You will receive an email when ready.
+            </p>
+          </div>
+          <div class="card stack" style="border-color: rgb(var(--danger) / 0.4)">
+            <span class="title" style="color: rgb(var(--danger))">Delete My Account</span>
+            <p class="muted" style="margin: 0">
+              Permanently delete your account and all associated data. This action is irreversible
+              after a 30-day grace period.
+            </p>
+            <label class="check"
+              ><input type="checkbox" checked />
+              <span>I understand that this action is irreversible.</span></label
+            >
+            <button class="btn danger block" type="button" aria-busy="true">Loading...</button>
+          </div>
+          <span class="state-label">Deletion pending</span>
+          <div class="card stack">
+            <span class="title">Cancel Account Deletion</span>
+            <p class="muted" style="margin: 0; color: rgb(var(--warning))">
+              Your account is currently scheduled for deletion. You can cancel this request during
+              the 30-day grace period.
+            </p>
+            <button class="btn secondary-btn block" type="button">Cancel Account Deletion</button>
+          </div>
+          <div class="alert error" role="alert">Failed to load data</div>
+        </div>
+        <footer>
+          States shown: archive requested · delete armed (checkbox gates button) · deleting ·
+          cancel-deletion · error.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/device-transfer">
+        <header>
+          <h2>Device transfer</h2>
+          <code>components/device-transfer</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Generating</span>
+          <p class="secondary pulse" role="status" style="margin: 0">Generating device link…</p>
+          <span class="state-label">Ready</span>
+          <div class="stack center" style="padding: 8px 0">
+            <h3 class="display" style="margin: 0; font-size: 22px">Device Transfer</h3>
+            <p style="margin: 0; font-size: 14px">Open this link on the other device:</p>
+            <div class="code-box" style="inline-size: 100%">
+              <code>https://hellotalk.app/device-transfer?token=7f3c9e1a…b42d</code>
+            </div>
+            <button class="btn block" type="button">Copy Link</button>
+            <p class="muted" style="margin: 0">Link expires in 5 minutes.</p>
+          </div>
+          <div class="row">
+            <button class="btn secondary-btn grow" type="button" disabled aria-busy="true">
+              Copying…</button
+            ><button class="btn tide grow" type="button">Copied ✓</button>
+          </div>
+          <span class="state-label">Consuming · done · error</span>
+          <p class="secondary" role="status" style="margin: 0">Transferring session…</p>
+          <p role="status" style="margin: 0; color: rgb(var(--success)); font-size: 14px">
+            Account transferred successfully!
+          </p>
+          <p role="alert" style="margin: 0; color: rgb(var(--danger)); font-size: 14px">
+            This link has expired. Generate a new one on your other device.
+          </p>
+        </div>
+        <footer>
+          States: generating · ready · copying · copied · consuming · done · error. Runtime issue:
+          all copy is hard-coded English (no <code>| t</code>).
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/theme-selector">
+        <header>
+          <h2>Theme selector</h2>
+          <code>components/theme-selector</code>
+        </header>
+        <div class="body">
+          <div class="seg" role="radiogroup" aria-label="Theme">
+            <button type="button" role="radio" aria-checked="false">Light</button>
+            <button type="button" role="radio" aria-checked="true">Dark</button>
+            <button type="button" role="radio" aria-checked="false">System Default</button>
+          </div>
+          <div class="seg" role="radiogroup" aria-label="Theme">
+            <button type="button" role="radio" aria-checked="false">Light</button>
+            <button type="button" role="radio" aria-checked="false">Dark</button>
+            <button type="button" role="radio" aria-checked="true">System Default</button>
+          </div>
+        </div>
+        <footer>
+          States: dark selected · system selected (ghost Helm buttons,
+          <code>bg-primary/15</code> when checked). Runtime issue: <code>theme.label</code> aria
+          label has no string.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/font-scale-slider">
+        <header>
+          <h2>Font scale slider</h2>
+          <code>components/font-scale-slider</code>
+        </header>
+        <div class="body">
+          <label class="row secondary"
+            ><span>Text size</span
+            ><input
+              class="range"
+              type="range"
+              min="0.8"
+              max="1.5"
+              step="0.05"
+              value="1"
+              aria-valuetext="100%"
+            /><span aria-hidden="true">100%</span></label
+          >
+          <label class="row secondary"
+            ><span>Text size</span
+            ><input
+              class="range"
+              type="range"
+              min="0.8"
+              max="1.5"
+              step="0.05"
+              value="1.5"
+              aria-valuetext="150%"
+            /><span aria-hidden="true">150%</span></label
+          >
+          <p style="margin: 0; font-size: 21px">Preview at 150% · 学ぶ · مرحبا</p>
+        </div>
+        <footer>
+          Range 80%-150% in 5% steps; <code>aria-valuetext</code> announces the percentage. States:
+          default · max.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/app-language-selector">
+        <header>
+          <h2>App language selector</h2>
+          <code>components/app-language-selector</code>
+        </header>
+        <div class="body">
+          <button
+            class="btn secondary-btn"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded="true"
+            style="align-self: flex-start; min-height: 36px; padding: 0 12px"
+          >
+            <span aria-hidden="true">🌐</span> <strong style="letter-spacing: 0.06em">EN</strong>
+            <span class="muted">▼</span>
+          </button>
+          <div class="scrim">
+            <div
+              class="dialog stack"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="alsTitle"
+              style="padding: 0; overflow: hidden"
+            >
+              <div
+                class="row"
+                style="
+                  padding: 12px 16px;
+                  border-block-end: 1px solid rgb(var(--surface-100));
+                  background: rgb(var(--surface-300) / 0.8);
+                "
+              >
+                <span aria-hidden="true" style="font-size: 22px">🌍</span>
+                <div class="grow">
+                  <div id="alsTitle" class="title">Select App Language (Any Language)</div>
+                  <div class="muted">
+                    Language: <strong style="color: rgb(var(--primary))">EN</strong>
+                  </div>
+                </div>
+                <button
+                  class="icon-btn"
+                  type="button"
+                  aria-label="Close"
+                  style="width: 36px; height: 36px"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="lang-grid" style="padding: 12px 16px">
+                <button class="lang-tile on" type="button">
+                  <span class="flag">🇬🇧</span
+                  ><span class="stack" style="gap: 0"
+                    ><strong style="font-size: 13px">English</strong
+                    ><span class="muted">English</span></span
+                  >
+                </button>
+                <button class="lang-tile" type="button">
+                  <span class="flag">🇯🇵</span
+                  ><span class="stack" style="gap: 0"
+                    ><strong style="font-size: 13px">Japanese</strong
+                    ><span class="muted">日本語</span></span
+                  >
+                </button>
+                <button class="lang-tile" type="button">
+                  <span class="flag">🇸🇦</span
+                  ><span class="stack" style="gap: 0"
+                    ><strong style="font-size: 13px">Arabic</strong
+                    ><span class="muted">العربية</span></span
+                  >
+                </button>
+                <button class="lang-tile" type="button">
+                  <span class="flag">🇮🇳</span
+                  ><span class="stack" style="gap: 0"
+                    ><strong style="font-size: 13px">Hindi</strong
+                    ><span class="muted">हिन्दी</span></span
+                  >
+                </button>
+              </div>
+              <div
+                class="row"
+                style="
+                  justify-content: flex-end;
+                  padding: 10px 16px;
+                  border-block-start: 1px solid rgb(var(--surface-100));
+                "
+              >
+                <button class="btn secondary-btn" type="button">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: trigger (current code) · open modal with selected tile. Grid 2 → 3 → 4 columns at
+          sm/md.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/language-selector">
+        <header>
+          <h2>Language selector</h2>
+          <code>components/language-selector</code>
+        </header>
+        <div class="body">
+          <button
+            class="btn secondary-btn block"
+            type="button"
+            aria-expanded="true"
+            aria-haspopup="listbox"
+            style="justify-content: space-between"
+          >
+            <span><span aria-hidden="true">🇬🇧</span> English</span
+            ><span class="muted" style="text-transform: uppercase">Change language ▲</span>
+          </button>
+          <div class="card" style="padding: 0; overflow: hidden" role="listbox">
+            <div style="padding: 10px; border-block-end: 1px solid rgb(var(--surface-100))">
+              <div class="field">
+                <input
+                  type="search"
+                  placeholder="Search languages..."
+                  aria-label="Search languages..."
+                  value=""
+                />
+              </div>
+            </div>
+            <div class="list" style="border: 0; border-radius: 0">
+              <div class="row">
+                <span aria-hidden="true">🇬🇧</span
+                ><span class="grow"
+                  ><strong style="font-size: 14px">English</strong><br /><span class="muted"
+                    >English</span
+                  ></span
+                ><span style="font-size: 12px; font-weight: 600; color: rgb(var(--primary))"
+                  >Selected</span
+                >
+              </div>
+              <div class="row">
+                <span aria-hidden="true">🇪🇸</span
+                ><span class="grow"
+                  ><strong style="font-size: 14px">Spanish</strong><br /><span class="muted"
+                    >Español</span
+                  ></span
+                >
+              </div>
+              <div class="row">
+                <span aria-hidden="true">🇰🇷</span
+                ><span class="grow"
+                  ><strong style="font-size: 14px">Korean</strong><br /><span class="muted"
+                    >한국어</span
+                  ></span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: open listbox · search · selected marker. Runtime issue: every option's
+          <code>aria-label</code> is "Selected" rather than the language name.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/legal-document-viewer">
+        <header>
+          <h2>Legal document viewer</h2>
+          <code>components/legal-document-viewer</code>
+        </header>
+        <div class="body">
+          <div>
+            <h3 class="display" style="margin: 0; font-size: 24px">Terms of Service</h3>
+            <p class="secondary" style="margin: 6px 0 0">
+              Last updated: <time datetime="2026-09-01">1 September 2026</time>
+            </p>
+          </div>
+          <nav class="card toc" aria-label="Document sections">
+            <strong style="font-size: 13px">On this page</strong>
+            <ol>
+              <li><a href="#">1. Acceptance of terms</a></li>
+              <li><a href="#">2. Your account</a></li>
+              <li><a href="#">3. Community guidelines</a></li>
+            </ol>
+          </nav>
+          <section class="card">
+            <h4 class="title" style="margin: 0 0 6px; font-size: 16px">1. Acceptance of terms</h4>
+            <p class="secondary" style="margin: 0; line-height: 1.6">
+              By creating an account you agree to these terms and to our Privacy Policy…
+            </p>
+          </section>
+          <span class="state-label">Empty</span>
+          <p class="card secondary" role="status" style="margin: 0">
+            This document is currently unavailable.
+          </p>
+        </div>
+        <footer>
+          States: document with TOC · unavailable. Used by terms/privacy routes. Runtime issue:
+          "Last updated", "On this page" and empty copy are hard-coded English.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/confirm-dialog">
+        <header>
+          <h2>Confirm dialog</h2>
+          <code>components/confirm-dialog</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack" role="alertdialog" aria-labelledby="cdMsg" style="gap: 16px">
+              <p id="cdMsg" style="margin: 0; font-size: 14px; font-weight: 500; line-height: 1.6">
+                Leave this group? You'll stop receiving its messages.
+              </p>
+              <div class="stack">
+                <button class="btn secondary-btn block" type="button">Cancel</button
+                ><button class="btn block" type="button">Confirm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          Global Helm dialog driven by <code>ConfirmService</code>; buttons stack under sm, row-end
+          above. States: open (mobile).
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/error-boundary">
+        <header>
+          <h2>Error boundary</h2>
+          <code>components/error-boundary</code>
+        </header>
+        <div class="body">
+          <div class="stack center" style="padding: 24px 8px; gap: 12px">
+            <div aria-hidden="true" style="font-size: 44px">🪙</div>
+            <h3 style="margin: 0; font-size: 20px">Something went wrong</h3>
+            <p class="secondary" style="margin: 0">
+              This section hit an unexpected error. Your data is safe.
+            </p>
+            <p class="mono" style="margin: 0">
+              TypeError: Cannot read properties of undefined (reading 'id')
+            </p>
+            <div class="row" style="justify-content: center">
+              <button class="btn" type="button">Try again</button
+              ><button class="btn secondary-btn" type="button">Report</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: error with retry + report (retry optional via <code>showRetry</code>;
+          <code>fullPage</code> stretches to viewport). Runtime issue:
+          <code>errorBoundary.*</code> keys have no English strings.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/visual-diff">
+        <header>
+          <h2>Visual diff</h2>
+          <code>components/visual-diff</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div style="font-size: 14px; line-height: 1.7">
+              I <del class="rem">have went</del><ins class="add">went</ins> to the market
+              <del class="rem">in</del><ins class="add">on</ins> Sunday.
+            </div>
+            <div class="muted" style="font-style: italic">
+              Use the simple past "went" without "have"; days take "on".
+              <button
+                class="icon-btn"
+                type="button"
+                aria-label="Translate"
+                style="width: 28px; height: 28px; font-size: 13px"
+              >
+                文
+              </button>
+            </div>
+            <div
+              class="card"
+              style="padding: 8px; font-size: 13px; background: rgb(var(--surface-200))"
+            >
+              "went" を使い、"have" は不要です。曜日には "on" を使います。
+            </div>
+            <button
+              class="btn secondary-btn"
+              type="button"
+              style="align-self: flex-start; min-height: 32px; font-size: 12px"
+            >
+              ➕ Create flashcard
+            </button>
+          </div>
+        </div>
+        <footer>
+          Correction diff: added (<code>ins</code>, success) · removed (<code>del</code>, danger) ·
+          explanation · translated explanation · actions. Runtime issue:
+          <code>correction.createFlashcard</code> has no string.
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>
