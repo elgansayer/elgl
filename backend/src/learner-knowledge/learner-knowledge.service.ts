@@ -4,6 +4,8 @@ import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
+import { UsersService } from '../users/users.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 export interface CEFRLevel {
   level: string;
@@ -54,6 +56,8 @@ export class LearnerKnowledgeService {
     private readonly hobbyTagsService: HobbyTagsService,
     private readonly lessonsService: LessonsService,
     private readonly momentsService: MomentsService,
+    private readonly usersService: UsersService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   async getProfile(
@@ -64,8 +68,16 @@ export class LearnerKnowledgeService {
       `Fetching unified learner profile for user ${userId} in ${language}`,
     );
 
-    // Fetch data from various sources (Mock implementation for now based on design doc)
-    const [flashcards, vocabulary, lessons, momentsCounts] = await Promise.all([
+    const supabase = this.supabaseService.getClient();
+    // Fetch data from various sources
+    const [
+      flashcards,
+      vocabulary,
+      lessons,
+      momentsCounts,
+      userProfile,
+      recentMomentsResponse,
+    ] = await Promise.all([
       this.flashcardsService
         .getFlashcards(userId, undefined, 20)
         .catch(() => []),
@@ -74,7 +86,18 @@ export class LearnerKnowledgeService {
       this.momentsService
         .getLifetimeCounts(userId)
         .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+      this.usersService.getProfile(userId).catch(() => null),
+      Promise.resolve(
+        supabase
+          .from('moments')
+          .select('target_language, post_type, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(3)
+      ).catch(() => ({ data: [] })),
     ]);
+
+    const { data: recentMoments } = recentMomentsResponse || { data: [] };
 
     const knowledgeItems = new Map<string, KnowledgeItem>();
 
@@ -100,7 +123,7 @@ export class LearnerKnowledgeService {
       });
     });
 
-    // Extract recent encounters from lessons (mock logic)
+    // Extract recent encounters from lessons
     const recentEncounters: RecentEncounter[] = lessons
       .slice(0, 3)
       .map((l: any) => ({
@@ -109,21 +132,35 @@ export class LearnerKnowledgeService {
         timestamp: new Date(l.created_at || Date.now()),
       }));
 
+    // Add recent encounters from moments
+    (recentMoments || []).forEach((m: any) => {
+      recentEncounters.push({
+        topic: m.post_type || 'Unknown Topic',
+        source: 'moment',
+        timestamp: new Date(m.created_at || Date.now()),
+      });
+    });
+    recentEncounters.sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+    );
+
+    const level = userProfile?.proficiency_level || 'beginner';
+
     // Synthesize the profile
     return {
       userId,
       language,
-      overallProficiency: { level: 'B1' }, // Placeholder based on assessments
+      overallProficiency: { level },
       skills: {
         speaking: 0.5,
         listening: 0.6,
         reading: 0.7,
         writing: 0.4,
         grammar: 0.5,
-        vocabulary: 0.6, // Adjusted based on moments/corrections maybe
+        vocabulary: 0.6,
       },
       knowledgeItems,
-      recentEncounters,
+      recentEncounters: recentEncounters.slice(0, 3),
     };
   }
 }
