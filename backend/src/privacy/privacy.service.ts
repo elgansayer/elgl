@@ -219,14 +219,12 @@ export class PrivacyService {
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
     let purged = 0;
-    let failed = 0;
 
-    for (
-      let offset = 0;
-      offset < rows.length;
-      offset += ARCHIVE_CLEANUP_CONCURRENCY
-    ) {
-      const chunk = rows.slice(offset, offset + ARCHIVE_CLEANUP_CONCURRENCY);
+    // Process bounded batches concurrently so cleanup latency does not grow by
+    // one storage and database round trip per archive.
+    for (let i = 0; i < rows.length; i += ARCHIVE_CLEANUP_CONCURRENCY) {
+      const chunk = rows.slice(i, i + ARCHIVE_CLEANUP_CONCURRENCY);
+
       const results = await Promise.allSettled(
         chunk.map(async (row) => {
           if (row.object_key) {
@@ -235,7 +233,7 @@ export class PrivacyService {
               .remove([row.object_key]);
             if (removeError) {
               this.logger.error('gdpr_archive_cleanup_object_failed');
-              throw new Error('remove_failed');
+              throw removeError;
             }
           }
 
@@ -250,23 +248,24 @@ export class PrivacyService {
             .eq('id', row.id);
 
           if (updateError) {
-            throw new Error('update_failed');
+            throw updateError;
           }
+
+          purged += 1;
         }),
       );
 
-      purged += results.filter(
-        (result) => result.status === 'fulfilled',
+      const failed = results.filter(
+        (result) => result.status === 'rejected',
       ).length;
-      failed += results.filter((result) => result.status === 'rejected').length;
+      if (failed > 0) {
+        // Do not include provider errors, object keys, request IDs or user IDs.
+        this.logger.error(`gdpr_archive_cleanup_items_failed count=${failed}`);
+      }
     }
 
-    if (failed > 0) {
-      this.logger.error(`gdpr_archive_cleanup_items_failed count=${failed}`);
-    }
-    if (purged > 0) {
+    if (purged > 0)
       this.logger.log(`gdpr_archive_cleanup_complete count=${purged}`);
-    }
     return purged;
   }
 

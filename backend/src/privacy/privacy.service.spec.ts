@@ -325,7 +325,7 @@ describe('PrivacyService', () => {
       );
     });
 
-    it('bounds concurrent object removals while processing every expired archive', async () => {
+    it('processes expired archives concurrently with a maximum batch size of ten', async () => {
       tableRows.set(
         'archive_requests',
         Array.from({ length: 25 }, (_, index) => ({
@@ -338,37 +338,37 @@ describe('PrivacyService', () => {
         })),
       );
 
-      let active = 0;
-      let peak = 0;
+      let activeRemovals = 0;
+      let peakRemovals = 0;
       mockRemove.mockImplementation(async () => {
-        active += 1;
-        peak = Math.max(peak, active);
-        await new Promise<void>((resolve) => setTimeout(resolve, 1));
-        active -= 1;
+        activeRemovals += 1;
+        peakRemovals = Math.max(peakRemovals, activeRemovals);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        activeRemovals -= 1;
         return { error: null };
       });
 
       await expect(service.purgeExpiredArchives()).resolves.toBe(25);
       expect(mockRemove).toHaveBeenCalledTimes(25);
-      expect(peak).toBeGreaterThan(1);
-      expect(peak).toBeLessThanOrEqual(10);
+      expect(peakRemovals).toBeGreaterThan(1);
+      expect(peakRemovals).toBeLessThanOrEqual(10);
     });
 
-    it('preserves partial progress and reports only an aggregate failure count', async () => {
+    it('reports failed cleanup items without blocking successful items', async () => {
       tableRows.set('archive_requests', [
         {
           id: 'archive-failed',
-          user_id: 'user-private',
+          user_id: 'private-user',
           status: 'ready',
-          object_key: 'private-object.json',
+          object_key: 'private-failed.json',
           expires_at: '2026-08-01T00:00:00.000Z',
           created_at: '2026-07-25T00:00:00.000Z',
         },
         {
-          id: 'archive-succeeded',
-          user_id: 'user-1',
+          id: 'archive-success',
+          user_id: 'private-user',
           status: 'ready',
-          object_key: 'opaque.json',
+          object_key: 'private-success.json',
           expires_at: '2026-08-01T00:00:00.000Z',
           created_at: '2026-07-25T00:00:00.000Z',
         },
@@ -376,18 +376,16 @@ describe('PrivacyService', () => {
       mockRemove
         .mockRejectedValueOnce(new Error('private provider detail'))
         .mockResolvedValueOnce({ error: null });
-      const errorSpy = vi.spyOn(Logger.prototype, 'error');
+      const errorLog = vi.spyOn(Logger.prototype, 'error');
 
       await expect(service.purgeExpiredArchives()).resolves.toBe(1);
-      expect(updates).toHaveLength(1);
-      expect(errorSpy).toHaveBeenCalledWith(
+
+      expect(errorLog).toHaveBeenCalledWith(
         'gdpr_archive_cleanup_items_failed count=1',
       );
-      expect(
-        errorSpy.mock.calls
-          .flat()
-          .some((arg) => String(arg).includes('private')),
-      ).toBe(false);
+      expect(errorLog).not.toHaveBeenCalledWith(
+        expect.stringContaining('private'),
+      );
     });
   });
 

@@ -154,7 +154,7 @@ export class NotificationsInboxComponent {
     } else if (notification.type === 'mention_chat' && notification.entity_id) {
       void this.router.navigate(['/chat', notification.entity_id]);
     } else if (notification.type === 'system') {
-      void this.router.navigate(['/help']);
+      void this.router.navigate(['/support']);
     } else {
       void this.router.navigate(['/profile', notification.actor_id]);
     }
