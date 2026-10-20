@@ -1,8 +1,5 @@
 import {
-  BadRequestException,
-  ConflictException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
   OnModuleDestroy,
@@ -13,22 +10,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
-
-export type EventRsvpStatus = 'attending' | 'interested';
-
-export interface EventRsvpSummary {
-  event_id: string;
-  attending_count: number;
-  interested_count: number;
-  viewer_status: EventRsvpStatus | null;
-}
-
-interface EventRsvpSummaryRpcRow {
-  event_id: string;
-  attending_count: number | string;
-  interested_count: number | string;
-  viewer_status: string | null;
-}
 
 export interface EventWithHost {
   id: string;
@@ -409,47 +390,14 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     return data ?? null;
   }
 
-  async getRsvpSummaries(
-    userId: string,
-    eventIds: string[],
-  ): Promise<EventRsvpSummary[]> {
-    const uniqueEventIds = [...new Set(eventIds)].slice(0, 50);
-    if (uniqueEventIds.length === 0) return [];
-
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase.rpc(
-      'get_event_rsvp_summaries' as never,
-      {
-        p_user_id: userId,
-        p_event_ids: uniqueEventIds,
-      } as never,
-    );
-
-    if (error) {
-      const code = this.getDatabaseErrorCode(error);
-      this.logger.error(
-        `Failed to fetch RSVP summaries for ${uniqueEventIds.length} events (code=${code})`,
-      );
-      throw new InternalServerErrorException('Could not load RSVP state');
-    }
-
-    return ((data ?? []) as unknown as EventRsvpSummaryRpcRow[]).map((row) => ({
-      event_id: row.event_id,
-      attending_count: Number(row.attending_count) || 0,
-      interested_count: Number(row.interested_count) || 0,
-      viewer_status:
-        row.viewer_status === 'attending' || row.viewer_status === 'interested'
-          ? row.viewer_status
-          : null,
-    }));
-  }
-
   async createRsvp(
     userId: string,
     eventId: string,
-    status: EventRsvpStatus,
+    status: 'attending' | 'interested',
   ) {
     const supabase = this.supabaseService.getClient();
+    // ⚡ Bolt Optimization: Replaced sequential delete-then-insert with a single upsert
+    // to reduce additive network latency when modifying user RSVPs.
     const { data, error } = await supabase
       .from('event_rsvps')
       .upsert(
@@ -458,11 +406,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       )
       .select()
       .single();
-
     if (error) {
-      this.throwRsvpMutationError(error, eventId);
+      this.logger.error('Failed to create/update RSVP', error);
+      throw error;
     }
-
     return data;
   }
 
@@ -474,44 +421,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       .eq('event_id', eventId)
       .eq('user_id', userId);
     if (error) {
-      this.throwRsvpMutationError(error, eventId);
+      this.logger.error('Failed to remove RSVP', error);
+      throw error;
     }
     return { success: true };
-  }
-
-  private throwRsvpMutationError(error: unknown, eventId: string): never {
-    const message = this.getDatabaseErrorMessage(error);
-
-    if (message.includes('event_full')) {
-      throw new ConflictException('Event is full');
-    }
-    if (message.includes('event_cancelled')) {
-      throw new BadRequestException('Event is cancelled');
-    }
-    if (message.includes('event_started')) {
-      throw new BadRequestException('Event has already started');
-    }
-    if (message.includes('event_not_found')) {
-      throw new NotFoundException('Event not found');
-    }
-
-    const code = this.getDatabaseErrorCode(error);
-    this.logger.error(`RSVP mutation failed for event ${eventId} (code=${code})`);
-    throw new InternalServerErrorException('Could not update RSVP');
-  }
-
-  private getDatabaseErrorMessage(error: unknown): string {
-    if (typeof error !== 'object' || error === null || !('message' in error)) {
-      return '';
-    }
-    return String(error.message);
-  }
-
-  private getDatabaseErrorCode(error: unknown): string {
-    if (typeof error !== 'object' || error === null || !('code' in error)) {
-      return 'unknown';
-    }
-    return String(error.code);
   }
 
   private async checkStartEvents(): Promise<void> {

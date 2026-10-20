@@ -11,8 +11,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
+import { EventsCalendarQueryService } from './events-calendar-query.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
+import { CalendarEventsQueryDto } from './dto/calendar-events-query.dto';
 import { RsvpDto } from './dto/rsvp.dto';
 import { RsvpSummariesQueryDto } from './dto/rsvp-summaries-query.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -20,7 +22,10 @@ import type { AuthenticatedRequest } from '../auth/authenticated-request.interfa
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly eventsCalendarQueryService: EventsCalendarQueryService,
+  ) {}
 
   @UseGuards(SupabaseAuthGuard)
   @Post()
@@ -45,6 +50,19 @@ export class EventsController {
   @Get('categories')
   getCategories() {
     return this.eventsService.getCategories();
+  }
+
+  @UseGuards(SupabaseAuthGuard)
+  @Get('my/calendar')
+  async getMyCalendarEvents(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: CalendarEventsQueryDto,
+  ) {
+    if (!req.user) throw new UnauthorizedException();
+    return this.eventsCalendarQueryService.getUserCalendarEvents(
+      req.user.id,
+      query,
+    );
   }
 
   @UseGuards(SupabaseAuthGuard)

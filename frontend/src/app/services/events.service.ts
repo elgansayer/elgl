@@ -1,23 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable, of } from 'rxjs';
-
-export type EventRsvpStatus = 'attending' | 'interested';
-
-export interface EventRsvp {
-  id?: string;
-  event_id: string;
-  user_id: string;
-  status: EventRsvpStatus;
-}
-
-export interface EventRsvpSummary {
-  event_id: string;
-  attending_count: number;
-  interested_count: number;
-  viewer_status: EventRsvpStatus | null;
-}
+import { Observable } from 'rxjs';
 
 export interface Event {
   id: string;
@@ -35,8 +19,6 @@ export interface Event {
   host_name?: string;
   host_avatar_url?: string;
   participants_count?: number;
-  attendees_count?: number;
-  interested_count?: number;
 }
 
 export interface EventsQuery {
@@ -48,6 +30,12 @@ export interface EventsQuery {
   page?: number;
   limit?: number;
   proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
+}
+
+export interface CalendarEventsQuery {
+  from_date: string;
+  to_date: string;
+  limit?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -133,24 +121,29 @@ export class EventsService {
     return this.http.get<Event[]>(`${environment.apiUrl}/events/my`, { params });
   }
 
-  getRsvp(eventId: string): Observable<EventRsvp | null> {
-    return this.http.get<EventRsvp | null>(`${environment.apiUrl}/events/${eventId}/rsvp`);
+  getMyCalendarEvents(query: CalendarEventsQuery) {
+    const params: Record<string, string | number> = {
+      from_date: query.from_date,
+      to_date: query.to_date,
+    };
+    if (query.limit) params['limit'] = query.limit;
+    return this.http.get<Event[]>(`${environment.apiUrl}/events/my/calendar`, { params });
   }
 
-  getRsvpSummaries(eventIds: string[]): Observable<EventRsvpSummary[]> {
-    const ids = [...new Set(eventIds)].slice(0, 50);
-    if (ids.length === 0) return of([]);
-
-    return this.http.get<EventRsvpSummary[]>(`${environment.apiUrl}/events/rsvp-summaries`, {
-      params: { event_ids: ids.join(',') },
-    });
+  getRsvp(eventId: string) {
+    return this.http.get<{ id?: string; event_id: string; user_id: string; status: string } | null>(
+      `${environment.apiUrl}/events/${eventId}/rsvp`,
+    );
   }
 
-  rsvp(eventId: string, status: EventRsvpStatus): Observable<EventRsvp> {
-    return this.http.post<EventRsvp>(`${environment.apiUrl}/events/${eventId}/rsvp`, { status });
+  rsvp(eventId: string, status: 'attending' | 'interested') {
+    return this.http.post<{ id: string; event_id: string; user_id: string; status: string }>(
+      `${environment.apiUrl}/events/${eventId}/rsvp`,
+      { status },
+    );
   }
 
-  removeRsvp(eventId: string): Observable<void> {
+  removeRsvp(eventId: string) {
     return this.http.delete<void>(`${environment.apiUrl}/events/${eventId}/rsvp`);
   }
 }

@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
 import { DesktopSidebarComponent } from './desktop-sidebar.component';
 import { I18nService } from '../../services/i18n.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
+import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 
 @Component({ template: '' })
 class EmptyRouteComponent {}
@@ -25,13 +26,20 @@ describe('DesktopSidebarComponent', () => {
   let fixture: ComponentFixture<DesktopSidebarComponent>;
   let component: DesktopSidebarComponent;
   let router: Router;
+  let seriousLearnerEnabled: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
+    seriousLearnerEnabled = signal(false);
+
     await TestBed.configureTestingModule({
       imports: [DesktopSidebarComponent, JoyrideModule.forRoot()],
       providers: [
         { provide: I18nService, useClass: MockI18nService },
         { provide: UnreadCounterService, useClass: MockUnreadCounterService },
+        {
+          provide: SeriousLearnerModeService,
+          useValue: { enabled: seriousLearnerEnabled },
+        },
         provideRouter([
           { path: '', component: EmptyRouteComponent },
           { path: 'chat', component: EmptyRouteComponent },
@@ -51,9 +59,21 @@ describe('DesktopSidebarComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render all nine navigation links', () => {
+  it('should render all nine navigation links in ordinary mode', () => {
     const links = fixture.nativeElement.querySelectorAll('nav a');
     expect(links.length).toBe(9);
+  });
+
+  it('should remove the Moments entry when Serious Learner mode is enabled', () => {
+    seriousLearnerEnabled.set(true);
+    fixture.detectChanges();
+
+    const momentsLink = fixture.nativeElement.querySelector('a[href="/moments"]');
+    const chatLink = fixture.nativeElement.querySelector('a[href="/chat"]');
+
+    expect(momentsLink).toBeNull();
+    expect(chatLink).toBeTruthy();
+    expect(fixture.nativeElement.querySelectorAll('nav a').length).toBe(8);
   });
 
   it('should render a labelled navigation landmark', () => {
