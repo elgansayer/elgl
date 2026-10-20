@@ -1,5 +1,5 @@
 import { Injectable, inject, resource, ResourceRef, Signal } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { withRetry } from './http-retry';
@@ -55,9 +55,7 @@ export class ModerationService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/moderation`;
 
-  getItemsResource(
-    type: Signal<'moment' | 'profile'>,
-  ): ResourceRef<ModerationItem[] | undefined> {
+  getItemsResource(type: Signal<'moment' | 'profile'>): ResourceRef<ModerationItem[] | undefined> {
     return resource({
       params: () => ({ type: type() }),
       loader: ({ params }) => this.getItems(params.type),
@@ -71,11 +69,13 @@ export class ModerationService {
     });
   }
 
-  async getItems(
-    type: 'moment' | 'profile',
-    status?: ModerationItem['status'],
-  ): Promise<ModerationItem[]> {
-    const params: Record<string, string> = status ? { type, status } : { type };
+  async getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
+    let params = new HttpParams().set('type', type);
+    const normalizedStatus = status?.trim();
+    if (normalizedStatus) {
+      params = params.set('status', normalizedStatus);
+    }
+
     try {
       return await withRetry(() =>
         firstValueFrom(
@@ -106,7 +106,11 @@ export class ModerationService {
     }
   }
 
-  async rejectItem(itemId: string, type: string, reason?: string): Promise<ModerationActionResponse> {
+  async rejectItem(
+    itemId: string,
+    type: string,
+    reason?: string,
+  ): Promise<ModerationActionResponse> {
     const body: Record<string, string> = { itemId, type };
     if (reason) {
       body['reason'] = reason;
@@ -114,11 +118,9 @@ export class ModerationService {
     try {
       return await withRetry(() =>
         firstValueFrom(
-          this.http.post<ModerationActionResponse>(
-            `${this.baseUrl}/reject`,
-            body,
-            { headers: this.getHeaders() },
-          ),
+          this.http.post<ModerationActionResponse>(`${this.baseUrl}/reject`, body, {
+            headers: this.getHeaders(),
+          }),
         ),
       );
     } catch {
@@ -138,11 +140,9 @@ export class ModerationService {
     try {
       return await withRetry(() =>
         firstValueFrom(
-          this.http.post<ModerationActionResponse>(
-            `${this.baseUrl}/report`,
-            body,
-            { headers: this.getHeaders() },
-          ),
+          this.http.post<ModerationActionResponse>(`${this.baseUrl}/report`, body, {
+            headers: this.getHeaders(),
+          }),
         ),
       );
     } catch {
