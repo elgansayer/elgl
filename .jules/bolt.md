@@ -183,6 +183,11 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+## 2026-08-25 - [Optimize bulk LLM generation via bounded concurrent Promise.allSettled chunking]
+
+**Learning:** In the backend `daily-tip.service.ts`, the cron job generating daily learning tips (`generateDailyTips`) used a sequential `for...of` loop with `await` to iteratively query the external LLM provider (`llmProxyService.proxyMessage`). The sequential execution of network calls for large datasets compounds latency to O(N) limits, causing severe performance bottlenecks during the daily scheduled generation window. Attempting unbounded `Promise.allSettled` execution runs the risk of exhausting external API concurrent request limits.
+**Action:** When making bulk external API calls (e.g. LLM prompts) across numerous rows, implement a bounded chunking approach (e.g., slicing an array into chunks of 10) mapped into a concurrent `Promise.allSettled` execution block within an outer `for` loop. This drastically speeds up processing time while maintaining safe rate-limited bounds.
+
 **Learning:** Found multiple Angular components rendering static or signal-driven data that were missing `changeDetection: ChangeDetectionStrategy.OnPush`. Without this strategy, Angular performs unnecessary main-thread change detection cycles, reducing application responsiveness and performance.
 **Action:** Proactively configure Angular components that render static data or rely entirely on signals/observables to use `ChangeDetectionStrategy.OnPush` to minimize main thread change detection overhead.
 
