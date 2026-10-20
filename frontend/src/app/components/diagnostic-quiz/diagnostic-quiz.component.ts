@@ -199,7 +199,7 @@ export class DiagnosticQuizComponent {
 
   readonly progressPercentage = computed(() => {
     const total = this.questions().length;
-    return total === 0 ? 0 : (this.currentIndex() / total) * 100;
+    return total === 0 ? 0 : ((this.currentIndex() + 1) / total) * 100;
   });
 
   readonly isLastQuestion = computed(() => {

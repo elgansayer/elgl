@@ -13,7 +13,7 @@ The application already establishes `html[dir='rtl']` at the global Relay layer 
 3. Physical left/right values are allowed only when the visual meaning is intentionally physical and direction-independent, such as a media crop coordinate.
 4. Shared Spartan/Helm wrappers must not impose a second RTL system; they inherit document direction.
 5. Iconography that conveys direction must use the existing RTL-aware icon contract rather than ad-hoc transforms.
-6. Light/dark theme behavior must remain identical under RTL; direction changes layout, not semantic color.
+6. Light/dark theme behavior must remain identical under RTL; direction changes layout, not semantic colour.
 
 ## Approved examples
 
