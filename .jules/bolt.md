@@ -20,6 +20,10 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2024-05-18 - Centrifugo Status Updates and Angular @for Tracking
+**Learning:** Real-time chat apps using Centrifugo for status updates (like delivery/read receipts) mutate the messages array frequently. If Angular's `@for` loop tracks items by object reference (`track msg`), every single real-time update forces a full DOM re-render of the entire chat list, causing severe scroll jank and main thread blocking.
+**Action:** Always verify that Angular `@for` loops in high-frequency update scenarios (like chat rooms or websockets) strictly track by a unique scalar identifier (`track msg.id`) rather than the object reference.
+
 
 ## 2026-09-20 - [Batch Supabase Queries with Promise.all in Moderation Service]
 **Learning:** Sequential database queries in `analyseUserForDatingBehaviour` create unnecessary N+1 latency, despite being independent queries on `users` and `moments`.
@@ -387,6 +391,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
