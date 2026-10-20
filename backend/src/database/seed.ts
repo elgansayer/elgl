@@ -97,45 +97,49 @@ async function seedUsersAndProfiles(supabase: any) {
     },
   ];
 
-  for (const u of seedUsers) {
-    const { data: authUser, error: authErr } =
-      await supabase.auth.admin.createUser({
-        email: u.email,
-        password: 'Password123!',
-        email_confirm: true,
-      });
+  // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all
+  // Expected impact: Reduces database latency when seeding bulk users
+  await Promise.all(
+    seedUsers.map(async (u) => {
+      const { data: authUser, error: authErr } =
+        await supabase.auth.admin.createUser({
+          email: u.email,
+          password: 'Password123!',
+          email_confirm: true,
+        });
 
-    let userId = authUser?.user?.id;
-    if (authErr && authErr.message.includes('already exists')) {
-      const res = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', u.email)
-        .single();
-      const existing: { id: string } | null = res.data;
-      userId = existing?.id;
-    }
+      let userId = authUser?.user?.id;
+      if (authErr && authErr.message.includes('already exists')) {
+        const res = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', u.email)
+          .single();
+        const existing: { id: string } | null = res.data;
+        userId = existing?.id;
+      }
 
-    if (userId) {
-      await supabase
-        .from('users')
-        .update({
-          is_vip: u.is_vip,
-          vip_tier: u.vip_tier || null,
-          coins_balance: u.coins_balance,
-          developer_api_key: u.developer_api_key || null,
-          display_name: u.profile.display_name,
-          bio_text: u.profile.bio_text,
-          avatar_url: u.profile.avatar_url,
-          native_languages: u.profile.native_languages?.[0],
-          target_languages: u.profile.target_languages,
-          location: supabase.rpc('st_geomfromtext' as any, {
-            text: u.profile.location,
-          }),
-        })
-        .eq('id', userId);
-    }
-  }
+      if (userId) {
+        await supabase
+          .from('users')
+          .update({
+            is_vip: u.is_vip,
+            vip_tier: u.vip_tier || null,
+            coins_balance: u.coins_balance,
+            developer_api_key: u.developer_api_key || null,
+            display_name: u.profile.display_name,
+            bio_text: u.profile.bio_text,
+            avatar_url: u.profile.avatar_url,
+            native_languages: u.profile.native_languages?.[0],
+            target_languages: u.profile.target_languages,
+            location: supabase.rpc('st_geomfromtext' as any, {
+              text: u.profile.location,
+            }),
+          })
+          .eq('id', userId);
+      }
+    }),
+  );
 }
 
 async function seedMomentsAndAudioRooms(supabase: any) {

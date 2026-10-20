@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataStorageService } from './data-storage.service';
 
-function storageSize(): number {
-  return (
-    new Blob([JSON.stringify(localStorage)]).size + new Blob([JSON.stringify(sessionStorage)]).size
-  );
-}
-
 function cacheWith(responses: Response[]): Cache {
   return {
     matchAll: vi.fn().mockResolvedValue(responses),
@@ -25,6 +19,10 @@ function installCacheStorage(cachesByName: Map<string, Cache>): {
     delete: deleteCache,
   } as unknown as CacheStorage);
   return { open, delete: deleteCache };
+}
+
+function localEntrySize(key: string): number {
+  return new Blob([key, localStorage.getItem(key) ?? '']).size;
 }
 
 describe('DataStorageService', () => {
@@ -52,28 +50,31 @@ describe('DataStorageService', () => {
     expect(localStorage.getItem('hellotalk_cellular_auto_download')).toBe('true');
   });
 
-  it('clears browser storage and every named cache while preserving the preference', async () => {
-    localStorage.setItem('temporary', 'value');
-    sessionStorage.setItem('temporary', 'value');
-    const cacheStorage = installCacheStorage(
-      new Map([
-        ['application', cacheWith([])],
-        ['media', cacheWith([])],
-      ]),
-    );
+  it('supports idempotent explicit cellular preference updates', () => {
+    localStorage.setItem('hellotalk_cellular_auto_download', 'true');
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
     const service = new DataStorageService();
 
-    service.clearLocalCache();
-    await vi.waitFor(() => expect(cacheStorage.delete).toHaveBeenCalledTimes(2));
+    service.setCellularAutoDownload(true);
+    expect(setItem).not.toHaveBeenCalled();
 
-    expect(localStorage.getItem('temporary')).toBeNull();
-    expect(sessionStorage.getItem('temporary')).toBeNull();
-    expect(localStorage.getItem('hellotalk_cellular_auto_download')).toBe('true');
-    expect(cacheStorage.delete).toHaveBeenCalledWith('application');
-    expect(cacheStorage.delete).toHaveBeenCalledWith('media');
+    service.setCellularAutoDownload(false);
+    expect(setItem).toHaveBeenCalledWith('hellotalk_cellular_auto_download', 'false');
+    expect(service.cellularAutoDownload()).toBe(false);
   });
 
-  it('estimates named caches concurrently from valid content-length headers', async () => {
+  it('counts transient local cache entries but excludes drafts, preferences, and session data', async () => {
+    localStorage.setItem('elgl:tr:first:ja', '{"value":"一"}');
+    localStorage.setItem('elgl:chat-draft:user:room', 'private unsent draft');
+    localStorage.setItem('hellotalk_cellular_auto_download', 'false');
+    sessionStorage.setItem('active-session-state', 'keep me');
+    vi.stubGlobal('caches', undefined);
+    const service = new DataStorageService();
+
+    await expect(service.estimateCacheSize()).resolves.toBe(localEntrySize('elgl:tr:first:ja'));
+  });
+
+  it('estimates named Cache API stores concurrently from valid content-length headers', async () => {
     const first = new Response('ignored', { headers: { 'content-length': '12' } });
     const second = new Response('ignored', { headers: { 'content-length': '30' } });
     const firstClone = vi.spyOn(first, 'clone');
@@ -90,7 +91,7 @@ describe('DataStorageService', () => {
 
     const size = await service.estimateCacheSize();
 
-    expect(size).toBe(storageSize() + 42);
+    expect(size).toBe(42);
     expect(cacheStorage.open).toHaveBeenCalledTimes(2);
     expect(applicationCache.matchAll).toHaveBeenCalledTimes(1);
     expect(mediaCache.matchAll).toHaveBeenCalledTimes(1);
@@ -108,7 +109,7 @@ describe('DataStorageService', () => {
 
       const size = await service.estimateCacheSize();
 
-      expect(size).toBe(storageSize() + 4);
+      expect(size).toBe(4);
       expect(clone).toHaveBeenCalledTimes(1);
     },
   );
@@ -121,17 +122,17 @@ describe('DataStorageService', () => {
 
     const size = await service.estimateCacheSize();
 
-    expect(size).toBe(storageSize() + 8);
+    expect(size).toBe(8);
     expect(clone).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the storage estimate available when the Cache API fails', async () => {
+  it('keeps the local cache estimate available when the Cache API fails', async () => {
+    localStorage.setItem('elgl:tr:first:es', 'hola');
     vi.stubGlobal('caches', {
       keys: vi.fn().mockRejectedValue(new Error('cache unavailable')),
     } as unknown as CacheStorage);
-    localStorage.setItem('saved', 'value');
     const service = new DataStorageService();
 
-    await expect(service.estimateCacheSize()).resolves.toBe(storageSize());
+    await expect(service.estimateCacheSize()).resolves.toBe(localEntrySize('elgl:tr:first:es'));
   });
 });
