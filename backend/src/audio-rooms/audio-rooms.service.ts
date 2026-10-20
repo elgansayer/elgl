@@ -1720,8 +1720,11 @@ export class AudioRoomsService implements OnModuleInit {
     roomId: string,
     dto: SendReactionDto,
   ): Promise<{ emojiId: string; animationUrl: string }> {
-    const room = await this.getRoom(roomId);
-    const profile = await this.usersService.getProfile(userId);
+    // ⚡ Bolt Optimization: Replace sequential database queries with concurrent Promise.all execution
+    const [room, profile] = await Promise.all([
+      this.getRoom(roomId),
+      this.usersService.getProfile(userId),
+    ]);
     if (!profile?.is_vip) {
       throw new ForbiddenException(
         'Only Pro members can send exclusive reactions.',

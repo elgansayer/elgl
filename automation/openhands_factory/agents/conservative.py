@@ -141,7 +141,11 @@ class ConservativeAgentRouter(AgentRouter):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
-        self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
+        self._global_agent_slots = BoundedSemaphore(
+            _positive_int_environment(
+                "FACTORY_HOST_AGENT_CONCURRENCY", MAX_GLOBAL_AGENT_CONCURRENCY
+            )
+        )
         self._review_slots = BoundedSemaphore(
             _positive_int_environment(
                 "FACTORY_REVIEW_LANE_MAX_CONCURRENT",
@@ -226,6 +230,14 @@ class ConservativeAgentRouter(AgentRouter):
                         or not isinstance(successes, int)
                     ):
                         continue
+                    model_for = getattr(self.providers.get(provider), "model_for", None)
+                    if callable(model_for):
+                        current_model = model_for(phase)
+                        if isinstance(current_model, str) and record.get("model") != current_model:
+                            # Retired model successes must not promote an unproven
+                            # replacement, nor should old failures penalise a model
+                            # that now completes this phase reliably.
+                            continue
                     prior_calls, prior_successes = totals.get(provider, (0, 0))
                     totals[provider] = (prior_calls + calls, prior_successes + successes)
             configured_order = {name: index for index, name in enumerate(candidates)}
@@ -265,6 +277,23 @@ class ConservativeAgentRouter(AgentRouter):
     def _review_identity(job: Job) -> str:
         pull_request = job.pull_request if job.pull_request is not None else job.task.identifier
         return f"pr-{pull_request}"
+
+    def observe_review_head(self, job: Job, now: datetime | None = None) -> None:
+        """Start the quiet-period clock when an external exact head is first known."""
+
+        gate = self._review_head_stability
+        if (
+            gate is None
+            or not gate.enabled
+            or job.task.source != "github-pull-request"
+            or not job.head_sha
+        ):
+            return
+        gate.defer_seconds(
+            self._review_identity(job),
+            job.head_sha,
+            now or datetime.now(UTC),
+        )
 
     def _ensure_review_head_stable(self, job: Job, now: datetime) -> None:
         """Avoid spending independent-review allowance on a moving external PR head."""

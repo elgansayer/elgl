@@ -59,22 +59,22 @@ export class DailyTipService {
       return;
     }
 
+    const safeUsers = users ?? [];
+    // ⚡ Bolt Optimization: Replace sequential await loop with bounded concurrent chunks
+    // Process up to 10 users concurrently to significantly improve API latency
+    // while preventing unbounded Promise.allSettled calls from exhausting concurrent request limits.
     const chunkSize = 10;
-    const allUsers = users ?? [];
-
-    // ⚡ Bolt Optimization: Replace sequential awaits in a for...of loop with a bounded concurrent
-    // Promise.allSettled batch map to drastically reduce network latency during LLM proxy calls,
-    // transforming N sequential calls into concurrent batches.
-    for (let i = 0; i < allUsers.length; i += chunkSize) {
-      const chunk = allUsers.slice(i, i + chunkSize);
+    for (let i = 0; i < safeUsers.length; i += chunkSize) {
+      const chunk = safeUsers.slice(i, i + chunkSize);
 
       await Promise.allSettled(
         chunk.map(async (user) => {
-          const lang = user.target_languages?.[0] ?? user.native_language ?? 'en';
+          const lang =
+            user.target_languages?.[0] ?? user.native_language ?? 'en';
           const prompt = `Give me a short daily learning tip (1-2 sentences) for someone learning ${lang}. Include practical advice. Do not include greetings.`;
-
           try {
-            const { response } = await this.llmProxyService.proxyMessage(prompt);
+            const { response } =
+              await this.llmProxyService.proxyMessage(prompt);
             const tipText = response?.trim() ?? 'Keep practising every day!';
 
             // Emit a push notification via the existing notification system

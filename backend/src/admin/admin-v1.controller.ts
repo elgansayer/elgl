@@ -34,7 +34,6 @@ import {
   AdminSystemHealthService,
   AdminSystemHealthSnapshot,
 } from './admin-system-health.service';
-import { AdminUserDetailService } from './admin-user-detail.service';
 import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
 import { AdminAuditQueryDto } from './dto/admin-audit-query.dto';
 import { AdminReportsQueryDto } from './dto/admin-reports-query.dto';
@@ -60,7 +59,6 @@ export class AdminV1Controller {
   constructor(
     private readonly authorization: AdminAuthorizationService,
     private readonly adminService: AdminService,
-    private readonly userDetailService: AdminUserDetailService,
     private readonly loginHistoryQuery: AdminLoginHistoryQueryService,
     private readonly audit: AdminAuditService,
     private readonly auditQuery: AdminAuditQueryService,
@@ -339,6 +337,6 @@ export class AdminV1Controller {
   @ApiOkResponse({ description: 'Administrative user summary returned' })
   @ApiNotFoundResponse({ description: 'User not found' })
   getUser(@Param('id') id: string): Promise<AdminUserSummary> {
-    return this.userDetailService.getUser(id);
+    return this.adminService.getUser(id);
   }
 }
