@@ -1,0 +1,1910 @@
+<!-- @dsCard group="Features" name="Learning & progress" subtitle="SRS · assessment · reading · gamification · streaks · light/dark · RTL · 390px" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Learning &amp; progress</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.learning" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 107 113 130;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 126 132 148;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      .sm-btn {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+      .btn.outline {
+        background: transparent;
+        color: rgb(var(--primary));
+        border-color: rgb(var(--primary));
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        align-items: stretch;
+      }
+      .wrap {
+        flex-wrap: wrap;
+      }
+      .center {
+        justify-content: center;
+      }
+      .center-text {
+        text-align: center;
+        align-items: center;
+      }
+      .push {
+        margin-inline-start: auto;
+      }
+      .pad-top {
+        padding-block-start: 10px;
+      }
+      .sr {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      .h-lg {
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .big {
+        font-size: 28px;
+      }
+      .huge {
+        font-size: 44px;
+      }
+      .link {
+        color: rgb(var(--primary));
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .err,
+      .danger-text {
+        color: rgb(var(--danger));
+      }
+      .err {
+        font-size: 12px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .ok-text {
+        color: rgb(var(--success));
+        font-size: 12px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .accent-text {
+        color: rgb(var(--accent));
+      }
+      .card.empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 6px;
+      }
+      .card.empty > span[aria-hidden] {
+        font-size: 28px;
+      }
+      .deck-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .deck-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 10px;
+        text-align: start;
+        cursor: pointer;
+        border-radius: 14px;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-300));
+        border-block-start: 4px solid rgb(var(--deck));
+        color: rgb(var(--text-primary));
+        font: inherit;
+        min-width: 0;
+      }
+      .deck-tile .title {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .deck-icon {
+        font-size: 22px;
+      }
+      .swatch {
+        inline-size: 28px;
+        block-size: 28px;
+        border-radius: 999px;
+        background: rgb(var(--sw));
+        border: 2px solid transparent;
+      }
+      .swatch.on {
+        outline: 2px solid rgb(var(--text-primary));
+        outline-offset: 2px;
+      }
+      .tally .chip {
+        font-size: 11px;
+      }
+      .flip-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-block-size: 170px;
+        padding: 16px;
+        border-radius: 18px;
+        text-align: center;
+        position: relative;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-100));
+        box-shadow: 0 8px 20px rgb(var(--shadow) / 0.12);
+        cursor: pointer;
+      }
+      .flip-card .badge {
+        position: absolute;
+        inset-block-start: 12px;
+        inset-inline-start: 12px;
+      }
+      .flip-card.back {
+        min-block-size: 120px;
+        border-inline-start: 4px solid rgb(var(--secondary));
+      }
+      .flip-term {
+        font-size: 38px;
+        font-weight: 700;
+      }
+      .grade-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr 1fr;
+        gap: 8px;
+      }
+      .grade {
+        min-block-size: 64px;
+        border-radius: 12px;
+        border: 1px solid;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        cursor: pointer;
+        font: inherit;
+      }
+      .grade small {
+        font-size: 11px;
+        opacity: 0.85;
+      }
+      .grade.again {
+        background: rgb(var(--danger) / 0.1);
+        border-color: rgb(var(--danger) / 0.5);
+        color: rgb(var(--danger));
+      }
+      .grade.good {
+        background: rgb(var(--secondary));
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--on-fill));
+      }
+      .grade.known {
+        background: rgb(var(--success) / 0.1);
+        border-color: rgb(var(--success) / 0.5);
+        color: rgb(var(--success));
+      }
+      .list.plain {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .plain-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .plain-list li {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .progress.done > span {
+        background: rgb(var(--success));
+      }
+      .vocab-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .boundary {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid rgb(var(--danger) / 0.3);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .boundary p {
+        margin: 0;
+      }
+      .mono {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 11px;
+        color: rgb(var(--danger));
+        background: rgb(var(--surface-200));
+        padding: 8px;
+        border-radius: 8px;
+        overflow-wrap: anywhere;
+      }
+      .hint-box {
+        background: rgb(var(--surface-200));
+        padding: 6px 8px;
+        border-radius: 8px;
+      }
+      .quiz {
+        border-color: rgb(var(--primary) / 0.25);
+      }
+      .q {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 4px 0;
+      }
+      .option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-block-size: 48px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        text-align: start;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        font: inherit;
+        cursor: pointer;
+      }
+      .option.sel {
+        border-color: rgb(var(--primary));
+        background: rgb(var(--primary) / 0.1);
+      }
+      .opt-n {
+        inline-size: 24px;
+        block-size: 24px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 700;
+        background: rgb(var(--surface-100));
+      }
+      .option.sel .opt-n {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .spinner {
+        inline-size: 32px;
+        block-size: 32px;
+        border-radius: 999px;
+        border: 4px solid rgb(var(--primary) / 0.3);
+        border-block-start-color: rgb(var(--primary));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .spinner {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(1turn);
+          }
+        }
+      }
+      input[type='range'] {
+        accent-color: rgb(var(--primary));
+        min-height: 24px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+      .result {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 12px;
+        background: rgb(var(--surface-100));
+      }
+      .rec-dot {
+        inline-size: 10px;
+        block-size: 10px;
+        border-radius: 999px;
+        background: rgb(var(--on-fill));
+      }
+      .score {
+        font-size: 32px;
+        font-weight: 700;
+        color: rgb(var(--secondary));
+      }
+      .mono-list {
+        margin: 6px 0 0;
+        padding-inline-start: 18px;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        border-block-end: 1px solid rgb(var(--surface-100));
+      }
+      .tabs button {
+        border: 0;
+        background: none;
+        padding: 10px 8px;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+        border-block-end: 2px solid transparent;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .tabs button[aria-selected='true'] {
+        color: rgb(var(--primary));
+        border-block-end-color: rgb(var(--primary));
+      }
+      .article {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-align: start;
+        border: 0;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+        inline-size: 100%;
+      }
+      .article .grow {
+        display: flex;
+        flex-direction: column;
+      }
+      .reader {
+        font-size: 20px;
+        line-height: 1.9;
+        margin: 4px 0;
+      }
+      .tok {
+        padding: 2px 3px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .tok.active {
+        background: rgb(var(--primary) / 0.18);
+        box-shadow: inset 0 -2px 0 rgb(var(--primary));
+      }
+      .doc h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      .doc p {
+        overflow-wrap: anywhere;
+      }
+      .sel {
+        min-block-size: 40px;
+        border-radius: 10px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 0 10px;
+        font: inherit;
+      }
+      .rank {
+        inline-size: 24px;
+        font-size: 18px;
+        font-weight: 700;
+        color: rgb(var(--primary));
+      }
+      .wotd {
+        font-size: 30px;
+        font-weight: 800;
+        color: rgb(var(--accent));
+      }
+      .streak-num {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.1;
+      }
+      .pill-count {
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: rgb(var(--surface-300));
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .celebrate {
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+        padding-block: 32px;
+      }
+      .cele-title {
+        font-size: 30px;
+        font-weight: 800;
+        color: rgb(255 255 255);
+      }
+      .cele-title.ink {
+        color: rgb(var(--text-primary));
+        font-size: 22px;
+      }
+      .cele-sub {
+        margin: 0;
+        color: rgb(255 255 255 / 0.82);
+        font-size: 14px;
+        max-inline-size: 260px;
+      }
+      .confetti {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .confetti i {
+        position: absolute;
+        inline-size: 10px;
+        block-size: 7px;
+        border-radius: 2px;
+        inset-block-start: 14%;
+      }
+      .confetti i:nth-child(1) {
+        inset-inline-start: 12%;
+        background: rgb(var(--neon-violet));
+        transform: rotate(20deg);
+      }
+      .confetti i:nth-child(2) {
+        inset-inline-start: 30%;
+        inset-block-start: 6%;
+        background: rgb(var(--neon-cyan));
+        transform: rotate(-35deg);
+      }
+      .confetti i:nth-child(3) {
+        inset-inline-start: 62%;
+        background: rgb(var(--neon-pink));
+        transform: rotate(50deg);
+      }
+      .confetti i:nth-child(4) {
+        inset-inline-start: 82%;
+        inset-block-start: 8%;
+        background: rgb(var(--neon-orange));
+        transform: rotate(-10deg);
+      }
+      .confetti i:nth-child(5) {
+        inset-inline-start: 46%;
+        inset-block-start: 4%;
+        background: rgb(var(--neon-blue));
+        transform: rotate(70deg);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .confetti i {
+          animation: fall 2.4s ease-in infinite;
+        }
+        .confetti i:nth-child(2n) {
+          animation-delay: 0.6s;
+        }
+        @keyframes fall {
+          to {
+            translate: 0 220px;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Learning &amp; progress</h1>
+        <p>
+          Design-sync ID <code>feature.learning</code> · every runtime surface in this area is one
+          specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <!-- ============ Flashcards & SRS ============ -->
+      <section class="specimen" data-component="components/flashcard-deck">
+        <header>
+          <h2>Flashcard decks</h2>
+          <code>components/flashcard-deck</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div class="row">
+              <div class="grow">
+                <div class="title">📚 Flashcard Decks</div>
+                <div class="muted">Organise your saved vocabulary into custom decks</div>
+              </div>
+              <button class="btn secondary-btn sm-btn" type="button">Browse decks</button>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn sm-btn" type="button">+ New Deck</button
+            ><span class="muted">3 deck(s)</span>
+          </div>
+          <div class="deck-grid">
+            <button
+              class="deck-tile"
+              type="button"
+              aria-label="Open deck Japanese verbs"
+              style="--deck: var(--primary)"
+            >
+              <span class="deck-icon">🗾</span><span class="title">Japanese verbs</span
+              ><span class="muted">42 cards</span>
+            </button>
+            <button
+              class="deck-tile"
+              type="button"
+              aria-label="Open deck Travel phrases"
+              style="--deck: var(--secondary)"
+            >
+              <span class="deck-icon">✈️</span><span class="title">Travel phrases</span
+              ><span class="muted">18 cards</span>
+            </button>
+            <button
+              class="deck-tile"
+              type="button"
+              aria-label="Open deck العربية اليومية"
+              style="--deck: var(--neon-violet)"
+            >
+              <span class="deck-icon">🌙</span
+              ><span class="title" lang="ar" dir="rtl">العربية اليومية</span
+              ><span class="muted">27 cards</span>
+            </button>
+          </div>
+          <span class="state-label">Create form</span>
+          <div class="card stack">
+            <div class="title">Create a new deck</div>
+            <label class="field"
+              >Name<input value="" placeholder="e.g. Spanish Verbs, Travel Phrases"
+            /></label>
+            <label class="field">Description<input placeholder="What is this deck for?" /></label>
+            <div class="stack">
+              <span class="secondary">Colour</span>
+              <div class="row">
+                <span
+                  class="swatch on"
+                  style="--sw: var(--primary)"
+                  aria-label="Select colour Ember"
+                ></span
+                ><span class="swatch" style="--sw: var(--secondary)"></span
+                ><span class="swatch" style="--sw: var(--neon-violet)"></span
+                ><span class="swatch" style="--sw: var(--neon-blue)"></span>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn" type="button">Save</button
+              ><button class="btn ghost" type="button">Cancel</button>
+            </div>
+          </div>
+          <span class="state-label">Empty</span>
+          <div class="card empty">
+            <span aria-hidden="true">📚</span>
+            <div class="title">No decks yet</div>
+            <div class="muted">Create your first deck to start organising your vocabulary.</div>
+          </div>
+        </div>
+        <footer>
+          States: deck list · create form · empty · (loading "Loading decks…", error banner via SRS
+          boundary)
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/flashcard-review">
+        <header>
+          <h2>Flashcard review</h2>
+          <code>components/flashcard-review</code>
+        </header>
+        <div class="body">
+          <div class="alert warning" role="status">
+            Offline mode - reviews will sync when you reconnect.
+          </div>
+          <div class="card stack">
+            <div class="row">
+              <div class="grow title">🎯 Flashcard Review</div>
+              <span class="muted">Card 4 of 12</span>
+            </div>
+            <div
+              class="progress"
+              role="progressbar"
+              aria-valuenow="33"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <span style="inline-size: 33%"></span>
+            </div>
+            <div class="row tally">
+              <span class="chip">↻ 1 again</span><span class="chip tide">• 2 good</span
+              ><span class="chip on">✓ 1 known</span>
+            </div>
+          </div>
+          <div
+            class="flip-card"
+            role="button"
+            tabindex="0"
+            aria-label="Flashcard: 勉強. Press to reveal answer"
+          >
+            <span class="badge tide">Level 2</span>
+            <span class="flip-term" lang="ja">勉強</span>
+            <span class="muted" lang="ja">べんきょう</span>
+            <button class="icon-btn" type="button" aria-label="Play pronunciation for 勉強">
+              🔊
+            </button>
+            <span class="muted">Tap to reveal answer</span>
+          </div>
+          <div class="flip-card back" aria-label="Answer revealed">
+            <span class="state-label">Answer</span>
+            <span class="title">study</span>
+            <span class="state-label">Context</span>
+            <span class="secondary" lang="ja">毎日日本語を勉強しています。</span>
+          </div>
+          <div class="grade-grid" role="group" aria-label="Rate your recall">
+            <button
+              class="grade again"
+              type="button"
+              aria-label="Rate as again - need more practice"
+            >
+              <b>Again</b><small>&lt; 1min</small>
+            </button>
+            <button class="grade good" type="button" aria-label="Rate as good">
+              <b>Good</b><small>Next: 3d</small>
+            </button>
+            <button class="grade known" type="button" aria-label="Rate as known - already mastered">
+              <b>Known</b><small>Mastered</small>
+            </button>
+          </div>
+          <span class="state-label">Complete · Empty</span>
+          <div class="row two">
+            <div class="card empty">
+              <span aria-hidden="true">🏁</span>
+              <div class="title">Review Complete!</div>
+              <div class="muted">Great job! Come back regularly…</div>
+              <button class="btn sm-btn" type="button">Start Again</button>
+            </div>
+            <div class="card empty">
+              <span aria-hidden="true">🎯</span>
+              <div class="title">No reviews due</div>
+              <div class="muted">Come back later when cards are due.</div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: degraded banner · front · answer · grading · complete · empty · skeleton loading
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/suggest-flashcards">
+        <header>
+          <h2>Word suggestions</h2>
+          <code>components/suggest-flashcards</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div class="title">Word Suggestions</div>
+            <label class="field"
+              ><span class="sr">Text</span
+              ><textarea rows="3" lang="ja">週末に友達と京都の古いお寺を見に行きました。</textarea>
+            </label>
+            <button class="btn" type="button">Suggest Words</button>
+            <p class="muted" role="status">Analysing text for useful vocabulary...</p>
+            <ul class="list plain">
+              <li class="row">
+                <span class="grow" lang="ja">週末 · weekend</span
+                ><button class="btn outline sm-btn" type="button">Add</button>
+              </li>
+              <li class="row">
+                <span class="grow" lang="ja">お寺 · temple</span
+                ><button class="btn outline sm-btn" type="button" disabled>Added</button>
+              </li>
+              <li class="row">
+                <span class="grow" lang="ja">古い · old</span
+                ><button class="btn outline sm-btn" type="button" disabled>Analysing…</button>
+              </li>
+            </ul>
+            <p class="muted" role="status">
+              No new words found in this text. Try a different sentence.
+            </p>
+            <p class="err" role="alert">Could not generate suggestions. Please try again.</p>
+          </div>
+        </div>
+        <footer>States: input · loading · results (add / adding / added) · no words · error</footer>
+      </section>
+
+      <section class="specimen" data-component="components/vocabulary-dashboard">
+        <header>
+          <h2>Vocabulary studio</h2>
+          <code>components/vocabulary-dashboard</code>
+        </header>
+        <div class="body">
+          <div>
+            <div class="display h-lg">📚 Vocabulary studio</div>
+            <div class="muted">
+              Spaced repetition, word decks, grammar coaching, and pronunciation scoring.
+            </div>
+          </div>
+          <div class="row">
+            <span class="secondary grow">Card 3 of 20</span
+            ><button class="btn secondary-btn sm-btn" type="button">Restart review</button>
+          </div>
+          <div class="flip-card" role="button" tabindex="0" aria-pressed="false">
+            <span class="flip-term" lang="ar" dir="rtl">مكتبة</span
+            ><span class="muted">Tap to flip</span>
+          </div>
+          <div class="grade-grid">
+            <button class="grade again" type="button"><b>Again</b></button
+            ><button class="grade good" type="button"><b>Good</b></button
+            ><button class="grade known" type="button"><b>Known</b></button>
+          </div>
+          <span class="state-label">Nothing due</span>
+          <div class="card empty">
+            <div class="title">📚 No review cards are due right now.</div>
+            <button class="btn block" type="button">Practise in AI conversation</button
+            ><button class="btn secondary-btn block" type="button">Restart review</button>
+          </div>
+        </div>
+        <footer>States: reviewing (front/back flip) · complete with AI-practice CTA</footer>
+      </section>
+
+      <section class="specimen" data-component="components/vocabulary-display">
+        <header>
+          <h2>Vocabulary from your interests</h2>
+          <code>components/vocabulary-display</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow title">Vocabulary from your interests</div>
+            <button class="btn ghost sm-btn" type="button" aria-label="Refresh vocabulary list">
+              Refresh
+            </button>
+          </div>
+          <div class="card stack">
+            <div class="title">🍜 Food</div>
+            <div class="vocab-row">
+              <div class="grow">
+                <b lang="ja">ラーメン</b>
+                <div class="muted">ramen</div>
+              </div>
+              <button
+                class="btn sm-btn"
+                type="button"
+                aria-label="Add ラーメン to spaced repetition flashcards"
+              >
+                + SRS
+              </button>
+            </div>
+            <div class="vocab-row">
+              <div class="grow">
+                <b lang="ar" dir="rtl">قهوة</b>
+                <div class="muted">coffee</div>
+              </div>
+              <button class="btn sm-btn" type="button">+ SRS</button>
+            </div>
+          </div>
+          <div class="card stack">
+            <div class="title">⚽ Sport</div>
+            <div class="vocab-row">
+              <div class="grow">
+                <b lang="ja">試合</b>
+                <div class="muted">match</div>
+              </div>
+              <button class="btn sm-btn" type="button">+ SRS</button>
+            </div>
+          </div>
+          <span class="state-label">Empty</span>
+          <div class="card empty" role="status">
+            <span aria-hidden="true">📚</span>
+            <div class="title">No vocabulary found</div>
+            <div class="muted">
+              Save some words from your conversations to build your vocabulary list.
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: grouped by interest tag · refreshing · empty · add success/error toast
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/srs-error-boundary">
+        <header>
+          <h2>SRS error boundary</h2>
+          <code>components/srs-error-boundary</code>
+        </header>
+        <div class="body">
+          <div class="boundary" role="alert">
+            <span class="big" aria-hidden="true">⚠️</span>
+            <div class="title danger-text">Flashcards hit a problem</div>
+            <p class="secondary">
+              Your review progress is safe. Try again, or report the issue so we can fix it.
+            </p>
+            <code class="mono"
+              >TypeError: Cannot read properties of undefined (reading 'interval')</code
+            >
+            <p class="muted hint-box">Hint: check your connection, then retry.</p>
+            <div class="row center">
+              <button class="btn sm-btn" type="button">Try again</button
+              ><button class="btn secondary-btn sm-btn" type="button">Report issue</button>
+            </div>
+            <p class="ok-text">Issue reported. Thank you!</p>
+          </div>
+        </div>
+        <footer>
+          Wraps decks, review, suggestions, dashboard, display. States: error · detail hint ·
+          reported
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/srs-rtl-verification">
+        <header>
+          <h2>SRS RTL verification</h2>
+          <code>components/srs-rtl-verification</code>
+        </header>
+        <div class="body" dir="rtl" lang="ar">
+          <div class="card stack">
+            <div class="row">
+              <div class="grow title">🎯 مراجعة البطاقات</div>
+              <span class="muted">البطاقة ٤ من ١٢</span>
+            </div>
+            <div class="progress"><span style="inline-size: 33%"></span></div>
+          </div>
+          <div class="flip-card">
+            <span class="flip-term">كِتاب</span><span class="muted">book</span>
+          </div>
+          <div class="grade-grid">
+            <button class="grade again" type="button"><b>مجددًا</b></button
+            ><button class="grade good" type="button"><b>جيد</b></button
+            ><button class="grade known" type="button"><b>أعرفها</b></button>
+          </div>
+        </div>
+        <footer>
+          Contract-only surface (spec): SRS screens use logical properties so progress fills and
+          grade order mirror in RTL.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/srs-tour-trigger">
+        <header>
+          <h2>SRS tour trigger</h2>
+          <code>components/srs-tour-trigger</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Tour not completed</span>
+          <div class="row">
+            <button class="btn sm-btn" type="button" aria-label="Start the SRS feature tour">
+              🎓 Take the tour
+            </button>
+          </div>
+          <span class="state-label">Tour completed</span>
+          <p class="muted">(renders nothing)</p>
+        </div>
+        <footer>States: visible until the tour is completed · hidden afterwards</footer>
+      </section>
+
+      <!-- ============ Assessment ============ -->
+      <section class="specimen" data-component="components/diagnostic-quiz">
+        <header>
+          <h2>Language level diagnostic</h2>
+          <code>components/diagnostic-quiz</code>
+        </header>
+        <div class="body">
+          <div class="card stack quiz">
+            <div class="row">
+              <div class="grow title">Language Level Diagnostic</div>
+              <span class="chip">Question 3 of 10</span>
+            </div>
+            <div class="progress" role="progressbar" aria-valuenow="30">
+              <span style="inline-size: 30%"></span>
+            </div>
+            <p class="q" lang="ja">「おはようございます」はいつ使いますか？</p>
+            <div class="stack" role="radiogroup">
+              <button class="option" type="button" aria-label="Option 1: In the morning">
+                <span class="opt-n">1</span>In the morning
+              </button>
+              <button class="option sel" type="button" aria-checked="true" role="radio">
+                <span class="opt-n">2</span>At night
+              </button>
+              <button class="option" type="button"><span class="opt-n">3</span>When leaving</button>
+            </div>
+            <div class="row">
+              <button class="btn secondary-btn" type="button">Previous</button
+              ><span class="grow"></span><button class="btn" type="button">Next</button>
+            </div>
+          </div>
+          <div class="row two">
+            <div class="card empty" role="status">
+              <span class="spinner" aria-hidden="true"></span>
+              <div class="muted">Loading your diagnostic quiz...</div>
+            </div>
+            <div class="card empty" role="alert">
+              <span aria-hidden="true">⚠️</span>
+              <div class="title">Unable to load quiz</div>
+              <button class="btn sm-btn" type="button">Try again</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: question · selected option · loading · error · last question shows "Finish"
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/proficiency-assessment">
+        <header>
+          <h2>Proficiency assessment</h2>
+          <code>components/proficiency-assessment</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div class="title">Proficiency assessment</div>
+            <p class="secondary">
+              Rate how confidently you can hold a conversation in your target language.
+            </p>
+            <label class="field" for="lp-score"
+              >Score: 64<input id="lp-score" type="range" min="0" max="100" value="64"
+            /></label>
+            <button class="btn" type="button">Submit</button>
+            <div class="result">
+              <span class="secondary">Your estimated level:</span>
+              <span class="badge tide">B1 · Intermediate</span>
+            </div>
+          </div>
+        </div>
+        <footer>States: slider input · result level</footer>
+      </section>
+
+      <section class="specimen" data-component="components/pronunciation-feedback">
+        <header>
+          <h2>Pronunciation feedback</h2>
+          <code>components/pronunciation-feedback</code>
+        </header>
+        <div class="body">
+          <div class="display h-lg">Pronunciation practice</div>
+          <label class="field"
+            >Sentence to practise<input lang="ja" value="東京駅はどこですか？"
+          /></label>
+          <div class="row">
+            <button class="btn" type="button" disabled>
+              <span class="rec-dot pulse" aria-hidden="true"></span>Recording…</button
+            ><button class="btn danger" type="button">Stop</button>
+          </div>
+          <div class="card stack">
+            <div class="row">
+              <span class="display score">86%</span><span class="secondary grow">Score</span>
+            </div>
+            <p class="secondary">
+              Clear rhythm. Lengthen the long vowel in <span lang="ja">とう</span>.
+            </p>
+            <details open>
+              <summary class="link">Phoneme breakdown</summary>
+              <ul class="mono-list">
+                <li>/toː/ ✓</li>
+                <li>/kʲo/ ✓</li>
+                <li>/eki/ ~ short</li>
+              </ul>
+            </details>
+          </div>
+        </div>
+        <footer>
+          States: idle · recording (pulse → static dot under reduced motion) · scored feedback
+        </footer>
+      </section>
+
+      <!-- ============ Reading ============ -->
+      <section class="specimen" data-component="components/reading-engine">
+        <header>
+          <h2>Reading engine</h2>
+          <code>components/reading-engine</code>
+        </header>
+        <div class="body">
+          <div>
+            <div class="display h-lg">📖 LingQ Reading Engine</div>
+            <div class="muted">Immerse, read, and build vocabulary with interactive texts</div>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Reading engine tabs">
+            <button role="tab" aria-selected="true" type="button">Articles</button
+            ><button role="tab" type="button">Reading history</button
+            ><button role="tab" type="button">My saved vocabulary</button>
+          </div>
+          <div class="row wrap" aria-label="Article filter controls">
+            <span class="muted">Difficulty:</span><span class="chip on">All</span
+            ><span class="chip">A2</span><span class="chip">B1</span
+            ><span class="muted">Topic:</span><span class="chip">Culture</span>
+          </div>
+          <div class="list">
+            <button class="article" type="button" aria-label="Open article: 京都の秋">
+              <span class="grow"
+                ><b lang="ja">京都の秋</b><span class="muted">Culture · 320 words</span></span
+              ><span class="badge tide">B1</span>
+            </button>
+            <button class="article" type="button">
+              <span class="grow"
+                ><b lang="ar" dir="rtl">رحلة إلى البتراء</b
+                ><span class="muted">Travel · 410 words</span></span
+              ><span class="badge">A2</span>
+            </button>
+          </div>
+          <span class="state-label">No results</span>
+          <div class="card empty">
+            <div class="title">No articles found</div>
+            <div class="muted">No articles match your current filters.</div>
+            <button class="btn ghost sm-btn" type="button">Clear filters</button>
+          </div>
+        </div>
+        <footer>
+          States: article list · filters · history · saved vocabulary · empty · error with Retry
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/reading-engine-error-boundary">
+        <header>
+          <h2>Reading engine error boundary</h2>
+          <code>components/reading-engine-error-boundary</code>
+        </header>
+        <div class="body">
+          <div class="boundary" role="alert">
+            <span class="big" aria-hidden="true">📖</span>
+            <div class="title danger-text">Reading Engine Interrupted</div>
+            <p class="secondary">
+              Something went wrong with the reading engine. Your reading progress has been
+              preserved.
+            </p>
+            <div class="row center">
+              <button class="btn sm-btn" type="button">Try Again</button
+              ><button class="btn secondary-btn sm-btn" type="button">Report Issue</button>
+            </div>
+            <p class="ok-text">Issue reported. Thank you for helping us improve!</p>
+          </div>
+        </div>
+        <footer>States: error · reported</footer>
+      </section>
+
+      <section class="specimen" data-component="components/audio-sync-reader">
+        <header>
+          <h2>Immersion reader</h2>
+          <code>components/audio-sync-reader</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div class="title">Immersion reading lesson</div>
+            <div class="muted">Tap words to look up definitions and build your SRS vocabulary</div>
+            <p
+              class="reader"
+              lang="ja"
+              aria-label="Immersive reading area with clickable word tokens"
+            >
+              <span class="tok">私は</span><span class="tok">毎朝</span
+              ><span class="tok active" aria-label="Active word: コーヒー">コーヒー</span
+              ><span class="tok">を</span><span class="tok">飲みます</span>。
+            </p>
+            <div class="row">
+              <button class="btn" type="button">⏸️ Pause reading</button
+              ><span class="muted grow">Word 3 of 5</span>
+            </div>
+          </div>
+          <div class="alert warning">Speech synthesis is not available in your browser.</div>
+        </div>
+        <footer>
+          States: playing with active-word highlight · paused (▶️ Play audio lesson) · TTS
+          unavailable
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/document-viewer">
+        <header>
+          <h2>Document viewer</h2>
+          <code>components/document-viewer</code>
+        </header>
+        <div class="body">
+          <article class="card doc" aria-label="Grammar note: particles は and が">
+            <h3 class="display">Grammar note: は vs が</h3>
+            <p class="secondary">
+              <span lang="ja">は</span> marks the topic; <span lang="ja">が</span> marks the
+              grammatical subject or new information.
+            </p>
+            <p class="secondary" lang="ja">私は学生です。 / 誰が来ましたか？</p>
+          </article>
+        </div>
+        <footer>
+          Projected-content article shell (elevated card, long-text wrapping). States: default
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/resource-library">
+        <header>
+          <h2>Resource library</h2>
+          <code>components/resource-library</code>
+        </header>
+        <div class="body">
+          <div class="title">Resource library</div>
+          <div class="row wrap">
+            <select class="sel" aria-label="Topic">
+              <option>All topics</option></select
+            ><select class="sel" aria-label="Difficulty">
+              <option>Intermediate</option></select
+            ><button class="btn sm-btn" type="button">Filter</button>
+          </div>
+          <div class="row wrap">
+            <span class="secondary">Group:</span><span class="chip">None</span
+            ><span class="chip on">By topic</span><span class="chip">By difficulty</span>
+          </div>
+          <div class="state-label">Grammar</div>
+          <div class="list">
+            <div class="row">
+              <div class="grow">
+                <b>Particles cheat-sheet</b>
+                <div class="muted">PDF · Intermediate</div>
+              </div>
+              <button class="icon-btn" type="button" aria-label="Edit">✏️</button>
+            </div>
+            <div class="row">
+              <div class="grow">
+                <b>Arabic verb forms I-X</b>
+                <div class="muted">Link · Advanced</div>
+              </div>
+              <button class="icon-btn" type="button" aria-label="Edit">✏️</button>
+            </div>
+          </div>
+          <details class="card">
+            <summary class="title">Add resource</summary>
+            <div class="stack pad-top">
+              <label class="field">Title<input placeholder="Title" /></label
+              ><label class="field">URL<input placeholder="https://" /></label
+              ><button class="btn" type="button">Save</button>
+            </div>
+          </details>
+        </div>
+        <footer>States: filtered list · grouped · create/edit form</footer>
+      </section>
+
+      <section class="specimen" data-component="components/study-buddy">
+        <header>
+          <h2>Study buddies</h2>
+          <code>components/study-buddy</code>
+        </header>
+        <div class="body">
+          <div>
+            <div class="title">Study buddies</div>
+            <div class="muted">Find a language partner to practise with regularly.</div>
+          </div>
+          <div class="state-label">Incoming requests</div>
+          <div class="list">
+            <div class="row">
+              <span class="avatar">ک</span
+              ><span class="grow"><b>Karim</b><span class="muted"> · Arabic ⇄ English</span></span
+              ><button class="btn tide sm-btn" type="button">Accept</button
+              ><button class="btn ghost sm-btn" type="button">Decline</button>
+            </div>
+          </div>
+          <div class="state-label">Potential matches</div>
+          <div class="list">
+            <div class="row">
+              <span class="avatar ember">ゆ</span
+              ><span class="grow"><b>Yuki</b><span class="muted"> · Japanese ⇄ English</span></span
+              ><button class="btn sm-btn" type="button">Request</button>
+            </div>
+            <div class="row">
+              <span class="avatar">L</span><span class="grow"><b>Language learner</b></span
+              ><button class="btn secondary-btn sm-btn" type="button" disabled>Request sent</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: requests · matches (request / sent) · empty "No potential study buddies found
+          yet."
+        </footer>
+      </section>
+
+      <!-- ============ Gamification ============ -->
+      <section class="specimen" data-component="components/quests">
+        <header>
+          <h2>Quests</h2>
+          <code>components/quests</code>
+        </header>
+        <div class="body">
+          <div class="title">Daily quests</div>
+          <ul class="list plain-list" aria-label="Quests">
+            <li>
+              <div class="row">
+                <span class="grow">Send 10 messages</span><span class="muted">7 / 10</span>
+              </div>
+              <div class="progress" role="progressbar" aria-valuenow="7" aria-valuemax="10">
+                <span style="inline-size: 70%"></span>
+              </div>
+              <div class="muted">Reward: 20 Coins</div>
+            </li>
+            <li>
+              <div class="row">
+                <span class="grow">Correct a partner's sentence</span
+                ><span class="muted">1 / 1</span>
+              </div>
+              <div class="progress done"><span style="inline-size: 100%"></span></div>
+              <div class="muted">Reward: 15 Coins</div>
+            </li>
+          </ul>
+          <div class="alert error row" role="alert">
+            <span class="grow">Error</span
+            ><button class="btn secondary-btn sm-btn" type="button">Retry</button>
+          </div>
+        </div>
+        <footer>States: in progress · complete · error + retry · loading · empty</footer>
+      </section>
+
+      <section class="specimen" data-component="components/leaderboard">
+        <header>
+          <h2>Top correctors</h2>
+          <code>components/leaderboard</code>
+        </header>
+        <div class="body">
+          <div class="display h-lg">Top Correctors</div>
+          <div class="card row">
+            <span class="rank display">1</span><span class="avatar ember">M</span>
+            <div class="grow">
+              <b>Mariam</b>
+              <div class="muted">Correction Ratio: 2.41</div>
+            </div>
+            <span class="badge success">Serious Learner</span>
+          </div>
+          <div class="card row">
+            <span class="rank display">2</span><span class="avatar">陳</span>
+            <div class="grow">
+              <b>Chén Wěi</b>
+              <div class="muted">Correction Ratio: 1.87</div>
+            </div>
+            <span class="badge tide">64 days</span>
+          </div>
+          <div class="card row">
+            <span class="rank display">3</span><span class="avatar">A</span>
+            <div class="grow">
+              <b>Aiko</b>
+              <div class="muted">Correction Ratio: 1.52</div>
+            </div>
+            <span class="badge tide">21 days</span>
+          </div>
+          <p class="muted">Empty: "No correctors yet."</p>
+        </div>
+        <footer>States: ranked list · serious-learner pill · loading · error · empty</footer>
+      </section>
+
+      <section class="specimen" data-component="components/word-of-the-day">
+        <header>
+          <h2>Word of the day</h2>
+          <code>components/word-of-the-day</code>
+        </header>
+        <div class="body">
+          <section class="card stack" aria-label="Word of the day">
+            <div class="state-label">Word of the day</div>
+            <div class="row wrap">
+              <span class="wotd" lang="ja">学ぶ</span><span class="secondary">to learn</span
+              ><span class="muted push">Japanese</span>
+            </div>
+            <p class="muted"><i lang="ja">毎日、新しいことを学びます。</i></p>
+          </section>
+          <section class="card stack" dir="rtl" lang="ar">
+            <div class="state-label">كلمة اليوم</div>
+            <div class="row wrap">
+              <span class="wotd">صَدِيق</span><span class="secondary">friend</span
+              ><span class="muted push">Arabic</span>
+            </div>
+          </section>
+        </div>
+        <footer>States: LTR · RTL · without example</footer>
+      </section>
+
+      <section class="specimen" data-component="components/streak-counter">
+        <header>
+          <h2>Streak counter</h2>
+          <code>components/streak-counter</code>
+        </header>
+        <div class="body">
+          <section class="card stack" aria-label="Streak counter">
+            <div class="state-label">Current streak</div>
+            <div class="row">
+              <span class="display streak-num accent-text">14</span
+              ><span class="secondary">days</span>
+            </div>
+          </section>
+        </div>
+        <footer>States: count (0 → n)</footer>
+      </section>
+
+      <section class="specimen" data-component="components/study-streak-counter">
+        <header>
+          <h2>Study streak counter</h2>
+          <code>components/study-streak-counter</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <span class="pill-count"><span class="display">1</span> day</span
+            ><span class="pill-count"><span class="display">14</span> days</span
+            ><span class="muted">Loading...</span>
+          </div>
+        </div>
+        <footer>Compact header counter. States: singular · plural · loading</footer>
+      </section>
+
+      <section class="specimen" data-component="components/study-streak-widget">
+        <header>
+          <h2>Daily study streak</h2>
+          <code>components/study-streak-widget</code>
+        </header>
+        <div class="body">
+          <div class="card row">
+            <span class="big" aria-hidden="true">🔥</span>
+            <div class="grow" aria-live="polite">
+              <div class="muted">Daily Study Streak</div>
+              <div class="display streak-num accent-text">14 Days</div>
+            </div>
+            <button class="btn sm-btn" type="button">Check In</button>
+          </div>
+          <div class="card row">
+            <span class="big" aria-hidden="true">🔥</span>
+            <div class="grow">
+              <div class="muted">Daily Study Streak</div>
+              <div class="display streak-num danger-text">13 Days</div>
+            </div>
+            <button class="btn sm-btn" type="button">Check In</button>
+          </div>
+          <div class="muted">Error with cached fallback (danger tone) · Loading...</div>
+        </div>
+        <footer>States: value · error with fallback · error · loading</footer>
+      </section>
+
+      <section class="specimen" data-component="components/streak-congratulations">
+        <header>
+          <h2>Streak congratulations</h2>
+          <code>components/streak-congratulations</code>
+        </header>
+        <div class="body">
+          <div class="scrim celebrate" role="dialog" aria-label="7-day streak">
+            <div class="confetti" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="huge" aria-hidden="true">🎉</span>
+            <div class="display cele-title">7-day streak!</div>
+            <p class="cele-sub">You've studied 7 days in a row. Keep the momentum going.</p>
+            <button class="btn" type="button">Keep going</button>
+          </div>
+        </div>
+        <footer>States: animated confetti · reduced-motion (static confetti, no canvas)</footer>
+      </section>
+
+      <section class="specimen" data-component="components/streak-celebration-overlay">
+        <header>
+          <h2>Streak milestone overlay</h2>
+          <code>components/streak-celebration-overlay</code>
+        </header>
+        <div class="body">
+          <div class="scrim celebrate">
+            <div class="confetti" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="display cele-title">30 days!</div>
+            <p class="cele-sub">A whole month of practice. Your partners notice.</p>
+            <button class="btn" type="button">Close</button>
+          </div>
+        </div>
+        <footer>
+          Shown on Home when a 7/30/100-day threshold is first crossed. Reduced motion: confetti
+          static.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/celebration-overlay">
+        <header>
+          <h2>Celebration overlay</h2>
+          <code>components/celebration-overlay</code>
+        </header>
+        <div class="body">
+          <div class="scrim celebrate">
+            <div class="dialog stack center-text">
+              <span class="huge" aria-hidden="true">🏆</span>
+              <div class="display cele-title ink">100 days!</div>
+              <p class="secondary">You've kept your streak for 100 days.</p>
+              <button class="btn sm-btn" type="button" aria-label="Close">Close</button>
+            </div>
+          </div>
+          <div class="row center">
+            <span class="chip">🎉 7 days</span><span class="chip">🥳 30 days</span
+            ><span class="chip on">🏆 100 days</span>
+          </div>
+        </div>
+        <footer>
+          States: 7 / 30 / 100 milestones · backdrop dismiss · reduced motion (no canvas confetti)
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>

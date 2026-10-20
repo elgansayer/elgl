@@ -1,0 +1,85 @@
+name: Design System Health
+
+# Deterministic Relay design audit. On pull requests it reports findings in the job summary (and
+# fails only on token-level contrast regressions); weekly it files de-duplicated
+# `design-improvement` issues that the Factory picks up and implements.
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/design-preview/**'
+      - 'frontend/src/styles.scss'
+      - 'design-sync.manifest.json'
+      - 'scripts/design-sync/**'
+      - '.github/workflows/design-system-health.yml'
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: design-system-health-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Design-sync unit tests and coverage gate
+        run: node --test scripts/design-sync/design-sync.test.mjs && node scripts/design-sync/check-full-coverage.mjs
+      - name: Static design audit
+        run: node scripts/design-sync/audit-design.mjs --write
+      - name: Fail on runtime token contrast regressions
+        if: github.event_name == 'pull_request'
+        run: |
+          node -e "
+            const r = require('./reports/design-audit.json');
+            const bad = r.findings.filter((f) => f.rule === 'token-contrast' || f.rule === 'token-missing');
+            const base = Number(process.env.KNOWN_TOKEN_FINDINGS || 0);
+            if (bad.length > base) { console.error(bad); process.exit(1); }
+          "
+        env:
+          # Ratchet: known token contrast findings at the time this gate landed. Lower it as fixes merge.
+          KNOWN_TOKEN_FINDINGS: '6'
+      - name: Job summary
+        if: always()
+        run: cat reports/design-audit.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: File weekly improvement issues
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node -e "
+            const r = require('./reports/design-audit.json');
+            const groups = {};
+            for (const f of r.findings.filter((x) => x.severity !== 'info')) {
+              (groups[f.rule + '|' + f.file] ??= []).push(f);
+            }
+            require('fs').writeFileSync('groups.json', JSON.stringify(groups));
+          "
+          gh label create design-improvement --color C65230 --description 'Automated Relay design improvement' 2>/dev/null || true
+          open_titles="$(gh issue list --state open --label design-improvement --limit 500 --json title -q '.[].title')"
+          node -e "
+            const g = require('./groups.json');
+            for (const [key, list] of Object.entries(g).slice(0, 25)) {
+              const [rule, file] = key.split('|');
+              const body = ['Automated finding from \`scripts/design-sync/audit-design.mjs\`.', '',
+                ...list.map((f) => '- [' + f.severity + '] ' + f.detail + ' <!-- design-audit:' + f.id + ' -->'), '',
+                'Fix the root cause (runtime token, component, or preview), keep Relay tokens, RTL, and AA contrast, and re-run \`npm run audit:design\`.'].join('\n');
+              console.log(JSON.stringify({ title: 'Design audit: ' + rule + ' in ' + file, body }));
+            }
+          " | while IFS= read -r line; do
+            title="$(jq -r .title <<<"$line")"
+            if grep -Fxq "$title" <<<"$open_titles"; then continue; fi
+            gh issue create --title "$title" --body "$(jq -r .body <<<"$line")" --label design-improvement --label factory-ready
+          done

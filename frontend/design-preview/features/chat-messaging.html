@@ -1,0 +1,2343 @@
+<!-- @dsCard group="Features" name="Chat & messaging" subtitle="inbox · bubbles · media · voice · search · reactions · AI · loading/empty/error · light/dark · RTL" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Chat & messaging</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.chat-messaging" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 107 113 130;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 126 132 148;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      .bubble {
+        max-width: 82%;
+        padding: 8px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+        overflow-wrap: anywhere;
+      }
+      .bubble.me {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        margin-inline-start: auto;
+        border-end-end-radius: 4px;
+      }
+      .bubble.them {
+        background: rgb(var(--secondary) / 0.12);
+        border: 1px solid rgb(var(--secondary) / 0.35);
+        border-end-start-radius: 4px;
+      }
+      .bubble .meta {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
+        align-items: center;
+        font-size: 11px;
+        opacity: 0.85;
+        margin-block-start: 4px;
+      }
+      .bubble .fwd {
+        font-size: 11px;
+        font-style: italic;
+        opacity: 0.85;
+        margin: 0 0 2px;
+      }
+      .bubble .mention {
+        font-weight: 700;
+        text-decoration: underline;
+      }
+      .thread {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .sys {
+        align-self: center;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid;
+      }
+      .sys.tide {
+        color: rgb(var(--secondary));
+        border-color: rgb(var(--secondary) / 0.3);
+        background: rgb(var(--secondary) / 0.1);
+      }
+      .sys.danger {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.3);
+        background: rgb(var(--danger) / 0.1);
+      }
+      .sys.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.3);
+        background: rgb(var(--warning) / 0.1);
+      }
+      .sys.muted-sys {
+        color: rgb(var(--text-secondary));
+        border-color: rgb(var(--surface-700));
+        background: rgb(var(--surface-300));
+      }
+      .appbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .appbar h3 {
+        margin: 0;
+        font:
+          700 18px/1.2 'Instrument Sans',
+          sans-serif;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 12px;
+        background: rgb(var(--surface-300));
+      }
+      .tabs button {
+        flex: 1;
+        min-height: 36px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        font: 600 13px inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .tabs button[aria-pressed='true'],
+      .tabs button[aria-checked='true'] {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.12);
+      }
+      .quick {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        text-align: center;
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+      }
+      .quick .ico {
+        width: 44px;
+        height: 44px;
+        margin: 0 auto 4px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+        background: rgb(var(--surface-300));
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding-inline: 12px;
+        border-radius: 12px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700));
+        color: rgb(var(--text-muted));
+        font-size: 14px;
+      }
+      .pills {
+        display: flex;
+        gap: 6px;
+        overflow: hidden;
+      }
+      .convo {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .convo .avatar {
+        position: relative;
+      }
+      .online {
+        position: absolute;
+        inset-block-end: 0;
+        inset-inline-end: 0;
+        width: 11px;
+        height: 11px;
+        border-radius: 999px;
+        background: rgb(var(--success));
+        border: 2px solid rgb(var(--surface-300));
+      }
+      .unread {
+        min-width: 20px;
+        height: 20px;
+        padding-inline: 6px;
+        border-radius: 999px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        display: inline-grid;
+        place-items: center;
+      }
+      .ellipsis {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .composer {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px;
+        border-radius: 16px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .composer .input {
+        flex: 1;
+        min-width: 0;
+        color: rgb(var(--text-muted));
+        font-size: 14px;
+      }
+      .media {
+        border-radius: 14px;
+        overflow: hidden;
+        aspect-ratio: 4 / 3;
+        display: grid;
+        place-items: center;
+        font-size: 42px;
+        background: linear-gradient(
+          135deg,
+          rgb(var(--secondary) / 0.35),
+          rgb(var(--primary) / 0.35)
+        );
+        position: relative;
+      }
+      .media.video::after {
+        content: '▶';
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 18px;
+        background: rgb(var(--surface-900) / 0.55);
+        color: rgb(255 255 255);
+      }
+      .media.round {
+        aspect-ratio: 1;
+        border-radius: 999px;
+        width: 160px;
+      }
+      .dropzone {
+        border: 2px dashed rgb(var(--surface-700));
+        border-radius: 14px;
+        padding: 18px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .switch {
+        width: 44px;
+        height: 26px;
+        border-radius: 999px;
+        background: rgb(var(--primary));
+        position: relative;
+        flex: none;
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        inset-block-start: 3px;
+        inset-inline-end: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: rgb(var(--on-fill));
+      }
+      .reacts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .react {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        min-height: 32px;
+        padding-inline: 10px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        font-size: 13px;
+      }
+      .react[aria-pressed='true'] {
+        border-color: rgb(var(--primary));
+        background: rgb(var(--primary) / 0.12);
+        color: rgb(var(--primary));
+        font-weight: 700;
+      }
+      .quick-emoji {
+        display: flex;
+        gap: 2px;
+        padding: 4px;
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .quick-emoji span {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        font-size: 18px;
+      }
+      .ticks {
+        display: inline-flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .tick {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .tick svg {
+        width: 16px;
+        height: 16px;
+      }
+      .tick.read svg {
+        color: rgb(var(--secondary));
+      }
+      .tick.muted-tick svg {
+        color: rgb(var(--text-muted));
+      }
+      .tooltip {
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        border-radius: 12px;
+        padding: 10px;
+        box-shadow: 0 8px 20px rgb(var(--shadow) / 0.2);
+        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 2px;
+        font-size: 22px;
+        text-align: center;
+      }
+      .emoji-grid span {
+        padding: 4px 0;
+        border-radius: 8px;
+      }
+      .radio-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        font-size: 12px;
+      }
+      .radio-row label {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700));
+      }
+      .radio-row label.on {
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+        font-weight: 700;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        border: 2px solid currentColor;
+        display: inline-block;
+      }
+      .on .dot {
+        background: currentColor;
+        box-shadow: inset 0 0 0 2px rgb(var(--surface-200));
+      }
+      .sticker-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        font-size: 34px;
+        text-align: center;
+      }
+      .sticker-grid span {
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        background: rgb(var(--surface-300));
+      }
+      .menu {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .menu button {
+        min-height: 44px;
+        text-align: start;
+        padding-inline: 14px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        font: 500 15px inherit;
+        color: rgb(var(--text-primary));
+      }
+      .menu button.destructive {
+        color: rgb(var(--danger));
+      }
+      .menu button.cancel {
+        background: rgb(var(--surface-300));
+        text-align: center;
+        font-weight: 600;
+        margin-block-start: 6px;
+      }
+      .menu hr {
+        border: 0;
+        border-top: 1px solid rgb(var(--surface-100));
+        margin: 4px 0;
+        width: 100%;
+      }
+      .link-card {
+        display: flex;
+        flex-direction: column;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+      }
+      .link-card .img {
+        aspect-ratio: 1.91 / 1;
+        display: grid;
+        place-items: center;
+        font-size: 36px;
+        background: rgb(var(--secondary) / 0.2);
+      }
+      .link-card .txt {
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 13px;
+      }
+      .tokens {
+        font-size: 18px;
+        line-height: 1.9;
+      }
+      .tokens .tok {
+        padding: 2px 3px;
+        border-radius: 6px;
+        background: rgb(var(--neon-blue) / 0.16);
+        border-block-end: 2px solid rgb(var(--neon-blue) / 0.6);
+      }
+      .tokens .tok.learning {
+        background: rgb(var(--warning) / 0.16);
+        border-block-end-color: rgb(var(--warning));
+      }
+      .tokens .tok.known {
+        background: transparent;
+        border-block-end-color: transparent;
+      }
+      .tokens .tok.focus {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 1px;
+      }
+      .translit {
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+        font-style: italic;
+      }
+      .rec-orb {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 40px;
+        background: rgb(var(--surface-300));
+        border: 2px solid rgb(var(--surface-700));
+      }
+      .rec-orb.live {
+        background: rgb(var(--danger) / 0.12);
+        border-color: rgb(var(--danger));
+      }
+      .timer {
+        font:
+          700 24px/1 'Instrument Sans',
+          sans-serif;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .player {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 14px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+      }
+      .player .play {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        border: 0;
+      }
+      .player .play[disabled] {
+        opacity: 0.45;
+      }
+      .wave {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: 28px;
+      }
+      .wave i {
+        flex: 1;
+        border-radius: 2px;
+        background: rgb(var(--text-muted) / 0.5);
+      }
+      .wave i.done {
+        background: rgb(var(--primary));
+      }
+      .time {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+        font-variant-numeric: tabular-nums;
+      }
+      .rec-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgb(var(--danger));
+        display: inline-block;
+      }
+      .native-audio {
+        height: 36px;
+        border-radius: 999px;
+        background: rgb(var(--surface-300));
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-inline: 12px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .img-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+      }
+      .img-grid span {
+        aspect-ratio: 1;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        background: rgb(var(--neon-cyan) / 0.25);
+      }
+      .guide {
+        border-radius: 14px;
+        padding: 12px;
+        background: rgb(var(--secondary) / 0.08);
+        border: 1px solid rgb(var(--secondary) / 0.3);
+        font-size: 13px;
+      }
+      .guide h4 {
+        margin: 0 0 4px;
+        color: rgb(var(--secondary));
+        font-size: 13px;
+      }
+      .reply-quote {
+        border-inline-start: 3px solid rgb(var(--secondary));
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgb(var(--surface-300));
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+      }
+      .wall-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .wall-grid span {
+        aspect-ratio: 3 / 4;
+        border-radius: 10px;
+        border: 2px solid transparent;
+      }
+      .wall-grid span.sel {
+        border-color: rgb(var(--primary));
+        box-shadow: 0 0 0 2px rgb(var(--surface-200));
+      }
+      .w1 {
+        background: linear-gradient(160deg, #1e2330, #0d0f15);
+      }
+      .w2 {
+        background: linear-gradient(160deg, #23285a, #0a0c1f);
+      }
+      .w3 {
+        background: linear-gradient(160deg, #2fc6d9, #1a8478);
+      }
+      .w4 {
+        background: linear-gradient(160deg, #f0954a, #c65230);
+      }
+      .aside {
+        border-radius: 14px;
+        padding: 12px;
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--vip) / 0.45);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .scenario {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 52px;
+        padding-inline: 14px;
+        border-radius: 14px;
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .scenario .e {
+        font-size: 22px;
+      }
+      .typing {
+        align-self: flex-start;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+        font-style: italic;
+      }
+      .diff del {
+        color: rgb(var(--danger));
+        text-decoration: line-through;
+      }
+      .diff ins {
+        color: rgb(var(--success));
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .srs-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .srs-row .btn {
+        min-height: 44px;
+        padding: 0 6px;
+        font-size: 12px;
+      }
+      .srs-blue {
+        background: rgb(var(--neon-blue));
+        color: rgb(var(--surface-900));
+      }
+      .srs-yellow {
+        background: rgb(var(--warning));
+      }
+      .srs-known {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .divider {
+        border: 0;
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+        margin: 4px 0;
+        width: 100%;
+      }
+      .fake-checkbox {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+        flex: none;
+      }
+      .spin {
+        display: inline-block;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Chat & messaging</h1>
+        <p>
+          Design-sync ID <code>feature.chat-messaging</code> · every runtime surface in this area is
+          one specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <!-- ============ Inbox ============ -->
+      <section class="specimen" data-component="components/chat-list">
+        <header>
+          <h2>Chat list</h2>
+          <code>components/chat-list</code>
+        </header>
+        <div class="body">
+          <div class="appbar">
+            <button class="icon-btn" type="button" aria-label="Open menu">≡</button>
+            <h3>Language Talks</h3>
+            <button class="icon-btn" type="button" aria-label="New chat">+</button>
+          </div>
+          <div class="tabs">
+            <button type="button" aria-pressed="true">Chats</button
+            ><button type="button" aria-pressed="false">Groups</button>
+          </div>
+          <div class="quick">
+            <div>
+              <div class="ico">📚</div>
+              All Courses
+            </div>
+            <div>
+              <div class="ico">🎮</div>
+              Play
+            </div>
+            <div>
+              <div class="ico">🌐</div>
+              AI Translation
+            </div>
+            <div>
+              <div class="ico">🤖</div>
+              Japanese Ai
+            </div>
+            <div>
+              <div class="ico">⌄</div>
+              More
+            </div>
+          </div>
+          <div class="search"><span aria-hidden="true">🔍</span>Search chats</div>
+          <div class="pills">
+            <button
+              class="icon-btn"
+              type="button"
+              aria-label="Filter options"
+              style="width: 36px; height: 36px"
+            >
+              ≡</button
+            ><span class="chip on">All</span><span class="chip">Unread</span
+            ><span class="chip">Partners</span><span class="chip">VIP</span>
+          </div>
+          <div class="list">
+            <div class="convo">
+              <span class="avatar">陳<span class="online"></span></span>
+              <div class="grow stack" style="gap: 2px">
+                <div class="row">
+                  <span class="title grow ellipsis" dir="auto"
+                    >Chén Wěi <span class="badge vip">VIP</span></span
+                  ><span class="muted">09:41</span>
+                </div>
+                <div class="row">
+                  <span class="secondary grow ellipsis" dir="auto">明天一起练习口语吧！</span
+                  ><span class="unread">3</span>
+                </div>
+              </div>
+              <span title="Archive chat" aria-label="Archive chat">📥</span
+              ><span aria-label="Lock chat">🔓</span>
+            </div>
+            <div class="convo">
+              <span class="avatar ember">م</span>
+              <div class="grow stack" style="gap: 2px">
+                <div class="row">
+                  <span class="title grow ellipsis" dir="auto">مريم</span
+                  ><span class="muted">Yesterday</span>
+                </div>
+                <div class="row">
+                  <span class="secondary grow ellipsis" dir="auto">شكراً على التصحيح!</span>
+                </div>
+              </div>
+              <span aria-label="Archive chat">📥</span><span aria-label="Lock chat">🔓</span>
+            </div>
+            <button
+              type="button"
+              class="row"
+              style="border: 0; font: 600 14px inherit; color: rgb(var(--text-secondary))"
+              aria-expanded="false"
+            >
+              <span>📁</span>Archived chats <span class="muted">(2)</span>
+            </button>
+            <button
+              type="button"
+              class="row"
+              style="border: 0; font: 600 14px inherit; color: rgb(var(--text-secondary))"
+            >
+              <span>🔒</span>Locked chats <span class="muted">(1)</span>
+            </button>
+          </div>
+          <hr class="divider" />
+          <div class="state-label">Loading</div>
+          <div class="card row">
+            <span class="spin">◌</span><span class="secondary">Loading conversations...</span>
+          </div>
+          <div class="state-label">Empty</div>
+          <div class="card stack" style="text-align: center; align-items: center">
+            <span style="font-size: 36px">💬</span><span class="title">No Messages</span>
+            <span class="secondary"
+              >Your inbox is empty! Find language partners and start exchanging messages.</span
+            >
+            <a class="btn" href="#">Browse Discovery</a>
+          </div>
+          <div class="state-label">Archive error</div>
+          <div class="alert error row" role="alert">
+            <span class="grow">Something went wrong. Please try again.</span
+            ><button class="btn secondary-btn" type="button">Retry</button>
+          </div>
+        </div>
+        <footer>
+          States: populated (online, VIP, unread, archive/lock actions, archived &amp; locked
+          folders) · loading · empty · error · Groups tab embeds groups-discovery
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/chat-view">
+        <header>
+          <h2>Chat view</h2>
+          <code>components/chat-view</code>
+        </header>
+        <div class="body">
+          <div class="thread">
+            <div class="bubble them" lang="ja">
+              こんにちは！今日はどうでしたか？
+              <div class="meta">09:30</div>
+            </div>
+            <div class="bubble me">
+              今日はとても忙しかったです 😅
+              <div class="meta">09:31 ✓✓</div>
+            </div>
+            <div class="bubble them" lang="ja">
+              お疲れさまでした！
+              <div class="meta">09:32</div>
+            </div>
+          </div>
+          <div class="composer"><span class="input">Type a message...</span></div>
+        </div>
+        <footer>
+          Lightweight message stream: renders chat-message per item, filters blocked senders, Enter
+          sends
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/chat-message">
+        <header>
+          <h2>Chat message</h2>
+          <code>components/chat-message</code>
+        </header>
+        <div class="body">
+          <div class="thread">
+            <div class="state-label">Text with @mention · partner (Tide)</div>
+            <div class="bubble them" dir="auto">
+              <span class="mention">@maria</span> 你的中文进步很大！
+              <div class="meta">10:02</div>
+            </div>
+            <div class="state-label">Own · forwarded · read (Ember)</div>
+            <div class="bubble me">
+              <p class="fwd">Forwarded</p>
+              See you at the language party tonight!
+              <div class="meta">
+                10:04
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  aria-hidden="true"
+                >
+                  <path d="M2 13l4 4L16 7M8 13l4 4L22 7" />
+                </svg>
+              </div>
+            </div>
+            <div class="state-label">Voice message · transcription · speed</div>
+            <div class="bubble them">
+              <div class="row">
+                <button
+                  class="icon-btn"
+                  type="button"
+                  aria-label="Play voice message"
+                  style="width: 36px; height: 36px"
+                >
+                  ▶</button
+                ><span class="grow">Voice message</span
+                ><button class="chip" type="button">1.5×</button>
+              </div>
+              <div class="muted" lang="zh">我今天去了图书馆。</div>
+              <div class="meta">10:05</div>
+            </div>
+            <div class="bubble me">
+              <div class="row">
+                <button
+                  class="icon-btn"
+                  type="button"
+                  style="width: 36px; height: 36px"
+                  aria-label="Play voice message"
+                >
+                  ▶</button
+                ><span class="grow">Voice message</span><span>1×</span>
+              </div>
+              <div style="font-size: 12px; opacity: 0.85">Transcribing...</div>
+              <div class="meta">10:06 ✓</div>
+            </div>
+            <div class="state-label">Correction (visual diff)</div>
+            <div class="bubble them diff">
+              私は昨日学校<del>に</del><ins>へ</ins>行きました。
+              <div style="font-size: 12px; margin-block-start: 4px">
+                Use へ for direction of movement.
+              </div>
+              <div class="meta">10:07</div>
+            </div>
+            <div class="state-label">Doodle</div>
+            <div class="bubble me" style="padding: 4px">
+              <div
+                class="media"
+                style="aspect-ratio: 1; width: 160px; font-size: 48px"
+                role="img"
+                aria-label="Doodle"
+              >
+                ✏️🐱
+              </div>
+              <div class="meta" style="padding-inline: 8px">10:08 ✓✓</div>
+            </div>
+          </div>
+          <div class="state-label">First message of a chat → cultural tip above</div>
+          <div class="guide">
+            <h4>Cultural Etiquette Guide</h4>
+            In Japan, it's polite to use です/ます forms with new partners until invited to be
+            casual.
+          </div>
+        </div>
+        <footer>
+          States: text · mention · forwarded · voice (playing speed, transcribing, transcript) ·
+          correction · doodle · link preview · delivery sent/delivered/read · blocked (hidden)
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/chat-system-bubble">
+        <header>
+          <h2>System bubble</h2>
+          <code>components/chat-system-bubble</code>
+        </header>
+        <div class="body">
+          <div class="thread">
+            <span class="sys tide" role="status">👤 Chén Wěi updated their profile.</span>
+            <span class="sys danger" role="status">📞 You missed a call from مريم.</span>
+            <span class="sys warning" role="status">✏️ Group renamed to "日本語 Café".</span>
+            <span class="sys tide" role="status">👋 3 member(s) joined the group.</span>
+            <span class="sys muted-sys" role="status">🚪 A member left the group.</span>
+            <span class="sys tide" role="status">📢 Language party starts in 10 minutes</span>
+          </div>
+        </div>
+        <footer>
+          Variants: profileUpdated · missedCall · groupRenamed · memberAdded · memberRemoved ·
+          announcement · fallback systemAlert (aria-live polite)
+        </footer>
+      </section>
+
+      <!-- ============ Media ============ -->
+      <section class="specimen" data-component="components/chat-media-message">
+        <header>
+          <h2>Media message</h2>
+          <code>components/chat-media-message</code>
+        </header>
+        <div class="body">
+          <div class="state-label">Image</div>
+          <div class="media" role="img" aria-label="Shared photo">🏯</div>
+          <div class="state-label">Instant video note (round)</div>
+          <div class="media video round" role="img" aria-label="Instant video note">🙂</div>
+          <div class="state-label">Video</div>
+          <div class="media video" role="img" aria-label="Shared video">🌸</div>
+        </div>
+        <footer>
+          States: image (opens new tab) · instant video note · video with native controls · unsafe
+          URL → nothing rendered
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/chat-media-picker">
+        <header>
+          <h2>Media picker</h2>
+          <code>components/chat-media-picker</code>
+        </header>
+        <div class="body">
+          <div class="sheet stack">
+            <div class="row">
+              <div class="grow">
+                <div class="title">Photo / video</div>
+                <div class="muted">
+                  Standard uses less data. HD keeps more image detail and allows larger videos.
+                </div>
+              </div>
+              <button class="icon-btn" type="button" aria-label="Close media picker">✕</button>
+            </div>
+            <label class="dropzone"
+              ><span class="title">IMG_2041.jpg</span
+              ><span class="muted">JPEG, PNG, WebP, MP4, WebM or MOV</span></label
+            >
+            <div class="media" role="img" aria-label="Selected photo preview">🗻</div>
+            <div class="row">
+              <div class="grow">
+                <div class="title">HD quality</div>
+                <div class="muted">Higher quality, larger upload</div>
+              </div>
+              <span class="fake-checkbox" aria-hidden="true">✓</span>
+            </div>
+            <p class="alert error" role="alert">Videos must be 50 MB or smaller.</p>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn secondary-btn" type="button">Cancel</button
+              ><button class="btn" type="button">Upload</button>
+            </div>
+          </div>
+          <div class="state-label">Uploading</div>
+          <div class="row" style="justify-content: flex-end">
+            <button class="btn secondary-btn" type="button" disabled>Cancel</button
+            ><button class="btn" type="button" disabled>Uploading...</button>
+          </div>
+        </div>
+        <footer>
+          States: empty (Choose a photo or video) · selected with preview · HD toggle · validation
+          error · uploading (disabled)
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/chat-media-share">
+        <header>
+          <h2>Media share</h2>
+          <code>components/chat-media-share</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <button class="chip tide" type="button">📷 Media</button
+            ><button
+              class="chip"
+              type="button"
+              style="color: rgb(var(--accent)); border-color: rgb(var(--accent))"
+            >
+              🎥 Video note
+            </button>
+          </div>
+          <div class="state-label">Send failed after upload</div>
+          <div class="alert error stack" role="alert">
+            <span>Couldn't send your media. Your upload is saved.</span>
+            <div class="row">
+              <button class="btn" type="button">Retry send</button
+              ><button class="btn secondary-btn" type="button">Dismiss</button>
+            </div>
+          </div>
+          <div class="state-label">Retrying</div>
+          <div class="row">
+            <button class="btn" type="button" disabled>Sending…</button
+            ><button class="btn secondary-btn" type="button" disabled>Dismiss</button>
+          </div>
+        </div>
+        <footer>
+          Opens media-picker or instant-video-recorder as modal dialogs · pending-media
+          retry/dismiss
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/media-attachments">
+        <header>
+          <h2>Media attachments</h2>
+          <code>components/media-attachments</code>
+        </header>
+        <div class="body">
+          <p style="margin: 0" dir="auto">
+            Weekend trip to Kyoto - practising my Japanese with locals!
+          </p>
+          <div class="player">
+            <button class="play" type="button" aria-label="Play">▶</button>
+            <div class="wave">
+              <i style="height: 30%"></i><i style="height: 60%"></i><i style="height: 90%"></i
+              ><i style="height: 50%"></i><i style="height: 70%"></i><i style="height: 35%"></i
+              ><i style="height: 80%"></i><i style="height: 45%"></i>
+            </div>
+            <span class="time">0:00 / 0:12</span>
+          </div>
+          <div class="img-grid"><span>⛩️</span><span>🍵</span><span>🎋</span><span>🍡</span></div>
+        </div>
+        <footer>
+          Composite: text · voice note (audio-player) · image grid (shown when images present)
+        </footer>
+      </section>
+      <!-- ============ Find & react ============ -->
+      <section class="specimen" data-component="components/chat-search">
+        <header>
+          <h2>Chat search</h2>
+          <code>components/chat-search</code>
+        </header>
+        <div class="body">
+          <div class="search" style="color: rgb(var(--text-primary))">
+            <span aria-hidden="true">🔍</span>図書館
+          </div>
+          <div class="tabs" role="radiogroup">
+            <button type="button" role="radio" aria-checked="true">This chat</button
+            ><button type="button" role="radio" aria-checked="false">All chats</button>
+          </div>
+          <div class="pills" role="radiogroup">
+            <span class="chip on">All</span><span class="chip">text</span
+            ><span class="chip">voice</span><span class="chip">correction</span
+            ><span class="chip">doodle</span><span class="chip">gift</span>
+          </div>
+          <div class="list">
+            <div class="stack" style="gap: 2px">
+              <span class="row"
+                ><span class="chip" style="padding: 0 6px">#a1b2c3d4</span
+                ><span class="title">Chén Wěi</span></span
+              ><span class="secondary" lang="ja" dir="auto"
+                >明日<mark>図書館</mark>で勉強しましょう</span
+              ><span class="muted">20/10/26, 09:12</span>
+            </div>
+            <div class="stack" style="gap: 2px">
+              <span class="title">You</span
+              ><span class="secondary" dir="auto">The <mark>図書館</mark> closes at 8pm</span
+              ><span class="muted">19/10/26, 18:40</span>
+            </div>
+          </div>
+          <div class="state-label">Searching · no results · error</div>
+          <div class="muted" role="status">Searching…</div>
+          <div class="muted" role="status">No results</div>
+          <div class="alert error row" role="alert">
+            <span class="grow">Error</span
+            ><button class="btn secondary-btn" type="button">Retry</button>
+          </div>
+        </div>
+        <footer>
+          States: results (within / global with room tag) · type filter · searching · no results ·
+          error+retry. ⚠ chatSearch.* keys have no English translation yet
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/message-reaction-bar">
+        <header>
+          <h2>Reaction bar</h2>
+          <code>components/message-reaction-bar</code>
+        </header>
+        <div class="body">
+          <div class="bubble them" lang="ar" dir="rtl">
+            مبروك على الامتحان! 🎉
+            <div class="meta">11:20</div>
+          </div>
+          <div class="reacts">
+            <button class="react" type="button" aria-pressed="true" aria-label="❤️ 2">❤️ 2</button>
+            <button class="react" type="button" aria-pressed="false" aria-label="😂 1">😂 1</button>
+            <div class="quick-emoji">
+              <span>❤️</span><span>😂</span><span>👍</span><span>😮</span><span>😢</span
+              ><span>🙏</span>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: reacted by me (pressed) · others' reactions · quick-emoji tray (6 defaults)
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/read-receipt">
+        <header>
+          <h2>Read receipt</h2>
+          <code>components/read-receipt</code>
+        </header>
+        <div class="body">
+          <div class="ticks">
+            <span class="tick muted-tick"
+              ><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm.5-10.75v4.19l2.97 1.72-.75 1.25L7.5 9.06V4.25h1z"
+                /></svg
+              >Sending</span
+            >
+            <span class="tick muted-tick"
+              ><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+                /></svg
+              >Sent</span
+            >
+            <span class="tick muted-tick"
+              ><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
+                />
+                <path
+                  d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+                /></svg
+              >Delivered</span
+            >
+            <span class="tick read"
+              ><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
+                />
+                <path
+                  d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+                /></svg
+              >Read (Tide)</span
+            >
+          </div>
+          <div class="state-label">Group detail tooltip (hover / tap / Enter)</div>
+          <div class="tooltip" role="tooltip">
+            <strong>Read by</strong>
+            <div class="row">
+              <span class="avatar sm">陳</span><span class="grow">Chén Wěi</span
+              ><span class="muted">2m ago</span>
+            </div>
+            <div class="row">
+              <span class="avatar sm ember">م</span><span class="grow" dir="auto">مريم</span
+              ><span class="muted">5m ago</span>
+            </div>
+            <span class="muted">Read by 2 of 6</span><span class="muted">+1 more</span>
+          </div>
+        </div>
+        <footer>
+          States: sending · sent · delivered · read · group tooltip with readers/count/overflow. ⚠
+          readReceipts.* keys untranslated
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/quick-replies">
+        <header>
+          <h2>Quick replies</h2>
+          <code>components/quick-replies</code>
+        </header>
+        <div class="body">
+          <div class="reacts">
+            <button
+              class="btn secondary-btn"
+              type="button"
+              style="min-height: 36px; font-size: 13px"
+            >
+              Hello! How can I help you today?
+            </button>
+            <button
+              class="btn secondary-btn"
+              type="button"
+              style="min-height: 36px; font-size: 13px"
+            >
+              Where are you from?
+            </button>
+            <button
+              class="btn secondary-btn"
+              type="button"
+              style="min-height: 36px; font-size: 13px"
+            >
+              What languages do you speak?
+            </button>
+            <button
+              class="btn secondary-btn"
+              type="button"
+              style="min-height: 36px; font-size: 13px"
+            >
+              How are you?
+            </button>
+          </div>
+          <div class="composer">
+            <span class="input">Type a message...</span
+            ><button class="btn" type="button" style="min-height: 36px">Send</button>
+          </div>
+        </div>
+        <footer>Hidden when no replies · wraps at 390px</footer>
+      </section>
+
+      <section class="specimen" data-component="components/emoji-picker">
+        <header>
+          <h2>Emoji picker</h2>
+          <code>components/emoji-picker</code>
+        </header>
+        <div class="body">
+          <div class="search">Search emoji...</div>
+          <div class="radio-row" role="radiogroup" aria-label="Emoji category">
+            <label class="on"><span class="dot"></span>Smileys</label
+            ><label><span class="dot"></span>People</label
+            ><label><span class="dot"></span>Animals</label
+            ><label><span class="dot"></span>Food</label
+            ><label><span class="dot"></span>Travel</label
+            ><label><span class="dot"></span>Activities</label
+            ><label><span class="dot"></span>Objects</label
+            ><label><span class="dot"></span>Symbols</label
+            ><label><span class="dot"></span>Flags</label>
+          </div>
+          <div class="emoji-grid">
+            <span>😀</span><span>😃</span><span>😄</span><span>😁</span><span>😆</span
+            ><span>😅</span><span>🤣</span><span>😂</span><span>🙂</span><span>🙃</span
+            ><span>😉</span><span>😊</span><span>😇</span><span>🥰</span><span>😍</span
+            ><span>🤩</span><span>😘</span><span>😗</span><span>😚</span><span>😙</span
+            ><span>😋</span><span>😛</span><span>😜</span><span>🤪</span>
+          </div>
+        </div>
+        <footer>
+          States: category radio group · search filter · grid (each emoji a labelled button)
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/sticker-picker">
+        <header>
+          <h2>Sticker picker</h2>
+          <code>components/sticker-picker</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack">
+            <div class="row">
+              <span class="title grow">Stickers</span
+              ><button class="icon-btn" type="button" aria-label="Close">✕</button>
+            </div>
+            <div class="secondary" style="font-weight: 700">Free Stickers</div>
+            <div class="sticker-grid">
+              <span>🐼</span><span>👋</span><span>🎉</span><span>🙏</span>
+            </div>
+            <div class="row">
+              <span class="secondary grow" style="font-weight: 700">Kawaii Cats</span
+              ><span class="badge tide">ANIMATED</span>
+            </div>
+            <div class="sticker-grid">
+              <span>😺</span><span>😻</span><span>🙀</span><span>😹</span>
+            </div>
+          </div>
+        </div>
+        <footer>Spartan dialog · default pack + unlocked packs · animated badge</footer>
+      </section>
+
+      <section class="specimen" data-component="components/long-press-context-menu">
+        <header>
+          <h2>Message actions menu</h2>
+          <code>components/long-press-context-menu</code>
+        </header>
+        <div class="body">
+          <button
+            class="btn secondary-btn"
+            type="button"
+            aria-haspopup="dialog"
+            style="min-height: 36px; font-size: 13px"
+          >
+            Open message actions
+          </button>
+          <div class="sheet menu" role="dialog" aria-label="Message actions">
+            <button type="button">Reply</button><button type="button">Copy</button
+            ><button type="button">Translate</button><button type="button">Simplify</button
+            ><button type="button">Transliterate</button><button type="button">Speak</button
+            ><button type="button">Correct</button><button type="button">Request correction</button
+            ><button type="button">Explanation</button><button type="button">Favourite</button>
+            <hr />
+            <button type="button" class="destructive">Report</button
+            ><button type="button" class="destructive">Block</button>
+            <button type="button" class="cancel">Cancel</button>
+          </div>
+          <div class="state-label">Simplify dialog · result / error</div>
+          <div class="dialog stack">
+            <div class="title">✅ Simplified:</div>
+            <div class="card">
+              <div class="muted">Original sentence</div>
+              <div lang="ja">彼の発言は物議を醸した。</div>
+            </div>
+            <p style="margin: 0" lang="ja">彼の言葉で、みんながもめました。</p>
+            <div class="alert error" role="alert">
+              You have made too many simplification requests. Please wait and try again.
+            </div>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn secondary-btn" type="button">Retry</button
+              ><button class="btn" type="button">Close</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          Long-press / right-click / button opens · text-only actions hidden for non-text · Simplify
+          &amp; Explanation dialogs: loading · result · rate_limit/auth/empty/request errors
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/link-preview-card">
+        <header>
+          <h2>Link preview card</h2>
+          <code>components/link-preview-card</code>
+        </header>
+        <div class="body">
+          <div class="bubble me" style="max-width: 100%">
+            Check this article 👇
+            <div class="link-card" style="margin-block-start: 8px">
+              <div class="img">📰</div>
+              <div class="txt">
+                <span class="muted" dir="auto">NHK Easy News</span
+                ><strong dir="auto">やさしい日本語で読むニュース</strong
+                ><span class="secondary" dir="auto"
+                  >Short news stories written in simple Japanese for learners.</span
+                ><span class="muted" dir="ltr">www3.nhk.or.jp</span>
+              </div>
+            </div>
+          </div>
+          <div class="state-label">Image failed → text-only</div>
+          <div class="link-card">
+            <div class="txt">
+              <strong dir="auto">Duolingo vs. tandem learning</strong
+              ><span class="muted" dir="ltr">example.com</span>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: with image · image error fallback · unsafe URL → hidden · no-referrer
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/tokenised-text">
+        <header>
+          <h2>Tokenised text</h2>
+          <code>components/tokenised-text</code>
+        </header>
+        <div class="body">
+          <div class="tokens" lang="ja" dir="auto">
+            <span class="tok known">私</span><span class="tok known">は</span
+            ><span class="tok learning">毎日</span
+            ><span class="tok focus" role="button" tabindex="0">図書館</span
+            ><span class="tok known">で</span><span class="tok">勉強</span
+            ><span class="tok known">します</span>。
+          </div>
+          <div class="translit" dir="ltr">watashi wa mainichi toshokan de benkyō shimasu.</div>
+          <div class="state-label">Save selection as flashcard</div>
+          <div class="dialog stack">
+            <div class="title">Save</div>
+            <div class="secondary" lang="ja">図書館で勉強</div>
+            <p class="alert error" role="alert">Something went wrong. Please try again.</p>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn secondary-btn" type="button">Cancel</button
+              ><button class="btn" type="button" aria-busy="true" disabled>Saving...</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          Intl.Segmenter tokens: new (blue) · learning (yellow) · known · keyboard-focusable words ·
+          transliteration · flashcard dialog (idle / saving / error)
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/word-definition-modal">
+        <header>
+          <h2>Word definition</h2>
+          <code>components/word-definition-modal</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack">
+            <div class="row">
+              <div class="grow">
+                <div class="display" style="font-size: 26px; font-weight: 700" lang="ja">
+                  図書館
+                </div>
+                <div class="muted">Spaced repetition status</div>
+              </div>
+              <button class="icon-btn" type="button" aria-label="Close">✕</button>
+            </div>
+            <div class="title" style="font-size: 18px">library</div>
+            <div class="translit">toshokan</div>
+            <div class="secondary">
+              A building or room containing collections of books for people to read or borrow.
+            </div>
+            <button class="btn secondary-btn" type="button">🔊 Listen to pronunciation</button>
+            <div class="muted">Spaced repetition status</div>
+            <div class="srs-row">
+              <button class="btn srs-blue" type="button">Reset to new</button
+              ><button class="btn srs-yellow" type="button">🟡 Save to learning</button
+              ><button class="btn srs-known" type="button">⚪ Mark known</button>
+            </div>
+          </div>
+          <div class="state-label">Loading · lookup failed</div>
+          <div class="card row" role="status">
+            <span class="spin">↻</span><span class="secondary">Looking up…</span>
+          </div>
+          <div class="card stack">
+            <span class="alert error" role="alert">Something went wrong. Please try again.</span
+            ><button class="btn secondary-btn" type="button">Retry</button>
+          </div>
+        </div>
+        <footer>
+          States: loading · failed+retry · result (translation, transliteration, definition, audio,
+          audio error) · SRS save (saving disables, save error). ⚠
+          wordModal.&#123;srsLabel,playAudio,learningBtn,knownBtn,loading&#125; not translated
+        </footer>
+      </section>
+      <!-- ============ Voice & audio ============ -->
+      <section class="specimen" data-component="components/voice-recorder">
+        <header>
+          <h2>Voice note recorder</h2>
+          <code>components/voice-recorder</code>
+        </header>
+        <div class="body">
+          <div class="card stack" style="text-align: center">
+            <div class="row">
+              <span class="title grow" style="text-align: start">🎙️ Voice Note Recorder</span
+              ><button class="icon-btn" type="button" aria-label="Cancel recording">✕</button>
+            </div>
+            <div class="row" style="justify-content: center">
+              <span class="chip">🎙️ Speak clearly</span><span class="chip">📤 Send to chat</span>
+            </div>
+            <div class="state-label">Idle</div>
+            <div class="rec-orb">🎙️</div>
+            <div class="timer">0:00</div>
+            <button class="btn tide" type="button">⏺️ Start recording</button>
+          </div>
+          <div class="card stack" style="text-align: center">
+            <div class="state-label">Recording</div>
+            <div class="rec-orb live pulse">🔴</div>
+            <div class="timer">0:14</div>
+            <button class="btn danger" type="button">⏹️ Stop recording</button>
+          </div>
+          <div class="card stack" style="text-align: center">
+            <div class="state-label">Preview → uploading</div>
+            <div class="native-audio">▶ 0:00 / 0:14</div>
+            <button class="btn" type="button">📤 Send voice note</button>
+            <button class="btn secondary-btn" type="button" disabled>⏳ Uploading…</button>
+          </div>
+        </div>
+        <footer>
+          States: idle · recording · preview/send · uploading (disabled). Copy note: the "Uploading
+          to Cloudflare R2..." string exposes infrastructure - recommend "Uploading…"
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/audio-player">
+        <header>
+          <h2>Audio player</h2>
+          <code>components/audio-player</code>
+        </header>
+        <div class="body">
+          <div class="state-label">Paused</div>
+          <div class="player" role="group" aria-label="Audio player">
+            <button class="play" type="button" aria-label="Play">▶</button>
+            <div class="wave">
+              <i style="height: 30%"></i><i style="height: 55%"></i><i style="height: 85%"></i
+              ><i style="height: 40%"></i><i style="height: 70%"></i><i style="height: 95%"></i
+              ><i style="height: 50%"></i><i style="height: 35%"></i><i style="height: 65%"></i
+              ><i style="height: 25%"></i>
+            </div>
+            <span class="time">0:00 / 0:18</span>
+          </div>
+          <div class="state-label">Playing (progress fills Ember)</div>
+          <div class="player" role="group" aria-label="Audio player">
+            <button class="play" type="button" aria-label="Pause">❚❚</button>
+            <div class="wave">
+              <i class="done" style="height: 30%"></i><i class="done" style="height: 55%"></i
+              ><i class="done" style="height: 85%"></i><i class="done" style="height: 40%"></i
+              ><i style="height: 70%"></i><i style="height: 95%"></i><i style="height: 50%"></i
+              ><i style="height: 35%"></i><i style="height: 65%"></i><i style="height: 25%"></i>
+            </div>
+            <span class="time">0:07 / 0:18</span>
+          </div>
+          <div class="state-label">Error</div>
+          <div class="player">
+            <button class="play" type="button" disabled aria-label="Play">▶</button>
+            <div class="wave">
+              <i style="height: 20%"></i><i style="height: 20%"></i><i style="height: 20%"></i
+              ><i style="height: 20%"></i>
+            </div>
+            <span class="time" style="color: rgb(var(--danger))">Unable to play this audio</span>
+          </div>
+        </div>
+        <footer>
+          States: paused · playing · seekable range (aria-valuetext) · error (controls disabled)
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/audio-recorder">
+        <header>
+          <h2>Audio intro recorder</h2>
+          <code>components/audio-recorder</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <span class="muted">Current Intro</span>
+            <div class="native-audio">▶ 0:00 / 0:22</div>
+          </div>
+          <div class="state-label">Idle</div>
+          <button class="btn" type="button">Record</button>
+          <div class="state-label">Recording (max 30 s)</div>
+          <div class="card row">
+            <span class="rec-dot pulse"></span><span class="grow">12 s / 30 s</span
+            ><button class="btn danger" type="button">Stop</button>
+          </div>
+          <div class="state-label">Preview</div>
+          <div class="card stack">
+            <div class="native-audio">▶ 0:00 / 0:12</div>
+            <div class="row">
+              <button class="btn" type="button">Upload</button
+              ><button class="btn secondary-btn" type="button">Discard</button>
+            </div>
+          </div>
+          <div class="state-label">Error</div>
+          <p class="alert error" style="margin: 0">Microphone access was denied.</p>
+        </div>
+        <footer>
+          States: existing intro · idle · recording w/ 30 s cap · preview upload/discard · uploading
+          (Loading…) · error
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/text-to-speech">
+        <header>
+          <h2>Text to speech</h2>
+          <code>components/text-to-speech</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <p style="margin: 0" lang="ko">오늘 날씨가 정말 좋네요!</p>
+            <div class="row">
+              <button
+                class="btn secondary-btn"
+                type="button"
+                aria-pressed="false"
+                style="min-height: 36px; font-size: 13px"
+              >
+                🔊 Read aloud
+              </button>
+            </div>
+          </div>
+          <div class="state-label">Speaking</div>
+          <div class="row">
+            <button
+              class="btn secondary-btn"
+              type="button"
+              aria-pressed="true"
+              style="
+                min-height: 36px;
+                font-size: 13px;
+                border-color: rgb(var(--primary));
+                color: rgb(var(--primary));
+              "
+            >
+              ⏹️ Stop reading
+            </button>
+          </div>
+        </div>
+        <footer>
+          States: idle · speaking (aria-pressed). Note: translation strings already contain the
+          emoji, so the template's own icon span duplicates it - drop one
+        </footer>
+      </section>
+
+      <!-- ============ Chat support ============ -->
+      <section class="specimen" data-component="components/cultural-tip">
+        <header>
+          <h2>Cultural tip</h2>
+          <code>components/cultural-tip</code>
+        </header>
+        <div class="body">
+          <div class="guide" role="region" aria-label="Cultural Etiquette Guide">
+            <h4>Cultural Etiquette Guide</h4>
+            في الثقافة العربية، يُفضَّل بدء المحادثة بالسؤال عن الحال قبل الدخول في الموضوع.
+          </div>
+          <div class="guide" role="region" aria-label="Cultural Etiquette Guide">
+            <h4>Cultural Etiquette Guide</h4>
+            Japanese speakers often avoid a direct "no" - listen for ちょっと… as a soft refusal.
+          </div>
+        </div>
+        <footer>
+          Shown above the first message when the partner's language is known · hidden while loading
+          / on error
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="chat/threaded-reply">
+        <header>
+          <h2>Threaded reply</h2>
+          <code>chat/threaded-reply</code>
+        </header>
+        <div class="body">
+          <div class="reply-quote">
+            <div class="row">
+              <span class="avatar sm">陳</span><span class="title grow">Chén Wěi</span
+              ><button
+                class="btn ghost"
+                type="button"
+                style="min-height: 32px; padding: 0 8px; font-size: 12px"
+              >
+                Cancel Reply
+              </button>
+            </div>
+            <span class="secondary ellipsis" lang="zh">明天一起练习口语吧！</span>
+          </div>
+          <div class="composer"><span class="input">Type a message...</span></div>
+          <div class="state-label">Unknown sender</div>
+          <div class="reply-quote">
+            <div class="row">
+              <span class="title grow">Unknown User</span
+              ><button
+                class="btn ghost"
+                type="button"
+                style="min-height: 32px; padding: 0 8px; font-size: 12px"
+              >
+                Cancel Reply
+              </button>
+            </div>
+            <span class="secondary">Deleted account message</span>
+          </div>
+        </div>
+        <footer>Pinned above the composer while replying · known / unknown sender</footer>
+      </section>
+
+      <section class="specimen" data-component="chat/wallpaper-picker">
+        <header>
+          <h2>Wallpaper picker</h2>
+          <code>chat/wallpaper-picker</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack">
+              <div class="row">
+                <span class="title grow">Chat Wallpaper</span
+                ><button class="icon-btn" type="button" aria-label="Close">✕</button>
+              </div>
+              <div class="wall-grid">
+                <span class="w1 sel" aria-label="Classic"></span
+                ><span class="w2" aria-label="Midnight"></span
+                ><span class="w3" aria-label="Ocean"></span
+                ><span class="w4" aria-label="Sunset"></span>
+              </div>
+              <div class="field">
+                <label for="wp-url">Custom Wallpaper URL</label>
+                <div class="row">
+                  <input
+                    id="wp-url"
+                    class="grow"
+                    placeholder="https://example.com/image.jpg"
+                  /><button class="btn" type="button">Apply</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          Presets: classic · midnight · ocean · sunset · custom URL · scrim click closes
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/chat-backup">
+        <header>
+          <h2>Chat backup</h2>
+          <code>components/chat-backup</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div class="title" style="font-size: 16px">Chat Backup</div>
+            <button class="btn" type="button">Export Chat History</button>
+            <button class="btn secondary-btn" type="button">Import Chat History</button>
+          </div>
+          <div class="state-label">Exporting · importing</div>
+          <div class="card stack">
+            <span class="muted" role="status">Exporting...</span
+            ><button class="btn" type="button" disabled>Export Chat History</button>
+          </div>
+          <div class="state-label">Errors</div>
+          <p class="alert error" style="margin: 0">Failed to export chat history.</p>
+          <p class="alert error" style="margin: 0">Failed to import chat history.</p>
+        </div>
+        <footer>States: idle · exporting · importing (.json) · export error · import error</footer>
+      </section>
+
+      <!-- ============ AI ============ -->
+      <section class="specimen" data-component="features/premium-ai">
+        <header>
+          <h2>Conversation analysis (Premium AI)</h2>
+          <code>features/premium-ai</code>
+        </header>
+        <div class="body">
+          <div class="aside">
+            <div class="title">Conversation Analysis</div>
+            <div class="secondary">
+              Get a report on grammar patterns, vocabulary range and fluency from this chat.
+            </div>
+            <button class="btn vip" type="button">Conversation Analysis · 🪙 20</button>
+          </div>
+          <div class="state-label">Running · run error</div>
+          <div class="aside">
+            <button class="btn vip" type="button" disabled aria-busy="true">Loading...</button
+            ><span class="muted" role="status" style="color: rgb(var(--danger))">Error</span
+            ><button class="btn vip" type="button">Retry · 🪙 20</button>
+          </div>
+          <div class="state-label">Result</div>
+          <div class="aside" aria-live="polite">
+            <div class="row">
+              <span class="title grow">Conversation Analysis</span
+              ><button class="btn ghost" type="button" style="min-height: 32px">Close</button>
+            </div>
+            <p class="secondary" style="margin: 0">
+              You used 42 unique words this week. Particle は/が errors dropped by 30%. Try more
+              て-form connectors.
+            </p>
+          </div>
+          <div class="state-label">Catalogue loading · error</div>
+          <div class="aside"><span class="muted">Loading...</span></div>
+          <div class="aside row">
+            <span class="grow" style="color: rgb(var(--danger))">Error</span
+            ><button class="btn secondary-btn" type="button">Retry</button>
+          </div>
+        </div>
+        <footer>
+          Coin-priced AI service in the chat room: catalogue loading/error · ready · running · run
+          error · result
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="ai-conversation">
+        <header>
+          <h2>AI conversation</h2>
+          <code>ai-conversation</code>
+        </header>
+        <div class="body">
+          <div class="state-label">Choose scenario</div>
+          <div class="stack">
+            <div class="title" style="font-size: 16px">Choose a role-play scenario</div>
+            <div class="secondary">
+              Practise real-life conversations with an AI partner. Pick a scenario to get started.
+            </div>
+            <button class="scenario" type="button">
+              <span class="e">☕</span>Ordering at a café
+            </button>
+            <button class="scenario" type="button"><span class="e">🏨</span>Hotel check-in</button>
+            <button class="scenario" type="button"><span class="e">💼</span>Job interview</button>
+          </div>
+          <hr class="divider" />
+          <div class="state-label">In conversation</div>
+          <div class="row">
+            <button class="icon-btn" type="button" aria-label="Back to scenarios">←</button
+            ><span style="font-size: 20px">☕</span><span class="title">Ordering at a café</span>
+          </div>
+          <div class="thread">
+            <div class="bubble them tokens" style="font-size: 14px; line-height: 1.7" lang="ja">
+              いらっしゃいませ！ご<span class="tok">注文</span>は何になさいますか？
+            </div>
+            <div class="bubble me" lang="ja">カフェラテをひとつください。</div>
+            <span class="typing">Writing...</span>
+          </div>
+          <div class="composer">
+            <span class="input">Type your message...</span
+            ><button class="btn" type="button" disabled style="min-height: 36px">Send</button>
+          </div>
+        </div>
+        <footer>
+          States: scenario list · conversation (AI = Tide, you = Ember) · AI typing (input disabled)
+          · tap word → word-definition-modal
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>

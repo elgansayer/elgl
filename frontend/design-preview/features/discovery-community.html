@@ -1,0 +1,2264 @@
+<!-- @dsCard group="Features" name="Discovery &amp; community" subtitle="Partner cards · filters · moments · groups · events · notifications · trust &amp; safety" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Discovery &amp; community</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.discovery-community" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 107 113 130;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 126 132 148;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      .gap-note {
+        color: rgb(var(--warning));
+        font-weight: 600;
+      }
+      .states {
+        display: grid;
+        gap: 10px;
+      }
+      .lang-pair {
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .match-card {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .match-card .duet-strip {
+        height: 6px;
+      }
+      .match-card .inner {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .ring-ember {
+        box-shadow: 0 0 0 2px rgb(var(--primary) / 0.45);
+      }
+      .ring-tide {
+        box-shadow: 0 0 0 2px rgb(var(--secondary) / 0.45);
+      }
+      .link-btn {
+        background: none;
+        border: 0;
+        padding: 0 8px;
+        min-height: 44px;
+        margin-inline-start: -8px;
+        color: rgb(var(--primary));
+        font: 600 12px/1 inherit;
+        cursor: pointer;
+        text-align: start;
+      }
+      .range {
+        position: relative;
+        height: 32px;
+      }
+      .range .track {
+        position: absolute;
+        inset-inline: 0;
+        inset-block-end: 12px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+      }
+      .range .fill {
+        position: absolute;
+        inset-block: 0;
+        border-radius: inherit;
+        background: rgb(var(--primary));
+      }
+      .range .thumb {
+        position: absolute;
+        inset-block-end: 5px;
+        width: 20px;
+        height: 20px;
+        margin-inline-start: -10px;
+        border-radius: 999px;
+        background: rgb(var(--surface-50));
+        border: 3px solid rgb(var(--primary));
+        box-shadow: 0 1px 3px rgb(var(--shadow) / 0.3);
+      }
+      .range.disabled {
+        opacity: 0.4;
+      }
+      .boundary {
+        text-align: center;
+        border: 1px solid rgb(var(--danger) / 0.3);
+        background: rgb(var(--danger) / 0.08);
+        border-radius: 20px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+      .boundary h3 {
+        margin: 0;
+        color: rgb(var(--danger));
+        font-size: 17px;
+        font-weight: 900;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        color: rgb(var(--danger));
+        background: rgb(var(--surface-200));
+        border-radius: 10px;
+        padding: 8px;
+        overflow-wrap: anywhere;
+        text-align: start;
+        width: 100%;
+      }
+      .play {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        border: 0;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        display: grid;
+        place-items: center;
+        margin-inline-start: auto;
+        cursor: pointer;
+      }
+      .wave {
+        display: flex;
+        gap: 2px;
+        align-items: center;
+        height: 16px;
+      }
+      .wave i {
+        display: block;
+        width: 3px;
+        border-radius: 2px;
+        background: rgb(var(--primary));
+      }
+      .app-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .app-bar h3 {
+        margin: 0;
+        font:
+          700 18px/1.2 'Instrument Sans',
+          sans-serif;
+      }
+      .pills {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-block-end: 2px;
+      }
+      .moment {
+        display: flex;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 16px;
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .moment .pinned {
+        font-size: 11px;
+        font-weight: 700;
+        color: rgb(var(--vip));
+        margin-block-end: 4px;
+      }
+      .moment p {
+        margin: 4px 0;
+        font-size: 14px;
+      }
+      .tok {
+        border-block-end: 1px dotted rgb(var(--secondary));
+      }
+      .media-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .media-grid div {
+        aspect-ratio: 1;
+        background: linear-gradient(
+          135deg,
+          rgb(var(--neon-blue) / 0.5),
+          rgb(var(--neon-violet) / 0.5)
+        );
+        display: grid;
+        place-items: center;
+        font-size: 26px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        align-items: center;
+      }
+      .actions span {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .lang-tag {
+        font-size: 11px;
+        color: rgb(var(--secondary));
+        background: rgb(var(--secondary) / 0.12);
+        border-radius: 999px;
+        padding: 1px 8px;
+      }
+      .comment {
+        border-inline-start: 2px solid rgb(var(--surface-100));
+        padding-inline-start: 10px;
+        font-size: 13px;
+      }
+      .diff del {
+        color: rgb(var(--danger));
+      }
+      .diff ins {
+        color: rgb(var(--success));
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .translation {
+        font-size: 13px;
+        font-style: italic;
+        color: rgb(var(--text-secondary));
+      }
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 3px solid rgb(var(--surface-100));
+        border-block-start-color: rgb(var(--primary));
+        margin: 8px auto;
+      }
+      .lightbox {
+        background: rgb(0 0 0 / 0.92);
+        border-radius: 16px;
+        position: relative;
+        aspect-ratio: 4 / 5;
+        display: grid;
+        place-items: center;
+        color: #fff;
+      }
+      .lightbox .img {
+        width: 78%;
+        aspect-ratio: 3 / 4;
+        border-radius: 8px;
+        background: linear-gradient(
+          160deg,
+          rgb(var(--neon-orange) / 0.7),
+          rgb(var(--neon-pink) / 0.6)
+        );
+        display: grid;
+        place-items: center;
+        font-size: 48px;
+      }
+      .lightbox .lb-close {
+        position: absolute;
+        inset-block-start: 8px;
+        inset-inline-end: 8px;
+      }
+      .lightbox .lb-count {
+        position: absolute;
+        inset-block-start: 18px;
+        inset-inline-start: 50%;
+        transform: translateX(-50%);
+        font-size: 13px;
+        background: rgb(255 255 255 / 0.15);
+        padding: 2px 10px;
+        border-radius: 999px;
+      }
+      .lightbox .lb-prev,
+      .lightbox .lb-next {
+        position: absolute;
+        inset-block-start: 50%;
+        transform: translateY(-50%);
+        background: rgb(255 255 255 / 0.15);
+        color: #fff;
+        border: 0;
+      }
+      .lightbox .lb-prev {
+        inset-inline-start: 6px;
+      }
+      .lightbox .lb-next {
+        inset-inline-end: 6px;
+      }
+      .lightbox .dots {
+        position: absolute;
+        inset-block-end: 12px;
+        display: flex;
+        gap: 6px;
+      }
+      .lightbox .dots i {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(255 255 255 / 0.4);
+        display: block;
+      }
+      .lightbox .dots i.on {
+        background: #fff;
+        width: 20px;
+      }
+      .share-targets {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+      }
+      .share-targets .bubble {
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        margin: 0 auto 4px;
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+        color: rgb(var(--on-fill));
+      }
+      .copy-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        background: rgb(var(--surface-100));
+        border-radius: 10px;
+        padding: 6px;
+      }
+      .copy-row span {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-inline: 6px;
+      }
+      .group-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .fab {
+        position: absolute;
+        inset-block-end: 12px;
+        inset-inline-end: 12px;
+        width: 52px;
+        height: 52px;
+        border-radius: 999px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        display: grid;
+        place-items: center;
+        font-size: 26px;
+        box-shadow: 0 8px 18px rgb(var(--shadow) / 0.3);
+      }
+      .rel {
+        position: relative;
+      }
+      .member-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .drawer {
+        margin-inline-start: auto;
+        width: 86%;
+        background: rgb(var(--surface-200));
+        border-radius: 20px 0 0 20px;
+        padding: 14px;
+        box-shadow: -8px 0 24px rgb(var(--shadow) / 0.25);
+      }
+      [dir='rtl'] .drawer {
+        border-radius: 0 20px 20px 0;
+      }
+      .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+        font-size: 11px;
+      }
+      .calendar .dn {
+        text-align: center;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+        padding-block: 4px;
+      }
+      .calendar .d {
+        min-height: 48px;
+        border-radius: 8px;
+        background: rgb(var(--surface-300));
+        padding: 3px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .calendar .d.sel {
+        outline: 2px solid rgb(var(--primary));
+      }
+      .calendar .d.today b {
+        color: rgb(var(--primary));
+      }
+      .calendar .ev {
+        font-size: 9px;
+        border-radius: 4px;
+        padding: 1px 3px;
+        background: rgb(var(--secondary) / 0.18);
+        color: rgb(var(--secondary));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .calendar .ev.ember {
+        background: rgb(var(--primary) / 0.16);
+        color: rgb(var(--primary));
+      }
+      .calendar .more {
+        font-size: 9px;
+        color: rgb(var(--text-muted));
+      }
+      .dl {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        text-align: center;
+        margin: 0;
+      }
+      .dl div {
+        background: rgb(var(--surface-300));
+        border-radius: 12px;
+        padding: 8px;
+      }
+      .dl dt {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .dl dd {
+        margin: 0;
+        font:
+          700 20px/1.2 'Instrument Sans',
+          sans-serif;
+      }
+      .notif {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .notif .dot {
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline-end: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgb(var(--primary));
+        border: 2px solid rgb(var(--surface-300));
+      }
+      .notif.unread {
+        background: rgb(var(--primary) / 0.06);
+      }
+      .matrix {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .matrix th {
+        font-weight: 600;
+        color: rgb(var(--text-muted));
+        padding: 4px;
+        text-align: center;
+      }
+      .matrix th:first-child,
+      .matrix td:first-child {
+        text-align: start;
+      }
+      .matrix td {
+        padding: 6px 4px;
+        border-block-start: 1px solid rgb(var(--surface-100));
+        text-align: center;
+      }
+      .cb {
+        display: inline-grid;
+        place-items: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 2px solid rgb(var(--surface-700));
+        font-size: 12px;
+        color: rgb(var(--on-fill));
+      }
+      .cb.on {
+        background: rgb(var(--primary));
+        border-color: rgb(var(--primary));
+      }
+      .radio-opt {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-300));
+      }
+      .radio-opt.on {
+        border-color: rgb(var(--danger));
+        background: rgb(var(--danger) / 0.06);
+      }
+      .radio {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 2px solid rgb(var(--surface-700));
+        flex: none;
+        margin-block-start: 2px;
+        display: grid;
+        place-items: center;
+      }
+      .radio.on {
+        border-color: rgb(var(--danger));
+      }
+      .radio.on::after {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--danger));
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 12px;
+        background: rgb(var(--surface-300));
+      }
+      .tabs span {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+      }
+      .tabs span.on {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        box-shadow: 0 1px 3px rgb(var(--shadow) / 0.15);
+      }
+      .island-map {
+        border-radius: 16px;
+        aspect-ratio: 16 / 10;
+        background:
+          radial-gradient(circle at 30% 40%, rgb(var(--primary) / 0.35) 0 14%, transparent 15%),
+          radial-gradient(circle at 70% 55%, rgb(var(--secondary) / 0.4) 0 18%, transparent 19%),
+          radial-gradient(circle at 50% 80%, rgb(var(--neon-violet) / 0.3) 0 9%, transparent 10%),
+          rgb(var(--neon-blue) / 0.15);
+        position: relative;
+      }
+      .island-map span {
+        position: absolute;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--surface-200));
+        border-radius: 999px;
+        padding: 2px 8px;
+      }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+      .btn.sm {
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Discovery &amp; community</h1>
+        <p>
+          Design-sync ID <code>feature.discovery-community</code> · every runtime surface in this
+          area is one specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <!-- ================= DISCOVERY ================= -->
+      <section class="specimen" data-component="components/profile-discovery-card">
+        <header>
+          <h2>Profile discovery card</h2>
+          <code>components/profile-discovery-card</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Default · bio clamped to 2 lines</span>
+          <article class="match-card">
+            <div class="duet-strip duet"></div>
+            <div class="inner">
+              <div class="row">
+                <span class="avatar ring-tide">陳</span>
+                <div class="grow">
+                  <div class="title">Chén Wěi</div>
+                  <div class="lang-pair">Chinese (Mandarin) → English, Spanish</div>
+                </div>
+              </div>
+              <p class="secondary" dir="auto" style="margin: 0">
+                我在上海教书，喜欢做饭和爬山。想找练习英语口语的伙伴。
+              </p>
+              <button class="link-btn" type="button" aria-pressed="false">Translate Bio</button>
+              <div class="row" style="justify-content: space-between">
+                <span class="muted" style="font-size: 10px">Tap to view</span
+                ><span style="color: rgb(var(--primary))" aria-hidden="true">→</span>
+              </div>
+            </div>
+          </article>
+          <span class="state-label">Translated · translating · error</span>
+          <article class="match-card">
+            <div class="duet-strip duet"></div>
+            <div class="inner">
+              <div class="row">
+                <span class="avatar ember ring-ember">م</span>
+                <div class="grow">
+                  <div class="title" dir="auto">مريم</div>
+                  <div class="lang-pair">Arabic → Japanese</div>
+                </div>
+              </div>
+              <p class="secondary" style="margin: 0">
+                I teach in Cairo and love calligraphy. Looking for a Japanese partner.
+              </p>
+              <div class="row">
+                <button class="link-btn" type="button" aria-pressed="true">Show Original</button
+                ><button
+                  class="link-btn"
+                  type="button"
+                  disabled
+                  style="color: rgb(var(--text-muted))"
+                >
+                  Translating...
+                </button>
+              </div>
+              <p class="muted" role="status" style="color: rgb(var(--danger)); margin: 0">
+                Translation unavailable - try again
+              </p>
+            </div>
+          </article>
+        </div>
+        <footer>
+          States shown: default · translated · translating · error · Ember/Tide duet strip.
+          <span class="gap-note"
+            >i18n gap: <code>discovery.tapToView</code> missing from every dictionary.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/age-range-slider">
+        <header>
+          <h2>Age range slider</h2>
+          <code>components/age-range-slider</code>
+        </header>
+        <div class="body">
+          <div class="card stack" role="group" aria-label="Age range">
+            <span class="secondary"
+              >Age range <span style="padding-inline-start: 4px">(22 – 35)</span></span
+            >
+            <div class="range">
+              <div class="track">
+                <div class="fill" style="inset-inline-start: 6%; width: 28%"></div>
+              </div>
+              <span class="thumb" style="inset-inline-start: 6%"></span
+              ><span class="thumb" style="inset-inline-start: 34%"></span>
+            </div>
+            <div class="row muted" style="justify-content: space-between">
+              <span>18</span><span>80</span>
+            </div>
+          </div>
+          <span class="state-label">Thumbs crossed (min = max) - topmost thumb swaps z-order</span>
+          <div class="card stack">
+            <span class="secondary">Age range (30 – 30)</span>
+            <div class="range">
+              <div class="track">
+                <div class="fill" style="inset-inline-start: 19%; width: 0"></div>
+              </div>
+              <span class="thumb" style="inset-inline-start: 19%"></span>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: default · collapsed range. Two native range inputs labelled "Age min" / "Age
+          max".
+          <span class="gap-note"
+            >Uses non-Relay tokens <code>text-on-surface-variant</code>,
+            <code>bg-surface-container</code>; fill uses physical <code>left</code>.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/distance-slider">
+        <header>
+          <h2>Distance slider</h2>
+          <code>components/distance-slider</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <span class="secondary" style="font-weight: 600">Maximum Distance: 25 km</span>
+            <div class="range">
+              <div class="track">
+                <div class="fill" style="inset-inline-start: 0; width: 25%"></div>
+              </div>
+              <span class="thumb" style="inset-inline-start: 25%"></span>
+            </div>
+          </div>
+          <span class="state-label">Disabled (location off)</span>
+          <div class="card stack">
+            <span class="secondary" style="font-weight: 600">Maximum Distance: 50 km</span>
+            <div class="range disabled">
+              <div class="track">
+                <div class="fill" style="inset-inline-start: 0; width: 50%"></div>
+              </div>
+              <span class="thumb" style="inset-inline-start: 50%"></span>
+            </div>
+          </div>
+        </div>
+        <footer>States shown: default · disabled (40% opacity, not-allowed cursor).</footer>
+      </section>
+
+      <section class="specimen" data-component="components/discovery-error-boundary">
+        <header>
+          <h2>Discovery error boundary</h2>
+          <code>components/discovery-error-boundary</code>
+        </header>
+        <div class="body">
+          <div class="boundary" role="alert">
+            <span style="font-size: 36px" aria-hidden="true">🔍</span>
+            <h3>Discovery is unavailable</h3>
+            <p class="secondary" style="margin: 0">Something went wrong while loading discovery.</p>
+            <p class="mono">
+              TypeError: Cannot read properties of undefined (reading 'target_languages')
+            </p>
+            <div class="row" style="flex-wrap: wrap; justify-content: center">
+              <button class="btn" type="button">Retry</button
+              ><button class="btn secondary-btn" type="button">Report error</button>
+            </div>
+            <p style="margin: 0; font-size: 12px; font-weight: 700; color: rgb(var(--success))">
+              Error reported
+            </p>
+          </div>
+        </div>
+        <footer>
+          States shown: error with detail · report sent. Healthy state renders projected content
+          unchanged.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="discovery/audio-intro-feed">
+        <header>
+          <h2>Audio intro feed</h2>
+          <code>discovery/audio-intro-feed</code>
+        </header>
+        <div class="body">
+          <div class="list">
+            <div class="row">
+              <span class="avatar">K</span>
+              <div class="grow">
+                <div class="title">Kenji</div>
+                <div class="lang-pair">Japanese → English</div>
+              </div>
+              <button class="play" type="button" aria-label="Pause Kenji's intro">❚❚</button>
+            </div>
+            <div class="row">
+              <span class="avatar ember">L</span>
+              <div class="grow">
+                <div class="title">Lucía</div>
+                <div class="lang-pair">Spanish → Korean</div>
+              </div>
+              <button class="play" type="button" aria-label="Play Lucía's intro">▶</button>
+            </div>
+            <div class="row">
+              <span class="avatar">ف</span>
+              <div class="grow">
+                <div class="title" dir="auto">فاطمة</div>
+                <div class="lang-pair">Arabic → French</div>
+              </div>
+              <button class="play" type="button" aria-label="Play intro">▶</button>
+            </div>
+          </div>
+          <span class="state-label">Loading · empty</span>
+          <div class="row" style="justify-content: space-around">
+            <div class="spinner pulse" role="status" aria-label="Loading"></div>
+            <div
+              class="stack"
+              style="align-items: center; color: rgb(var(--text-secondary)); font-size: 13px"
+            >
+              <span style="font-size: 28px" aria-hidden="true">🎙️</span>No audio intros available
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: playing · paused · loading · empty.
+          <span class="gap-note"
+            >Play button lacks an accessible name in code; uses <code>text-white</code> instead of
+            on-fill.</span
+          >
+        </footer>
+      </section>
+
+      <!-- ================= MOMENTS ================= -->
+      <section class="specimen" data-component="components/moments-feed">
+        <header>
+          <h2>Moments feed</h2>
+          <code>components/moments-feed</code>
+        </header>
+        <div class="body">
+          <div class="app-bar">
+            <span class="icon-btn" aria-label="Visitors">👤</span>
+            <h3>Moments</h3>
+            <div class="row">
+              <span class="icon-btn" aria-label="Notifications">🔔</span
+              ><span class="icon-btn" aria-label="Compose">＋</span>
+            </div>
+          </div>
+          <div class="pills">
+            <span class="chip on">All</span><span class="chip">For You</span
+            ><span class="chip">Classmates</span><span class="chip">Following</span>
+          </div>
+          <article class="moment">
+            <span class="avatar ember">あ</span>
+            <div class="grow">
+              <div class="pinned">📌 Pinned moment (VIP 8 UKP / $10 USD)</div>
+              <div class="row" style="justify-content: space-between">
+                <div>
+                  <div class="title">Aiko</div>
+                  <div class="row muted">
+                    <span>09:42</span><span class="lang-tag">🇬🇧 English</span>
+                  </div>
+                </div>
+                <button class="btn ghost sm" type="button">Unpin</button>
+              </div>
+              <p>
+                <span class="tok">Yesterday</span> I <span class="tok">goed</span> to the
+                <span class="tok">market</span> and bought fresh strawberries 🍓
+              </p>
+              <div class="media-grid">
+                <div>🍓</div>
+                <div>🧺</div>
+              </div>
+              <div class="actions">
+                <span>❤️ 24</span><span>💬 3</span><span>🔊</span><span>✏️ Correct</span
+                ><span>💬 Quote</span><span>Translate</span>
+              </div>
+              <div class="stack" style="margin-block-start: 8px">
+                <div class="comment">
+                  <b>Tom</b> · <span class="muted">Reply · 09:50</span>
+                  <div class="diff">I <del>goed</del> <ins>went</ins> to the market</div>
+                  <span class="muted">Past tense of "go" is irregular.</span>
+                </div>
+                <div class="chip tide" style="align-self: flex-start">Replying to @Tom ✕</div>
+                <div class="field">
+                  <input type="text" placeholder="Write a comment" aria-label="Write a comment" />
+                </div>
+              </div>
+            </div>
+          </article>
+          <span class="state-label">Empty</span>
+          <div class="card stack" style="align-items: center; text-align: center">
+            <span style="font-size: 32px" aria-hidden="true">📷</span>
+            <div class="title">No Moments Found</div>
+            <p class="secondary" style="margin: 0">
+              Nothing to see here yet. Share a photo, voice note, or text update with the community!
+            </p>
+            <button class="btn" type="button">Create First Moment</button>
+          </div>
+          <span class="state-label">Compose form</span>
+          <div class="card stack">
+            <div class="field">
+              <textarea
+                rows="3"
+                placeholder="Share what you are practising today..."
+                aria-label="Moment text"
+              ></textarea>
+            </div>
+            <div class="row secondary">
+              <span>Visible to native speakers of</span><span class="chip">🇯🇵 Japanese ▾</span>
+            </div>
+            <div class="row">
+              <span class="icon-btn" aria-label="Record voice">🎤</span>
+              <div class="field grow">
+                <input type="url" placeholder="Image URL" aria-label="Image URL" />
+              </div>
+              <button class="btn secondary-btn sm" type="button">ADD IMAGE</button>
+            </div>
+            <button class="btn block" type="button">Post moment</button>
+          </div>
+        </div>
+        <footer>
+          States shown: feed with pinned/own moment, tokenised text, image grid, comments with
+          visual correction diff, reply pill · empty · compose. Also: audio moments, show more/less,
+          @mention combobox, voice recorder sheet.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/moment-translate">
+        <header>
+          <h2>Moment translate</h2>
+          <code>components/moment-translate</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <p lang="ja" style="margin: 0">今日は初めてお寿司を作りました！</p>
+            <button class="chip" type="button" aria-expanded="false" style="align-self: flex-start">
+              Translate
+            </button>
+          </div>
+          <div class="card stack">
+            <p lang="ja" style="margin: 0">今日は初めてお寿司を作りました！</p>
+            <button
+              class="chip on"
+              type="button"
+              aria-expanded="true"
+              style="align-self: flex-start"
+            >
+              Hide translation
+            </button>
+            <p class="translation" style="margin: 0">Today I made sushi for the first time!</p>
+          </div>
+          <div class="row">
+            <span class="muted">Loading...</span
+            ><span class="muted" style="color: rgb(var(--danger))"
+              >Failed to translate moment.</span
+            >
+          </div>
+        </div>
+        <footer>States shown: collapsed · expanded with translation · loading · error.</footer>
+      </section>
+
+      <section class="specimen" data-component="components/liked-by-modal">
+        <header>
+          <h2>Liked by modal</h2>
+          <code>components/liked-by-modal</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack" role="dialog" aria-label="Liked by">
+              <div class="row" style="justify-content: space-between">
+                <h3 style="margin: 0; font-size: 20px">Liked by</h3>
+                <button class="icon-btn" type="button" aria-label="Close">✕</button>
+              </div>
+              <div class="row">
+                <span class="avatar">S</span>
+                <div>
+                  <div class="title">Sofia</div>
+                  <div class="muted">PT ➔ EN</div>
+                </div>
+              </div>
+              <div class="row">
+                <span class="avatar ember">ج</span>
+                <div>
+                  <div class="title" dir="auto">جمال</div>
+                  <div class="muted">AR ➔ JA</div>
+                </div>
+              </div>
+              <div class="row">
+                <span class="avatar">민</span>
+                <div>
+                  <div class="title">민준</div>
+                  <div class="muted">KO ➔ ES</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="justify-content: space-around; text-align: center">
+            <div class="stack">
+              <span class="state-label">Empty</span><span class="muted">No likes yet</span>
+            </div>
+            <div class="stack">
+              <span class="state-label">Error</span><span class="muted">Failed to load data</span
+              ><button class="btn secondary-btn sm" type="button">Retry</button>
+            </div>
+          </div>
+        </div>
+        <footer>States shown: list · empty · error/retry · (loading spinner). Helm dialog.</footer>
+      </section>
+
+      <section class="specimen" data-component="components/lightbox">
+        <header>
+          <h2>Lightbox</h2>
+          <code>components/lightbox</code>
+        </header>
+        <div class="body">
+          <div class="lightbox" role="dialog" aria-label="Image 2 of 3">
+            <button
+              class="icon-btn lb-close"
+              type="button"
+              aria-label="Close"
+              style="background: rgb(255 255 255 / 0.15); color: #fff; border: 0"
+            >
+              ✕
+            </button>
+            <span class="lb-count" aria-hidden="true">2 / 3</span>
+            <div class="img" aria-hidden="true">🌅</div>
+            <button class="icon-btn lb-prev" type="button" aria-label="Previous image">‹</button>
+            <button class="icon-btn lb-next" type="button" aria-label="Next image">›</button>
+            <div class="dots"><i></i><i class="on"></i><i></i></div>
+          </div>
+          <div class="row" style="justify-content: space-around">
+            <span class="muted">Loading... (status)</span
+            ><span class="muted">⚠️ Failed to load data</span>
+          </div>
+        </div>
+        <footer>
+          States shown: multi-image with counter, prev/next, indicator dots · loading · failed
+          image. Swipe via pointer events.
+          <span class="gap-note"
+            >i18n gap: <code>lightbox.*</code> keys missing - screen readers hear raw keys.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/share-modal">
+        <header>
+          <h2>Share modal</h2>
+          <code>components/share-modal</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack" style="padding: 0; overflow: hidden">
+              <div
+                class="row"
+                style="
+                  justify-content: space-between;
+                  padding: 14px;
+                  border-block-end: 1px solid rgb(var(--surface-100));
+                "
+              >
+                <h3 style="margin: 0">Share</h3>
+                <button class="icon-btn" type="button" aria-label="Close">✕</button>
+              </div>
+              <div style="padding: 0 14px">
+                <div class="card row">
+                  <div
+                    class="avatar"
+                    style="
+                      border-radius: 8px;
+                      background: rgb(var(--primary) / 0.2);
+                      color: rgb(var(--primary));
+                    "
+                  >
+                    🔗
+                  </div>
+                  <div class="grow">
+                    <div class="title">Tokyo Language Café</div>
+                    <div class="muted">Event · Sat 14:00</div>
+                  </div>
+                </div>
+              </div>
+              <div style="padding: 0 14px 14px" class="stack">
+                <div class="share-targets">
+                  <div>
+                    <div class="bubble" style="background: rgb(var(--secondary))">💬</div>
+                    Direct message
+                  </div>
+                  <div>
+                    <div class="bubble" style="background: rgb(var(--warning))">⭕</div>
+                    Moments
+                  </div>
+                </div>
+                <div class="copy-row">
+                  <span>https://hellotalk.app/events/7f2c</span
+                  ><button class="btn sm" type="button">Copy</button>
+                </div>
+                <div class="copy-row">
+                  <span>https://hellotalk.app/events/7f2c</span
+                  ><button class="btn sm" type="button" style="background: rgb(var(--success))">
+                    Copied!
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: default · copied.
+          <span class="gap-note"
+            >i18n gap: <code>share.*</code> keys missing; custom overlay instead of Helm
+            dialog.</span
+          >
+        </footer>
+      </section>
+
+      <!-- ================= GROUPS ================= -->
+      <section class="specimen" data-component="components/groups-discovery">
+        <header>
+          <h2>Groups discovery</h2>
+          <code>components/groups-discovery</code>
+        </header>
+        <div class="body rel">
+          <div class="pills" role="radiogroup" aria-label="Filter groups by topic">
+            <span class="chip on" role="radio" aria-checked="true">All Topics</span
+            ><span class="chip" role="radio" aria-checked="false">🎵 Music</span
+            ><span class="chip" role="radio" aria-checked="false">🍜 Food</span
+            ><span class="chip" role="radio" aria-checked="false">✈️ Travel</span>
+          </div>
+          <div class="list">
+            <div class="group-card">
+              <div>
+                <div class="title">日本語 Beginners</div>
+                <div class="muted">38 / 50 members</div>
+              </div>
+              <button class="btn sm" type="button">Join</button>
+            </div>
+            <div class="group-card">
+              <div>
+                <div class="title">Español Cafe</div>
+                <div class="muted">12 / 50 members</div>
+              </div>
+              <span class="chip tide">✓ Joined</span>
+            </div>
+            <div class="group-card">
+              <div>
+                <div class="title" dir="auto">نادي العربية</div>
+                <div class="muted">50 / 50 members</div>
+              </div>
+              <span class="chip">Full</span>
+            </div>
+            <div class="group-card">
+              <div>
+                <div class="title">K-drama Talk</div>
+                <div class="muted">22 / 50 members</div>
+              </div>
+              <button class="btn sm" type="button" disabled>Loading...</button>
+            </div>
+          </div>
+          <span class="state-label">Empty (filtered)</span>
+          <div
+            class="card stack"
+            style="align-items: center; text-align: center; margin-block-end: 60px"
+          >
+            <span style="font-size: 28px">👥</span
+            ><span class="secondary">No groups found. Create one or check back later!</span
+            ><button class="btn ghost sm" type="button">Show all topics</button>
+          </div>
+          <span class="fab" aria-label="Create Group">+</span>
+        </div>
+        <footer>
+          States shown: join · joined · full · joining · empty with clear-filter · embedded FAB.
+          Also error banner and loading.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/create-group">
+        <header>
+          <h2>Create group</h2>
+          <code>components/create-group</code>
+        </header>
+        <div class="body">
+          <div>
+            <h3 class="display" style="margin: 0">Create Group</h3>
+            <p class="secondary" style="margin: 4px 0 0">
+              Start a group chat with up to 50 members including yourself.
+            </p>
+          </div>
+          <label class="field">Group Name<input type="text" value="Weekend Tandem 🇯🇵🇬🇧" /></label>
+          <label class="field"
+            >Add Members (2/49)<input
+              type="search"
+              placeholder="Search by name, language, or user ID..."
+              value="yu"
+          /></label>
+          <div class="list">
+            <div class="row">
+              <span class="avatar sm">Y</span>
+              <div class="grow">
+                <div class="title">Yuki</div>
+                <div class="muted">Japanese</div>
+              </div>
+              <span class="chip on">+ Add</span>
+            </div>
+            <div class="row">
+              <span class="avatar sm ember">Y</span>
+              <div class="grow">
+                <div class="title">Yusuf</div>
+                <div class="muted">Turkish</div>
+              </div>
+              <span class="chip on">+ Add</span>
+            </div>
+          </div>
+          <div class="title">Selected Members (2)</div>
+          <div class="row" style="flex-wrap: wrap">
+            <span class="chip tide">Aiko ✕</span><span class="chip tide">Tom ✕</span>
+          </div>
+          <p class="alert success" role="status" style="margin: 0">
+            Group created successfully! Navigating home...
+          </p>
+          <button class="btn block" type="button">Create Group</button>
+        </div>
+        <footer>
+          States shown: search results · selected members · success. Also: max-members reached,
+          no-members empty, error, creating (spinner + "Creating").
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/group-participant-drawer">
+        <header>
+          <h2>Group participant drawer</h2>
+          <code>components/group-participant-drawer</code>
+        </header>
+        <div class="body">
+          <div class="scrim" style="padding: 0; display: flex">
+            <div class="drawer stack" role="dialog" aria-label="Participants">
+              <div class="row" style="justify-content: space-between">
+                <h3 style="margin: 0; font-size: 16px">Participants (3)</h3>
+                <button class="icon-btn" type="button" aria-label="Close">✕</button>
+              </div>
+              <div class="member-row">
+                <span class="avatar">A</span>
+                <div class="grow">
+                  <div class="row">
+                    <span class="title">Aiko</span><span class="badge vip">VIP</span>
+                  </div>
+                  <div class="lang-pair">Japanese → English</div>
+                </div>
+              </div>
+              <div class="member-row">
+                <span class="avatar ember">T</span>
+                <div class="grow">
+                  <div class="title">Tom</div>
+                  <div class="lang-pair">English → Japanese</div>
+                </div>
+              </div>
+              <div class="member-row">
+                <span class="avatar">ل</span>
+                <div class="grow">
+                  <div class="title" dir="auto">ليلى</div>
+                  <div class="lang-pair">Arabic → English</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: open with VIP badge, language pair · (empty: "No participants"). Slides from
+          inline-end; mirrors in RTL.
+          <span class="gap-note"
+            >i18n gap: <code>group.participants</code>, <code>group.noParticipants</code>.</span
+          >
+        </footer>
+      </section>
+
+      <!-- ================= EVENTS ================= -->
+      <section class="specimen" data-component="components/events-feed">
+        <header>
+          <h2>Events feed</h2>
+          <code>components/events-feed</code>
+        </header>
+        <div class="body">
+          <div class="app-bar">
+            <h3>Events</h3>
+            <button class="btn sm" type="button">Create event</button>
+          </div>
+          <div class="tabs" role="radiogroup">
+            <span class="on">Upcoming</span><span>Past</span>
+          </div>
+          <div class="row">
+            <label class="field grow"
+              ><select aria-label="Language Pair">
+                <option>All languages</option>
+              </select></label
+            ><label class="field grow"
+              ><select aria-label="Category">
+                <option>Category</option>
+              </select></label
+            >
+          </div>
+          <div class="list">
+            <article class="stack" style="gap: 2px">
+              <a class="title" href="#" style="color: rgb(var(--primary))">Tokyo Language Café</a
+              ><span class="muted">20 Oct 2026, 14:00</span
+              ><span class="secondary">In-Person Meetup · Shibuya</span
+              ><span class="muted">Hosted by Aiko</span>
+            </article>
+            <article class="stack" style="gap: 2px">
+              <a class="title" href="#" style="color: rgb(var(--primary))"
+                >Ramadan traditions - cultural exchange</a
+              ><span class="muted">22 Oct 2026, 19:00</span
+              ><span class="secondary">Cultural Exchange · Audio room</span
+              ><span class="muted">Hosted by مريم</span>
+            </article>
+          </div>
+          <button class="btn secondary-btn block" type="button">Load more</button>
+          <div class="alert error" role="alert">
+            Something went wrong. Please try again.
+            <button class="btn secondary-btn sm" type="button">Retry</button>
+          </div>
+        </div>
+        <footer>
+          States shown: list · load more · error/retry. Also loading and "No upcoming events".
+          <span class="gap-note"
+            >i18n gap: <code>events.createEvent</code>, <code>filter_upcoming/past</code>,
+            <code>hosted_by</code>, <code>load_more</code>; <code>events.title</code> resolves to
+            "Event Title".</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/events-calendar">
+        <header>
+          <h2>Events calendar</h2>
+          <code>components/events-calendar</code>
+        </header>
+        <div class="body">
+          <h3 class="display" style="margin: 0">Event Calendar</h3>
+          <div class="row" style="justify-content: space-between">
+            <button class="btn ghost sm" type="button">‹ Previous</button><b>October 2026</b
+            ><button class="btn ghost sm" type="button">Next ›</button>
+          </div>
+          <div class="calendar">
+            <span class="dn">M</span><span class="dn">T</span><span class="dn">W</span
+            ><span class="dn">T</span><span class="dn">F</span><span class="dn">S</span
+            ><span class="dn">S</span> <span></span><span></span><span></span
+            ><span class="d"><b>1</b></span
+            ><span class="d"><b>2</b></span
+            ><span class="d"><b>3</b><span class="ev">Café</span></span
+            ><span class="d"><b>4</b></span> <span class="d"><b>5</b></span
+            ><span class="d"><b>6</b></span
+            ><span class="d"><b>7</b></span
+            ><span class="d"><b>8</b><span class="ev ember">Seminar</span></span
+            ><span class="d"><b>9</b></span
+            ><span class="d"><b>10</b></span
+            ><span class="d"><b>11</b></span> <span class="d"><b>12</b></span
+            ><span class="d"><b>13</b></span
+            ><span class="d"><b>14</b></span
+            ><span class="d"><b>15</b></span
+            ><span class="d"><b>16</b></span
+            ><span class="d"><b>17</b><span class="ev">K-pop</span></span
+            ><span class="d"><b>18</b></span>
+            <span class="d today sel"
+              ><b>20</b><span class="ev">Café</span><span class="ev ember">Ramadan</span
+              ><span class="more">+1 more</span></span
+            ><span class="d"><b>21</b></span
+            ><span class="d"><b>22</b></span
+            ><span class="d"><b>23</b></span
+            ><span class="d"><b>24</b></span
+            ><span class="d"><b>25</b></span
+            ><span class="d"><b>26</b></span>
+          </div>
+          <div class="title">Tuesday 20 October</div>
+          <div class="card stack">
+            <div class="row" style="justify-content: space-between">
+              <span class="title">Tokyo Language Café</span
+              ><span class="chip">in_person_meetup</span>
+            </div>
+            <span class="muted">14:00 · Shibuya</span
+            ><a href="#" style="color: rgb(var(--primary)); font-size: 13px; font-weight: 600"
+              >View Details →</a
+            >
+          </div>
+        </div>
+        <footer>
+          States shown: month grid with event chips and "+N more" · selected day list. Also loading,
+          error/retry, empty day. <span class="gap-note">Category chip shows raw enum value.</span>
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/event-detail">
+        <header>
+          <h2>Event detail</h2>
+          <code>components/event-detail</code>
+        </header>
+        <div class="body">
+          <article class="stack">
+            <div class="duet" style="border-radius: 16px; padding: 18px">
+              <h3 class="display" style="margin: 0; font-size: 22px">Tokyo Language Café</h3>
+              <span>Tuesday, 20 October 2026 at 14:00</span>
+            </div>
+            <span class="secondary">Hosted by Aiko · In-Person Meetup · Shibuya, Tokyo</span>
+            <p style="margin: 0; font-size: 14px">
+              Casual Japanese ↔ English exchange over coffee. All levels welcome - we split into
+              pairs every 20 minutes.
+            </p>
+            <dl class="dl">
+              <div>
+                <dt>Max Participants</dt>
+                <dd>20</dd>
+              </div>
+              <div>
+                <dt>attending</dt>
+                <dd>14</dd>
+              </div>
+              <div>
+                <dt>interested</dt>
+                <dd>31</dd>
+              </div>
+            </dl>
+          </article>
+          <div class="row" style="justify-content: space-around">
+            <span class="muted">Loading...</span
+            ><span class="alert error">Something went wrong. Please try again.</span>
+          </div>
+        </div>
+        <footer>
+          States shown: loaded · loading · error/retry. Design suggestion: add RSVP and Share
+          actions (runtime has none).
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="events/create-event-modal">
+        <header>
+          <h2>Create event modal</h2>
+          <code>events/create-event-modal</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack">
+            <h3 style="margin: 0">Create event</h3>
+            <label class="field"
+              >Event Title<input type="text" value="Arabic calligraphy evening"
+            /></label>
+            <label class="field"
+              >Date &amp; time<input type="datetime-local" value="2026-10-28T19:00"
+            /></label>
+            <label class="field"
+              >Language Pair<select>
+                <option>English ↔ Arabic</option>
+              </select></label
+            >
+            <label class="field"
+              >Category<select>
+                <option>Cultural Exchange</option>
+              </select></label
+            >
+            <label class="field invalid"
+              >Where<input type="text" value="" placeholder="Venue or room link" /><span
+                class="error"
+                >Required</span
+              ></label
+            >
+            <label class="field"
+              >Max Participants<input type="number" placeholder="e.g. 20"
+            /></label>
+            <label class="field">Description<textarea rows="2"></textarea></label>
+            <div class="btn-row">
+              <button class="btn secondary-btn" type="button">Cancel</button
+              ><button class="btn" type="button" disabled>Create</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: filled · invalid required field · submit disabled. Also submit error.
+          <span class="gap-note"
+            >i18n gap: <code>events.dateTime</code>, <code>where</code>, <code>create</code>,
+            <code>cancel</code>, placeholders.</span
+          >
+        </footer>
+      </section>
+
+      <!-- ================= NOTIFICATIONS ================= -->
+      <section class="specimen" data-component="components/notifications-inbox">
+        <header>
+          <h2>Notifications inbox</h2>
+          <code>components/notifications-inbox</code>
+        </header>
+        <div class="body">
+          <div class="app-bar">
+            <span class="icon-btn" aria-label="Back">←</span>
+            <h3>Notifications <span class="badge">3</span></h3>
+            <button class="btn ghost sm" type="button">Mark all read</button>
+          </div>
+          <div class="pills">
+            <span class="chip on">All</span><span class="chip">Likes</span
+            ><span class="chip">Comments</span><span class="chip">Followers</span
+            ><span class="chip">System</span>
+          </div>
+          <div class="list">
+            <div class="notif unread">
+              <span class="rel"><span class="avatar">A</span><span class="dot"></span></span>
+              <div class="grow">
+                <b>Aiko</b> <span class="secondary">liked your moment</span>
+                <div class="muted" style="color: rgb(var(--primary))">New activity</div>
+              </div>
+              <span aria-hidden="true">❤️</span>
+            </div>
+            <div class="notif unread">
+              <span class="rel"><span class="avatar ember">T</span><span class="dot"></span></span>
+              <div class="grow">
+                <b>Tom</b> <span class="secondary">commented on your moment</span>
+                <div class="secondary" dir="auto">"Nice! 上手ですね"</div>
+              </div>
+              <span aria-hidden="true">💬</span>
+            </div>
+            <div class="notif">
+              <span class="avatar">م</span>
+              <div class="grow">
+                <b dir="auto">مريم</b> <span class="secondary">started following you</span>
+              </div>
+              <span aria-hidden="true">👤</span>
+            </div>
+          </div>
+          <span class="state-label">Empty</span>
+          <div class="card stack" style="align-items: center; text-align: center">
+            <span style="font-size: 28px">🔔</span>
+            <div class="title">No notifications yet</div>
+            <span class="secondary"
+              >When partners interact with your profile or posts, you will see alerts here.</span
+            >
+          </div>
+        </div>
+        <footer>
+          States shown: unread/read rows · tabs · empty. Also loading, load error/retry, show more,
+          action error.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/notification-preferences">
+        <header>
+          <h2>Notification preferences</h2>
+          <code>components/notification-preferences</code>
+        </header>
+        <div class="body">
+          <h3 class="display" style="margin: 0">Notification Preferences</h3>
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th scope="col">Category</th>
+                <th>Push</th>
+                <th>Email</th>
+                <th>In-App</th>
+                <th>Badges</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>New Messages</td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb"></span></td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb on">✓</span></td>
+              </tr>
+              <tr>
+                <td>Corrections</td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb"></span></td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb"></span></td>
+              </tr>
+              <tr>
+                <td>Gifts</td>
+                <td><span class="cb"></span></td>
+                <td><span class="cb"></span></td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb"></span></td>
+              </tr>
+              <tr>
+                <td>Study Reminders</td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb on">✓</span></td>
+                <td><span class="cb"></span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="card stack">
+            <div class="row"><span class="cb on">✓</span><b>Do Not Disturb</b></div>
+            <div class="row">
+              <label class="field grow">Quiet Hours Start<input type="time" value="22:00" /></label
+              ><label class="field grow">Quiet Hours End<input type="time" value="07:30" /></label>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn secondary-btn" type="button">Reset</button
+            ><button class="btn" type="button">Save</button>
+          </div>
+        </div>
+        <footer>
+          States shown: category × channel matrix (11 categories × 4 channels), DND + quiet hours.
+          Also loading, error, mutation-pending (all disabled).
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/notification-customization">
+        <header>
+          <h2>Notification customisation</h2>
+          <code>components/notification-customization</code>
+        </header>
+        <div class="body">
+          <h3 class="display" style="margin: 0">Notification sound &amp; vibration</h3>
+          <label class="field"
+            >Custom tone URL<input type="url" placeholder="https://…/tone.mp3"
+          /></label>
+          <label class="field"
+            >Vibration pattern<input type="text" value="200,100,200" /><span class="hint"
+              >Milliseconds, comma separated</span
+            ></label
+          >
+          <p class="alert success" style="margin: 0">Saved</p>
+          <button class="btn block" type="button">Save</button>
+        </div>
+        <footer>
+          States shown: form · saved. Also loading, error.
+          <span class="gap-note"
+            >i18n gap: every <code>notification_customization.*</code> key is missing. Design
+            suggestion: replace raw URL/pattern inputs with a tone picker + preset patterns.</span
+          >
+        </footer>
+      </section>
+
+      <!-- ================= LANGUAGE ISLANDS ================= -->
+      <section class="specimen" data-component="pages/language-islands">
+        <header>
+          <h2>Language islands</h2>
+          <code>pages/language-islands</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Runtime today</span>
+          <div class="card"><code>languageIslands.title</code></div>
+          <span class="state-label">Proposed design</span>
+          <h3 class="display" style="margin: 0">Language Islands</h3>
+          <p class="secondary" style="margin: 0">
+            Drop into an always-on space where only one language is spoken.
+          </p>
+          <div class="island-map" aria-hidden="true">
+            <span style="inset-block-start: 30%; inset-inline-start: 20%">🇯🇵 128</span
+            ><span style="inset-block-start: 48%; inset-inline-start: 62%">🇪🇸 204</span
+            ><span style="inset-block-start: 74%; inset-inline-start: 42%">🇸🇦 57</span>
+          </div>
+          <div class="list">
+            <div class="row">
+              <span aria-hidden="true">🇯🇵</span>
+              <div class="grow">
+                <div class="title">Japanese Island</div>
+                <div class="muted">128 practising now · beginner-friendly</div>
+              </div>
+              <button class="btn tide sm" type="button">Enter</button>
+            </div>
+            <div class="row">
+              <span aria-hidden="true">🇪🇸</span>
+              <div class="grow">
+                <div class="title">Spanish Island</div>
+                <div class="muted">204 practising now</div>
+              </div>
+              <button class="btn tide sm" type="button">Enter</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          <span class="gap-note"
+            >Stub page: renders only a raw i18n key (missing in every dictionary).</span
+          >
+          Proposed design shown for design-first follow-up.
+        </footer>
+      </section>
+
+      <!-- ================= TRUST & SAFETY ================= -->
+      <section class="specimen" data-component="components/report-user-modal">
+        <header>
+          <h2>Report user modal</h2>
+          <code>components/report-user-modal</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack">
+            <div class="row" style="justify-content: space-between">
+              <h3 style="margin: 0">Report user</h3>
+              <button class="icon-btn" type="button" aria-label="Close">✕</button>
+            </div>
+            <fieldset class="stack" style="border: 0; padding: 0; margin: 0">
+              <legend class="title" style="margin-block-end: 6px">Reason for reporting</legend>
+              <label class="radio-opt on"
+                ><span class="radio on"></span>
+                <div>
+                  <div class="title">Harassment</div>
+                  <div class="muted">Unwanted advances, threats, or abusive behaviour</div>
+                </div></label
+              >
+              <label class="radio-opt"
+                ><span class="radio"></span>
+                <div>
+                  <div class="title">Spam</div>
+                  <div class="muted">Unsolicited promotions, phishing, or fraudulent activity</div>
+                </div></label
+              >
+              <label class="radio-opt"
+                ><span class="radio"></span>
+                <div>
+                  <div class="title">Fake profile</div>
+                  <div class="muted">Impersonation or false identity</div>
+                </div></label
+              >
+            </fieldset>
+            <label class="field"
+              >Additional details (optional)<textarea
+                rows="2"
+                placeholder="Describe what happened..."
+              ></textarea>
+            </label>
+            <label class="row"><span class="cb on">✓</span><span>Also block this user</span></label>
+            <div class="btn-row">
+              <button class="btn secondary-btn" type="button">Cancel</button
+              ><button class="btn danger" type="button">Submit report</button>
+            </div>
+          </div>
+          <div class="alert error">
+            Could not load report categories.
+            <button class="btn secondary-btn sm" type="button">Retry</button>
+          </div>
+        </div>
+        <footer>
+          States shown: selected category · block toggle · load error. Also loading, submitting,
+          category-required error.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/trust-safety-modal">
+        <header>
+          <h2>Trust &amp; safety modal</h2>
+          <code>components/trust-safety-modal</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack">
+            <div class="row" style="justify-content: space-between; align-items: flex-start">
+              <div>
+                <h3 style="margin: 0">🛡️ Trust and safety moderation</h3>
+                <p class="secondary" style="margin: 4px 0 0">
+                  Report or block Kenji to keep our community safe
+                </p>
+              </div>
+              <button class="icon-btn" type="button" aria-label="Close">✕</button>
+            </div>
+            <div class="tabs" role="tablist">
+              <span class="on" role="tab" aria-selected="true">⚠️ Report user</span
+              ><span role="tab" aria-selected="false">🚫 Block user</span>
+            </div>
+            <label class="field"
+              >Select violation category:<select>
+                <option>Harassment</option>
+              </select></label
+            >
+            <label class="field"
+              >Additional context (optional):<textarea
+                rows="2"
+                placeholder="Provide context or specific phrase where violation occurred..."
+              ></textarea>
+            </label>
+            <div class="btn-row">
+              <button class="btn secondary-btn" type="button">Cancel</button
+              ><button class="btn" type="button">Submit report</button>
+            </div>
+          </div>
+          <span class="state-label">Block tab</span>
+          <div class="dialog stack">
+            <div class="tabs"><span>⚠️ Report user</span><span class="on">🚫 Block user</span></div>
+            <div class="alert warning" role="alert">
+              <b>⚠️ What happens when you block Kenji:</b>
+              <ul style="margin: 6px 0 0; padding-inline-start: 18px">
+                <li>They will not be able to send you direct chat messages.</li>
+                <li>Their Moments will immediately vanish from your timeline.</li>
+                <li>They cannot see when you visit their profile.</li>
+              </ul>
+            </div>
+            <div class="btn-row">
+              <button class="btn secondary-btn" type="button">Cancel</button
+              ><button class="btn danger" type="button">Confirm block</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: report tab · block tab with consequences · (categories skeleton loading).
+          Arrow-key tablist.
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>

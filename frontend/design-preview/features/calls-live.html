@@ -1,0 +1,1934 @@
+<!-- @dsCard group="Features" name="Calls &amp; live rooms" subtitle="1:1 voice/video · audio &amp; video rooms · parties · classrooms · ringing / connecting / connected / muted / error / empty" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Calls &amp; live rooms</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.calls-live" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 107 113 130;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 126 132 148;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      /* Call stage: always an ink surface in both themes so video/avatars read clearly. */
+      .stage {
+        background: rgb(var(--surface-900));
+        color: rgb(var(--surface-50));
+        border-radius: 16px;
+        padding: 20px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        text-align: center;
+        position: relative;
+        min-height: 220px;
+      }
+      html.dark .stage {
+        background: rgb(var(--surface-800));
+        color: rgb(var(--text-primary));
+      }
+      .stage .sub {
+        font-size: 13px;
+        opacity: 0.75;
+      }
+      .stage h3 {
+        margin: 0;
+        font:
+          700 18px/1.2 'Instrument Sans',
+          sans-serif;
+      }
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .ctl {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+      }
+      .round {
+        width: 56px;
+        height: 56px;
+        border-radius: 999px;
+        border: 0;
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+        cursor: pointer;
+        background: rgb(var(--surface-50) / 0.18);
+        color: inherit;
+      }
+      .round.on {
+        background: rgb(var(--danger));
+        color: rgb(var(--on-fill));
+      }
+      .round.end {
+        background: rgb(var(--danger));
+        color: rgb(var(--on-fill));
+      }
+      .round.accept {
+        background: rgb(var(--success));
+        color: rgb(var(--on-fill));
+      }
+      .round.share {
+        background: rgb(var(--success));
+        color: rgb(var(--on-fill));
+      }
+      .round.sm {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+      }
+      .ring {
+        box-shadow: 0 0 0 6px rgb(var(--secondary) / 0.35);
+      }
+      .pip {
+        position: absolute;
+        inset-block-start: 12px;
+        inset-inline-end: 12px;
+        width: 72px;
+        height: 96px;
+        border-radius: 12px;
+        background: rgb(var(--surface-50) / 0.15);
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid rgb(var(--surface-50) / 0.3);
+      }
+      .timer {
+        font:
+          700 14px/1 ui-monospace,
+          monospace;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgb(var(--surface-50) / 0.15);
+      }
+      .tile {
+        border-radius: 12px;
+        min-height: 120px;
+        display: grid;
+        place-items: center;
+        position: relative;
+        background: rgb(var(--surface-900));
+        color: rgb(var(--surface-50));
+        font-size: 12px;
+        text-align: center;
+        padding: 8px;
+      }
+      html.dark .tile {
+        background: rgb(var(--surface-800));
+        color: rgb(var(--text-primary));
+      }
+      .tile .tag {
+        position: absolute;
+        inset-block-end: 8px;
+        inset-inline-start: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .tile .tag.tide {
+        background: rgb(var(--secondary));
+      }
+      .tiles {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .overlay-chat {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+        width: 100%;
+      }
+      .overlay-chat div {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgb(var(--surface-900) / 0.6);
+        color: rgb(var(--surface-50));
+        max-width: 90%;
+      }
+      .overlay-chat b {
+        color: rgb(var(--neon-cyan));
+        margin-inline-end: 6px;
+      }
+      .seats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        text-align: center;
+        font-size: 11px;
+      }
+      .seats .avatar {
+        margin: 0 auto 4px;
+      }
+      .speaking {
+        box-shadow: 0 0 0 3px rgb(var(--success));
+      }
+      .live-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--danger));
+        margin-inline-end: 6px;
+      }
+      .stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        align-items: center;
+        flex: 1;
+      }
+      .stat b {
+        font:
+          700 20px/1 'Instrument Sans',
+          sans-serif;
+      }
+      .seg {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .seg .btn {
+        min-height: 40px;
+        padding: 0 14px;
+      }
+      .seg .btn[aria-pressed='true'] {
+        box-shadow: 0 0 0 2px rgb(var(--primary));
+      }
+      .thumb {
+        height: 110px;
+        border-radius: 12px 12px 0 0;
+        background: rgb(var(--surface-900));
+        color: rgb(var(--surface-50));
+        display: grid;
+        place-items: center;
+        font-size: 34px;
+        position: relative;
+      }
+      html.dark .thumb {
+        background: rgb(var(--surface-800));
+      }
+      .thumb .badge {
+        position: absolute;
+        inset-block-start: 8px;
+        inset-inline-start: 8px;
+      }
+      .thumb .watch {
+        position: absolute;
+        inset-block-start: 8px;
+        inset-inline-end: 8px;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-900) / 0.6);
+        color: rgb(var(--surface-50));
+      }
+      .circle-cam {
+        width: 200px;
+        height: 200px;
+        border-radius: 999px;
+        margin: 0 auto;
+        display: grid;
+        place-items: center;
+        background: rgb(var(--surface-900));
+        color: rgb(var(--surface-50));
+        font-size: 40px;
+      }
+      .circle-cam.rec {
+        box-shadow: 0 0 0 4px rgb(var(--danger));
+      }
+      .note-flag {
+        font-size: 11px;
+        color: rgb(var(--warning));
+        font-weight: 600;
+      }
+      .stub {
+        font:
+          12px/1.4 ui-monospace,
+          monospace;
+        padding: 10px;
+        border: 1px dashed rgb(var(--surface-700));
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Calls &amp; live rooms</h1>
+        <p>
+          Design-sync ID <code>feature.calls-live</code> · every runtime surface in this area is one
+          specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <!-- ================= 1:1 calls ================= -->
+      <section class="specimen" data-component="components/incoming-call">
+        <header>
+          <h2>Incoming call</h2>
+          <code>components/incoming-call</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Ringing · voice · end-to-end encrypted</span>
+          <div
+            class="dialog stack"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Incoming voice call"
+            style="align-items: center; text-align: center"
+          >
+            <div class="avatar lg ring pulse">学</div>
+            <h3 class="display" style="margin: 0" dir="auto">Hana Sato</h3>
+            <p class="secondary" style="margin: 0">Incoming voice call...</p>
+            <p class="muted" style="margin: 0">🔒 End-to-end encrypted</p>
+            <div class="controls">
+              <div class="ctl">
+                <button class="round end" aria-label="Decline">✕</button><span>Decline</span>
+              </div>
+              <div class="ctl">
+                <button class="round accept" aria-label="Accept">📞</button><span>Accept</span>
+              </div>
+            </div>
+            <p class="muted" aria-live="polite" style="margin: 0">Ringing...</p>
+          </div>
+          <span class="state-label">Action pending (aria-busy) · unknown caller · video</span>
+          <div class="dialog row" aria-busy="true">
+            <div class="avatar">?</div>
+            <div class="grow">
+              <div class="title">Unknown Caller</div>
+              <div class="muted">Incoming video call...</div>
+            </div>
+            <button class="round end sm" disabled aria-label="Decline">✕</button>
+            <button class="round accept sm" disabled aria-label="Accept">📹</button>
+          </div>
+        </div>
+        <footer>
+          States: ringing · video vs voice · E2EE badge · action pending (buttons disabled) ·
+          unknown caller fallback<br /><span class="note-flag"
+            >i18n gap: voip.endToEndEncrypted, voip.acceptIcon, voip.rejectIcon,
+            voip.avatarPlaceholder have no English copy - copy shown is proposed.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/incoming-call-modal">
+        <header>
+          <h2>Incoming call modal (global)</h2>
+          <code>components/incoming-call-modal</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Top-of-screen banner · ringtone loops while open</span>
+          <div class="card row" style="box-shadow: 0 12px 28px rgb(var(--shadow) / 0.25)">
+            <div class="avatar ember">M</div>
+            <div class="grow">
+              <div class="title" dir="auto">مريم</div>
+              <div class="muted">Incoming video call...</div>
+            </div>
+            <div class="ctl">
+              <button class="round end sm" aria-label="Decline">✕</button><span>Decline</span>
+            </div>
+            <div class="ctl">
+              <button class="round accept sm" aria-label="Accept">📹</button><span>Accept</span>
+            </div>
+          </div>
+          <span class="state-label">Voice call · initial-letter avatar</span>
+          <div class="card row">
+            <div class="avatar">C</div>
+            <div class="grow">
+              <div class="title">Chen Wei</div>
+              <div class="muted">Incoming voice call...</div>
+            </div>
+            <button class="round end sm" aria-label="Decline">✕</button>
+            <button class="round accept sm" aria-label="Accept">📞</button>
+          </div>
+        </div>
+        <footer>
+          States: video · voice · avatar image vs initial fallback. Driven by
+          IncomingCallModalService.currentCall.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/voip-call">
+        <header>
+          <h2>VoIP call</h2>
+          <code>components/voip-call</code>
+        </header>
+        <div class="body">
+          <div class="tiles">
+            <div class="stage" style="min-height: 0">
+              <span class="state-label" style="color: inherit">Incoming · ringing</span>
+              <div class="avatar ember pulse">H</div>
+              <div class="title">Hana</div>
+              <div class="sub">Incoming call...</div>
+              <div class="controls">
+                <button class="round accept sm" aria-label="Accept call">📞</button
+                ><button class="round end sm" aria-label="Reject call">✕</button>
+              </div>
+            </div>
+            <div class="stage" style="min-height: 0">
+              <span class="state-label" style="color: inherit">Outgoing · ringing</span>
+              <div class="avatar">L</div>
+              <div class="title">Lucas</div>
+              <div class="sub">Ringing...</div>
+              <div class="controls">
+                <button class="round sm" aria-label="Mute">🎤</button
+                ><button class="round sm" aria-label="Video">📹</button
+                ><button class="round end sm" aria-label="End call">✕</button>
+              </div>
+            </div>
+            <div class="stage" style="min-height: 0">
+              <span class="state-label" style="color: inherit">Connected · muted</span>
+              <div class="avatar">L</div>
+              <div class="title">Lucas</div>
+              <div class="sub">Connected</div>
+              <div class="timer">04:12</div>
+              <div class="controls">
+                <button class="round on sm" aria-pressed="true" aria-label="Unmute">🔇</button
+                ><button class="round sm" aria-label="Video">📹</button
+                ><button class="round end sm" aria-label="End call">✕</button>
+              </div>
+            </div>
+            <div class="stage" style="min-height: 0">
+              <span class="state-label" style="color: inherit">Ended / missed / rejected</span>
+              <div class="avatar">L</div>
+              <div class="title">Lucas</div>
+              <div class="sub">Call ended</div>
+              <div class="sub">Missed call</div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States (CallState): ringing (incoming/outgoing) · connecting · connected + timer · muted ·
+          ended · missed · rejected<br /><span class="note-flag"
+            >Status text is hard-coded English in the component (not i18n).</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/active-call">
+        <header>
+          <h2>Active call</h2>
+          <code>components/active-call</code>
+        </header>
+        <div class="body">
+          <div class="stage">
+            <div class="avatar lg">C</div>
+            <h3>Chen Wei</h3>
+            <div class="sub" aria-live="polite">Connecting...</div>
+            <div class="controls" style="margin-block-start: auto">
+              <div class="ctl">
+                <button class="round" aria-label="Mute">🎤</button><span>Mute</span>
+              </div>
+              <div class="ctl">
+                <button class="round" aria-label="Speaker on">🔉</button><span>Speaker on</span>
+              </div>
+              <div class="ctl">
+                <button class="round end" aria-label="End Call">📞</button><span>End Call</span>
+              </div>
+            </div>
+          </div>
+          <span class="state-label">Muted + speakerphone</span>
+          <div class="controls">
+            <div class="ctl">
+              <button class="round on" aria-pressed="true" aria-label="Unmute">🔇</button
+              ><span>Unmute</span>
+            </div>
+            <div class="ctl">
+              <button class="round" aria-pressed="true" aria-label="Speaker off">🔊</button
+              ><span>Speaker off</span>
+            </div>
+          </div>
+        </div>
+        <footer>States: connecting · mute ↔ unmute · speaker on ↔ off · end call</footer>
+      </section>
+
+      <section class="specimen" data-component="components/voip-active-call">
+        <header>
+          <h2>VoIP active call</h2>
+          <code>components/voip-active-call</code>
+        </header>
+        <div class="body">
+          <div class="stage">
+            <div class="avatar lg ember">M</div>
+            <h3 dir="auto">María</h3>
+            <div class="timer" role="timer">12:47</div>
+            <div class="controls" style="margin-block-start: auto">
+              <div class="ctl">
+                <button class="round" aria-label="Mute">🎙️</button><span>Mute</span>
+              </div>
+              <div class="ctl">
+                <button class="round" aria-label="Speaker">🔊</button><span>Speaker</span>
+              </div>
+              <div class="ctl">
+                <button class="round end" aria-label="Hang Up">☎️</button><span>Hang Up</span>
+              </div>
+            </div>
+          </div>
+          <span class="state-label">Muted · speaker off</span>
+          <div class="controls">
+            <div class="ctl">
+              <button class="round on" aria-pressed="true">🔇</button><span>Unmute</span>
+            </div>
+            <div class="ctl"><button class="round">🔈</button><span>Speaker</span></div>
+          </div>
+        </div>
+        <footer>
+          States: in-call with duration · muted · speaker on/off · hang up.
+          <span class="note-flag"
+            >Runtime shows Material icon ligature text (mic_off, volume_up) - needs an icon font or
+            SVG.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/video-call">
+        <header>
+          <h2>Video call</h2>
+          <code>components/video-call</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Connected · remote video · local PiP · live chat overlay</span>
+          <div
+            class="stage"
+            role="dialog"
+            aria-label="End call"
+            style="min-height: 280px; justify-content: flex-end"
+          >
+            <div class="pip" role="region" aria-label="Your camera preview">You</div>
+            <div
+              class="timer"
+              role="timer"
+              aria-label="Call duration"
+              style="position: absolute; inset-block-start: 12px; inset-inline-start: 12px"
+            >
+              08:03
+            </div>
+            <div style="font-size: 54px; margin-block: auto">🧑🏽</div>
+            <div class="overlay-chat" role="log" aria-label="Live chat messages">
+              <div><b>Ana</b>¡Hola!</div>
+              <div><b>Kenji</b>Nice accent 👏</div>
+            </div>
+            <div class="controls" role="toolbar" aria-label="Call controls">
+              <button class="round sm" aria-pressed="false" aria-label="Mute audio">🎤</button>
+              <button class="round on sm" aria-pressed="true" aria-label="Turn camera on">
+                🚫
+              </button>
+              <button class="round share sm" aria-pressed="true" aria-label="Stop sharing screen">
+                🖥️
+              </button>
+              <button class="round sm" aria-label="Picture in picture">⧉</button>
+              <button class="round end sm" aria-label="End call">✕</button>
+            </div>
+          </div>
+          <div class="tiles">
+            <div class="tile">
+              <div>
+                <div
+                  class="skeleton pulse"
+                  style="width: 48px; height: 48px; border-radius: 999px; margin: 0 auto 6px"
+                ></div>
+                Connecting…
+              </div>
+            </div>
+            <div class="tile">
+              <div>
+                <div class="avatar" style="margin: 0 auto 6px">LM</div>
+                Waiting for Lucas...
+              </div>
+            </div>
+            <div class="tile">
+              <div><span class="badge success">You're sharing your screen</span></div>
+            </div>
+            <div class="tile">
+              <div>
+                ⚠️<br /><b>Video Classroom Error</b><br /><button
+                  class="btn danger"
+                  style="min-height: 32px; margin-block-start: 6px"
+                >
+                  End call
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="alert warning" role="status">Lucas is sharing their screen</div>
+        </div>
+        <footer>
+          States: connecting (skeleton) · waiting for remote · connected · audio muted · camera off
+          · presenting · remote presenting · PiP · error<br /><span class="note-flag"
+            >i18n gap: video_call.connecting has no English copy.</span
+          >
+        </footer>
+      </section>
+
+      <!-- ================= Live rooms ================= -->
+      <section class="specimen" data-component="components/audio-room">
+        <header>
+          <h2>Live audio &amp; video rooms</h2>
+          <code>components/audio-room</code>
+        </header>
+        <div class="body">
+          <div>
+            <h3 class="display" style="margin: 0 0 4px">🎙️ Live audio and video rooms</h3>
+            <p class="secondary" style="margin: 0">
+              Join language rooms, raise your hand to speak, or launch your own room.
+            </p>
+          </div>
+          <div class="row" style="flex-wrap: wrap; gap: 6px">
+            <span class="chip">🌍 Language exchange</span
+            ><span class="chip">✋ Raise hand queue</span
+            ><span class="chip">💬 Synchronised subtitles</span
+            ><span class="chip">🛡️ Safety moderation</span>
+          </div>
+          <div class="row"><button class="btn block">+ Launch live room</button></div>
+          <div class="seg" role="group" aria-label="View">
+            <button class="btn secondary-btn" aria-pressed="true">🌐 Group by language</button
+            ><button class="btn secondary-btn" aria-pressed="false">📋 Flat list</button>
+          </div>
+          <div class="card stack">
+            <div class="row">
+              <span class="badge danger">🔴 Live</span
+              ><span class="title grow">Japanese ⇄ English free talk</span
+              ><span class="muted">24 listening</span>
+            </div>
+            <div class="row">
+              <div class="avatar sm ember">H</div>
+              <span class="secondary grow">Hana · Host</span
+              ><button class="btn tide" style="min-height: 36px">Join room</button>
+            </div>
+          </div>
+          <span class="state-label">In room · stage + audience</span>
+          <div class="card stack">
+            <div class="row">
+              <span class="badge danger">🔴 Live SFU room</span
+              ><span class="muted grow">3 speaker(s)</span>
+            </div>
+            <div class="title">🎙️ Speaker stage</div>
+            <div class="seats">
+              <div>
+                <div class="avatar ember speaking">H</div>
+                Host
+              </div>
+              <div>
+                <div class="avatar">K</div>
+                Co-Host
+              </div>
+              <div>
+                <div class="avatar">A</div>
+                Ana
+              </div>
+              <div><div class="avatar" style="background: rgb(var(--surface-700))">+2</div></div>
+            </div>
+            <div class="title">🎧 Listener audience</div>
+            <p class="muted" style="margin: 0">
+              21 listeners in the audience listening to the stage.
+            </p>
+            <div class="row" style="flex-wrap: wrap; gap: 6px">
+              <button class="btn secondary-btn" style="min-height: 36px">✋ Raise hand</button>
+              <button class="btn secondary-btn" style="min-height: 36px">🎁 Gift host</button>
+              <button class="btn secondary-btn" style="min-height: 36px">🪙 Tip host</button>
+              <button class="btn secondary-btn" style="min-height: 36px">📝 Notes</button>
+              <button class="btn secondary-btn" style="min-height: 36px">✨ Exclusive</button>
+              <button class="btn secondary-btn" style="min-height: 36px">Create Poll</button>
+              <button class="btn ghost" style="min-height: 36px">🛡️ Moderate</button>
+              <button class="btn danger" style="min-height: 36px">👋 Leave</button>
+            </div>
+          </div>
+          <span class="state-label">Quick poll</span>
+          <div class="card stack">
+            <div class="title">Which tense next?</div>
+            <div class="row">
+              <span class="grow secondary">Past</span><span class="muted">62%</span>
+            </div>
+            <div class="progress"><span style="width: 62%"></span></div>
+            <div class="row">
+              <span class="grow secondary">Future</span><span class="muted">38%</span>
+            </div>
+            <div class="progress">
+              <span style="width: 38%; background: rgb(var(--secondary))"></span>
+            </div>
+            <span class="muted">13 vote(s)</span>
+          </div>
+          <span class="state-label">Loading · empty</span>
+          <div class="card muted" role="status">Loading live rooms...</div>
+          <div class="card" style="text-align: center">
+            <div class="title">No active rooms right now</div>
+            <div class="muted">Be first to launch one.</div>
+          </div>
+        </div>
+        <footer>
+          States: room list (grouped/flat) · loading · empty · in-room stage/audience · host
+          controls (demote, end and archive) · quick poll form/results · speaker requests
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/audio-stage">
+        <header>
+          <h2>Audio stage</h2>
+          <code>components/audio-stage</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Runtime today: scaffold stub</span>
+          <div class="stub">audio-stage works!</div>
+          <span class="state-label">Proposed design intent (not shipped)</span>
+          <div class="card seats">
+            <div>
+              <div class="avatar ember speaking">H</div>
+              Hana · Host
+            </div>
+            <div>
+              <div class="avatar">K</div>
+              Kenji
+            </div>
+            <div>
+              <div class="avatar">🔇</div>
+              Ana
+            </div>
+            <div>
+              <div class="avatar" style="background: rgb(var(--surface-700))">✋</div>
+              Open seat
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: stub only.
+          <span class="note-flag"
+            >The Angular component renders the CLI placeholder text - either wire it to the stage
+            view-model in audio-room or delete it.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/approve-speaker-modal">
+        <header>
+          <h2>Approve speaker requests</h2>
+          <code>components/approve-speaker-modal</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack" role="dialog" aria-label="Manage speaker requests">
+              <div class="row">
+                <h3 class="display grow" style="margin: 0">Manage speaker requests</h3>
+                <button class="icon-btn" aria-label="Close">✕</button>
+              </div>
+              <p class="secondary" style="margin: 0">2 learner(s) are waiting to speak on stage.</p>
+              <div class="card row">
+                <span>✋</span>
+                <div class="grow">
+                  <div class="title">Learner 3f9a21c0...</div>
+                  <div class="muted">Wants stage access to speak</div>
+                </div>
+                <button class="btn tide" style="min-height: 36px">Approve</button
+                ><button class="btn secondary-btn" style="min-height: 36px">Decline</button>
+              </div>
+              <div class="card row">
+                <span>✋</span>
+                <div class="grow">
+                  <div class="title">Learner 8b02de11...</div>
+                  <div class="muted">Wants stage access to speak</div>
+                </div>
+                <button class="btn tide" style="min-height: 36px">Approve</button
+                ><button class="btn secondary-btn" style="min-height: 36px">Decline</button>
+              </div>
+              <button class="btn block">Done</button>
+            </div>
+          </div>
+          <span class="state-label">Empty</span>
+          <div class="dialog muted" style="text-align: center">
+            No speaker requests at the moment.
+          </div>
+        </div>
+        <footer>
+          States: pending requests · empty. Learners are labelled by truncated user ID (no
+          name/avatar) - consider showing display names.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/video-room">
+        <header>
+          <h2>Video room</h2>
+          <code>components/video-room</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <h3 class="display grow" style="margin: 0">French beginners corner</h3>
+            <button
+              class="btn secondary-btn"
+              style="min-height: 36px"
+              aria-expanded="true"
+              aria-haspopup="listbox"
+            >
+              🎥 Invite co-host</button
+            ><button class="icon-btn" aria-label="Show guided tour">?</button>
+          </div>
+          <div class="list" role="listbox" aria-label="Select speaker to invite as co-host">
+            <div role="option">Speaker 3f9a21</div>
+            <div role="option">Speaker 8b02de</div>
+          </div>
+          <div class="tiles" role="group">
+            <div class="tile">🧑🏻‍🏫<span class="tag">Host</span></div>
+            <div class="tile">
+              👩🏾<span class="tag tide">Co-Host</span
+              ><button
+                class="icon-btn"
+                aria-label="Remove co-host from split screen"
+                style="
+                  position: absolute;
+                  inset-block-start: 6px;
+                  inset-inline-end: 6px;
+                  width: 32px;
+                  height: 32px;
+                "
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <span class="state-label">Waiting · no eligible speakers · connecting</span>
+          <div class="tiles">
+            <div class="tile">Waiting for host video...</div>
+            <div class="tile">Waiting for co-host to join...</div>
+          </div>
+          <p class="muted" role="status" style="margin: 0">
+            Approve a stage speaker before inviting a co-host.
+          </p>
+          <div class="card row">
+            <div
+              class="skeleton pulse"
+              style="width: 40px; height: 40px; border-radius: 999px"
+            ></div>
+            <span class="secondary">Connecting to room...</span>
+          </div>
+        </div>
+        <footer>
+          States: host/co-host split grid · invite picker open · waiting for host · waiting for
+          co-host · no eligible speakers · connecting
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/split-screen-video">
+        <header>
+          <h2>Split-screen video</h2>
+          <code>components/split-screen-video</code>
+        </header>
+        <div class="body">
+          <div class="tiles" role="group" aria-label="Split screen video">
+            <div class="tile">🧑🏻‍🏫<span class="tag">Hana (Host)</span></div>
+            <div class="tile">👩🏾<span class="tag tide">Ana (Co-Host)</span></div>
+          </div>
+          <span class="state-label">No co-host · loading host</span>
+          <div class="tiles">
+            <div class="tile">
+              <div>
+                <div
+                  class="skeleton pulse"
+                  style="width: 40px; height: 40px; border-radius: 999px; margin: 0 auto 6px"
+                ></div>
+                Loading host video…
+              </div>
+            </div>
+            <div class="tile">
+              <button class="btn tide" aria-label="Invite a co-host to split screen">
+                ➕ Invite Co-Host
+              </button>
+            </div>
+          </div>
+          <span class="state-label">Error</span>
+          <div class="alert error stack" style="align-items: center; text-align: center">
+            🎥<b>Video Classroom Error</b
+            ><span
+              >An unexpected error occurred while loading this video classroom. Your connection has
+              been preserved.</span
+            ><button class="btn">Try Again</button>
+          </div>
+        </div>
+        <footer>
+          States: host + co-host · invite co-host · loading · error/retry<br /><span
+            class="note-flag"
+            >i18n gap: splitScreen.loadingHost / loadingCoHost; "(Host)"/"(Co-Host)" suffixes are
+            hard-coded English.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/live-chat-overlay">
+        <header>
+          <h2>Live chat overlay</h2>
+          <code>components/live-chat-overlay</code>
+        </header>
+        <div class="body">
+          <div class="stage" style="justify-content: flex-end; min-height: 200px">
+            <div style="font-size: 46px; margin-block: auto">🧑🏻‍🏫</div>
+            <div class="overlay-chat" role="log" aria-live="polite" aria-label="Live chat messages">
+              <div><b>Ana</b>¿Puedes repetir?</div>
+              <div><b dir="auto">مريم</b><span dir="auto">شكراً!</span></div>
+              <div><b>Kenji</b>Great explanation 🙌</div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: scrolling message log with top fade mask over host video. Polite live region.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/room-chat">
+        <header>
+          <h2>Room chat &amp; subtitles</h2>
+          <code>components/room-chat</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <span class="title grow">💬 Synchronised room chat and subtitles</span
+            ><button class="btn secondary-btn" style="min-height: 36px">
+              🎙️ Show AI subtitles (3)
+            </button>
+          </div>
+          <div class="list">
+            <div>
+              <div class="row"><b class="grow">Ana</b><span class="muted">19:02</span></div>
+              <p style="margin: 4px 0 0">Hello everyone!</p>
+            </div>
+            <div>
+              <div class="row"><b class="grow">Kenji</b><span class="muted">19:03</span></div>
+              <p style="margin: 4px 0 0">How do you say "deadline"?</p>
+            </div>
+          </div>
+          <div class="row">
+            <input
+              class="grow"
+              style="
+                min-height: 44px;
+                border-radius: 12px;
+                border: 1px solid rgb(var(--surface-700));
+                background: rgb(var(--surface-200));
+                color: inherit;
+                padding: 0 12px;
+              "
+              placeholder="Send a chat message to the room..."
+            /><button class="btn">Send</button>
+          </div>
+          <span class="state-label">Subtitles tab (speaker)</span>
+          <div class="card">
+            <span class="muted">🎙️ Hana (Live AI caption):</span>
+            <p style="margin: 4px 0 0">今日は過去形を練習しましょう。</p>
+          </div>
+          <div class="row"><button class="btn tide grow">Broadcast caption</button></div>
+          <span class="state-label">Empty</span>
+          <div class="card muted">
+            No messages in this live room yet. Say hello to the stage speakers!
+          </div>
+        </div>
+        <footer>
+          States: chat · subtitles · empty chat · empty subtitles · speaker caption composer. Embeds
+          the soundboard. <span class="note-flag">All copy hard-coded English (no i18n).</span>
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/soundboard">
+        <header>
+          <h2>Soundboard</h2>
+          <code>components/soundboard</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <div class="row"><h4 class="title grow" style="margin: 0">Sound Effects</h4></div>
+            <div class="seg">
+              <button class="btn secondary-btn" aria-label="Play Applause sound effect">
+                👏 Applause
+              </button>
+              <button class="btn secondary-btn pulse" aria-busy="true" disabled>🥁 Drumroll</button>
+              <button class="btn secondary-btn" disabled>😂 Laugh</button>
+              <button class="btn secondary-btn" disabled>🎉 Party</button>
+            </div>
+          </div>
+          <span class="state-label">Loading · load error</span>
+          <div class="card row">
+            <span class="title grow">Sound Effects</span
+            ><span class="muted" role="status">Loading...</span>
+          </div>
+          <div class="alert error row" role="alert">
+            <span class="grow">Error</span
+            ><button class="btn secondary-btn" style="min-height: 32px">Retry</button>
+          </div>
+        </div>
+        <footer>
+          States: ready · playing (others disabled) · loading · load error + retry · play error.
+          Visible to host/co-host only.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/host-dashboard">
+        <header>
+          <h2>Host dashboard</h2>
+          <code>components/host-dashboard</code>
+        </header>
+        <div class="body">
+          <div class="card row" role="region" aria-label="Host dashboard">
+            <div class="stat">
+              <span class="muted">Viewers</span><b><span class="live-dot pulse"></span>128</b>
+            </div>
+            <div class="stat"><span class="muted">Coins earned</span><b>🪙 2,340</b></div>
+            <div class="stat"><span class="muted">Uptime</span><b>01:12:09</b></div>
+          </div>
+        </div>
+        <footer>
+          States: live stats.
+          <span class="note-flag"
+            >i18n gap: every host_dashboard.* key is missing from all locale files - runtime renders
+            raw keys. Labels shown are proposed.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/voiceroom-create-modal">
+        <header>
+          <h2>Launch live room</h2>
+          <code>components/voiceroom-create-modal</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack" role="dialog" aria-label="Launch live language room">
+              <div class="row">
+                <div class="grow">
+                  <h3 class="display" style="margin: 0">🎙️ Launch live language room</h3>
+                  <p class="muted" style="margin: 2px 0 0">
+                    Start a hosted room powered by LiveKit SFU.
+                  </p>
+                </div>
+                <button class="icon-btn" aria-label="Cancel">✕</button>
+              </div>
+              <label class="field"
+                >Room title<input placeholder="Conversation practice room"
+              /></label>
+              <label class="field"
+                >Language pair<select>
+                  <option>English ⇄ Japanese</option>
+                </select></label
+              >
+              <label class="field"
+                >Topic<select>
+                  <option>Free Talk</option>
+                </select></label
+              >
+              <label class="row secondary"
+                ><input type="checkbox" style="width: 20px; height: 20px" /> Enable split-screen
+                video</label
+              >
+              <div class="row">
+                <button class="btn ghost grow">Cancel</button
+                ><button class="btn grow" disabled>Launch stage</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: empty (Launch disabled until title valid) · submitting. Topics: Pronunciation,
+          Beginners, Cultural Exchange, Grammar Help, Free Talk.
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/private-party-create-modal">
+        <header>
+          <h2>Create a private party</h2>
+          <code>components/private-party-create-modal</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack" role="dialog" aria-label="Create a Private Party">
+            <div class="row">
+              <h3 class="display grow" style="margin: 0">Create a Private Party</h3>
+              <button class="icon-btn" aria-label="Cancel">✕</button>
+            </div>
+            <p class="muted" style="margin: 0">
+              Start an invite-only audio room for your friends or study partners.
+            </p>
+            <label class="field">Room title<input value="Friday Spanish hangout" /></label>
+            <label class="field"
+              >Language pair<select>
+                <option>English ⇄ Spanish</option>
+              </select></label
+            >
+            <div class="field">
+              Invite Friends<span class="hint"
+                >Select friends to invite. Only invited users can join this room.</span
+              >
+            </div>
+            <div class="row" style="flex-wrap: wrap; gap: 6px">
+              <span class="chip on">Ana ✕</span><span class="chip on">Lucas ✕</span>
+            </div>
+            <label class="field"
+              ><input placeholder="Search friends..." aria-label="Search friends..."
+            /></label>
+            <div class="list">
+              <label class="row"><input type="checkbox" checked /> Ana</label
+              ><label class="row"><input type="checkbox" checked /> Lucas</label
+              ><label class="row"><input type="checkbox" /> Kenji</label>
+            </div>
+            <div class="row">
+              <button class="btn ghost grow">Cancel</button
+              ><button class="btn grow">Launch Private Party</button>
+            </div>
+          </div>
+          <span class="state-label">Friends loading · error · none</span>
+          <p class="muted" role="status" style="margin: 0">Loading friends...</p>
+          <div class="alert error row" role="alert">
+            <span class="grow">Error</span
+            ><button class="btn secondary-btn" style="min-height: 32px">Retry</button>
+          </div>
+          <p class="muted" style="margin: 0">
+            No friends found. Follow some language partners first!
+          </p>
+        </div>
+        <footer>
+          States: form · selected friend pills · friend search · loading friends · error/retry · no
+          friends
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/language-parties">
+        <header>
+          <h2>Language Parties</h2>
+          <code>components/language-parties</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow">
+              <h3 class="display" style="margin: 0">Language Parties</h3>
+              <p class="muted" style="margin: 2px 0 0">
+                Live audio rooms dedicated to spoken practice in a group setting
+              </p>
+            </div>
+            <button class="btn">+ Create Party</button>
+          </div>
+          <div class="row" style="flex-wrap: wrap; gap: 6px">
+            <span class="chip on">🇯🇵 🇬🇧 Japanese</span><span class="chip">All Topics</span
+            ><span class="chip">All Levels</span><button class="chip">Clear (1) ✕</button>
+          </div>
+          <p class="muted" style="margin: 0">2 active parties</p>
+          <article class="card stack">
+            <h4 class="title" style="margin: 0" dir="auto">Anime vocab night</h4>
+            <div class="row" style="flex-wrap: wrap; gap: 6px">
+              <span class="chip tide">English ⇄ Japanese</span><span class="chip">#culture</span
+              ><span class="chip">Intermediate</span>
+            </div>
+            <div class="row">
+              <div class="avatar sm ember">K</div>
+              <div class="grow">
+                <div class="title">Kenji</div>
+                <div class="muted">Host</div>
+              </div>
+            </div>
+            <div class="row muted">
+              <span>🎙️ 3 speakers</span><span>👥 18 listening</span><span>⏱️ 45min</span>
+            </div>
+            <div class="row">
+              <span
+                class="grow"
+                style="font-size: 12px; font-weight: 700; color: rgb(var(--danger))"
+                ><span class="live-dot pulse"></span>Live Now</span
+              ><button class="btn tide">Join Party</button>
+            </div>
+          </article>
+          <span class="state-label">Loading · empty · filtered empty</span>
+          <div class="card stack">
+            <div class="skeleton pulse" style="width: 70%"></div>
+            <div class="skeleton pulse" style="width: 40%"></div>
+          </div>
+          <div class="card" style="text-align: center">
+            🎙️
+            <div class="title">No active language parties</div>
+            <p class="muted">
+              Be the first to start a language party! Create one now and invite others to practise
+              together.
+            </p>
+            <button class="btn">Create the First Party</button>
+          </div>
+          <div class="card" style="text-align: center">
+            <div class="title">No parties match your filters</div>
+            <button class="btn secondary-btn">Clear All Filters</button>
+          </div>
+          <span class="state-label">Create Language Party modal</span>
+          <div class="dialog stack">
+            <h3 class="display" style="margin: 0">Create Language Party</h3>
+            <p class="muted" style="margin: 0">
+              Set up a live audio room for group language practice.
+            </p>
+            <label class="field"
+              >Party Title<input placeholder="E.g. French Beginners Corner" /></label
+            ><label class="field"
+              >Proficiency Level<select>
+                <option>Beginner</option>
+              </select></label
+            ><label class="row secondary"><input type="checkbox" /> Enable video streaming</label>
+            <div class="row">
+              <button class="btn ghost grow">Cancel</button
+              ><button class="btn grow">Launch Party</button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: list · filters + clear · loading skeleton · error/retry · empty · filtered empty ·
+          joining (aria-busy) · create modal<br /><span class="note-flag"
+            >i18n gap: language-pair and level option labels (audioRoom.languagePair.*,
+            languageParty.level.*) have no English copy.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/tip-host-modal">
+        <header>
+          <h2>Tip the host</h2>
+          <code>components/tip-host-modal</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack" role="dialog" aria-modal="true" aria-label="Tip the Host">
+              <div class="row">
+                <div class="grow">
+                  <h3 class="display" style="margin: 0">Tip the Host</h3>
+                  <p class="muted" style="margin: 2px 0 0">Show your appreciation with coins</p>
+                </div>
+                <button class="icon-btn" aria-label="Close">✕</button>
+              </div>
+              <div class="card row">
+                <span>💰</span>
+                <div class="grow">
+                  <div class="muted">Your balance</div>
+                  <b aria-live="polite">320 🪙</b>
+                </div>
+              </div>
+              <fieldset style="border: 0; padding: 0; margin: 0">
+                <legend class="muted" style="margin-block-end: 6px">Choose an amount</legend>
+                <div class="seg">
+                  <button class="btn secondary-btn" aria-pressed="false">10 🪙</button
+                  ><button class="btn secondary-btn" aria-pressed="true">50 🪙</button
+                  ><button class="btn secondary-btn" aria-pressed="false">100 🪙</button
+                  ><button class="btn secondary-btn" aria-pressed="false" disabled>500 🪙</button>
+                </div>
+              </fieldset>
+              <div class="row">
+                <label class="field grow"
+                  >Custom amount<input type="number" placeholder="Enter coins" /></label
+                ><button class="btn secondary-btn" disabled style="align-self: flex-end">
+                  Custom
+                </button>
+              </div>
+              <div class="row">
+                <button class="btn ghost grow">Cancel</button
+                ><button class="btn vip grow">Send 50 🪙</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States: preset selected · custom amount · send disabled when amount &gt; balance · sending
+          ("...")<br /><span class="note-flag"
+            >i18n gap: tipPresetLabel, tipCustomAmountLabel, tipCustomPlaceholder and aria labels
+            lack English copy.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/voiceroom-notes">
+        <header>
+          <h2>Room notes</h2>
+          <code>components/voiceroom-notes</code>
+        </header>
+        <div class="body">
+          <div>
+            <h3 class="display" style="margin: 0">Shared notes</h3>
+            <span class="muted">Everyone in the room can see these</span>
+          </div>
+          <ul class="list" style="margin: 0; padding: 0; list-style: none">
+            <li>
+              <div class="row">
+                <b class="grow">Hana</b
+                ><button
+                  class="icon-btn"
+                  style="width: 32px; height: 32px"
+                  aria-label="Delete note"
+                >
+                  ×
+                </button>
+              </div>
+              <p style="margin: 4px 0" class="secondary">
+                締め切り = deadline. Use に間に合う for "make it in time".
+              </p>
+              <div class="row" style="gap: 6px">
+                <span class="chip tide">締め切り</span><span class="chip tide">間に合う</span>
+              </div>
+            </li>
+          </ul>
+          <form class="stack" onsubmit="return false;">
+            <textarea
+              rows="2"
+              aria-label="Note"
+              placeholder="Write a note for the room…"
+              style="
+                border-radius: 12px;
+                border: 1px solid rgb(var(--surface-700));
+                background: rgb(var(--surface-200));
+                color: inherit;
+                padding: 10px;
+                font: inherit;
+              "
+            ></textarea>
+            <label class="field">Vocabulary<input placeholder="Comma-separated words" /></label>
+            <button class="btn" disabled>Post</button>
+          </form>
+          <span class="state-label">Loading · error · empty</span>
+          <p class="muted" style="margin: 0">Loading… · Something went wrong · No notes yet.</p>
+        </div>
+        <footer>
+          States: list with vocabulary chips · loading · error · empty · posting (disabled)<br /><span
+            class="note-flag"
+            >i18n gap: all voices.notes.* and global.* keys are missing from every locale - copy
+            shown is proposed.</span
+          >
+        </footer>
+      </section>
+
+      <!-- ================= Classrooms & recording ================= -->
+      <section class="specimen" data-component="components/classrooms-marketplace">
+        <header>
+          <h2>Video classrooms</h2>
+          <code>components/classrooms-marketplace</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow">
+              <h3 class="display" style="margin: 0">🏫 Video Classrooms</h3>
+              <p class="muted" style="margin: 2px 0 0">
+                Join live video language-learning sessions hosted by the community
+              </p>
+            </div>
+            <button class="icon-btn" aria-label="Show guided tour">?</button>
+          </div>
+          <span class="badge success" style="align-self: flex-start">🎥 You are hosting</span>
+          <nav class="row" aria-label="Language filters" style="flex-wrap: wrap; gap: 6px">
+            <button class="chip on" aria-pressed="true">All Languages</button
+            ><button class="chip" aria-pressed="false">en-ja</button
+            ><button class="chip" aria-pressed="false">en-es</button>
+          </nav>
+          <article class="card" style="padding: 0; overflow: hidden">
+            <div class="thumb">
+              🎥<span class="badge danger">● LIVE</span><span class="watch">42 watching</span>
+            </div>
+            <div class="stack" style="padding: 12px">
+              <div class="title">Business Japanese: email etiquette</div>
+              <div class="row" style="gap: 6px">
+                <span class="chip tide">en-ja</span><span class="chip">business</span>
+              </div>
+              <div class="row muted">
+                <span>2 speakers</span><span>·</span><span>Started 19:00</span>
+              </div>
+              <button class="btn block">Join Classroom</button>
+            </div>
+          </article>
+          <span class="state-label">Loading · error · empty</span>
+          <div class="card stack">
+            <div class="skeleton pulse" style="height: 80px"></div>
+            <div class="skeleton pulse" style="width: 70%"></div>
+          </div>
+          <div class="alert error stack" style="text-align: center">
+            ⚠️<b>Failed to load classrooms</b
+            ><span
+              >We could not load the classroom list. Please check your connection and try
+              again.</span
+            ><button class="btn">Try Again</button>
+          </div>
+          <div class="card" style="text-align: center">
+            🏫
+            <div class="title">No Video Classrooms Available</div>
+            <p class="muted" style="margin: 0">
+              No live video classrooms match your filters. Start one or check back later!
+            </p>
+          </div>
+        </div>
+        <footer>
+          States: list · hosting badge · language filters · loading skeleton · load error · empty ·
+          guided tour steps<br /><span class="note-flag"
+            >Bug: classroomsMarketplace.title stores HTML entities ("&amp;#127979;&amp;#65039;")
+            which render literally through interpolation - store the emoji character instead.</span
+          >
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/video-classroom-error-boundary">
+        <header>
+          <h2>Video classroom error boundary</h2>
+          <code>components/video-classroom-error-boundary</code>
+        </header>
+        <div class="body">
+          <div
+            class="alert error stack"
+            role="alert"
+            style="text-align: center; align-items: center; padding: 18px"
+          >
+            <span style="font-size: 28px">🎥</span>
+            <b style="font-size: 16px">Video Classroom Error</b>
+            <span
+              >An unexpected error occurred while loading this video classroom. Your connection has
+              been preserved.</span
+            >
+            <code class="muted">NotReadableError: Could not start video source</code>
+            <span class="muted">Another app may be using your camera.</span>
+            <div class="row">
+              <button class="btn">Try Again</button
+              ><button class="btn secondary-btn">Report Crash</button>
+            </div>
+          </div>
+          <span class="state-label">After reporting</span>
+          <div class="alert success">Crash reported. Thank you for helping us improve!</div>
+        </div>
+        <footer>
+          States: healthy (projects content) · error with message + hint · retry · report crash ·
+          reported confirmation
+        </footer>
+      </section>
+
+      <section class="specimen" data-component="components/instant-video-recorder">
+        <header>
+          <h2>Video note recorder</h2>
+          <code>components/instant-video-recorder</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow">
+              <h3 class="display" style="margin: 0">Video note</h3>
+              <p class="muted" style="margin: 2px 0 0">
+                Record a short circular video message. Camera and microphone stop as soon as
+                recording ends.
+              </p>
+            </div>
+            <span class="chip" aria-label="Maximum recording duration 30 seconds"
+              >00:12 / 00:30</span
+            >
+          </div>
+          <div class="circle-cam rec">🙂</div>
+          <p class="secondary" role="status" style="margin: 0; text-align: center">
+            <span class="live-dot pulse"></span>Recording 00:12
+          </p>
+          <div class="row">
+            <button class="btn secondary-btn grow">Cancel</button
+            ><button class="btn grow">Stop</button>
+          </div>
+          <span class="state-label">Preview</span>
+          <div class="row">
+            <button class="btn secondary-btn grow">Cancel</button
+            ><button class="btn secondary-btn grow">Retake</button
+            ><button class="btn grow">Send video note</button>
+          </div>
+          <span class="state-label">Opening camera · uploading · errors</span>
+          <div class="row">
+            <button class="btn grow" disabled>Opening camera…</button
+            ><button class="btn grow" disabled>Uploading…</button>
+          </div>
+          <div class="alert error" role="alert">
+            Camera and microphone permission are required to record a video note.
+          </div>
+          <div class="alert error" role="alert">
+            This video note is too large. Please record a shorter note.
+          </div>
+        </div>
+        <footer>
+          States: idle · requesting permission · recording (30s cap) · preview · uploading ·
+          permission denied · unsupported · too large · failed<br /><span class="note-flag"
+            >All copy hard-coded English (no i18n).</span
+          >
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>

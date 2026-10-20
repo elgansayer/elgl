@@ -1,0 +1,1436 @@
+<!-- @dsCard group="Features" name="Profile & identity" subtitle="Profile editing, media uploads, interests, social graph, visitors, badges, stats, milestones, favourites · light/dark · RTL · 390px" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Profile & identity</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.profile-identity" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 107 113 130;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 126 132 148;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      .cover {
+        position: relative;
+        block-size: 120px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: linear-gradient(
+          135deg,
+          rgb(var(--primary) / 0.85),
+          rgb(var(--secondary) / 0.85)
+        );
+      }
+      .cover.empty {
+        background: rgb(var(--surface-200));
+        display: grid;
+        place-items: center;
+        color: rgb(var(--text-muted));
+        font-size: 32px;
+      }
+      .cover.dashed {
+        border: 2px dashed rgb(var(--surface-700));
+        background: transparent;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        color: rgb(var(--text-muted));
+        font-size: 13px;
+      }
+      .cover .on-cover {
+        position: absolute;
+        inset-block-end: 10px;
+        inset-inline-end: 10px;
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+      .cover .overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        background: rgb(var(--surface-500) / 0.88);
+        color: rgb(var(--text-primary));
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .crop-frame {
+        position: absolute;
+        inset-block: 18px;
+        inset-inline: 40px;
+        border: 2px solid rgb(var(--on-fill));
+        box-shadow: 0 0 0 999px rgb(var(--surface-900) / 0.45);
+      }
+      .avatar-drop {
+        inline-size: 80px;
+        block-size: 80px;
+        border-radius: 999px;
+        border: 2px dashed rgb(var(--surface-700));
+        display: grid;
+        place-items: center;
+        font-size: 26px;
+        color: rgb(var(--text-muted));
+      }
+      .audio-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-100));
+        font-size: 12px;
+      }
+      .audio-bar .wave {
+        flex: 1;
+        block-size: 14px;
+        background: repeating-linear-gradient(
+          90deg,
+          rgb(var(--secondary)) 0 2px,
+          transparent 2px 5px
+        );
+        border-radius: 4px;
+        opacity: 0.8;
+      }
+      .rec-dot {
+        inline-size: 10px;
+        block-size: 10px;
+        border-radius: 999px;
+        background: rgb(var(--danger));
+        display: inline-block;
+      }
+      .rec-dot.paper {
+        background: rgb(var(--on-fill));
+      }
+      .chip-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .blur {
+        filter: blur(4px);
+        user-select: none;
+      }
+      .stat-tiles {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .stat-tiles .card {
+        padding: 10px;
+        text-align: center;
+      }
+      .stat-tiles strong {
+        display: block;
+        font:
+          700 20px/1.1 'Instrument Sans',
+          sans-serif;
+      }
+      .bars {
+        display: flex;
+        align-items: end;
+        gap: 6px;
+        block-size: 70px;
+      }
+      .bars span {
+        flex: 1;
+        background: rgb(var(--primary) / 0.8);
+        border-radius: 4px 4px 0 0;
+      }
+      .bars span.today {
+        background: rgb(var(--secondary));
+      }
+      .pie {
+        inline-size: 64px;
+        block-size: 64px;
+        border-radius: 999px;
+        flex: none;
+        background: conic-gradient(
+          rgb(var(--primary)) 0 45%,
+          rgb(var(--secondary)) 45% 75%,
+          rgb(var(--vip)) 75% 100%
+        );
+      }
+      .legend-dot {
+        inline-size: 8px;
+        block-size: 8px;
+        border-radius: 999px;
+        display: inline-block;
+        margin-inline-end: 6px;
+      }
+      .done {
+        color: rgb(var(--success));
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .diff del {
+        color: rgb(var(--danger));
+        text-decoration: line-through;
+      }
+      .diff ins {
+        color: rgb(var(--success));
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .tabs {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-block-end: 2px;
+      }
+      .tabs .chip {
+        white-space: nowrap;
+        min-height: 32px;
+      }
+      .option {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        font-size: 13px;
+      }
+      .option.correct {
+        border-color: rgb(var(--success));
+        background: rgb(var(--success) / 0.1);
+      }
+      .lock {
+        opacity: 0.55;
+      }
+      .check {
+        display: inline-grid;
+        place-items: center;
+        inline-size: 20px;
+        block-size: 20px;
+        border-radius: 6px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 12px;
+      }
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Profile & identity</h1>
+        <p>
+          Design-sync ID <code>feature.profile-identity</code> · every runtime surface in this area
+          is one specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <!-- 1 -->
+      <section class="specimen" data-component="components/profile-edit">
+        <header>
+          <h2>Edit Profile</h2>
+          <code>components/profile-edit</code>
+        </header>
+        <div class="body">
+          <div class="stack">
+            <span class="secondary">Cover Photo</span>
+            <div class="cover">
+              <button type="button" class="btn on-cover">Change Cover</button>
+            </div>
+          </div>
+          <label class="field">Display Name<input value="Maria Okafor" /></label>
+          <label class="field"
+            >Gender
+            <select>
+              <option>Prefer not to say</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <span class="state-label">Business account fields</span>
+          <label class="field">Business Name<input value="Kyoto Language Café" /></label>
+          <div class="two-col">
+            <label class="field">Business Hours<input value="Mon–Fri 9–18" /></label>
+            <label class="field">Website URL<input value="https://kyoto.cafe" dir="ltr" /></label>
+          </div>
+          <button type="button" class="btn block">Save Profile</button>
+        </div>
+        <footer>States shown: existing cover · business fields (business accounts only)</footer>
+      </section>
+
+      <!-- 2 -->
+      <section class="specimen" data-component="components/profile-cover-photo">
+        <header>
+          <h2>Cover photo</h2>
+          <code>components/profile-cover-photo</code>
+        </header>
+        <div class="body">
+          <span class="state-label">Empty</span>
+          <div class="cover dashed">
+            <div>
+              <div style="font-size: 15px">Upload a cover photo</div>
+              <div class="muted">JPG, PNG or WebP</div>
+            </div>
+          </div>
+          <span class="state-label">Preview selected · saving</span>
+          <div class="cover"></div>
+          <div class="row" style="justify-content: flex-end">
+            <button type="button" class="btn secondary-btn">Cancel</button>
+            <button type="button" class="btn" disabled><span class="pulse">⏳</span> Save</button>
+          </div>
+        </div>
+        <footer>States shown: empty drop zone · preview · saving (disabled)</footer>
+      </section>
+
+      <!-- 3 -->
+      <section class="specimen" data-component="components/cover-photo-cropper">
+        <header>
+          <h2>Crop cover photo</h2>
+          <code>components/cover-photo-cropper</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div class="dialog stack" role="dialog" aria-labelledby="crop-t">
+              <h3 id="crop-t" class="title" style="font-size: 17px; margin: 0">Crop</h3>
+              <div class="cover" style="block-size: 110px"><div class="crop-frame"></div></div>
+              <p class="muted" style="margin: 0">Fixed 3:1 aspect · exported as WebP at 1200px</p>
+              <div class="row" style="justify-content: flex-end">
+                <button type="button" class="btn secondary-btn">Cancel</button>
+                <button type="button" class="btn">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer>States shown: Helm dialog · Save disabled until a crop exists</footer>
+      </section>
+
+      <!-- 4 -->
+      <section class="specimen" data-component="components/cover-photo-uploader">
+        <header>
+          <h2>Cover photo uploader</h2>
+          <code>components/cover-photo-uploader</code>
+        </header>
+        <div class="body">
+          <span class="state-label">No cover · hover/focus overlay</span>
+          <div class="cover empty">
+            <div class="overlay">🖼️<br />Add Cover Photo</div>
+          </div>
+          <span class="state-label">Image chosen</span>
+          <div class="cover"></div>
+          <div class="stack">
+            <button type="button" class="btn secondary-btn block">Crop</button>
+            <button type="button" class="btn block">Upload</button>
+            <button type="button" class="btn ghost block">Cancel</button>
+          </div>
+          <span class="state-label">Uploading · error</span>
+          <button type="button" class="btn block" disabled>Uploading...</button>
+          <div class="alert error" role="alert">Error: the image could not be uploaded.</div>
+        </div>
+        <footer>States shown: add/change cover · chosen · uploading · error</footer>
+      </section>
+
+      <!-- 5 -->
+      <section class="specimen" data-component="components/avatar-upload">
+        <header>
+          <h2>Avatar upload</h2>
+          <code>components/avatar-upload</code>
+        </header>
+        <div class="body">
+          <h3 class="title" style="margin: 0">Upload a profile photo</h3>
+          <span class="state-label">Empty</span>
+          <div class="avatar-drop" aria-label="Choose photo">＋</div>
+          <span class="state-label">Square crop selection</span>
+          <div class="cover" style="block-size: 160px">
+            <div class="crop-frame" style="inset-inline: 110px; inset-block: 20px"></div>
+          </div>
+          <div class="row">
+            <button type="button" class="btn">Crop and upload</button>
+            <button type="button" class="btn secondary-btn">Cancel</button>
+          </div>
+        </div>
+        <footer>States shown: empty · drag-to-position crop · uploading disables primary</footer>
+      </section>
+
+      <!-- 6 -->
+      <section class="specimen" data-component="components/audio-intro-recorder">
+        <header>
+          <h2>Audio Introduction</h2>
+          <code>components/audio-intro-recorder</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <span class="state-label">Idle</span>
+            <p class="secondary" style="margin: 0">
+              Record a 30-second audio introduction to let others hear your voice.
+            </p>
+            <div>
+              <button type="button" class="btn" style="border-radius: 999px">
+                <span class="rec-dot"></span> Record Intro
+              </button>
+            </div>
+          </div>
+          <div class="card stack">
+            <span class="state-label">Recording</span>
+            <div class="row">
+              <button type="button" class="btn danger pulse" style="border-radius: 999px">
+                <span class="rec-dot paper"></span> Stop Recording
+              </button>
+              <span class="secondary" role="status">0:12 / 0:30</span>
+            </div>
+          </div>
+          <div class="card stack">
+            <span class="state-label">Recorded · ready to save</span>
+            <div class="audio-bar">▶ <span class="wave"></span> 0:24</div>
+            <div class="row">
+              <button type="button" class="btn secondary-btn" style="border-radius: 999px">
+                Re-record
+              </button>
+              <button
+                type="button"
+                class="btn"
+                style="border-radius: 999px; background: rgb(var(--success))"
+              >
+                Save
+              </button>
+            </div>
+            <p class="muted" style="margin: 0; color: rgb(var(--danger))" role="alert">
+              Something went wrong. Please try again.
+            </p>
+          </div>
+        </div>
+        <footer>States shown: idle · recording (live timer) · preview + save · error</footer>
+      </section>
+
+      <!-- 7 -->
+      <section class="specimen" data-component="components/profile-interests">
+        <header>
+          <h2>Profile interests</h2>
+          <code>components/profile-interests</code>
+        </header>
+        <div class="body">
+          <p class="secondary" style="margin: 0">Tap to toggle the topics shown on your profile.</p>
+          <div class="chip-wrap">
+            <span class="chip on">✓ Travel</span><span class="chip">Music</span
+            ><span class="chip on">✓ Cooking</span> <span class="chip">Anime</span
+            ><span class="chip">Football</span><span class="chip on">✓ Photography</span>
+            <span class="chip">Gaming</span><span class="chip">Books</span
+            ><span class="chip">Tech</span>
+          </div>
+        </div>
+        <footer>States shown: selected · unselected toggle chips</footer>
+      </section>
+
+      <!-- 8 -->
+      <section class="specimen" data-component="components/hobby-tags">
+        <header>
+          <h2>Hobbies &amp; Interests</h2>
+          <code>components/hobby-tags</code>
+        </header>
+        <div class="body">
+          <div class="list">
+            <div class="row">
+              <span class="grow title">🎸 Guitar</span>
+              <select aria-label="Proficiency level for Guitar" class="chip">
+                <option>Intermediate</option>
+              </select>
+              <button
+                type="button"
+                class="icon-btn"
+                aria-label="Remove Guitar from your hobbies"
+                style="width: 36px; height: 36px"
+              >
+                ✕
+              </button>
+            </div>
+            <div class="row">
+              <span class="grow title">🍳 料理 (Cooking)</span>
+              <select aria-label="Proficiency level for Cooking" class="chip">
+                <option>Advanced</option>
+              </select>
+              <button
+                type="button"
+                class="icon-btn"
+                aria-label="Remove Cooking"
+                style="width: 36px; height: 36px"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <span class="state-label">Adding · search</span>
+          <label class="field"
+            >Search hobbies<input placeholder="Search hobbies..." value="kal"
+          /></label>
+          <div class="list">
+            <div>Calligraphy</div>
+            <div class="title" style="color: rgb(var(--primary))">Create "kal"</div>
+          </div>
+          <div class="row"><button type="button" class="btn ghost">Cancel</button></div>
+          <span class="state-label">Empty</span>
+          <p class="muted" style="margin: 0">
+            No hobbies added yet. Click "Add Hobby" to get started!
+          </p>
+          <button type="button" class="btn secondary-btn">+ Add Hobby</button>
+          <div class="card stack">
+            <span class="title">Vocabulary from your hobbies</span>
+            <div class="chip-wrap">
+              <span class="chip tide" lang="ja">弦 · string</span
+              ><span class="chip tide" lang="ja">和音 · chord</span>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: list with proficiency · search/create · no results · empty · hobby
+          vocabulary
+        </footer>
+      </section>
+
+      <!-- 9 -->
+      <section class="specimen" data-component="interests-select">
+        <header>
+          <h2>Choose interests</h2>
+          <code>interests-select</code>
+        </header>
+        <div class="body">
+          <div class="chip-wrap">
+            <button type="button" class="chip on">✓ Language exchange</button
+            ><button type="button" class="chip">Film</button>
+            <button type="button" class="chip on">✓ Hiking</button
+            ><button type="button" class="chip">Art</button>
+            <button type="button" class="chip">Fashion</button
+            ><button type="button" class="chip on">✓ Coffee</button>
+          </div>
+          <button type="button" class="btn block">Save interests</button>
+        </div>
+        <footer>States shown: multi-select · confirm (onboarding &amp; profile)</footer>
+      </section>
+
+      <!-- 10 -->
+      <section class="specimen" data-component="components/external-profile">
+        <header>
+          <h2>Another learner's profile</h2>
+          <code>components/external-profile</code>
+        </header>
+        <div class="body">
+          <div class="cover" style="block-size: 90px"></div>
+          <div class="row" style="margin-block-start: -36px; padding-inline: 8px">
+            <div class="avatar lg">م</div>
+          </div>
+          <div class="stack">
+            <span class="title" style="font-size: 17px" lang="ar" dir="rtl">مريم الحسن</span>
+            <span class="muted">🇸🇦 Arabic → 🇬🇧 English · Riyadh</span>
+          </div>
+          <div class="row">
+            <button type="button" class="btn duet grow">Send message</button>
+            <button type="button" class="btn secondary-btn">Follow</button>
+          </div>
+          <span class="state-label">Already following</span>
+          <div class="row">
+            <button type="button" class="btn duet grow">Send message</button
+            ><button type="button" class="btn secondary-btn">Unfollow</button>
+          </div>
+        </div>
+        <footer>States shown: follow · following (unfollow) · Ember/Tide duet CTA</footer>
+      </section>
+
+      <!-- 11 -->
+      <section class="specimen" data-component="components/follow-list">
+        <header>
+          <h2>Followers / Following</h2>
+          <code>components/follow-list</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <button type="button" class="icon-btn" aria-label="Back">←</button
+            ><span class="title grow" style="font-size: 16px">Followers</span>
+          </div>
+          <div class="tabs">
+            <span class="chip on">Followers</span><span class="chip">Following</span>
+          </div>
+          <div class="list">
+            <div class="row">
+              <div class="avatar">陈</div>
+              <div class="grow">
+                <div class="title" lang="zh">陈伟</div>
+                <div class="muted">Chinese → English</div>
+              </div>
+              <button type="button" class="btn secondary-btn" style="min-height: 36px">
+                Unfollow
+              </button>
+            </div>
+            <div class="row">
+              <div class="avatar ember">L</div>
+              <div class="grow">
+                <div class="title">Lucas Ferreira</div>
+                <div class="muted">Portuguese → Japanese</div>
+              </div>
+              <button type="button" class="btn" style="min-height: 36px">Follow</button>
+            </div>
+          </div>
+          <span class="state-label">Empty · error</span>
+          <p class="muted" style="margin: 0">No followers yet.</p>
+          <div class="alert error" role="alert">Failed to load the list. Please try again.</div>
+        </div>
+        <footer>States shown: list · follow/unfollow · empty · load error</footer>
+      </section>
+
+      <!-- 12 -->
+      <section class="specimen" data-component="components/profile-visitors">
+        <header>
+          <h2>Who viewed me</h2>
+          <code>components/profile-visitors</code>
+        </header>
+        <div class="body">
+          <div class="list">
+            <div class="row">
+              <div class="avatar">Y</div>
+              <div class="grow">
+                <div class="title">Yuki Tanaka</div>
+                <div class="muted">2 hours ago</div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="avatar ember blur">?</div>
+              <div class="grow blur">
+                <div class="title">Hidden visitor</div>
+                <div class="muted">Yesterday</div>
+              </div>
+              <span class="badge vip">VIP</span>
+            </div>
+          </div>
+          <div class="card stack" style="border-color: rgb(var(--vip))">
+            <span class="title">Upgrade for full visitor identities and advanced features</span>
+            <span class="muted">8 UKP / $10 USD per month</span>
+            <button type="button" class="btn vip">See Plans</button>
+          </div>
+          <span class="state-label">Loading · empty</span>
+          <p class="muted pulse" role="status" style="margin: 0">Loading visitors...</p>
+          <p class="muted" style="margin: 0">No visitors yet.</p>
+        </div>
+        <footer>States shown: visible · blurred (free tier) · VIP upsell · loading · empty</footer>
+      </section>
+
+      <!-- 13 -->
+      <section class="specimen" data-component="components/visitor-logs">
+        <header>
+          <h2>Visitor log</h2>
+          <code>components/visitor-logs</code>
+        </header>
+        <div class="body">
+          <div class="stack">
+            <span class="title" style="font-size: 16px">Who viewed me</span
+            ><span class="muted">Recent profile visitors and language matches.</span>
+          </div>
+          <div class="alert warning">
+            <strong>Unlock full visitor identities with VIP</strong><br />Visitor details are
+            blurred on the free tier. <span class="badge vip">8 UKP / $10 USD VIP</span>
+          </div>
+          <div class="row">
+            <span class="chip on">Visible: 3</span><span class="chip">Blurred: 5</span
+            ><span class="grow"></span
+            ><button type="button" class="btn ghost" style="min-height: 36px">Hide blurred</button>
+          </div>
+          <div class="list">
+            <div class="row">
+              <div class="avatar">A</div>
+              <div class="grow">
+                <div class="title">Ana Ruiz</div>
+                <div class="muted">Language partner</div>
+              </div>
+              <span class="badge success">Visible</span>
+            </div>
+            <div class="row">
+              <div class="avatar ember blur">K</div>
+              <div class="grow blur"><div class="title">Kenji</div></div>
+              <span class="badge vip">VIP only</span>
+            </div>
+          </div>
+          <span class="state-label">Error</span>
+          <div class="alert error" role="alert">
+            Something went wrong. Please try again.
+            <button type="button" class="btn ghost" style="min-height: 32px">Retry</button>
+          </div>
+        </div>
+        <footer>States shown: counts · show all / hide blurred · VIP banner · error + retry</footer>
+      </section>
+
+      <!-- 14 -->
+      <section class="specimen" data-component="components/earned-badges">
+        <header>
+          <h2>Earned badges</h2>
+          <code>components/earned-badges</code>
+        </header>
+        <div class="body">
+          <span class="state-label">VIP + serious learner</span>
+          <div class="chip-wrap">
+            <span class="badge vip">👑 VIP</span><span class="badge">🎓 Serious learner</span>
+          </div>
+          <span class="state-label">None</span>
+          <span class="muted">No badges yet</span>
+        </div>
+        <footer>States shown: both badges · none</footer>
+      </section>
+
+      <!-- 15 -->
+      <section class="specimen" data-component="components/my-stats">
+        <header>
+          <h2>My stats</h2>
+          <code>components/my-stats</code>
+        </header>
+        <div class="body">
+          <div class="card stack">
+            <span class="title">Study hours</span>
+            <div class="bars" aria-hidden="true">
+              <span style="block-size: 40%"></span><span style="block-size: 65%"></span
+              ><span style="block-size: 30%"></span><span style="block-size: 80%"></span
+              ><span style="block-size: 55%"></span><span style="block-size: 20%"></span
+              ><span class="today" style="block-size: 90%"></span>
+            </div>
+            <div class="row muted" style="justify-content: space-between">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span
+              ><span>Sat</span><span>Sun</span>
+            </div>
+          </div>
+          <div class="card row">
+            <div class="pie" aria-hidden="true"></div>
+            <div class="stack muted">
+              <span class="title" style="color: rgb(var(--text-primary))">Activity breakdown</span>
+              <span
+                ><i class="legend-dot" style="background: rgb(var(--primary))"></i>Chat 45%</span
+              >
+              <span
+                ><i class="legend-dot" style="background: rgb(var(--secondary))"></i>Vocabulary
+                30%</span
+              >
+              <span><i class="legend-dot" style="background: rgb(var(--vip))"></i>Moments 25%</span>
+            </div>
+          </div>
+          <div class="stat-tiles">
+            <div class="card"><strong>1,284</strong><span class="muted">Messages sent</span></div>
+            <div class="card"><strong>96</strong><span class="muted">Corrections made</span></div>
+            <div class="card"><strong>23</strong><span class="muted">Moments posted</span></div>
+          </div>
+          <span class="state-label">Error</span>
+          <div class="alert error" role="alert">
+            Could not load your stats.
+            <button type="button" class="btn secondary-btn" style="min-height: 32px">Retry</button>
+          </div>
+        </div>
+        <footer>States shown: charts (with text list fallback) · summary · loading/error</footer>
+      </section>
+
+      <!-- 16 -->
+      <section class="specimen" data-component="components/milestone">
+        <header>
+          <h2>Milestones</h2>
+          <code>components/milestone</code>
+        </header>
+        <div class="body">
+          <div class="row"><span class="secondary grow">Progress</span><strong>50%</strong></div>
+          <div
+            class="progress"
+            role="progressbar"
+            aria-valuenow="50"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <span style="inline-size: 50%"></span>
+          </div>
+          <label class="field">Title<input placeholder="e.g. Hold a 10-minute call" /></label>
+          <label class="field">Description<input placeholder="Optional" /></label>
+          <button type="button" class="btn" disabled>Add milestone</button>
+          <div class="list">
+            <div class="row">
+              <div class="grow">
+                <div class="title">Pass JLPT N4</div>
+                <div class="muted">December exam</div>
+              </div>
+              <button type="button" class="btn secondary-btn" style="min-height: 36px">
+                Complete
+              </button>
+            </div>
+            <div class="row">
+              <div class="grow"><div class="title">First voice room</div></div>
+              <span class="done">✓ Completed</span
+              ><button type="button" class="btn secondary-btn" style="min-height: 36px">
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+        <footer>
+          States shown: progress · add (disabled until title) · open · completed ·
+          empty/loading/error per resource
+        </footer>
+      </section>
+
+      <!-- 17 -->
+      <section class="specimen" data-component="components/favourites">
+        <header>
+          <h2>Favourites</h2>
+          <code>components/favourites</code>
+        </header>
+        <div class="body">
+          <div class="card">
+            <div class="title" style="font-size: 16px">Favourites</div>
+            <div class="muted">Messages, corrections, voice notes and moments you saved.</div>
+          </div>
+          <nav class="tabs" aria-label="Favourites">
+            <span class="chip on">⭐ All (3)</span><span class="chip">💬 Messages</span
+            ><span class="chip">✏️ Corrections</span><span class="chip">🎤 Audio</span
+            ><span class="chip">📰 Moments</span>
+          </nav>
+          <div class="card stack">
+            <div class="row">
+              <div class="avatar sm">陈</div>
+              <div class="grow">
+                <div class="title" lang="zh">陈伟</div>
+                <div class="muted">10/18/26, 9:14 PM</div>
+              </div>
+              <button type="button" class="icon-btn" aria-label="Delete favourite">🗑</button>
+            </div>
+            <span class="chip" style="align-self: flex-start">✏️ Corrections</span>
+            <p class="diff" style="margin: 0">
+              I <del>goed</del> <ins>went</ins> to the market yesterday.
+            </p>
+          </div>
+          <div class="card stack">
+            <div class="row">
+              <div class="avatar sm ember">Y</div>
+              <div class="grow title">Yuki</div>
+              <span class="chip">🎤 Voice note</span>
+            </div>
+            <div class="audio-bar">▶ <span class="wave"></span> 0:09</div>
+          </div>
+        </div>
+        <footer>
+          States shown: tabbed filter · correction diff · voice note · loading/empty/error + retry
+        </footer>
+      </section>
+
+      <!-- 18 -->
+      <section class="specimen" data-component="components/business-profile">
+        <header>
+          <h2>Business profile</h2>
+          <code>components/business-profile</code>
+        </header>
+        <div class="body">
+          <p class="muted" style="margin: 0">Tell learners about your school or service.</p>
+          <label class="field">Business name<input value="Kyoto Language Café" /></label>
+          <label class="field">Business hours<input placeholder="Mon–Fri 9:00–18:00" /></label>
+          <label class="field">Website<input type="url" placeholder="https://" dir="ltr" /></label>
+          <span class="title">Catalogue</span>
+          <div class="card stack">
+            <label class="field">Item name<input value="60-min conversation lesson" /></label>
+            <label class="field"
+              >Description<textarea rows="2">
+Relaxed Japanese practice with a native tutor.</textarea>
+            </label>
+            <label class="field">Price<input value="¥3,000" /></label>
+          </div>
+          <div class="row">
+            <button type="button" class="btn secondary-btn grow">+ Add item</button
+            ><button type="button" class="btn grow">Save</button>
+          </div>
+        </div>
+        <footer>States shown: details · catalogue item editor</footer>
+      </section>
+
+      <!-- 19 -->
+      <section class="specimen" data-component="components/topic-following">
+        <header>
+          <h2>Topics</h2>
+          <code>components/topic-following</code>
+        </header>
+        <div class="body">
+          <div class="list">
+            <div class="row">
+              <span class="grow title">#JLPT</span
+              ><button type="button" class="btn tide" style="min-height: 36px">Following</button>
+            </div>
+            <div class="row">
+              <span class="grow title">#Slang</span
+              ><button type="button" class="btn secondary-btn" style="min-height: 36px">
+                Follow
+              </button>
+            </div>
+            <div class="row">
+              <span class="grow title" lang="ar">#اللهجات</span
+              ><button type="button" class="btn secondary-btn" style="min-height: 36px">
+                Follow
+              </button>
+            </div>
+          </div>
+          <span class="state-label">Empty</span>
+          <p class="muted" style="margin: 0">No topics to follow yet.</p>
+        </div>
+        <footer>States shown: following · not following · empty · follows document dir</footer>
+      </section>
+
+      <!-- 20 -->
+      <section class="specimen" data-component="components/language-questions">
+        <header>
+          <h2>Language questions</h2>
+          <code>components/language-questions</code>
+        </header>
+        <div class="body">
+          <article class="card stack">
+            <div class="row">
+              <span class="badge tide">JA</span><span class="grow"></span
+              ><span class="muted">12 / 17</span>
+            </div>
+            <p class="title" style="margin: 0" lang="ja">「おつかれさま」はいつ使いますか？</p>
+            <div class="option correct">After work, to colleagues</div>
+            <div class="option">Only in the morning</div>
+            <div class="option">To strangers on the street</div>
+          </article>
+          <span class="state-label">Empty</span>
+          <p class="muted" style="margin: 0">No questions yet.</p>
+        </div>
+        <footer>States shown: question with answer ratio · options · empty</footer>
+      </section>
+
+      <!-- 21 -->
+      <section class="specimen" data-component="achievements">
+        <header>
+          <h2>Achievements</h2>
+          <code>achievements</code>
+        </header>
+        <div class="body">
+          <ul class="list" role="list" style="margin: 0; padding: 0; list-style: none">
+            <li class="stack">
+              <div class="row">
+                <span style="color: rgb(var(--vip))">★</span
+                ><span class="badge success">Earned</span>
+              </div>
+              <div class="title">First correction</div>
+              <div class="muted">Correct a partner's message.</div>
+              <div class="progress"><span style="inline-size: 100%"></span></div>
+              <span class="muted">1 / 1</span>
+            </li>
+            <li class="stack lock">
+              <div class="row"><span>◻</span><span class="chip">Locked</span></div>
+              <div class="title">Chatterbox</div>
+              <div class="muted">Send 1,000 messages.</div>
+              <div class="progress"><span style="inline-size: 62%"></span></div>
+              <span class="muted">620 / 1000</span>
+            </li>
+          </ul>
+          <span class="state-label">Loading · empty · error</span>
+          <p class="muted pulse" style="margin: 0">Loading achievements…</p>
+          <p class="muted" style="margin: 0">No achievements yet.</p>
+          <div class="alert error" role="alert">Could not load achievements.</div>
+        </div>
+        <footer>States shown: earned · locked with progress · loading · empty · error</footer>
+      </section>
+
+      <!-- 22 -->
+      <section class="specimen" data-component="features/settings">
+        <header>
+          <h2>Profile settings</h2>
+          <code>features/settings</code>
+        </header>
+        <div class="body">
+          <label class="field"
+            >Bio<textarea rows="3" lang="ja">東京在住。英語とスペイン語を勉強中です 🌏</textarea>
+          </label>
+          <label class="field"
+            >Native language<select>
+              <option>Japanese</option>
+            </select></label
+          >
+          <div class="two-col">
+            <label class="field">Minimum age<input type="number" value="18" /></label>
+            <label class="field">Maximum age<input type="number" value="35" /></label>
+          </div>
+          <label class="row" style="font-size: 14px"
+            ><span class="check" aria-hidden="true">✓</span> Display kana readings</label
+          >
+          <button type="button" class="btn block">Save</button>
+        </div>
+        <footer>States shown: reactive form · age filter · kana toggle</footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>
