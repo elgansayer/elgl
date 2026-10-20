@@ -399,6 +399,10 @@ export class LanguagePartiesComponent {
     this.showCreateModal.set(false);
   }
 
+  retryParties(): void {
+    this.partiesResource.reload();
+  }
+
   async onCreateParty(payload: {
     title: string;
     languagePair: string;

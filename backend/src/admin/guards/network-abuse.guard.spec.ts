@@ -32,7 +32,9 @@ describe('NetworkAbuseGuard', () => {
     } as unknown as AdminNetworkAbuseService);
 
     await expect(
-      guard.canActivate(contextFor({ path: '/api/admin/v1/security/network/blocks' })),
+      guard.canActivate(
+        contextFor({ path: '/api/admin/v1/security/network/blocks' }),
+      ),
     ).resolves.toBe(true);
     expect(isRequestBlocked).not.toHaveBeenCalled();
   });
