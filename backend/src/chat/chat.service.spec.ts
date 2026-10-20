@@ -17,6 +17,7 @@ vi.mock('dompurify', () => ({
   })),
 }));
 
+import { ServiceUnavailableException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
@@ -29,6 +30,7 @@ import { SystemMessageService } from './services/system-message.service';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { XpService } from '../xp/xp.service';
+import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
 import { UsersService } from '../users/users.service';
 
 vi.mock('./centrifugo.service', () => ({
@@ -65,6 +67,7 @@ describe('ChatService', () => {
 
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -137,6 +140,12 @@ describe('ChatService', () => {
             get: vi.fn().mockReturnValue(5),
           },
         },
+        {
+          provide: LearnerKnowledgeService,
+          useValue: {
+            getProfile: vi.fn().mockResolvedValue(null),
+          },
+        },
       ],
     }).compile();
 
@@ -162,6 +171,54 @@ describe('ChatService', () => {
         exp: expect.any(Number),
       });
       expect(result).toBe('mock-token');
+    });
+  });
+
+  describe('getUnreadCount', () => {
+    it('returns the validated database count', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({ data: 7, error: null });
+
+      await expect(service.getUnreadCount('user-1')).resolves.toEqual({
+        unreadCount: 7,
+      });
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('count_chat_unread', {
+        p_user_id: 'user-1',
+      });
+    });
+
+    it('normalises bigint string results from PostgREST', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({ data: '12', error: null });
+
+      await expect(service.getUnreadCount('user-1')).resolves.toEqual({
+        unreadCount: 12,
+      });
+    });
+
+    it('fails closed when the count query fails', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: 3,
+        error: { message: 'database unavailable' },
+      });
+
+      await expect(service.getUnreadCount('user-1')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    });
+
+    it.each([
+      '-1',
+      '',
+      '   ',
+      '1e2',
+      '1.5',
+      'Infinity',
+      Number.MAX_SAFE_INTEGER + 1,
+    ])('fails closed for invalid count %s', async (data) => {
+      mockSupabaseClient.rpc.mockResolvedValue({ data, error: null });
+
+      await expect(service.getUnreadCount('user-1')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
     });
   });
 

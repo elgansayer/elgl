@@ -543,7 +543,7 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort, undefined, undefined, _currentUserProfile));
+      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort, searchLat, searchLon, _currentUserProfile));
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -1035,13 +1035,22 @@ export class DiscoveryService {
       is_partner_of_week: partnerSet.has(u.id),
     }));
 
-    // For best_match, use composite score if possible (here we lack the full searcher profile, but we can do our best with just candidates, or fetch the searcher)
+    // For best_match, promote partner of week first, then maintain db order
     if (sort === 'best_match') {
+      // In findByLanguagePair, we don't have current user profile handy, but we will sort based on what we can.
+      results.forEach(u => {
+        const matchData = this.calculateMatchScore(null, u);
+        (u as any).match_reasons = matchData.reasons;
+        (u as any)._matchScore = matchData.score;
+      });
       results.sort((a, b) => {
-        const scoreA = this.calculateCompositeScore(null, a);
-        const scoreB = this.calculateCompositeScore(null, b);
-        if (scoreA !== scoreB) return scoreB - scoreA;
-        return (b.study_streak_days || 0) - (a.study_streak_days || 0);
+        const aPow = a.is_partner_of_week ? 1 : 0;
+        const bPow = b.is_partner_of_week ? 1 : 0;
+        if (aPow !== bPow) return bPow - aPow;
+
+        const scoreA = (a as any)._matchScore ?? 0;
+        const scoreB = (b as any)._matchScore ?? 0;
+        return scoreB - scoreA;
       });
     }
 
@@ -1065,10 +1074,10 @@ export class DiscoveryService {
       return users.filter((u) => activeHostSet.has(u.id));
     } catch (err) {
       this.logger.error(
-        'Voice room active filter failed, returning unfiltered results',
+        'Voice room active filter failed, returning no active hosts',
         err,
       );
-      return users;
+      return [];
     }
   }
 
@@ -1142,129 +1151,6 @@ export class DiscoveryService {
     return filtered.slice(0, 50);
   }
 
-
-  /**
-   * Calculates a weighted composite score for "best_match" sorting.
-   * Incorporates 8 signals:
-   * 1. Complementary Languages (Reciprocity)
-   * 2. Proficiency Level Gap
-   * 3. Timezone / Active Hours Overlap
-   * 4. Interests Overlap
-   * 5. Response Behaviour (recency of activity)
-   * 6. Correction Behaviour (helpfulness)
-   * 7. Learning Seriousness (dedication)
-   * 8. Conversation Compatibility (using demographic proxy)
-   */
-  private calculateCompositeScore(searcher: UserProfile | null, candidate: DiscoveryUser): number {
-    let score = 0;
-
-    // 1. Complementary Languages (Reciprocity Score) - Max ~50 pts
-    if (searcher && searcher.target_languages && searcher.native_languages) {
-      const candidateNatives = candidate.native_languages || [];
-      const candidateTargets = candidate.target_languages || [];
-      const searcherTargets = searcher.target_languages;
-      const searcherNatives = searcher.native_languages;
-
-      const teachesMe = candidateNatives.some((lang) => searcherTargets.includes(lang));
-      const learnsFromMe = candidateTargets.some((lang) => searcherNatives.includes(lang));
-
-      if (teachesMe && learnsFromMe) {
-        score += 50;
-      } else if (teachesMe || learnsFromMe) {
-        score += 20;
-      }
-    }
-
-    // 2. Proficiency Level Gap
-    if (searcher && searcher.proficiency_level && candidate.proficiency_level) {
-      const levels = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6 };
-      const searcherLevel = levels[searcher.proficiency_level as keyof typeof levels] || 1;
-      const candidateLevel = levels[candidate.proficiency_level as keyof typeof levels] || 1;
-      if (searcherLevel === candidateLevel) {
-        score += 10;
-      }
-    }
-
-    // 3. Timezone / Active Hours Overlap (Max 50)
-    if (searcher && searcher.available_time_start && searcher.available_time_end &&
-        candidate.available_time_start && candidate.available_time_end) {
-      const parseTime = (t: string) => {
-        const [h, m] = t.split(':').map(Number);
-        return h + m / 60;
-      };
-      const sStart = parseTime(searcher.available_time_start);
-      const sEnd = parseTime(searcher.available_time_end);
-      const cStart = parseTime(candidate.available_time_start);
-      const cEnd = parseTime(candidate.available_time_end);
-
-      const overlapStart = Math.max(sStart, cStart);
-      const overlapEnd = Math.min(sEnd, cEnd);
-      if (overlapEnd > overlapStart) {
-        const hours = overlapEnd - overlapStart;
-        score += Math.min(50, hours * 10);
-      }
-    }
-
-    // 4. Interests Overlap
-    if (searcher && searcher.interests && candidate.interests) {
-      let sharedCount = 0;
-      const searcherInterests = new Set(searcher.interests);
-      for (const interest of candidate.interests) {
-        if (searcherInterests.has(interest)) {
-          sharedCount++;
-        }
-      }
-      // Weighting 10 points per shared interest (TF-IDF approximated by count for now)
-      score += sharedCount * 10;
-    }
-
-    // 5. Response Behaviour (proxy: recency) - Max 30 pts
-    if (candidate.last_active_at) {
-      const lastActive = new Date(candidate.last_active_at).getTime();
-      const now = Date.now();
-      const diffHours = (now - lastActive) / (1000 * 60 * 60);
-      if (diffHours < 24) {
-        score += 30; // Top quartile approximation
-      } else if (diffHours < 72) {
-        score += 10;
-      }
-    }
-
-    // 6. Correction Behaviour - Max ~40 pts
-    const correctionRatio = candidate.correction_ratio || 0;
-    const correctorScore = candidate.corrector_score || 0; // Using corrector_score if present in UserProfile
-    score += (correctionRatio * 0.4 * 100) + ((correctorScore / 5) * 0.6 * 100);
-
-    // 7. Learning Seriousness
-    const streak = candidate.study_streak_days || 0;
-    if (searcher && searcher.is_serious_learner) {
-      score += Math.min(50, streak * 2);
-    } else {
-      score += Math.min(20, streak);
-    }
-
-    // 8. Conversation Compatibility (Proxy: Demographics match)
-    // For now, give a small boost if they share the same age range or country as a simplified compatibility metric
-    if (searcher && searcher.age && candidate.age) {
-      if (Math.abs(searcher.age - candidate.age) <= 5) {
-        score += 10;
-      }
-    }
-    const searcherCountry = (searcher as any)?.country;
-    if (searcherCountry && candidate.country) {
-      if (searcherCountry.toLowerCase() === candidate.country.toLowerCase()) {
-        score += 5;
-      }
-    }
-
-    // Partner of the week gets massive boost to ensure they are on top
-    if (candidate.is_partner_of_week) {
-      score += 10000;
-    }
-
-    return score;
-  }
-
   private applyAdvancedFilters(
     users: UserProfile[],
     query: SearchQueryDto,
@@ -1319,25 +1205,117 @@ export class DiscoveryService {
     return result;
   }
 
+  private calculateMatchScore(
+    searcher: UserProfile | null,
+    candidate: DiscoveryUser,
+  ): { score: number; reasons: string[] } {
+    let score = 0;
+    const reasons: string[] = [];
+
+    // Helper: basic overlap check
+    const hasOverlap = (left?: string[] | null, right?: string[] | null) => {
+      if (!left || !right || left.length === 0 || right.length === 0) return false;
+      const rightSet = new Set(right);
+      return left.some(l => rightSet.has(l));
+    };
+
+    if (searcher) {
+      // A. Complementary Languages (Reciprocity)
+      const mutualMatch =
+        hasOverlap(candidate.native_languages, searcher.target_languages) &&
+        hasOverlap(candidate.target_languages, searcher.native_languages);
+      const oneWayMatch =
+        hasOverlap(candidate.native_languages, searcher.target_languages) ||
+        hasOverlap(candidate.target_languages, searcher.native_languages);
+
+      if (mutualMatch) {
+        score += 50;
+        reasons.push('language_exchange');
+      } else if (oneWayMatch) {
+        score += 20;
+        reasons.push('one_way_language_exchange');
+      }
+
+      // B. Proficiency Level Gap
+      if (searcher.proficiency_level && candidate.proficiency_level && searcher.proficiency_level === candidate.proficiency_level) {
+        score += 10;
+        reasons.push('similar_proficiency');
+      }
+
+      // D. Interest Overlap
+      if (searcher.interests && candidate.interests) {
+        const searcherInterestsSet = new Set(searcher.interests);
+        let sharedInterests = 0;
+        for (const interest of candidate.interests) {
+          if (searcherInterestsSet.has(interest)) {
+            sharedInterests++;
+          }
+        }
+        if (sharedInterests > 0) {
+          score += sharedInterests * 10;
+          reasons.push('shared_interests');
+        }
+      }
+
+      // G. Learning Seriousness
+      if (searcher.is_serious_learner && candidate.study_streak_days) {
+        score += Math.min(candidate.study_streak_days, 50);
+        reasons.push('study_streak');
+      }
+    }
+
+    // F. Correction Behaviour (Helpfulness)
+    if (candidate.correction_ratio) {
+      score += candidate.correction_ratio * 40;
+      reasons.push('helpful_corrector');
+    }
+
+    // C. Timezone / Active Hours Overlap (proxy using recent activity)
+    if (candidate.last_active_at) {
+      const activeTime = Date.parse(candidate.last_active_at);
+      if (Number.isFinite(activeTime)) {
+        const ageMs = Math.max(0, Date.now() - activeTime);
+        if (ageMs <= 24 * 60 * 60 * 1000) { // Active in last day
+          score += 10;
+          reasons.push('active_recently');
+        }
+      }
+    }
+
+    return { score, reasons };
+  }
+
   private sortUsers(
     users: UserProfile[],
     sort?: string,
     _searchLat?: number,
     _searchLon?: number,
-    _searcherProfile?: UserProfile | null,
+    searcherProfile?: UserProfile | null,
   ): UserProfile[] {
     if (!sort || !users.length) return users;
     const discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
       case 'best_match':
-        return discoveryUsers.sort((a, b) => {
-          const scoreA = this.calculateCompositeScore(_searcherProfile || null, a);
-          const scoreB = this.calculateCompositeScore(_searcherProfile || null, b);
-          if (scoreA !== scoreB) {
-            return scoreB - scoreA;
+        discoveryUsers.forEach(u => {
+          if (searcherProfile) {
+            const matchData = this.calculateMatchScore(searcherProfile, u);
+            // We use standard type casting to inject reasons
+            (u as any).match_reasons = matchData.reasons;
+            (u as any)._matchScore = matchData.score;
+          } else {
+            const matchData = this.calculateMatchScore(null, u);
+            (u as any).match_reasons = matchData.reasons;
+            (u as any)._matchScore = matchData.score;
           }
-          // Tie-breaker
-          return (b.study_streak_days || 0) - (a.study_streak_days || 0);
+        });
+        return discoveryUsers.sort((a, b) => {
+          const aPow = a.is_partner_of_week ? 1 : 0;
+          const bPow = b.is_partner_of_week ? 1 : 0;
+          if (aPow !== bPow) return bPow - aPow;
+
+          const scoreA = (a as any)._matchScore ?? 0;
+          const scoreB = (b as any)._matchScore ?? 0;
+          return scoreB - scoreA;
         });
       case 'online_now':
         return discoveryUsers.sort((a, b) => {
