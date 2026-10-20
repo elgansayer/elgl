@@ -183,6 +183,12 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+**Learning:** Found multiple Angular components rendering static or signal-driven data that were missing `changeDetection: ChangeDetectionStrategy.OnPush`. Without this strategy, Angular performs unnecessary main-thread change detection cycles, reducing application responsiveness and performance.
+**Action:** Proactively configure Angular components that render static data or rely entirely on signals/observables to use `ChangeDetectionStrategy.OnPush` to minimize main thread change detection overhead.
+
+## 2026-10-16 - [Optimize Main Thread Render via ChangeDetectionStrategy.OnPush]
+**Learning:** Found multiple Angular components rendering static or signal-driven data that were missing `changeDetection: ChangeDetectionStrategy.OnPush`. Without this strategy, Angular performs unnecessary main-thread change detection cycles, reducing application responsiveness and performance.
+**Action:** Proactively configure Angular components that render static data or rely entirely on signals/observables to use `ChangeDetectionStrategy.OnPush` to minimize main thread change detection overhead.
 
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `safety-cache-invalidation.service.ts` and `video-calls-cache-invalidation.service.ts`, the `invalidateTrustAndSafetyCaches` and `invalidateAllVideoClassroomCaches` methods sequentially iterated over cache namespaces, invoking Redis commands (like `deleteByScan` or `del`) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during invalidation, unnecessarily stalling the event loop and compounding network latency.
@@ -196,3 +202,4 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
