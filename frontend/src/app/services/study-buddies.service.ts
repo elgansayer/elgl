@@ -30,17 +30,17 @@ export interface BuddyRequest {
 @Injectable({ providedIn: 'root' })
 export class StudyBuddiesService {
   private http = inject(HttpClient);
-  private readonly sbApiUrl = `${environment.apiUrl}/study-buddies`;
+  private readonly apiUrl = environment.apiUrl;
 
   async follow(targetUserId: string): Promise<void> {
     await firstValueFrom(
-      this.http.post(`${this.sbApiUrl}/follow`, { targetUserId }),
+      this.http.post(`${this.apiUrl}/study-buddies/follow`, { targetUserId }),
     );
   }
 
   async unfollow(targetUserId: string): Promise<void> {
     await firstValueFrom(
-      this.http.delete(`${this.sbApiUrl}/unfollow`, {
+      this.http.delete(`${this.apiUrl}/study-buddies/unfollow`, {
         body: { targetUserId },
       }),
     );
@@ -48,20 +48,20 @@ export class StudyBuddiesService {
 
   async getOrCreateChannel(partnerId: string): Promise<{ channel: string }> {
     return firstValueFrom(
-      this.http.get<{ channel: string }>(`${this.sbApiUrl}/channel`, {
+      this.http.get<{ channel: string }>(`${this.apiUrl}/study-buddies/channel`, {
         params: { partnerId },
       }),
     );
   }
 
   async requestBuddy(dto: { partnerId: string; message?: string }): Promise<void> {
-    await firstValueFrom(this.http.post(`${this.sbApiUrl}/request`, dto));
+    await firstValueFrom(this.http.post(`${this.apiUrl}/study-buddies/request`, dto));
   }
 
   async getMatches(): Promise<StudyBuddyMatch[]> {
     try {
       const data = await firstValueFrom(
-        this.http.get<Record<string, unknown>[]>(`${this.sbApiUrl}/matches`),
+        this.http.get<Record<string, unknown>[]>(`${this.apiUrl}/study-buddies/matches`),
       );
       if (!data) return [];
       const matches: StudyBuddyMatch[] = data
@@ -78,14 +78,14 @@ export class StudyBuddiesService {
   }
 
   getIncomingRequests(): Promise<BuddyRequest[]> {
-    return firstValueFrom(this.http.get<BuddyRequest[]>(`${this.sbApiUrl}/requests`));
+    return firstValueFrom(this.http.get<BuddyRequest[]>(`${this.apiUrl}/study-buddies/requests`));
   }
 
   async acceptRequest(id: string): Promise<void> {
-    await firstValueFrom(this.http.post(`${this.sbApiUrl}/requests/${id}/accept`, {}));
+    await firstValueFrom(this.http.post(`${this.apiUrl}/study-buddies/requests/${id}/accept`, {}));
   }
 
   async declineRequest(id: string): Promise<void> {
-    await firstValueFrom(this.http.post(`${this.sbApiUrl}/requests/${id}/decline`, {}));
+    await firstValueFrom(this.http.post(`${this.apiUrl}/study-buddies/requests/${id}/decline`, {}));
   }
 }
