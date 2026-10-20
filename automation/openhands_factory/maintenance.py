@@ -290,7 +290,7 @@ class MaintenanceController:
         return {
             "observed_at": datetime.now(UTC).isoformat(),
             "repository": self.config.github_repository,
-            "repository_path": str(self.config.repository),
+            "repository_path": str(self.config.repository.resolve()),
             "runtime_signature": self.runtime_signature,
             "jobs_by_state": dict(Counter(job.state.value for job in jobs.values())),
             # Actual recoveries by the running daemon generation, apart from queued age.
@@ -437,9 +437,11 @@ class MaintenanceController:
                 prepare_attempt=clear,
                 validate_output=validate,
                 timeout_seconds=self.config.maintenance_analysis_timeout_seconds,
+                read_only_reference=self.config.repository.resolve(),
                 system_prompt_override=(
                     "You are a bounded Factory maintenance planner. Write only inside "
-                    f"your assigned scratch directory. You may read {self.config.repository} "
+                    "your assigned scratch directory. You may read "
+                    f"{self.config.repository.resolve()} "
                     "as a read-only reference to check existing code. Never read secrets, "
                     "provider homes, other state or logs. Never execute operational commands, "
                     "run tests, modify the repository, contact GitHub, alter safeguards, "

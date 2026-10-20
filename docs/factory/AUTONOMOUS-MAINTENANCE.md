@@ -39,6 +39,10 @@ These are prioritised future tasks, not claims that all seven are implemented.
    from tracked source files, checked by the host. Manual/dead-letter proposals
    and fabricated or escaping source references are rejected. Diagnoses remain
    hypotheses until verified. Choosing observation is legitimate.
+   Maintenance requests explicitly register the canonical, read-only main checkout
+   with the provider's inner workspace policy, as well as the existing outer mount
+   sandbox. A filesystem integration test verifies that source remains readable
+   after the service home is masked and that opening it for writing fails read-only.
 3. Deduplicate one concrete maintenance issue. Only identities in the controller's
    private ledger receive the maintenance scheduling tag. A GitHub label or body
    alone cannot obtain this privilege.
