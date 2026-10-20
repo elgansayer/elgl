@@ -1,6 +1,6 @@
 # Test isolation, flake handling, and browser E2E ownership
 
-Audit date: 2026-08-24.
+Audit date: 2026-08-15.
 
 ## Isolation contract
 

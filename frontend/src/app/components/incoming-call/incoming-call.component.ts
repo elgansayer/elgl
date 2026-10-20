@@ -4,7 +4,7 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { LivekitService } from '../../services/livekit.service';
@@ -137,7 +137,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 })
 export class IncomingCallComponent implements OnDestroy {
   readonly i18n = inject(I18nService);
-  private centrifugoService = inject(CentrifugoService);
+  private centrifugoService = inject(CentrifugeService);
   private authService = inject(AuthService);
   private livekitService = inject(LivekitService);
   private userService = inject(UserService);

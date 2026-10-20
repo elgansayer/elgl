@@ -4,10 +4,10 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AppSelectComponent } from '../primitives/select/select.component';
+import { EventRsvpControlsComponent } from '../event-rsvp-controls/event-rsvp-controls.component';
 import { EventsService, Event } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 
 const PAGE_SIZE = 20;
 
@@ -21,15 +21,10 @@ const PAGE_SIZE = 20;
     TranslatePipe,
     DatePipe,
     AppSelectComponent,
-    CreateEventModalComponent,
+    EventRsvpControlsComponent,
   ],
   template: `
-    <div class="mb-4 flex items-center justify-between gap-4">
-      <h1 class="text-2xl font-bold">{{ 'events.title' | t }}</h1>
-      <button hlmBtn type="button" size="touch" (click)="openCreateModal()">
-        {{ 'events.createEvent' | t }}
-      </button>
-    </div>
+    <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
 
     <!-- Filter bar -->
     <div class="flex gap-2 mb-4 items-center flex-wrap">
@@ -95,6 +90,12 @@ const PAGE_SIZE = 20;
                 {{ 'events.hosted_by' | t: { name: event.host_name } }}
               </p>
             }
+            <app-event-rsvp-controls
+              [eventId]="event.id"
+              [eventTitle]="event.title"
+              [maxParticipants]="event.max_participants"
+              [mutable]="canRsvp(event)"
+            />
           </div>
         }
       </div>
@@ -127,13 +128,6 @@ const PAGE_SIZE = 20;
         </button>
       }
     }
-
-    @if (isCreateModalOpen()) {
-      <app-create-event-modal
-        (created)="onEventCreated()"
-        (dismiss)="closeCreateModal()"
-      />
-    }
   `,
 })
 export class EventsFeedComponent implements OnInit {
@@ -149,7 +143,6 @@ export class EventsFeedComponent implements OnInit {
   readonly hasMore = signal(true);
   readonly status = signal<'upcoming' | 'past'>('upcoming');
   readonly languagePair = signal<string | undefined>(undefined);
-  readonly isCreateModalOpen = signal(false);
   private readonly page = signal(1);
 
   readonly languagePairOptions = computed(() => {
@@ -170,6 +163,10 @@ export class EventsFeedComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadEvents(true);
+  }
+
+  canRsvp(event: Event): boolean {
+    return !event.is_cancelled && Date.parse(event.date_time) > Date.now();
   }
 
   private languageDisplayName(code: string, displayNames: Intl.DisplayNames | undefined): string {
@@ -238,19 +235,6 @@ export class EventsFeedComponent implements OnInit {
     if (nextLanguagePair === this.languagePair()) return;
 
     this.languagePair.set(nextLanguagePair);
-    void this.loadEvents(true);
-  }
-
-  openCreateModal(): void {
-    this.isCreateModalOpen.set(true);
-  }
-
-  closeCreateModal(): void {
-    this.isCreateModalOpen.set(false);
-  }
-
-  onEventCreated(): void {
-    this.closeCreateModal();
     void this.loadEvents(true);
   }
 

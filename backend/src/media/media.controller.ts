@@ -27,20 +27,12 @@ export class MediaController {
     return this.mediaService.generateCoverPresignedUrl(req.user.id, dto);
   }
 
-  @Post('avatar/presigned-url')
-  async getAvatarPresignedUrl(
+  @Post('voice-note/presigned-url')
+  async getVoiceNotePresignedUrl(
     @Req() req: { user: { id: string } },
     @Body() dto: PresignedMediaUploadDto,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
-    return this.mediaService.generateAvatarPresignedUrl(req.user.id, dto);
-  }
-
-  @Post('audio-intro/presigned-url')
-  async getAudioIntroPresignedUrl(
-    @Req() req: { user: { id: string } },
-    @Body() dto: PresignedMediaUploadDto,
-  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
-    return this.mediaService.generateAudioIntroPresignedUrl(req.user.id, dto);
+    return this.mediaService.generateVoiceNotePresignedUrl(req.user.id, dto);
   }
 
   @Post('voice-note')

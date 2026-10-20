@@ -1,19 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FavouritesComponent } from './favourites.component';
 import { I18nService } from '../../services/i18n.service';
-import { ChatService, FavouriteRecord } from '../../services/chat.service';
+import { FavouriteRecord } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 
 describe('FavouritesComponent failure handling', () => {
   let fixture: ComponentFixture<FavouritesComponent>;
   let component: FavouritesComponent;
-  let chatService: {
-    getFavourites: ReturnType<typeof vi.fn>;
+  let favouriteService: {
+    getStarredMessages: ReturnType<typeof vi.fn>;
     removeFavourite: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
-    chatService = {
-      getFavourites: vi.fn().mockRejectedValue(new Error('provider unavailable')),
+    favouriteService = {
+      getStarredMessages: vi.fn().mockRejectedValue(new Error('provider unavailable')),
       removeFavourite: vi.fn().mockRejectedValue(new Error('delete unavailable')),
     };
 
@@ -26,7 +27,7 @@ describe('FavouritesComponent failure handling', () => {
             translate: (key: string): string => key,
           },
         },
-        { provide: ChatService, useValue: chatService },
+        { provide: FavouriteService, useValue: favouriteService },
       ],
     }).compileComponents();
 
@@ -63,7 +64,11 @@ describe('FavouritesComponent failure handling', () => {
       },
       created_at: '2026-08-23T12:01:00Z',
     } as FavouriteRecord;
-    chatService.getFavourites.mockResolvedValueOnce([favourite]);
+    favouriteService.getStarredMessages.mockResolvedValueOnce({
+      items: [favourite],
+      has_more: false,
+      next_offset: null,
+    });
 
     await component.loadFavourites();
     fixture.detectChanges();

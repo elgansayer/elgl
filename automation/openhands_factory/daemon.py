@@ -6,13 +6,14 @@ import logging
 import signal
 import time
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from threading import Semaphore
+from threading import Semaphore, Thread
 
 from filelock import FileLock, Timeout
 
@@ -21,24 +22,28 @@ from openhands_factory.agents.router import AgentRouter
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
-from openhands_factory.doctor import disk_space_checks
-from openhands_factory.exceptions import FactoryError
+from openhands_factory.doctor import disk_space_checks, no_pr_progress_check
+from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
     FactoryGeneration,
     activate_generation,
     assert_generation_current,
 )
+from openhands_factory.host_diagnostics import gather_diagnostics
 from openhands_factory.issue_admission import IssueAdmissionGate
+from openhands_factory.jobs import RECOVERABLE_ACTIVE_STATES
+from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
-from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
 MAX_ACTIONABLE_FAILURE_FINGERPRINTS = 5
+MAX_WATCHDOG_RECOVERED_TASK_IDS = 20
+MAINTENANCE_CYCLE_ID = "0"  # Reserved: GitHub issue identifiers are strictly positive.
 
 
 def provider_status_snapshot(
@@ -80,7 +85,35 @@ def is_review_lane_job(job: Job) -> bool:
 def is_new_github_issue(job: Job) -> bool:
     """Return whether the job is entering the Factory from issue discovery."""
 
-    return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
+    return (
+        job.state is JobState.DISCOVERED
+        and job.task.source == "github-issue"
+        and not is_maintenance_job(job)
+    )
+
+
+def is_maintenance_job(job: Job) -> bool:
+    return job.task.source == "github-issue" and MAINTENANCE_TAG in job.task.triage_tags
+
+
+def maintenance_selection(
+    jobs: dict[str, Job], excluded: set[str], now: datetime, limit: int
+) -> tuple[list[Job], dict[str, Job]]:
+    ordinary = {identifier: job for identifier, job in jobs.items() if not is_maintenance_job(job)}
+    if limit <= 0 or any(
+        is_maintenance_job(job) and identifier in excluded for identifier, job in jobs.items()
+    ):
+        return [], ordinary
+    ready = [
+        job
+        for identifier, job in jobs.items()
+        if is_maintenance_job(job)
+        and identifier not in excluded
+        and job.state not in {JobState.DONE, JobState.QUARANTINED}
+        and (job.next_attempt_at is None or job.next_attempt_at <= now)
+    ]
+    ready.sort(key=lambda job: (job.task.priority, job.updated_at, int(job.task.identifier)))
+    return ready[:1], ordinary
 
 
 # Lower value = closer to merged. Within a review-lane priority tier, jobs
@@ -131,6 +164,21 @@ def select_batch(
         return []
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
+    maintenance, jobs = maintenance_selection(jobs, excluded, current, limit)
+    if maintenance:
+        return [
+            *maintenance,
+            *select_batch(
+                jobs,
+                limit - 1,
+                excluded,
+                current,
+                new_issue_slots,
+                review_first,
+                review_lane_max_concurrent,
+                review_only,
+            ),
+        ]
     candidates = [
         job
         for job in jobs.values()
@@ -173,16 +221,126 @@ def select_batch(
     return selected
 
 
+def selection_diagnostics(
+    jobs: dict[str, Job],
+    excluded_task_ids: set[str],
+    now: datetime,
+    review_lane_max_concurrent: int,
+    review_only: bool = False,
+) -> dict[str, object]:
+    """Expose bounded scheduler inputs without task bodies or credentials."""
+
+    maintenance, ordinary = maintenance_selection(jobs, excluded_task_ids, now, 1)
+    candidates = [
+        *maintenance,
+        *[
+            job
+            for job in ordinary.values()
+            if job.task.identifier not in excluded_task_ids
+            and job.state.value not in {"done", "quarantined"}
+            and (job.next_attempt_at is None or job.next_attempt_at <= now)
+            and (not review_only or is_review_lane_job(job))
+        ],
+    ]
+    active_review_count = sum(
+        1
+        for job in jobs.values()
+        if job.task.identifier in excluded_task_ids and is_review_lane_job(job)
+    )
+    review_capacity = max(0, review_lane_max_concurrent - active_review_count)
+    return {
+        "candidate_jobs": [job.task.identifier for job in candidates[:25]],
+        "candidate_count": len(candidates),
+        "excluded_jobs": sorted(excluded_task_ids, key=int)[:25],
+        "active_review_count": active_review_count,
+        "review_capacity": review_capacity,
+        "review_jobs": [
+            job.task.identifier
+            for job in sorted(
+                (candidate for candidate in candidates if is_review_lane_job(candidate)),
+                key=_review_sort_key,
+            )[:25]
+        ],
+    }
+
+
+def should_use_failsafe(
+    selected_jobs: list[Job],
+    diagnostic: Mapping[str, object],
+    *,
+    review_only: bool,
+) -> bool:
+    """Return whether an empty primary selection indicates a real scheduler stall."""
+
+    candidate_count = diagnostic.get("candidate_count")
+    review_capacity = diagnostic.get("review_capacity")
+    if not isinstance(candidate_count, int) or candidate_count <= 0 or selected_jobs:
+        return False
+    return not (review_only and isinstance(review_capacity, int) and review_capacity <= 0)
+
+
+def select_batch_failsafe(
+    jobs: dict[str, Job],
+    limit: int,
+    excluded_task_ids: set[str],
+    now: datetime,
+    new_issue_slots: int | None,
+    review_lane_max_concurrent: int,
+    review_only: bool = False,
+) -> list[Job]:
+    """Guarantee progress if the primary selector violates its runnable invariant."""
+
+    maintenance, jobs = maintenance_selection(jobs, excluded_task_ids, now, limit)
+    limit = max(0, limit - len(maintenance))
+    eligible = [
+        job
+        for job in jobs.values()
+        if job.task.identifier not in excluded_task_ids
+        and job.state not in {JobState.DONE, JobState.QUARANTINED}
+        and (job.next_attempt_at is None or job.next_attempt_at <= now)
+        and (not review_only or is_review_lane_job(job))
+    ]
+    active_reviews = sum(
+        1
+        for job in jobs.values()
+        if job.task.identifier in excluded_task_ids and is_review_lane_job(job)
+    )
+    review_slots = max(0, review_lane_max_concurrent - active_reviews)
+    reviews = sorted(
+        (job for job in eligible if is_review_lane_job(job)),
+        key=_review_sort_key,
+    )[: min(limit, review_slots)]
+    remaining = [job for job in eligible if not is_review_lane_job(job)]
+    remaining.sort(key=lambda job: (job.task.priority, int(job.task.identifier)))
+    issue_candidate_available = any(
+        not is_new_github_issue(job) or new_issue_slots is None or new_issue_slots > 0
+        for job in remaining
+    )
+    if limit > 1 and issue_candidate_available:
+        reviews = reviews[: limit - 1]
+    return [
+        *maintenance,
+        *reviews,
+        *select_issue_admitted(remaining, limit - len(reviews), new_issue_slots),
+    ]
+
+
 def refresh_jobs(
     pipeline: FactoryPipeline,
     protected_task_ids: set[str],
     now: float,
     cooldown_seconds: int,
+    *,
+    storage_pressure: bool = False,
 ) -> tuple[dict[str, Job], float]:
     """Refresh GitHub work without turning a control-plane outage into a crash."""
 
     try:
-        return pipeline.refresh(protected_task_ids), now + cooldown_seconds
+        if storage_pressure:
+            jobs = pipeline.refresh(protected_task_ids, storage_pressure=True)
+        else:
+            jobs = pipeline.refresh(protected_task_ids)
+        return jobs, now + cooldown_seconds
     except FactoryError as error:
         LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
         return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
@@ -204,6 +362,40 @@ def await_refresh(
                 # misreport that failure as an ordinary heartbeat interval.
                 return future.result()
             publish_heartbeat()
+
+
+def stall_alert_decision(
+    *,
+    storage_blocked: bool,
+    no_pr_progress_warning: bool,
+    no_pr_progress_detail: str,
+    stall_since: datetime | None,
+    now: datetime,
+    stall_alert_minutes: float,
+    already_dispatched: bool,
+) -> tuple[datetime | None, str | None]:
+    """Pure decision: is this a stall, how long has it run, should it alert now.
+
+    Returns (updated_stall_since, alert_reason). alert_reason is non-None only
+    once the stall has persisted at least stall_alert_minutes and no alert has
+    already been dispatched for this continuous episode (already_dispatched) -
+    the caller tracks that flag and must reset it once stall_since comes back
+    None, so a later, distinct episode can alert again.
+    """
+    stalled = storage_blocked or no_pr_progress_warning
+    if not stalled:
+        return None, None
+    since = stall_since or now
+    elapsed_minutes = (now - since).total_seconds() / 60
+    if elapsed_minutes < stall_alert_minutes or already_dispatched:
+        return since, None
+    reasons = []
+    if storage_blocked:
+        reasons.append("storage reserve blocked")
+    if no_pr_progress_warning:
+        reasons.append(no_pr_progress_detail)
+    reason = f"Scheduling has been stalled for {elapsed_minutes:.0f} minutes: " + "; ".join(reasons)
+    return since, reason
 
 
 def queue_snapshot(
@@ -273,6 +465,72 @@ def queue_snapshot(
     }
 
 
+@dataclass
+class WatchdogRecoveries:
+    """Count the abandoned attempts this daemon generation actually recovered.
+
+    Kept apart from queue age on purpose. Work can wait for hours without anything
+    having crashed, and a ``last_error`` left behind by an earlier recovery is history,
+    not proof that the watchdog is recovering anything now. Only a real recovery moves
+    this counter.
+    """
+
+    total: int = 0
+    last_recovered_at: datetime | None = None
+    last_recovered_task_ids: list[str] = field(default_factory=list)
+
+    def record(self, task_ids: Iterable[str], recovered_at: datetime) -> None:
+        recovered = list(task_ids)
+        if not recovered:
+            return
+        self.total += len(recovered)
+        self.last_recovered_at = recovered_at
+        self.last_recovered_task_ids = recovered[:MAX_WATCHDOG_RECOVERED_TASK_IDS]
+
+
+def _queued_since(job: Job) -> datetime:
+    """Return when runnable work began waiting: its last update or its elapsed deadline."""
+
+    if job.next_attempt_at is None:
+        return job.updated_at
+    return max(job.updated_at, job.next_attempt_at)
+
+
+def watchdog_snapshot(
+    jobs: Mapping[str, Job],
+    active_task_ids: set[str],
+    recoveries: WatchdogRecoveries,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    """Report actual watchdog recoveries separately from how long work has queued.
+
+    ``queued_*`` covers mid-pipeline work that is runnable but has no attempt in
+    flight, the population an age-only watchdog once mistook for abandoned workers.
+    Its age says how long the work has waited for a worker, never that anything crashed.
+    """
+
+    current = now or datetime.now(UTC)
+    queued_ages = [
+        max(0.0, (current - _queued_since(job)).total_seconds())
+        for job in jobs.values()
+        if job.state in RECOVERABLE_ACTIVE_STATES
+        and job.task.identifier not in active_task_ids
+        and job.attempt_started_at is None
+        and (job.next_attempt_at is None or job.next_attempt_at <= current)
+    ]
+    return {
+        "recovered_total": recoveries.total,
+        "last_recovered_at": (
+            recoveries.last_recovered_at.isoformat()
+            if recoveries.last_recovered_at is not None
+            else None
+        ),
+        "last_recovered_task_ids": list(recoveries.last_recovered_task_ids),
+        "queued_count": len(queued_ages),
+        "oldest_queued_age_seconds": int(max(queued_ages, default=0.0)),
+    }
+
+
 class FactoryDaemon:
     def __init__(self, config: FactoryConfig) -> None:
         self.config = config
@@ -284,6 +542,15 @@ class FactoryDaemon:
         self.verification_slots = Semaphore(1)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
+        self.stall_since: datetime | None = None
+        self.stall_investigation_dispatched = False
+        self.watchdog_recoveries = WatchdogRecoveries()
+        self.scheduler_snapshot: dict[str, object] = {
+            "max_parallel_jobs": config.max_parallel_jobs,
+            "capacity": config.max_parallel_jobs,
+            "last_selected_jobs": [],
+            "last_selection_at": None,
+        }
 
     @staticmethod
     def _issue_admission_gate(config: FactoryConfig) -> IssueAdmissionGate:
@@ -324,6 +591,42 @@ class FactoryDaemon:
         self.storage_blocked = blocked
         return not blocked
 
+    def _check_stall(self) -> None:
+        """Notice a stall that has persisted past stall_alert_minutes and
+        dispatch a best-effort Telegram alert plus AI investigation.
+
+        Two independent signals, either sufficient on its own: storage_blocked
+        (this daemon's own scheduling gate) and no_pr_progress_check (whether
+        any job with an open PR has moved in max_no_pr_hours) - the latter
+        catches stall causes this daemon has no specific detector for. Neither
+        signal was previously evaluated proactively; both were only checkable
+        on demand via `hellotalk-factory doctor`, so a real stall produced no
+        notification until an operator happened to look.
+        """
+        no_pr_progress = no_pr_progress_check(self.config)
+        self.stall_since, reason = stall_alert_decision(
+            storage_blocked=self.storage_blocked,
+            no_pr_progress_warning=no_pr_progress.warning,
+            no_pr_progress_detail=no_pr_progress.detail,
+            stall_since=self.stall_since,
+            now=datetime.now(UTC),
+            stall_alert_minutes=self.config.stall_alert_minutes,
+            already_dispatched=self.stall_investigation_dispatched,
+        )
+        if self.stall_since is None:
+            self.stall_investigation_dispatched = False
+        if reason is None:
+            return
+        self.stall_investigation_dispatched = True
+        LOGGER.warning("factory.stall_detected reason=%s", reason)
+        diagnostics = gather_diagnostics(self.config.state_dir)
+        Thread(
+            target=self.pipeline.run_stall_investigation,
+            args=(reason, diagnostics, not self.storage_blocked),
+            daemon=True,
+            name="factory-stall-investigation",
+        ).start()
+
     def _activate_generation(self) -> None:
         from openhands_factory.agents.process import AgentProcessRunner
         from openhands_factory.conversation_runner import ConversationRunner
@@ -340,7 +643,11 @@ class FactoryDaemon:
         # token used by JobStore/TaskStore to stop stale processes writing state.
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
-        self.pipeline = FactoryPipeline(self.config)
+        self.pipeline = FactoryPipeline(
+            self.config,
+            verification_slots=self.verification_slots,
+            host_resource_slots=self.host_resource_slots,
+        )
         self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",
@@ -391,6 +698,7 @@ class FactoryDaemon:
         next_refresh_at = 0.0
         next_prune_at = 0.0
         architect_future: Future[None] | None = None
+        architect_retry_not_before: datetime | None = None
         # Publish liveness before the first provider probe and GitHub refresh.
         # A large queue can make that first scheduling cycle slower than the
         # watchdog interval, but the daemon already owns its generation here.
@@ -419,11 +727,15 @@ class FactoryDaemon:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
                 capacity = self.config.max_parallel_jobs - len(active)
-                # Must run unconditionally, before the storage gate below and
-                # regardless of pause/capacity state: this is what's supposed
-                # to correct a low-disk state, so gating it behind
-                # storage_ready (as an earlier version of this fix did)
-                # deadlocks - once blocked, nothing ever runs to unblock it.
+                # storage_ready and everything in this block must run
+                # unconditionally, before the scheduling gate below and
+                # regardless of pause/capacity state: pruning is what's
+                # supposed to correct a low-disk state, and the stall check
+                # is what's supposed to notice when it or anything else
+                # hasn't. Gating either behind storage_ready/scheduling (as
+                # an earlier version of the pruning fix did) deadlocks -
+                # once blocked, nothing ever runs to notice or unblock it.
+                storage_ready = self._storage_ready()
                 prune_now = time.monotonic()
                 if prune_now >= next_prune_at:
                     next_prune_at = prune_now + self.config.cooldown_seconds
@@ -437,7 +749,27 @@ class FactoryDaemon:
                             len(pruned),
                             self.config.recovery_retention_hours,
                         )
-                storage_ready = self._storage_ready()
+                    self._check_stall()
+                if not self.paused() and not storage_ready:
+                    now = time.monotonic()
+                    if now >= next_refresh_at:
+                        pressure_refresh_seconds = max(self.config.cooldown_seconds, 900)
+                        refresh_future = control.submit(
+                            refresh_jobs,
+                            self.pipeline,
+                            active_task_ids,
+                            now,
+                            pressure_refresh_seconds,
+                            storage_pressure=True,
+                        )
+                        _, next_refresh_at = await_refresh(
+                            refresh_future,
+                            lambda: self._write_daemon_state("running", active, active_started_at),
+                        )
+                        LOGGER.warning(
+                            "Storage reserve blocked scheduling; ran pressure-safe "
+                            "control-plane reconciliation without starting providers"
+                        )
                 if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
@@ -488,9 +820,41 @@ class FactoryDaemon:
                                 task_id,
                             )
                         if recovered:
+                            self.watchdog_recoveries.record(recovered, datetime.now(UTC))
                             jobs = self.pipeline.jobs.load()
                     else:
                         jobs = self.pipeline.jobs.load()
+                    # Reconciliation commits several state transitions before returning.
+                    # Schedule only from that committed view, not from an intermediate
+                    # mapping held across a slow GitHub refresh.
+                    jobs = self.pipeline.jobs.load()
+                    if self.config.maintenance_enabled:
+                        maintenance_controller = MaintenanceController(self.pipeline)
+                        maintenance_controller.apply_recoveries(active_task_ids)
+                        jobs = self.pipeline.jobs.load()
+                        if (
+                            MAINTENANCE_CYCLE_ID not in active_task_ids
+                            and capacity > 0
+                            and available_host_slots > 0
+                            and maintenance_controller.due()
+                        ):
+                            maintenance_worker = FactoryPipeline(
+                                self.config,
+                                verification_slots=self.verification_slots,
+                                host_resource_slots=self.host_resource_slots,
+                                agent_router=self.pipeline.router,
+                            )
+                            future = workers.submit(maintenance_worker.run_maintenance_cycle)
+                            active[future] = MAINTENANCE_CYCLE_ID
+                            active_started_at[MAINTENANCE_CYCLE_ID] = datetime.now(UTC).isoformat()
+                            active_task_ids.add(MAINTENANCE_CYCLE_ID)
+                            capacity = max(0, capacity - 1)
+                            LOGGER.info("Scheduled bounded Factory maintenance cycle")
+                    jobs = host_admitted_jobs(jobs, available_host_slots)
+                    # A refresh recalculates PR WIP from GitHub. Use that current
+                    # result for this same scheduling pass instead of admitting one
+                    # extra issue from the empty startup snapshot.
+                    wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                     scheduler_time = datetime.now(UTC)
                     new_issue_slots = self.issue_admission.available_slots(scheduler_time)
                     for job in select_batch(
@@ -547,9 +911,20 @@ class FactoryDaemon:
                     if architect_future is not None:
                         try:
                             architect_future.result()
+                        except ProviderCapacityUnavailable as error:
+                            retry = (
+                                error.retry_after_seconds or self.config.provider_cooldown_seconds
+                            )
+                            architect_retry_not_before = datetime.now(UTC) + timedelta(
+                                seconds=max(retry, 1)
+                            )
+                            LOGGER.warning("Architect cycle deferred: %s", error)
                         except Exception:
                             LOGGER.exception("Architect cycle crashed")
-                    if self.pipeline.architect_due():
+                    if (
+                        architect_retry_not_before is None
+                        or datetime.now(UTC) >= architect_retry_not_before
+                    ) and self.pipeline.architect_due():
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(
@@ -592,6 +967,7 @@ class FactoryDaemon:
                 "active_started_at": active_started_at or {},
                 "issue_admission": self.issue_admission.snapshot(),
                 "queue": queue_snapshot(jobs, active_task_ids),
+                "watchdog": watchdog_snapshot(jobs, active_task_ids, self.watchdog_recoveries),
                 "providers": provider_status_snapshot(self.provider_health),
             },
         )

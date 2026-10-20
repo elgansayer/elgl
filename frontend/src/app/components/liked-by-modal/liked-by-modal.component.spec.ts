@@ -1,220 +1,262 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { I18nService } from '../../services/i18n.service';
+import {
+  MomentLikeUser,
+  MomentsStore,
+} from '../../services/moments.store';
 import { LikedByModalComponent } from './liked-by-modal.component';
-
-interface LikedUser {
-  id: string;
-  avatar_url: string | null;
-  display_name: string;
-  native_languages?: string[];
-  target_languages: string[];
-}
-
-function flushRequest(httpTesting: HttpTestingController, users: LikedUser[] = []): void {
-  httpTesting.expectOne('/api/moments/moment-123/likes').flush(users);
-}
-
-function getDialog(): HTMLElement {
-  const title = document.body.querySelector<HTMLElement>('[data-testid="liked-by-title"]');
-  const dialog = title?.closest<HTMLElement>('[role="dialog"]');
-  if (!dialog) {
-    throw new Error('Expected the Liked By dialog to be rendered in the document overlay');
-  }
-  return dialog;
-}
 
 describe('LikedByModalComponent', () => {
   let component: LikedByModalComponent;
   let fixture: ComponentFixture<LikedByModalComponent>;
-  let httpTesting: HttpTestingController;
+  let loadMomentLikes: ReturnType<typeof vi.fn>;
+
+  const users: MomentLikeUser[] = [
+    {
+      id: 'user-1',
+      display_name: 'Alice',
+      avatar_url: null,
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    },
+    {
+      id: 'user-2',
+      display_name: 'Bob',
+      avatar_url: 'https://example.com/bob.jpg',
+      native_languages: ['fr'],
+      target_languages: ['en'],
+    },
+  ];
 
   beforeEach(async () => {
+    loadMomentLikes = vi.fn().mockResolvedValue([]);
+
     await TestBed.configureTestingModule({
       imports: [LikedByModalComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        {
+          provide: MomentsStore,
+          useValue: { loadMomentLikes },
+        },
+        {
+          provide: I18nService,
+          useValue: {
+            translations: signal({}),
+            translate: (key: string) => key,
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LikedByModalComponent);
     component = fixture.componentInstance;
-    httpTesting = TestBed.inject(HttpTestingController);
     fixture.componentRef.setInput('momentId', 'moment-123');
   });
 
   afterEach(() => {
-    try {
-      httpTesting?.verify();
-    } finally {
-      fixture?.destroy();
-    }
+    fixture.destroy();
+    vi.clearAllMocks();
   });
 
-  it('creates with an instance-safe dialog title relationship', () => {
+  async function start(): Promise<void> {
     fixture.detectChanges();
-
-    expect(component).toBeTruthy();
-    const dialog = getDialog();
-    const titleId = dialog.getAttribute('aria-labelledby');
-    expect(titleId).toMatch(/^brn-dialog-title-\d+$/);
-    expect(dialog.querySelector(`#${titleId}`)?.getAttribute('data-testid')).toBe('liked-by-title');
-    flushRequest(httpTesting);
-  });
-
-  it('shows an accessible loading state while fetching likes', () => {
-    fixture.detectChanges();
-
-    expect(component.likedUsers.isLoading()).toBe(true);
-    expect(getDialog().querySelector('[role="progressbar"]')).toBeTruthy();
-    flushRequest(httpTesting);
-  });
-
-  it('lists every returned liker with language metadata and decorative avatars', async () => {
-    fixture.detectChanges();
-    const mockUsers: LikedUser[] = [
-      {
-        id: 'user-1',
-        display_name: 'Alice',
-        avatar_url: null,
-        native_languages: ['en'],
-        target_languages: ['es', 'fr'],
-      },
-      {
-        id: 'user-2',
-        display_name: 'Bob',
-        avatar_url: 'https://example.com/avatar.jpg',
-        native_languages: ['fr'],
-        target_languages: ['en'],
-      },
-    ];
-
-    flushRequest(httpTesting, mockUsers);
     await fixture.whenStable();
     fixture.detectChanges();
+  }
 
-    const dialog = getDialog();
-    const rows = dialog.querySelectorAll('li');
-    expect(rows.length).toBe(2);
-    expect(dialog.textContent).toContain('Alice');
-    expect(dialog.textContent).toContain('Bob');
-    expect(dialog.textContent).toContain('EN');
-    expect(dialog.textContent).toContain('ES');
+  it('loads the first authenticated page when the modal opens', async () => {
+    loadMomentLikes.mockResolvedValue(users);
 
-    const images = dialog.querySelectorAll('img');
-    expect(images[0].getAttribute('src')).toContain('default-avatar.png');
-    expect(images[0].getAttribute('alt')).toBe('');
-    expect(images[1].getAttribute('src')).toBe('https://example.com/avatar.jpg');
-    expect(images[1].getAttribute('alt')).toBe('');
-    expect(rows[0].querySelector('[dir="auto"]')?.textContent).toContain('Alice');
+    await start();
+
+    expect(loadMomentLikes).toHaveBeenCalledWith('moment-123', 0, 50);
+    expect(component.users()).toEqual(users);
+    expect(component.isLoading()).toBe(false);
+    expect(component.loadError()).toBe(false);
+    expect(component.hasMore()).toBe(false);
   });
 
-  it('renders the honest empty state when the Moment has no likes', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
-    await fixture.whenStable();
-    fixture.detectChanges();
+  it('shows a retryable failure without retaining stale users', async () => {
+    loadMomentLikes.mockRejectedValue(new Error('private provider detail'));
 
-    expect(component.likedUsers.value()).toEqual([]);
-    const dialog = getDialog();
-    expect(dialog.querySelectorAll('li').length).toBe(1);
-    expect(dialog.textContent).toContain('No likes yet');
+    await start();
+
+    expect(component.users()).toEqual([]);
+    expect(component.loadError()).toBe(true);
+    expect(component.isLoading()).toBe(false);
+    expect(document.body.textContent).toContain('common.loadError');
   });
 
-  it('shows an alert and lets the user retry a failed request', async () => {
-    fixture.detectChanges();
-    httpTesting
-      .expectOne('/api/moments/moment-123/likes')
-      .flush('unavailable', { status: 503, statusText: 'Service Unavailable' });
-    await fixture.whenStable();
-    fixture.detectChanges();
+  it('retries the first page after an initial failure', async () => {
+    loadMomentLikes
+      .mockRejectedValueOnce(new Error('temporary'))
+      .mockResolvedValueOnce(users);
 
-    expect(component.likedUsers.error()).toBeTruthy();
-    const dialog = getDialog();
-    expect(dialog.querySelector('[role="alert"]')).toBeTruthy();
+    await start();
+    expect(component.loadError()).toBe(true);
 
-    const retry = dialog.querySelector<HTMLButtonElement>('[data-testid="liked-by-retry"]');
-    if (!retry) {
-      throw new Error('Expected the Liked By retry action to be rendered');
-    }
-    expect(retry.getAttribute('type')).toBe('button');
-    retry.click();
-    fixture.detectChanges();
-
-    httpTesting.expectOne('/api/moments/moment-123/likes').flush([]);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(component.likedUsers.error()).toBeFalsy();
-    expect(component.likedUsers.value()).toEqual([]);
-  });
-
-  it('emits closeModal from the labelled Spartan close action', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const closeSpy = vi.fn();
-    const subscription = component.closeModal.subscribe(closeSpy);
-    const closeButton = getDialog().querySelector<HTMLButtonElement>(
-      '[data-testid="liked-by-close"]',
-    );
-
-    if (!closeButton) {
-      throw new Error('Expected the Liked By close action to be rendered');
-    }
-    expect(closeButton.getAttribute('type')).toBe('button');
-    expect(closeButton.getAttribute('aria-label')).toBeTruthy();
-    closeButton.click();
-
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-    subscription.unsubscribe();
-  });
-
-  it('emits closeModal for dialog-originated dismissal while controlled open', () => {
-    const closeSpy = vi.fn();
-    const subscription = component.closeModal.subscribe(closeSpy);
-
-    component.onDialogStateChanged('closed');
-
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-    subscription.unsubscribe();
-  });
-
-  it('does not emit a duplicate close after the parent closes the modal', () => {
-    fixture.componentRef.setInput('open', false);
-    fixture.detectChanges();
-    httpTesting.expectNone('/api/moments/moment-123/likes');
-    const closeSpy = vi.fn();
-    const subscription = component.closeModal.subscribe(closeSpy);
-
-    component.onDialogStateChanged('closed');
-
-    expect(closeSpy).not.toHaveBeenCalled();
-    subscription.unsubscribe();
-  });
-
-  it('refetches the liker list when momentId changes', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
+    component.retry();
     await fixture.whenStable();
 
+    expect(loadMomentLikes).toHaveBeenNthCalledWith(2, 'moment-123', 0, 50);
+    expect(component.users()).toEqual(users);
+    expect(component.loadError()).toBe(false);
+  });
+
+  it('appends and deduplicates additional pages', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `user-${index}`,
+      display_name: `User ${index}`,
+      avatar_url: null,
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    }));
+    loadMomentLikes
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce([
+        firstPage[49],
+        {
+          id: 'user-50',
+          display_name: 'User 50',
+          avatar_url: null,
+          native_languages: ['en'],
+          target_languages: ['ja'],
+        },
+      ]);
+
+    await start();
+    expect(component.hasMore()).toBe(true);
+
+    await component.loadMore();
+
+    expect(loadMomentLikes).toHaveBeenNthCalledWith(2, 'moment-123', 50, 50);
+    expect(component.users()).toHaveLength(51);
+    expect(component.users().at(-1)?.id).toBe('user-50');
+    expect(component.hasMore()).toBe(false);
+  });
+
+  it('does not issue duplicate load-more requests while one is pending', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `user-${index}`,
+      display_name: `User ${index}`,
+      avatar_url: null,
+      target_languages: ['ja'],
+    }));
+    let resolvePage: ((value: MomentLikeUser[]) => void) | undefined;
+    const pendingPage = new Promise<MomentLikeUser[]>((resolve) => {
+      resolvePage = resolve;
+    });
+    loadMomentLikes
+      .mockResolvedValueOnce(firstPage)
+      .mockReturnValueOnce(pendingPage);
+
+    await start();
+
+    const firstLoad = component.loadMore();
+    const secondLoad = component.loadMore();
+    expect(loadMomentLikes).toHaveBeenCalledTimes(2);
+
+    resolvePage?.([]);
+    await Promise.all([firstLoad, secondLoad]);
+    expect(component.isLoadingMore()).toBe(false);
+  });
+
+  it('ignores a stale response when the moment changes', async () => {
+    let resolveFirst: ((value: MomentLikeUser[]) => void) | undefined;
+    const firstRequest = new Promise<MomentLikeUser[]>((resolve) => {
+      resolveFirst = resolve;
+    });
+    loadMomentLikes
+      .mockReturnValueOnce(firstRequest)
+      .mockResolvedValueOnce([users[1]]);
+
+    fixture.detectChanges();
     fixture.componentRef.setInput('momentId', 'moment-456');
     fixture.detectChanges();
-
-    const req = httpTesting.expectOne('/api/moments/moment-456/likes');
-    req.flush([
-      {
-        id: 'user-2',
-        display_name: 'Bob',
-        avatar_url: null,
-        native_languages: ['fr'],
-        target_languages: ['en'],
-      },
-    ] satisfies LikedUser[]);
     await fixture.whenStable();
-    fixture.detectChanges();
 
-    expect(component.likedUsers.value()).toHaveLength(1);
-    expect(component.likedUsers.value()?.[0].display_name).toBe('Bob');
+    resolveFirst?.([users[0]]);
+    await fixture.whenStable();
+
+    expect(component.users()).toEqual([users[1]]);
+    expect(loadMomentLikes).toHaveBeenNthCalledWith(2, 'moment-456', 0, 50);
+  });
+
+  it('exposes profile links and hides incomplete language pairs', async () => {
+    loadMomentLikes.mockResolvedValue([
+      users[0],
+      {
+        id: 'user-3',
+        display_name: 'No target yet',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: [],
+      },
+    ]);
+
+    await start();
+
+    const links = Array.from(
+      document.body.querySelectorAll('a[role="listitem"]'),
+    ) as HTMLAnchorElement[];
+    expect(links).toHaveLength(2);
+    expect(links[0].getAttribute('href')).toContain('/profile/user/user-1');
+    expect(component.hasLanguagePair(users[0])).toBe(true);
+    expect(
+      component.hasLanguagePair({
+        id: 'user-3',
+        display_name: 'No target yet',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: [],
+      }),
+    ).toBe(false);
+  });
+
+  it('clears pending pagination when the modal closes and reopens', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `user-${index}`,
+      display_name: `User ${index}`,
+      avatar_url: null,
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    }));
+    let resolvePage: ((value: MomentLikeUser[]) => void) | undefined;
+    const pendingPage = new Promise<MomentLikeUser[]>((resolve) => {
+      resolvePage = resolve;
+    });
+    loadMomentLikes
+      .mockResolvedValueOnce(firstPage)
+      .mockReturnValueOnce(pendingPage)
+      .mockResolvedValueOnce([]);
+
+    await start();
+    const loadMore = component.loadMore();
+    expect(component.isLoadingMore()).toBe(true);
+
+    fixture.componentRef.setInput('open', false);
+    fixture.detectChanges();
+    expect(component.isLoadingMore()).toBe(false);
+
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.isLoadingMore()).toBe(false);
+
+    resolvePage?.([]);
+    await loadMore;
+  });
+
+  it('emits close when the Spartan dialog closes', async () => {
+    loadMomentLikes.mockResolvedValue([]);
+    await start();
+    const emitSpy = vi.spyOn(component.closeModal, 'emit');
+
+    component.onDialogStateChanged('closed');
+
+    expect(emitSpy).toHaveBeenCalledOnce();
   });
 });

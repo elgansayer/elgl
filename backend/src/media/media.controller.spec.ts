@@ -16,8 +16,7 @@ describe('MediaController', () => {
           provide: MediaService,
           useValue: {
             generateCoverPresignedUrl: vi.fn(),
-            generateAvatarPresignedUrl: vi.fn(),
-            generateAudioIntroPresignedUrl: vi.fn(),
+            generateVoiceNotePresignedUrl: vi.fn(),
             confirmCoverUpload: vi.fn(),
           },
         },
@@ -68,57 +67,28 @@ describe('MediaController', () => {
     });
   });
 
-  describe('getAvatarPresignedUrl', () => {
-    it('uses the authenticated user and server-owned avatar folder', async () => {
+  describe('getVoiceNotePresignedUrl', () => {
+    it('uses the authenticated user identity and dedicated service method', async () => {
       const dto = {
-        filename: 'avatar.webp',
-        contentType: 'image/webp',
+        filename: 'voice.webm',
+        contentType: 'audio/webm;codecs=opus',
       };
       const expectedResponse = {
-        uploadUrl: 'https://upload.url/avatar',
-        mediaUrl: 'https://media.url/avatar',
-        objectKey: 'avatars/user-1/avatar.webp',
+        uploadUrl: 'https://upload.url/voice',
+        mediaUrl: 'https://media.url/voice.webm',
+        objectKey: 'voice-notes/user-1/voice.webm',
       };
 
-      (mediaService.generateAvatarPresignedUrl as Mock).mockResolvedValue(
+      (mediaService.generateVoiceNotePresignedUrl as Mock).mockResolvedValue(
         expectedResponse,
       );
 
-      const result = await controller.getAvatarPresignedUrl(
+      const result = await controller.getVoiceNotePresignedUrl(
         { user: { id: 'user-1' } },
         dto,
       );
 
-      expect(mediaService.generateAvatarPresignedUrl).toHaveBeenCalledWith(
-        'user-1',
-        dto,
-      );
-      expect(result).toEqual(expectedResponse);
-    });
-  });
-
-  describe('getAudioIntroPresignedUrl', () => {
-    it('uses the authenticated user and server-owned audio-intro folder', async () => {
-      const dto = {
-        filename: 'intro.m4a',
-        contentType: 'audio/mp4',
-      };
-      const expectedResponse = {
-        uploadUrl: 'https://upload.url/audio',
-        mediaUrl: 'https://media.url/audio',
-        objectKey: 'audio-intros/user-1/intro.m4a',
-      };
-
-      (mediaService.generateAudioIntroPresignedUrl as Mock).mockResolvedValue(
-        expectedResponse,
-      );
-
-      const result = await controller.getAudioIntroPresignedUrl(
-        { user: { id: 'user-1' } },
-        dto,
-      );
-
-      expect(mediaService.generateAudioIntroPresignedUrl).toHaveBeenCalledWith(
+      expect(mediaService.generateVoiceNotePresignedUrl).toHaveBeenCalledWith(
         'user-1',
         dto,
       );

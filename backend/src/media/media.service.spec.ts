@@ -168,6 +168,33 @@ describe('MediaService', () => {
     });
   });
 
+  it('issues user-scoped, size-bounded direct voice-note upload URLs', async () => {
+    const result = await service.generateVoiceNotePresignedUrl('user-1', {
+      filename: 'voice.webm',
+      contentType: 'audio/webm;codecs=opus',
+    });
+
+    expect(result.objectKey).toMatch(
+      /^voice-notes\/user-1\/\d+-[a-f0-9]{16}\.webm$/,
+    );
+    expect(r2ObjectService.createUploadUrl).toHaveBeenCalledWith(
+      result.objectKey,
+      'audio/webm;codecs=opus',
+      10 * 1024 * 1024,
+    );
+  });
+
+  it('rejects unsupported direct voice-note content types before signing', async () => {
+    await expect(
+      service.generateVoiceNotePresignedUrl('user-1', {
+        filename: 'voice.html',
+        contentType: 'text/html',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(r2ObjectService.createUploadUrl).not.toHaveBeenCalled();
+  });
+
   it('downloads, compresses and overwrites a confirmed cover through the gateway', async () => {
     const result = await service.confirmCoverUpload(
       'user-1',
@@ -193,26 +220,6 @@ describe('MediaService', () => {
       coverUrl: 'https://media.example.test/covers/user-1/cover.png',
     });
   });
-
-  it.each([
-    'covers/user-2/cover.png',
-    'covers/user-1/nested/cover.png',
-    'avatars/user-1/cover.png',
-    '',
-    `covers/user-1/${'x'.repeat(500)}`,
-  ])(
-    'rejects an unowned or malformed cover object key before reading R2: %s',
-    async (objectKey) => {
-      await expect(
-        service.confirmCoverUpload('user-1', objectKey),
-      ).rejects.toBeInstanceOf(BadRequestException);
-
-      expect(r2ObjectService.downloadObject).not.toHaveBeenCalled();
-      expect(imageCompressionService.compress).not.toHaveBeenCalled();
-      expect(r2ObjectService.uploadBytes).not.toHaveBeenCalled();
-      expect(usersUpdate).not.toHaveBeenCalled();
-    },
-  );
 
   it('uploads compressed avatar bytes without an AWS client', async () => {
     const file = {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import time
 from collections.abc import Sequence
@@ -115,28 +116,6 @@ class GitWorkflow:
         self._add_worktree(worktree, branch, f"origin/{self.base_branch}")
         return branch
 
-    def prepare_claimed_worktree(
-        self,
-        worktree: Path,
-        branch: str,
-        initial_base_sha: str | None,
-    ) -> None:
-        """Rebuild a crash-recovered branch from its durable canonical identity."""
-
-        ensure_push_target(branch, self.base_branch)
-        fetch = _run_with_lock_retry(
-            self.runner,
-            ("git", "fetch", "origin", self.base_branch),
-            self.repository,
-        )
-        if fetch.returncode != 0:
-            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
-        self._add_worktree(
-            worktree,
-            branch,
-            initial_base_sha or f"origin/{self.base_branch}",
-        )
-
     def prepare_pull_request_worktree(self, worktree: Path, branch: str) -> None:
         """Check out an existing pull request branch for independent review.
 
@@ -151,6 +130,121 @@ class GitWorkflow:
         if fetch.returncode != 0:
             raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
         self._add_worktree(worktree, branch, f"origin/{branch}")
+
+    def contains_current_base(self) -> bool:
+        """Return whether this head already contains the latest remote base."""
+
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        ancestor = self.runner(
+            (
+                "git",
+                "merge-base",
+                "--is-ancestor",
+                f"origin/{self.base_branch}",
+                "HEAD",
+            ),
+            self.repository,
+        )
+        if ancestor.returncode not in {0, 1}:
+            raise RepositorySafetyError(
+                f"Could not compare pull request with base branch: {ancestor.stderr}"
+            )
+        return ancestor.returncode == 0
+
+    def merge_base_for_repair(self) -> bool:
+        """Merge the current base into a PR worktree and report conflicts.
+
+        GitHub cannot update a branch whose merge is conflicting. Leaving the
+        conflict materialised in the isolated worktree gives the repair agent
+        exact files and markers to resolve instead of asking it to infer the
+        conflict from a status string.
+        """
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect merge conflicts: {unresolved.stderr}")
+        if unresolved.stdout.strip():
+            return True
+
+        self.discard_transient_build_metadata()
+
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        merge = self.runner(
+            ("git", "merge", "--no-commit", "--no-ff", f"origin/{self.base_branch}"),
+            self.repository,
+        )
+        if merge.returncode == 0:
+            return False
+
+        unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
+        if unresolved.returncode == 0 and unresolved.stdout.strip():
+            return True
+        raise RepositorySafetyError(f"Could not merge base branch: {merge.stderr}")
+
+    def discard_transient_build_metadata(self) -> bool:
+        """Restore only an unstaged, generator-only local build-number change.
+
+        Verification embeds the current HEAD in this tracked generated file.
+        It is not a source repair and must not obstruct the next base merge.
+        Version changes, staged edits, symlinks and other content are preserved.
+        """
+        relative = "frontend/src/app/generated/build-info.generated.ts"
+        path = self.repository / relative
+        if (
+            path.is_symlink()
+            or not path.is_file()
+            or not path.resolve().is_relative_to(self.repository.resolve())
+            or path.resolve().relative_to(self.repository.resolve()).as_posix() != relative
+            or path.stat().st_size > 2048
+            or path.stat().st_mode & 0o111
+        ):
+            return False
+        baseline = self.runner(("git", "show", f"HEAD:{relative}"), self.repository)
+        if baseline.returncode:
+            return False
+        try:
+            current = path.read_bytes().decode("utf-8")
+        except (OSError, UnicodeError):
+            return False
+        if current == baseline.stdout:
+            return False
+        header = "// Generated by scripts/generate-help-about-data.mjs. Do not edit by hand.\n"
+        pattern = re.compile(
+            r"(?m)^export const GENERATED_BUILD_NUMBER = 'local\.([0-9a-f]{12})';$"
+        )
+        matches = pattern.findall(current)
+        if (
+            not current.startswith(header)
+            or len(matches) != 1
+            or len(pattern.findall(baseline.stdout)) != 1
+            or pattern.sub("<build-number>", current)
+            != pattern.sub("<build-number>", baseline.stdout)
+            or matches[0] != self.head_sha()[:12]
+        ):
+            return False
+        staged = self.runner(
+            ("git", "diff", "--cached", "--quiet", "--", relative), self.repository
+        )
+        if staged.returncode:
+            return False
+        restored = self.runner(
+            ("git", "restore", "--source=HEAD", "--worktree", "--", relative), self.repository
+        )
+        if restored.returncode:
+            raise RepositorySafetyError("Could not restore transient generated build metadata")
+        return True
 
     def _add_worktree(self, worktree: Path, branch: str, start_point: str) -> None:
         if worktree.exists():
@@ -333,27 +427,7 @@ class GitWorkflow:
         ):
             raise RepositorySafetyError("Recovery directory cannot be inside the worktree")
         resolved_recovery.mkdir(parents=True, exist_ok=False)
-        # The point of this archive is to not lose hand-edited uncommitted
-        # work - none of these directories are ever hand-edited, all are
-        # regenerable (npm/uv install, a build), and copying them in full
-        # is what turned a ~63 MB archive into a 2+ GB one, exhausting the
-        # disk-space reserve that gates Factory scheduling.
-        shutil.copytree(
-            resolved_worktree,
-            resolved_recovery,
-            symlinks=True,
-            dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns(
-                "node_modules",
-                "dist",
-                ".angular",
-                ".venv",
-                "__pycache__",
-                ".mypy_cache",
-                ".pytest_cache",
-                ".ruff_cache",
-            ),
-        )
+        shutil.copytree(resolved_worktree, resolved_recovery, symlinks=True, dirs_exist_ok=True)
         (resolved_recovery / "RECOVERY.txt").write_text(
             "This is a preserved OpenHands worktree archive. The original Git worktree "
             "registration was removed after the daemon could no longer safely retire it.\n"
