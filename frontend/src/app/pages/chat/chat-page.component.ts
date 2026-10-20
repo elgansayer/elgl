@@ -21,15 +21,7 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [
-    HlmInput,
-    HlmButton,
-    FormsModule,
-    DatePipe,
-    TranslatePipe,
-    A11yClickableDirective,
-    VisualDiffComponent,
-  ],
+  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective, VisualDiffComponent],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -533,7 +525,7 @@ export class ChatPageComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
-  private centrifugoService = inject(CentrifugeService);
+  private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);
 
@@ -575,7 +567,7 @@ export class ChatPageComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+        this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       }
     });
   }
@@ -583,7 +575,7 @@ export class ChatPageComponent implements OnInit {
   async selectRoom(room: ChatRoom) {
     // Unsubscribe previous room
     if (this.subscribedRoomId && this.subscribedRoomId !== room.id) {
-      this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       this.subscribedRoomId = null;
     }
 
@@ -596,8 +588,8 @@ export class ChatPageComponent implements OnInit {
       // Subscribe to real-time updates for this room (status updates, new messages, deletions)
       if (this.subscribedRoomId !== room.id) {
         this.subscribedRoomId = room.id;
-        this.centrifugoService.subscribe(`chat:${room.id}`, (data: unknown) => {
-          this.handleCentrifugeEvent(data as Record<string, unknown>);
+        this.centrifugeService.subscribe(`chat:${room.id}`, (data: unknown) => {
+          this.handleCentrifugoEvent(data as Record<string, unknown>);
         });
       }
 
@@ -620,7 +612,7 @@ export class ChatPageComponent implements OnInit {
     }
   }
 
-  private handleCentrifugeEvent(data: Record<string, unknown>): void {
+  private handleCentrifugoEvent(data: Record<string, unknown>): void {
     // Handle status update events
     if (data['status_update']) {
       const update = data['status_update'] as Record<string, unknown>;

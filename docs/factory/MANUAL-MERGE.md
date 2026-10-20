@@ -8,7 +8,7 @@ an autonomous Factory fallback.
 
 Protection for `main` is split across two active, layered GitHub rulesets:
 
-1. The baseline `main` ruleset requires a pull request and strict `CI / required` on the current head. It also
+1. The baseline `main` ruleset requires a pull request and non-strict `CI / required` on the current head. It also
    owns the repository's non-fast-forward, deletion, and other baseline protections.
 2. The `factory-independent-review` ruleset contains only the required
    `factory/independent-review` status.

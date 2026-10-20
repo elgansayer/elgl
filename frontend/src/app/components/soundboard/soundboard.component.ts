@@ -12,7 +12,10 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
-import { SoundItem, SoundboardService } from '../../services/soundboard.service';
+import {
+  SoundItem,
+  SoundboardService,
+} from '../../services/soundboard.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { getBundledSoundboardClip } from '../../services/soundboard-clips';
 
@@ -107,7 +110,6 @@ export class SoundboardComponent {
 
   private playbackAudio: HTMLAudioElement | null = null;
   private loadGeneration = 0;
-  private lastProcessedEventCount = 0;
 
   constructor() {
     effect(() => {
@@ -116,26 +118,21 @@ export class SoundboardComponent {
       untracked(() => void this.loadSounds(room));
     });
 
-    effect(() => {
+    effect((onCleanup) => {
       const room = this.roomId().trim();
-      const events = this.centrifugoService.events();
-      if (!room || events.length === 0 || events.length === this.lastProcessedEventCount) {
-        return;
-      }
-
-      this.lastProcessedEventCount = events.length;
-      const latest = events.at(-1);
-      if (!latest || latest.channel !== `room_${room}` || !isRecord(latest.data)) {
-        return;
-      }
-      if (latest.data['type'] !== 'soundboard_play') return;
-
-      const soundId =
-        typeof latest.data['sound_id'] === 'string' ? latest.data['sound_id'].trim() : '';
-      const clip = getBundledSoundboardClip(soundId);
-      if (!clip) return;
-
-      untracked(() => this.playRemoteSound(clip.audioDataUrl));
+      if (!room) return;
+      const channel = `room_${room}`;
+      const handler = (data: unknown) => {
+        if (!isRecord(data) || data['type'] !== 'soundboard_play') return;
+        const soundId = typeof data['sound_id'] === 'string' ? data['sound_id'].trim() : '';
+        const clip = getBundledSoundboardClip(soundId);
+        if (!clip) return;
+        untracked(() => this.playRemoteSound(clip.audioDataUrl));
+      };
+      this.centrifugoService.subscribe(channel, handler);
+      onCleanup(() => {
+        this.centrifugoService.unsubscribe(channel);
+      });
     });
 
     this.destroyRef.onDestroy(() => {

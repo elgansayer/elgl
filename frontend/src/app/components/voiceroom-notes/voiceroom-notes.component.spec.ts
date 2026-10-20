@@ -27,8 +27,8 @@ class MockI18nService {
 }
 
 class MockCentrifugeService {
-  subscribeLiveRoom = vi.fn();
-  unsubscribeLiveRoom = vi.fn();
+  subscribe = vi.fn();
+  unsubscribe = vi.fn();
   publish = vi.fn();
 }
 

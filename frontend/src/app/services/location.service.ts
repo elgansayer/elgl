@@ -30,18 +30,28 @@ export class LocationService {
 
   async getCurrentLocation(userId: string): Promise<CurrentLocation | null> {
     const headers = await this.authHeaders();
-    const response = await fetch(`${environment.apiUrl}/location/${userId}/current`, { headers });
+    const response = await fetch(
+      `${environment.apiUrl}/location/${userId}/current`,
+      { headers },
+    );
     if (!response.ok) return null;
     return response.json();
   }
 
-  async shareCurrentLocation(userId: string, latitude: number, longitude: number): Promise<void> {
+  async shareCurrentLocation(
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<void> {
     const headers = await this.authHeaders();
-    const response = await fetch(`${environment.apiUrl}/location/${userId}/current`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ latitude, longitude }),
-    });
+    const response = await fetch(
+      `${environment.apiUrl}/location/${userId}/current`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ latitude, longitude }),
+      },
+    );
     if (!response.ok) throw new Error('Failed to share location');
   }
 
@@ -50,45 +60,72 @@ export class LocationService {
     viewerUserId: string,
   ): Promise<{ shareId: string; channel: string }> {
     const headers = await this.authHeaders();
-    const response = await fetch(`${environment.apiUrl}/location/${userId}/live/start`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ viewerUserId }),
-    });
+    const response = await fetch(
+      `${environment.apiUrl}/location/${userId}/live/start`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ viewerUserId }),
+      },
+    );
     if (!response.ok) throw new Error('Failed to start live share');
     return response.json();
   }
 
-  async updateLiveLocation(userId: string, latitude: number, longitude: number): Promise<void> {
+  async updateLiveLocation(
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<void> {
     const headers = await this.authHeaders();
-    const response = await fetch(`${environment.apiUrl}/location/${userId}/live/update`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ latitude, longitude }),
-    });
+    const response = await fetch(
+      `${environment.apiUrl}/location/${userId}/live/update`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ latitude, longitude }),
+      },
+    );
     if (!response.ok) throw new Error('Failed to update live location');
   }
 
   async stopLiveShare(userId: string): Promise<void> {
     const headers = await this.authHeaders();
-    const response = await fetch(`${environment.apiUrl}/location/${userId}/live`, {
-      method: 'DELETE',
-      headers,
-    });
+    const response = await fetch(
+      `${environment.apiUrl}/location/${userId}/live`,
+      { method: 'DELETE', headers },
+    );
     if (!response.ok) throw new Error('Failed to stop live share');
   }
 
   async getLiveLocation(sharerUserId: string): Promise<LiveLocationData> {
     const headers = await this.authHeaders();
-    const response = await fetch(`${environment.apiUrl}/location/${sharerUserId}/live`, {
-      headers,
-    });
+    const response = await fetch(
+      `${environment.apiUrl}/location/${sharerUserId}/live`,
+      { headers },
+    );
     if (!response.ok) throw new Error('No active live share');
     return response.json();
   }
 
-  subscribeToLiveLocation(userId: string, callback: (data: LiveLocationData) => void): () => void {
-    this.centrifugoService.subscribeLiveLocation(userId, callback);
-    return () => this.centrifugoService.unsubscribeLiveLocation(userId);
+  subscribeToLiveLocation(
+    userId: string,
+    callback: (data: LiveLocationData) => void,
+  ): () => void {
+    const channel = `location_live_${userId}`;
+    const handler = (data: unknown) => {
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'latitude' in data &&
+        'longitude' in data &&
+        'sharer_user_id' in data &&
+        'updated_at' in data
+      ) {
+        callback(data as LiveLocationData);
+      }
+    };
+    this.centrifugoService.subscribe(channel, handler);
+    return () => this.centrifugoService.unsubscribe(channel);
   }
 }

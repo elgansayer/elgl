@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SoundboardComponent } from './soundboard.component';
 import { SoundboardService } from '../../services/soundboard.service';
-import { CentrifugeService, CentrifugeEvent } from '../../services/centrifuge.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
@@ -26,7 +26,9 @@ describe('SoundboardComponent', () => {
   let playSoundMock: ReturnType<typeof vi.fn>;
   let hapticTapFn: ReturnType<typeof vi.fn>;
   let currentUserSignal: ReturnType<typeof signal<UserInfo | null>>;
-  let eventsSignal: ReturnType<typeof signal<CentrifugeEvent[]>>;
+  let mockSubscribe: ReturnType<typeof vi.fn>;
+  let mockUnsubscribe: ReturnType<typeof vi.fn>;
+  let publishedEvents: Map<string, (data: unknown) => void>;
   const audioElements: AudioStubRecord[] = [];
 
   beforeEach(async () => {
@@ -52,7 +54,14 @@ describe('SoundboardComponent', () => {
     playSoundMock = vi.fn().mockResolvedValue({ success: true });
     hapticTapFn = vi.fn();
     currentUserSignal = signal<UserInfo | null>(null);
-    eventsSignal = signal<CentrifugeEvent[]>([]);
+    publishedEvents = new Map();
+    mockSubscribe = vi.fn((channel: string, callback: (data: unknown) => void) => {
+      publishedEvents.set(channel, callback);
+      return null;
+    });
+    mockUnsubscribe = vi.fn((channel: string) => {
+      publishedEvents.delete(channel);
+    });
 
     await TestBed.configureTestingModule({
       imports: [SoundboardComponent],
@@ -61,7 +70,7 @@ describe('SoundboardComponent', () => {
           provide: SoundboardService,
           useValue: { getSounds: getSoundsMock, playSound: playSoundMock },
         },
-        { provide: CentrifugeService, useValue: { events: eventsSignal } },
+        { provide: CentrifugeService, useValue: { subscribe: mockSubscribe, unsubscribe: mockUnsubscribe } },
         { provide: AuthService, useValue: { currentUser: currentUserSignal } },
         { provide: HapticFeedbackService, useValue: { tap: hapticTapFn } },
       ],
@@ -106,7 +115,9 @@ describe('SoundboardComponent', () => {
     await initialise();
 
     expect(getSoundsMock).toHaveBeenCalledTimes(1);
-    expect(component.sounds()).toEqual([{ id: 'applause', name: 'Applause', icon: '👏' }]);
+    expect(component.sounds()).toEqual([
+      { id: 'applause', name: 'Applause', icon: '👏' },
+    ]);
     expect(component.loadError()).toBe(false);
   });
 
@@ -164,16 +175,11 @@ describe('SoundboardComponent', () => {
     currentUserSignal.set({ id: 'listener-1' });
     await initialise();
 
-    eventsSignal.set([
-      {
-        channel: 'room_room-1',
-        data: {
-          type: 'soundboard_play',
-          sound_id: 'applause',
-          sound_url: 'https://attacker.example/arbitrary.mp3',
-        },
-      },
-    ]);
+    publishedEvents.get('room_room-1')?.({
+      type: 'soundboard_play',
+      sound_id: 'applause',
+      sound_url: 'https://attacker.example/arbitrary.mp3',
+    });
     fixture.detectChanges();
 
     expect(audioElements).toHaveLength(1);
@@ -186,14 +192,9 @@ describe('SoundboardComponent', () => {
   it('ignores unknown sounds and events from another room', async () => {
     await initialise();
 
-    eventsSignal.set([
-      { channel: 'room_room-2', data: { type: 'soundboard_play', sound_id: 'applause' } },
-    ]);
+    publishedEvents.get('room_room-2')?.({ type: 'soundboard_play', sound_id: 'applause' });
     fixture.detectChanges();
-    eventsSignal.set([
-      ...eventsSignal(),
-      { channel: 'room_room-1', data: { type: 'soundboard_play', sound_id: 'custom-url' } },
-    ]);
+    publishedEvents.get('room_room-1')?.({ type: 'soundboard_play', sound_id: 'custom-url' });
     fixture.detectChanges();
 
     expect(audioElements).toHaveLength(0);
