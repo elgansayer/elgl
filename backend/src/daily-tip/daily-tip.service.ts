@@ -72,7 +72,6 @@ export class DailyTipService {
           const lang =
             user.target_languages?.[0] ?? user.native_language ?? 'en';
           const prompt = `Give me a short daily learning tip (1-2 sentences) for someone learning ${lang}. Include practical advice. Do not include greetings.`;
-
           try {
             const { response } =
               await this.llmProxyService.proxyMessage(prompt);

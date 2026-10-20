@@ -183,6 +183,10 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+
+## 2026-08-26 - [Optimize sequential LLM calls via bounded concurrent chunking]
+**Learning:** Generating daily tips iteratively inside a loop causes compounding network delays, particularly when waiting sequentially on the LLM proxy.
+**Action:** Replace single sequential awaits in iterative generation jobs with bounded chunks (e.g., slicing by 10) mapped to concurrent promises using Promise.allSettled. This dramatically reduces total execution time without completely exhausting concurrent LLM request limits.
 ## 2024-05-25 - [Optimize frontend component change detection strategy]
 **Learning:** The Angular frontend relies extensively on highly reactive signals and observables for components, but many components (e.g. ChatSystemBubbleComponent) lacked the `changeDetection: ChangeDetectionStrategy.OnPush` setting. This causes the main thread to constantly evaluate and re-render static signal data on every DOM event globally across the Angular change detection tree, incurring high unnecessary overhead for performance-sensitive UI components like chat bubbles.
 **Action:** When creating or maintaining structural and UI rendering components in Angular that consume static inputs or Signals exclusively, proactively set `changeDetection: ChangeDetectionStrategy.OnPush` within the `@Component` decorator to isolate them from default global change detection.
