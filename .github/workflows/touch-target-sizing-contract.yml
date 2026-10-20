@@ -5,6 +5,11 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'scripts/verify-touch-target-sizing.mjs'
+      - 'scripts/verify-touch-target-sizing.test.mjs'
+      - '.github/workflows/touch-target-sizing-contract.yml'
   merge_group:
     types: [checks_requested]
 

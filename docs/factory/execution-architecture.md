@@ -97,7 +97,7 @@ and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeabil
 review may report `CHANGES_REQUESTED`. The scheduled merge workflow is the only autonomous merge authority and
 enforces the same boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`.
 
-GitHub applies a baseline ruleset requiring pull requests and strict `CI / required`, plus a second review-only
+GitHub applies a baseline ruleset requiring pull requests and non-strict `CI / required`, plus a second review-only
 ruleset requiring `factory/independent-review`. Only the exact repository-owner user may bypass either ruleset,
 and only through an existing pull request. This permits a deliberate human waiver of CI, review, or both while
 Factory automation continues to require literal success from both statuses. Roles, apps, teams, deploy keys,
