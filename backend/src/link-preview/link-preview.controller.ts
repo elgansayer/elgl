@@ -7,24 +7,27 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
-  ApiTags,
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiOkResponse,
   ApiOperation,
   ApiQuery,
-  ApiOkResponse,
-  ApiBadRequestResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewService } from './link-preview.service';
 import { LinkPreview } from './interfaces/link-preview.interface';
 
 @ApiTags('Link Preview')
+@ApiBearerAuth()
 @Controller('link-preview')
 @UseGuards(SupabaseAuthGuard)
 export class LinkPreviewController {
   constructor(private readonly linkPreviewService: LinkPreviewService) {}
 
   @Get()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Fetch an OpenGraph link preview',
     description:
@@ -54,6 +57,9 @@ export class LinkPreviewController {
   @ApiBadRequestResponse({
     description:
       'The url query parameter is missing, malformed, uses a disallowed protocol or port, or the page could not be fetched.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'A valid Supabase session is required.',
   })
   async getPreview(@Query('url') url: string): Promise<LinkPreview | null> {
     if (!url) {

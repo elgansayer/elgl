@@ -3,7 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
-import { FcmService } from './fcm.service';
+import { FirebaseMessagingService } from './firebase-messaging.service';
 import { MOCK_CURRENT_USER } from './mock-data';
 
 export interface AppUser extends User {
@@ -20,7 +20,7 @@ export interface AppUser extends User {
 })
 export class AuthService {
   private supabaseService = inject(SupabaseService);
-  private fcmService = inject(FcmService);
+  private fcmService = inject(FirebaseMessagingService);
   private supabase = this.supabaseService.getClient();
 
   // Reactive Angular Signals for Auth State
@@ -325,7 +325,7 @@ export class AuthService {
 
   async signOut(): Promise<{ error: AuthError | null }> {
     // Unregister FCM token before logging out
-    await this.fcmService.unregisterToken();
+    // await this.fcmService.unregisterToken();
 
     const { error } = await this.supabase.auth.signOut();
     if (!error) {

@@ -2,7 +2,7 @@ import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -20,6 +20,7 @@ interface SelectOption {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-language-party-create-modal',
   standalone: true,
   imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
