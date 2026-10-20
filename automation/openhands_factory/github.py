@@ -363,12 +363,6 @@ class GitHubClient:
 
         current = now or datetime.now(UTC)
         cutoff = current - timedelta(days=recent_days)
-        json_fields = (
-            "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
-            "isCrossRepository,labels,author"
-        )
-        if known_path_fingerprint is not None:
-            json_fields += ",files"
         output = self._run(
             (
                 "gh",
@@ -381,7 +375,8 @@ class GitHubClient:
                 "--limit",
                 str(limit),
                 "--json",
-                json_fields,
+                "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
+                "isCrossRepository,labels,author,files",
             )
         )
         matches: list[PullRequestMatch] = []
@@ -841,24 +836,6 @@ class GitHubClient:
                 f"repos/{self.repository}/pulls/{pull_request}/update-branch",
                 "-f",
                 f"expected_head_sha={expected_head_sha}",
-            )
-        )
-
-    def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
-        """Squash-merge only the exact reviewed head without bypassing GitHub rules."""
-
-        self._run(
-            (
-                "gh",
-                "pr",
-                "merge",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--squash",
-                "--delete-branch",
-                "--match-head-commit",
-                expected_head_sha,
             )
         )
 

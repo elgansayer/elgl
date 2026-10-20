@@ -163,6 +163,21 @@ export class AdminService {
     return result;
   }
 
+  async getUser(userId: string): Promise<AdminUserSummary> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select(SUMMARY_COLUMNS)
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('User not found');
+    }
+
+    return data;
+  }
+
   async setVipStatus(
     userId: string,
     dto: ToggleVipDto,
@@ -198,8 +213,11 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateLoginHistoryCache(userId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateLoginHistoryCache(userId),
+    ]);
 
     return data;
   }
@@ -283,9 +301,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateBlocksListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateBlocksListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
@@ -312,9 +333,12 @@ export class AdminService {
       (Date.now() - start) / 1000,
     );
 
-    await this.invalidateUserListCaches();
-    await this.invalidateReportsListCaches();
-    await this.invalidateLoginHistoryCache(targetUserId);
+    // ⚡ Bolt: Execute independent cache invalidations concurrently to reduce network latency
+    await Promise.all([
+      this.invalidateUserListCaches(),
+      this.invalidateReportsListCaches(),
+      this.invalidateLoginHistoryCache(targetUserId),
+    ]);
   }
 
   async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {

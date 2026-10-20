@@ -1,20 +1,21 @@
-import { signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Location } from '@angular/common';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { vi } from 'vitest';
-import { ConfirmService } from '../../services/confirm.service';
-import { I18nService } from '../../services/i18n.service';
+import { BlockManagementComponent } from './block-management.component';
 import {
   BlockedUserResponse,
   BlockedUsersService,
 } from '../../services/blocked-users.service';
-import { BlockManagementComponent } from './block-management.component';
+import { I18nService } from '../../services/i18n.service';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, '..');
 
-describe('BlockManagementComponent RTL logical CSS compliance', () => {
+describe('BlockManagementComponent template contract', () => {
   let templateContent: string;
 
   beforeAll(() => {
@@ -24,7 +25,7 @@ describe('BlockManagementComponent RTL logical CSS compliance', () => {
     );
   });
 
-  it('does not contain physical direction CSS utilities', () => {
+  it('uses logical direction utilities and translated user-facing copy', () => {
     const violations = [
       /\bpl-\d/,
       /\bpr-\d/,
@@ -37,39 +38,25 @@ describe('BlockManagementComponent RTL logical CSS compliance', () => {
       /\btext-left\b/,
       /\btext-right\b/,
     ];
-    for (const pattern of violations) {
-      expect(templateContent).not.toMatch(pattern);
-    }
-  });
+    for (const pattern of violations) expect(templateContent).not.toMatch(pattern);
 
-  it('uses logical spacing and direction-safe language separation', () => {
     expect(templateContent).toContain('ps-4');
     expect(templateContent).toContain('pe-4');
-    expect(templateContent).toContain('ms-1 me-1');
-    expect(templateContent).not.toContain('→');
+    expect(templateContent).toContain("'safety.blockManagement.title'");
+    expect(templateContent).toContain("'safety.blockManagement.unblock'");
+    expect(templateContent).toContain("'common.cancel'");
+    expect(templateContent).not.toMatch(/>\s*Blocked Users\s*</);
+    expect(templateContent).not.toMatch(/>\s*Unblock\s*</);
   });
 
-  it('uses i18n keys for user-facing state', () => {
-    const keys = [
-      "'safety.blockManagement.title'",
-      "'safety.blockManagement.loadError'",
-      "'safety.blockManagement.loadErrorDesc'",
-      "'safety.blockManagement.emptyTitle'",
-      "'safety.blockManagement.emptyDesc'",
-      "'safety.blockManagement.unblock'",
-      "'common.error_generic'",
-    ];
-    for (const key of keys) {
-      expect(templateContent).toContain(key);
-    }
-  });
-
-  it('uses a labelled main region and touch-sized Spartan unblock action', () => {
-    expect(templateContent).toContain('<main');
-    expect(templateContent).toContain('aria-labelledby="block-management-title"');
-    expect(templateContent).toContain('variant="destructive"');
-    expect(templateContent).toContain('size="touch"');
-    expect(templateContent).toContain('[attr.aria-busy]');
+  it('provides semantic list, status, busy and high-zoom wrapping affordances', () => {
+    expect(templateContent).toContain('role="list"');
+    expect(templateContent).toContain('role="listitem"');
+    expect(templateContent).toContain('aria-live="assertive"');
+    expect(templateContent).toContain('[attr.aria-busy]="isUnblocking(user.id)"');
+    expect(templateContent).toContain('flex-col');
+    expect(templateContent).toContain('break-words');
+    expect(templateContent).toContain('dir="auto"');
   });
 });
 
@@ -79,15 +66,15 @@ describe('BlockManagementComponent', () => {
   let blockedUsersSignal: ReturnType<typeof signal<BlockedUserResponse[]>>;
   let loadingSignal: ReturnType<typeof signal<boolean>>;
   let errorSignal: ReturnType<typeof signal<string | null>>;
-  let unblockingUserIdsSignal: ReturnType<typeof signal<ReadonlySet<string>>>;
-  let unblockErrorSignal: ReturnType<typeof signal<boolean>>;
+  let unblockErrorSignal: ReturnType<typeof signal<string | null>>;
+  let pendingIds: Set<string>;
   let unblockUserSpy: ReturnType<typeof vi.fn>;
   let loadBlockedUsersSpy: ReturnType<typeof vi.fn>;
-  let confirmSpy: ReturnType<typeof vi.fn>;
+  let clearUnblockErrorSpy: ReturnType<typeof vi.fn>;
+  let goBackSpy: ReturnType<typeof vi.fn>;
 
   const mockI18nService = {
-    translate: (key: string, params?: Record<string, unknown>) =>
-      params?.['name'] ? `${key}:${String(params['name'])}` : key,
+    translate: (key: string) => key,
   };
 
   const user = (overrides: Partial<BlockedUserResponse> = {}): BlockedUserResponse => ({
@@ -100,29 +87,32 @@ describe('BlockManagementComponent', () => {
 
   beforeEach(async () => {
     blockedUsersSignal = signal<BlockedUserResponse[]>([]);
-    loadingSignal = signal<boolean>(false);
+    loadingSignal = signal(false);
     errorSignal = signal<string | null>(null);
-    unblockingUserIdsSignal = signal<ReadonlySet<string>>(new Set());
-    unblockErrorSignal = signal<boolean>(false);
-    unblockUserSpy = vi.fn().mockResolvedValue(true);
+    unblockErrorSignal = signal<string | null>(null);
+    pendingIds = new Set<string>();
+    unblockUserSpy = vi.fn().mockResolvedValue(undefined);
     loadBlockedUsersSpy = vi.fn().mockResolvedValue(undefined);
-    confirmSpy = vi.fn().mockResolvedValue(true);
+    clearUnblockErrorSpy = vi.fn(() => unblockErrorSignal.set(null));
+    goBackSpy = vi.fn();
 
     await TestBed.configureTestingModule({
       imports: [BlockManagementComponent],
       providers: [
         { provide: I18nService, useValue: mockI18nService },
-        { provide: ConfirmService, useValue: { confirm: confirmSpy } },
+        { provide: Location, useValue: { back: goBackSpy } },
         {
           provide: BlockedUsersService,
           useValue: {
             blockedUsers: blockedUsersSignal.asReadonly(),
             isLoading: loadingSignal.asReadonly(),
             error: errorSignal.asReadonly(),
-            unblockingUserIds: unblockingUserIdsSignal.asReadonly(),
             unblockError: unblockErrorSignal.asReadonly(),
+            pendingUnblocks: signal<ReadonlySet<string>>(new Set()).asReadonly(),
+            isUnblocking: (id: string) => pendingIds.has(id),
             unblockUser: unblockUserSpy,
             loadBlockedUsers: loadBlockedUsersSpy,
+            clearUnblockError: clearUnblockErrorSpy,
           },
         },
       ],
@@ -132,115 +122,100 @@ describe('BlockManagementComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('creates', () => {
+  it('creates and renders empty state', () => {
     fixture.detectChanges();
     expect(component).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('app-empty-state')).toBeTruthy();
   });
 
-  it('shows skeleton loaders while loading', () => {
+  it('shows loading skeletons and a retryable empty-page load failure', () => {
     loadingSignal.set(true);
     fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('app-skeleton-loader').length).toBeGreaterThan(0);
 
-    const skeletonEls = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
-    expect(skeletonEls.length).toBeGreaterThan(0);
-    expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).toBeTruthy();
-  });
-
-  it('shows a retry action when loading fails', () => {
-    errorSignal.set('Failed to load blocked users');
+    loadingSignal.set(false);
+    errorSignal.set('failed');
     fixture.detectChanges();
-
     const emptyState = fixture.nativeElement.querySelector('app-empty-state');
     expect(emptyState).toBeTruthy();
-    const button = emptyState.querySelector('button');
-    expect(button).toBeTruthy();
-    button.click();
-    expect(loadBlockedUsersSpy).toHaveBeenCalledOnce();
+    emptyState.querySelector('button').click();
+    expect(loadBlockedUsersSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('shows an honest empty state when there are no blocked users', () => {
-    fixture.detectChanges();
-
-    const emptyState = fixture.nativeElement.querySelector('app-empty-state');
-    expect(emptyState).toBeTruthy();
-    expect(emptyState.textContent).toContain('safety.blockManagement.emptyTitle');
-  });
-
-  it('renders blocked-user identity and language metadata without a directional arrow', () => {
+  it('retains stale rows during a refresh failure and exposes retry', () => {
     blockedUsersSignal.set([user()]);
+    errorSignal.set('failed');
     fixture.detectChanges();
 
-    const item = fixture.nativeElement.querySelector('li');
-    expect(item.textContent).toContain('Ada Lovelace');
-    expect(item.textContent).toContain('English');
-    expect(item.textContent).toContain('French, German');
-    expect(item.textContent).not.toContain('→');
+    expect(fixture.nativeElement.querySelectorAll('li')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeTruthy();
   });
 
-  it('uses a decorative avatar when the adjacent display name already labels the user', () => {
-    blockedUsersSignal.set([user({ avatar_url: 'https://example.com/avatar.png' })]);
+  it('renders safe user details and language context', () => {
+    blockedUsersSignal.set([
+      user({ avatar_url: 'https://example.com/avatar.png' }),
+      user({ id: 'user-2', display_name: 'Lin', avatar_url: undefined, target_languages: [] }),
+    ]);
     fixture.detectChanges();
 
-    const img = fixture.nativeElement.querySelector('li img');
-    expect(img.getAttribute('src')).toBe('https://example.com/avatar.png');
-    expect(img.getAttribute('alt')).toBe('');
+    const items = fixture.nativeElement.querySelectorAll('li');
+    expect(items).toHaveLength(2);
+    expect(items[0].querySelector('img').getAttribute('src')).toBe('https://example.com/avatar.png');
+    expect(items[0].textContent).toContain('English');
+    expect(items[0].textContent).toContain('French, German');
+    expect(items[1].querySelector('img')).toBeNull();
   });
 
-  it('asks for confirmation before unblocking a user', async () => {
+  it('requires a confirmation step before calling the unblock API', () => {
     blockedUsersSignal.set([user({ id: 'user-42' })]);
     fixture.detectChanges();
 
     fixture.nativeElement.querySelector('li button').click();
-    await fixture.whenStable();
-
-    expect(confirmSpy).toHaveBeenCalledWith(
-      'safety.blockManagement.unblockAria:Ada Lovelace',
-    );
-    expect(unblockUserSpy).toHaveBeenCalledWith('user-42');
-  });
-
-  it('does not unblock when confirmation is cancelled', async () => {
-    confirmSpy.mockResolvedValue(false);
-    blockedUsersSignal.set([user()]);
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector('li button').click();
-    await fixture.whenStable();
+    expect(component.confirmUnblockId()).toBe('user-42');
+    expect(unblockUserSpy).not.toHaveBeenCalled();
+    expect(clearUnblockErrorSpy).toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelectorAll('li button')).toHaveLength(2);
+  });
 
+  it('cancels without unblocking', () => {
+    component.requestUnblock('user-42');
+    component.cancelUnblock();
+
+    expect(component.confirmUnblockId()).toBeNull();
     expect(unblockUserSpy).not.toHaveBeenCalled();
   });
 
-  it('disables an unblock action while that user mutation is pending', () => {
-    blockedUsersSignal.set([user({ id: 'user-42' })]);
-    unblockingUserIdsSignal.set(new Set(['user-42']));
-    fixture.detectChanges();
+  it('unblocks after confirmation and closes the confirmation state', async () => {
+    component.requestUnblock('user-42');
+    await component.confirmUnblock('user-42');
 
-    const button = fixture.nativeElement.querySelector('li button');
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(unblockUserSpy).toHaveBeenCalledWith('user-42');
+    expect(component.confirmUnblockId()).toBeNull();
   });
 
-  it('announces unblock failures without removing the current list', () => {
-    blockedUsersSignal.set([user()]);
-    unblockErrorSignal.set(true);
-    fixture.detectChanges();
+  it('keeps confirmation available for retry after an unblock failure', async () => {
+    unblockUserSpy.mockRejectedValueOnce(new Error('network'));
+    component.requestUnblock('user-42');
 
-    const alert = fixture.nativeElement.querySelector('[role="alert"]');
-    expect(alert.textContent).toContain('common.error_generic');
-    expect(fixture.nativeElement.querySelectorAll('li')).toHaveLength(1);
+    await component.confirmUnblock('user-42');
+
+    expect(component.confirmUnblockId()).toBe('user-42');
   });
 
-  describe('language helpers', () => {
-    it('handles missing and empty target language lists', () => {
-      expect(component.hasTargetLanguages(user({ target_languages: undefined }))).toBe(false);
-      expect(component.hasTargetLanguages(user({ target_languages: [] }))).toBe(false);
-      expect(component.getTargetLanguagesText(user({ target_languages: undefined }))).toBe('');
-    });
+  it('suppresses duplicate unblock attempts while one is pending', async () => {
+    pendingIds.add('user-42');
+    component.requestUnblock('user-42');
+    expect(component.confirmUnblockId()).toBeNull();
 
-    it('joins target languages for display', () => {
-      expect(
-        component.getTargetLanguagesText(user({ target_languages: ['Spanish', 'Italian'] })),
-      ).toBe('Spanish, Italian');
-    });
+    component.confirmUnblockId.set('user-42');
+    await component.confirmUnblock('user-42');
+    expect(unblockUserSpy).not.toHaveBeenCalled();
+  });
+
+  it('navigates back to privacy settings history', () => {
+    component.goBack();
+    expect(goBackSpy).toHaveBeenCalledTimes(1);
   });
 });

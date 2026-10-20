@@ -235,9 +235,9 @@ Avoid:
 
 ```html
 @if (isBrowser) {
-  <button>...</button>
+<button>...</button>
 } @else {
-  <div>...</div>
+<div>...</div>
 }
 ```
 
@@ -269,7 +269,7 @@ The initial document must remain usable in:
 - LTR;
 - RTL.
 
-Do not create separate server theme classes with hard-coded colors. Relay semantic roles remain authoritative.
+Do not create separate server theme classes with hard-coded colours. Relay semantic roles remain authoritative.
 
 Where the server cannot know a browser-only preference, choose a deterministic safe initial state and transition without duplicating product DOM. Any anti-flash bootstrap in `index.html` must remain tiny, defensive, and free of private data.
 
@@ -330,6 +330,11 @@ Do not instantiate `Audio`, `MediaRecorder`, `RTCPeerConnection`, or request med
 ### 14.3 Calls and live rooms
 
 Routes whose primary function is a live device session may remain client-rendered as already documented by `app.routes.server.ts`.
+
+The existing device-transfer exception follows its canonical settings URL,
+`settings/device-transfer`, after route consolidation. It still loads the same
+device-transfer component and does not add a second client-only route or make
+the settings section client-only. The wildcard fallback remains server-rendered.
 
 ### 14.4 Notifications and service workers
 

@@ -385,6 +385,10 @@ describe('AudioRoomsService', () => {
         canPublishData: true,
       });
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
+        { room_id: 'room-id-1', user_id: 'host-1' },
+        { onConflict: 'room_id,user_id' },
+      );
       expect(result).toEqual({
         token: 'mock-livekit-jwt',
         room_id: 'room-id-1',
@@ -424,7 +428,31 @@ describe('AudioRoomsService', () => {
         listeners_count: 6,
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'room-id-1');
+      expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
+        { room_id: 'room-id-1', user_id: 'listener-1' },
+        { onConflict: 'room_id,user_id' },
+      );
       expect(result.is_speaker).toBe(false);
+    });
+
+    it('fails closed when authorised participation cannot be persisted', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: 'room-id-1',
+          room_name: 'room-1',
+          host_id: 'host-1',
+          speakers: ['host-1'],
+          listeners_count: 1,
+        },
+        error: null,
+      });
+      mockQueryBuilder.upsert.mockResolvedValueOnce({
+        error: { message: 'database unavailable' },
+      });
+
+      await expect(
+        service.generateToken('host-1', { room_name: 'room-1' }),
+      ).rejects.toThrow('Failed to record audio room participation');
     });
   });
 
