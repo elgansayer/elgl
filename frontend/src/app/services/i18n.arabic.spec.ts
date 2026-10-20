@@ -36,6 +36,7 @@ describe('I18nService Arabic rendering contract', () => {
     ['light', false],
     ['dark', true],
   ])('keeps Arabic language and RTL semantics intact in %s mode', async (_mode, darkMode) => {
+    document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('hellotalk_dict_ar', JSON.stringify({}));
 
     await service.setLanguage('ar');

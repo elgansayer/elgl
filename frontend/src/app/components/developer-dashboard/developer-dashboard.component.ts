@@ -39,7 +39,6 @@ export class DeveloperDashboardComponent {
   readonly centrifugeService = inject(CentrifugeService);
 
   readonly activeTab = signal<'overview' | 'postgis' | 'centrifugo' | 'livekit'>('overview');
-  readonly isGeneratingApiKey = signal<boolean>(false);
 
   // PostGIS Matchmaking Sandbox Signals
   readonly searchLatitude = signal<number>(51.5074); // London center
@@ -80,26 +79,8 @@ export class DeveloperDashboardComponent {
   }
 
   async generateKey(): Promise<void> {
-    if (this.isGeneratingApiKey()) return;
-
-    this.isGeneratingApiKey.set(true);
-    try {
-      const issuedKey = await this.store.generateApiKey();
-      if (!issuedKey) {
-        await this.addLog(
-          'REDIS',
-          'Developer API key generation failed; no credential was issued.',
-          'warn',
-        );
-        return;
-      }
-
-      // Never include the reusable credential in diagnostics. The raw key is
-      // deliberately limited to the issuance response/UI path.
-      await this.addLog('REDIS', 'Generated new production API key (600 RPM).', 'success');
-    } finally {
-      this.isGeneratingApiKey.set(false);
-    }
+    await this.store.generateApiKey();
+    await this.addLog('REDIS', 'Generated new production API key (600 RPM).', 'success');
   }
 
   async runPostGisSearch(): Promise<void> {

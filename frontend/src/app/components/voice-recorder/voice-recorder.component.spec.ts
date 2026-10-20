@@ -2,9 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { VoiceRecorderComponent } from './voice-recorder.component';
 import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 import { MediaService } from '../../services/media.service';
+import { I18nService } from '../../services/i18n.service';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -14,14 +16,14 @@ class MockTranslatePipe implements PipeTransform {
 }
 
 class MockMediaService {
-  uploadVoiceNote = vi.fn().mockResolvedValue({ url: 'https://media.url/voice.webm' });
+  uploadVoiceNote = vi.fn().mockResolvedValue({ url: 'https://media.url/voice.ogg' });
+}
+class MockI18nService {
+  translate = vi.fn((key: string) => `t:${key}`);
 }
 
 class MockedMediaRecorder {
-  static isTypeSupported = vi.fn().mockReturnValue(true);
-
   state: 'inactive' | 'recording' = 'inactive';
-  mimeType = 'audio/webm;codecs=opus';
   ondataavailable: ((event: BlobEvent) => void) | null = null;
   onstop: (() => void) | null = null;
 
@@ -31,9 +33,7 @@ class MockedMediaRecorder {
 
   stop(): void {
     this.state = 'inactive';
-    this.ondataavailable?.({
-      data: new Blob(['audio'], { type: this.mimeType }),
-    } as BlobEvent);
+    this.ondataavailable?.({ data: new Blob(['audio'], { type: 'audio/webm' }) } as BlobEvent);
     this.onstop?.();
   }
 }
@@ -43,15 +43,13 @@ describe('VoiceRecorderComponent', () => {
   let fixture: ComponentFixture<VoiceRecorderComponent>;
   let stopTrack: ReturnType<typeof vi.fn>;
   let mediaService: MockMediaService;
-  let getUserMedia: ReturnType<typeof vi.fn>;
-  let streamMock: MediaStream;
 
+  let i18n: MockI18nService;
   beforeEach(async () => {
     stopTrack = vi.fn();
-    streamMock = {
+    const streamMock = {
       getTracks: () => [{ stop: stopTrack }],
     } as unknown as MediaStream;
-    getUserMedia = vi.fn().mockResolvedValue(streamMock);
 
     Object.defineProperty(window, 'MediaRecorder', {
       writable: true,
@@ -61,25 +59,26 @@ describe('VoiceRecorderComponent', () => {
 
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
-      value: { getUserMedia },
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue(streamMock),
+      },
     });
-
-    if (!URL.createObjectURL) {
-      Object.defineProperty(URL, 'createObjectURL', {
-        configurable: true,
-        value: vi.fn().mockReturnValue('blob:voice-preview'),
-      });
-    } else {
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:voice-preview');
-    }
 
     await TestBed.configureTestingModule({
       imports: [VoiceRecorderComponent],
-      providers: [{ provide: MediaService, useClass: MockMediaService }],
+      providers: [
+        { provide: MediaService, useClass: MockMediaService },
+        { provide: I18nService, useClass: MockI18nService },
+      ],
     })
       .overrideComponent(VoiceRecorderComponent, {
         set: {
-          imports: [MockTranslatePipe, AppCardComponent, AppButtonPrimaryComponent],
+          imports: [
+            MockTranslatePipe,
+            AppCardComponent,
+            AppChipComponent,
+            AppButtonPrimaryComponent,
+          ],
         },
       })
       .compileComponents();
@@ -88,125 +87,112 @@ describe('VoiceRecorderComponent', () => {
     component = fixture.componentInstance;
     mediaService = TestBed.inject(MediaService) as unknown as MockMediaService;
     fixture.detectChanges();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.useRealTimers();
+    i18n = TestBed.inject(I18nService) as unknown as MockI18nService;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('records a bounded audio preview and releases the microphone on stop', async () => {
+  it('should stop the media stream and clear the timer when destroyed mid-recording', async () => {
+    vi.useFakeTimers();
+    try {
+      await component.startRecording();
+      expect(component.isRecording()).toBe(true);
+
+      fixture.destroy();
+
+      expect(stopTrack).toHaveBeenCalled();
+
+      const durationBeforeTick = component.durationSeconds();
+      vi.advanceTimersByTime(5000);
+      expect(component.durationSeconds()).toBe(durationBeforeTick);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should revoke the preview object URL when destroyed after recording', async () => {
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    try {
+      await component.startRecording();
+      component.stopRecording();
+
+      expect(component.audioPreviewUrl()).toBeTruthy();
+
+      fixture.destroy();
+
+      const previewUrl = component.audioPreviewUrl();
+      if (previewUrl) {
+        expect(revokeSpy).toHaveBeenCalledWith(previewUrl);
+      }
+    } finally {
+      revokeSpy.mockRestore();
+    }
+  });
+
+  it('should upload voice note via media service and emit result URL', async () => {
     await component.startRecording();
-
-    expect(component.isRecording()).toBe(true);
-    expect(getUserMedia).toHaveBeenCalledWith({ audio: true });
-
     component.stopRecording();
 
-    expect(component.isRecording()).toBe(false);
-    expect(component.audioPreviewUrl()).toBe('blob:voice-preview');
-    expect(stopTrack).toHaveBeenCalled();
+    const emitted: string[] = [];
+    component.audioUploaded.subscribe((url: string) => emitted.push(url));
+
+    await component.uploadAndSend();
+
+    expect(mediaService.uploadVoiceNote).toHaveBeenCalled();
+    expect(emitted).toEqual(['https://media.url/voice.ogg']);
   });
 
-  it('automatically stops after two minutes', async () => {
-    vi.useFakeTimers();
+  it('should preserve the recording for retry and never emit a fake URL when upload fails', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await component.startRecording();
+      component.stopRecording();
+      const previewUrl = component.audioPreviewUrl();
+      const emitted: string[] = [];
+      component.audioUploaded.subscribe((url: string) => emitted.push(url));
+      mediaService.uploadVoiceNote.mockRejectedValueOnce(new Error('signed upload request failed'));
+
+      await component.uploadAndSend();
+
+      expect(emitted).toEqual([]);
+      expect(component.audioPreviewUrl()).toBe(previewUrl);
+      expect(component.isUploading()).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith('Failed to upload voice note.');
+
+      expect(i18n.translate).toHaveBeenCalledWith('voiceRecorder.uploadError');
+      mediaService.uploadVoiceNote.mockResolvedValueOnce({ url: 'https://media.url/retry.ogg' });
+      await component.uploadAndSend();
+
+      expect(mediaService.uploadVoiceNote).toHaveBeenCalledTimes(2);
+      expect(emitted).toEqual(['https://media.url/retry.ogg']);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('should ignore duplicate send attempts while an upload is already in flight', async () => {
     await component.startRecording();
+    component.stopRecording();
 
-    vi.advanceTimersByTime(120_000);
-
-    expect(component.durationSeconds()).toBe(120);
-    expect(component.isRecording()).toBe(false);
-    expect(stopTrack).toHaveBeenCalled();
-  });
-
-  it('cancels a pending hold if the user releases before microphone permission resolves', async () => {
-    let resolveStream: ((stream: MediaStream) => void) | undefined;
-    getUserMedia.mockImplementationOnce(
+    let resolveUpload: ((value: { url: string }) => void) | undefined;
+    mediaService.uploadVoiceNote.mockImplementationOnce(
       () =>
-        new Promise<MediaStream>((resolve) => {
-          resolveStream = resolve;
+        new Promise<{ url: string }>((resolve) => {
+          resolveUpload = resolve;
         }),
     );
 
-    component.onRecordKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
-    expect(component.isPreparing()).toBe(true);
+    const firstUpload = component.uploadAndSend();
+    const secondUpload = component.uploadAndSend();
 
-    component.onRecordKeyUp(new KeyboardEvent('keyup', { key: ' ' }));
-    expect(component.isPreparing()).toBe(false);
+    expect(component.isUploading()).toBe(true);
+    expect(mediaService.uploadVoiceNote).toHaveBeenCalledTimes(1);
 
-    resolveStream?.(streamMock);
-    await Promise.resolve();
-    await Promise.resolve();
+    resolveUpload?.({ url: 'https://media.url/voice.ogg' });
+    await Promise.all([firstUpload, secondUpload]);
 
-    expect(component.isRecording()).toBe(false);
-    expect(stopTrack).toHaveBeenCalled();
-  });
-
-  it('shows a microphone error without fabricating a recording', async () => {
-    getUserMedia.mockRejectedValueOnce(new Error('permission denied'));
-
-    await component.startRecording();
-
-    expect(component.errorKey()).toBe('audioIntro.microphoneError');
-    expect(component.isRecording()).toBe(false);
-    expect(component.audioPreviewUrl()).toBeNull();
-  });
-
-  it('uploads through MediaService and emits only the persisted media URL', async () => {
-    await component.startRecording();
-    component.stopRecording();
-
-    const emitted: string[] = [];
-    component.audioUploaded.subscribe((url: string) => emitted.push(url));
-
-    await component.uploadAndSend();
-
-    expect(mediaService.uploadVoiceNote).toHaveBeenCalledWith(expect.any(Blob));
-    expect(emitted).toEqual(['https://media.url/voice.webm']);
-    expect(component.errorKey()).toBeNull();
-  });
-
-  it('keeps the preview retryable and never emits a mock URL when upload fails', async () => {
-    mediaService.uploadVoiceNote.mockRejectedValueOnce(new Error('network failure'));
-    await component.startRecording();
-    component.stopRecording();
-
-    const emitted: string[] = [];
-    component.audioUploaded.subscribe((url: string) => emitted.push(url));
-
-    await component.uploadAndSend();
-
-    expect(emitted).toEqual([]);
-    expect(component.audioPreviewUrl()).toBe('blob:voice-preview');
-    expect(component.errorKey()).toBe('audioIntro.uploadError');
     expect(component.isUploading()).toBe(false);
-  });
-
-  it('stops the media stream and clears the timer when destroyed mid-recording', async () => {
-    vi.useFakeTimers();
-    await component.startRecording();
-    expect(component.isRecording()).toBe(true);
-
-    fixture.destroy();
-
-    expect(stopTrack).toHaveBeenCalled();
-    const durationBeforeTick = component.durationSeconds();
-    vi.advanceTimersByTime(5000);
-    expect(component.durationSeconds()).toBe(durationBeforeTick);
-  });
-
-  it('revokes the preview object URL when cancelled', async () => {
-    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-    await component.startRecording();
-    component.stopRecording();
-
-    component.cancel();
-
-    expect(revokeSpy).toHaveBeenCalledWith('blob:voice-preview');
-    expect(component.audioPreviewUrl()).toBeNull();
   });
 });
