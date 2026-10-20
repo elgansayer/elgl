@@ -7,8 +7,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { LivekitService } from './livekit.service';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
@@ -48,17 +48,12 @@ export class LivekitController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['room_name', 'participant_identity'],
+      required: ['room_name'],
       properties: {
         room_name: {
           type: 'string',
           description: 'LiveKit room name to join',
           example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        },
-        participant_identity: {
-          type: 'string',
-          description: 'User identity for the LiveKit participant',
-          example: 'user_abc123',
         },
       },
     },
@@ -93,9 +88,10 @@ export class LivekitController {
     @CurrentUser() user: User | null,
     @Body() dto: LivekitTokenDto,
   ) {
-    if (!user) {
-      throw new UnauthorizedException();
+    if (!user?.id) {
+      throw new UnauthorizedException('User identity not found');
     }
+
     return this.livekitService.generateToken(user.id, dto.room_name);
   }
 }

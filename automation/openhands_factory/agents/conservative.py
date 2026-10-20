@@ -27,9 +27,9 @@ MAX_PROVIDER_CANDIDATES_PER_PHASE = 2
 MAX_GLOBAL_AGENT_CONCURRENCY = 2
 MAX_REVIEW_CONCURRENCY = 2
 REVIEW_INTERVAL_SECONDS = 60 * 60
-REVIEWS_PER_INTERVAL = 12
+REVIEWS_PER_INTERVAL = 36
 AGENT_ROUTE_INTERVAL_SECONDS = 60 * 60
-AGENT_ROUTES_PER_INTERVAL = 24
+AGENT_ROUTES_PER_INTERVAL = 48
 AGENT_ROUTES_PER_TASK_PER_INTERVAL = 4
 _RESOURCE_RETRY_SECONDS = 60
 _CODE_MUTATING_PHASES = {
@@ -141,7 +141,11 @@ class ConservativeAgentRouter(AgentRouter):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
-        self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
+        self._global_agent_slots = BoundedSemaphore(
+            _positive_int_environment(
+                "FACTORY_HOST_AGENT_CONCURRENCY", MAX_GLOBAL_AGENT_CONCURRENCY
+            )
+        )
         self._review_slots = BoundedSemaphore(
             _positive_int_environment(
                 "FACTORY_REVIEW_LANE_MAX_CONCURRENT",
@@ -203,6 +207,49 @@ class ConservativeAgentRouter(AgentRouter):
         if not self.conservative_enabled:
             return candidates, health
 
+        # Static policy is the safe starting order, but a 24/7 service must learn
+        # when that order no longer reflects the providers that actually finish
+        # work. Rank providers with enough phase-specific evidence by a smoothed
+        # completion rate. Unmeasured providers keep a neutral exploration score.
+        # This also makes a hot-deployed runtime self-correct while a root-owned
+        # production policy file is waiting for the next successful updater run.
+        if self.metrics_store is not None:
+            totals: dict[str, tuple[int, int]] = {}
+            snapshot = self.metrics_store.snapshot()
+            records = snapshot.get("providers", [])
+            if isinstance(records, list):
+                for record in records:
+                    if not isinstance(record, dict) or record.get("phase") != phase.value:
+                        continue
+                    provider = record.get("provider")
+                    calls = record.get("calls")
+                    successes = record.get("successes")
+                    if (
+                        not isinstance(provider, str)
+                        or not isinstance(calls, int)
+                        or not isinstance(successes, int)
+                    ):
+                        continue
+                    model_for = getattr(self.providers.get(provider), "model_for", None)
+                    if callable(model_for):
+                        current_model = model_for(phase)
+                        if isinstance(current_model, str) and record.get("model") != current_model:
+                            # Retired model successes must not promote an unproven
+                            # replacement, nor should old failures penalise a model
+                            # that now completes this phase reliably.
+                            continue
+                    prior_calls, prior_successes = totals.get(provider, (0, 0))
+                    totals[provider] = (prior_calls + calls, prior_successes + successes)
+            configured_order = {name: index for index, name in enumerate(candidates)}
+
+            def observed_score(name: str) -> float:
+                calls, successes = totals.get(name, (0, 0))
+                if calls < 5:
+                    return 0.5
+                return (successes + 2) / (calls + 4)
+
+            candidates.sort(key=lambda name: (-observed_score(name), configured_order[name]))
+
         # Preserve independent review when possible before applying the provider
         # budget. Without this reorder, capping a route could retain the original
         # implementation provider and accidentally discard an independent reviewer.
@@ -230,6 +277,23 @@ class ConservativeAgentRouter(AgentRouter):
     def _review_identity(job: Job) -> str:
         pull_request = job.pull_request if job.pull_request is not None else job.task.identifier
         return f"pr-{pull_request}"
+
+    def observe_review_head(self, job: Job, now: datetime | None = None) -> None:
+        """Start the quiet-period clock when an external exact head is first known."""
+
+        gate = self._review_head_stability
+        if (
+            gate is None
+            or not gate.enabled
+            or job.task.source != "github-pull-request"
+            or not job.head_sha
+        ):
+            return
+        gate.defer_seconds(
+            self._review_identity(job),
+            job.head_sha,
+            now or datetime.now(UTC),
+        )
 
     def _ensure_review_head_stable(self, job: Job, now: datetime) -> None:
         """Avoid spending independent-review allowance on a moving external PR head."""
