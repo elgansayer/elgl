@@ -294,7 +294,6 @@ class GitWorkflow:
             Path("backend/node_modules"),
             Path("e2e/node_modules"),
             Path("admin-portal/node_modules"),
-            Path(".venv"),
         ):
             source = self.repository / relative
             destination = worktree / relative
@@ -450,27 +449,7 @@ class GitWorkflow:
         ):
             raise RepositorySafetyError("Recovery directory cannot be inside the worktree")
         resolved_recovery.mkdir(parents=True, exist_ok=False)
-        # The point of this archive is to not lose hand-edited uncommitted
-        # work - none of these directories are ever hand-edited, all are
-        # regenerable (npm/uv install, a build), and copying them in full
-        # is what turned a ~63 MB archive into a 2+ GB one, exhausting the
-        # disk-space reserve that gates Factory scheduling.
-        shutil.copytree(
-            resolved_worktree,
-            resolved_recovery,
-            symlinks=True,
-            dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns(
-                "node_modules",
-                "dist",
-                ".angular",
-                ".venv",
-                "__pycache__",
-                ".mypy_cache",
-                ".pytest_cache",
-                ".ruff_cache",
-            ),
-        )
+        shutil.copytree(resolved_worktree, resolved_recovery, symlinks=True, dirs_exist_ok=True)
         (resolved_recovery / "RECOVERY.txt").write_text(
             "This is a preserved OpenHands worktree archive. The original Git worktree "
             "registration was removed after the daemon could no longer safely retire it.\n"

@@ -1,8 +1,7 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { AuthService } from './auth.service';
+import { firstValueFrom } from 'rxjs';
 
 export interface BlockedUserResponse {
   id: string;
@@ -17,32 +16,24 @@ export interface BlockedUserResponse {
 })
 export class BlockedUsersService {
   private readonly http = inject(HttpClient);
-  private readonly authService = inject(AuthService);
   private readonly apiUrl = environment.apiUrl || '';
 
   private readonly blockedUsersSignal = signal<BlockedUserResponse[]>([]);
   private readonly loadingSignal = signal<boolean>(true);
   private readonly errorSignal = signal<string | null>(null);
-  private readonly unblockingUserIdsSignal = signal<ReadonlySet<string>>(new Set());
-  private readonly unblockErrorSignal = signal<boolean>(false);
 
   /** Read-only signal of the current blocked users list. */
   readonly blockedUsers = this.blockedUsersSignal.asReadonly();
   readonly isLoading = this.loadingSignal.asReadonly();
   readonly error = this.errorSignal.asReadonly();
-  readonly unblockingUserIds = this.unblockingUserIdsSignal.asReadonly();
-  readonly unblockError = this.unblockErrorSignal.asReadonly();
 
   constructor() {
-    void this.loadBlockedUsers();
+    this.loadBlockedUsers();
   }
 
   private getHeaders(): HttpHeaders {
-    const token = this.authService.getAccessToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-    return new HttpHeaders({ Authorization: `Bearer ${token}` });
+    const token = localStorage.getItem('auth_token') ?? '';
+    return new HttpHeaders().set('Authorization', `Bearer ${token}`);
   }
 
   /** Fetches the full list of blocked user details from the backend and updates the signal. */
@@ -50,10 +41,10 @@ export class BlockedUsersService {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     try {
-      const users = await firstValueFrom(
+      const users: BlockedUserResponse[] = await firstValueFrom(
         this.http.get<BlockedUserResponse[]>(`${this.apiUrl}/blocks`, {
           headers: this.getHeaders(),
-        }),
+        })
       );
       this.blockedUsersSignal.set(users ?? []);
     } catch {
@@ -64,40 +55,18 @@ export class BlockedUsersService {
     }
   }
 
-  /** Unblocks one user, preserving the current list when the request fails. */
-  async unblockUser(userId: string): Promise<boolean> {
-    if (!userId || this.unblockingUserIdsSignal().has(userId)) {
-      return false;
-    }
-
-    this.unblockErrorSignal.set(false);
-    this.setUnblocking(userId, true);
-
+  /** Unblock a user by ID and remove them from the local list optimistically. */
+  async unblockUser(userId: string): Promise<void> {
     try {
       await firstValueFrom(
-        this.http.delete(`${this.apiUrl}/blocks/${encodeURIComponent(userId)}`, {
+        this.http.delete(`${this.apiUrl}/blocks/${userId}`, {
           headers: this.getHeaders(),
-        }),
+        })
       );
-      this.blockedUsersSignal.update((users) => users.filter((user) => user.id !== userId));
-      return true;
+      this.blockedUsersSignal.update((prev) => prev.filter((u) => u.id !== userId));
     } catch {
-      this.unblockErrorSignal.set(true);
-      return false;
-    } finally {
-      this.setUnblocking(userId, false);
+      // If the request fails, reload the full list to stay in sync.
+      await this.loadBlockedUsers();
     }
-  }
-
-  private setUnblocking(userId: string, pending: boolean): void {
-    this.unblockingUserIdsSignal.update((current) => {
-      const next = new Set(current);
-      if (pending) {
-        next.add(userId);
-      } else {
-        next.delete(userId);
-      }
-      return next;
-    });
   }
 }

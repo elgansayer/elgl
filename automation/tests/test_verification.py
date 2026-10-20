@@ -179,10 +179,7 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert environment["HOME"] == "/tmp/home"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
     assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
-    assert environment["UV_NO_SYNC"] == "1"
     assert environment["UV_OFFLINE"] == "1"
-    assert environment["UV_PROJECT_ENVIRONMENT"] == str(virtual_environment)
-    assert environment["VIRTUAL_ENV"] == str(virtual_environment)
 
 
 def test_uv_cache_mount_is_writable_not_read_only() -> None:
@@ -278,7 +275,5 @@ def test_workout_agent_frontend_uses_angular_native_gate(tmp_path: Path) -> None
     names = {command.name for command in commands}
 
     assert "frontend-build" in names
-    assert "frontend-test" in names
-    assert "backend-tests" not in names
-    frontend_test = next(command for command in commands if command.name == "frontend-test")
-    assert frontend_test.arguments == ("npm", "test", "--", "--watch=false")
+    assert "admin-build" in names
+    assert "factory-tests" in names

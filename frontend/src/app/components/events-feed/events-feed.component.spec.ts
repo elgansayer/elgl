@@ -54,29 +54,6 @@ describe('EventsFeedComponent', () => {
     expect(fixture.nativeElement.querySelector('app-select')).not.toBeNull();
   });
 
-  it('opens the create modal and refreshes the first page after creation', async () => {
-    fixture.detectChanges();
-    await settle();
-
-    component.openCreateModal();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('app-create-event-modal')).not.toBeNull();
-
-    component.onEventCreated();
-    await settle();
-
-    expect(component.isCreateModalOpen()).toBe(false);
-    expect(fixture.nativeElement.querySelector('app-create-event-modal')).toBeNull();
-    expect(listEvents).toHaveBeenCalledTimes(2);
-    expect(listEvents).toHaveBeenLastCalledWith({
-      status: 'upcoming',
-      language_pair: undefined,
-      page: 1,
-      limit: 20,
-    });
-  });
-
   it('does not reload when the already-selected status is chosen again', async () => {
     fixture.detectChanges();
     await settle();

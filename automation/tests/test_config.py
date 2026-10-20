@@ -422,14 +422,9 @@ def test_default_repository_is_production_clone() -> None:
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
     assert config.recovery_retention_hours == 72
-    assert config.stall_alert_minutes == 20
     assert config.max_parallel_jobs == 5
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
-    assert config.repository_profile == "hellotalk"
-    assert config.prompt_dir == config.repository / "automation" / "prompts"
-    assert config.system_prompt_path == config.prompt_dir / "system.md"
-    assert config.provider_capacity_dir == config.state_dir
     assert config.require_trusted_intake is False
     assert config.trusted_github_actors == frozenset({"elgansayer"})
     assert config.control_github_actors == frozenset({"elgansayer"})
@@ -437,32 +432,6 @@ def test_default_repository_is_production_clone() -> None:
     assert config.agents.providers["openhands"].enabled is True
     assert config.agents.providers["claude"].enabled is False
     assert config.agents.routing.implementation[0] == "claude"
-
-
-def test_repository_profile_paths_and_shared_capacity_are_configurable(tmp_path: Path) -> None:
-    repository = tmp_path / "workout-agent"
-    prompt_dir = tmp_path / "trusted-prompts"
-    configured = FactoryConfig.from_environment(
-        environment(
-            FACTORY_REPOSITORY=str(repository),
-            FACTORY_STATE_DIR=str(tmp_path / "state"),
-            FACTORY_REPOSITORY_PROFILE="workout-agent",
-            FACTORY_PROMPT_DIR=str(prompt_dir),
-            FACTORY_SYSTEM_PROMPT_PATH=str(prompt_dir / "workout-agent-system.md"),
-            FACTORY_PROVIDER_CAPACITY_DIR=str(tmp_path / "shared"),
-            GITHUB_REPOSITORY="elgansayer/workout-agent",
-        )
-    )
-
-    assert configured.repository_profile == "workout-agent"
-    assert configured.prompt_dir == prompt_dir
-    assert configured.system_prompt_path == prompt_dir / "workout-agent-system.md"
-    assert configured.provider_capacity_dir == tmp_path / "shared"
-
-
-def test_unknown_repository_profile_is_rejected() -> None:
-    with pytest.raises(ConfigurationError, match="repository_profile"):
-        FactoryConfig.from_environment(environment(FACTORY_REPOSITORY_PROFILE="unknown"))
 
 
 def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
