@@ -1,4 +1,93 @@
+# Language Learning Efficacy Audit Report
+
+This report evaluates the current implementation of language learning mechanics (chat, reading, corrections, vocabulary, AI conversations, pronunciation, lessons, streaks, and assessments) from a pedagogical perspective, rather than purely architectural. It analyses how well these features reinforce each other to maximise comprehensible input, retrieval practice, spaced repetition, active production, and meaningful feedback.
+
+## 1. Comprehensible Input (Reading & Chat)
+- **Observation:** The application implements interactive reading and real-time chat with transliteration, translation, and text-to-speech support. These tools lower the affective filter and provide immediate scaffolding.
+- **Analysis:** While isolated input is strong, there is a gap in systemic integration. Reading texts do not dynamically adapt to the user's specific SRS vocabulary level.
+- **Recommendation:** Integrate vocabulary tracking more deeply into the reading selection process to provide truly comprehensible input ("i+1" principle).
+
+## 2. Meaningful Feedback (Corrections & Pronunciation)
+- **Observation:** Visual diff corrections via native speakers and AI pronunciation scoring offer direct, actionable feedback on active production.
+- **Analysis:** At baseline, correction explanation generation (`chat.service.ts`) used a generic prompt. This change adds a grammatical rationale and usage example, while native-language explanations and follow-up retrieval exercises remain future integration gaps.
+- **Recommendation:** Extend the new pedagogical prompt with the learner's native language and targeted retrieval practice opportunities.
+
+## 3. Retrieval Practice & Spaced Repetition (Vocabulary & Flashcards)
+- **Observation:** The SRS flashcard system allows users to save vocabulary from interests and reading sessions.
+- **Analysis:** Flashcard generation from interests (`interests.service.ts`) historically left `original_context` blank. Meaningful spaced repetition relies on contextual cues rather than isolated rote memorisation.
+- **Recommendation:** Implement automated contextual sentence generation when saving vocabulary to provide associative hooks for retrieval practice.
+
+## 4. Active Production (AI Conversations & Chat)
+- **Observation:** AI conversations and peer chat encourage output. The AI proxies (e.g. text simplification in `nlp.service.ts`) help maintain conversational flow.
+- **Analysis:** Active production is isolated from the structured lessons. Learners might not apply the specific grammar or vocabulary they just studied.
+- **Recommendation:** Prompt AI conversation partners and suggest chat topics that explicitly incorporate the user's current 'due' SRS vocabulary or recently completed lesson objectives.
+
+## 5. Motivation & Consistency (Streaks & Assessments)
+- **Observation:** Streaks and assessments provide gamification and progress tracking.
+- **Analysis:** Streaks are primarily volume-based (days active) rather than quality-based (spaced repetition adherence). Assessments accurately gauge skill but do not automatically adjust the difficulty of subsequent reading materials or AI chat complexity.
+- **Recommendation:** Tie streak maintenance to completing due SRS reviews, ensuring that the gamification directly supports long-term retention.
+
+## Conclusion & Code Implementation Plan
+The individual features are robust but operate largely in silos. To transform this from a feature-rich app into a cohesive language acquisition engine, the systems must interact.
+
+**Immediate Changes Implemented:**
+1. **Contextual Flashcard Generation:** Modified `interests.service.ts` to populate `original_context` for flashcards that lack context, using bounded batched LLM requests and leaving failed or invalid generations null for a later retry.
+2. **Pedagogical Correction Explanations:** Upgraded the AI prompt in `chat.service.ts` (`generateCorrectionPayloadIfNeeded`) to provide grammatical rationale and usage examples rather than just a simple explanation.
+
 # Language Learning Audit Report
+
+## 1. Comprehensible Input
+*   **Reading Engine:** The Reading Engine (`reading-engine.component.ts`) provides comprehensible input by allowing users to read articles at their level.
+*   **Chat:** AI Chat prompts (like in `chat-llm-proxy.service.ts` and `chat.service.ts`) currently lack explicit instructions to provide comprehensible input (e.g., using i+1 language). This needs to be improved.
+*   **AI Conversation:** The `ai-conversation.service.ts` explicitly includes instructions for comprehensible input ("Use natural, conversational language slightly above their ${level} level (i+1)"). This is excellent.
+
+## 2. Retrieval Practice & Spaced Repetition
+*   **Vocabulary/Flashcards:** The application has a dedicated vocabulary system (`vocabulary.store.ts`) with Spaced Repetition System (SRS) levels. It also has features to review cards.
+*   **AI Conversation:** The `ai-conversation.service.ts` prompt includes instructions to "Deliberately reuse recently learned material (vocabulary listed above)".
+*   **Premium AI:** The `premium-ai.service.ts` coach prompt could better integrate spaced repetition recommendations into the "Next steps" section.
+
+## 3. Active Production
+*   **Audio Rooms & AI Conversation:** These features directly encourage speaking. `ai-conversation.service.ts` includes prompts to "Ask engaging, open-ended questions".
+*   **Chat:** Chat also requires active production, but AI prompts could be tweaked to encourage longer, more complex responses from the user.
+
+## 4. Meaningful Feedback
+*   **Grammar Corrections:** The `grammar-explanation.service.ts` and `grammar-check.service.ts` provide feedback, but the system prompts could be enhanced to explicitly ask the AI to explain the *why* behind corrections in a pedagogical way, reinforcing the "meaningful" aspect.
+*   **Premium AI Report:** The `premium-ai.service.ts` provides a structured report, which is great. It could be instructed to provide more actionable pedagogical feedback.
+*   **AI Conversation:** The `ai-conversation.service.ts` includes instructions to "gently and naturally rephrase their sentence correctly".
+
+## Integration Assessment
+*   **Strengths:** The app has a wide array of tools (chat, reading, vocabulary, AI conversation, assessments). The `learner-knowledge.service.ts` attempts to integrate flashcards, assessments, and lessons into a holistic profile. The AI Conversation explicitly references struggling vocabulary.
+*   **Weaknesses:** The connection between reading/chat and the vocabulary system could be stronger. While vocabulary can be extracted from audio rooms (`audio-rooms.service.ts`), it's not clear if this seamlessly feeds into the SRS system. The AI chat prompts (outside of the dedicated AI conversation mode) are generic and don't leverage the user's specific learning context (i+1, specific vocabulary).
+
+## Recommended Actions
+1.  **Enhance Chat Prompts:** Update `chat.service.ts` and `chat-llm-proxy.service.ts` to mandate comprehensible input (i+1).
+2.  **Enhance Grammar Feedback:** Update `grammar-explanation.service.ts` and `grammar-check.service.ts` to focus on *why* a correction is made.
+3.  **Enhance Premium AI Coach:** Update `premium-ai.service.ts` to include explicit spaced repetition strategies in its "Next steps".
+
+This report audits the application from a pedagogical perspective, evaluating how well its features align with evidence-based language learning principles such as Comprehensible Input, Retrieval Practice, Spaced Repetition, Active Production, and Meaningful Feedback.
+
+## 1. Chat & Social Feed (Active Production & Meaningful Feedback)
+- **Observation:** The application features real-time chat, group chats, and a social feed ('Moments'). Native speakers can correct others using a visual diff tool.
+- **Pedagogical Value:** This provides high-quality, authentic active production opportunities. The visual diff correction tool offers excellent meaningful feedback.
+- **Alignment:** Strong alignment with Active Production and Meaningful Feedback.
+
+## 2. Interactive Reading Engine (Comprehensible Input & Spaced Repetition)
+- **Observation:** The app includes a LingQ-style interactive reading engine with universal word tokenization. Users can click words to translate and save them to a flashcard system with Spaced Repetition System (SRS) levels.
+- **Pedagogical Value:** This is a gold standard for Comprehensible Input. Linking encountering words in context to SRS directly bridges input and retrieval practice.
+- **Alignment:** Exceptional alignment with Comprehensible Input, Retrieval Practice, and Spaced Repetition.
+
+## 3. AI Conversations (Active Production, Retrieval Practice, Meaningful Feedback)
+- **Observation:** The `ai-conversation.service.ts` heavily personalizes the AI system prompt. Crucially, it fetches the user's recent flashcards and instructs the AI to: `Deliberately reuse recently learned material (vocabulary listed above) to reinforce learning.` It also instructs the AI to provide i+1 input and gentle corrections.
+- **Pedagogical Value:** This creates a dynamic, responsive environment that actively pulls vocabulary from the user's passive recognition (SRS) into active production through conversational retrieval practice.
+- **Alignment:** Outstanding integration of all pedagogical pillars.
+
+## 4. Streaks & Assessments (Motivation & Tracking)
+- **Observation:** The app tracks study streaks and learner knowledge (proficiency levels and struggling concepts).
+- **Pedagogical Value:** Gamification (streaks) encourages consistency, vital for language acquisition. The knowledge tracking informs the AI tutor, allowing for targeted support.
+- **Alignment:** Supports the necessary consistency for the core pedagogical pillars to be effective.
+
+## Conclusion
+The application demonstrates an exceptionally strong, interwoven pedagogical design. The features are not siloed; they actively reinforce each other. The integration of saved flashcards directly into the AI conversation prompt is a masterclass in connecting passive review with active retrieval. The current implementation already maximizes the targeted pedagogical principles.
 
 This report evaluates the application as a language-learning expert to determine whether chat, reading, corrections, vocabulary, AI conversations, pronunciation, lessons, streaks and assessments reinforce each other to maximise comprehensible input, retrieval practice, spaced repetition, active production and meaningful feedback.
 
@@ -30,3 +119,6 @@ This report evaluates the application as a language-learning expert to determine
 The application possesses all the necessary features for a highly effective language learning ecosystem. The integration between features (e.g., tokenised text in chat saving to SRS, corrections saving to SRS) is generally strong and well-aligned with second language acquisition principles.
 
 **Current state effectively reinforces:** Comprehensible input (Reading), Spaced Repetition (Vocabulary), Active Production (Chat/AI), and Meaningful Feedback (Corrections/Pronunciation).
+
+
+

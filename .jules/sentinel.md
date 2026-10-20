@@ -94,6 +94,17 @@
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
 
+## 2024-09-02 - Language Corrections Flow Audit
+**Vulnerability:** Language corrections flow lacked a formal audit.
+**Learning:** The current implementation in `frontend/src/app/components/visual-diff/visual-diff.component.ts` successfully satisfies the requirements: speed, clarity, neutrality, translatability, and reusability. It uses `Intl.Segmenter` for universal tokenization and integrates with `FlashcardService`.
+**Prevention:** Maintain the current architecture and ensure any future modifications to the corrections flow adhere to these core requirements.
+
+## 2026-09-04 - [Strict Secrets Validation in Production for Cloudflare Services]
+**Vulnerability:** Cloudflare service tokens and signing secrets (`CLOUDFLARE_R2_SIGNING_SECRET`, `CLOUDFLARE_R2_SERVICE_TOKEN`, `CLOUDFLARE_STREAM_API_TOKEN`) could default to insecure test values if missing in production.
+**Learning:** Default fallbacks for critical external service secrets present a high risk in production by allowing silent initialization into an insecure, predictable state.
+**Prevention:** Apply strict fail-fast validation checks where `NODE_ENV === 'production'` alongside explicit validation for known development fallback credentials directly within the service initialization.
+
+
 ## 2026-08-29 - Fixed Insecure Random Number Generation
 
 **Vulnerability:** The daily check-in reward used predictable `Math.random()`, while the host dashboard displayed invented random earnings instead of persisted gift transactions.
@@ -260,6 +271,8 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
+
 
 
 

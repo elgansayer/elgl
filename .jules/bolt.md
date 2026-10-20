@@ -21,6 +21,23 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-18 - [Optimize Angular @for loops with explicit track by id]
+**Learning:** Tracking items by object reference (e.g., `track room` or `track msg`) instead of unique IDs in Angular's `@for` block can cause unnecessary DOM recreations during state updates.
+**Action:** When iterating over objects with unique identifiers (like `id`), always use `track item.id` instead of `track item` to improve rendering performance and minimize change detection overhead.
+
+## 2026-08-30 - [Overlap Independent Bulk Queries in getComments]
+**Learning:** `getComments` issues two fixed-count bulk queries after loading comments. Running those independent lookups sequentially adds their network latencies even though neither result depends on the other.
+**Action:** Start independent bulk lookups together with `Promise.all` when their combined request load is bounded and partial results are not required.
+
+
+## 2026-08-30 - [Optimize GDPR Archive Deck Flashcards Fetch with Bounded Concurrency]
+**Learning:** In the backend `privacy.service.ts`, sequentially fetching chunks of `deck_flashcards` using `this.fetchPaged` within a `for` loop during GDPR archive creation introduces N+1 latency, prolonging the data collection process. However, simply using an unbounded `Promise.all` over a large number of decks can exhaust database connection pools.
+**Action:** Replace the sequential chunk fetching with a bounded concurrency approach (e.g., chunking the array into smaller subsets of 5 concurrent requests) and resolve these subsets using `Promise.all` to balance speed and resource utilisation.
+
+## 2026-09-03 - [Batch Redis Cache Invalidation Queries with Promise.all]
+**Learning:** Sequential `deleteByPattern` and `del` requests in NestJS event handlers block sequentially, creating N+1 latency across network calls to the Redis cache database.
+**Action:** When performing multiple cache invalidations in a single handler, gather all promises and resolve them concurrently using a single `Promise.all` array.
+
 ## 2026-09-07 - [Parallelize Multiple Redis Cache Invalidations in NestJS Services]
 **Learning:** Sequential `await` calls for independent `invalidateCache` methods in mutative admin API routes create unnecessary additive latency during actions like blocking or warning users, degrading performance.
 **Action:** Group independent, concurrent cache invalidations (e.g., user lists, blocks, login history) into a single `Promise.all` array to execute them in parallel and reduce request roundtrip times.
@@ -436,6 +453,10 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
+
+
+
 
 
 

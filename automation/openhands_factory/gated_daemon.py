@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime
 
 from openhands_factory import daemon as daemon_module
 from openhands_factory.config import FactoryConfig
 from openhands_factory.main_merge_gate import MainBranchMergeGate, gate_merge_batch
+from openhands_factory.models import Job, JobState
 from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.models import Job, JobState, Task
 
 SelectBatch = Callable[..., list[Job]]
 MergePullRequest = Callable[[int, str], None]
-CollectOpenIssues = Callable[[int], list[Task]]
 
 
 class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
@@ -133,7 +133,6 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
     def _loop(self) -> int:
         original_select = daemon_module.select_batch
         original_merge = self.pipeline.github.merge_pull_request
-        original_collect_issues = self.pipeline.github.collect_open_issues
 
         def gated_select_batch(
             jobs: dict[str, Job],
@@ -164,19 +163,10 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
                 expected_head_sha,
             )
 
-        def admission_aware_collect_open_issues(limit: int = 10_000) -> list[Task]:
-            return self._collect_open_issues_for_refresh(original_collect_issues, limit)
-
         daemon_module.select_batch = gated_select_batch
         self.pipeline.github.merge_pull_request = gated_merge_pull_request  # type: ignore[method-assign]
-        self.pipeline.github.collect_open_issues = (  # type: ignore[method-assign]
-            admission_aware_collect_open_issues
-        )
         try:
             return super()._loop()
         finally:
             daemon_module.select_batch = original_select
             self.pipeline.github.merge_pull_request = original_merge  # type: ignore[method-assign]
-            self.pipeline.github.collect_open_issues = (  # type: ignore[method-assign]
-                original_collect_issues
-            )
