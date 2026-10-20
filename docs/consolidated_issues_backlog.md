@@ -179,12 +179,18 @@
 
 - Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448).
 
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, Error Handling, extracted components for scalability)
+
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448).
+
   - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
   - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
   - Add micro-interactions (hover effects) and unread notification badges.
   - Extract Communities list and creation form into separate components for scalability.
   - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
 - Dedicated Groups & Scheduled Events System.
+
+
 
 
 - Harden Centrifugo connection token endpoint and lock connection-token contract.
@@ -319,6 +325,7 @@
 - Build a Pro subscription tier (Tandem Pro clone) offering unlimited translations, advanced visitor logs, nearby members visibility, and ad-free browsing.
 - Make Nearby use explicit GPS location.
 - Complete persisted Serious Learner mode and standardise active Serious Learner filtering.
+- Audit and propose advanced partner discovery ranking signals.
 - Converge discovery error actions on Spartan.
 
 ## 🧠 Learning & AI Tools
@@ -529,6 +536,8 @@
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
+- Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag.
+
 - Ensure Performance and Scalability for Data-Heavy Views
   - Implement Angular CDK Virtual Scrolling for Chat and Reading views to prevent DOM bloat, memory leaks, and UI lag when handling extensive chat histories or large reading texts
 
@@ -563,6 +572,12 @@
 - Develop universal connectivity features: In-App Sharing, External Deep Linking Engine, and End-to-end encrypted voice calls.
 
 - Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag (Ref: PR #8448).
+- Complete comprehensive i18n localization across all frontend modules (replace hardcoded strings and ensure coverage in I18nService.baseDictionary with British English defaults and the applicable en-GB dictionary).
+
+## Acceptance criteria and provenance
+
+This file is a summary. The complete acceptance criteria and source references, including PR #8448, remain in `wiki/Issues_Backlog.md`; that document is authoritative when this summary omits detail. Preserve dynamic-height handling, pagination, DOM bounds and viewport position when evaluating virtual scrolling.
+
 
   - Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into the relevant Angular standalone components (e.g., `chat-page.component.ts`, `reading-engine.component.ts`).
   - Replace standard loops rendering chat messages with `<cdk-virtual-scroll-viewport>`.
@@ -577,4 +592,6 @@
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
+
+
 

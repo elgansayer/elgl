@@ -1,25 +1,80 @@
 ## 2026-08-24 - [Optimize Offline Reading Cache Articles via Promise.all]
-
 **Learning:** In the frontend `offline-reading.service.ts`, iterating through arrays to sequentially await insertions (`this.putInStore`) and evictions (`this.deleteFromStore`) in `cacheArticles` causes significant, additive delay to the UI thread/local storage interaction. A simple loop adds unnecessary serialization of writes to IndexedDB when caching lists of articles for offline support.
 **Action:** Replace single sequential IDB writes inside a `for...of` loop with a single concurrent `Promise.all` batch using `.map`. This allows multiple object store requests to queue effectively in IndexedDB and resolves much faster, keeping offline cache updates snappy and reducing potential stuttering.
 
-## 2024-05-18 - Replacing sequential await with Promise.all in User Profile Fetching
-**Learning:** Sequential awaits for fetching related user data (follower/following counts, XP, corrector score) create unnecessary latency during user profile retrieval. The Supabase queries are completely independent and can be fired off concurrently.
-**Action:** Found sequentially awaited db queries/service calls in `UsersService.getProfile`. Used `Promise.all` to fetch the counts, xp, and score concurrently, maintaining safe fallbacks utilizing inner `catch` wrappers to ensure partial failures do not crash the entire request.
 ## 2026-08-25 - [Batch Supabase Queries with Promise.all]
-
 **Learning:** Independent Supabase query builder `.then()` requests in NestJS services block sequentially, creating N+1 latency across network calls to the Postgres database.
 **Action:** When aggregating data across multiple independent tables (e.g., getting counts from `moments`, `moment_comments`, `profile_visits`), gather all configured query builder objects and resolve them concurrently using a single `Promise.all` array.
 
-## 2026-08-27 - [Batch Hydration Supabase Queries with Promise.all in MomentsService]
-
-**Learning:** Independent Supabase database lookups sequentially awaiting responses block the Node.js event loop unnecessarily. N+1 lookups on the same method (e.g. hydrating profiles, likes, and votes) can be parallelized.
-**Action:** When a service method requests multiple related collections (like hydrating author profiles and user likes for a feed), use a concurrent `Promise.all` batch array to mitigate additive network latency.
-
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
-
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-18 - [Optimize Chat Component Rendering with OnPush and Object Identity Tracking]
+**Learning:** Changing ChangeDetectionStrategy to OnPush in data-heavy components like `ChatPageComponent`, combined with tracking `@for` loop items by their unique identifiers (e.g., `track msg.id` instead of object reference `track msg`), significantly reduces change detection and DOM recreation overhead when the local list of messages updates.
+**Action:** Use ChangeDetectionStrategy.OnPush for components that receive frequent reactive updates (e.g. chat messages), and always use unique IDs for list `@for` tracking.
+
+## 2026-09-18 - [Angular OnPush and @for Loop Optimization]
+**Learning:** Adding `ChangeDetectionStrategy.OnPush` to components using Signals, alongside updating `@for` loops to track by unique IDs (e.g., `track item.id`) rather than entire object references, significantly reduces unnecessary change detection cycles and DOM re-renders without adding complexity to the codebase.
+**Action:** Always prioritize applying `ChangeDetectionStrategy.OnPush` on components displaying dynamic lists, and ensure `@for` loops track by specific unique identifiers to leverage Angular's optimized rendering.
+
+
+## 2026-09-18 - [Optimize Angular @for loops with explicit track by id]
+**Learning:** Tracking items by object reference (e.g., `track room` or `track msg`) instead of unique IDs in Angular's `@for` block can cause unnecessary DOM recreations during state updates.
+**Action:** When iterating over objects with unique identifiers (like `id`), always use `track item.id` instead of `track item` to improve rendering performance and minimize change detection overhead.
+
+## 2026-08-30 - [Overlap Independent Bulk Queries in getComments]
+**Learning:** `getComments` issues two fixed-count bulk queries after loading comments. Running those independent lookups sequentially adds their network latencies even though neither result depends on the other.
+**Action:** Start independent bulk lookups together with `Promise.all` when their combined request load is bounded and partial results are not required.
+
+
+## 2026-08-30 - [Optimize GDPR Archive Deck Flashcards Fetch with Bounded Concurrency]
+**Learning:** In the backend `privacy.service.ts`, sequentially fetching chunks of `deck_flashcards` using `this.fetchPaged` within a `for` loop during GDPR archive creation introduces N+1 latency, prolonging the data collection process. However, simply using an unbounded `Promise.all` over a large number of decks can exhaust database connection pools.
+**Action:** Replace the sequential chunk fetching with a bounded concurrency approach (e.g., chunking the array into smaller subsets of 5 concurrent requests) and resolve these subsets using `Promise.all` to balance speed and resource utilisation.
+
+## 2026-09-03 - [Batch Redis Cache Invalidation Queries with Promise.all]
+**Learning:** Sequential `deleteByPattern` and `del` requests in NestJS event handlers block sequentially, creating N+1 latency across network calls to the Redis cache database.
+**Action:** When performing multiple cache invalidations in a single handler, gather all promises and resolve them concurrently using a single `Promise.all` array.
+
+## 2026-09-07 - [Parallelize Multiple Redis Cache Invalidations in NestJS Services]
+**Learning:** Sequential `await` calls for independent `invalidateCache` methods in mutative admin API routes create unnecessary additive latency during actions like blocking or warning users, degrading performance.
+**Action:** Group independent, concurrent cache invalidations (e.g., user lists, blocks, login history) into a single `Promise.all` array to execute them in parallel and reduce request roundtrip times.
+
+## 2026-09-08 - [Memoize Chat Message Ownership]
+
+**Learning:** Angular 22 already uses its signal-aware change detection strategy by default, so explicit `OnPush` metadata is redundant. The chat message template reads message ownership repeatedly for layout, colour, bubble-tail, and delivery-state bindings, making that derived value a better optimization target.
+**Action:** Keep Angular's framework default and express repeatedly consumed derived template state as a `computed()` signal so it is cached until its signal dependencies change. Remove unused computed values so they do not expand the component's reactive API.
+
+## 2026-09-08 - [Batch Archive Cleanup Queries with Promise.allSettled]
+
+**Learning:** Sequential awaits in GDPR archive cleanup add storage and database latency, while unbounded fan-out can overload Supabase and amplify provider failures.
+**Action:** Process archive cleanup in bounded `Promise.allSettled` chunks. Preserve partial progress and report only privacy-safe aggregate failure counts.
+
+
+## 2026-09-09 - [Redis Invalidation DoS Fix]
+**Learning:** This codebase uses Redis cache tags and user lists. Using `redis.keys` with wildcards like `admin:users:list:*` runs blocking `KEYS` command which can freeze the Redis event loop, creating a DoS vulnerability or scaling bottleneck as the key count grows.
+**Action:** Always prefer `redis.scan` with `MATCH` using a cursor when invalidating or listing wildcard keys in Redis for scalable cache evictions.
+
+## 2026-09-15 - [Track Angular Loops by ID & Use OnPush]
+**Learning:** In Angular frontend components with frequent array updates (like real-time chat lists or messages), iterating with `@for (item of items(); track item)` tracks by object reference. When the array is replaced or items are updated immutably, Angular destroys and recreates the DOM elements, causing severe jank. Additionally, without `ChangeDetectionStrategy.OnPush`, Angular checks the entire component tree on every tick. Unawaited async tasks (like `void this.chatService.markMessageStatus`) are inherently non-blocking and do not suffer from sequential N+1 latency, so wrapping them in `Promise.all` is redundant.
+**Action:** Always use `track item.id` in `@for` loops to track by unique identifier. Apply `ChangeDetectionStrategy.OnPush` to components using Signals to prevent unnecessary re-renders. Avoid attempting to batch naturally concurrent unawaited operations.
+
+## 2024-05-18 - Missing Component Tests Force Slower Full Suite Testing
+**Learning:** Some heavily integrated UI components (like `chat-view.component.ts`) in this architecture completely lack dedicated unit tests. If you modify them during optimization passes, you cannot rely on targeted `--include` runs and are forced to execute the entire frontend test suite, which can be computationally expensive (90s+).
+**Action:** When scoping daily performance improvements in `chat-view`, anticipate a longer verification cycle. Future performance work might benefit from first refactoring and decoupling these heavy components to make localized testing feasible before optimizing their internals.
+
+
+## 2026-09-19 - [Optimize Angular @for loops with tracking by unique identifier]
+**Learning:** In the Angular frontend components (like `frontend/src/app/pages/chat/chat-page.component.ts`), using `@for` with object reference tracking (e.g. `track room` or `track msg`) causes unnecessary DOM recreations during state updates.
+**Action:** When optimizing Angular `@for` loops, always track items by their unique identifiers (e.g., `track item.id`) instead of object references to prevent unnecessary DOM re-renders and improve frontend performance.
+
+## 2026-09-19 - Avoid modifying `package-lock.json` unless explicitly resolving local dependencies
+**Learning:** Running `npm install` blindly, especially when Node.js versions mismatch (`nvm` not being set up by default), can strip out critical native or optional dependencies (like `sass-embedded`) from `package-lock.json`, breaking the build and introducing massive diff noise.
+**Action:** Always prefer `git restore --staged package-lock.json && git checkout package-lock.json` if a lockfile modification was inadvertently made while trying to resolve local missing dependencies or tools. Never commit `package-lock.json` updates without explicit instructions when making purely frontend component changes.
+
+## 2026-08-29 - [Optimize Angular @for loops with track .id]
+**Learning:** Tracking whole object references in Angular `@for` loops (e.g., `track msg` or `track room`) causes the framework to recreate DOM elements unnecessarily when the object reference changes (e.g., during state updates like appending a message).
+**Action:** Always use unique primitive identifiers like `track item.id` in `@for` loops for collections that update frequently.
+
 ## 2026-08-30 - [Optimize Angular @for Loops]
 **Learning:** In Angular 17+, using `@for` with `track item` where `item` is an object reference (e.g., `track room` or `track msg`) causes Angular to recreate the DOM nodes if the array is replaced with new object references, even if the actual item IDs are the same. This can lead to significant rendering jank in active views like chat lists or message histories where updates arrive via websockets.
 **Action:** Always track by a unique primitive identifier (e.g., `track room.id`) in `@for` loops to preserve DOM state across reference-breaking state updates.
@@ -395,6 +450,21 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -3,10 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { VideoCallsService } from './video-calls.service';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken } from 'livekit-server-sdk';
-import {
-  DegradationMarker,
-  VideoCallsDegradationService,
-} from './video-calls-degradation.service';
+import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { VideoCallsEncryptionService } from './video-calls-encryption.service';
 import { MetricsService } from '../metrics/metrics.service';
 
@@ -64,7 +61,7 @@ describe('VideoCallsService', () => {
           _service: string,
           operation: () => Promise<unknown>,
           _fallback: () => unknown,
-          marker: DegradationMarker,
+          marker: any,
         ) => {
           try {
             return await operation();
@@ -88,6 +85,42 @@ describe('VideoCallsService', () => {
     createSession: vi.fn().mockResolvedValue('room-e2ee-key'),
     getKeyForParticipant: vi.fn().mockResolvedValue('room-e2ee-key'),
   };
+
+  describe('production credential validation', () => {
+    it.each([
+      ['test-livekit-api-key', 'production-secret'],
+      ['dev_livekit_key_test_value_123', 'production-secret'],
+      ['devkey', 'production-secret'],
+      ['production-key', 'test-livekit-secret'],
+      ['production-key', 'dev_livekit_secret_test_value_123'],
+      ['production-key', 'secret'],
+      ['production-key', 'secret-livekit-api-secret-change-in-prod'],
+    ])('rejects known development credentials', (apiKey, secret) => {
+      const productionConfig: Record<string, string> = {
+        NODE_ENV: 'production',
+        LIVEKIT_URL: 'https://production.livekit.cloud',
+        LIVEKIT_API_KEY: apiKey,
+        LIVEKIT_SECRET: secret,
+      };
+
+      expect(
+        () =>
+          new VideoCallsService(
+            {
+              get: vi.fn((key: string) => productionConfig[key]),
+            } as unknown as ConfigService,
+            mockDegradationService as unknown as VideoCallsDegradationService,
+            mockEncryptionService as unknown as VideoCallsEncryptionService,
+            {
+              buildIceServers: vi.fn().mockReturnValue([]),
+            } as unknown as LivekitService,
+            mockMetricsService as unknown as MetricsService,
+          ),
+      ).toThrow(
+        'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+      );
+    });
+  });
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
@@ -152,54 +185,40 @@ describe('VideoCallsService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('constructor', () => {
-    it.each([
-      ['test-livekit-api-key', 'secure-livekit-secret'],
-      ['dev_livekit_key_test_value_123', 'secure-livekit-secret'],
-      ['secure-livekit-api-key', 'test-livekit-secret'],
-      ['secure-livekit-api-key', 'dev_livekit_secret_test_value_123'],
-    ])(
-      'should reject insecure production credentials %s / %s',
-      async (apiKey, secret) => {
-        await expect(
-          Test.createTestingModule({
-            providers: [
-              VideoCallsService,
-              {
-                provide: ConfigService,
-                useValue: {
-                  get: vi.fn((key: string) => {
-                    if (key === 'NODE_ENV') return 'production';
-                    if (key === 'LIVEKIT_API_KEY') return apiKey;
-                    if (key === 'LIVEKIT_SECRET') return secret;
-                    if (key === 'LIVEKIT_URL')
-                      return 'https://test.livekit.cloud';
-                    return null;
-                  }),
-                },
-              },
-              {
-                provide: VideoCallsDegradationService,
-                useValue: mockDegradationService,
-              },
-              {
-                provide: VideoCallsEncryptionService,
-                useValue: mockEncryptionService,
-              },
-              {
-                provide: LivekitService,
-                useValue: {
-                  buildIceServers: vi.fn().mockReturnValue([]),
-                },
-              },
-              { provide: MetricsService, useValue: mockMetricsService },
-            ],
-          }).compile(),
-        ).rejects.toThrow(
-          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
-        );
-      },
-    );
+  it('should throw an error in production if insecure test secrets are used', async () => {
+    await expect(Test.createTestingModule({
+      providers: [
+        VideoCallsService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((key: string) => {
+              if (key === 'NODE_ENV') return 'production';
+              if (key === 'LIVEKIT_URL') return 'https://test.livekit.cloud';
+              if (key === 'LIVEKIT_API_KEY') return 'test-livekit-api-key';
+              if (key === 'LIVEKIT_SECRET') return 'test-livekit-secret';
+              return null;
+            }),
+          },
+        },
+        {
+          provide: VideoCallsDegradationService,
+          useValue: mockDegradationService,
+        },
+        {
+          provide: VideoCallsEncryptionService,
+          useValue: mockEncryptionService,
+        },
+        {
+          provide: LivekitService,
+          useValue: { buildIceServers: vi.fn().mockReturnValue([]) },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
+        },
+      ],
+    }).compile()).rejects.toThrow('LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production');
   });
 
   describe('createRoom', () => {
@@ -268,7 +287,7 @@ describe('VideoCallsService', () => {
           _service: string,
           operation: () => Promise<unknown>,
           fallback: () => unknown,
-          marker: DegradationMarker,
+          marker: any,
         ) => {
           marker.degraded = true;
           marker.reason = 'Service livekit failed: LiveKit connection refused';
@@ -342,7 +361,7 @@ describe('VideoCallsService', () => {
           _service: string,
           operation: () => Promise<unknown>,
           fallback: () => unknown,
-          marker: DegradationMarker,
+          marker: any,
         ) => {
           marker.degraded = true;
           marker.reason = 'Service livekit failed: timeout';

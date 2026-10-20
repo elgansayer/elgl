@@ -1084,10 +1084,10 @@ export class DiscoveryService {
       return users.filter((u) => activeHostSet.has(u.id));
     } catch (err) {
       this.logger.error(
-        'Voice room active filter failed, returning no active hosts',
+        'Voice room active filter failed, returning unfiltered results',
         err,
       );
-      return [];
+      return users;
     }
   }
 

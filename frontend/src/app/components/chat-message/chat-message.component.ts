@@ -325,6 +325,14 @@ export class ChatMessageComponent {
     return parts;
   });
 
+  readonly isOwnMessage = computed(() => {
+    const currentUserId = this.currentUserId();
+    if (currentUserId != null) {
+      return this.message().sender_id === currentUserId;
+    }
+    return this.message().sender_id === this.authService.currentUser()?.id;
+  });
+
   constructor() {
     effect(() => {
       const senderId = this.message().sender_id;
@@ -347,13 +355,6 @@ export class ChatMessageComponent {
         void this.fetchTranscription(msg.media_url);
       }
     });
-  }
-
-  isOwnMessage(): boolean {
-    if (this.currentUserId() != null) {
-      return this.message().sender_id === this.currentUserId();
-    }
-    return this.message().sender_id === this.authService.currentUser()?.id;
   }
 
   cycleVoicePlaybackSpeed(): void {
