@@ -5,6 +5,7 @@ import { MomentsService } from './moments.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { MomentsRankingService } from './moments-ranking.service';
 
 describe('MomentsController', () => {
   let controller: MomentsController;
@@ -36,6 +37,14 @@ describe('MomentsController', () => {
         {
           provide: R2Service,
           useValue: {},
+        },
+        {
+          provide: MomentsRankingService,
+          useValue: {
+            rankForYou: vi
+              .fn()
+              .mockImplementation(async (_userId, moments) => moments),
+          },
         },
       ],
     })

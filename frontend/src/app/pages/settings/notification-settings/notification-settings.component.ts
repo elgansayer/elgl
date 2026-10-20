@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, resource } from '@angular/core';
+import { Component, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { I18nService } from '../../../services/i18n.service';
 import {
@@ -39,7 +39,6 @@ export class NotificationSettingsComponent {
   readonly channels: LegacyChannel[] = ['push', 'badge'];
 
   readonly prefs = signal<LegacyNotificationPreferences | null>(null);
-  readonly saving = signal(false);
   readonly pendingToggle = signal<string | null>(null);
   readonly saved = signal(false);
   readonly error = signal<string | null>(null);
@@ -53,13 +52,12 @@ export class NotificationSettingsComponent {
         this.prefs.set(prefs);
         return prefs;
       } catch {
+        this.prefs.set(null);
         this.loadError.set(this.i18n.translate('common.error_generic'));
         return null;
       }
     },
   });
-
-  readonly isLoading = this.prefsResource.isLoading;
 
   constructor() {
     this.prefsResource.reload();
@@ -75,12 +73,16 @@ export class NotificationSettingsComponent {
     return `notification_settings.channel.${ch}`;
   }
 
-  isTogglePending(cat: LegacyCategory, ch: LegacyChannel): boolean {
-    return this.pendingToggle() === `${cat}:${ch}`;
+  toggleKey(cat: LegacyCategory, ch: LegacyChannel): string {
+    return `${cat}:${ch}`;
   }
 
-  retryLoad(): void {
-    if (this.isLoading()) return;
+  isPending(cat: LegacyCategory, ch: LegacyChannel): boolean {
+    return this.pendingToggle() === this.toggleKey(cat, ch);
+  }
+
+  reload(): void {
+    if (this.pendingToggle()) return;
     this.error.set(null);
     this.saved.set(false);
     this.prefsResource.reload();
@@ -88,8 +90,9 @@ export class NotificationSettingsComponent {
 
   async toggle(cat: LegacyCategory, ch: LegacyChannel): Promise<void> {
     const p = this.prefs();
-    if (!p || this.saving()) return;
+    if (!p || this.loadError() || this.pendingToggle()) return;
 
+    const key = this.toggleKey(cat, ch);
     const current = p[cat][ch];
     const update = {
       [cat]: {
@@ -98,23 +101,18 @@ export class NotificationSettingsComponent {
       },
     };
 
+    this.pendingToggle.set(key);
     this.error.set(null);
     this.saved.set(false);
-    this.saving.set(true);
-    this.pendingToggle.set(`${cat}:${ch}`);
 
     try {
       const result = await this.prefsService.updateLegacyPreferences(update);
-      if (!result.success) {
-        throw new Error('Notification preference update was not persisted');
-      }
       this.prefs.set(result.preferences);
       this.saved.set(true);
     } catch {
       this.error.set(this.i18n.translate('common.error_generic'));
     } finally {
       this.pendingToggle.set(null);
-      this.saving.set(false);
     }
   }
 }

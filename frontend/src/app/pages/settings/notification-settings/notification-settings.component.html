@@ -1,4 +1,4 @@
-<div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10" [attr.aria-busy]="isLoading() || saving()">
+<div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10">
   <h1 class="text-2xl font-semibold text-text-primary mb-2">
     {{ 'notification_settings.title' | t }}
   </h1>
@@ -8,18 +8,11 @@
 
   @if (loadError()) {
     <div
-      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
       role="alert"
+      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
     >
-      <p>{{ (loadError() ?? '') | t }}</p>
-      <button
-        hlmBtn
-        type="button"
-        size="touch"
-        class="mt-3"
-        [disabled]="isLoading()"
-        (click)="retryLoad()"
-      >
+      <p>{{ loadError() }}</p>
+      <button hlmBtn type="button" variant="outline" class="mt-3 min-h-11" (click)="reload()">
         {{ 'common.retry' | t }}
       </button>
     </div>
@@ -27,15 +20,16 @@
 
   @if (error()) {
     <div
-      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
       role="alert"
+      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
     >
-      {{ (error() ?? '') | t }}
+      {{ error() }}
     </div>
   }
 
   <div
     class="rounded-2xl bg-surface-200/50 border border-surface-100 overflow-hidden shadow-sm mb-6"
+    [attr.aria-busy]="pendingToggle() ? 'true' : null"
   >
     <div class="bg-surface-200/80 px-4 py-3 border-b border-surface-100">
       <div class="flex">
@@ -56,36 +50,30 @@
       <div
         class="flex items-center px-4 py-3 border-b border-surface-100/50 last:border-b-0 hover:bg-surface-200/30 transition-colors"
       >
-        <div class="flex-1 flex items-center gap-3">
-          <span class="text-lg" role="img" [attr.aria-label]="cat.labelKey | t">{{
-            cat.icon
-          }}</span>
-          <span class="text-sm text-text-primary">{{ cat.labelKey | t }}</span>
+        <div class="flex-1 flex items-center gap-3 min-w-0">
+          <span class="text-lg shrink-0" aria-hidden="true">{{ cat.icon }}</span>
+          <span class="text-sm text-text-primary break-words">{{ cat.labelKey | t }}</span>
         </div>
         @for (ch of channels; track ch) {
-          <div class="w-16 flex justify-center">
+          <div class="w-16 flex justify-center shrink-0">
             <button
               hlmBtn
               type="button"
               role="switch"
-              size="icon-touch"
-              [disabled]="saving() || !prefs()"
               [attr.aria-checked]="toggleValue(cat.key, ch)"
-              [attr.aria-busy]="isTogglePending(cat.key, ch) ? 'true' : null"
               [attr.aria-label]="(cat.labelKey | t) + ' ' + (channelLabel(ch) | t)"
-              class="p-0 bg-transparent hover:bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+              [attr.aria-busy]="isPending(cat.key, ch) ? 'true' : null"
+              [disabled]="!prefs() || !!pendingToggle() || !!loadError()"
+              class="relative inline-flex min-h-11 min-w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-60"
+              [class.bg-primary]="toggleValue(cat.key, ch)"
+              [class.bg-surface-300]="!toggleValue(cat.key, ch)"
               (click)="toggle(cat.key, ch)"
             >
               <span
-                aria-hidden="true"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors px-1"
-                [class.justify-end]="toggleValue(cat.key, ch)"
-                [class.justify-start]="!toggleValue(cat.key, ch)"
-                [class.bg-primary]="toggleValue(cat.key, ch)"
-                [class.bg-surface-300]="!toggleValue(cat.key, ch)"
-              >
-                <span class="h-4 w-4 rounded-full bg-on-fill"></span>
-              </span>
+                class="inline-block h-4 w-4 transform rounded-full bg-on-fill transition-transform"
+                [class.translate-x-6]="toggleValue(cat.key, ch)"
+                [class.translate-x-1]="!toggleValue(cat.key, ch)"
+              ></span>
             </button>
           </div>
         }
