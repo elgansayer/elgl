@@ -1,30 +1,24 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewController } from './link-preview.controller';
-import { LinkPreviewService } from './link-preview.service';
+import type { LinkPreviewService } from './link-preview.service';
 
 describe('LinkPreviewController', () => {
-  let controller: LinkPreviewController;
   const mockGetPreview = vi.fn();
+  const controller = new LinkPreviewController({
+    getPreview: mockGetPreview,
+  } as unknown as LinkPreviewService);
 
-  beforeEach(async () => {
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      controllers: [LinkPreviewController],
-      providers: [
-        {
-          provide: LinkPreviewService,
-          useValue: { getPreview: mockGetPreview },
-        },
-      ],
-    }).compile();
+  beforeEach(() => vi.clearAllMocks());
 
-    controller = moduleRef.get<LinkPreviewController>(LinkPreviewController);
-  });
+  it('requires Supabase authentication before allowing an external scrape', () => {
+    const guards = Reflect.getMetadata(
+      GUARDS_METADATA,
+      LinkPreviewController,
+    ) as unknown[];
 
-  afterEach(() => vi.clearAllMocks());
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+    expect(guards).toContain(SupabaseAuthGuard);
   });
 
   it('rejects a request without a url query parameter', async () => {

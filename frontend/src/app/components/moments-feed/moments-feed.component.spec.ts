@@ -311,28 +311,33 @@ describe.skip('MomentsFeedComponent', () => {
       expect(component.mentionQueryMap()[momentId]).toBeNull();
     });
 
-    it('inserts mention text and clears query on selectMention', () => {
+    it('formats mention text and clears the query after primitive selection', () => {
       const momentId = 'm1';
+      const member = {
+        id: 'u2',
+        display_name: 'Alice',
+        avatar_url: null,
+      };
       component.commentInputMap[momentId] = 'Hello @Ali';
       (component as any).mentionRangeStartMap[momentId] = 6;
       (component as any).mentionRangeEndMap[momentId] = 10;
       component.mentionQueryMap.update((m) => ({ ...m, [momentId]: 'Ali' }));
 
-      component.selectMention(momentId, {
-        id: 'u2',
-        display_name: 'Alice',
-        avatar_url: null,
-      });
+      component.commentInputMap[momentId] = component.mentionItemToStringFor(momentId)(member);
+      component.onMentionSelected(momentId, member);
 
       expect(component.commentInputMap[momentId]).toBe('Hello @Alice ');
       expect(component.mentionQueryMap()[momentId]).toBeNull();
     });
 
-    it('does nothing when selectMention is called with undefined', () => {
+    it('preserves the comment when the primitive has no selected value', () => {
       const momentId = 'm1';
-      const before = component.commentInputMap[momentId] ?? '';
-      component.selectMention(momentId, undefined);
-      expect(component.commentInputMap[momentId]).toBe(before);
+      component.commentInputMap[momentId] = 'Hello';
+      const formatted = component.mentionItemToStringFor(momentId)(undefined);
+      component.onMentionSelected(momentId, undefined);
+
+      expect(formatted).toBe('Hello');
+      expect(component.commentInputMap[momentId]).toBe('Hello');
     });
 
     it('starts a reply with correct context', () => {

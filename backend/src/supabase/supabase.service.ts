@@ -42,6 +42,11 @@ export type UsersRow = {
   bio_text?: string | null;
   status_text?: string | null;
   proficiency_level?: string | null;
+  availability_morning?: boolean | null;
+  availability_afternoon?: boolean | null;
+  availability_evening?: boolean | null;
+  available_time_start?: string | null;
+  available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
   mock_country?: string | null;
@@ -2184,6 +2189,17 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      claim_daily_checkin_reward: {
+        Args: {
+          p_user_id: string;
+          p_reward: number;
+        };
+        Returns: {
+          claimed: boolean;
+          coins_rewarded: number;
+          new_balance: number;
+        }[];
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;
