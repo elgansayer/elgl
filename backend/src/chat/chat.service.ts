@@ -2309,7 +2309,7 @@ export class ChatService {
 
         if (tokensToPractice.length > 0) {
           prompt.push(
-            `Try to naturally incorporate some of these words to help them practice: ${tokensToPractice.join(', ')}.`,
+            `Try to naturally incorporate some of these words to help them practice: ${tokensToPractice.join(', ')}. Then, encourage Active Production by asking the user to use one of these words in their next reply.`,
           );
         }
       }
