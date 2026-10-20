@@ -1,8 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '../../environments/environment';
@@ -49,7 +46,14 @@ describe('RecommendationsService', () => {
         native_languages: ['ja'],
         target_languages: ['en'],
         shared_interest_count: 2,
-        recommendation_reasons: ['language_exchange', 'shared_interests'],
+        recommendation_reasons: [
+          'language_exchange',
+          'shared_interests',
+          'proficiency_match',
+          'availability_match',
+          'high_correction_ratio',
+          'learning_goal_match',
+        ],
       },
     ]);
 
@@ -57,6 +61,12 @@ describe('RecommendationsService', () => {
       expect.objectContaining({
         id: 'p-1',
         shared_interest_count: 2,
+        recommendation_reasons: expect.arrayContaining([
+          'proficiency_match',
+          'availability_match',
+          'high_correction_ratio',
+          'learning_goal_match',
+        ]),
       }),
     ]);
   });

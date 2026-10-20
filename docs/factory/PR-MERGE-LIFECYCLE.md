@@ -18,7 +18,7 @@ CI_PENDING
   -> every terminal check succeeds, is neutral, or is skipped
   -> no CHANGES_REQUESTED human review
   -> reviewed head SHA is still current
-  -> GitHub reports CLEAN + MERGEABLE
+  -> GitHub reports MERGEABLE and either CLEAN or non-strict BEHIND
 
 MERGE_QUEUED
   -> Telegram: MERGE_QUEUED
@@ -70,7 +70,7 @@ The Factory never merges merely because a PR has the `factory-reviewed` label. B
 - required Factory and CI checks have passed
 - checks are no longer pending
 - mergeability is `MERGEABLE`
-- merge state is `CLEAN`
+- merge state is `CLEAN`, or `BEHIND` when non-strict required checks permit the already-tested head
 - no `CHANGES_REQUESTED` decision is active
 
 The merge command uses `--match-head-commit <reviewed_sha>`. If a commit lands after review, GitHub rejects the stale merge and the Factory refreshes the PR through independent review again.

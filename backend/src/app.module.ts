@@ -79,6 +79,10 @@ import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
 import { LivekitModule } from './livekit/livekit.module';
+import { OpenApiFixtureFactoryController } from './mock/openapi-fixture-factory.controller';
+import { OpenApiFixtureFactoryRegistry } from './mock/openapi-fixture-factory';
+import { MockScenariosModule } from './mock/mock-scenarios.module';
+import { UserInterestsModule } from './modules/user-interests/user-interests.module';
 
 @Module({
   imports: [
@@ -174,6 +178,8 @@ import { LivekitModule } from './livekit/livekit.module';
     ReadingEngineModule,
     CloudflareModule,
     LearnerKnowledgeModule,
+    MockScenariosModule,
+    UserInterestsModule,
   ],
   controllers: [AppController],
   providers: [
