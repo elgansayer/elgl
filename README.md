@@ -116,6 +116,7 @@ The deep immersion reading and vocabulary acquisition system integrated througho
 - **Cloud Chat Backups:** Syncing the local message database to the cloud to persist message histories across devices.
 - **AI Conversations:** AI conversational bots are native to the application and accessible from the root path.
 
+
 ## 8. VIP Premium Monetisation & Virtual Economy
 
 The logic enforced by NestJS to drive subscriptions across tiers and power the in-app economy.
