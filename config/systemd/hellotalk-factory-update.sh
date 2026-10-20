@@ -557,7 +557,11 @@ run_storage_maintenance() {
     log 'No verified runtime commit is available; refusing root maintenance refresh'
     return 1
   }
-  install_runtime_bundle "$commit" || return 1
+  # Maintenance must not overwrite newer updater/watchdog code or deployment
+  # provenance with an older package's bundle during a staged guard rollout.
+  install_runtime_file_from_commit \
+    "$commit" scripts/maintain-factory-host-storage.sh \
+    "$RUNTIME_MAINTENANCE" 0755 || return 1
   "$RUNTIME_MAINTENANCE" --apply --prune-containers
 }
 

@@ -102,6 +102,36 @@ def test_maintenance_runtime_prefers_completed_deployment_without_network():
     assert "candidate_ci_green" not in function
 
 
+def test_maintenance_refreshes_only_its_helper_without_downgrading_the_guard(tmp_path):
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    function = updater.split("run_storage_maintenance() {", 1)[1].split("\n}\n", 1)[0]
+    helper = tmp_path / "maintenance-helper"
+    helper.write_text('#!/bin/bash\nprintf "%s\\n" "$*"\n')
+    helper.chmod(0o700)
+    result = subprocess.run(
+        [
+            "bash",
+            "-ec",
+            'trusted_runtime_commit() { echo verified-previous; }; '
+            'install_runtime_file_from_commit() { printf "%s\\n" "$*"; }; '
+            'install_runtime_bundle() { echo unsafe-bundle-refresh; return 99; }; '
+            'RUNTIME_MAINTENANCE="$1"; '
+            "run_storage_maintenance() {" + function + "\n}; run_storage_maintenance",
+            "_",
+            str(helper),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        f"verified-previous scripts/maintain-factory-host-storage.sh {helper} 0755",
+        "--apply --prune-containers",
+    ]
+
+
 def test_promotion_stays_on_approved_sha_when_main_moves_during_drain(tmp_path):
     def git(*arguments):
         return subprocess.check_output(["git", *arguments], cwd=tmp_path, text=True).strip()
