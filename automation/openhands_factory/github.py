@@ -22,6 +22,7 @@ from openhands_factory.models import (
     logical_task_key,
     supersession_references,
 )
+from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ProcessResult, run_process
 
 REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
@@ -64,6 +65,10 @@ class PullRequestStatus:
     checks_pending: bool
     failed_checks: frozenset[str] = frozenset()
     merge_state_status: str = "CLEAN"
+    workflow_run_ids: frozenset[str] = frozenset()
+    ci_required_passed: bool = False
+    ci_required_pending: bool = False
+    ci_required_failed: bool = False
 
 
 @dataclass(frozen=True)
@@ -343,6 +348,120 @@ class GitHubClient:
             )
         return tasks
 
+    def list_pull_requests(self, limit: int = 10_000) -> list[PullRequestRecord]:
+        """Return bounded PR identity without one oversized GraphQL request.
+
+        GitHub returns HTTP 502 for this repository when nested file and check
+        fields are requested across its full history. Page the authoritative
+        identity through REST, then best-effort enrich only the newest 50 PRs
+        with the nested GraphQL fields used by detailed metrics.
+        """
+
+        if limit <= 0:
+            return []
+        payload: list[object] = []
+        for page in range(1, (limit + 99) // 100 + 1):
+            output = self._run(
+                (
+                    "gh",
+                    "api",
+                    "--method",
+                    "GET",
+                    f"repos/{self.repository}/pulls",
+                    "-f",
+                    "state=all",
+                    "-f",
+                    "per_page=100",
+                    "-f",
+                    f"page={page}",
+                )
+            )
+            page_payload = json.loads(output)
+            if not isinstance(page_payload, list):
+                raise FactoryError("GitHub pull-request inventory is not a list")
+            payload.extend(page_payload)
+            if len(page_payload) < 100:
+                break
+        payload = payload[:limit]
+
+        rich_by_number: dict[int, object] = {}
+        rich_limit = min(limit, len(payload), 50)
+        if rich_limit:
+            rich = self._invoke(
+                (
+                    "gh",
+                    "pr",
+                    "list",
+                    "--repo",
+                    self.repository,
+                    "--state",
+                    "all",
+                    "--limit",
+                    str(rich_limit),
+                    "--json",
+                    "number,title,body,state,isDraft,headRefName,headRefOid,baseRefName,"
+                    "isCrossRepository,labels,files,createdAt,updatedAt,closedAt,mergedAt,"
+                    "mergeStateStatus,statusCheckRollup",
+                ),
+                120,
+            )
+            if rich.returncode == 0:
+                try:
+                    rich_payload = json.loads(rich.stdout)
+                except json.JSONDecodeError:
+                    rich_payload = None
+                if isinstance(rich_payload, list):
+                    rich_by_number = {
+                        number: item
+                        for item in rich_payload
+                        if isinstance(item, dict)
+                        and isinstance((number := item.get("number")), int)
+                        and not isinstance(number, bool)
+                    }
+
+        records: list[PullRequestRecord] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                raise FactoryError("GitHub pull-request inventory contains a malformed entry")
+            number = item.get("number")
+            if isinstance(number, int) and not isinstance(number, bool):
+                rich_item = rich_by_number.get(number)
+                if isinstance(rich_item, dict):
+                    item = rich_item
+                else:
+                    head = item.get("head")
+                    base = item.get("base")
+                    head_mapping = head if isinstance(head, dict) else {}
+                    base_mapping = base if isinstance(base, dict) else {}
+                    head_repository = head_mapping.get("repo")
+                    repository_mapping = (
+                        head_repository if isinstance(head_repository, dict) else {}
+                    )
+                    merged_at = item.get("merged_at")
+                    item = {
+                        "number": number,
+                        "title": item.get("title"),
+                        "body": item.get("body"),
+                        "state": "MERGED" if isinstance(merged_at, str) else item.get("state"),
+                        "isDraft": item.get("draft") is True,
+                        "headRefName": head_mapping.get("ref"),
+                        "headRefOid": head_mapping.get("sha"),
+                        "baseRefName": base_mapping.get("ref"),
+                        "isCrossRepository": repository_mapping.get("full_name") != self.repository,
+                        "labels": item.get("labels"),
+                        "createdAt": item.get("created_at"),
+                        "updatedAt": item.get("updated_at"),
+                        "closedAt": item.get("closed_at"),
+                        "mergedAt": merged_at,
+                    }
+            try:
+                records.append(PullRequestRecord.from_payload(item))
+            except (TypeError, ValueError) as error:
+                raise FactoryError(
+                    "GitHub pull-request inventory contains invalid identity"
+                ) from error
+        return records
+
     def find_equivalent_pull_requests(
         self,
         task: Task,
@@ -363,12 +482,6 @@ class GitHubClient:
 
         current = now or datetime.now(UTC)
         cutoff = current - timedelta(days=recent_days)
-        json_fields = (
-            "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
-            "isCrossRepository,labels,author"
-        )
-        if known_path_fingerprint is not None:
-            json_fields += ",files"
         output = self._run(
             (
                 "gh",
@@ -381,7 +494,8 @@ class GitHubClient:
                 "--limit",
                 str(limit),
                 "--json",
-                json_fields,
+                "number,title,body,baseRefName,headRefName,headRefOid,state,closedAt,mergedAt,"
+                "isCrossRepository,labels,author,files",
             )
         )
         matches: list[PullRequestMatch] = []
@@ -637,6 +751,7 @@ class GitHubClient:
             "factory-active": "0052cc",
             "factory-review": "5319e7",
             "factory-reviewed": "0e8a16",
+            "factory-stack-blocked": "fbca04",
             "factory-quarantined": "b60205",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
@@ -813,12 +928,70 @@ class GitHubClient:
         except ValueError as error:
             raise FactoryError(f"Could not parse pull request URL: {url}") from error
 
+    def update_pull_request(self, pull_request: int, *, title: str, body: str) -> None:
+        self._run(
+            (
+                "gh",
+                "pr",
+                "edit",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--title",
+                title,
+                "--body",
+                body,
+            )
+        )
+
+    def supersede_pull_request(
+        self,
+        pull_request: int,
+        *,
+        canonical: int | None,
+        reason: str,
+    ) -> None:
+        """Close and delete one non-canonical PR branch before replacement proceeds."""
+
+        self.add_issue_labels(pull_request, ("superseded", "duplicate"))
+        canonical_text = f" Canonical pull request: #{canonical}." if canonical is not None else ""
+        self.add_comment(
+            pull_request,
+            f"Factory convergence closed this non-canonical pull request: {reason}."
+            f"{canonical_text}",
+        )
+        self._run(
+            (
+                "gh",
+                "pr",
+                "close",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--delete-branch",
+            )
+        )
+
     def mark_ready(self, pull_request: int) -> None:
         self._run(
             (
                 "gh",
                 "pr",
                 "ready",
+                str(pull_request),
+                "--repo",
+                self.repository,
+            )
+        )
+
+    def reopen_pull_request(self, pull_request: int) -> None:
+        """Reopen a Factory-owned PR whose issue is still active."""
+
+        self._run(
+            (
+                "gh",
+                "pr",
+                "reopen",
                 str(pull_request),
                 "--repo",
                 self.repository,
@@ -841,24 +1014,6 @@ class GitHubClient:
                 f"repos/{self.repository}/pulls/{pull_request}/update-branch",
                 "-f",
                 f"expected_head_sha={expected_head_sha}",
-            )
-        )
-
-    def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
-        """Squash-merge only the exact reviewed head without bypassing GitHub rules."""
-
-        self._run(
-            (
-                "gh",
-                "pr",
-                "merge",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--squash",
-                "--delete-branch",
-                "--match-head-commit",
-                expected_head_sha,
             )
         )
 
@@ -951,6 +1106,16 @@ class GitHubClient:
                 pending = True
 
         failed_checks = failed_check_names(check_rollup)
+        ci_required_observed = "CI / required" in observed_checks
+        ci_required_pending = not ci_required_observed or any(
+            str(check.get("name") or check.get("context") or "") == "CI / required"
+            and (
+                str(check.get("status") or "").upper() in _PENDING_CHECK_STATES
+                or str(check.get("state") or "").upper() in _PENDING_CHECK_STATES
+            )
+            for check in check_rollup
+        )
+        ci_required_failed = "CI / required" in failed_checks
         missing_required = REQUIRED_FACTORY_MERGE_CHECKS - observed_checks
         if missing_required:
             # GitHub creates workflow check-runs asynchronously. Treat an absent
@@ -983,4 +1148,12 @@ class GitHubClient:
             checks_pending=pending or human_review_blocked,
             failed_checks=failed_checks,
             merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN").upper(),
+            workflow_run_ids=PullRequestRecord.from_payload(item).workflow_run_ids,
+            ci_required_passed=(
+                "CI / required" in successful_checks
+                and not ci_required_pending
+                and not ci_required_failed
+            ),
+            ci_required_pending=ci_required_pending,
+            ci_required_failed=ci_required_failed,
         )

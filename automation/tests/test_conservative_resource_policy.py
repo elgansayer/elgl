@@ -17,7 +17,9 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.conservative import ConservativeAgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import ReviewAdmissionGate
+from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
 
@@ -141,9 +143,9 @@ def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Pa
 def test_conservative_router_shares_host_capacity_with_exclusive_verification(
     tmp_path: Path,
 ) -> None:
-    host_resource_slots = threading.BoundedSemaphore(2)
-    assert host_resource_slots.acquire(blocking=False)
-    assert host_resource_slots.acquire(blocking=False)
+    host_resource_slots = HostResourceGate(tmp_path / "host-resources.json", 2)
+    assert host_resource_slots.acquire_shared("test:first")
+    assert host_resource_slots.acquire_shared("test:second")
     provider = Provider("first")
     task = Task("42", "Issue", "Body", "github-issue", 0)
     request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
@@ -158,11 +160,11 @@ def test_conservative_router_shares_host_capacity_with_exclusive_verification(
         router.run(request, Job(task))
 
     assert provider.calls == 0
-    host_resource_slots.release()
-    host_resource_slots.release()
+    host_resource_slots.release_shared("test:first")
+    host_resource_slots.release_shared("test:second")
     assert router.run(request, Job(task)).success
-    assert host_resource_slots.acquire(blocking=False)
-    assert host_resource_slots.acquire(blocking=False)
+    assert host_resource_slots.acquire_shared("test:third")
+    assert host_resource_slots.acquire_shared("test:fourth")
 
 
 def test_conservative_router_enforces_global_hourly_agent_route_budget(
@@ -302,9 +304,9 @@ def test_conservative_router_defaults_support_continuous_pr_drain(tmp_path: Path
     )
 
     assert router._agent_route_admission is not None
-    assert router._agent_route_admission.max_admissions == 24
+    assert router._agent_route_admission.max_admissions == 48
     assert router._review_admission is not None
-    assert router._review_admission.max_admissions == 12
+    assert router._review_admission.max_admissions == 36
 
 
 def test_conservative_router_honours_single_review_lane(

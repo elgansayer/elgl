@@ -9,6 +9,8 @@ ELGL exposes a signed-in Privacy / GDPR hub for two user-controlled operations:
 
 This document describes the production trust boundaries, retention policy, failure behaviour, and rollback considerations introduced for issue #570.
 
+`GET /api/privacy/status` restores the persisted deletion state and latest archive state whenever the hub loads. A still-valid ready archive receives a fresh short-lived signed URL, so a user can resume its download after navigating away or reloading without starting another export.
+
 ## Archive lifecycle
 
 `POST /api/privacy/request-archive` is authenticated with `SupabaseAuthGuard` and rate limited to three requests per hour. The service creates at most one `processing` archive per user. Retries while an export is running return the existing request rather than starting duplicate collection work. An unexpired `ready` export is also reused and receives a fresh signed URL.
@@ -58,6 +60,7 @@ Relevant Redis safety/discovery caches are invalidated after the database update
 - The archive bucket is never public.
 - Opaque storage keys contain no user ID, email address, or timestamp.
 - Signed URLs are generated only after an authenticated request is matched to a ready archive owned by that user.
+- A transient archive-signing failure does not hide the separately persisted account-deletion state.
 - Signed URLs, archive object keys, user IDs, raw provider errors, and exported content are not written to operational logs.
 - User-controlled archive requests are rate limited and concurrent generation is deduplicated by a partial unique index.
 - Non-HTTP(S) download URLs are rejected by the Angular UI before navigation.
@@ -78,6 +81,7 @@ At minimum, deployment verification should confirm:
 6. a failed dataset query returns an error and does not upload a partial archive;
 7. expired objects are removed and their request rows become `expired`;
 8. deletion immediately removes location/discovery visibility, cancellation restores the pending state, and an expired deletion removes both the profile and Supabase Auth principal.
+9. reloading the Privacy / GDPR hub restores a pending deletion and any still-valid ready archive without exposing another user's state.
 
 Focused backend and Angular unit tests cover the archive lifecycle, pagination, partial failure, cleanup, signed-download handling, retry/concurrency guards, and deletion state transitions.
 

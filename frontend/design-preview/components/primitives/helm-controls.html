@@ -1,0 +1,1685 @@
+<!-- @dsCard group="Components" name="Spartan Helm controls" subtitle="button · input · textarea · checkbox · radio · native select · input group · popover · autocomplete · combobox" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Components · Spartan Helm controls</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="spartan.helm-controls" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 101 106 122;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 137 143 157;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      /* Spartan semantic tokens -> Relay (mirror of frontend/src/styles.scss :root mapping) */
+      :root {
+        --h-primary: var(--primary);
+        --h-primary-fg: var(--on-fill);
+        --h-secondary: var(--surface-100);
+        --h-secondary-fg: var(--text-primary);
+        --h-muted: var(--surface-100);
+        --h-muted-fg: var(--text-secondary);
+        --h-accent: var(--accent);
+        --h-accent-fg: var(--on-fill);
+        --h-destructive: var(--danger);
+        --h-border: var(--surface-100);
+        --h-input: var(--surface-100);
+        --h-ring: var(--primary);
+        --h-popover: var(--surface-200);
+        --h-bg: var(--surface-500);
+        --h-fg: var(--text-primary);
+        --radius: 12px;
+      }
+      .demo-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: rgb(var(--text-muted));
+        min-inline-size: 64px;
+      }
+      .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .ring {
+        box-shadow: 0 0 0 3px rgb(var(--h-ring) / 0.5);
+        border-color: rgb(var(--h-ring)) !important;
+      }
+      .ring-invalid {
+        box-shadow: 0 0 0 3px rgb(var(--h-destructive) / 0.2);
+        border-color: rgb(var(--h-destructive)) !important;
+      }
+      html.dark .ring-invalid {
+        box-shadow: 0 0 0 3px rgb(var(--h-destructive) / 0.4);
+      }
+      .is-disabled {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      svg.i {
+        inline-size: 16px;
+        block-size: 16px;
+        flex: none;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      svg.i.xs {
+        inline-size: 12px;
+        block-size: 12px;
+      }
+      svg.i.sm {
+        inline-size: 14px;
+        block-size: 14px;
+      }
+      /* hlmBtn */
+      .hb {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        font: 500 14px/1 inherit;
+        cursor: pointer;
+        block-size: 32px;
+        padding-inline: 10px;
+        background-clip: padding-box;
+        transition: all 0.15s;
+        background: rgb(var(--h-primary));
+        color: rgb(var(--h-primary-fg));
+      }
+      .hb.v-outline {
+        border-color: rgb(var(--h-border));
+        background: rgb(var(--h-bg));
+        color: rgb(var(--h-fg));
+      }
+      html.dark .hb.v-outline {
+        background: rgb(var(--h-input) / 0.3);
+        border-color: rgb(var(--h-input));
+      }
+      .hb.v-outline.hover {
+        background: rgb(var(--h-muted));
+      }
+      .hb.v-secondary {
+        background: rgb(var(--h-secondary));
+        color: rgb(var(--h-secondary-fg));
+      }
+      .hb.v-secondary.hover {
+        background: rgb(var(--h-secondary) / 0.8);
+      }
+      .hb.v-ghost {
+        background: transparent;
+        color: rgb(var(--h-fg));
+      }
+      .hb.v-ghost.hover {
+        background: rgb(var(--h-muted));
+      }
+      html.dark .hb.v-ghost.hover {
+        background: rgb(var(--h-muted) / 0.5);
+      }
+      .hb.v-destructive {
+        background: rgb(var(--h-destructive) / 0.1);
+        color: rgb(var(--h-destructive));
+      }
+      html.dark .hb.v-destructive {
+        background: rgb(var(--h-destructive) / 0.2);
+      }
+      .hb.v-destructive.hover {
+        background: rgb(var(--h-destructive) / 0.2);
+      }
+      .hb.v-destructive-solid {
+        background: rgb(var(--h-destructive));
+        color: rgb(var(--h-primary-fg));
+      }
+      .hb.v-destructive-solid.hover {
+        background: rgb(var(--h-destructive) / 0.9);
+      }
+      .hb.v-link {
+        background: transparent;
+        color: rgb(var(--h-primary));
+        text-underline-offset: 4px;
+      }
+      .hb.v-link.hover {
+        text-decoration: underline;
+      }
+      .hb.v-default.hover {
+        background: rgb(var(--h-primary) / 0.8);
+      }
+      .hb.s-xs {
+        block-size: 24px;
+        padding-inline: 8px;
+        font-size: 12px;
+        gap: 4px;
+        border-radius: 10px;
+      }
+      .hb.s-sm {
+        block-size: 28px;
+        padding-inline: 10px;
+        font-size: 12.8px;
+        gap: 4px;
+        border-radius: 12px;
+      }
+      .hb.s-lg {
+        block-size: 36px;
+        padding-inline: 10px;
+      }
+      .hb.s-touch {
+        block-size: auto;
+        min-block-size: 44px;
+        padding: 10px 16px;
+        gap: 8px;
+      }
+      .hb.s-icon {
+        inline-size: 32px;
+        padding: 0;
+      }
+      .hb.s-icon-xs {
+        inline-size: 24px;
+        block-size: 24px;
+        padding: 0;
+        border-radius: 10px;
+      }
+      .hb.s-icon-sm {
+        inline-size: 28px;
+        block-size: 28px;
+        padding: 0;
+        border-radius: 12px;
+      }
+      .hb.s-icon-lg {
+        inline-size: 36px;
+        block-size: 36px;
+        padding: 0;
+      }
+      .hb.s-icon-touch {
+        inline-size: 44px;
+        block-size: 44px;
+        padding: 0;
+      }
+      /* hlmInput / hlmTextarea / native select */
+      .hi {
+        inline-size: 100%;
+        min-inline-size: 0;
+        block-size: 36px;
+        border-radius: 10px;
+        border: 1px solid rgb(var(--h-input));
+        background: transparent;
+        color: rgb(var(--h-fg));
+        padding: 4px 12px;
+        font: 400 14px/1.4 inherit;
+        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
+        outline: none;
+      }
+      html.dark .hi {
+        background: rgb(var(--h-input) / 0.3);
+      }
+      .hi::placeholder {
+        color: rgb(var(--h-muted-fg));
+      }
+      .hi:focus-visible {
+        border-color: rgb(var(--h-ring));
+        box-shadow: 0 0 0 3px rgb(var(--h-ring) / 0.5);
+      }
+      .hi[aria-invalid='true'] {
+        border-color: rgb(var(--h-destructive));
+        box-shadow: 0 0 0 3px rgb(var(--h-destructive) / 0.2);
+      }
+      .hi:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      textarea.hi {
+        block-size: auto;
+        min-block-size: 64px;
+        padding-block: 8px;
+        resize: vertical;
+      }
+      .hsel {
+        position: relative;
+        inline-size: fit-content;
+      }
+      .hsel select.hi {
+        appearance: none;
+        block-size: 32px;
+        border-radius: 12px;
+        padding-block: 4px;
+        padding-inline: 10px 32px;
+        font-size: 14px;
+      }
+      .hsel.sm select.hi {
+        block-size: 28px;
+        border-radius: 10px;
+        padding-block: 2px;
+      }
+      .hsel svg {
+        position: absolute;
+        inset-inline-end: 10px;
+        inset-block-start: 50%;
+        transform: translateY(-50%);
+        color: rgb(var(--h-muted-fg));
+        pointer-events: none;
+      }
+      .hsel.is-disabled {
+        opacity: 0.5;
+      }
+      .hsel select.hi[data-invalid] {
+        border-color: rgb(var(--h-destructive));
+        box-shadow: 0 0 0 3px rgb(var(--h-destructive) / 0.2);
+      }
+      /* checkbox / radio */
+      .hcb {
+        inline-size: 16px;
+        block-size: 16px;
+        border-radius: 4px;
+        border: 1px solid rgb(var(--h-input));
+        display: inline-grid;
+        place-items: center;
+        flex: none;
+        color: rgb(var(--h-primary-fg));
+      }
+      html.dark .hcb {
+        background: rgb(var(--h-input) / 0.3);
+      }
+      .hcb.checked,
+      html.dark .hcb.checked {
+        background: rgb(var(--h-primary));
+        border-color: rgb(var(--h-primary));
+      }
+      .hcb.invalid {
+        border-color: rgb(var(--h-destructive));
+        box-shadow: 0 0 0 3px rgb(var(--h-destructive) / 0.2);
+      }
+      .hrd {
+        inline-size: 16px;
+        block-size: 16px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--h-input));
+        flex: none;
+        display: inline-grid;
+        place-items: center;
+        color: rgb(var(--h-primary));
+        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
+      }
+      html.dark .hrd {
+        background: rgb(var(--h-input) / 0.3);
+      }
+      .hrd.checked::after {
+        content: '';
+        inline-size: 8px;
+        block-size: 8px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+      .opt {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+      }
+      .opt.invalid {
+        color: rgb(var(--h-destructive));
+      }
+      .opt.invalid .hrd {
+        border-color: rgb(var(--h-destructive));
+      }
+      /* input group */
+      .hig {
+        display: flex;
+        align-items: center;
+        inline-size: 100%;
+        min-inline-size: 0;
+        block-size: 32px;
+        border: 1px solid rgb(var(--h-input));
+        border-radius: 12px;
+        color: rgb(var(--h-fg));
+      }
+      html.dark .hig {
+        background: rgb(var(--h-input) / 0.3);
+      }
+      .hig.col {
+        flex-direction: column;
+        block-size: auto;
+        align-items: stretch;
+      }
+      .hig input,
+      .hig textarea {
+        flex: 1;
+        min-inline-size: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: 400 14px/1.4 inherit;
+        padding: 4px 6px;
+        outline: none;
+      }
+      .hig textarea {
+        resize: none;
+        padding: 8px 10px;
+        min-block-size: 64px;
+      }
+      .hig input::placeholder,
+      .hig textarea::placeholder {
+        color: rgb(var(--h-muted-fg));
+      }
+      .hig.disabled {
+        background: rgb(var(--h-input) / 0.5);
+        opacity: 0.5;
+      }
+      .addon {
+        color: rgb(var(--h-muted-fg));
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        padding-block: 6px;
+      }
+      .addon.is {
+        padding-inline-start: 8px;
+      }
+      .addon.ie {
+        padding-inline-end: 8px;
+      }
+      .addon.bs,
+      .addon.be {
+        padding-inline: 10px;
+        justify-content: flex-start;
+      }
+      .addon.bs {
+        padding-block-start: 8px;
+        border-block-end: 1px solid rgb(var(--h-border));
+        padding-block-end: 8px;
+      }
+      .addon.be {
+        padding-block-end: 8px;
+        border-block-start: 1px solid rgb(var(--h-border));
+        padding-block-start: 8px;
+      }
+      .addon .grow-end {
+        margin-inline-start: auto;
+      }
+      kbd {
+        font: 500 11px/1 inherit;
+        padding: 3px 5px;
+        border-radius: 7px;
+        background: rgb(var(--h-muted));
+        color: rgb(var(--h-muted-fg));
+      }
+      .igb {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        block-size: 24px;
+        padding-inline: 6px;
+        border-radius: 9px;
+        border: 0;
+        background: transparent;
+        color: rgb(var(--h-fg));
+        font: 500 13px/1 inherit;
+        cursor: pointer;
+      }
+      .igb.hover {
+        background: rgb(var(--h-muted));
+      }
+      .igb.icon-xs {
+        inline-size: 24px;
+        padding: 0;
+      }
+      .igb.icon-sm {
+        inline-size: 32px;
+        block-size: 32px;
+        padding: 0;
+      }
+      /* popover / listbox */
+      .pop {
+        background: rgb(var(--h-popover));
+        color: rgb(var(--h-fg));
+        border-radius: 12px;
+        font-size: 14px;
+        box-shadow:
+          0 0 0 1px rgb(var(--h-fg) / 0.1),
+          0 4px 8px rgb(var(--shadow) / 0.12);
+      }
+      .pop.content {
+        inline-size: 100%;
+        max-inline-size: 288px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .pop.list {
+        padding: 4px;
+        max-block-size: 288px;
+        overflow: hidden;
+      }
+      .pop.list .search {
+        margin: 4px 4px 0;
+      }
+      .li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 10px;
+        padding-block: 4px;
+        padding-inline: 6px 32px;
+        font-size: 14px;
+        position: relative;
+      }
+      .li.hl {
+        background: rgb(var(--h-accent));
+        color: rgb(var(--h-accent-fg));
+      }
+      .li.dis {
+        opacity: 0.5;
+      }
+      .li .check {
+        position: absolute;
+        inset-inline-end: 8px;
+      }
+      .lbl {
+        color: rgb(var(--h-muted-fg));
+        font-size: 12px;
+        padding: 6px 8px;
+      }
+      .sep {
+        block-size: 1px;
+        background: rgb(var(--h-border));
+        margin: 4px -4px;
+      }
+      .status {
+        color: rgb(var(--h-muted-fg));
+        font-size: 14px;
+        padding: 8px 10px;
+        text-align: center;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        min-block-size: 32px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--h-input));
+        padding: 4px;
+        font-size: 14px;
+        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
+      }
+      html.dark .chips {
+        background: rgb(var(--h-input) / 0.3);
+      }
+      .chips input {
+        flex: 1;
+        min-inline-size: 64px;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+      .chips input::placeholder {
+        color: rgb(var(--h-muted-fg));
+      }
+      .hchip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        block-size: 21px;
+        padding-inline: 6px 0;
+        border-radius: 8px;
+        background: rgb(var(--h-muted));
+        color: rgb(var(--h-fg));
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .hchip button {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        inline-size: 20px;
+        block-size: 20px;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        opacity: 0.6;
+        padding: 0;
+      }
+      .sub {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: rgb(var(--text-muted));
+        margin-block-start: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Spartan Helm controls</h1>
+        <p>
+          Design-sync ID <code>spartan.helm-controls</code> · every runtime surface in this area is
+          one specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <section class="specimen" data-component="components/ui/autocomplete">
+        <header>
+          <h2>Autocomplete · hlm-autocomplete</h2>
+          <code>components/ui/autocomplete</code>
+        </header>
+        <div class="body">
+          <div class="hig ring">
+            <span class="addon is"
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" /></svg></span
+            ><input role="combobox" aria-expanded="true" aria-controls="ac-list" value="Ja" /><span
+              class="addon ie"
+              ><button type="button" class="igb icon-xs" aria-label="Clear">
+                <svg class="i xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg></button
+            ></span>
+          </div>
+          <div class="pop list" id="ac-list" role="listbox">
+            <div class="lbl">Languages</div>
+            <div class="li hl" role="option" aria-selected="true">
+              Japanese <span class="muted" style="color: inherit; opacity: 0.8">日本語</span>
+            </div>
+            <div class="li" role="option">Javanese</div>
+            <div class="sep" role="separator"></div>
+            <div class="lbl">Cities</div>
+            <div class="li" role="option">Jakarta</div>
+            <div class="li dis" role="option" aria-disabled="true">Jaipur (unavailable)</div>
+          </div>
+          <p class="sub">Empty · loading status</p>
+          <div class="pop list" role="listbox" aria-label="No results">
+            <div class="status">No languages match “Jq”.</div>
+          </div>
+          <div class="pop list" role="status">
+            <div class="status"><span class="pulse">Searching…</span></div>
+          </div>
+        </div>
+        <footer>
+          Parts: input (input-group) · search · content · list · group · label · item · separator ·
+          empty · status. Item states: default · highlighted (bg-accent / accent-foreground) ·
+          disabled. States: open listbox · empty · loading.
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/button">
+        <header>
+          <h2>Button · hlmBtn</h2>
+          <code>components/ui/button</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <span class="demo-label">default</span>
+            <div class="wrap">
+              <button type="button" class="hb v-default">Send</button>
+              <button type="button" class="hb v-default hover">Hover</button>
+              <button type="button" class="hb v-default ring">Focus</button>
+              <button type="button" class="hb v-default is-disabled" disabled aria-disabled="true">
+                Disabled
+              </button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="demo-label">outline</span>
+            <div class="wrap">
+              <button type="button" class="hb v-outline">Cancel</button>
+              <button type="button" class="hb v-outline hover">Hover</button>
+              <button type="button" class="hb v-outline ring">Focus</button>
+              <button type="button" class="hb v-outline is-disabled" disabled aria-disabled="true">
+                Disabled
+              </button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="demo-label">secondary</span>
+            <div class="wrap">
+              <button type="button" class="hb v-secondary">Skip</button>
+              <button type="button" class="hb v-secondary hover">Hover</button>
+              <button type="button" class="hb v-secondary ring">Focus</button>
+              <button
+                type="button"
+                class="hb v-secondary is-disabled"
+                disabled
+                aria-disabled="true"
+              >
+                Disabled
+              </button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="demo-label">ghost</span>
+            <div class="wrap">
+              <button type="button" class="hb v-ghost">More</button>
+              <button type="button" class="hb v-ghost hover">Hover</button>
+              <button type="button" class="hb v-ghost ring">Focus</button>
+              <button type="button" class="hb v-ghost is-disabled" disabled aria-disabled="true">
+                Disabled
+              </button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="demo-label">destructive</span>
+            <div class="wrap">
+              <button type="button" class="hb v-destructive">Remove</button>
+              <button type="button" class="hb v-destructive hover">Hover</button>
+              <button type="button" class="hb v-destructive ring">Focus</button>
+              <button
+                type="button"
+                class="hb v-destructive is-disabled"
+                disabled
+                aria-disabled="true"
+              >
+                Disabled
+              </button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="demo-label">destructive-solid</span>
+            <div class="wrap">
+              <button type="button" class="hb v-destructive-solid">Delete</button>
+              <button type="button" class="hb v-destructive-solid hover">Hover</button>
+              <button type="button" class="hb v-destructive-solid ring">Focus</button>
+              <button
+                type="button"
+                class="hb v-destructive-solid is-disabled"
+                disabled
+                aria-disabled="true"
+              >
+                Disabled
+              </button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="demo-label">link</span>
+            <div class="wrap">
+              <button type="button" class="hb v-link">Learn more</button>
+              <button type="button" class="hb v-link hover">Hover</button>
+              <button type="button" class="hb v-link ring">Focus</button>
+              <button type="button" class="hb v-link is-disabled" disabled aria-disabled="true">
+                Disabled
+              </button>
+            </div>
+          </div>
+          <p class="sub">Sizes (default variant, icon inline-start)</p>
+          <div class="wrap">
+            <button type="button" class="hb v-default s-xs">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" /></svg
+              >xs
+            </button>
+            <button type="button" class="hb v-default s-sm">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" /></svg
+              >sm
+            </button>
+            <button type="button" class="hb v-default s-default">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" /></svg
+              >default
+            </button>
+            <button type="button" class="hb v-default s-lg">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" /></svg
+              >lg
+            </button>
+            <button type="button" class="hb v-default s-touch">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" /></svg
+              >touch
+            </button>
+          </div>
+          <p class="sub">Icon sizes (outline)</p>
+          <div class="wrap">
+            <button type="button" class="hb v-outline s-icon-xs" aria-label="Add (icon-xs)">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <button type="button" class="hb v-outline s-icon-sm" aria-label="Add (icon-sm)">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <button type="button" class="hb v-outline s-icon" aria-label="Add (icon)">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <button type="button" class="hb v-outline s-icon-lg" aria-label="Add (icon-lg)">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <button type="button" class="hb v-outline s-icon-touch" aria-label="Add (icon-touch)">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+          </div>
+          <p class="sub">Invalid (data-matches-spartan-invalid)</p>
+          <div class="wrap">
+            <button type="button" class="hb v-outline ring-invalid">Choose language</button>
+          </div>
+          <p class="sub">RTL / icon inline-end</p>
+          <div class="wrap">
+            <button type="button" class="hb v-default s-touch" lang="ar">
+              إرسال
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <footer>
+          Variants: default · outline · secondary · ghost · destructive · destructive-solid · link.
+          Sizes: xs · sm · default · lg · touch · icon-xs · icon-sm · icon · icon-lg · icon-touch.
+          States: default · hover · focus-visible (ring-3 ring/50) · disabled (opacity 50) ·
+          invalid. Touch sizes (min-h-11 / size-11) meet the 44px target.
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/checkbox">
+        <header>
+          <h2>Checkbox · hlm-checkbox</h2>
+          <code>components/ui/checkbox</code>
+        </header>
+        <div class="body">
+          <div class="opt">
+            <span class="hcb" role="checkbox" aria-checked="false" tabindex="0"></span>Show online
+            status
+          </div>
+          <div class="opt">
+            <span class="hcb checked" role="checkbox" aria-checked="true" tabindex="0"
+              ><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" /></svg></span
+            >Allow message requests
+          </div>
+          <div class="opt">
+            <span class="hcb checked" role="checkbox" aria-checked="mixed" tabindex="0"
+              ><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" /></svg></span
+            >All notifications (indeterminate)
+          </div>
+          <div class="opt">
+            <span class="hcb ring" role="checkbox" aria-checked="false" tabindex="0"></span
+            >Focus-visible
+          </div>
+          <div class="opt invalid" style="color: rgb(var(--h-destructive))">
+            <span
+              class="hcb invalid"
+              role="checkbox"
+              aria-checked="false"
+              aria-invalid="true"
+              tabindex="0"
+            ></span
+            >I agree to the Terms (required)
+          </div>
+          <div class="opt is-disabled">
+            <span class="hcb" role="checkbox" aria-checked="false" aria-disabled="true"></span
+            >Disabled
+          </div>
+          <div class="opt is-disabled">
+            <span class="hcb checked" role="checkbox" aria-checked="true" aria-disabled="true"
+              ><svg class="i sm" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" /></svg></span
+            >Disabled checked
+          </div>
+        </div>
+        <footer>
+          Single size (size-4, rounded 4px). States: unchecked · checked · indeterminate (renders
+          check, aria-checked=mixed) · focus-visible · invalid (border-destructive + ring) ·
+          disabled · disabled-checked.
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/combobox">
+        <header>
+          <h2>Combobox · hlm-combobox</h2>
+          <code>components/ui/combobox</code>
+        </header>
+        <div class="body">
+          <p class="sub">Single · open</p>
+          <button
+            type="button"
+            class="hb v-outline"
+            style="inline-size: 100%; justify-content: space-between"
+            aria-haspopup="listbox"
+            aria-expanded="true"
+          >
+            Spanish<svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          <div class="pop list" role="listbox" aria-label="Learning language">
+            <div class="hig search">
+              <span class="addon is"
+                ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" /></svg></span
+              ><input placeholder="Search…" />
+            </div>
+            <div class="li" role="option">English</div>
+            <div class="li hl" role="option" aria-selected="true">
+              Spanish<span class="check"
+                ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" /></svg
+              ></span>
+            </div>
+            <div class="li" role="option">Portuguese</div>
+          </div>
+          <p class="sub">Placeholder trigger</p>
+          <button
+            type="button"
+            class="hb v-outline"
+            style="inline-size: 100%; justify-content: space-between; color: rgb(var(--h-muted-fg))"
+          >
+            Select a level<svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          <p class="sub">Multiple · chips</p>
+          <div class="chips ring" role="group" aria-label="Interests">
+            <span class="hchip"
+              >Travel<button type="button" aria-label="Remove Travel">
+                <svg class="i xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg></button
+            ></span>
+            <span class="hchip"
+              >Anime<button type="button" aria-label="Remove Anime">
+                <svg class="i xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg></button
+            ></span>
+            <span class="hchip"
+              >Cooking<button type="button" aria-label="Remove Cooking">
+                <svg class="i xs" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg></button
+            ></span>
+            <input placeholder="Add interest" aria-label="Add interest" />
+          </div>
+          <div class="chips ring-invalid">
+            <input placeholder="Pick at least one topic" aria-invalid="true" />
+          </div>
+          <div class="pop list" role="listbox"><div class="status">No topics found.</div></div>
+        </div>
+        <footer>
+          Modes: single (trigger + value / placeholder) · multiple (chips + chip-input +
+          chip-remove). Parts: content · list · group · label · item (check on selected) · separator
+          · empty · status. States: open · highlighted · invalid · empty.
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/input">
+        <header>
+          <h2>Input · hlmInput</h2>
+          <code>components/ui/input</code>
+        </header>
+        <div class="body">
+          <label class="field">Display name<input class="hi" placeholder="e.g. Mariko" /></label>
+          <label class="field">Filled<input class="hi" value="Chén Wěi" /></label>
+          <label class="field"
+            >Focus-visible<input class="hi ring" value="maria@example.com"
+          /></label>
+          <label class="field invalid"
+            >Email<input
+              class="hi"
+              aria-invalid="true"
+              value="maria@"
+              aria-describedby="hi-err"
+            /><span class="error" id="hi-err">Enter a valid email address.</span></label
+          >
+          <label class="field">Disabled<input class="hi" disabled value="Locked by admin" /></label>
+          <label class="field">File<input class="hi" type="file" /></label>
+          <label class="field">RTL<input class="hi" dir="rtl" lang="ar" value="مرحبا بك" /></label>
+        </div>
+        <footer>
+          Single style (h-9, rounded-md, border-input, dark:bg-input/30). States: placeholder ·
+          filled · focus-visible · aria-invalid · disabled · file · RTL.
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/input-group">
+        <header>
+          <h2>Input group · hlm-input-group</h2>
+          <code>components/ui/input-group</code>
+        </header>
+        <div class="body">
+          <p class="sub">align inline-start + inline-end</p>
+          <div class="hig">
+            <span class="addon is"
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" /></svg></span
+            ><input placeholder="Search partners" /><span class="addon ie"><kbd>⌘K</kbd></span>
+          </div>
+          <p class="sub">text addon + button (size xs, ghost)</p>
+          <div class="hig">
+            <span class="addon is">https://</span><input value="hellotalk.app/u/mariko" /><span
+              class="addon ie"
+              ><button type="button" class="igb hover">Copy</button></span
+            >
+          </div>
+          <p class="sub">icon-xs / icon-sm buttons</p>
+          <div class="hig">
+            <span class="addon is"
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="m3 7 9 6 9-6" /></svg></span
+            ><input placeholder="Email" /><span class="addon ie"
+              ><button type="button" class="igb icon-xs" aria-label="Info">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8h.01M11 12h1v4h1" />
+                </svg></button
+              ><button type="button" class="igb icon-sm" aria-label="Clear">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg></button
+            ></span>
+          </div>
+          <p class="sub">textarea + block-end addon</p>
+          <div class="hig col">
+            <textarea placeholder="Write a moment…"></textarea
+            ><span class="addon be"
+              ><span>0 / 500</span
+              ><span class="grow-end"
+                ><button type="button" class="hb s-sm v-default">
+                  <svg class="i sm" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" /></svg
+                  >Post
+                </button></span
+              ></span
+            >
+          </div>
+          <p class="sub">block-start addon</p>
+          <div class="hig col">
+            <span class="addon bs">Correction</span><textarea>彼は昨日学校に行きました。</textarea>
+          </div>
+          <p class="sub">focus-visible · invalid · disabled</p>
+          <div class="hig ring">
+            <span class="addon is"
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" /></svg></span
+            ><input value="Lisbon" />
+          </div>
+          <div class="hig ring-invalid">
+            <span class="addon is">@</span><input value="mariko!" aria-invalid="true" />
+          </div>
+          <div class="hig disabled">
+            <span class="addon is"
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg></span
+            ><input disabled value="Region locked" />
+          </div>
+        </div>
+        <footer>
+          Addon align: inline-start · inline-end · block-start · block-end. Button sizes: xs · sm ·
+          icon-xs · icon-sm (ghost). Parts: input · textarea · text · kbd. States: focus-within ring
+          · invalid · disabled (bg-input/50, opacity 50).
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/native-select">
+        <header>
+          <h2>Native select · hlm-native-select</h2>
+          <code>components/ui/native-select</code>
+        </header>
+        <div class="body">
+          <label class="field"
+            >Native language<span class="hsel"
+              ><select class="hi">
+                <option>English</option>
+                <option>日本語</option>
+                <option>العربية</option></select
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" /></svg></span
+          ></label>
+          <label class="field"
+            >Size sm<span class="hsel sm"
+              ><select class="hi">
+                <optgroup label="Popular">
+                  <option>Spanish</option>
+                  <option>Korean</option>
+                </optgroup></select
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" /></svg></span
+          ></label>
+          <label class="field"
+            >Focus-visible<span class="hsel"
+              ><select class="hi ring">
+                <option>Japanese</option></select
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" /></svg></span
+          ></label>
+          <label class="field invalid"
+            >Invalid<span class="hsel"
+              ><select class="hi" data-invalid="true" aria-invalid="true">
+                <option>Select a language</option></select
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" /></svg></span
+            ><span class="error">Required</span></label
+          >
+          <label class="field"
+            >Disabled<span class="hsel is-disabled"
+              ><select class="hi" disabled>
+                <option>Locked</option></select
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" /></svg></span
+          ></label>
+          <label class="field" dir="rtl" lang="ar"
+            >اللغة<span class="hsel"
+              ><select class="hi">
+                <option>العربية</option></select
+              ><svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" /></svg></span
+          ></label>
+        </div>
+        <footer>
+          Sizes: default (h-8, rounded-lg) · sm (h-7). Composition: option · opt-group. States:
+          default · focus-visible · invalid · disabled · RTL (chevron pinned to inline-end).
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/popover">
+        <header>
+          <h2>Popover · hlm-popover</h2>
+          <code>components/ui/popover</code>
+        </header>
+        <div class="body">
+          <div class="wrap">
+            <button
+              type="button"
+              class="hb v-outline"
+              aria-expanded="true"
+              aria-haspopup="dialog"
+              style="background: rgb(var(--h-muted))"
+            >
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 8h.01M11 12h1v4h1" /></svg
+              >Streak rules
+            </button>
+          </div>
+          <div class="pop content" role="dialog" aria-labelledby="pp-t">
+            <div class="stack" style="gap: 2px">
+              <strong id="pp-t" style="font-weight: 500">Keep your streak</strong
+              ><span style="color: rgb(var(--h-muted-fg))"
+                >Send one message or finish one review a day. Streak freezes protect one missed
+                day.</span
+              >
+            </div>
+            <div class="wrap">
+              <button type="button" class="hb v-default s-sm">Got it</button
+              ><button type="button" class="hb v-ghost s-sm">Learn more</button>
+            </div>
+          </div>
+          <p class="sub">With form (side=top)</p>
+          <div class="pop content" role="dialog" aria-label="Set reminder">
+            <label class="field">Reminder time<input class="hi" value="20:30" /></label>
+          </div>
+        </div>
+        <footer>
+          Content: bg-popover, rounded-lg, p-2.5, w-72, ring-1 foreground/10, shadow-md;
+          zoom/fade-in 100ms (disabled under reduced-motion). Parts: trigger (aria-expanded → muted)
+          · header · title · description. Sides: bottom · top.
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/radio-group">
+        <header>
+          <h2>Radio group · hlm-radio-group</h2>
+          <code>components/ui/radio-group</code>
+        </header>
+        <div class="body">
+          <div role="radiogroup" aria-label="Who can call me" class="stack">
+            <div class="opt">
+              <span class="hrd checked" role="radio" aria-checked="true" tabindex="0"></span
+              >Everyone
+            </div>
+            <div class="opt">
+              <span class="hrd" role="radio" aria-checked="false" tabindex="-1"></span>Partners only
+            </div>
+            <div class="opt">
+              <span class="hrd ring" role="radio" aria-checked="false" tabindex="-1"></span>Nobody
+              (focus-visible)
+            </div>
+            <div class="opt is-disabled">
+              <span class="hrd" role="radio" aria-checked="false" aria-disabled="true"></span>VIP
+              only (disabled)
+            </div>
+          </div>
+          <p class="sub">Invalid group</p>
+          <div role="radiogroup" aria-label="Proficiency" aria-invalid="true" class="stack">
+            <div class="opt invalid">
+              <span class="hrd" role="radio" aria-checked="false"></span>Beginner
+            </div>
+            <div class="opt invalid">
+              <span class="hrd" role="radio" aria-checked="false"></span>Intermediate
+            </div>
+            <span class="field"><span class="error">Choose a level to continue.</span></span>
+          </div>
+        </div>
+        <footer>
+          Indicator: size-4 rounded-full border-input, text-primary dot. States: checked · unchecked
+          · focus-visible (ring-[3px]) · disabled · group invalid (text-destructive).
+        </footer>
+      </section>
+      <section class="specimen" data-component="components/ui/textarea">
+        <header>
+          <h2>Textarea · hlmTextarea</h2>
+          <code>components/ui/textarea</code>
+        </header>
+        <div class="body">
+          <label class="field"
+            >Bio<textarea class="hi" placeholder="Tell partners about yourself"></textarea>
+          </label>
+          <label class="field"
+            >Focus-visible<textarea class="hi ring">
+I'm learning Japanese and can help with Spanish.</textarea>
+          </label>
+          <label class="field invalid"
+            >Report reason<textarea class="hi" aria-invalid="true"></textarea
+            ><span class="error">Please describe what happened.</span></label
+          >
+          <label class="field"
+            >Disabled<textarea class="hi" disabled>Read-only note</textarea>
+          </label>
+          <label class="field"
+            >RTL<textarea class="hi" dir="rtl" lang="ar">أتعلم اللغة اليابانية</textarea>
+          </label>
+        </div>
+        <footer>
+          Single style (field-sizing-content, min-h-16). States: placeholder · focus-visible ·
+          aria-invalid · disabled · RTL.
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>

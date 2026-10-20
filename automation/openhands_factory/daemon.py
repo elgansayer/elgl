@@ -6,13 +6,14 @@ import logging
 import signal
 import time
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from threading import BoundedSemaphore, Semaphore, Thread
+from threading import Semaphore, Thread
 
 from filelock import FileLock, Timeout
 
@@ -31,15 +32,18 @@ from openhands_factory.generation import (
 )
 from openhands_factory.host_diagnostics import gather_diagnostics
 from openhands_factory.issue_admission import IssueAdmissionGate
+from openhands_factory.jobs import RECOVERABLE_ACTIVE_STATES
+from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
-from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
 MAX_ACTIONABLE_FAILURE_FINGERPRINTS = 5
+MAX_WATCHDOG_RECOVERED_TASK_IDS = 20
+MAINTENANCE_CYCLE_ID = "0"  # Reserved: GitHub issue identifiers are strictly positive.
 
 
 def provider_status_snapshot(
@@ -81,7 +85,35 @@ def is_review_lane_job(job: Job) -> bool:
 def is_new_github_issue(job: Job) -> bool:
     """Return whether the job is entering the Factory from issue discovery."""
 
-    return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
+    return (
+        job.state is JobState.DISCOVERED
+        and job.task.source == "github-issue"
+        and not is_maintenance_job(job)
+    )
+
+
+def is_maintenance_job(job: Job) -> bool:
+    return job.task.source == "github-issue" and MAINTENANCE_TAG in job.task.triage_tags
+
+
+def maintenance_selection(
+    jobs: dict[str, Job], excluded: set[str], now: datetime, limit: int
+) -> tuple[list[Job], dict[str, Job]]:
+    ordinary = {identifier: job for identifier, job in jobs.items() if not is_maintenance_job(job)}
+    if limit <= 0 or any(
+        is_maintenance_job(job) and identifier in excluded for identifier, job in jobs.items()
+    ):
+        return [], ordinary
+    ready = [
+        job
+        for identifier, job in jobs.items()
+        if is_maintenance_job(job)
+        and identifier not in excluded
+        and job.state not in {JobState.DONE, JobState.QUARANTINED}
+        and (job.next_attempt_at is None or job.next_attempt_at <= now)
+    ]
+    ready.sort(key=lambda job: (job.task.priority, job.updated_at, int(job.task.identifier)))
+    return ready[:1], ordinary
 
 
 # Lower value = closer to merged. Within a review-lane priority tier, jobs
@@ -97,17 +129,6 @@ _REVIEW_STATE_ORDER = {
     JobState.REPAIRING: 5,
     JobState.PR_DRAFT: 6,
 }
-
-
-def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
-    """Prioritise merge proximity while rotating equally eligible PRs fairly."""
-
-    return (
-        job.task.priority,
-        _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
-        job.updated_at,
-        int(job.task.identifier),
-    )
 
 
 def select_issue_admitted(
@@ -143,6 +164,21 @@ def select_batch(
         return []
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
+    maintenance, jobs = maintenance_selection(jobs, excluded, current, limit)
+    if maintenance:
+        return [
+            *maintenance,
+            *select_batch(
+                jobs,
+                limit - 1,
+                excluded,
+                current,
+                new_issue_slots,
+                review_first,
+                review_lane_max_concurrent,
+                review_only,
+            ),
+        ]
     candidates = [
         job
         for job in jobs.values()
@@ -160,7 +196,11 @@ def select_batch(
     remaining = [item for item in candidates if not is_review_lane_job(item)]
     review_ready = sorted(
         (item for item in candidates if is_review_lane_job(item)),
-        key=_review_sort_key,
+        key=lambda item: (
+            item.task.priority,
+            _REVIEW_STATE_ORDER.get(item.state, len(_REVIEW_STATE_ORDER)),
+            int(item.task.identifier),
+        ),
     )[:review_capacity]
 
     if not review_ready:
@@ -186,15 +226,21 @@ def selection_diagnostics(
     excluded_task_ids: set[str],
     now: datetime,
     review_lane_max_concurrent: int,
+    review_only: bool = False,
 ) -> dict[str, object]:
     """Expose bounded scheduler inputs without task bodies or credentials."""
 
+    maintenance, ordinary = maintenance_selection(jobs, excluded_task_ids, now, 1)
     candidates = [
-        job
-        for job in jobs.values()
-        if job.task.identifier not in excluded_task_ids
-        and job.state.value not in {"done", "quarantined"}
-        and (job.next_attempt_at is None or job.next_attempt_at <= now)
+        *maintenance,
+        *[
+            job
+            for job in ordinary.values()
+            if job.task.identifier not in excluded_task_ids
+            and job.state.value not in {"done", "quarantined"}
+            and (job.next_attempt_at is None or job.next_attempt_at <= now)
+            and (not review_only or is_review_lane_job(job))
+        ],
     ]
     active_review_count = sum(
         1
@@ -218,6 +264,21 @@ def selection_diagnostics(
     }
 
 
+def should_use_failsafe(
+    selected_jobs: list[Job],
+    diagnostic: Mapping[str, object],
+    *,
+    review_only: bool,
+) -> bool:
+    """Return whether an empty primary selection indicates a real scheduler stall."""
+
+    candidate_count = diagnostic.get("candidate_count")
+    review_capacity = diagnostic.get("review_capacity")
+    if not isinstance(candidate_count, int) or candidate_count <= 0 or selected_jobs:
+        return False
+    return not (review_only and isinstance(review_capacity, int) and review_capacity <= 0)
+
+
 def select_batch_failsafe(
     jobs: dict[str, Job],
     limit: int,
@@ -225,15 +286,19 @@ def select_batch_failsafe(
     now: datetime,
     new_issue_slots: int | None,
     review_lane_max_concurrent: int,
+    review_only: bool = False,
 ) -> list[Job]:
     """Guarantee progress if the primary selector violates its runnable invariant."""
 
+    maintenance, jobs = maintenance_selection(jobs, excluded_task_ids, now, limit)
+    limit = max(0, limit - len(maintenance))
     eligible = [
         job
         for job in jobs.values()
         if job.task.identifier not in excluded_task_ids
         and job.state not in {JobState.DONE, JobState.QUARANTINED}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
+        and (not review_only or is_review_lane_job(job))
     ]
     active_reviews = sum(
         1
@@ -247,7 +312,14 @@ def select_batch_failsafe(
     )[: min(limit, review_slots)]
     remaining = [job for job in eligible if not is_review_lane_job(job)]
     remaining.sort(key=lambda job: (job.task.priority, int(job.task.identifier)))
+    issue_candidate_available = any(
+        not is_new_github_issue(job) or new_issue_slots is None or new_issue_slots > 0
+        for job in remaining
+    )
+    if limit > 1 and issue_candidate_available:
+        reviews = reviews[: limit - 1]
     return [
+        *maintenance,
         *reviews,
         *select_issue_admitted(remaining, limit - len(reviews), new_issue_slots),
     ]
@@ -256,25 +328,30 @@ def select_batch_failsafe(
 def refresh_jobs(
     pipeline: FactoryPipeline,
     protected_task_ids: set[str],
-    _started_at: float,
+    now: float,
     cooldown_seconds: int,
+    *,
+    storage_pressure: bool = False,
 ) -> tuple[dict[str, Job], float]:
     """Refresh GitHub work without turning a control-plane outage into a crash."""
 
     try:
-        jobs = pipeline.refresh(protected_task_ids)
-        return jobs, time.monotonic() + cooldown_seconds
+        if storage_pressure:
+            jobs = pipeline.refresh(protected_task_ids, storage_pressure=True)
+        else:
+            jobs = pipeline.refresh(protected_task_ids)
+        return jobs, now + cooldown_seconds
     except FactoryError as error:
         LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
-        return pipeline.jobs.load(), time.monotonic() + max(cooldown_seconds, 30)
+        return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
 
 
-def await_future_with_heartbeat[T](
-    future: Future[T],
+def await_refresh(
+    future: Future[tuple[dict[str, Job], float]],
     publish_heartbeat: Callable[[], None],
     heartbeat_seconds: float = 10.0,
-) -> T:
-    """Keep daemon liveness current while a control-plane operation blocks."""
+) -> tuple[dict[str, Job], float]:
+    """Keep daemon liveness current while control-plane reconciliation blocks."""
 
     while True:
         try:
@@ -285,30 +362,6 @@ def await_future_with_heartbeat[T](
                 # misreport that failure as an ordinary heartbeat interval.
                 return future.result()
             publish_heartbeat()
-
-
-def await_refresh(
-    future: Future[tuple[dict[str, Job], float]],
-    publish_heartbeat: Callable[[], None],
-    heartbeat_seconds: float = 10.0,
-) -> tuple[dict[str, Job], float]:
-    """Keep compatibility for callers awaiting GitHub reconciliation."""
-
-    return await_future_with_heartbeat(future, publish_heartbeat, heartbeat_seconds)
-
-
-def consume_completed_architect_future(
-    future: Future[None] | None,
-) -> tuple[Future[None] | None, Exception | None]:
-    """Consume one completed architect result exactly once."""
-
-    if future is None or not future.done():
-        return future, None
-    try:
-        future.result()
-    except Exception as error:
-        return None, error
-    return None, None
 
 
 def stall_alert_decision(
@@ -412,28 +465,86 @@ def queue_snapshot(
     }
 
 
+@dataclass
+class WatchdogRecoveries:
+    """Count the abandoned attempts this daemon generation actually recovered.
+
+    Kept apart from queue age on purpose. Work can wait for hours without anything
+    having crashed, and a ``last_error`` left behind by an earlier recovery is history,
+    not proof that the watchdog is recovering anything now. Only a real recovery moves
+    this counter.
+    """
+
+    total: int = 0
+    last_recovered_at: datetime | None = None
+    last_recovered_task_ids: list[str] = field(default_factory=list)
+
+    def record(self, task_ids: Iterable[str], recovered_at: datetime) -> None:
+        recovered = list(task_ids)
+        if not recovered:
+            return
+        self.total += len(recovered)
+        self.last_recovered_at = recovered_at
+        self.last_recovered_task_ids = recovered[:MAX_WATCHDOG_RECOVERED_TASK_IDS]
+
+
+def _queued_since(job: Job) -> datetime:
+    """Return when runnable work began waiting: its last update or its elapsed deadline."""
+
+    if job.next_attempt_at is None:
+        return job.updated_at
+    return max(job.updated_at, job.next_attempt_at)
+
+
+def watchdog_snapshot(
+    jobs: Mapping[str, Job],
+    active_task_ids: set[str],
+    recoveries: WatchdogRecoveries,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    """Report actual watchdog recoveries separately from how long work has queued.
+
+    ``queued_*`` covers mid-pipeline work that is runnable but has no attempt in
+    flight, the population an age-only watchdog once mistook for abandoned workers.
+    Its age says how long the work has waited for a worker, never that anything crashed.
+    """
+
+    current = now or datetime.now(UTC)
+    queued_ages = [
+        max(0.0, (current - _queued_since(job)).total_seconds())
+        for job in jobs.values()
+        if job.state in RECOVERABLE_ACTIVE_STATES
+        and job.task.identifier not in active_task_ids
+        and job.attempt_started_at is None
+        and (job.next_attempt_at is None or job.next_attempt_at <= current)
+    ]
+    return {
+        "recovered_total": recoveries.total,
+        "last_recovered_at": (
+            recoveries.last_recovered_at.isoformat()
+            if recoveries.last_recovered_at is not None
+            else None
+        ),
+        "last_recovered_task_ids": list(recoveries.last_recovered_task_ids),
+        "queued_count": len(queued_ages),
+        "oldest_queued_age_seconds": int(max(queued_ages, default=0.0)),
+    }
+
+
 class FactoryDaemon:
     def __init__(self, config: FactoryConfig) -> None:
         self.config = config
         self.stopping = False
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
-        # Two lightweight agent sessions may run together. An exclusive frontend
-        # verification drains both permits so an agent-triggered Angular build
-        # cannot overlap the authoritative build, test, lint, or browser gate.
-        self.host_resource_slots = BoundedSemaphore(2)
-        self.verification_slots = Semaphore(1)
-        self.pipeline = FactoryPipeline(
-            config,
-            verification_slots=self.verification_slots,
-            host_resource_slots=self.host_resource_slots,
-            exclusive_host_permits=2,
-        )
+        self.pipeline = FactoryPipeline(config)
         self.issue_admission = self._issue_admission_gate(config)
+        self.verification_slots = Semaphore(1)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
         self.stall_since: datetime | None = None
         self.stall_investigation_dispatched = False
+        self.watchdog_recoveries = WatchdogRecoveries()
         self.scheduler_snapshot: dict[str, object] = {
             "max_parallel_jobs": config.max_parallel_jobs,
             "capacity": config.max_parallel_jobs,
@@ -511,7 +622,7 @@ class FactoryDaemon:
         diagnostics = gather_diagnostics(self.config.state_dir)
         Thread(
             target=self.pipeline.run_stall_investigation,
-            args=(reason, diagnostics),
+            args=(reason, diagnostics, not self.storage_blocked),
             daemon=True,
             name="factory-stall-investigation",
         ).start()
@@ -532,7 +643,11 @@ class FactoryDaemon:
         # token used by JobStore/TaskStore to stop stale processes writing state.
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
-        self.pipeline = FactoryPipeline(self.config)
+        self.pipeline = FactoryPipeline(
+            self.config,
+            verification_slots=self.verification_slots,
+            host_resource_slots=self.host_resource_slots,
+        )
         self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",
@@ -621,16 +736,6 @@ class FactoryDaemon:
                 # an earlier version of the pruning fix did) deadlocks -
                 # once blocked, nothing ever runs to notice or unblock it.
                 storage_ready = self._storage_ready()
-                paused = self.paused()
-                self.scheduler_snapshot.update(
-                    {
-                        "max_parallel_jobs": self.config.max_parallel_jobs,
-                        "capacity": capacity,
-                        "paused": paused,
-                        "storage_ready": storage_ready,
-                        "review_lane_max_concurrent": (self.config.review_lane_max_concurrent),
-                    }
-                )
                 prune_now = time.monotonic()
                 if prune_now >= next_prune_at:
                     next_prune_at = prune_now + self.config.cooldown_seconds
@@ -645,14 +750,30 @@ class FactoryDaemon:
                             self.config.recovery_retention_hours,
                         )
                     self._check_stall()
-                if not paused and storage_ready and capacity > 0:
+                if not self.paused() and not storage_ready:
                     now = time.monotonic()
                     if now >= next_refresh_at:
-                        health_future = control.submit(self.pipeline.router.health_snapshot)
-                        health = await_future_with_heartbeat(
-                            health_future,
+                        pressure_refresh_seconds = max(self.config.cooldown_seconds, 900)
+                        refresh_future = control.submit(
+                            refresh_jobs,
+                            self.pipeline,
+                            active_task_ids,
+                            now,
+                            pressure_refresh_seconds,
+                            storage_pressure=True,
+                        )
+                        _, next_refresh_at = await_refresh(
+                            refresh_future,
                             lambda: self._write_daemon_state("running", active, active_started_at),
                         )
+                        LOGGER.warning(
+                            "Storage reserve blocked scheduling; ran pressure-safe "
+                            "control-plane reconciliation without starting providers"
+                        )
+                if not self.paused() and storage_ready and capacity > 0:
+                    now = time.monotonic()
+                    if now >= next_refresh_at:
+                        health = self.pipeline.router.health_snapshot()
                         self.provider_health = dict(health)
                         LOGGER.info(
                             "Factory provider health: %s",
@@ -699,6 +820,7 @@ class FactoryDaemon:
                                 task_id,
                             )
                         if recovered:
+                            self.watchdog_recoveries.record(recovered, datetime.now(UTC))
                             jobs = self.pipeline.jobs.load()
                     else:
                         jobs = self.pipeline.jobs.load()
@@ -706,9 +828,36 @@ class FactoryDaemon:
                     # Schedule only from that committed view, not from an intermediate
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
+                    if self.config.maintenance_enabled:
+                        maintenance_controller = MaintenanceController(self.pipeline)
+                        maintenance_controller.apply_recoveries(active_task_ids)
+                        jobs = self.pipeline.jobs.load()
+                        if (
+                            MAINTENANCE_CYCLE_ID not in active_task_ids
+                            and capacity > 0
+                            and available_host_slots > 0
+                            and maintenance_controller.due()
+                        ):
+                            maintenance_worker = FactoryPipeline(
+                                self.config,
+                                verification_slots=self.verification_slots,
+                                host_resource_slots=self.host_resource_slots,
+                                agent_router=self.pipeline.router,
+                            )
+                            future = workers.submit(maintenance_worker.run_maintenance_cycle)
+                            active[future] = MAINTENANCE_CYCLE_ID
+                            active_started_at[MAINTENANCE_CYCLE_ID] = datetime.now(UTC).isoformat()
+                            active_task_ids.add(MAINTENANCE_CYCLE_ID)
+                            capacity = max(0, capacity - 1)
+                            LOGGER.info("Scheduled bounded Factory maintenance cycle")
+                    jobs = host_admitted_jobs(jobs, available_host_slots)
+                    # A refresh recalculates PR WIP from GitHub. Use that current
+                    # result for this same scheduling pass instead of admitting one
+                    # extra issue from the empty startup snapshot.
+                    wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                     scheduler_time = datetime.now(UTC)
                     new_issue_slots = self.issue_admission.available_slots(scheduler_time)
-                    selected_jobs = select_batch(
+                    for job in select_batch(
                         jobs,
                         capacity,
                         active_task_ids,
@@ -716,55 +865,7 @@ class FactoryDaemon:
                         new_issue_slots=new_issue_slots,
                         review_first=self.config.review_lane_first,
                         review_lane_max_concurrent=self.config.review_lane_max_concurrent,
-                    )
-                    diagnostic = selection_diagnostics(
-                        jobs,
-                        active_task_ids,
-                        scheduler_time,
-                        self.config.review_lane_max_concurrent,
-                    )
-                    if not selected_jobs and diagnostic["candidate_count"]:
-                        LOGGER.error(
-                            "Primary scheduler returned no jobs for a runnable queue; "
-                            "using deterministic failsafe selection"
-                        )
-                        selected_jobs = select_batch_failsafe(
-                            jobs,
-                            capacity,
-                            active_task_ids,
-                            scheduler_time,
-                            new_issue_slots,
-                            self.config.review_lane_max_concurrent,
-                        )
-                    self.scheduler_snapshot.update(
-                        {
-                            "last_selected_jobs": [job.task.identifier for job in selected_jobs],
-                            "last_selection_at": scheduler_time.isoformat(),
-                            "new_issue_slots": new_issue_slots,
-                            "selection_input_count": sum(
-                                1
-                                for job in jobs.values()
-                                if job.state not in {JobState.DONE, JobState.QUARANTINED}
-                            ),
-                            "selection_input": [
-                                {
-                                    "task_id": job.task.identifier,
-                                    "state": job.state.value,
-                                    "source": job.task.source,
-                                    "pull_request": job.pull_request,
-                                    "next_attempt_at": (
-                                        job.next_attempt_at.isoformat()
-                                        if job.next_attempt_at is not None
-                                        else None
-                                    ),
-                                }
-                                for job in jobs.values()
-                                if job.state not in {JobState.DONE, JobState.QUARANTINED}
-                            ][:25],
-                            "selection_diagnostics": diagnostic,
-                        }
-                    )
-                    for job in selected_jobs:
+                    ):
                         self._assert_owner()
                         if is_new_github_issue(job) and not self.issue_admission.admit(
                             job.task.identifier, scheduler_time
@@ -777,8 +878,6 @@ class FactoryDaemon:
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
-                            host_resource_slots=self.host_resource_slots,
-                            exclusive_host_permits=2,
                             agent_router=self.pipeline.router,
                         )
                         review_priority = is_review_lane_job(job)
@@ -804,37 +903,28 @@ class FactoryDaemon:
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
                         LOGGER.info("Scheduled task %s", job.task.identifier)
-                if not paused and storage_ready:
-                    architect_future, architect_error = consume_completed_architect_future(
-                        architect_future
-                    )
-                    if architect_error is not None:
-                        if isinstance(architect_error, ProviderCapacityUnavailable):
+                if (
+                    not self.paused()
+                    and storage_ready
+                    and (architect_future is None or architect_future.done())
+                ):
+                    if architect_future is not None:
+                        try:
+                            architect_future.result()
+                        except ProviderCapacityUnavailable as error:
                             retry = (
-                                architect_error.retry_after_seconds
-                                or self.config.provider_cooldown_seconds
+                                error.retry_after_seconds or self.config.provider_cooldown_seconds
                             )
                             architect_retry_not_before = datetime.now(UTC) + timedelta(
                                 seconds=max(retry, 1)
                             )
-                            LOGGER.warning("Architect cycle deferred: %s", architect_error)
-                        else:
-                            LOGGER.error(
-                                "Architect cycle crashed",
-                                exc_info=(
-                                    type(architect_error),
-                                    architect_error,
-                                    architect_error.__traceback__,
-                                ),
-                            )
+                            LOGGER.warning("Architect cycle deferred: %s", error)
+                        except Exception:
+                            LOGGER.exception("Architect cycle crashed")
                     if (
-                        architect_future is None
-                        and (
-                            architect_retry_not_before is None
-                            or datetime.now(UTC) >= architect_retry_not_before
-                        )
-                        and self.pipeline.architect_due()
-                    ):
+                        architect_retry_not_before is None
+                        or datetime.now(UTC) >= architect_retry_not_before
+                    ) and self.pipeline.architect_due():
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(
@@ -875,9 +965,9 @@ class FactoryDaemon:
                 "storage_blocked": self.storage_blocked,
                 "active_jobs": sorted(active_task_ids, key=int),
                 "active_started_at": active_started_at or {},
-                "scheduler": getattr(self, "scheduler_snapshot", {}),
                 "issue_admission": self.issue_admission.snapshot(),
                 "queue": queue_snapshot(jobs, active_task_ids),
+                "watchdog": watchdog_snapshot(jobs, active_task_ids, self.watchdog_recoveries),
                 "providers": provider_status_snapshot(self.provider_health),
             },
         )

@@ -60,24 +60,25 @@ describe('ProfileVisitsService', () => {
 
   describe('getVisitCount', () => {
     it('should return the correct visit count for a user', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { visit_count: 5 },
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        count: 5,
         error: null,
       });
 
       const result = await service.getVisitCount('user-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
-        'count(*) as visit_count',
-      );
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith('id', {
+        count: 'exact',
+        head: true,
+      });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('viewed_id', 'user-1');
       expect(result).toEqual(5);
     });
 
     it('should return 0 if no visits are found', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        count: 0,
         error: null,
       });
 
@@ -87,8 +88,8 @@ describe('ProfileVisitsService', () => {
     });
 
     it('should throw an error if the query fails', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        count: null,
         error: { message: 'DB query error' },
       });
 

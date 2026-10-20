@@ -254,32 +254,28 @@ async function handleRoute(req, res) {
   }
 
   // Serve static - normalise path to prevent directory traversal
-  const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
-  const filePath = path.join(PUBLIC_DIR, safePath === '/' ? 'index.html' : safePath);
-  serveStatic(res, filePath);
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch (err) {
+    return sendJson(res, 400, { error: 'Bad request' });
+  }
+
+  // Strip leading slashes to prevent absolute path resolution
+  const normalizedPath = decodedPath.replace(/^[\/\\]+/, '');
+  const targetPath = path.resolve(PUBLIC_DIR, normalizedPath === '' ? 'index.html' : normalizedPath);
+
+  // Ensure the resolved path strictly starts with PUBLIC_DIR
+  if (!targetPath.startsWith(PUBLIC_DIR + path.sep) && targetPath !== PUBLIC_DIR) {
+    return sendJson(res, 403, { error: 'Forbidden' });
+  }
+
+  serveStatic(res, targetPath);
 }
 
 // ---- Server ----
 const server = createServer(async (req, res) => {
   try {
-    const url = new URL(req.url, `http://localhost`);
-    if (url.pathname !== '/health') {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Basic ')) {
-        res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
-        return res.end('Unauthorized');
-      }
-
-      const b64 = authHeader.substring(6);
-      const decoded = Buffer.from(b64, 'base64').toString('utf8');
-      const [username, password] = decoded.split(':', 2);
-
-      if (username !== DASHBOARD_USER || password !== DASHBOARD_PASSWORD) {
-        res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
-        return res.end('Unauthorized');
-      }
-    }
-
     await handleRoute(req, res);
   } catch (err) {
     console.error('Request error:', err);

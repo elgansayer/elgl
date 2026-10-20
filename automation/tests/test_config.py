@@ -6,7 +6,7 @@ import pytest
 from openhands_factory import cli
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.cli import _config
-from openhands_factory.config import AgentsConfig, FactoryConfig
+from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
 RETIRED_SYSTEMD_UNITS = {
@@ -421,16 +421,9 @@ def test_default_repository_is_production_clone() -> None:
     config = FactoryConfig.from_environment(environment())
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
-    assert config.recovery_retention_hours == 72
-    assert config.stall_alert_minutes == 20
     assert config.max_parallel_jobs == 5
-    assert config.review_lane_max_concurrent == 2
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
-    assert config.repository_profile == "hellotalk"
-    assert config.prompt_dir == config.repository / "automation" / "prompts"
-    assert config.system_prompt_path == config.prompt_dir / "system.md"
-    assert config.provider_capacity_dir == config.state_dir
     assert config.require_trusted_intake is False
     assert config.trusted_github_actors == frozenset({"elgansayer"})
     assert config.control_github_actors == frozenset({"elgansayer"})
@@ -438,32 +431,6 @@ def test_default_repository_is_production_clone() -> None:
     assert config.agents.providers["openhands"].enabled is True
     assert config.agents.providers["claude"].enabled is False
     assert config.agents.routing.implementation[0] == "claude"
-
-
-def test_repository_profile_paths_and_shared_capacity_are_configurable(tmp_path: Path) -> None:
-    repository = tmp_path / "workout-agent"
-    prompt_dir = tmp_path / "trusted-prompts"
-    configured = FactoryConfig.from_environment(
-        environment(
-            FACTORY_REPOSITORY=str(repository),
-            FACTORY_STATE_DIR=str(tmp_path / "state"),
-            FACTORY_REPOSITORY_PROFILE="workout-agent",
-            FACTORY_PROMPT_DIR=str(prompt_dir),
-            FACTORY_SYSTEM_PROMPT_PATH=str(prompt_dir / "workout-agent-system.md"),
-            FACTORY_PROVIDER_CAPACITY_DIR=str(tmp_path / "shared"),
-            GITHUB_REPOSITORY="elgansayer/workout-agent",
-        )
-    )
-
-    assert configured.repository_profile == "workout-agent"
-    assert configured.prompt_dir == prompt_dir
-    assert configured.system_prompt_path == prompt_dir / "workout-agent-system.md"
-    assert configured.provider_capacity_dir == tmp_path / "shared"
-
-
-def test_unknown_repository_profile_is_rejected() -> None:
-    with pytest.raises(ConfigurationError, match="repository_profile"):
-        FactoryConfig.from_environment(environment(FACTORY_REPOSITORY_PROFILE="unknown"))
 
 
 def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
@@ -516,8 +483,7 @@ def test_production_agent_configuration_loads() -> None:
 
     assert factory_config.agents.routing_enabled
     assert factory_config.agents.providers["claude"].enabled
-    assert factory_config.agents.providers["claude"].model == "sonnet"
-    assert factory_config.agents.providers["claude"].phase_models["general_action"] == "haiku"
+    assert factory_config.agents.providers["claude"].model == "fable"
     assert factory_config.agents.providers["claude"].credential_paths == [
         ".claude",
         ".claude.json",
@@ -561,26 +527,6 @@ def test_production_agent_configuration_loads() -> None:
         "claude",
         "pi",
     ]
-
-
-def test_legacy_fable_configuration_migrates_to_subscription_backed_models() -> None:
-    agents = AgentsConfig.model_validate(
-        {
-            "providers": {
-                "claude": {
-                    "enabled": True,
-                    "model": "fable",
-                    "phase_models": {"implementation": "sonnet", "general_action": "fable"},
-                }
-            }
-        }
-    )
-
-    assert agents.providers["claude"].model == "sonnet"
-    assert agents.providers["claude"].phase_models == {
-        "implementation": "sonnet",
-        "general_action": "haiku",
-    }
 
 
 @pytest.mark.parametrize(
@@ -788,13 +734,6 @@ def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> Non
     assert "FACTORY_REQUIRE_READY_LABEL=true" in profile
     assert "FACTORY_PROVIDER_CAPACITY_DIR=/var/lib/repo-factory/shared" in profile
     assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
-
-
-def test_hellotalk_instance_uses_two_review_lanes() -> None:
-    root = Path(__file__).parents[2]
-    profile = (root / "config/factory/instances/hellotalk.env").read_text(encoding="utf-8")
-
-    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=2" in profile
 
 
 def test_instance_installer_preserves_legacy_rollback_path() -> None:
