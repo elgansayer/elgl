@@ -183,12 +183,15 @@
 
 - Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448).
 
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling).
+
   - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
   - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
   - Add micro-interactions (hover effects) and unread notification badges.
   - Extract Communities list and creation form into separate components for scalability.
   - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
 - Dedicated Groups & Scheduled Events System.
+
 
 
 
@@ -536,6 +539,8 @@
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
+- Implement virtual scrolling for data-heavy chat and reading views to prevent DOM bloat and UI lag.
+
 - Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag.
 
 - Ensure Performance and Scalability for Data-Heavy Views
@@ -592,6 +597,7 @@ This file is a summary. The complete acceptance criteria and source references, 
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
+
 
 
 
