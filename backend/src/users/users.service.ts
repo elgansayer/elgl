@@ -82,38 +82,34 @@ export class UsersService {
 
     const profile = response.data as UserProfile;
 
-    // Fetch related profile data concurrently to improve performance
-    const [scoreRes, fcRes, fngRes, xpTotal] = await Promise.all([
-      this.correctorScoreService
-        ? this.correctorScoreService.getCorrectorScore(userId)
-        : Promise.resolve({ averageScore: 0 }),
-      (async () => {
-        try {
-          return await supabase
-            .from('user_follows')
-            .select('*', { count: 'exact', head: true })
-            .eq('following_id', userId);
-        } catch {
-          return { count: 0 };
-        }
-      })(),
-      (async () => {
-        try {
-          return await supabase
-            .from('user_follows')
-            .select('*', { count: 'exact', head: true })
-            .eq('follower_id', userId);
-        } catch {
-          return { count: 0 };
-        }
-      })(),
-      this.xpService.getTotalXp(userId),
-    ]);
+    // Attach corrector score if available
+    let correctorScore = 0;
+    if (this.correctorScoreService) {
+      const score = await this.correctorScoreService.getCorrectorScore(userId);
+      correctorScore = score.averageScore ?? 0;
+    }
+    profile.corrector_score = correctorScore;
 
-    profile.corrector_score = scoreRes?.averageScore ?? 0;
-    profile.followers_count = fcRes?.count ?? 0;
-    profile.following_count = fngRes?.count ?? 0;
-    profile.xp_total = xpTotal;
+    // Attach follower / following counts
+    let followersCount = 0;
+    let followingCount = 0;
+    try {
+      const { count: fc } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', userId);
+      const { count: fng } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', userId);
+      followersCount = fc ?? 0;
+      followingCount = fng ?? 0;
+    } catch {
+      // leave zero.
+    }
+    profile.followers_count = followersCount;
+    profile.following_count = followingCount;
+    profile.xp_total = await this.xpService.getTotalXp(userId);
 
     return profile;
   }

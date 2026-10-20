@@ -56,7 +56,6 @@ class AgentFailureKind(StrEnum):
     REPOSITORY_FAILURE = "repository_failure"
     POLICY_FAILURE = "policy_failure"
     INTERNAL_FACTORY_FAILURE = "internal_factory_failure"
-    CANCELLED = "cancelled"
 
 
 @dataclass
@@ -82,8 +81,6 @@ class AgentResult:
     model: str | None = None
     attempt: int = 1
     fallback_reason: str | None = None
-    captured_output_chars: int | None = None
-    output_truncated: bool | None = None
 
 
 @dataclass
@@ -97,6 +94,8 @@ class AgentRequest:
     max_output_bytes: int | None = None
     prepare_attempt: Callable[[], None] | None = None
     validate_output: Callable[[], None] | None = None
+    # Host-selected source context, mounted read-only by the outer sandbox.
+    read_only_reference: Path | None = None
 
 
 class AgentProvider(Protocol):

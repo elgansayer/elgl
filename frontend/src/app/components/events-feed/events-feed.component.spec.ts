@@ -1,19 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventsFeedComponent } from './events-feed.component';
 import { Event, EventsService } from '../../services/events.service';
 
-function event(id: string): Event {
+function event(id: string, overrides: Partial<Event> = {}): Event {
   return {
     id,
     title: `Event ${id}`,
-    date_time: '2026-08-20T12:00:00.000Z',
+    date_time: '2099-08-20T12:00:00.000Z',
     host_id: 'host-1',
     is_cancelled: false,
-    created_at: '2026-08-19T12:00:00.000Z',
-    updated_at: '2026-08-19T12:00:00.000Z',
+    created_at: '2099-08-19T12:00:00.000Z',
+    updated_at: '2099-08-19T12:00:00.000Z',
+    ...overrides,
   };
 }
 
@@ -21,7 +21,6 @@ describe('EventsFeedComponent', () => {
   let fixture: ComponentFixture<EventsFeedComponent>;
   let component: EventsFeedComponent;
   let listEvents: ReturnType<typeof vi.fn>;
-  let getCategories: ReturnType<typeof vi.fn>;
 
   async function settle(): Promise<void> {
     await Promise.resolve();
@@ -31,17 +30,14 @@ describe('EventsFeedComponent', () => {
 
   beforeEach(async () => {
     listEvents = vi.fn().mockReturnValue(of([]));
-    getCategories = vi
-      .fn()
-      .mockReturnValue(
-        of(['audio_room', 'learning_seminar', 'in_person_meetup', 'cultural_exchange']),
-      );
 
     await TestBed.configureTestingModule({
       imports: [EventsFeedComponent],
       providers: [
-        provideRouter([]),
-        { provide: EventsService, useValue: { listEvents, getCategories } },
+        {
+          provide: EventsService,
+          useValue: { listEvents, createEvent: vi.fn() },
+        },
       ],
     }).compileComponents();
 
@@ -49,73 +45,19 @@ describe('EventsFeedComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('loads the first upcoming page and backend-owned category identifiers', async () => {
+  it('loads the first upcoming page and exposes Spartan radio-group selection semantics', async () => {
     fixture.detectChanges();
     await settle();
 
-    expect(getCategories).toHaveBeenCalledTimes(1);
-    expect(component.categories()).toContain('audio_room');
     expect(listEvents).toHaveBeenCalledWith({
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 1,
       limit: 20,
     });
     expect(fixture.nativeElement.querySelector('[role="radiogroup"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('hlm-radio')).toHaveLength(2);
-    expect(fixture.nativeElement.querySelectorAll('app-select')).toHaveLength(2);
-  });
-
-  it('sends canonical category identifiers and resets pagination when category changes', async () => {
-    fixture.detectChanges();
-    await settle();
-
-    component.onCategoryChange('audio_room');
-    await settle();
-
-    expect(listEvents).toHaveBeenLastCalledWith({
-      status: 'upcoming',
-      language_pair: undefined,
-      category: 'audio_room',
-      page: 1,
-      limit: 20,
-    });
-  });
-
-  it('renders event titles as native links to the event detail route', async () => {
-    listEvents.mockReturnValueOnce(of([event('detail-1')]));
-
-    fixture.detectChanges();
-    await settle();
-
-    const link = fixture.nativeElement.querySelector('a[href="/events/detail-1"]');
-    expect(link).not.toBeNull();
-    expect(link.textContent).toContain('Event detail-1');
-  });
-
-  it('opens the create modal and refreshes the first page after creation', async () => {
-    fixture.detectChanges();
-    await settle();
-
-    component.openCreateModal();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('app-create-event-modal')).not.toBeNull();
-
-    component.onEventCreated();
-    await settle();
-
-    expect(component.isCreateModalOpen()).toBe(false);
-    expect(fixture.nativeElement.querySelector('app-create-event-modal')).toBeNull();
-    expect(listEvents).toHaveBeenCalledTimes(2);
-    expect(listEvents).toHaveBeenLastCalledWith({
-      status: 'upcoming',
-      language_pair: undefined,
-      category: undefined,
-      page: 1,
-      limit: 20,
-    });
+    expect(fixture.nativeElement.querySelector('app-select')).not.toBeNull();
   });
 
   it('does not reload when the already-selected status is chosen again', async () => {
@@ -140,17 +82,43 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenNthCalledWith(2, {
       status: 'past',
       language_pair: undefined,
-      category: undefined,
       page: 1,
       limit: 20,
     });
     expect(listEvents).toHaveBeenNthCalledWith(3, {
       status: 'past',
       language_pair: 'en-ja',
-      category: undefined,
       page: 1,
       limit: 20,
     });
+  });
+
+  it('inserts a newly-created matching event without reloading the feed', async () => {
+    listEvents.mockReturnValueOnce(of([event('later', { date_time: '2099-08-22T12:00:00.000Z' })]));
+    fixture.detectChanges();
+    await settle();
+
+    component.onEventCreated(
+      event('new', {
+        date_time: '2099-08-21T12:00:00.000Z',
+        language_pair: 'en-ja',
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(listEvents).toHaveBeenCalledTimes(1);
+    expect(component.events().map((item) => item.id)).toEqual(['new', 'later']);
+  });
+
+  it('does not insert a newly-created event that conflicts with the active language filter', async () => {
+    fixture.detectChanges();
+    await settle();
+    component.onLanguageChange('en-ja');
+    await settle();
+
+    component.onEventCreated(event('en-fr', { language_pair: 'en-fr' }));
+
+    expect(component.events()).toEqual([]);
   });
 
   it('ignores stale responses after a newer filter request wins', async () => {
@@ -197,14 +165,12 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenNthCalledWith(2, {
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 2,
       limit: 20,
     });
     expect(listEvents).toHaveBeenNthCalledWith(3, {
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 2,
       limit: 20,
     });
@@ -228,7 +194,6 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenLastCalledWith({
       status: 'upcoming',
       language_pair: undefined,
-      category: undefined,
       page: 1,
       limit: 20,
     });
