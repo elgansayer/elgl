@@ -267,6 +267,30 @@ describe('AdminService', () => {
       });
     });
 
+    it('starts independent cache invalidations concurrently', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', is_vip: true, vip_tier: 'consumer' },
+        error: null,
+      });
+      let resolveUserKeys!: (keys: string[]) => void;
+      mockRedisClient.keys.mockReturnValue(
+        new Promise<string[]>((resolve) => {
+          resolveUserKeys = resolve;
+        }),
+      );
+
+      const update = service.setVipStatus('user-1', { is_vip: true });
+
+      await vi.waitFor(() => {
+        expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
+        expect(mockRedisClient.del).toHaveBeenCalledWith(
+          'admin:login-history:user-1',
+        );
+      });
+      resolveUserKeys([]);
+      await update;
+    });
+
     it('throws NotFoundException when the update fails', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
@@ -351,6 +375,28 @@ describe('AdminService', () => {
         NotFoundException,
       );
     });
+
+    it('starts all independent cache invalidations concurrently', async () => {
+      mockQueryBuilder.insert.mockReturnValue({ error: null });
+      const keyResolvers: Array<(keys: string[]) => void> = [];
+      mockRedisClient.keys.mockImplementation(
+        () =>
+          new Promise<string[]>((resolve) => {
+            keyResolvers.push(resolve);
+          }),
+      );
+
+      const ban = service.banUser('bad-user', 'admin-1');
+
+      await vi.waitFor(() => {
+        expect(mockRedisClient.keys).toHaveBeenCalledTimes(2);
+        expect(mockRedisClient.del).toHaveBeenCalledWith(
+          'admin:login-history:bad-user',
+        );
+      });
+      keyResolvers.forEach((resolve) => resolve([]));
+      await ban;
+    });
   });
 
   describe('warnUser', () => {
@@ -377,6 +423,28 @@ describe('AdminService', () => {
       await expect(service.warnUser('bad-user', 'admin-1')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('starts all independent cache invalidations concurrently', async () => {
+      mockQueryBuilder.insert.mockReturnValue({ error: null });
+      const keyResolvers: Array<(keys: string[]) => void> = [];
+      mockRedisClient.keys.mockImplementation(
+        () =>
+          new Promise<string[]>((resolve) => {
+            keyResolvers.push(resolve);
+          }),
+      );
+
+      const warning = service.warnUser('bad-user', 'admin-1');
+
+      await vi.waitFor(() => {
+        expect(mockRedisClient.keys).toHaveBeenCalledTimes(2);
+        expect(mockRedisClient.del).toHaveBeenCalledWith(
+          'admin:login-history:bad-user',
+        );
+      });
+      keyResolvers.forEach((resolve) => resolve([]));
+      await warning;
     });
   });
 
