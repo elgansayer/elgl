@@ -11,7 +11,11 @@ import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
 
-function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile {
+function makeProfile(
+  id: string,
+  bioText = 'Original profile bio',
+  overrides: Partial<UserProfile> = {},
+): UserProfile {
   return {
     id,
     display_name: `Partner ${id}`,
@@ -29,6 +33,7 @@ function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile 
     privacy_hide_from_search: false,
     privacy_hide_gender: false,
     created_at: '2026-01-01T00:00:00.000Z',
+    ...overrides,
   };
 }
 
@@ -99,6 +104,26 @@ describe('UserDetailComponent bio translation', () => {
     expect(component).toBeTruthy();
     expect(getUserProfile).toHaveBeenCalledWith('user-1');
     expect(component.profile()?.id).toBe('user-1');
+  });
+
+  it('shows a VIP badge when the member has not hidden it', async () => {
+    getUserProfile.mockResolvedValueOnce(
+      makeProfile('vip-visible', 'Bio', { is_vip: true, privacy_hide_vip_status: false }),
+    );
+    await component.loadProfile('vip-visible');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('discovery.vipBadge');
+  });
+
+  it('does not render the VIP badge when the member hides VIP status', async () => {
+    getUserProfile.mockResolvedValueOnce(
+      makeProfile('vip-hidden', 'Bio', { is_vip: true, privacy_hide_vip_status: true }),
+    );
+    await component.loadProfile('vip-hidden');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('discovery.vipBadge');
   });
 
   it('translates into the active UI language and can show the original again', async () => {
