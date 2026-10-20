@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -103,13 +105,7 @@ module.exports = {
         // Arabic, Cyrillic, Devanagari, etc). Never apply `font-display` to
         // user-generated or translated content, only to guaranteed-Latin
         // product copy (headlines, streak numerals, onboarding).
-        display: [
-          '"Instrument Sans"',
-          'ui-sans-serif',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          'sans-serif',
-        ],
+        display: ['ui-sans-serif', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
       borderRadius: {
         app: '0.75rem', // controls: buttons, inputs - confident, not bubble-heavy
@@ -132,5 +128,22 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(function ({ addUtilities }) {
+      addUtilities({
+        '.pt-safe': {
+          paddingTop: 'env(safe-area-inset-top)',
+        },
+        '.pb-safe': {
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        },
+        '.pl-safe': {
+          paddingLeft: 'env(safe-area-inset-left)',
+        },
+        '.pr-safe': {
+          paddingRight: 'env(safe-area-inset-right)',
+        },
+      });
+    }),
+  ],
 };

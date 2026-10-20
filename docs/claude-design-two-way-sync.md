@@ -145,6 +145,15 @@ CI should eventually fail changed visual-contract code that has neither:
 
 This is tracked by #7068.
 
+Full surface coverage is enforced by `npm run check:design-coverage`: every runtime UI surface must be
+specifically mapped to a design-sync item with a preview specimen.
+
+### Automation
+
+The code-first push, design-first pull, conflict detection and weekly design-improvement loop run
+unattended; see `docs/design/claude-design-automation.md`. Automation follows this contract: it never
+resolves a conflict itself, and design-first changes reach runtime only through Factory PRs.
+
 ## 10. Completion rule
 
 A visual migration task is not complete merely because the Angular component builds.

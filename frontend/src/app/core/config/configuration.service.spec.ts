@@ -57,7 +57,7 @@ describe('ConfigurationService', () => {
     async (mode) => {
       const loadPromise = service.loadConfiguration();
       httpMock.expectOne('./assets/config.json').flush({
-        apiEndpoint: 'http://localhost:3000/api',
+        apiEndpoint: 'http://127.0.0.1:3000/api',
         appName: 'ELGL Offline',
         version: '1.0.0',
         environment: 'development',
@@ -89,7 +89,7 @@ describe('ConfigurationService', () => {
   it('fails closed for an invalid runtime mock mode', async () => {
     const loadPromise = service.loadConfiguration();
     httpMock.expectOne('./assets/config.json').flush({
-      apiEndpoint: 'http://localhost:3000/api',
+      apiEndpoint: 'http://127.0.0.1:3000/api',
       appName: 'ELGL',
       version: '1.0.0',
       environment: 'development',
