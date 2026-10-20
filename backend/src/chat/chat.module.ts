@@ -7,10 +7,12 @@ import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
+import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatForwardController } from './chat-forward.controller';
 import { ChatArchiveController } from './chat-archive.controller';
 import { ChatEditController } from './chat-edit.controller';
 import { ChatMediaSendController } from './chat-media-send.controller';
@@ -41,10 +43,12 @@ import { DirectConversationService } from './direct-conversations/direct-convers
     LlmProxyModule,
     SupabaseModule,
     CloudflareR2Module,
+    LearnerKnowledgeModule,
     forwardRef(() => UsersModule),
   ],
   controllers: [
     ChatController,
+    ChatForwardController,
     ChatArchiveController,
     ChatEditController,
     ChatMediaSendController,
