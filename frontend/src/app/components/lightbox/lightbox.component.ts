@@ -1,9 +1,11 @@
 import { Component, computed, input, linkedSignal, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input, linkedSignal, output, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-lightbox',
   imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   host: {

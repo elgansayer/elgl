@@ -25,6 +25,49 @@ export class VideoCallsService {
     private livekitService: LivekitService,
     private readonly metricsService: MetricsService,
   ) {
+    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
+    const secret = this.configService.get<string>('LIVEKIT_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
+    if (env === 'production') {
+      if (
+        !apiKey ||
+        !secret ||
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        secret === 'test-livekit-secret' ||
+        secret === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
+
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        secret === 'test-livekit-secret' ||
+        secret === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        apiKey === 'devkey' ||
+        secret === 'test-livekit-secret' ||
+        secret === 'dev_livekit_secret_test_value_123' ||
+        secret === 'secret' ||
+        secret === 'secret-livekit-api-secret-change-in-prod'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
+    }
+
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
       this.configService.get<string>('LIVEKIT_API_KEY'),

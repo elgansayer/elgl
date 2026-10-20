@@ -123,7 +123,7 @@ The implementation stage should use an approved single-selection interaction pri
 
 ### Hard-coded accessible copy
 
-The header close button uses `aria-label="Cancel doodle"`. Colour swatches build names from `'Select ' + color`, and brush controls build names from `w + 'px stroke width'`. These strings bypass `TranslatePipe`/`I18nService` and must be replaced with translated labels.
+The header close button uses `aria-label="Cancel doodle"`. Colour swatches build names from `'Select ' + colour`, and brush controls build names from `w + 'px stroke width'`. These strings bypass `TranslatePipe`/`I18nService` and must be replaced with translated labels.
 
 Hex codes should not be the only human-readable colour names. The product palette needs localisable semantic colour names so screen-reader users can distinguish choices meaningfully.
 

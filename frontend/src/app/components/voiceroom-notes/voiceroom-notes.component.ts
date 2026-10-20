@@ -6,7 +6,8 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
+import { environment } from '../../../environments/environment';
 
 interface VoiceRoomNote {
   id: string;
@@ -25,10 +26,11 @@ interface VoiceRoomNote {
   styleUrls: ['./voiceroom-notes.component.css'],
 })
 export class VoiceroomNotesComponent {
-  private http = inject(HttpClient);
-  private i18n = inject(I18nService);
-  private centrifugo = inject(CentrifugoService);
-  private destroyRef = inject(DestroyRef);
+  private readonly http = inject(HttpClient);
+  private readonly i18n = inject(I18nService);
+  private readonly centrifugo = inject(CentrifugeService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly apiBase = environment.apiUrl;
   private subscribedRoomId?: string;
 
   roomId = input.required<string>();
@@ -45,7 +47,9 @@ export class VoiceroomNotesComponent {
       refreshKey: this.refreshCounter(),
     }),
     loader: ({ params }) =>
-      firstValueFrom(this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)),
+      firstValueFrom(
+        this.http.get<VoiceRoomNote[]>(`${this.apiBase}/audio-rooms/${params.roomId}/notes`),
+      ),
     defaultValue: [],
   });
 
@@ -53,13 +57,14 @@ export class VoiceroomNotesComponent {
     effect(() => {
       const currentRoomId = this.roomId();
       if (this.subscribedRoomId && this.subscribedRoomId !== currentRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifugo.unsubscribe('room_' + this.subscribedRoomId);
         this.subscribedRoomId = undefined;
       }
 
       if (currentRoomId) {
         this.subscribedRoomId = currentRoomId;
-        this.centrifugo.subscribeLiveRoom(currentRoomId, (data) => {
+        this.centrifugo.subscribe('room_' + currentRoomId, (data: unknown) => {
+          if (typeof data !== 'object' || data === null || !('type' in data)) return;
           if (data.type === 'voice_room_note') {
             this.refreshCounter.update((value) => value + 1);
           } else if (data.type === 'voice_room_note_deleted') {
@@ -71,7 +76,7 @@ export class VoiceroomNotesComponent {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifugo.unsubscribe('room_' + this.subscribedRoomId);
       }
     });
   }
@@ -96,7 +101,7 @@ export class VoiceroomNotesComponent {
     this.isPosting.set(true);
     try {
       await firstValueFrom(
-        this.http.post(`/audio-rooms/${this.roomId()}/notes`, {
+        this.http.post(`${this.apiBase}/audio-rooms/${this.roomId()}/notes`, {
           content: c,
           vocabulary: this.vocabulary().trim() || undefined,
         }),
@@ -113,7 +118,9 @@ export class VoiceroomNotesComponent {
 
   async deleteNote(noteId: string): Promise<void> {
     try {
-      await firstValueFrom(this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`));
+      await firstValueFrom(
+        this.http.delete(`${this.apiBase}/audio-rooms/${this.roomId()}/notes/${noteId}`),
+      );
       this.refreshCounter.update((value) => value + 1);
     } catch {
       // handled by UI error display

@@ -27,6 +27,12 @@ const forbiddenPatterns = [
     pattern: /return\s+\{\s*unreadCount\s*:\s*2\s*\}/,
     label: 'fabricated unread count',
   },
+  {
+    pattern: /import\s+\{\s*MOCK_CURRENT_USER\s*\}\s+from\s+['"]\.\/mock-data['"]/,
+    label: 'runtime mock authentication identity',
+  },
+  { pattern: /mock-jwt-token/, label: 'synthetic authentication access token' },
+  { pattern: /mock-refresh-token/, label: 'synthetic authentication refresh token' },
 ];
 
 const failures = [];
