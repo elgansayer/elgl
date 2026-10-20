@@ -90,14 +90,7 @@ class MetricsStore:
         return {
             "recorded_at": datetime.now(UTC).isoformat(),
             "providers": [
-                {
-                    **asdict(item),
-                    "successful_outputs_per_model_minute": (
-                        round(item.successes * 60 / item.total_duration_seconds, 3)
-                        if item.total_duration_seconds > 0
-                        else None
-                    ),
-                }
+                asdict(item)
                 for item in sorted(
                     usage.values(),
                     key=lambda value: (value.provider, value.model, value.phase),

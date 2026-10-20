@@ -4,7 +4,6 @@ import pytest
 
 from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
 from openhands_factory.models import Job, JobState, Task
-from openhands_factory.state import atomic_write_json
 
 
 class Gate:

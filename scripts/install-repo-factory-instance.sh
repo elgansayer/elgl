@@ -103,12 +103,10 @@ if [ ! -f "$CONFIG_ROOT/common.env" ]; then
     echo 'GITHUB_TOKEN was not found in the legacy environment.' >&2
     exit 1
   fi
-  chown root:root "$temporary"
-  chmod 0600 "$temporary"
+  chown root:"$FACTORY_USER" "$temporary"
+  chmod 0640 "$temporary"
   mv "$temporary" "$CONFIG_ROOT/common.env"
 fi
-chown root:root "$CONFIG_ROOT/common.env"
-chmod 0600 "$CONFIG_ROOT/common.env"
 install -m 0640 -o root -g "$FACTORY_USER" \
   "$CONTROL_REPOSITORY/config/factory/agents.production.json" "$CONFIG_ROOT/agents.json"
 install -m 0640 -o root -g "$FACTORY_USER" \

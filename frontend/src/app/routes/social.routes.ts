@@ -148,7 +148,8 @@ export const socialRoutes: Routes = [
     path: 'business-profile',
     loadComponent: () =>
       import('../components/business-profile/business-profile.component').then(
-        (m) => m.BusinessProfileComponent),
+        (m) => m.BusinessProfileComponent,
+      ),
     title: 'Business Profile - HelloTalk',
   },
 ];

@@ -152,9 +152,6 @@ class Job:
     attempts: int = 0
     repair_attempts: int = 0
     quality_repairs: int = 0
-    maintenance_recovery_id: str | None = None
-    maintenance_recovery_attempts: int = 0
-    maintenance_recovery_failures: int = 0
     last_error: str | None = None
     next_attempt_at: datetime | None = None
     failure_counts: dict[str, int] = field(default_factory=dict)
@@ -173,13 +170,6 @@ class Job:
     review_findings: list[str] = field(default_factory=list)
     provider_history: list[dict[str, str | int | float | bool | None]] = field(default_factory=list)
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    # In-flight marker for worker attempts. ``attempt_started_at`` is when the oldest
-    # attempt whose outcome was never committed began, and ``attempt_generation`` is the
-    # Factory generation that most recently owned it. Both are set when a worker begins
-    # and cleared by the write that commits its outcome, so a queued, backed-off or
-    # polling job never carries them.
-    attempt_started_at: datetime | None = None
-    attempt_generation: str | None = None
 
 
 @dataclass

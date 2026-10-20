@@ -56,7 +56,6 @@ class AgentFailureKind(StrEnum):
     REPOSITORY_FAILURE = "repository_failure"
     POLICY_FAILURE = "policy_failure"
     INTERNAL_FACTORY_FAILURE = "internal_factory_failure"
-    CANCELLED = "cancelled"
 
 
 @dataclass
