@@ -8,6 +8,8 @@ import { I18nService } from '../../services/i18n.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 
+const CALENDAR_EVENT_LIMIT = 100;
+
 @Component({
   imports: [HlmButton, TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent],
   template: `
@@ -16,7 +18,6 @@ import { AppCardComponent } from '../primitives/card/card.component';
       [attr.aria-busy]="eventsResource.isLoading() ? 'true' : null"
     >
       <div class="max-w-2xl mx-auto">
-        <!-- Header -->
         <h1 class="text-2xl font-bold mb-6">{{ 'events.calendar.title' | t }}</h1>
 
         @if (eventsResource.isLoading()) {
@@ -37,45 +38,51 @@ import { AppCardComponent } from '../primitives/card/card.component';
             </button>
           </div>
         } @else {
-          <!-- Month Navigation -->
-          <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center justify-between gap-3 mb-6">
             <button
               hlmBtn
               type="button"
-              class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
+              variant="secondary"
+              size="touch"
+              [disabled]="monthOffset() <= 0"
               (click)="previousMonth()"
             >
               &lsaquo; {{ 'events.calendar.prev' | t }}
             </button>
-            <span class="text-lg font-semibold">{{ monthLabel() }}</span>
+            <span class="text-lg font-semibold text-center" aria-live="polite">{{ monthLabel() }}</span>
             <button
               hlmBtn
               type="button"
-              class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
+              variant="secondary"
+              size="touch"
               (click)="nextMonth()"
             >
               {{ 'events.calendar.next' | t }} &rsaquo;
             </button>
           </div>
 
-          <!-- Day names -->
-          <div class="grid grid-cols-7 mb-2">
+          <div class="grid grid-cols-7 mb-2" role="row">
             @for (name of dayNames(); track $index) {
               <div
                 class="text-center text-xs font-medium text-text-muted uppercase tracking-wider py-2"
+                role="columnheader"
               >
                 {{ name }}
               </div>
             }
           </div>
 
-          <!-- Calendar grid -->
-          <div class="grid grid-cols-7 gap-px bg-surface-400 rounded-lg overflow-hidden">
+          <div
+            class="grid grid-cols-7 gap-px bg-surface-400 rounded-lg overflow-hidden"
+            role="grid"
+            [attr.aria-label]="monthLabel()"
+          >
             @for (day of days(); track $index) {
               @if (day) {
                 <button
                   hlmBtn
                   type="button"
+                  role="gridcell"
                   class="flex w-full flex-col items-center min-h-[72px] p-1.5 bg-surface-300 text-text-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                   [attr.aria-label]="
                     'events.calendar.selectDate' | t: { date: formatCalendarDate(day) }
@@ -92,7 +99,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
                     day
                   }}</span>
                   @if (eventsByDate().has(day)) {
-                    <div class="w-full space-y-0.5">
+                    <div class="w-full space-y-0.5" aria-hidden="true">
                       @for (ev of eventsByDate().get(day)!.slice(0, 2); track ev.id) {
                         <div
                           class="text-[10px] leading-tight truncate bg-primary/60 text-on-fill px-1 py-0.5 rounded-sm w-full"
@@ -118,7 +125,6 @@ import { AppCardComponent } from '../primitives/card/card.component';
             }
           </div>
 
-          <!-- Selected Date Events -->
           @if (selectedDate()) {
             <div class="mt-6">
               <h2 class="text-lg font-semibold mb-3">
@@ -132,7 +138,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
                   <app-card>
                     <div class="p-4">
                       <div class="flex items-start justify-between mb-2">
-                        <h3 class="font-semibold text-text-primary">{{ ev.title }}</h3>
+                        <h3 class="font-semibold text-text-primary" dir="auto">{{ ev.title }}</h3>
                         @if (ev.category) {
                           <span class="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
                             {{ ev.category }}
@@ -140,12 +146,12 @@ import { AppCardComponent } from '../primitives/card/card.component';
                         }
                       </div>
                       @if (ev.description) {
-                        <p class="text-sm text-text-secondary mb-2">{{ ev.description }}</p>
+                        <p class="text-sm text-text-secondary mb-2" dir="auto">{{ ev.description }}</p>
                       }
-                      <div class="flex items-center justify-between text-xs text-text-muted">
+                      <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
                         <span>{{ formatEventTime(ev.date_time) }}</span>
                         @if (ev.location) {
-                          <span>{{ ev.location }}</span>
+                          <span dir="auto">{{ ev.location }}</span>
                         }
                       </div>
                       <a
@@ -170,14 +176,23 @@ export class EventsCalendarComponent {
   private i18n = inject(I18nService);
 
   monthOffset = signal<number>(0);
-
   selectedDay = signal<number | null>(null);
-
   todayDate = computed(() => new Date());
 
   monthStart = computed(() => {
     const now = this.todayDate();
     return new Date(now.getFullYear(), now.getMonth() + this.monthOffset(), 1);
+  });
+
+  monthRange = computed(() => {
+    const start = this.monthStart();
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+    end.setMilliseconds(end.getMilliseconds() - 1);
+    return {
+      from_date: start.toISOString(),
+      to_date: end.toISOString(),
+      limit: CALENDAR_EVENT_LIMIT,
+    };
   });
 
   monthLabel = computed(() => {
@@ -189,8 +204,7 @@ export class EventsCalendarComponent {
   dayNames = computed(() => {
     const locale = this.i18n.currentLang();
     const names: string[] = [];
-    // Use 2023-01-01 (a Sunday) to get day names starting from Sunday
-    const base = new Date(2023, 0, 1); // Sunday
+    const base = new Date(2023, 0, 1);
     for (let i = 0; i < 7; i++) {
       const d = new Date(base);
       d.setDate(base.getDate() + i);
@@ -206,7 +220,7 @@ export class EventsCalendarComponent {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startDow = firstDay.getDay(); // 0 = Sunday
+    const startDow = firstDay.getDay();
     const totalCells = startDow + daysInMonth;
     const trailing = (7 - (totalCells % 7)) % 7;
     const cells: (number | null)[] = [];
@@ -216,11 +230,11 @@ export class EventsCalendarComponent {
     return cells;
   });
 
-  protected readonly eventsResource = resource<Event[], { status: string }>({
-    params: () => ({ status: 'upcoming' }),
+  protected readonly eventsResource = resource<Event[], ReturnType<EventsCalendarComponent['monthRange']>>({
+    params: () => this.monthRange(),
     loader: async ({ params }) => {
-      const events = await firstValueFrom(this.eventsService.getMyEvents(params.status));
-      return events ?? [];
+      const events = await firstValueFrom(this.eventsService.getMyCalendarEvents(params));
+      return Array.isArray(events) ? events : [];
     },
   });
 
@@ -234,13 +248,21 @@ export class EventsCalendarComponent {
     const startYear = monthStart.getFullYear();
     const startMonth = monthStart.getMonth();
     for (const ev of this.events()) {
+      if (!ev || ev.is_cancelled || typeof ev.date_time !== 'string') continue;
       const evDate = new Date(ev.date_time);
-      if (evDate.getFullYear() !== startYear || evDate.getMonth() !== startMonth) {
+      if (
+        Number.isNaN(evDate.getTime()) ||
+        evDate.getFullYear() !== startYear ||
+        evDate.getMonth() !== startMonth
+      ) {
         continue;
       }
       const day = evDate.getDate();
       if (!map.has(day)) map.set(day, []);
       map.get(day)!.push(ev);
+    }
+    for (const events of map.values()) {
+      events.sort((a, b) => Date.parse(a.date_time) - Date.parse(b.date_time));
     }
     return map;
   });
@@ -249,9 +271,7 @@ export class EventsCalendarComponent {
     const day = this.selectedDay();
     if (day === null) return null;
     const start = this.monthStart();
-    const year = start.getFullYear();
-    const month = start.getMonth();
-    return new Date(year, month, day);
+    return new Date(start.getFullYear(), start.getMonth(), day);
   });
 
   selectedDateLabel = computed(() => {
@@ -297,6 +317,7 @@ export class EventsCalendarComponent {
 
   formatEventTime(dateTimeStr: string): string {
     const date = new Date(dateTimeStr);
+    if (Number.isNaN(date.getTime())) return '';
     const locale = this.i18n.currentLang();
     return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   }
@@ -312,6 +333,7 @@ export class EventsCalendarComponent {
   }
 
   previousMonth(): void {
+    if (this.monthOffset() <= 0) return;
     this.selectedDay.set(null);
     this.monthOffset.update((o) => o - 1);
   }

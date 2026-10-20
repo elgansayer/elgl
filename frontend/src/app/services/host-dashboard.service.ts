@@ -1,6 +1,4 @@
-import { Injectable, inject } from '@angular/core';
-import { environment } from '../../environments/environment';
-import { ApiService } from './api.service';
+import { Injectable } from '@angular/core';
 
 export interface HostDashboardStats {
   viewerCount: number;
@@ -8,41 +6,14 @@ export interface HostDashboardStats {
   startTime: Date;
 }
 
-interface HostDashboardApiStats {
-  roomId: string;
-  viewerCount: number;
-  earnedCoins: number;
-  startTime: string;
-}
-
 @Injectable({ providedIn: 'root' })
 export class HostDashboardService {
-  private readonly api = inject(ApiService);
-
-  async getDashboardStats(roomId: string): Promise<HostDashboardStats> {
-    const fallback: HostDashboardApiStats = {
-      roomId,
-      viewerCount: 0,
-      earnedCoins: 0,
-      startTime: new Date().toISOString(),
+  getDashboardStats(_roomId: string): Promise<HostDashboardStats> {
+    const dummy = {
+      viewerCount: Math.floor(Math.random() * 50) + 5,
+      earnedCoins: Math.floor(Math.random() * 20) + 1,
+      startTime: new Date(Date.now() - Math.floor(Math.random() * 3600000)),
     };
-
-    try {
-      const stats = await this.api.get<HostDashboardApiStats>(
-        `${environment.apiUrl}/host-dashboard/${encodeURIComponent(roomId)}/stats`,
-        { fallback },
-      );
-      return {
-        viewerCount: stats.viewerCount,
-        earnedCoins: stats.earnedCoins,
-        startTime: new Date(stats.startTime),
-      };
-    } catch {
-      return {
-        viewerCount: fallback.viewerCount,
-        earnedCoins: fallback.earnedCoins,
-        startTime: new Date(fallback.startTime),
-      };
-    }
+    return Promise.resolve(dummy);
   }
 }

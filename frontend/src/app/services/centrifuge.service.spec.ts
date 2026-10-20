@@ -3,7 +3,6 @@ import { vi } from 'vitest';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { CentrifugeService } from './centrifuge.service';
 import { AuthService } from './auth.service';
-import { environment } from '../../environments/environment';
 
 class MockSubscription {
   private listeners = new Map<string, Array<(...args: unknown[]) => void>>();
@@ -41,37 +40,16 @@ class MockSubscription {
 
 class MockCentrifuge {
   state = 'connected';
-  connect = vi.fn(() => {
-    this.state = 'connecting';
-  });
-  disconnect = vi.fn(() => {
-    this.state = 'disconnected';
-  });
-  publish = vi.fn().mockResolvedValue(undefined);
-  private readonly subs = new Map<string, MockSubscription>();
-  private readonly listeners = new Map<string, Array<(...args: unknown[]) => void>>();
-
-  on(event: string, cb: (...args: unknown[]) => void): this {
-    const existing = this.listeners.get(event) ?? [];
-    existing.push(cb);
-    this.listeners.set(event, existing);
-    return this;
-  }
-
-  emit(event: string, ctx: unknown = {}): void {
-    for (const cb of this.listeners.get(event) ?? []) {
-      cb(ctx);
-    }
-  }
+  on = vi.fn();
+  connect = vi.fn();
+  disconnect = vi.fn();
+  publish = vi.fn();
+  private subs = new Map<string, MockSubscription>();
 
   newSubscription(channel: string): MockSubscription {
     const sub = new MockSubscription();
     this.subs.set(channel, sub);
     return sub;
-  }
-
-  getSubscription(channel: string): MockSubscription | undefined {
-    return this.subs.get(channel);
   }
 }
 
@@ -83,7 +61,6 @@ describe('CentrifugeService', () => {
   let service: CentrifugeService;
   let httpMock: HttpTestingController;
   let mockCentrifuge: MockCentrifuge;
-  let authService: MockAuthService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -96,16 +73,12 @@ describe('CentrifugeService', () => {
 
     service = TestBed.inject(CentrifugeService);
     httpMock = TestBed.inject(HttpTestingController);
-    authService = TestBed.inject(AuthService) as unknown as MockAuthService;
 
     mockCentrifuge = new MockCentrifuge();
-    (service as unknown as { centrifuge: MockCentrifuge | null }).centrifuge = mockCentrifuge;
+    (service as unknown as { centrifuge: MockCentrifuge }).centrifuge = mockCentrifuge;
   });
 
   afterEach(() => {
-    service.disconnect();
-    vi.restoreAllMocks();
-    vi.useRealTimers();
     httpMock.verify();
   });
 
@@ -126,6 +99,39 @@ describe('CentrifugeService', () => {
 
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledWith({ hello: 'world' });
+  });
+
+  it('delivers publications to the primary handler and additive listeners without replacing either', () => {
+    const primary = vi.fn();
+    const additive = vi.fn();
+    const sub = service.subscribe('chat:room-1', primary) as unknown as MockSubscription;
+
+    const unlisten = service.listen('chat:room-1', additive);
+    expect(sub.listenerCount('publication')).toBe(1);
+
+    sub.emit('publication', { data: 'hello' });
+    expect(primary).toHaveBeenCalledWith('hello');
+    expect(additive).toHaveBeenCalledWith('hello');
+
+    unlisten();
+    sub.emit('publication', { data: 'after' });
+    expect(primary).toHaveBeenLastCalledWith('after');
+    expect(additive).toHaveBeenCalledTimes(1);
+    expect(sub.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('keeps the channel subscribed for additive listeners when the primary owner unsubscribes', () => {
+    const primary = vi.fn();
+    const additive = vi.fn();
+    service.listen('chat:room-1', additive);
+    const sub = service.subscribe('chat:room-1', primary) as unknown as MockSubscription;
+
+    service.unsubscribe('chat:room-1');
+    expect(sub.unsubscribe).not.toHaveBeenCalled();
+
+    sub.emit('publication', { data: 'reaction' });
+    expect(primary).not.toHaveBeenCalled();
+    expect(additive).toHaveBeenCalledWith('reaction');
   });
 
   it('only calls the message handler once per publication', () => {

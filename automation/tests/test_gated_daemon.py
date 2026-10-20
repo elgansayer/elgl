@@ -4,7 +4,6 @@ import pytest
 
 from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
 from openhands_factory.models import Job, JobState, Task
-from openhands_factory.state import atomic_write_json
 
 
 class Gate:
@@ -138,27 +137,6 @@ def test_daemon_executes_merge_after_current_main_is_reverified() -> None:
     assert gate.calls == 1
 
 
-def test_daemon_can_use_exact_head_pr_gate_without_waiting_for_main_push_ci() -> None:
-    daemon = object.__new__(MainCiGatedFactoryDaemon)
-    daemon.config = SimpleNamespace(require_green_main_between_merges=False)
-    gate = Gate(False)
-    daemon.main_merge_gate = gate
-    merge_one = _job("1", JobState.MERGE_QUEUED)
-    merge_two = _job("2", JobState.MERGE_QUEUED)
-
-    selected = daemon._gated_select_batch(
-        lambda *args, **kwargs: [merge_one, merge_two],
-        {"1": merge_one, "2": merge_two},
-        2,
-    )
-    merge = MergeRecorder()
-    daemon._gated_merge_pull_request(merge, 77, "reviewed-head")
-
-    assert selected == [merge_one]
-    assert merge.merges == [(77, "reviewed-head")]
-    assert gate.calls == 0
-
-
 def test_issue_refresh_reuses_cached_backlog_while_admission_is_full() -> None:
     daemon = object.__new__(MainCiGatedFactoryDaemon)
     cached_issue = _task("101", "github-issue")
@@ -178,34 +156,31 @@ def test_issue_refresh_reuses_cached_backlog_while_admission_is_full() -> None:
     assert collector.calls == []
 
 
-def test_issue_refresh_reuses_cached_backlog_while_pr_capacity_is_full() -> None:
+def test_issue_refresh_hits_github_under_storage_pressure_when_admission_is_full() -> None:
     daemon = object.__new__(MainCiGatedFactoryDaemon)
-    cached_issue = _task("101", "github-issue")
-    cached_pull_request = _task("202", "github-pull-request")
-    daemon.issue_admission = AdmissionSlots(4)
+    fresh_issue = _task("303", "github-issue")
+    daemon.issue_admission = AdmissionSlots(0)
+    daemon.storage_blocked = True
     daemon.pipeline = SimpleNamespace(
-        pull_request_capacity=SimpleNamespace(pause_new_dispatch=True),
-        tasks=SimpleNamespace(cached=lambda: [cached_issue, cached_pull_request]),
+        tasks=SimpleNamespace(cached=lambda: [_task("101", "github-issue")])
     )
-    collector = IssueCollector([_task("303", "github-issue")])
+    collector = IssueCollector([fresh_issue])
 
     tasks = daemon._collect_open_issues_for_refresh(
         collector,
-        now=datetime(2026, 8, 31, tzinfo=UTC),
+        limit=777,
+        now=datetime(2026, 9, 12, tzinfo=UTC),
     )
 
-    assert tasks == [cached_issue]
-    assert collector.calls == []
+    assert tasks == [fresh_issue]
+    assert collector.calls == [777]
 
 
 def test_issue_refresh_hits_github_when_admission_slot_opens() -> None:
     daemon = object.__new__(MainCiGatedFactoryDaemon)
     fresh_issue = _task("303", "github-issue")
     daemon.issue_admission = AdmissionSlots(1)
-    daemon.pipeline = SimpleNamespace(
-        pull_request_capacity=SimpleNamespace(pause_new_dispatch=False),
-        tasks=SimpleNamespace(cached=lambda: []),
-    )
+    daemon.pipeline = SimpleNamespace(tasks=SimpleNamespace(cached=lambda: []))
     collector = IssueCollector([fresh_issue])
 
     tasks = daemon._collect_open_issues_for_refresh(

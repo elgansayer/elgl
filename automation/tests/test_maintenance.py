@@ -20,6 +20,7 @@ from openhands_factory.maintenance import (
     MAINTENANCE_TAG,
     MaintenanceController,
     MaintenancePlan,
+    analysis_attempt_feedback,
     collect_incidents,
     error_identity,
     maintenance_feedback,
@@ -662,6 +663,58 @@ def test_busy_capacity_does_not_start_the_analysis_spacing_clock(controller):
     make_due(controller)
     controller.run()
     assert controller.pipeline.calls == 1
+
+
+def test_failed_analysis_keeps_bounded_redacted_diagnostics_without_claiming_success(controller):
+    def fails(job, scratch, phase, prompt, **kwargs):
+        assert str(scratch.resolve() / ".factory-maintenance.json") in prompt
+        job.provider_history.extend(
+            [
+                {
+                    "provider": "fixture",
+                    "model": "fixture-model",
+                    "phase": "planning",
+                    "success": False,
+                    "duration_seconds": 178.0,
+                    "failure_classification": "invalid_agent_output",
+                    "error": "x" * 1500 + " Missing report token=fixture-secret",
+                    "raw_output": "private-output-not-for-persistence",
+                    "captured_output_chars": 80,
+                }
+            ]
+            * 12
+        )
+        raise FactoryError("All eligible providers failed")
+
+    controller.pipeline._run_agent = fails
+    with pytest.raises(FactoryError):
+        controller.run()
+    state = controller.state()
+    assert state["analyses_today"] == 1
+    assert state.get("records", []) == []
+    attempts = state["last_analysis_attempts"]
+    assert len(attempts) == 8
+    assert all(len(item["error"]) <= 1000 for item in attempts)
+    assert "fixture-secret" not in json.dumps(attempts)
+    assert "private-output-not-for-persistence" not in json.dumps(attempts)
+    assert controller.snapshot({})["previous_analysis_attempts"] == attempts
+    assert controller.pipeline.github.created == []
+
+
+def test_analysis_feedback_ignores_malformed_and_nested_values():
+    assert analysis_attempt_feedback({"error": "not a list"}) == []
+    assert analysis_attempt_feedback([None, {"error": {"raw": "private"}}]) == [
+        {
+            "provider": None,
+            "model": None,
+            "phase": None,
+            "success": None,
+            "duration_seconds": None,
+            "failure_classification": None,
+            "captured_output_chars": None,
+            "output_truncated": None,
+        }
+    ]
 
 
 def test_unchanged_observation_is_not_new_evidence_but_a_changed_head_is(controller):

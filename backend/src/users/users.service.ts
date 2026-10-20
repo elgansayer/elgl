@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { MessageFiltersDto, UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import {
   UserProfile,
@@ -82,38 +82,34 @@ export class UsersService {
 
     const profile = response.data as UserProfile;
 
-    // Fetch related profile data concurrently to improve performance
-    const [scoreRes, fcRes, fngRes, xpTotal] = await Promise.all([
-      this.correctorScoreService
-        ? this.correctorScoreService.getCorrectorScore(userId)
-        : Promise.resolve({ averageScore: 0 }),
-      (async () => {
-        try {
-          return await supabase
-            .from('user_follows')
-            .select('*', { count: 'exact', head: true })
-            .eq('following_id', userId);
-        } catch {
-          return { count: 0 };
-        }
-      })(),
-      (async () => {
-        try {
-          return await supabase
-            .from('user_follows')
-            .select('*', { count: 'exact', head: true })
-            .eq('follower_id', userId);
-        } catch {
-          return { count: 0 };
-        }
-      })(),
-      this.xpService.getTotalXp(userId),
-    ]);
+    // Attach corrector score if available
+    let correctorScore = 0;
+    if (this.correctorScoreService) {
+      const score = await this.correctorScoreService.getCorrectorScore(userId);
+      correctorScore = score.averageScore ?? 0;
+    }
+    profile.corrector_score = correctorScore;
 
-    profile.corrector_score = scoreRes?.averageScore ?? 0;
-    profile.followers_count = fcRes?.count ?? 0;
-    profile.following_count = fngRes?.count ?? 0;
-    profile.xp_total = xpTotal;
+    // Attach follower / following counts
+    let followersCount = 0;
+    let followingCount = 0;
+    try {
+      const { count: fc } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', userId);
+      const { count: fng } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', userId);
+      followersCount = fc ?? 0;
+      followingCount = fng ?? 0;
+    } catch {
+      // leave zero.
+    }
+    profile.followers_count = followersCount;
+    profile.following_count = followingCount;
+    profile.xp_total = await this.xpService.getTotalXp(userId);
 
     return profile;
   }
@@ -918,12 +914,7 @@ export class UsersService {
     }
   }
 
-  async getMessageFilters(userId: string): Promise<{
-    age_min?: number;
-    age_max?: number;
-    allowed_native_languages?: string[];
-    allowed_genders?: string[];
-  }> {
+  async getMessageFilters(userId: string): Promise<MessageFiltersDto> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('users')
@@ -932,7 +923,7 @@ export class UsersService {
       .single();
 
     if (error || !data) {
-      return {};
+      throw new InternalServerErrorException('Failed to load message filters');
     }
     return (
       (data as { message_filters?: Record<string, unknown> })
@@ -942,17 +933,47 @@ export class UsersService {
 
   async setMessageFilters(
     userId: string,
-    filters: {
-      age_min?: number;
-      age_max?: number;
-      allowed_native_languages?: string[];
-      allowed_genders?: string[];
-    },
+    filters: MessageFiltersDto,
   ): Promise<void> {
+    if (
+      filters.age_min !== undefined &&
+      filters.age_max !== undefined &&
+      filters.age_min > filters.age_max
+    ) {
+      throw new BadRequestException('Minimum age cannot exceed maximum age');
+    }
+
     const supabase = this.supabaseService.getClient();
+    const current = await this.getMessageFilters(userId);
+    const normalised: MessageFiltersDto = {
+      ...current,
+      ...filters,
+      ...(filters.allowed_genders !== undefined
+        ? {
+            allowed_genders: filters.allowed_genders.map((value) =>
+              value.trim().toLowerCase(),
+            ),
+          }
+        : {}),
+      ...(filters.allowed_native_languages !== undefined
+        ? {
+            allowed_native_languages: filters.allowed_native_languages.map(
+              (value) => value.trim().toLowerCase(),
+            ),
+          }
+        : {}),
+    };
+    if (
+      normalised.age_min !== undefined &&
+      normalised.age_max !== undefined &&
+      normalised.age_min > normalised.age_max
+    ) {
+      throw new BadRequestException('Minimum age cannot exceed maximum age');
+    }
+
     const { error } = await supabase
       .from('users')
-      .update({ message_filters: filters } as never)
+      .update({ message_filters: normalised } as never)
       .eq('id', userId);
 
     if (error) {

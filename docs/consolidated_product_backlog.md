@@ -29,6 +29,14 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 ## 👤 User Profiles & Settings
 
+- unlock premium one-off AI services
+- 50/50 language exchange timers
+- verb conjugation trainer
+- partial credit scoring
+- daily AI usage rate limiting
+- strict LLM prompt injection protection
+- Architectural Enhancements for Language Learning Synergy (integrate Pronunciation/AI with Flashcards and Reading Engine)
+
 - Add privacy-safe profile visit tracking and Who Viewed Me logs.
 - Add online and VIP status visibility controls.
 - Add free-text learning goals and complete Translate Bio accessibility contract.
@@ -36,6 +44,7 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Complete safe Data & Storage controls and complete private data archive and deletion lifecycle (GDPR).
 
 ## 🎙️ Live Audio Rooms & Video Events
+
 
 - Complete centralized events discovery and centralized discovery feed.
 - Complete Create Event modal and safe Attending and Interested RSVPs.
@@ -71,6 +80,8 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 ## 🛡️ Trust & Safety (Moderation)
 
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling)
+
 
 - Complete production Block Management and lock ban and warn moderation endpoints.
 - Enforce typed user-content sanitisation boundaries.
@@ -93,3 +104,4 @@ _Organized by complete user outcomes rather than individual technical chores._
   - Ensure dynamic height recalculation works correctly for chat messages with varying content lengths (text, media, audio).
   - Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
   - Write or update unit tests to verify that the virtual scroller correctly limits the rendered DOM nodes to the visible viewport slice.
+

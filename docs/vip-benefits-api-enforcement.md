@@ -57,35 +57,6 @@ Me" logs. Free users only ever see blurred visitor records on their own visitor 
 - `ProfileVisitsService.getVisitors()` returns blurred visitor identities for non-VIP
   profile owners.
 
-## VIP route guard
-
-Routes protected with `RequireVip()` use `VipGuard` to read the authoritative
-`is_vip`/`vip_tier` fields directly from Supabase on each guard decision. The guard is
-fail-closed:
-
-- `RequireVip('any')` and `RequireVip('consumer')` both require `is_vip = true`.
-- `RequireVip('developer')` requires `is_vip = true` and a `vip_tier` beginning with
-  `developer`.
-- A missing authenticated user, missing entitlement row, Supabase lookup failure or
-  unknown runtime requirement denies access.
-- `vip_tier` alone never grants access when `is_vip` is false, preventing stale tier
-  labels from restoring expired privileges.
-
-The generic `any` requirement must never mean "any authenticated user". This invariant
-is regression-tested because a permissive interpretation would silently bypass every
-consumer VIP entitlement on any endpoint that adopts the generic decorator.
-
-## Failure and rollback behavior
-
-Entitlement lookups fail closed rather than granting paid functionality during a data
-or provider outage. API callers receive a bounded forbidden response; provider payloads,
-credentials and user entitlement records are not logged by the guard.
-
-The guard change is stateless and requires no schema or data migration. Rollback is a
-normal application revert. If an entitlement lookup is unavailable after rollback,
-operators should restore the Supabase dependency rather than temporarily bypassing the
-VIP guard.
-
 ## Tests
 
 - `backend/src/users/users.service.spec.ts` covers the target language allowance,
@@ -95,6 +66,3 @@ VIP guard.
 - `backend/src/nlp/nlp.service.spec.ts` and
   `backend/src/ai-conversation/ai-conversation.service.spec.ts` cover the AI usage cap
   behaviour for free and VIP users.
-- `backend/src/monetisation/guards/vip.guard.spec.ts` covers consumer, developer and
-  generic VIP authorization, stale tier labels, authentication failures and fail-closed
-  entitlement lookup behavior.

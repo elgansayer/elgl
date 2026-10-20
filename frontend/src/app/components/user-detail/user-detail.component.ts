@@ -1,12 +1,13 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, inject, signal, input, effect } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { AuthService } from '../../services/auth.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { DirectConversationService } from '../../services/direct-conversation.service';
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
@@ -27,14 +28,15 @@ import { AchievementsComponent } from '../../achievements/achievements.component
 })
 export class UserDetailComponent {
   private location = inject(Location);
-  private router = inject(Router);
   private userService = inject(UserService);
   private discoveryService = inject(DiscoveryService);
   private authService = inject(AuthService);
+  private profileVisitsService = inject(ProfileVisitsService);
   private directConversationService = inject(DirectConversationService);
   private relationshipService = inject(ProfileRelationshipService);
   private readonly i18n = inject(I18nService);
   private translationContextKey = '';
+  private readonly visitAttempts = new Set<string>();
 
   userId = input.required<string>();
 
@@ -43,21 +45,14 @@ export class UserDetailComponent {
   readonly errorMessage = signal<string>('');
 
   readonly isFollowing = signal<boolean>(false);
-  readonly isFollowingPending = signal<boolean>(false);
-  readonly followErrorKey = signal<string>('');
   readonly isLiked = signal<boolean>(false);
-
-  readonly isOpeningChat = signal<boolean>(false);
-  readonly chatErrorKey = signal<string>('');
 
   readonly translatedBioText = signal<string>('');
   readonly showTranslated = signal<boolean>(false);
   readonly isTranslating = signal<boolean>(false);
   readonly translationErrorKey = signal<string>('');
 
-  readonly isOwnProfile = computed(
-    () => this.profile()?.id === this.authService.currentUser()?.id,
-  );
+  readonly isOwnProfile = computed(() => this.profile()?.id === this.authService.currentUser()?.id);
 
   constructor() {
     effect(() => {
@@ -74,10 +69,6 @@ export class UserDetailComponent {
       this.showTranslated.set(false);
       this.isTranslating.set(false);
       this.translationErrorKey.set('');
-      this.followErrorKey.set('');
-      this.chatErrorKey.set('');
-      this.isFollowingPending.set(false);
-      this.isOpeningChat.set(false);
     });
   }
 
@@ -87,31 +78,27 @@ export class UserDetailComponent {
 
   async loadProfile(id: string): Promise<void> {
     this.isLoading.set(true);
-    this.errorMessage.set('');
     try {
       const data = await this.userService.getUserProfile(id);
-      if (id !== this.userId()) return;
       if (data) {
         this.profile.set(data);
         this.isFollowing.set(data.is_followed_by_me || false);
         this.isLiked.set(data.is_liked_by_me || false);
+        void this.recordVisibleProfileVisit(data.id);
       } else {
         this.errorMessage.set(this.i18n.translate('userProfile.notFound'));
       }
     } catch (e: unknown) {
-      if (id !== this.userId()) return;
       const message = e instanceof Error ? e.message : String(e);
       this.errorMessage.set(message || this.i18n.translate('userProfile.loadError'));
     } finally {
-      if (id === this.userId()) {
-        this.isLoading.set(false);
-      }
+      this.isLoading.set(false);
     }
   }
 
   get displayBio(): string {
     const p = this.profile();
-    if (!p?.bio_text?.trim()) return '';
+    if (!p?.bio_text) return '';
     if (this.showTranslated() && this.translatedBioText()) {
       return this.translatedBioText();
     }
@@ -123,31 +110,13 @@ export class UserDetailComponent {
     return this.showTranslated() ? 'profile.showOriginal' : 'profile.translateBio';
   }
 
-  get translationActionLabel(): string {
-    const action = this.i18n.translate(this.translationLabelKey);
-    const displayName = this.profile()?.display_name?.trim();
-    return displayName ? `${action}: ${displayName}` : action;
-  }
-
-  translationBioId(): string {
-    return `user-detail-bio-${this.userId()}`;
-  }
-
   translationStatusId(): string {
     return `user-detail-bio-translation-status-${this.userId()}`;
   }
 
-  followStatusId(): string {
-    return `user-detail-follow-status-${this.userId()}`;
-  }
-
-  chatStatusId(): string {
-    return `user-detail-chat-status-${this.userId()}`;
-  }
-
   async toggleTranslation(): Promise<void> {
     const p = this.profile();
-    if (!p?.bio_text?.trim()) return;
+    if (!p?.bio_text) return;
 
     if (this.isTranslating()) return;
 
@@ -189,60 +158,26 @@ export class UserDetailComponent {
 
   async toggleFollow(): Promise<void> {
     const p = this.profile();
-    if (!p || this.isOwnProfile() || this.isFollowingPending()) return;
+    if (!p) return;
 
-    const profileId = p.id;
     const currentlyFollowing = this.isFollowing();
-    this.followErrorKey.set('');
-    this.isFollowingPending.set(true);
     this.isFollowing.set(!currentlyFollowing);
 
     try {
       if (currentlyFollowing) {
-        await this.relationshipService.unfollow(p.id);
+        await this.userService.unfollowUser(p.id);
       } else {
-        await this.relationshipService.follow(p.id);
+        await this.userService.followUser(p.id);
       }
-    } catch {
-      if (this.profile()?.id === profileId) {
-        this.isFollowing.set(currentlyFollowing);
-        this.followErrorKey.set('common.error_generic');
-      }
-    } finally {
-      if (this.profile()?.id === profileId) {
-        this.isFollowingPending.set(false);
-      }
-    }
-  }
-
-  async openConversation(): Promise<void> {
-    const p = this.profile();
-    if (!p || this.isOwnProfile() || this.isOpeningChat()) return;
-
-    const profileId = p.id;
-    this.chatErrorKey.set('');
-    this.isOpeningChat.set(true);
-    try {
-      const roomId = await this.directConversationService.openOrCreate(profileId);
-      if (this.profile()?.id !== profileId) return;
-      const navigated = await this.router.navigate(['/chat', roomId]);
-      if (!navigated) {
-        throw new Error('Unable to navigate to conversation');
-      }
-    } catch {
-      if (this.profile()?.id === profileId) {
-        this.chatErrorKey.set('common.error_generic');
-      }
-    } finally {
-      if (this.profile()?.id === profileId) {
-        this.isOpeningChat.set(false);
-      }
+    } catch (e) {
+      this.isFollowing.set(currentlyFollowing);
+      console.error('Follow error:', e);
     }
   }
 
   async toggleLike(): Promise<void> {
     const p = this.profile();
-    if (!p || this.isOwnProfile()) return;
+    if (!p) return;
 
     const currentlyLiked = this.isLiked();
     this.isLiked.set(!currentlyLiked);
@@ -263,6 +198,22 @@ export class UserDetailComponent {
     if (!url) return;
     const audio = new Audio(url);
     audio.play();
+  }
+
+  private async recordVisibleProfileVisit(profileId: string): Promise<void> {
+    if (this.authService.currentUser()?.id === profileId || this.visitAttempts.has(profileId)) {
+      return;
+    }
+
+    this.visitAttempts.add(profileId);
+    try {
+      await this.profileVisitsService.recordVisit(profileId);
+    } catch {
+      // Profile rendering must not fail because the audit trail is temporarily unavailable.
+      // Remove the attempt marker so a later successful reload can retry; the backend's
+      // daily unique key makes that retry safe if the first request actually committed.
+      this.visitAttempts.delete(profileId);
+    }
   }
 
   private getTranslationContext(): string {
