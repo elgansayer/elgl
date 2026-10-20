@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from openhands_factory import daemon as daemon_module
 from openhands_factory.config import FactoryConfig
 from openhands_factory.main_merge_gate import MainBranchMergeGate, gate_merge_batch
+from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.models import Job, JobState, Task
 
 SelectBatch = Callable[..., list[Job]]
@@ -115,13 +116,19 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         """
 
         pull_request_capacity = getattr(self.pipeline, "pull_request_capacity", None)
-        if bool(getattr(pull_request_capacity, "pause_new_dispatch", False)):
-            return [task for task in self.pipeline.tasks.cached() if task.source == "github-issue"]
-
+        paused = bool(getattr(pull_request_capacity, "pause_new_dispatch", False))
         available = self.issue_admission.available_slots(now or datetime.now(UTC))
-        if available is None or available > 0:
+        if not paused and (available is None or available > 0):
             return original(limit)
-        return [task for task in self.pipeline.tasks.cached() if task.source == "github-issue"]
+        cached = [task for task in self.pipeline.tasks.cached() if task.source == "github-issue"]
+        if bool(getattr(getattr(self, "config", None), "maintenance_enabled", False)):
+            admitted = MaintenanceController(self.pipeline).admitted_issue_ids()
+            if admitted - {task.identifier for task in cached}:
+                # A controller repair can be created while ordinary intake is
+                # WIP-paused. Discover its exact issue before using the cache;
+                # scheduler admission still blocks every ordinary new issue.
+                return original(limit)
+        return cached
 
     def _loop(self) -> int:
         original_select = daemon_module.select_batch

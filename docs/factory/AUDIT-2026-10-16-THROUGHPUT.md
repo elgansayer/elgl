@@ -25,7 +25,33 @@ The principal throughput constraints were:
 - Refresh the Google route to the account-visible Gemini 3.8 Flash effort tiers.
 - Enable the installed Pi adapter as a bounded fourth subscription provider after its GitHub Copilot OAuth probe returned `ready`.
 
-## Deliberate non-change
+## Follow-up: storage, stale heads and rollout cadence
+
+A live follow-up found both instances paused at the 5 GiB storage reserve. Removing
+14 reproducible dependency caches from inactive worktrees restored 11.4 GiB free
+and scheduling resumed. Source files and provider credentials were preserved.
+
+GitHub's `BLOCKED` and `UNSTABLE` aggregate states can hide a stale base. Initial
+verification and unverified-head refresh now inspect local ancestry for those
+states as well as `UNKNOWN`, then use the existing SHA-matched branch update and
+fresh CI/review flow. This avoids retrying failures already fixed on main, such
+as Google Fonts downloads inside the networkless verifier. Reviewed merge
+candidates retain the non-strict fast merge policy.
+
+Both updater timers now check every 30 minutes with up to two minutes of jitter,
+instead of waiting until the following 03:00 UTC. The updater still skips package
+installation and restarts when current, and drains active workers before rollout.
+
+Codex implementation now requests `high` reasoning instead of `max`. Planning
+and architecture retain `max`, security review retains `high`, independent review
+retains `medium`, and bounded repairs retain `low`. Measure runtime and repair
+rate after rollout; no percentage saving is claimed.
+
+Validation: full Factory pytest suite, Ruff formatting/lint and mypy for the
+pipeline change; six regression cases cover three aggregate states through both
+initial intake and existing-head refresh. Systemd validates the timer calendar.
+
+## Independent review
 
 The independent review gate remains. It was not the dominant delay, and removing it would discard useful cross-provider defect detection. The improvement instead removes redundant base replay and post-merge waiting while increasing review concurrency.
 

@@ -28,6 +28,7 @@ from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestMatch, PullRequestStatus
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.jobs import JobStore
+from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
@@ -384,6 +385,8 @@ class FactoryPipeline:
         if self.active_label_reconciliation_pending:
             self._reconcile_active_labels(protected_task_ids or set())
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
+        if self.config.maintenance_enabled:
+            tasks = MaintenanceController(self).tag_tasks(tasks)
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
         for job in jobs.values():
@@ -572,8 +575,11 @@ class FactoryPipeline:
         try:
             # A sibling dispatch may have completed a transition while this worker
             # waited for the claim lock. Reload only after acquisition, so stale
-            # in-memory state can never repeat branch or PR creation.
-            job = self.jobs.load().get(task_id)
+            # in-memory state can never repeat branch or PR creation. The same locked
+            # read marks the attempt in flight and the write that commits its outcome
+            # clears the marker, so a worker that dies first leaves evidence the
+            # watchdog can tell apart from work that is merely queued.
+            job = self.jobs.begin_attempt(task_id)
             if job is None or job.state in TERMINAL_STATES:
                 return None
             self._copy_claim_metadata(job, claim)
@@ -592,8 +598,12 @@ class FactoryPipeline:
                 LOGGER.warning("Factory job %s deferred: %s", job.task.identifier, error)
             except Exception as error:
                 job.attempts += 1
+                if job.maintenance_recovery_id is not None:
+                    job.maintenance_recovery_failures += 1
                 job.last_error = str(error)[-2000:]
                 self._record_failure(job)
+            job.attempt_started_at = None
+            job.attempt_generation = None
             job.updated_at = datetime.now(UTC)
             self.jobs.save_job(job)
             if job.last_error and job.last_failure_fingerprint is not None:
@@ -704,6 +714,9 @@ class FactoryPipeline:
         prepare_attempt: Callable[[], None] | None = None,
         validate_output: Callable[[], None] | None = None,
         require_repository_change: bool = False,
+        timeout_seconds: int | None = None,
+        system_prompt_override: str | None = None,
+        read_only_reference: Path | None = None,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
 
@@ -766,7 +779,9 @@ class FactoryPipeline:
             task=job.task,
             prompt=prompt,
             cwd=worktree,
-            system_prompt=self.system_prompt,
+            system_prompt=system_prompt_override or self.system_prompt,
+            read_only_reference=read_only_reference,
+            timeout_seconds=timeout_seconds,
             prepare_attempt=(
                 prepare if prepare_attempt is not None or require_repository_change else None
             ),
@@ -786,15 +801,24 @@ class FactoryPipeline:
                 )
                 and isinstance(entry.get("provider"), str)
             }
-        history_before = len(job.provider_history)
+        # Retain references while routing so bounded-history eviction cannot
+        # make new attempts disappear from convergence metrics.
+        history_before = list(job.provider_history)
+        previous_entries = {id(entry) for entry in history_before}
         try:
             result = self.router.run(request, job, exclude=excluded)
         finally:
+            invocations = sum(id(entry) not in previous_entries for entry in job.provider_history)
             if agent_phase is AgentPhase.CODE_REVIEW and job.pull_request is not None:
                 self.pr_metrics.record_reviewer_invocations(
                     job.pull_request,
-                    len(job.provider_history) - history_before,
+                    invocations,
                 )
+            elif (
+                agent_phase in {AgentPhase.CI_REPAIR, AgentPhase.QUALITY_REPAIR}
+                and job.pull_request is not None
+            ):
+                self.pr_metrics.record_repair_invocations(job.pull_request, invocations)
 
         if agent_phase is AgentPhase.IMPLEMENTATION:
             job.implementation_provider = result.provider
@@ -1333,8 +1357,6 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REPAIRING:
-            if job.repair_attempts >= 5:
-                raise FactoryError("Repair limit exceeded")
             status = self._status(job)
             if status.state == "MERGED":
                 job.state = JobState.MERGED
@@ -1348,8 +1370,14 @@ class FactoryPipeline:
                 status.mergeable == "CONFLICTING"
                 or status.merge_state_status in CONFLICTING_MERGE_STATES
             )
+            stale_base = (
+                not base_conflict
+                and status.merge_state_status in {"BEHIND", "BLOCKED", "UNSTABLE", "UNKNOWN"}
+                and not workflow.contains_current_base()
+            )
             if (
                 not base_conflict
+                and not stale_base
                 and not status.failed_checks
                 and (
                     status.checks_pending
@@ -1377,7 +1405,7 @@ class FactoryPipeline:
             # agent's judgement. Try that for free first; only spend an LLM
             # call if the worktree is still unchanged afterwards.
             has_unmerged_paths = False
-            if base_conflict:
+            if base_conflict or stale_base:
                 has_unmerged_paths = workflow.merge_base_for_repair()
                 repair_context += (
                     "\nThe current base branch has been merged into this isolated "
@@ -1386,8 +1414,15 @@ class FactoryPipeline:
                 )
             else:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
-            mechanically_repaired = not base_conflict and workflow.has_changes()
-            if has_unmerged_paths or (not base_conflict and not mechanically_repaired):
+            mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
+            if has_unmerged_paths or (
+                not (base_conflict or stale_base) and not mechanically_repaired
+            ):
+                # Bound generated repairs, not read-only status refreshes or
+                # deterministic fixes. A spent model budget must not hide a
+                # changed/merged head or block a clean current-base integration.
+                if job.repair_attempts >= 5:
+                    raise FactoryError("Repair limit exceeded")
                 self._run_agent(
                     job,
                     worktree,
@@ -1396,12 +1431,16 @@ class FactoryPipeline:
                     lease_owner=lease_owner,
                     require_repository_change=True,
                 )
-            verified_paths = self._verify(workflow)
+            verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
+            if verified_paths is None:
+                return
             job.quality_repairs = 0
             workflow.stage_all()
             commit_subject = (
                 "fix: resolve base conflicts for"
                 if base_conflict
+                else "fix: refresh current base for"
+                if stale_base
                 else (
                     "fix: apply automatic formatting for"
                     if mechanically_repaired
@@ -1666,8 +1705,11 @@ class FactoryPipeline:
         )
         self.github.add_comment(job.pull_request, comment)
         status = self._status(job)
+        # GitHub's aggregate state masks base staleness behind required-check
+        # failures or a missing Factory review. Inspect ancestry before spending
+        # verification or provider capacity on a head missing fixes from main.
         local_base_is_stale = (
-            status.merge_state_status == "UNKNOWN"
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
             and not self._workflow(worktree).contains_current_base()
         )
         if status.merge_state_status == "BEHIND" or local_base_is_stale:
@@ -1779,8 +1821,9 @@ class FactoryPipeline:
         )
         job.review_findings.clear()
         status = known_status or self._status(job)
+        # BLOCKED/UNSTABLE do not imply that the branch contains current main.
         local_base_is_stale = (
-            status.merge_state_status == "UNKNOWN"
+            status.merge_state_status in {"UNKNOWN", "BLOCKED", "UNSTABLE"}
             and not self._workflow(worktree).contains_current_base()
         )
         if status.merge_state_status == "BEHIND" or local_base_is_stale:
@@ -1921,19 +1964,22 @@ class FactoryPipeline:
         # before spending minutes in the host-wide verification slot.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
-        run_verification(shared)
-        if not exclusive:
-            return changed
-        if self.verification_slots is None:
-            run_verification(exclusive)
-            return changed
-        with self.verification_slots:
-            if self.host_resource_slots is None:
+        try:
+            run_verification(shared)
+            if not exclusive:
+                return changed
+            if self.verification_slots is None:
                 run_verification(exclusive)
-            else:
-                with self.host_resource_slots.exclusive():
+                return changed
+            with self.verification_slots:
+                if self.host_resource_slots is None:
                     run_verification(exclusive)
-        return changed
+                else:
+                    with self.host_resource_slots.exclusive():
+                        run_verification(exclusive)
+            return changed
+        finally:
+            workflow.discard_transient_build_metadata()
 
     def _verify_or_schedule_quality_repair(
         self,
@@ -2189,6 +2235,10 @@ class FactoryPipeline:
                     "provider_history": job.provider_history,
                 }
             )
+
+    def run_maintenance_cycle(self) -> Job | None:
+        MaintenanceController(self).run()
+        return None
 
     def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
         """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.
