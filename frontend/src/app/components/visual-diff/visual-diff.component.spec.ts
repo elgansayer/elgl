@@ -10,14 +10,18 @@ import { VisualDiffComponent } from './visual-diff.component';
 describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
+  const createFlashcard = vi.fn();
 
   beforeEach(async () => {
+    createFlashcard.mockReset();
+    createFlashcard.mockResolvedValue(undefined);
+
     await TestBed.configureTestingModule({
       imports: [VisualDiffComponent],
       providers: [
         {
           provide: FlashcardService,
-          useValue: { createFlashcard: vi.fn().mockResolvedValue(undefined) },
+          useValue: { createFlashcard },
         },
         {
           provide: I18nService,
@@ -234,5 +238,47 @@ describe('VisualDiffComponent', () => {
         (element as HTMLElement).classList.contains('line-through'),
       ),
     ).toBe(true);
+  });
+
+  it('creates a flashcard with the trimmed tutor explanation as context', async () => {
+    fixture.componentRef.setInput('original', 'I goes to market yesterday.');
+    fixture.componentRef.setInput('corrected', 'I went to the market yesterday.');
+    fixture.componentRef.setInput('explanation', '  Use the past tense here.  ');
+
+    await component.createFlashcard();
+
+    expect(createFlashcard).toHaveBeenCalledWith({
+      word_token: 'I went to the market yesterday.',
+      translation: 'I goes to market yesterday.',
+      original_context: 'Use the past tense here.',
+    });
+  });
+
+  it('omits whitespace-only context and retains the field-specific SRS limits', async () => {
+    fixture.componentRef.setInput('original', 'o'.repeat(600));
+    fixture.componentRef.setInput('corrected', 'c'.repeat(300));
+    fixture.componentRef.setInput('explanation', '   ');
+
+    await component.createFlashcard();
+
+    expect(createFlashcard).toHaveBeenCalledWith({
+      word_token: 'c'.repeat(200),
+      translation: 'o'.repeat(500),
+      original_context: undefined,
+    });
+  });
+
+  it('limits tutor context independently to 1000 characters', async () => {
+    fixture.componentRef.setInput('original', 'Hello world');
+    fixture.componentRef.setInput('corrected', 'Hello, world');
+    fixture.componentRef.setInput('explanation', '  ' + 'e'.repeat(1100) + '  ');
+
+    await component.createFlashcard();
+
+    expect(createFlashcard).toHaveBeenCalledWith({
+      word_token: 'Hello, world',
+      translation: 'Hello world',
+      original_context: 'e'.repeat(1000),
+    });
   });
 });
