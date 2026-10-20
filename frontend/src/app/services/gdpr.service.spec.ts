@@ -18,6 +18,24 @@ describe('GdprService', () => {
 
   afterEach(() => httpTesting.verify());
 
+  it('restores persisted privacy status through environment.apiUrl', async () => {
+    const resultPromise = service.getStatus();
+    const request = httpTesting.expectOne(`${environment.apiUrl}/privacy/status`);
+
+    expect(request.request.method).toBe('GET');
+    request.flush({
+      is_deletion_pending: true,
+      scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
+      latest_archive: null,
+    });
+
+    await expect(resultPromise).resolves.toEqual({
+      is_deletion_pending: true,
+      scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
+      latest_archive: null,
+    });
+  });
+
   it('requests an archive through environment.apiUrl', async () => {
     const resultPromise = service.requestArchive('receipt-1', 'ios');
     const request = httpTesting.expectOne(`${environment.apiUrl}/privacy/request-archive`);
