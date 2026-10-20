@@ -72,7 +72,11 @@ jobs:
             if (!config.includes(marker)) failures.push(`cypress.config.ts missing: ${marker}`);
           }
 
-          const requiredSpecs = ['cypress/e2e/app.cy.ts', 'cypress/e2e/moments-flow.cy.ts'];
+          const requiredSpecs = [
+            'cypress/e2e/app.cy.ts',
+            'cypress/e2e/moments-flow.cy.ts',
+            'cypress/e2e/chat-flow.cy.ts',
+          ];
           for (const spec of requiredSpecs) {
             if (!fs.existsSync(spec)) failures.push(`missing Cypress smoke spec: ${spec}`);
           }
@@ -84,7 +88,7 @@ jobs:
           console.log('Cypress frontend installation/configuration contract passed.');
           NODE
 
-      - name: Run Cypress app and Moments smoke tests
+      - name: Run Cypress app, Moments, and Chat smoke tests
         run: >-
           npx start-server-and-test start http://localhost:4200
-          "cypress run --spec 'cypress/e2e/app.cy.ts,cypress/e2e/moments-flow.cy.ts' --browser electron"
+          "cypress run --spec 'cypress/e2e/app.cy.ts,cypress/e2e/moments-flow.cy.ts,cypress/e2e/chat-flow.cy.ts' --browser electron"

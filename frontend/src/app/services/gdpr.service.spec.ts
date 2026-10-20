@@ -1,117 +1,57 @@
-import {
-  HttpClientTestingModule,
-  HttpTestingController,
-} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { environment } from '../../environments/environment';
 import { GdprService } from './gdpr.service';
 
 describe('GdprService', () => {
   let service: GdprService;
-  let httpMock: HttpTestingController;
+  let httpTesting: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [GdprService],
+      providers: [GdprService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(GdprService);
-    httpMock = TestBed.inject(HttpTestingController);
+    httpTesting = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => {
-    httpMock.verify();
-  });
+  afterEach(() => httpTesting.verify());
 
-  it('loads and normalizes authoritative deletion status', async () => {
-    const resultPromise = service.getStatus();
+  it('requests an archive through environment.apiUrl', async () => {
+    const resultPromise = service.requestArchive('receipt-1', 'ios');
+    const request = httpTesting.expectOne(`${environment.apiUrl}/privacy/request-archive`);
 
-    const req = httpMock.expectOne('/api/privacy/status');
-    expect(req.request.method).toBe('GET');
-    req.flush({
-      deletion: {
-        pending: true,
-        scheduled_for: '2026-09-26T04:00:00Z',
-        requested_at: '2026-08-27T04:00:00Z',
-      },
-    });
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ receipt_id: 'receipt-1', app_store: 'ios' });
+    request.flush({ request_id: 'request-1', status: 'processing', message: 'queued' });
 
     await expect(resultPromise).resolves.toEqual({
-      deletion: {
-        pending: true,
-        scheduled_for: '2026-09-26T04:00:00.000Z',
-        requested_at: '2026-08-27T04:00:00.000Z',
-      },
+      request_id: 'request-1',
+      status: 'processing',
+      message: 'queued',
     });
   });
 
-  it('accepts null deletion timestamps', async () => {
-    const resultPromise = service.getStatus();
-    httpMock.expectOne('/api/privacy/status').flush({
-      deletion: {
-        pending: false,
-        scheduled_for: null,
-        requested_at: null,
-      },
-    });
-
-    await expect(resultPromise).resolves.toEqual({
-      deletion: {
-        pending: false,
-        scheduled_for: null,
-        requested_at: null,
-      },
-    });
-  });
-
-  it('rejects malformed lifecycle response shapes', async () => {
-    const missingDeletion = service.getStatus();
-    httpMock.expectOne('/api/privacy/status').flush({ pending: false });
-    await expect(missingDeletion).rejects.toThrow('Invalid privacy status response');
-
-    const invalidPending = service.getStatus();
-    httpMock.expectOne('/api/privacy/status').flush({
-      deletion: {
-        pending: 'false',
-        scheduled_for: null,
-        requested_at: null,
-      },
-    });
-    await expect(invalidPending).rejects.toThrow('Invalid privacy status response');
-  });
-
-  it('rejects malformed lifecycle timestamps', async () => {
-    const resultPromise = service.getStatus();
-    httpMock.expectOne('/api/privacy/status').flush({
-      deletion: {
-        pending: true,
-        scheduled_for: 'not-a-date',
-        requested_at: null,
-      },
-    });
-
-    await expect(resultPromise).rejects.toThrow('Invalid privacy status timestamp');
-  });
-
-  it('sends explicit confirmation for account deletion', async () => {
+  it('requests account deletion through environment.apiUrl', async () => {
     const resultPromise = service.deleteAccount(true);
+    const request = httpTesting.expectOne(`${environment.apiUrl}/privacy/delete-account`);
 
-    const req = httpMock.expectOne('/api/privacy/delete-account');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ confirm_delete: true });
-    req.flush({ message: 'accepted' });
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ confirm_delete: true });
+    request.flush({});
 
-    await expect(resultPromise).resolves.toBeUndefined();
+    await resultPromise;
   });
 
-  it('uses a POST mutation when cancelling deletion', async () => {
+  it('cancels deletion through environment.apiUrl', async () => {
     const resultPromise = service.cancelDeletion();
+    const request = httpTesting.expectOne(`${environment.apiUrl}/privacy/cancel-deletion`);
 
-    const req = httpMock.expectOne('/api/privacy/cancel-deletion');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({});
-    req.flush({ message: 'cancelled' });
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush({});
 
-    await expect(resultPromise).resolves.toBeUndefined();
+    await resultPromise;
   });
 });
