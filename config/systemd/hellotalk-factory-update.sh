@@ -693,8 +693,10 @@ if [ "$runtime_update_needed" = true ]; then
 fi
 
 if [ "$local_sha" != "$remote_sha" ]; then
-  log 'Pulling main'
-  factory_git_authenticated pull --ff-only origin main
+  log 'Fast-forwarding main to the verified candidate'
+  # Do not pull a mutable branch after a potentially long drain. Another owner
+  # merge may have moved it to an untested SHA since the candidate passed CI.
+  factory_git_read merge --ff-only "$remote_sha"
 fi
 
 pulled_sha=$(factory_git_read rev-parse HEAD)
