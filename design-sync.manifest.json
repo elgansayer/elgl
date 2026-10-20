@@ -107,6 +107,11 @@
     },
     {
       "id": "spartan.component-system",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 repairs duplicate imports, uses framework-default change detection, narrows malformed realtime payloads and removes an unused test import. No template content, styles, tokens, controls or valid-publication behaviour changes. No preview or Claude Design reconciliation is claimed."
+      },
       "kind": "primitive",
       "ownerLayer": "spartan-helm",
       "repositoryPaths": ["frontend/src/app/components"],
@@ -142,6 +147,11 @@
     },
     {
       "id": "screen.home",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 removes duplicate Angular imports and redundant explicit OnPush metadata. Home templates, styles, layout and interaction contracts are unchanged. No preview or Claude Design reconciliation is claimed."
+      },
       "kind": "screen",
       "ownerLayer": "feature",
       "repositoryPaths": ["frontend/src/app/pages/home"],
