@@ -13,10 +13,14 @@
     "check:lint-contract": "node --test scripts/verify-project-lint-contract.test.mjs && node scripts/verify-project-lint-contract.mjs",
     "check:playwright-test-boundary": "node --test scripts/verify-playwright-test-boundary.test.mjs && node scripts/verify-playwright-test-boundary.mjs",
     "check:e2e-backend-readiness": "node --test e2e/backend-readiness.test.mjs",
+    "check:ssr-compatibility": "node --test scripts/verify-ssr-compatibility.test.mjs && node scripts/verify-ssr-compatibility.mjs",
     "check:chat-reference-analysis": "node --test scripts/verify-chat-reference-analysis.test.mjs && node scripts/verify-chat-reference-analysis.mjs",
     "check:agent-ui-governance": "node scripts/check-agent-ui-governance.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
-    "check:design-sync-drift": "node scripts/check-design-sync-drift.mjs",
+    "check:design-sync-drift": "node --test scripts/check-design-sync-drift.test.mjs && node scripts/check-design-sync-drift.mjs",
+    "check:design-coverage": "node --test scripts/design-sync/design-sync.test.mjs && node scripts/design-sync/check-full-coverage.mjs",
+    "audit:design": "node scripts/design-sync/audit-design.mjs --write",
+    "audit:design-render": "node scripts/design-sync/render-previews.mjs",
     "check:spartan-boundaries": "node scripts/verify-spartan-boundaries.mjs",
     "check:spartan-full-tree": "node scripts/report-full-tree-spartan-adoption.mjs --strict",
     "check:component-system": "node scripts/verify-component-system-convergence.mjs",
@@ -56,7 +60,7 @@
     "test:backend": "cd backend && npm run test",
     "test:admin": "cd admin-portal && npm run test",
     "test:r2-gateway": "cd workers/r2-gateway && npm test",
-    "verify": "npm run check:constitution && npm run check:lint-contract && npm run check:playwright-test-boundary && npm run check:e2e-backend-readiness && npm run check:chat-reference-analysis && npm run check:agent-ui-governance && npm run check:design-sync && npm run check:spartan-boundaries && npm run check:spartan-full-tree && npm run check:component-system && npm run check:visual-contract-matrix && npm run check:rtl-logical-contract && npm run check:focus-ring-contract && npm run check:reduced-motion-contract && npm run check:ux-platform-contract && npm run check:translation-safe-apis && npm run check:dependency-compatibility-lanes && npm run check:empty-state-illustrations && npm run check:no-aws-sdk && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
+    "verify": "npm run check:constitution && npm run check:lint-contract && npm run check:playwright-test-boundary && npm run check:e2e-backend-readiness && npm run check:ssr-compatibility && npm run check:chat-reference-analysis && npm run check:agent-ui-governance && npm run check:design-sync && npm run check:spartan-boundaries && npm run check:spartan-full-tree && npm run check:component-system && npm run check:visual-contract-matrix && npm run check:rtl-logical-contract && npm run check:focus-ring-contract && npm run check:reduced-motion-contract && npm run check:ux-platform-contract && npm run check:translation-safe-apis && npm run check:dependency-compatibility-lanes && npm run check:empty-state-illustrations && npm run check:no-aws-sdk && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -71,8 +75,8 @@
     "@eslint/js": "^10.0.1",
     "artillery": "^2.0.34",
     "husky": "^9.1.7",
-    "lint-staged": "^17.3.0",
-    "prettier": "^3.3.3"
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10"
   },
   "lint-staged": {
     "*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": [

@@ -426,6 +426,10 @@ def test_default_repository_is_production_clone() -> None:
     assert config.max_parallel_jobs == 5
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
+    assert config.repository_profile == "hellotalk"
+    assert config.prompt_dir == config.repository / "automation" / "prompts"
+    assert config.system_prompt_path == config.prompt_dir / "system.md"
+    assert config.provider_capacity_dir == config.state_dir
     assert config.require_trusted_intake is False
     assert config.trusted_github_actors == frozenset({"elgansayer"})
     assert config.control_github_actors == frozenset({"elgansayer"})
@@ -433,6 +437,32 @@ def test_default_repository_is_production_clone() -> None:
     assert config.agents.providers["openhands"].enabled is True
     assert config.agents.providers["claude"].enabled is False
     assert config.agents.routing.implementation[0] == "claude"
+
+
+def test_repository_profile_paths_and_shared_capacity_are_configurable(tmp_path: Path) -> None:
+    repository = tmp_path / "workout-agent"
+    prompt_dir = tmp_path / "trusted-prompts"
+    configured = FactoryConfig.from_environment(
+        environment(
+            FACTORY_REPOSITORY=str(repository),
+            FACTORY_STATE_DIR=str(tmp_path / "state"),
+            FACTORY_REPOSITORY_PROFILE="workout-agent",
+            FACTORY_PROMPT_DIR=str(prompt_dir),
+            FACTORY_SYSTEM_PROMPT_PATH=str(prompt_dir / "workout-agent-system.md"),
+            FACTORY_PROVIDER_CAPACITY_DIR=str(tmp_path / "shared"),
+            GITHUB_REPOSITORY="elgansayer/workout-agent",
+        )
+    )
+
+    assert configured.repository_profile == "workout-agent"
+    assert configured.prompt_dir == prompt_dir
+    assert configured.system_prompt_path == prompt_dir / "workout-agent-system.md"
+    assert configured.provider_capacity_dir == tmp_path / "shared"
+
+
+def test_unknown_repository_profile_is_rejected() -> None:
+    with pytest.raises(ConfigurationError, match="repository_profile"):
+        FactoryConfig.from_environment(environment(FACTORY_REPOSITORY_PROFILE="unknown"))
 
 
 def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
@@ -712,3 +742,52 @@ def test_recovery_retention_must_be_positive() -> None:
 def test_stall_alert_threshold_must_be_positive() -> None:
     with pytest.raises(ConfigurationError, match="stall alert threshold must be positive"):
         FactoryConfig.from_environment(environment(FACTORY_STALL_ALERT_MINUTES="0"))
+
+
+def test_repo_factory_service_is_instance_scoped_and_resource_bounded() -> None:
+    root = Path(__file__).parents[2]
+    unit = (root / "config/systemd/repo-factory@.service").read_text(encoding="utf-8")
+    slice_unit = (root / "config/systemd/repo-factory.slice").read_text(encoding="utf-8")
+
+    assert "EnvironmentFile=/etc/repo-factory/instances/%i.env" in unit
+    assert "WorkingDirectory=/var/lib/repo-factory/%i/repository" in unit
+    assert "Slice=repo-factory.slice" in unit
+    assert "ExecStart=/opt/hellotalk-factory/venv/bin/repo-factory daemon" in unit
+    assert "MemoryMax=7G" in slice_unit
+
+
+def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> None:
+    root = Path(__file__).parents[2]
+    profile = (root / "config/factory/instances/workout-agent.env").read_text(encoding="utf-8")
+
+    assert "FACTORY_REPOSITORY_PROFILE=workout-agent" in profile
+    assert "FACTORY_MAX_PARALLEL_JOBS=1" in profile
+    assert "FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600" in profile
+    assert "FACTORY_REQUIRE_READY_LABEL=true" in profile
+    assert "FACTORY_PROVIDER_CAPACITY_DIR=/var/lib/repo-factory/shared" in profile
+    assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
+
+
+def test_instance_installer_preserves_legacy_rollback_path() -> None:
+    installer = (Path(__file__).parents[2] / "scripts/install-repo-factory-instance.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "SECONDARY_MOUNT=/mnt/HC_Volume_106574422" in installer
+    assert "--reference-if-able" in installer
+    assert "hellotalk-factory-update.timer" in installer
+    assert "repo-factory-update.timer" in installer
+    assert "localhost/repo-factory-worker:current" in installer
+    assert "--migrate-hellotalk requires --instance hellotalk and --activate" in installer
+    assert "rm -rf" not in installer
+
+
+def test_repo_factory_update_coordinates_both_instances() -> None:
+    root = Path(__file__).parents[2]
+    script = (root / "config/systemd/hellotalk-factory-update.sh").read_text(encoding="utf-8")
+    unit = (root / "config/systemd/repo-factory-update.service").read_text(encoding="utf-8")
+
+    assert "all_factories_idle" in script
+    assert "restore_services_on_failure" in script
+    assert "localhost/repo-factory-worker:current" in script
+    assert "REPO_FACTORY_SECONDARY_SERVICE=repo-factory@workout-agent.service" in unit

@@ -1,11 +1,11 @@
 import { Component, input, output, inject, resource, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UpperCasePipe } from '@angular/common';
-import { environment } from '../../../environments/environment';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { environment } from '../../../environments/environment';
 
 interface LikedUser {
   id: string;
@@ -109,11 +109,12 @@ export class LikedByModalComponent {
   readonly open = input(true);
   readonly closeModal = output<void>();
   private readonly http = inject(HttpClient);
+  private readonly apiBase = environment.apiUrl;
   readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
   readonly likedUsers = resource({
     params: () => (this.open() ? this.momentId() : undefined),
     loader: ({ params: momentId }) =>
-      firstValueFrom(this.http.get<LikedUser[]>(`${environment.apiUrl}/moments/${momentId}/likes`)),
+      firstValueFrom(this.http.get<LikedUser[]>(`${this.apiBase}/moments/${momentId}/likes`)),
   });
 
   onDialogStateChanged(state: HlmDialogState): void {
