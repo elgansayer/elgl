@@ -36,6 +36,14 @@ export class PrivacyController {
     };
   }
 
+  @Get('status')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 30, ttl: 60 * 60 * 1000 } })
+  async getStatus(@CurrentUser() user: User | null) {
+    if (!user) throw new UnauthorizedException();
+    return this.privacyService.getStatus(user.id);
+  }
+
   @Post('request-archive')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 3, ttl: 60 * 60 * 1000 } })
