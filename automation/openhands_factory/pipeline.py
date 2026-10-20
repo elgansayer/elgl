@@ -1355,8 +1355,6 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REPAIRING:
-            if job.repair_attempts >= 5:
-                raise FactoryError("Repair limit exceeded")
             status = self._status(job)
             if status.state == "MERGED":
                 job.state = JobState.MERGED
@@ -1418,6 +1416,11 @@ class FactoryPipeline:
             if has_unmerged_paths or (
                 not (base_conflict or stale_base) and not mechanically_repaired
             ):
+                # Bound generated repairs, not read-only status refreshes or
+                # deterministic fixes. A spent model budget must not hide a
+                # changed/merged head or block a clean current-base integration.
+                if job.repair_attempts >= 5:
+                    raise FactoryError("Repair limit exceeded")
                 self._run_agent(
                     job,
                     worktree,
