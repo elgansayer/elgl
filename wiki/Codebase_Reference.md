@@ -339,15 +339,6 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/host-dashboard/dto/host-dashboard.dto.ts`
 - *(No methods found or interface/type definition)*
 
-### `backend/src/assessments/assessments.module.ts`
-- *(No methods found or interface/type definition)*
-
-### `backend/src/assessments/assessments.service.ts`
-- Methods: `getQuestions`, `getFallbackQuestions`
-
-### `backend/src/assessments/assessments.controller.ts`
-- *(No methods found or interface/type definition)*
-
 ### `backend/src/email/email.module.ts`
 - *(No methods found or interface/type definition)*
 
@@ -1853,7 +1844,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/services/version.service.ts`
-- Methods: `getVersion`
+- Methods: `getVersion`, `checkVersion`, `refreshVersionPolicy`, `readMinimumSupported`, `applyMinimumVersion`
 
 ### `frontend/src/app/services/discovery.service.ts`
 - Methods: `getHeaders`, `findPartners`, `searchByCountryCity`, `getAudioIntros`, `getRecentNativeSpeakers`, `getSpotlightUsers`, `findByLanguagePair`, `translateBio`, `sendMessageToPartner`, `followPartner`
@@ -1917,9 +1908,6 @@ This document contains an exhaustive list of files and methods in the codebase.
 
 ### `frontend/src/app/services/livekit-e2ee.worker.ts`
 - *(No methods found or interface/type definition)*
-
-### `frontend/src/app/services/version-check.service.ts`
-- Methods: `isVersionLower`, `checkVersion`
 
 ### `frontend/src/app/services/pronunciation.service.ts`
 - Methods: `submitVoiceFeedback`, `analyse`
@@ -2826,4 +2814,3 @@ This document contains an exhaustive list of files and methods in the codebase.
 
 ### `frontend/src/app/pages/block-management/block-management.component.ts`
 - Methods: `hasTargetLanguages`, `getTargetLanguagesText`, `onUnblock`, `retryLoad`
-
