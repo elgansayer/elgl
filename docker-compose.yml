@@ -9,8 +9,6 @@ services:
     environment:
       - NODE_ENV=production
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:4200}
-      - REDIS_URL=redis://cache:6379
-      - CENTRIFUGO_URL=http://websocket:8000
     env_file:
       - .env
     ports:
@@ -60,9 +58,6 @@ services:
     image: centrifugo/centrifugo:v5
     restart: always
     command: centrifugo -c /centrifugo/config.json
-    environment:
-      - CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=${CENTRIFUGO_SECRET}
-      - CENTRIFUGO_API_KEY=${CENTRIFUGO_API_KEY}
     ports:
       - '8000:8000'
       - '8001:8001'
