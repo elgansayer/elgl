@@ -1,3 +1,4 @@
+import { AppEmptyStateComponent } from '../../../components/primitives/empty-state/empty-state.component';
 import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -13,14 +14,14 @@ type RecommendationAction = 'follow' | 'message';
 
 @Component({
   selector: 'app-recommended-for-you-carousel',
-  imports: [RouterLink, HlmButton, TranslatePipe],
+  imports: [RouterLink, HlmButton, TranslatePipe, AppEmptyStateComponent],
   templateUrl: './recommended-for-you-carousel.component.html',
   styleUrls: ['./recommended-for-you-carousel.component.scss'],
 })
 export class RecommendedForYouCarouselComponent {
   private readonly recommendationsService = inject(RecommendationsService);
   private readonly studyBuddiesService = inject(StudyBuddiesService);
-  private readonly router = inject(Router);
+  public readonly router = inject(Router);
   private loadRequestId = 0;
 
   @ViewChild('carousel') private carousel?: ElementRef<HTMLElement>;
@@ -136,10 +137,7 @@ export class RecommendedForYouCarouselComponent {
     }
   }
 
-  reasonLabel(
-    reason: RecommendationReason,
-    recommendation: DiscoveryRecommendation,
-  ): string {
+  reasonLabel(reason: RecommendationReason, recommendation: DiscoveryRecommendation): string {
     switch (reason) {
       case 'language_exchange':
         return 'Language exchange match';
@@ -169,11 +167,7 @@ export class RecommendedForYouCarouselComponent {
     return `${userId}:${action}`;
   }
 
-  private setActionPending(
-    userId: string,
-    action: RecommendationAction,
-    pending: boolean,
-  ): void {
+  private setActionPending(userId: string, action: RecommendationAction, pending: boolean): void {
     const key = this.actionKey(userId, action);
     this.pendingActions.update((current) => {
       const next = new Set(current);

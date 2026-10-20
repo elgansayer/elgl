@@ -10,7 +10,7 @@ import {
   viewChild,
   OnInit,
 } from '@angular/core';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -95,7 +95,7 @@ export class LiveChatOverlayComponent implements OnInit {
 
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
-  centrifugo = inject(CentrifugoService);
+  centrifugo = inject(CentrifugeService);
   i18n = inject(I18nService);
   destroyRef = inject(DestroyRef);
   private injector = inject(Injector);

@@ -164,6 +164,53 @@ describe('DiagnosticQuizComponent', () => {
     expect(component.currentIndex()).toBe(0);
   });
 
+  it('reports progress for the active question and reaches 100% on the final question', async () => {
+    await load();
+    expect(component.progressPercentage()).toBe(50);
+    component.selectOption('q1', 'high');
+    component.next();
+    expect(component.progressPercentage()).toBe(100);
+  });
+
+  it('suppresses duplicate submissions while in-flight and allows retry after failure', async () => {
+    let rejectSubmit!: (err: Error) => void;
+    quizService.submitResults.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectSubmit = reject;
+        }),
+    );
+
+    await load();
+    component.selectOption('q1', 'high');
+    component.next();
+    component.selectOption('q2', 'low');
+
+    // First submit trigger
+    component.next();
+    expect(component.isSubmitting()).toBe(true);
+    expect(quizService.submitResults).toHaveBeenCalledTimes(1);
+
+    // Duplicate submit attempt while in-flight should be ignored
+    component.next();
+    expect(quizService.submitResults).toHaveBeenCalledTimes(1);
+
+    // Fail the submission
+    rejectSubmit(new Error('network error'));
+    await fixture.whenStable();
+
+    expect(component.submitError()).toBe(true);
+    expect(component.isSubmitting()).toBe(false);
+    expect(component.answers()).toEqual({ q1: 'high', q2: 'low' });
+
+    // Retry submission
+    quizService.submitResults.mockResolvedValueOnce(result);
+    component.next();
+    await fixture.whenStable();
+
+    expect(quizService.submitResults).toHaveBeenCalledTimes(2);
+  });
+
   it('shows retryable load and empty states', async () => {
     quizService.getQuestions.mockRejectedValueOnce(new Error('unavailable'));
     await load();
@@ -178,3 +225,4 @@ describe('DiagnosticQuizComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('No questions available');
   });
 });
+
