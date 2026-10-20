@@ -8,13 +8,13 @@ def _workflow(name: str) -> str:
     return (REPOSITORY_ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
 
 
-def test_primary_security_review_keeps_opus_for_open_ended_work_only() -> None:
+def test_primary_security_review_uses_best_observed_provider_and_scoped_models() -> None:
     config_path = REPOSITORY_ROOT / "config" / "factory" / "agents.production.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
     claude = config["providers"]["claude"]
     phase_models = claude["phase_models"]
 
-    assert config["routing"]["security_review"][0] == "claude"
+    assert config["routing"]["security_review"][0] == "google"
     assert phase_models["planning"] == "opus"
     assert phase_models["architecture"] == "opus"
     assert phase_models["implementation"] == "sonnet"
@@ -64,3 +64,67 @@ def test_static_product_contracts_only_run_when_their_inputs_change() -> None:
         assert "  pull_request:\n    branches: [main]\n    paths:\n" in workflow
         for path in inputs:
             assert f"      - '{path}'\n" in workflow
+
+
+def test_clean_project_lint_is_post_merge_or_manual_only() -> None:
+    workflow = _workflow("clean-project-lint.yml")
+
+    assert "  push:\n    branches: [main, develop]\n" in workflow
+    assert "  workflow_dispatch:\n" in workflow
+    assert "  pull_request:\n" not in workflow
+    assert "  merge_group:\n" not in workflow
+
+
+def test_factory_format_evidence_only_runs_for_its_actual_daemon_input() -> None:
+    workflow = _workflow("factory-format-evidence.yml")
+
+    assert "      - 'automation/openhands_factory/daemon.py'\n" in workflow
+    assert "      - 'automation/**/*.py'\n" not in workflow
+    assert "uv run --frozen ruff format openhands_factory/daemon.py" in workflow
+
+
+def test_dependency_review_only_runs_for_dependency_inputs() -> None:
+    workflow = _workflow("dependency-review.yml")
+
+    assert "    paths:\n" in workflow
+    for path in (
+        "**/package.json",
+        "**/package-lock.json",
+        "automation/pyproject.toml",
+        "automation/uv.lock",
+        ".github/workflows/**",
+    ):
+        assert f"      - '{path}'\n" in workflow
+
+
+def test_mock_boundary_skips_only_non_production_factory_surfaces() -> None:
+    workflow = _workflow("mock-backend-boundary.yml")
+    paths_block = workflow.split("    paths:\n", 1)[1].split("  push:\n", 1)[0]
+    paths = [
+        line.removeprefix("      - '").removesuffix("'")
+        for line in paths_block.splitlines()
+        if line.startswith("      - '")
+    ]
+
+    dockerfile = "**/*[Dd][Oo][Cc][Kk][Ee][Rr][Ff][Ii][Ll][Ee]"
+    compose = "**/*[Dd][Oo][Cc][Kk][Ee][Rr]-[Cc][Oo][Mm][Pp][Oo][Ss][Ee]"
+    production = "**/*.[Pp][Rr][Oo][Dd][Uu][Cc][Tt][Ii][Oo][Nn]"
+    prod = "**/*.[Pp][Rr][Oo][Dd]."
+    assert paths == [
+        "**",
+        "!automation/**/*.py",
+        "!automation/prompts/**",
+        "!factory-dashboard/**",
+        "!config/factory/**",
+        "!config/systemd/**",
+        "!docs/**",
+        f"{dockerfile}*",
+        f"{dockerfile}*/**",
+        f"{compose}*",
+        f"{compose}*/**",
+        f"{production}*",
+        f"{production}*/**",
+        f"{prod}*",
+        f"{prod}*/**",
+    ]
+    assert "paths-ignore:" not in workflow
