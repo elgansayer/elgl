@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, input, output, inject, signal, computed } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -31,7 +31,6 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             type="button"
             variant="ghost"
             size="icon-touch"
-            [disabled]="isSending()"
             (click)="closed.emit()"
             [attr.aria-label]="'common.close' | t"
           >
@@ -40,11 +39,11 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
         </div>
 
         <div
-          class="flex items-center justify-between gap-3 rounded-2xl border border-vip/30 bg-vip/10 p-4"
+          class="flex items-center justify-between rounded-2xl border border-vip/30 bg-vip/10 p-4"
         >
-          <div class="flex min-w-0 items-center gap-2">
-            <span class="shrink-0 text-2xl" aria-hidden="true">💰</span>
-            <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl" aria-hidden="true">💰</span>
+            <div>
               <span class="block text-[10px] font-black uppercase text-vip">{{
                 'giftModal.balanceLabel' | t
               }}</span>
@@ -58,8 +57,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             type="button"
             variant="secondary"
             size="sm"
-            class="shrink-0 text-vip"
-            [disabled]="isSending() || !economyStore.isOnline()"
+            class="text-vip"
             (click)="toggleCoinPackages()"
           >
             {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
@@ -74,18 +72,18 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               @for (pkg of economyStore.coinPackages(); track pkg.id) {
                 <div
-                  class="flex items-center justify-between gap-3 rounded-2xl border border-surface-100 bg-surface-300 p-3.5"
+                  class="flex items-center justify-between rounded-2xl border border-surface-100 bg-surface-300 p-3.5"
                 >
-                  <div class="flex min-w-0 items-center gap-3">
-                    <span class="shrink-0 text-2xl" aria-hidden="true">🪙</span>
-                    <div class="min-w-0">
-                      <span class="break-words text-sm font-black text-text-primary">
+                  <div class="flex items-center gap-3">
+                    <span class="text-2xl" aria-hidden="true">🪙</span>
+                    <div>
+                      <span class="text-sm font-black text-text-primary">
                         {{
                           'giftModal.package.' + pkg.id + '.title'
                             | t: { coins: pkg.coins, name: pkg.name }
                         }}
                       </span>
-                      <span class="block break-words text-xs text-text-secondary">{{
+                      <span class="block text-xs text-text-secondary">{{
                         'giftModal.package.' + pkg.id + '.desc' | t
                       }}</span>
                     </div>
@@ -94,8 +92,6 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                     hlmBtn
                     type="button"
                     size="sm"
-                    class="shrink-0"
-                    [disabled]="isSending() || !economyStore.isOnline()"
                     (click)="buyCoins(pkg.id)"
                     [attr.aria-label]="
                       'giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name }
@@ -118,9 +114,9 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
               <div
                 class="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3"
               >
-                <span class="shrink-0 text-3xl" aria-hidden="true">{{ gift.icon }}</span>
-                <div class="min-w-0 flex-1">
-                  <span class="block break-words text-sm font-bold text-text-primary">{{ gift.name }}</span>
+                <span class="text-3xl" aria-hidden="true">{{ gift.icon }}</span>
+                <div class="flex-1">
+                  <span class="block text-sm font-bold text-text-primary">{{ gift.name }}</span>
                   <span class="text-xs text-text-secondary">{{
                     'giftModal.giftCost' | t: { cost: gift.cost_coins }
                   }}</span>
@@ -130,7 +126,6 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  [disabled]="isSending()"
                   (click)="clearSelection()"
                   [attr.aria-label]="'giftModal.deselectAria' | t: { name: gift.name }"
                 >
@@ -152,9 +147,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                     role="radio"
                     class="h-auto w-full flex-col space-y-1 rounded-2xl p-2.5 text-center"
                     (click)="selectGift(gift)"
-                    [disabled]="
-                      isSending() || !economyStore.isOnline() || gift.cost_coins > effectiveBalance()
-                    "
+                    [disabled]="gift.cost_coins > effectiveBalance()"
                     [attr.aria-checked]="selectedGift()?.id === gift.id"
                     [attr.aria-label]="
                       'giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins }
@@ -174,15 +167,8 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
           </div>
         }
 
-        <div class="flex flex-wrap justify-end gap-3 border-t border-surface-100 pt-2">
-          <button
-            hlmBtn
-            type="button"
-            variant="secondary"
-            size="touch"
-            [disabled]="isSending()"
-            (click)="closed.emit()"
-          >
+        <div class="flex justify-end gap-3 border-t border-surface-100 pt-2">
+          <button hlmBtn type="button" variant="secondary" size="touch" (click)="closed.emit()">
             {{ 'giftModal.cancelBtn' | t }}
           </button>
           @if (!showCoinPackages()) {
@@ -191,9 +177,8 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 hlmBtn
                 type="button"
                 size="touch"
-                [disabled]="!canSendSelectedGift()"
+                [disabled]="isSending()"
                 (click)="confirmSend()"
-                [attr.aria-busy]="isSending()"
                 [attr.aria-label]="
                   'giftModal.sendAria'
                     | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() }
@@ -234,33 +219,20 @@ export class GiftPickerComponent {
   readonly selectedGift = signal<VirtualGift | null>(null);
   readonly showCoinPackages = signal(false);
   readonly isSending = signal(false);
+  readonly deductedAmount = signal(0);
 
   readonly titleId = 'gift-picker-title-' + crypto.randomUUID();
   readonly subtitleId = 'gift-picker-subtitle-' + crypto.randomUUID();
 
-  readonly effectiveBalance = computed(() => {
-    const balance = this.economyStore.coinsBalance();
-    return Number.isFinite(balance) && balance > 0 ? Math.floor(balance) : 0;
-  });
-
-  readonly canSendSelectedGift = computed(() => {
-    const gift = this.selectedGift();
-    return (
-      !!gift &&
-      this.economyStore.isOnline() &&
-      !this.isSending() &&
-      Number.isFinite(gift.cost_coins) &&
-      gift.cost_coins >= 0 &&
-      gift.cost_coins <= this.effectiveBalance()
-    );
-  });
+  readonly effectiveBalance = computed(
+    () => this.economyStore.coinsBalance() - this.deductedAmount(),
+  );
 
   onDialogStateChanged(state: HlmDialogState): void {
-    if (state === 'closed' && !this.isSending()) this.closed.emit();
+    if (state === 'closed') this.closed.emit();
   }
 
   toggleCoinPackages(): void {
-    if (this.isSending() || !this.economyStore.isOnline()) return;
     this.showCoinPackages.update((value) => !value);
     if (this.showCoinPackages() && this.economyStore.coinPackages().length === 0) {
       void this.economyStore.loadCoinPackages();
@@ -268,43 +240,33 @@ export class GiftPickerComponent {
   }
 
   buyCoins(packageId: string): void {
-    if (this.isSending() || !this.economyStore.isOnline()) return;
     void this.economyStore.buyCoins(packageId);
   }
 
   selectGift(gift: VirtualGift): void {
-    if (
-      this.isSending() ||
-      !this.economyStore.isOnline() ||
-      !Number.isFinite(gift.cost_coins) ||
-      gift.cost_coins < 0 ||
-      gift.cost_coins > this.effectiveBalance()
-    ) {
-      return;
-    }
     this.selectedGift.set(gift);
+    this.deductedAmount.set(gift.cost_coins);
   }
 
   clearSelection(): void {
-    if (this.isSending()) return;
     this.selectedGift.set(null);
+    this.deductedAmount.set(0);
   }
 
   async confirmSend(): Promise<void> {
     const gift = this.selectedGift();
-    if (!gift || !this.canSendSelectedGift()) return;
-
+    if (!gift) return;
     this.isSending.set(true);
     try {
       const ok = await this.economyStore.sendGift(this.receiverId(), gift.id, this.roomId());
-      if (!ok) return;
-
-      this.economyStore.triggerGiftAnimation({
-        gift,
-        sender_name: 'You',
-        receiver_name: this.receiverName(),
-      });
-      this.closed.emit();
+      if (ok) {
+        this.economyStore.triggerGiftAnimation({
+          gift,
+          sender_name: 'You',
+          receiver_name: this.receiverName(),
+        });
+        this.closed.emit();
+      }
     } finally {
       this.isSending.set(false);
     }
