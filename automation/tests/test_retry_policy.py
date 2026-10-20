@@ -1,6 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import FailureKind, Job, JobState, Task
 from openhands_factory.retry_policy import (
@@ -24,6 +26,16 @@ def test_classifies_failure_kinds_from_outer_openhands_diagnostics() -> None:
     assert classify_failure("HTTP 429 rate limit exceeded") is FailureKind.RATE_LIMIT
     assert classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
     assert classify_failure("Quality gate validation failed") is FailureKind.VALIDATION
+    infrastructure_failures = (
+        "getaddrinfo EAI_AGAIN fonts.googleapis.com",
+        "The Cypress binary is missing",
+        "We expected the binary to be installed here",
+        "No space left on device",
+        "frontend-build failed with exit 137",
+        "frontend-build failed with exit 143",
+    )
+    for detail in infrastructure_failures:
+        assert classify_failure(detail) is FailureKind.INFRASTRUCTURE, detail
 
 
 def test_agent_failure_context_is_persisted_in_stable_fingerprint() -> None:
@@ -137,6 +149,41 @@ def test_job_store_persists_class_budget_and_jittered_next_attempt(tmp_path: Pat
     assert restored.last_failure_kind == FailureKind.TASK_TIMEOUT.value
     assert restored.last_failure_fingerprint is not None
     assert restored.repeated_failure_count == 1
+    assert restored.next_attempt_at is not None
+    delay = restored.next_attempt_at - restored.updated_at
+    assert timedelta(minutes=3, seconds=59) <= delay <= timedelta(minutes=6, seconds=1)
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    (
+        "getaddrinfo EAI_AGAIN fonts.googleapis.com",
+        "The Cypress binary is missing",
+    ),
+    ids=("dns", "missing-cypress"),
+)
+def test_new_infrastructure_failure_does_not_inherit_transient_retry_debt(
+    tmp_path: Path,
+    diagnostic: str,
+) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    job = _job()
+    job.state = JobState.VERIFYING
+    job.failure_counts = {FailureKind.TRANSIENT.value: 23}
+    store.save({job.task.identifier: job})
+
+    failed = store.load()[job.task.identifier]
+    failed.attempts = 24
+    failed.last_error = f"frontend verification failed: {diagnostic}"
+    failed.updated_at = datetime.now(UTC)
+    store.save_job(failed)
+
+    restored = store.load()[job.task.identifier]
+    assert restored.failure_counts == {
+        FailureKind.TRANSIENT.value: 23,
+        FailureKind.INFRASTRUCTURE.value: 1,
+    }
+    assert restored.last_failure_kind == FailureKind.INFRASTRUCTURE.value
     assert restored.next_attempt_at is not None
     delay = restored.next_attempt_at - restored.updated_at
     assert timedelta(minutes=3, seconds=59) <= delay <= timedelta(minutes=6, seconds=1)

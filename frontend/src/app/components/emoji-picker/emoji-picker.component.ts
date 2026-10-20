@@ -1,7 +1,7 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
-import { Component, computed, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, output, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 
@@ -1406,6 +1406,7 @@ const EMOJI_CATEGORIES = [
 ];
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-emoji-picker',
   imports: [HlmInput, HlmButton, FormsModule, ...HlmRadioGroupImports],
   template: `
