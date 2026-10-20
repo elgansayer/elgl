@@ -1,3 +1,8 @@
+## 2026-08-21 - [Livekit Insecure Direct Object Reference (IDOR)]
+**Vulnerability:** Livekit connection tokens were generated based on `participant_identity` provided in the HTTP request body (`LivekitTokenDto`) rather than securely deriving the identity from the authenticated user's session token.
+**Learning:** Even when endpoints are protected by `SupabaseAuthGuard`, relying on client-provided IDs in the request body for security-critical operations (like generating access tokens) allows malicious authenticated users to spoof identities and gain unauthorized access (IDOR).
+**Prevention:** Always extract the user identity directly from the authenticated request context (e.g., `req.user.id`) for authorization and token generation, never trust client-provided IDs for self-identification.
+
 ## 2026-08-05 - [Add Helmet and secure CORS]
 
 **Vulnerability:** Missing secure HTTP headers and overly permissive CORS policy.
@@ -57,37 +62,29 @@
 **Vulnerability:** Monetisation services (`AppleReceiptValidatorService` and `MonetisationService`) relied on weak development fallback values for critical secrets (`APPLE_SHARED_SECRET` and `STRIPE_SECRET_KEY`) when environment variables were missing.
 **Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, preventing real payments while avoiding startup crashes.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
-
 ## 2026-08-21 - [Fail-Fast LiveKit Credentials in Production]
-
 **Vulnerability:** LiveKit `LIVEKIT_API_KEY`, `LIVEKIT_SECRET`, and TURN credentials defaulted to insecure test values (e.g., `guest`, `somepassword`, `turn.example.com`) if missing in production.
 **Learning:** Default configuration schemas (like `validation.schema.ts`) can mask missing environment variables by silently providing valid but insecure fallback strings to services like `LivekitService`. This is a critical risk for WebRTC authentication.
 **Prevention:** Apply a strict fail-fast validation in the service constructor or before usage. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if any credential matches the known insecure defaults.
-
 ## 2026-08-23 - [Strict Secrets Validation in Production for STRIPE_SECRET_KEY in EconomyService]
 
 **Vulnerability:** Monetisation service `EconomyService` relied on weak development fallback values for critical secrets (`STRIPE_SECRET_KEY`) when environment variables were missing.
 **Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, avoiding startup crashes but preventing secure operations.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`sk_test_123`), preventing the backend from initializing insecurely.
 
-## 2026-08-25 - [Strict Secrets Validation in Production for STRIPE_SECRET_KEY in StripeService]
-
-**Vulnerability:** Stripe service `StripeService` was missing strict secret validation and could potentially use default configurations or weak keys without failing if environment variables weren't carefully enforced.
-**Learning:** Default fallbacks or missing explicit strict validation for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, preventing secure operations.
-**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`sk_test_123` or `sk_test`), preventing the backend from initializing insecurely.
+## 2024-08-24 - Fail-Secure Initialization for LiveKit Secrets
+**Vulnerability:** LiveKit API Key and Secret were missing strict production validation in several services (`audio-rooms.module.ts`, `transcript-egress.service.ts`, `audio-rooms.service.ts`, `calls.service.ts`), allowing fallback values to potentially be used in production environments.
+**Learning:** Services that instantiate third-party clients (like LiveKit `RoomServiceClient`) must apply the same fail-fast/fail-secure secret validation pattern as the centralised config, throwing errors if development keys are used in production.
+**Prevention:** Apply a uniform pattern across the codebase checking `NODE_ENV === 'production'` alongside explicit matching of known default/test dummy secret values before passing them to external SDKs.
 
 ## 2026-08-25 - [Fail-Fast SUPABASE_SERVICE_ROLE_KEY in Production]
-
 **Vulnerability:** The SupabaseService could initialize using a well-known test default for `SUPABASE_SERVICE_ROLE_KEY` (e.g., `test-service-role-key`) if the environment variable was missing in a production environment, putting backend service authentication at risk.
 **Learning:** Even though environment validation exists at the configuration module boundary, relying solely on global schemas is insufficient defense-in-depth. A missing production environment variable could still silently fall back to test defaults in the validation schema before injection.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the injected key matches known insecure defaults, preventing the service from initializing insecurely.
-
 ## 2026-08-25 - [Fail-Fast LiveKit Credentials in Production (Audio and Calls)]
-
 **Vulnerability:** LiveKit API keys and secrets used in audio-rooms and calls services (`LIVEKIT_API_KEY`, `LIVEKIT_SECRET`) could default to insecure test values (e.g., `test-livekit-api-key`) if environment variables were missing in a production environment.
 **Learning:** Default fallbacks for critical external service secrets present a high risk in production by allowing silent initialization into an insecure, predictable state. Consistent validation must occur anywhere a secret is injected into a service.
 **Prevention:** Always apply strict fail-fast validation checks where `NODE_ENV === 'production'` alongside explicit validation for known development fallback credentials, directly within the module or service initialization.
-
 ## 2026-08-25 - [Fail-Fast TRANSFER_SECRET in Production]
 
 **Vulnerability:** The TransferService could initialize using the well-known insecure fallback `test-transfer-secret` if the environment variable was omitted or masked in a production environment.
@@ -118,10 +115,15 @@
 **Prevention:** Reject missing, blank, whitespace-padded, test-default and example-placeholder Centrifugo credentials in the global production environment validator. Require both variables during production Compose interpolation and start Centrifugo only after the validated API is healthy, so predictable credentials are never exposed by the standalone WebSocket container.
 
 ## 2026-09-05 - Missing authentication on admin dashboard
-
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-09-08 - Strict Environment Secret Validation for VideoCallsService
+
+**Vulnerability:** Missing strict environment secret validation allowed insecure defaults or missing keys (e.g. `LIVEKIT_API_KEY` and `LIVEKIT_SECRET`) to pass unnoticed into production for `VideoCallsService`.
+**Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical media endpoints if not explicitly validated during app startup.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
+
 ## 2026-09-07 - [Strict Secrets Validation in Production for VideoCallsService]
 
 **Vulnerability:** The VideoCallsService lacked strict environment secret validation, allowing it to potentially use default or known test keys for `LIVEKIT_API_KEY` and `LIVEKIT_SECRET` in a production environment if misconfigured.
@@ -271,6 +273,9 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
+
+
 
 
 

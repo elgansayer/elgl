@@ -24,6 +24,7 @@ describe('DiscoveryService', () => {
   let mockRedisSet: Mock;
   let mockPipelineSet: Mock;
   let mockPipelineExec: Mock;
+  let mockLoggerError: Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
   let mockDegradationService: {
@@ -52,6 +53,7 @@ describe('DiscoveryService', () => {
       'order',
       'ilike',
       'overlaps',
+      'is',
     ];
     for (const method of chainableMethods) {
       builder[method] = vi.fn().mockReturnValue(builder);
@@ -96,6 +98,7 @@ describe('DiscoveryService', () => {
     mockAudioRoomsService = {
       getActiveHostIds: vi.fn().mockResolvedValue([]),
     };
+    mockLoggerError = vi.fn();
 
     mockDegradationService = {
       executeWithBreaker: vi
@@ -139,7 +142,7 @@ describe('DiscoveryService', () => {
           useValue: {
             info: vi.fn(),
             warn: vi.fn(),
-            error: vi.fn(),
+            error: mockLoggerError,
             debug: vi.fn(),
             trace: vi.fn(),
           },
@@ -164,25 +167,80 @@ describe('DiscoveryService', () => {
   describe('getPartnerOfWeekIds', () => {
     it('should return empty array when redis returns null', async () => {
       mockRedisClient.get.mockResolvedValue(null);
-      const result = await service.getPartnerOfWeekIds();
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual([]);
     });
 
     it('should return parsed array when redis has valid JSON', async () => {
       mockRedisClient.get.mockResolvedValue('["id-a","id-b"]');
-      const result = await service.getPartnerOfWeekIds();
+      stubLimitResponse([{ id: 'id-a' }, { id: 'id-b' }]);
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual(['id-a', 'id-b']);
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'privacy_hide_from_search',
+        false,
+      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+    });
+
+    it('should remove cached partners that are no longer discoverable', async () => {
+      mockRedisClient.get.mockResolvedValue('["eligible","deleting"]');
+      stubLimitResponse([{ id: 'eligible' }]);
+
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([
+        'eligible',
+      ]);
+    });
+
+    it('filters partners in the authenticated viewer block graph', async () => {
+      mockRedisClient.get.mockResolvedValue('["eligible","blocked"]');
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      stubLimitResponse([{ id: 'eligible' }, { id: 'blocked' }]);
+
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([
+        'eligible',
+      ]);
+      expect(mockSafetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
+        'viewer',
+      );
+    });
+
+    it('fails closed when the viewer block graph is unavailable', async () => {
+      mockRedisClient.get.mockResolvedValue('["cached-partner"]');
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('block graph unavailable'),
+      );
+
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([]);
+      expect(mockQueryBuilder.select).not.toHaveBeenCalled();
+    });
+
+    it('should fail closed when partner privacy revalidation fails', async () => {
+      mockRedisClient.get.mockResolvedValue('["stale-partner"]');
+      stubLimitResponse([], { message: 'database unavailable' });
+
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([]);
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        'Failed to revalidate Partner of the Week privacy state',
+      );
     });
 
     it('should return empty array on malformed JSON', async () => {
       mockRedisClient.get.mockResolvedValue('not-json');
-      const result = await service.getPartnerOfWeekIds();
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual([]);
     });
 
     it('should return empty array when JSON is not an array', async () => {
       mockRedisClient.get.mockResolvedValue('{"a":1}');
-      const result = await service.getPartnerOfWeekIds();
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual([]);
     });
   });
@@ -200,8 +258,10 @@ describe('DiscoveryService', () => {
       target_languages: string[];
       privacy_hide_from_search: boolean;
       is_deletion_pending: boolean;
+      scheduled_for_deletion_at: string | null;
       correction_ratio: number;
       study_streak_days: number;
+      last_active_at: string;
     }> =>
       Array.from({ length: count }, (_, i) => ({
         id: `u${i + 1}`,
@@ -210,8 +270,10 @@ describe('DiscoveryService', () => {
         target_languages: ['ja'],
         privacy_hide_from_search: false,
         is_deletion_pending: false,
+        scheduled_for_deletion_at: null,
         correction_ratio: 0.6 + (count - i) * 0.005,
         study_streak_days: 10 + (count - i),
+        last_active_at: new Date().toISOString(),
       }));
 
     it('should store partner IDs in redis when users qualify', async () => {
@@ -326,6 +388,17 @@ describe('DiscoveryService', () => {
 
       await service.calculateDailyRecommendations();
 
+      expect(mockQueryBuilder.is).toHaveBeenCalledTimes(2);
+      expect(mockQueryBuilder.is).toHaveBeenNthCalledWith(
+        1,
+        'scheduled_for_deletion_at',
+        null,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenNthCalledWith(
+        2,
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockPipelineSet).toHaveBeenCalledWith(
         'daily_recommendations:u1',
         '["u2"]',
@@ -400,13 +473,21 @@ describe('DiscoveryService', () => {
         'privacy_hide_from_search',
         false,
       );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
       expect(result).toEqual(
         partners.map((p) => ({ ...p, is_partner_of_week: false })),
       );
     });
 
-    it('should apply native language, target language, and serious learner filters', async () => {
+    it('should apply native language, target language, and active serious learner filters', async () => {
       const partners = [{ id: 'partner-2', display_name: 'Serious Partner' }];
       stubLimitResponse(partners);
 
@@ -424,8 +505,12 @@ describe('DiscoveryService', () => {
         'target_languages',
         ['EN'],
       );
-      expect(mockQueryBuilder.gt).toHaveBeenCalledWith('study_streak_days', 7);
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
       expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
+        'last_active_at',
+        expect.any(String),
+      );
+      expect(mockQueryBuilder.gte).not.toHaveBeenCalledWith(
         'correction_ratio',
         0.8,
       );
@@ -434,13 +519,13 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should enforce serious_learner_mode from user profile', async () => {
-      // NOTE: serious_learner_mode sets query.serious_learner_only=true at line 234,
-      // which comes AFTER the serious_learner_only filter check at line 223.
-      // The queryBuilder still has the filter applied via query modification
-      // for the RPC path (serious_only flag), but gt/gte on queryBuilder won't be called.
+    it('should enforce serious_learner_mode from user profile before building filters', async () => {
       const partners = [
-        { id: 'p1', study_streak_days: 10, correction_ratio: 0.9 },
+        {
+          id: 'p1',
+          study_streak_days: 10,
+          last_active_at: new Date().toISOString(),
+        },
       ];
       stubLimitResponse(partners);
 
@@ -452,7 +537,11 @@ describe('DiscoveryService', () => {
         },
       );
 
-      // serious_learner_only is set on the query object for downstream use (enrich/RPC)
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
+        'last_active_at',
+        expect.any(String),
+      );
       expect(result).toEqual(
         partners.map((p) => ({ ...p, is_partner_of_week: false })),
       );
@@ -1093,6 +1182,93 @@ describe('DiscoveryService', () => {
       ]);
     });
 
+    it('best_match: computes composite score when user profile is present', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify([])); // No partner of the week
+
+      const currentUserProfile: any = {
+        id: 'user-1',
+        native_languages: ['en'],
+        target_languages: ['ja'],
+        proficiency_level: 'B1',
+        available_time_start: '18:00',
+        available_time_end: '20:00',
+        interests: ['music', 'travel'],
+      };
+
+      // Mock date to ensure deterministic scoring for 'recent activity'
+      const mockNow = new Date('2026-08-20T12:00:00Z');
+      vi.setSystemTime(mockNow);
+
+      const partners = [
+        {
+          id: 'partner-1-perfect',
+          native_languages: ['ja'],
+          target_languages: ['en'],
+          proficiency_level: 'B2', // Gap 1 (10 pts)
+          available_time_start: '19:00', // Overlap (15 pts)
+          available_time_end: '21:00',
+          interests: ['music'], // Match 1 (2 pts)
+          last_active_at: '2026-08-20T10:00:00Z', // Recent (<1 day, 10 pts)
+          correction_ratio: 1.0, // (15 pts)
+          study_streak_days: 10, // (10 pts)
+          country: 'Japan',
+          age: 25,
+          // Base complementary: 20
+          // Total: 20+10+15+2+10+15+10 + 5 + 5 (country/age match) = 92
+        },
+        {
+          id: 'partner-2-poor',
+          native_languages: ['ko'],
+          target_languages: ['fr'],
+          proficiency_level: 'A1', // Gap 2 (0 pts)
+          available_time_start: '08:00', // No overlap (0 pts)
+          available_time_end: '10:00',
+          interests: ['sports'], // No match (0 pts)
+          last_active_at: '2026-07-20T10:00:00Z', // Not recent (>7 days, 0 pts)
+          correction_ratio: 0.1, // (1.5 pts)
+          study_streak_days: 1, // (1 pt)
+          country: 'Korea',
+          age: 20,
+          // Base complementary: 0
+          // Total: 2.5
+        },
+        {
+          id: 'partner-3-tie',
+          native_languages: ['ko'],
+          target_languages: ['fr'],
+          proficiency_level: 'A1',
+          available_time_start: '08:00',
+          available_time_end: '10:00',
+          interests: ['sports'],
+          last_active_at: '2026-07-20T10:00:00Z',
+          correction_ratio: 0.1,
+          study_streak_days: 1,
+          country: 'Korea',
+          age: 20,
+          // Identical score to partner-2-poor, should be sorted by id ascending
+        },
+      ];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartners(
+        'user-1',
+        currentUserProfile,
+        {
+          sort: 'best_match',
+          country: 'japan',
+          age_min: 21,
+        },
+      );
+
+      expect(result.map((u) => u.id)).toEqual([
+        'partner-1-perfect',
+        'partner-2-poor',
+        'partner-3-tie',
+      ]);
+
+      vi.useRealTimers();
+    });
+
     it('online_now: orders by most recent last_active_at first', async () => {
       const partners = [
         { id: 'a', last_active_at: '2026-07-01T00:00:00.000Z' },
@@ -1170,6 +1346,14 @@ describe('DiscoveryService', () => {
       expect(notCalls.some((c: string[]) => c[0] === 'audio_intro_url')).toBe(
         true,
       );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
     });
 
     it('should apply VIP country/city spoofing', async () => {
@@ -1185,14 +1369,25 @@ describe('DiscoveryService', () => {
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('city', '%Paris%');
     });
 
-    it('should return empty when query errors', async () => {
+    it('should fail closed when the audio intro query errors', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
-        error: { message: 'fail' },
+        error: { code: 'PGRST301', message: 'sensitive database detail' },
       });
 
-      const result = await service.getAudioIntros('user-1', null, {});
-      expect(result).toEqual([]);
+      await expect(
+        service.getAudioIntros('user-1', null, {}),
+      ).rejects.toMatchObject({
+        status: 503,
+        message: 'Audio introductions are temporarily unavailable',
+      });
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        { errorCode: 'PGRST301' },
+        'Audio intro discovery query failed',
+      );
+      expect(mockLoggerError.mock.calls.flat().join(' ')).not.toContain(
+        'sensitive database detail',
+      );
     });
 
     it('should filter blocked users from results', async () => {
@@ -1218,6 +1413,14 @@ describe('DiscoveryService', () => {
 
       const result = await service.getRecentNativeSpeakers('user-1');
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(result).toHaveLength(2);
       expect(result[0].is_partner_of_week).toBe(true);
       expect(result[1].is_partner_of_week).toBe(false);
@@ -1244,6 +1447,14 @@ describe('DiscoveryService', () => {
 
       const result = await service.getSpotlightUsers('user-1');
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(result).toHaveLength(2);
       expect(result[0].is_partner_of_week).toBe(true);
     });
@@ -1274,6 +1485,14 @@ describe('DiscoveryService', () => {
         target_language: 'JA',
       });
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
         'native_languages',
         ['JA'],
@@ -1401,6 +1620,14 @@ describe('DiscoveryService', () => {
         city: 'Tokyo',
       });
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('country', '%Japan%');
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('city', '%Tokyo%');
       expect(result).toHaveLength(1);
@@ -1421,6 +1648,20 @@ describe('DiscoveryService', () => {
   // searchPartnersWithDegradation
   // ---------------------------------------------------------------------------
   describe('searchPartnersWithDegradation', () => {
+    it('should fail closed before degradation when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValueOnce(
+        new Error('Failed to load complete block graph'),
+      );
+
+      await expect(
+        service.searchPartnersWithDegradation('user-1', null, {}),
+      ).rejects.toThrow('Failed to load complete block graph');
+      expect(mockDegradationService.executeWithBreaker).not.toHaveBeenCalled();
+      expect(
+        mockDegradationService.recordDegradationEvent,
+      ).not.toHaveBeenCalled();
+    });
+
     it('should return results with a non-degraded marker on normal success', async () => {
       const partners = [{ id: 'p1', display_name: 'User One' }];
       stubLimitResponse(partners);
@@ -1441,6 +1682,9 @@ describe('DiscoveryService', () => {
     });
 
     it('should fall back to mock data when breaker degrades and search returns empty', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
+        'fake-1',
+      ]);
       mockDegradationService.executeWithBreaker.mockImplementationOnce(
         (
           _svc: string,
@@ -1469,6 +1713,9 @@ describe('DiscoveryService', () => {
       expect(result.marker.fallbackSource).toBe('mock');
       expect(result.marker.reason).toContain('circuit open');
       expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data.map((candidate) => candidate.id)).not.toContain(
+        'fake-1',
+      );
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(
@@ -1513,6 +1760,9 @@ describe('DiscoveryService', () => {
     });
 
     it('should catch thrown errors and fall back to mock data', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
+        'fake-1',
+      ]);
       mockDegradationService.executeWithBreaker.mockRejectedValueOnce(
         new Error('supabase down'),
       );
@@ -1527,6 +1777,9 @@ describe('DiscoveryService', () => {
       expect(result.marker.fallbackSource).toBe('mock');
       expect(result.marker.reason).toBe('supabase down');
       expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data.map((candidate) => candidate.id)).not.toContain(
+        'fake-1',
+      );
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(

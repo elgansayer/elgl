@@ -1,9 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PipeTransform } from '@angular/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TranslatePipe } from '../../services/translate.pipe';
 import { CoverPhotoUploaderComponent } from './cover-photo-uploader.component';
+
+class MockTranslatePipe implements PipeTransform {
+  transform(value: string): string {
+    return value;
+  }
+}
 
 describe('CoverPhotoUploaderComponent', () => {
   let component: CoverPhotoUploaderComponent;
@@ -27,7 +35,11 @@ describe('CoverPhotoUploaderComponent', () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [CoverPhotoUploaderComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: TranslatePipe, useClass: MockTranslatePipe },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CoverPhotoUploaderComponent);
@@ -67,8 +79,8 @@ describe('CoverPhotoUploaderComponent', () => {
     const trigger = fixture.nativeElement.querySelector('.group button') as HTMLButtonElement;
     const image = fixture.nativeElement.querySelector('.group img') as HTMLImageElement;
 
-    expect(trigger.textContent).toContain('Change Cover Photo');
-    expect(image.alt).toBe('Cover preview');
+    expect(trigger.textContent).toContain('coverPhoto.changeCover');
+    expect(image.alt).toBe('coverPhoto.previewAlt');
   });
 
   it('stores the selected file and reads a local preview without starting crop mode', async () => {
@@ -100,6 +112,29 @@ describe('CoverPhotoUploaderComponent', () => {
 
     expect(component.selectedFile()).toBeNull();
     expect(component.imageSource()).toBeNull();
+    expect(component.uploadError()).toBe(true);
+
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Error');
+  });
+
+  it('rejects empty and oversized source files before reading them into memory', () => {
+    for (const size of [0, 25 * 1024 * 1024 + 1]) {
+      const file = new File(['image'], 'cover.webp', { type: 'image/webp' });
+      Object.defineProperty(file, 'size', { configurable: true, value: size });
+      const input = document.createElement('input');
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [file] as unknown as FileList,
+      });
+
+      component.onFileSelected({ target: input } as unknown as Event);
+
+      expect(component.selectedFile()).toBeNull();
+      expect(component.imageSource()).toBeNull();
+      expect(component.croppedBlob()).toBeNull();
+      expect(component.uploadError()).toBe(true);
+    }
   });
 
   it('delegates cropping to the shared cover photo cropper', () => {
@@ -128,13 +163,48 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(createObjectUrl).toHaveBeenCalledWith(blob);
   });
 
+  it('rejects empty, oversized and unsupported crop results before upload state changes', () => {
+    const invalidCrops = [
+      new Blob([], { type: 'image/webp' }),
+      new Blob(['cropped'], { type: 'image/svg+xml' }),
+      new Blob(['cropped'], { type: 'image/webp' }),
+    ];
+    Object.defineProperty(invalidCrops[2], 'size', {
+      configurable: true,
+      value: 25 * 1024 * 1024 + 1,
+    });
+
+    for (const blob of invalidCrops) {
+      component.onCropSaved(blob);
+
+      expect(component.croppedBlob()).toBeNull();
+      expect(component.croppedPreviewUrl()).toBeNull();
+      expect(component.uploadError()).toBe(true);
+    }
+
+    expect(createObjectUrl).not.toHaveBeenCalled();
+  });
+
+  it('clears a previous valid crop when a replacement crop is invalid', async () => {
+    component.onCropSaved(new Blob(['cropped'], { type: 'image/webp' }));
+
+    component.onCropSaved(new Blob([], { type: 'image/webp' }));
+    await component.uploadCropped();
+
+    expect(component.croppedBlob()).toBeNull();
+    expect(component.croppedPreviewUrl()).toBeNull();
+    expect(component.uploadError()).toBe(true);
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:cover-preview');
+    httpMock.expectNone((request) => request.url.includes('/media/cover/'));
+  });
+
   it('keeps upload disabled until a valid crop result exists', () => {
     component.selectedFile.set(new File(['image'], 'cover.png', { type: 'image/png' }));
     component.imageSource.set('data:image/png;base64,AA==');
     fixture.detectChanges();
 
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
-    const upload = buttons.find((button) => button.textContent?.includes('Upload'));
+    const upload = buttons.find((button) => button.textContent?.includes('common.upload'));
 
     expect(upload).toBeTruthy();
     expect(upload?.disabled).toBe(true);
@@ -208,7 +278,9 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.croppedPreviewUrl()).toBe('blob:cover-preview');
     expect(component.uploadError()).toBe(true);
     expect(component.isUploading()).toBe(false);
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Error');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'common.error',
+    );
     fetchSpy.mockRestore();
   });
 
