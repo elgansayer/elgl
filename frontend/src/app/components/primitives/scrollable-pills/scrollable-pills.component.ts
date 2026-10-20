@@ -1,7 +1,8 @@
-import { Component, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-scrollable-pills',
   imports: [...HlmButtonImports],
   template: `
