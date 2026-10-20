@@ -2,11 +2,9 @@ import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import { AuthService } from '../../services/auth.service';
-import { DirectConversationService } from '../../services/direct-conversation.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
 import { ProfileVisitsService } from '../../services/profile-visits.service';
@@ -15,7 +13,11 @@ import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
 
-function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile {
+function makeProfile(
+  id: string,
+  bioText = 'Original profile bio',
+  overrides: Partial<UserProfile> = {},
+): UserProfile {
   return {
     id,
     display_name: `Partner ${id}`,
@@ -33,24 +35,22 @@ function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile 
     privacy_hide_from_search: false,
     privacy_hide_gender: false,
     created_at: '2026-01-01T00:00:00.000Z',
+    ...overrides,
   };
 }
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((resolver, rejecter) => {
+  const promise = new Promise<T>((resolver) => {
     resolve = resolver;
-    reject = rejecter;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 }
 
-describe('UserDetailComponent', () => {
+describe('UserDetailComponent bio translation', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
   let currentLang: ReturnType<typeof signal<string>>;
-  let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
   let translateBio: ReturnType<typeof vi.fn>;
   let getUserProfile: ReturnType<typeof vi.fn>;
   let recordVisit: ReturnType<typeof vi.fn>;
@@ -61,7 +61,6 @@ describe('UserDetailComponent', () => {
 
   beforeEach(async () => {
     currentLang = signal('en-GB');
-    currentUser = signal<{ id: string } | null>({ id: 'current-user' });
     translateBio = vi.fn();
     getUserProfile = vi.fn().mockResolvedValue(makeProfile('user-1'));
     recordVisit = vi
@@ -78,13 +77,11 @@ describe('UserDetailComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         {
-          provide: AuthService,
-          useValue: { currentUser },
-        },
-        {
           provide: UserService,
           useValue: {
             getUserProfile,
+            followUser: vi.fn(),
+            unfollowUser: vi.fn(),
             likeProfile: vi.fn(),
           },
         },
@@ -119,9 +116,6 @@ describe('UserDetailComponent', () => {
         },
       })
       .compileComponents();
-
-    const router = TestBed.inject(Router);
-    navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;
@@ -179,24 +173,24 @@ describe('UserDetailComponent', () => {
     expect(recordVisit).toHaveBeenCalledWith('user-3');
   });
 
-  it('ignores a stale profile response after the route target changes', async () => {
-    const stale = createDeferred<UserProfile | null>();
-    getUserProfile.mockReturnValueOnce(stale.promise);
-    getUserProfile.mockResolvedValueOnce(makeProfile('user-fast'));
-
-    fixture.componentRef.setInput('userId', 'user-slow');
-    fixture.detectChanges();
-    fixture.componentRef.setInput('userId', 'user-fast');
-    fixture.detectChanges();
-    await Promise.resolve();
-
-    stale.resolve(makeProfile('user-slow'));
-    await stale.promise;
-    await Promise.resolve();
+  it('shows a VIP badge when the member has not hidden it', async () => {
+    getUserProfile.mockResolvedValueOnce(
+      makeProfile('vip-visible', 'Bio', { is_vip: true, privacy_hide_vip_status: false }),
+    );
+    await component.loadProfile('vip-visible');
     fixture.detectChanges();
 
-    expect(component.profile()?.id).toBe('user-fast');
-    expect(component.isLoading()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('discovery.vipBadge');
+  });
+
+  it('does not render the VIP badge when the member hides VIP status', async () => {
+    getUserProfile.mockResolvedValueOnce(
+      makeProfile('vip-hidden', 'Bio', { is_vip: true, privacy_hide_vip_status: true }),
+    );
+    await component.loadProfile('vip-hidden');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('discovery.vipBadge');
   });
 
   it('translates into the active UI language and can show the original again', async () => {
