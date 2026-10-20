@@ -30,7 +30,7 @@ export class AudioIntroController {
     @Body() dto: UpdateAudioIntroDto,
   ) {
     if (req.user.id !== userId) {
-      throw new ForbiddenException('You can only update your own audio intro');
+      throw new ForbiddenException();
     }
     return this.audioIntroService.updateAudioIntro(userId, dto.audio_url);
   }

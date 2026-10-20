@@ -687,19 +687,19 @@ describe('MomentsService', () => {
           return {
             select: vi
               .fn()
-              .mockResolvedValue({ data: [{ id: '1' }, { id: '2' }] }),
+              .mockResolvedValue({ count: 2 }),
           };
         }
         if (table === 'moment_comments') {
           return {
             select: vi.fn().mockReturnValue({
-              not: vi.fn().mockResolvedValue({ data: [{ id: 'c-1' }] }),
+              not: vi.fn().mockResolvedValue({ count: 1 }),
             }),
           };
         }
         if (table === 'translations') {
           return {
-            select: vi.fn().mockResolvedValue({ data: [{ id: 't-1' }] }),
+            select: vi.fn().mockResolvedValue({ count: 1 }),
           };
         }
         return mockQueryBuilder;
@@ -716,18 +716,18 @@ describe('MomentsService', () => {
           return {
             select: vi
               .fn()
-              .mockResolvedValue({ data: null, error: { message: 'boom' } }),
+              .mockResolvedValue({ count: null, error: { message: 'boom' } }),
           };
         }
         if (table === 'moment_comments') {
           return {
             select: vi.fn().mockReturnValue({
-              not: vi.fn().mockResolvedValue({ data: [] }),
+              not: vi.fn().mockResolvedValue({ count: 0 }),
             }),
           };
         }
         if (table === 'translations') {
-          return { select: vi.fn().mockResolvedValue({ data: [] }) };
+          return { select: vi.fn().mockResolvedValue({ count: 0 }) };
         }
         return mockQueryBuilder;
       });
@@ -1508,7 +1508,7 @@ describe('MomentsService', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
-          data: { user_id: 'author-1', text_content: 'old' },
+          data: { user_id: 'user-1', text_content: 'old' },
           error: null,
         }),
       }));
@@ -1516,6 +1516,23 @@ describe('MomentsService', () => {
       await expect(
         service.editMomentText('user-1', 'm-1', { textContent: 'New text' }),
       ).rejects.toThrow('You cannot edit this moment.');
+    });
+
+    it('should throw ForbiddenException if user is not the author', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { user_id: 'author-1', text_content: 'old' },
+          error: null,
+        }),
+      }));
+
+      await expect(
+        service.editMomentText('user-1', 'm-1', { textContent: 'New text' }),
+      ).rejects.toThrow(
+        new ForbiddenException('You can only edit your own Moments.'),
+      );
     });
 
     it('should update the text and return the hydrated moment', async () => {

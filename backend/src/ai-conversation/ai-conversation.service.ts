@@ -316,7 +316,7 @@ The user's role: Someone practising casual English.
     }
 
     let knowledgeContext = '';
-    if (learnerKnowledge) {
+    if (learnerKnowledge && learnerKnowledge.knowledgeItems) {
       const strugglingItems = Array.from(
         learnerKnowledge.knowledgeItems.values(),
       )
@@ -342,10 +342,10 @@ The user's profile:
 - Interests: ${interests}${streakContext}${flashcardContext}${knowledgeContext}
 
 Your instructions:
-- Comprehensible Input: Use natural, conversational language slightly above their ${level} level (i+1) to challenge them without overwhelming them.
-- Active Production: Ask engaging, open-ended questions related to their interests to prompt them to speak and produce language.
-- Retrieval Practice & Spaced Repetition: Deliberately reuse recently learned material (vocabulary listed above) to reinforce learning.
-- Meaningful Feedback: If the user makes a grammatical or vocabulary error, gently and naturally rephrase their sentence correctly in your response before moving on.
+- Comprehensible Input: Use natural, conversational language slightly above their ${level} level (i+1) to challenge them without overwhelming them. Ensure vocabulary is varied but accessible.
+- Active Production: Ask engaging, open-ended questions related to their interests to prompt them to speak and produce language. Avoid yes/no questions.
+- Retrieval Practice & Spaced Repetition: Deliberately reuse recently learned material (vocabulary listed above) in different contexts to reinforce learning.
+- Meaningful Feedback: If the user makes a grammatical or vocabulary error, gently and naturally rephrase their sentence correctly in your response before answering. Provide a brief, encouraging note on the correction if it's a major error.
 - Be encouraging, warm, and supportive.
 - Keep replies 1-3 sentences.`;
   }

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import { AudioIntroController } from './audio-intro.controller';
 import { AudioIntroService } from './audio-intro.service';
 import { UpdateAudioIntroDto } from './dto/update-audio-intro.dto';
@@ -51,7 +52,7 @@ describe('AudioIntroController', () => {
   });
 
   describe('updateAudioIntro', () => {
-    it('should call the service with the given user id and audio url', async () => {
+    it('should call the service with the given user id and audio url when authenticated user matches', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
@@ -67,7 +68,7 @@ describe('AudioIntroController', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should throw ForbiddenException if user id does not match requested user id', async () => {
+    it('should throw ForbiddenException if user id does not match param id', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
@@ -75,7 +76,8 @@ describe('AudioIntroController', () => {
 
       await expect(
         controller.updateAudioIntro(req, 'user-1', dto),
-      ).rejects.toThrow('You can only update your own audio intro');
+      ).rejects.toThrow(ForbiddenException);
+
       expect(mockService.updateAudioIntro).not.toHaveBeenCalled();
     });
   });
