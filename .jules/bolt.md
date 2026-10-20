@@ -22,6 +22,10 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2024-05-18 - [Optimize Angular Change Detection in Chat Room]
+**Learning:** In the Angular frontend `chat-page.component.ts`, using `@for (room of rooms(); track room)` and `@for (msg of messages(); track msg)` tracks by object reference. This causes unnecessary DOM recreations during state updates or real-time message changes, severely impacting change detection performance in high-frequency rendering components like chat pages.
+**Action:** Always use `track item.id` instead of object reference (e.g. `track room.id`, `track msg.id`) in `@for` loops to ensure Angular accurately correlates state mutations to DOM nodes and avoids unnecessary UI thread stalling.
+
 
 
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
@@ -30,6 +34,7 @@
 ## 2026-09-13 - Angular Change Detection Strategy Optimization
 **Learning:** Found an opportunity to improve frontend performance by setting `ChangeDetectionStrategy.OnPush` on frequently rendered list and message components (`chat-message.component.ts` and `chat-list.component.ts`), which prevents unnecessary change detection cycles. Combined with memoizing expensive method calls in templates (converting `isOwnMessage()` into a computed signal) this creates a substantial reduction in rendering overhead for long lists.
 **Action:** Always check frequently instantiated components (like chat messages or list items) for missing `OnPush` strategy and ensure template methods are converted to computed signals to prevent repeated evaluation during change detection cycles.
+
 
 ## 2026-09-18 - [Optimize Chat Component Rendering with OnPush and Object Identity Tracking]
 **Learning:** Changing ChangeDetectionStrategy to OnPush in data-heavy components like `ChatPageComponent`, combined with tracking `@for` loop items by their unique identifiers (e.g., `track msg.id` instead of object reference `track msg`), significantly reduces change detection and DOM recreation overhead when the local list of messages updates.
