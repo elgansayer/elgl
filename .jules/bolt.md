@@ -177,6 +177,14 @@
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
 
+## 2026-10-06 - [Optimize Reading Engine Cache Invalidation via Promise.all]
+
+**Learning:** In the backend `reading-engine-cache.service.ts`, clearing reading engine caches (`handleUserDataCleared`) iteratively over prefixes using `await` inside a `for...of` loop creates N separate sequential cache invalidation calls, which add up to unnecessary delay during user data deletion.
+**Action:** Replaced single sequential iterations inside cache invalidation loops with an array lookup via `.map` and grouped them via `Promise.all`. This safely mitigates latency issues when bulk deleting multiple cached items.
+## 2026-10-06 - [Optimize Moments feed initialization via Promise.all]
+
+**Learning:** In the backend `moments.service.ts`, the `getFeed` method sequentially awaited `safetyService.getBlockedAndBlockerIds` and `usersService.getProfile`. These two data fetches are independent and awaiting them sequentially introduces unnecessary additive network/database latency during a high-traffic operation.
+**Action:** When a method requires multiple independent initialization parameters or lookups, combine them into a single `Promise.all` concurrent call to minimize the total blocking time before executing the core business logic.
 ## 2024-05-24 - [Replaced sequential safety checks with Promise.all in chat.service.ts]
 **Learning:** Found sequential calls to `getBlockedAndBlockerIds` for sender and receiver in both `sendMessage` and `sendContact` functions of `chat.service.ts`. These independent queries cause unnecessary additive network latency.
 **Action:** Used `Promise.all` to fetch both `receiverBlockedIds` and `senderBlockedIds` concurrently to optimize the database query execution and reduce wait times.
@@ -187,6 +195,14 @@
 ## 2026-10-10 - Angular Change Detection Defaults
 **Learning:** In this NestJS + Angular architecture, many components that render static data or use signals/observables fall back to default change detection, causing unnecessary main thread overhead during app-wide updates.
 **Action:** When inspecting components in the feed or dashboard that only need updates on explicit inputs or signal mutations, proactively isolate their change detection tree by setting `changeDetection: ChangeDetectionStrategy.OnPush`.
+
+## 2026-10-06 - Concurrent Redis Scan/Del for Cache Invalidation
+**Learning:** In the video classroom cache invalidation service, we discovered a sequence of sequential `await` operations inside a `for...of` loop mapping over cache patterns. This forced Redis network round trips to block one another unnecessarily when doing `del` and `scan` operations for multiple static prefixes, amplifying total cache invalidation latency.
+**Action:** Always map arrays of static cache invalidation patterns or independent I/O commands to an array of Promises and execute them concurrently via `Promise.all` (and aggregate the results with `reduce` if needed).
+## 2026-08-25 - [Optimize sequential delete-then-insert with upsert]
+**Learning:** In `backend/src/events/events.service.ts`, `createRsvp` first issued a `delete()` to remove any existing RSVP, followed sequentially by an `insert()`. This structure causes two independent roundtrips over the network, compounding database latency on write operations.
+**Action:** When a table has a unique constraint covering the targeted identifiers (like `UNIQUE (event_id, user_id)`), replace sequential `delete` and `insert` calls with a single atomic `.upsert()` specifying the constraint fields in `onConflict`. This optimizes both network overhead and database operation efficiency.
+
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, the `invalidateAllVideoClassroomCaches` method sequentially iterated over cache patterns invoking `deleteByScan` or `redis.del` using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during bulk cache invalidation, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a method, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
