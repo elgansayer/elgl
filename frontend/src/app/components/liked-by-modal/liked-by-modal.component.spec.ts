@@ -1,236 +1,262 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { I18nService } from '../../services/i18n.service';
+import {
+  MomentLikeUser,
+  MomentsStore,
+} from '../../services/moments.store';
 import { LikedByModalComponent } from './liked-by-modal.component';
-import { TranslatePipe } from '../../services/translate.pipe';
 
-interface LikedUser {
-  id: string;
-  avatar_url: string | null;
-  display_name: string;
-  native_languages?: string[];
-  target_languages: string[];
-}
-
-function flushRequest(httpTesting: HttpTestingController): void {
-  httpTesting.expectOne('/api/moments/moment-123/likes').flush([]);
-}
-
-describe.skip('LikedByModalComponent', () => {
+describe('LikedByModalComponent', () => {
   let component: LikedByModalComponent;
   let fixture: ComponentFixture<LikedByModalComponent>;
-  let httpTesting: HttpTestingController;
+  let loadMomentLikes: ReturnType<typeof vi.fn>;
+
+  const users: MomentLikeUser[] = [
+    {
+      id: 'user-1',
+      display_name: 'Alice',
+      avatar_url: null,
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    },
+    {
+      id: 'user-2',
+      display_name: 'Bob',
+      avatar_url: 'https://example.com/bob.jpg',
+      native_languages: ['fr'],
+      target_languages: ['en'],
+    },
+  ];
 
   beforeEach(async () => {
+    loadMomentLikes = vi.fn().mockResolvedValue([]);
+
     await TestBed.configureTestingModule({
-      imports: [LikedByModalComponent, TranslatePipe],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      imports: [LikedByModalComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: MomentsStore,
+          useValue: { loadMomentLikes },
+        },
+        {
+          provide: I18nService,
+          useValue: {
+            translations: signal({}),
+            translate: (key: string) => key,
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LikedByModalComponent);
     component = fixture.componentInstance;
-    httpTesting = TestBed.inject(HttpTestingController);
     fixture.componentRef.setInput('momentId', 'moment-123');
   });
 
   afterEach(() => {
-    httpTesting.verify();
+    fixture.destroy();
+    vi.clearAllMocks();
   });
 
-  it('should create', () => {
+  async function start(): Promise<void> {
     fixture.detectChanges();
-    expect(component).toBeTruthy();
-    flushRequest(httpTesting);
-  });
-
-  it('should show loading state while fetching likes', () => {
-    fixture.detectChanges();
-    expect(component.likedUsers.isLoading()).toBe(true);
-    const spinner = fixture.nativeElement.querySelector('[role="progressbar"]');
-    expect(spinner).toBeTruthy();
-    flushRequest(httpTesting);
-  });
-
-  it('should load and display users when API responds', async () => {
-    fixture.detectChanges();
-
-    const req = httpTesting.expectOne('/api/moments/moment-123/likes');
-    const mockUsers: LikedUser[] = [
-      {
-        id: 'user-1',
-        display_name: 'Alice',
-        avatar_url: null,
-        native_languages: ['en'],
-        target_languages: ['es', 'fr'],
-      },
-      {
-        id: 'user-2',
-        avatar_url: 'https://example.com/avatar.jpg',
-        display_name: 'Bob',
-        native_languages: ['fr'],
-        target_languages: ['en'],
-      },
-    ];
-    req.flush(mockUsers);
     await fixture.whenStable();
     fixture.detectChanges();
+  }
 
-    expect(component.likedUsers.isLoading()).toBe(false);
-    expect(component.likedUsers.value()).toEqual(mockUsers);
-    expect(fixture.nativeElement.textContent).toContain('Alice');
-    expect(fixture.nativeElement.textContent).toContain('Bob');
+  it('loads the first authenticated page when the modal opens', async () => {
+    loadMomentLikes.mockResolvedValue(users);
+
+    await start();
+
+    expect(loadMomentLikes).toHaveBeenCalledWith('moment-123', 0, 50);
+    expect(component.users()).toEqual(users);
+    expect(component.isLoading()).toBe(false);
+    expect(component.loadError()).toBe(false);
+    expect(component.hasMore()).toBe(false);
   });
 
-  it('should show error state when API fails', async () => {
-    fixture.detectChanges();
+  it('shows a retryable failure without retaining stale users', async () => {
+    loadMomentLikes.mockRejectedValue(new Error('private provider detail'));
 
-    const req = httpTesting.expectOne('/api/moments/moment-123/likes');
-    req.error(new ErrorEvent('Network error'));
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await start();
 
-    expect(component.likedUsers.isLoading()).toBe(false);
-    expect(component.likedUsers.error()).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('Failed to load data');
+    expect(component.users()).toEqual([]);
+    expect(component.loadError()).toBe(true);
+    expect(component.isLoading()).toBe(false);
+    expect(document.body.textContent).toContain('common.loadError');
   });
 
-  it('should show empty state when no likes exist', async () => {
-    fixture.detectChanges();
+  it('retries the first page after an initial failure', async () => {
+    loadMomentLikes
+      .mockRejectedValueOnce(new Error('temporary'))
+      .mockResolvedValueOnce(users);
 
-    const req = httpTesting.expectOne('/api/moments/moment-123/likes');
-    req.flush([]);
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await start();
+    expect(component.loadError()).toBe(true);
 
-    expect(component.likedUsers.value()).toEqual([]);
-    expect(fixture.nativeElement.textContent).toContain('No likes yet');
-  });
-
-  it('should emit closeModal when close button clicked', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const emitSpy = vi.spyOn(component.closeModal, 'emit');
-    const closeButton = fixture.nativeElement.querySelector('button[aria-label]');
-    expect(closeButton).toBeTruthy();
-    closeButton.click();
-    expect(emitSpy).toHaveBeenCalled();
-  });
-
-  it('should emit closeModal when backdrop clicked', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const emitSpy = vi.spyOn(component.closeModal, 'emit');
-    const backdrop = fixture.nativeElement.querySelector('.fixed.inset-0');
-    expect(backdrop).toBeTruthy();
-    backdrop.click();
-    expect(emitSpy).toHaveBeenCalled();
-  });
-
-  it('should not emit closeModal when dialog card clicked', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const emitSpy = vi.spyOn(component.closeModal, 'emit');
-    const dialogCard = fixture.nativeElement.querySelector('[role="dialog"]');
-    expect(dialogCard).toBeTruthy();
-    dialogCard.click();
-    expect(emitSpy).not.toHaveBeenCalled();
-  });
-
-  it('should emit closeModal when Escape key pressed on dialog', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const emitSpy = vi.spyOn(component.closeModal, 'emit');
-    const dialogCard = fixture.nativeElement.querySelector('[role="dialog"]');
-    dialogCard.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    expect(emitSpy).toHaveBeenCalled();
-  });
-
-  it('should set correct ARIA attributes on dialog', () => {
-    fixture.detectChanges();
-    const dialogCard = fixture.nativeElement.querySelector('[role="dialog"]');
-    expect(dialogCard).toBeTruthy();
-    expect(dialogCard.getAttribute('aria-modal')).toBe('true');
-    expect(dialogCard.getAttribute('aria-labelledby')).toBe('liked-by-title');
-    flushRequest(httpTesting);
-  });
-
-  it('should display user language pairs correctly', async () => {
-    fixture.detectChanges();
-
-    const req = httpTesting.expectOne('/api/moments/moment-123/likes');
-    const mockUsers: LikedUser[] = [
-      {
-        id: 'user-1',
-        display_name: 'Alice',
-        avatar_url: null,
-        native_languages: ['en'],
-        target_languages: ['es'],
-      },
-    ];
-    req.flush(mockUsers);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const textContent = fixture.nativeElement.textContent;
-    expect(textContent).toContain('Alice');
-    expect(textContent).toContain('EN');
-    expect(textContent).toContain('ES');
-  });
-
-  it('should use default avatar when avatar_url is missing', async () => {
-    fixture.detectChanges();
-
-    const req = httpTesting.expectOne('/api/moments/moment-123/likes');
-    req.flush([
-      {
-        id: 'user-1',
-        display_name: 'Alice',
-        avatar_url: null,
-        native_languages: ['en'],
-        target_languages: ['es'],
-      },
-    ]);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const img = fixture.nativeElement.querySelector('img');
-    expect(img.getAttribute('src')).toContain('default-avatar.png');
-  });
-
-  it('should refetch when momentId changes', async () => {
-    fixture.detectChanges();
-    flushRequest(httpTesting);
+    component.retry();
     await fixture.whenStable();
 
+    expect(loadMomentLikes).toHaveBeenNthCalledWith(2, 'moment-123', 0, 50);
+    expect(component.users()).toEqual(users);
+    expect(component.loadError()).toBe(false);
+  });
+
+  it('appends and deduplicates additional pages', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `user-${index}`,
+      display_name: `User ${index}`,
+      avatar_url: null,
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    }));
+    loadMomentLikes
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce([
+        firstPage[49],
+        {
+          id: 'user-50',
+          display_name: 'User 50',
+          avatar_url: null,
+          native_languages: ['en'],
+          target_languages: ['ja'],
+        },
+      ]);
+
+    await start();
+    expect(component.hasMore()).toBe(true);
+
+    await component.loadMore();
+
+    expect(loadMomentLikes).toHaveBeenNthCalledWith(2, 'moment-123', 50, 50);
+    expect(component.users()).toHaveLength(51);
+    expect(component.users().at(-1)?.id).toBe('user-50');
+    expect(component.hasMore()).toBe(false);
+  });
+
+  it('does not issue duplicate load-more requests while one is pending', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `user-${index}`,
+      display_name: `User ${index}`,
+      avatar_url: null,
+      target_languages: ['ja'],
+    }));
+    let resolvePage: ((value: MomentLikeUser[]) => void) | undefined;
+    const pendingPage = new Promise<MomentLikeUser[]>((resolve) => {
+      resolvePage = resolve;
+    });
+    loadMomentLikes
+      .mockResolvedValueOnce(firstPage)
+      .mockReturnValueOnce(pendingPage);
+
+    await start();
+
+    const firstLoad = component.loadMore();
+    const secondLoad = component.loadMore();
+    expect(loadMomentLikes).toHaveBeenCalledTimes(2);
+
+    resolvePage?.([]);
+    await Promise.all([firstLoad, secondLoad]);
+    expect(component.isLoadingMore()).toBe(false);
+  });
+
+  it('ignores a stale response when the moment changes', async () => {
+    let resolveFirst: ((value: MomentLikeUser[]) => void) | undefined;
+    const firstRequest = new Promise<MomentLikeUser[]>((resolve) => {
+      resolveFirst = resolve;
+    });
+    loadMomentLikes
+      .mockReturnValueOnce(firstRequest)
+      .mockResolvedValueOnce([users[1]]);
+
+    fixture.detectChanges();
     fixture.componentRef.setInput('momentId', 'moment-456');
     fixture.detectChanges();
-
-    const req = httpTesting.expectOne('/api/moments/moment-456/likes');
-    req.flush([
-      {
-        id: 'user-2',
-        display_name: 'Bob',
-        avatar_url: null,
-        native_languages: ['fr'],
-        target_languages: ['en'],
-      } as any,
-    ]);
     await fixture.whenStable();
-    fixture.detectChanges();
 
-    expect(component.likedUsers.value()?.length).toBe(1);
-    expect(component.likedUsers.value()?.[0].display_name).toBe('Bob');
+    resolveFirst?.([users[0]]);
+    await fixture.whenStable();
+
+    expect(component.users()).toEqual([users[1]]);
+    expect(loadMomentLikes).toHaveBeenNthCalledWith(2, 'moment-456', 0, 50);
+  });
+
+  it('exposes profile links and hides incomplete language pairs', async () => {
+    loadMomentLikes.mockResolvedValue([
+      users[0],
+      {
+        id: 'user-3',
+        display_name: 'No target yet',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: [],
+      },
+    ]);
+
+    await start();
+
+    const links = Array.from(
+      document.body.querySelectorAll('a[role="listitem"]'),
+    ) as HTMLAnchorElement[];
+    expect(links).toHaveLength(2);
+    expect(links[0].getAttribute('href')).toContain('/profile/user/user-1');
+    expect(component.hasLanguagePair(users[0])).toBe(true);
+    expect(
+      component.hasLanguagePair({
+        id: 'user-3',
+        display_name: 'No target yet',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: [],
+      }),
+    ).toBe(false);
+  });
+
+  it('clears pending pagination when the modal closes and reopens', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `user-${index}`,
+      display_name: `User ${index}`,
+      avatar_url: null,
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    }));
+    let resolvePage: ((value: MomentLikeUser[]) => void) | undefined;
+    const pendingPage = new Promise<MomentLikeUser[]>((resolve) => {
+      resolvePage = resolve;
+    });
+    loadMomentLikes
+      .mockResolvedValueOnce(firstPage)
+      .mockReturnValueOnce(pendingPage)
+      .mockResolvedValueOnce([]);
+
+    await start();
+    const loadMore = component.loadMore();
+    expect(component.isLoadingMore()).toBe(true);
+
+    fixture.componentRef.setInput('open', false);
+    fixture.detectChanges();
+    expect(component.isLoadingMore()).toBe(false);
+
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.isLoadingMore()).toBe(false);
+
+    resolvePage?.([]);
+    await loadMore;
+  });
+
+  it('emits close when the Spartan dialog closes', async () => {
+    loadMomentLikes.mockResolvedValue([]);
+    await start();
+    const emitSpy = vi.spyOn(component.closeModal, 'emit');
+
+    component.onDialogStateChanged('closed');
+
+    expect(emitSpy).toHaveBeenCalledOnce();
   });
 });

@@ -21,7 +21,8 @@ interface DiscoverableGroup {
 }
 
 interface InterestTopic {
-  id: string;
+  id: string | null;
+  tag: string;
   name: string;
 }
 
@@ -52,7 +53,7 @@ interface InterestTopic {
           >
             {{ 'groups_discovery_all_topics' | t }}
           </button>
-          @for (topic of interestPills(); track topic.id) {
+          @for (topic of interestPills(); track topic.id ?? topic.tag) {
             <button
               hlmBtn
               (click)="selectedInterest.set(topic.id)"
@@ -108,7 +109,7 @@ interface InterestTopic {
           }
           @if (!isEmbedded()) {
             <a
-              [routerLink]="['/groups/create']"
+              [routerLink]="['/community/groups/create']"
               class="mt-3 bg-accent-500 hover:bg-accent-400 text-on-fill px-4 py-1.5 rounded-full text-sm font-bold transition-colors"
             >
               {{ 'groups_discovery_create' | t }}
@@ -167,7 +168,7 @@ interface InterestTopic {
       <!-- Create group FAB for embedded mode -->
       @if (isEmbedded()) {
         <a
-          [routerLink]="['/groups/create']"
+          [routerLink]="['/community/groups/create']"
           class="fixed bottom-20 end-4 bg-accent-500 hover:bg-accent-400 text-on-fill w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg shadow-accent-500/30 transition-colors z-10"
           [attr.aria-label]="'groups_discovery_create' | t"
         >
@@ -211,7 +212,9 @@ export class GroupsDiscoveryComponent {
       try {
         const lang = this.i18n.currentLang();
         return await firstValueFrom(
-          this.http.get<InterestTopic[]>(`${this.apiUrl}/interests?language=${lang}`),
+          this.http.get<InterestTopic[]>(
+            `${this.apiUrl}/interests?language=${lang}&includeEmpty=true`,
+          ),
         );
       } catch {
         return [];
@@ -221,7 +224,9 @@ export class GroupsDiscoveryComponent {
 
   protected interestPills = computed(() => {
     const interests = this.interestsResource.value();
-    return interests ?? [];
+    return (interests ?? []).filter((interest): interest is InterestTopic & { id: string } =>
+      Boolean(interest.id),
+    );
   });
 
   /** Load discoverable groups from the API */

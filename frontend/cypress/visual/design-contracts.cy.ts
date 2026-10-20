@@ -28,7 +28,17 @@ const tabletStates = {
   'tablet-1024-dark': { viewport: 'lg', mode: 'dark' },
 } as const;
 
+const desktopStates = {
+  'desktop-1024-light': { viewport: 'lg', mode: 'light' },
+  'desktop-1024-dark': { viewport: 'lg', mode: 'dark' },
+  'desktop-1024-rtl': { viewport: 'lg', mode: 'rtl' },
+  'desktop-1024-text-200': { viewport: 'lg', mode: 'text-200' },
+  'desktop-1280-light': { viewport: 'wide', mode: 'light' },
+  'desktop-1280-dark': { viewport: 'wide', mode: 'dark' },
+} as const;
+
 type TabletState = keyof typeof tabletStates;
+type DesktopState = keyof typeof desktopStates;
 
 const automatedStates = new Set([
   'light',
@@ -37,10 +47,15 @@ const automatedStates = new Set([
   'wide',
   'rtl',
   ...Object.keys(tabletStates),
+  ...Object.keys(desktopStates),
 ]);
 
 function isTabletState(state: string): state is TabletState {
   return state in tabletStates;
+}
+
+function isDesktopState(state: string): state is DesktopState {
+  return state in desktopStates;
 }
 
 function applyState(state: string, rendering: VisualMatrix['rendering']): void {
@@ -58,6 +73,13 @@ function applyState(state: string, rendering: VisualMatrix['rendering']): void {
         ? rendering.viewportTabletMd
         : rendering.viewportTabletLgBoundary;
     mode = tabletState.mode;
+  } else if (isDesktopState(state)) {
+    const desktopState = desktopStates[state];
+    viewport =
+      desktopState.viewport === 'lg'
+        ? rendering.viewportTabletLgBoundary
+        : rendering.viewportWide;
+    mode = desktopState.mode;
   } else if (state === 'dark') {
     mode = 'dark';
   } else if (state === 'rtl') {
@@ -94,21 +116,26 @@ function applyState(state: string, rendering: VisualMatrix['rendering']): void {
   });
 }
 
-function assertTabletResponsiveContract(state: string): void {
-  if (!isTabletState(state)) return;
+function assertResponsiveContract(state: string): void {
+  const responsiveState = isTabletState(state)
+    ? { family: 'tablet', ...tabletStates[state] }
+    : isDesktopState(state)
+      ? { family: 'desktop', ...desktopStates[state] }
+      : undefined;
+  if (!responsiveState) return;
 
   cy.document().then((document) => {
     const root = document.documentElement;
     expect(
       root.scrollWidth,
-      `${state}: tablet layout must not create horizontal document overflow`,
+      `${state}: ${responsiveState.family} layout must not create horizontal document overflow`,
     ).to.be.at.most(root.clientWidth + 1);
 
-    if (tabletStates[state].mode === 'rtl') {
+    if (responsiveState.mode === 'rtl') {
       expect(root.dir, `${state}: RTL state must preserve document direction`).to.equal('rtl');
     }
 
-    if (tabletStates[state].mode === 'text-200') {
+    if (responsiveState.mode === 'text-200') {
       expect(
         Number.parseFloat(getComputedStyle(root).fontSize),
         `${state}: text-scale state must enlarge root text`,
@@ -137,7 +164,7 @@ describe('Relay + Spartan visual contracts', () => {
           cy.get('body').should('be.visible');
           applyState(state, matrix.rendering);
           cy.document().its('fonts.status').should('eq', 'loaded');
-          assertTabletResponsiveContract(state);
+          assertResponsiveContract(state);
           cy.screenshot(`${contract.designSyncId}/${state}`, { capture: 'fullPage' });
         }
       }

@@ -52,4 +52,40 @@ describe('Moments lightbox integration', () => {
     expect(lightboxTemplate).toContain('*hlmDialogPortal');
     expect(lightboxTemplate).toContain('(stateChanged)="onDialogStateChanged($event)"');
   });
+
+  it('uses pointer gestures with cancellation instead of touch-only handlers', () => {
+    expect(lightboxTemplate).toContain('(pointerdown)="onPointerDown($event)"');
+    expect(lightboxTemplate).toContain('(pointerup)="onPointerUp($event)"');
+    expect(lightboxTemplate).toContain('(pointercancel)="onPointerCancel($event)"');
+    expect(lightboxTemplate).not.toContain('(touchstart)');
+    expect(lightboxTemplate).not.toContain('(touchend)');
+  });
+
+  it('keeps duplicate image URLs addressable by tracking gallery positions', () => {
+    expect(lightboxTemplate).toContain('@for (img of images(); track $index; let i = $index)');
+  });
+
+  it('announces current position and exposes indicator selection semantically', () => {
+    expect(lightboxTemplate).toContain('aria-live="polite"');
+    expect(lightboxTemplate).toContain('[attr.aria-current]="i === currentIndex() ? \'true\' : null"');
+  });
+
+  it('keeps gallery indicators touch-sized and respects reduced motion', () => {
+    expect(lightboxTemplate).toContain(
+      'size="icon-touch"\n            (click)="goTo(i, $event)"',
+    );
+    expect(lightboxTemplate).toContain(
+      'transition-all duration-300 ease-out motion-reduce:transition-none',
+    );
+    expect(lightboxTemplate).toContain(
+      'transition-colors duration-200 motion-reduce:transition-none',
+    );
+  });
+
+  it('renders explicit image loading and unavailable states', () => {
+    expect(lightboxTemplate).toContain("'common.loading' | t");
+    expect(lightboxTemplate).toContain("'common.loadError' | t");
+    expect(lightboxTemplate).toContain('(load)="onImageLoad(img)"');
+    expect(lightboxTemplate).toContain('(error)="onImageError(img)"');
+  });
 });

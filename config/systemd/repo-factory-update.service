@@ -1,0 +1,29 @@
+[Unit]
+Description=Repo Factory daily self-update
+After=network-online.target repo-factory@hellotalk.service repo-factory@workout-agent.service
+Wants=network-online.target
+Conflicts=repo-factory-health@hellotalk.service repo-factory-health@workout-agent.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/repo-factory/common.env
+EnvironmentFile=/etc/repo-factory/instances/hellotalk.env
+EnvironmentFile=/etc/hellotalk-factory/runtime.env
+Environment=HOME=/home/dev
+Environment=REPO_FACTORY_CONTROL_REPOSITORY=/var/lib/repo-factory/control
+Environment=REPO_FACTORY_PRIMARY_HEARTBEAT=/var/lib/hellotalk-factory/daemon.json
+Environment=REPO_FACTORY_PRIMARY_SERVICE=repo-factory@hellotalk.service
+Environment=REPO_FACTORY_SECONDARY_HEARTBEAT=/var/lib/repo-factory/workout-agent/state/daemon.json
+Environment=REPO_FACTORY_SECONDARY_SERVICE=repo-factory@workout-agent.service
+ExecStart=/bin/bash /opt/repo-factory/repo-factory-update.sh
+UMask=0077
+PrivateTmp=true
+ProtectHome=false
+BindPaths=/run/user
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/repo-factory /var/log/repo-factory /var/lib/hellotalk-factory /var/log/hellotalk-factory /opt/hellotalk-factory /run/systemd

@@ -1,7 +1,7 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import {
-  Component,
+  Component, ChangeDetectionStrategy,
   ElementRef,
   output,
   viewChild,
@@ -14,6 +14,7 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-doodle-pad',
   imports: [
     HlmButton,

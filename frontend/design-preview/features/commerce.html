@@ -1,0 +1,1372 @@
+<!-- @dsCard group="Features" name="Commerce &amp; gifting" subtitle="shop · cart · stickers · gifts · coins · plans · escrow · developer · light/dark · RTL" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Features · Commerce &amp; gifting</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="design-sync-id" content="feature.commerce" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===== Relay tokens (mirror of frontend/src/styles.scss) - do not edit per file ===== */
+      :root {
+        --surface-50: 255 255 255;
+        --surface-100: 228 231 237;
+        --surface-200: 253 253 254;
+        --surface-300: 241 243 247;
+        --surface-400: 233 235 241;
+        --surface-500: 246 247 250;
+        --surface-600: 219 223 230;
+        --surface-700: 199 204 214;
+        --surface-800: 154 161 175;
+        --surface-900: 18 21 28;
+        --text-primary: 18 21 28;
+        --text-secondary: 74 81 99;
+        --text-muted: 101 106 122;
+        --primary: 198 82 48;
+        --secondary: 26 132 120;
+        --danger: 217 58 58;
+        --success: 25 134 84;
+        --warning: 161 108 9;
+        --vip: 153 111 16;
+        --on-fill: 255 255 255;
+        --shadow: 16 19 28;
+        --accent: 204 72 60;
+        --neon-violet: 139 108 240;
+        --neon-pink: 232 87 143;
+        --neon-cyan: 47 198 217;
+        --neon-blue: 91 141 239;
+        --neon-orange: 240 149 74;
+      }
+      html.dark {
+        --surface-50: 58 65 82;
+        --surface-100: 46 52 68;
+        --surface-200: 30 35 48;
+        --surface-300: 35 40 56;
+        --surface-400: 25 29 40;
+        --surface-500: 18 21 28;
+        --surface-600: 13 15 21;
+        --surface-700: 10 12 17;
+        --surface-800: 6 7 10;
+        --surface-900: 0 0 0;
+        --text-primary: 243 244 247;
+        --text-secondary: 180 186 201;
+        --text-muted: 137 143 157;
+        --primary: 255 122 82;
+        --secondary: 53 214 192;
+        --danger: 255 107 107;
+        --success: 52 211 153;
+        --warning: 242 179 61;
+        --vip: 232 184 75;
+        --on-fill: 18 21 28;
+        --shadow: 0 0 0;
+        --accent: 225 79 66;
+      }
+      /* ===== Shared catalogue chrome - do not edit per file ===== */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        line-height: 1.4;
+      }
+      .display {
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .page-head {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.5);
+        border-radius: 999px;
+      }
+      .toggle button {
+        border: 0;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 13px/1 inherit;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle button[aria-pressed='true'] {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .toggle button:focus-visible,
+      .specimen :focus-visible {
+        outline: 2px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+      .grid {
+        max-width: 1240px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+        align-items: start;
+      }
+      .specimen {
+        background: rgb(var(--surface-500));
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        border-radius: 24px;
+        overflow: hidden;
+        max-width: 390px;
+        width: 100%;
+        justify-self: center;
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 16px 32px rgb(var(--shadow) / 0.18);
+      }
+      .specimen > header {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-400));
+      }
+      .specimen > header h2 {
+        margin: 0;
+        font:
+          700 15px/1.3 'Instrument Sans',
+          sans-serif;
+      }
+      .specimen > header code {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+      }
+      .specimen > .body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .specimen > footer {
+        padding: 10px 16px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        border-top: 1px dashed rgb(var(--surface-700) / 0.6);
+      }
+      /* ===== Relay building blocks ===== */
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .muted {
+        color: rgb(var(--text-muted));
+        font-size: 12px;
+      }
+      .secondary {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        font: 600 14px/1 inherit;
+        cursor: pointer;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .btn.secondary-btn {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-color: rgb(var(--surface-700));
+      }
+      .btn.tide {
+        background: rgb(var(--secondary));
+      }
+      .btn.danger {
+        background: rgb(var(--danger));
+      }
+      .btn.ghost {
+        background: transparent;
+        color: rgb(var(--primary));
+      }
+      .btn.vip {
+        background: rgb(var(--vip));
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        display: inline-grid;
+        place-items: center;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid rgb(var(--surface-700));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        padding: 10px 12px;
+        font: 400 15px/1.3 inherit;
+      }
+      .field .hint {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .field .error {
+        font-weight: 400;
+        font-size: 12px;
+        color: rgb(var(--danger));
+      }
+      .field.invalid input {
+        border-color: rgb(var(--danger));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-700) / 0.6);
+      }
+      .chip.on {
+        background: rgb(var(--primary) / 0.14);
+        border-color: rgb(var(--primary));
+        color: rgb(var(--primary));
+      }
+      .chip.tide {
+        background: rgb(var(--secondary) / 0.14);
+        border-color: rgb(var(--secondary));
+        color: rgb(var(--secondary));
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .badge.success {
+        background: rgb(var(--success));
+      }
+      .badge.warning {
+        background: rgb(var(--warning));
+      }
+      .badge.danger {
+        background: rgb(var(--danger));
+      }
+      .badge.vip {
+        background: rgb(var(--vip));
+      }
+      .badge.tide {
+        background: rgb(var(--secondary));
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--secondary));
+      }
+      .avatar.ember {
+        background: rgb(var(--primary));
+      }
+      .avatar.sm {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+      .avatar.lg {
+        width: 72px;
+        height: 72px;
+        font-size: 26px;
+      }
+      .list {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .list > * {
+        padding: 12px 14px;
+        background: rgb(var(--surface-300));
+      }
+      .list > * + * {
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .sheet {
+        background: rgb(var(--surface-200));
+        border-radius: 20px 20px 0 0;
+        padding: 16px;
+        box-shadow: 0 -8px 24px rgb(var(--shadow) / 0.18);
+      }
+      .dialog {
+        background: rgb(var(--surface-200));
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 16px 40px rgb(var(--shadow) / 0.3);
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .scrim {
+        background: rgb(var(--surface-900) / 0.55);
+        padding: 24px 12px;
+        border-radius: 16px;
+      }
+      .alert {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border: 1px solid;
+      }
+      .alert.error {
+        color: rgb(var(--danger));
+        border-color: rgb(var(--danger) / 0.5);
+        background: rgb(var(--danger) / 0.08);
+      }
+      .alert.success {
+        color: rgb(var(--success));
+        border-color: rgb(var(--success) / 0.5);
+        background: rgb(var(--success) / 0.08);
+      }
+      .alert.warning {
+        color: rgb(var(--warning));
+        border-color: rgb(var(--warning) / 0.5);
+        background: rgb(var(--warning) / 0.08);
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: inherit;
+      }
+      .duet {
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+        color: rgb(var(--on-fill));
+      }
+      .skeleton {
+        background: rgb(var(--surface-100));
+        border-radius: 8px;
+        min-height: 12px;
+      }
+      .state-label {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgb(var(--text-muted));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse {
+          animation: pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          50% {
+            opacity: 0.55;
+          }
+        }
+      }
+      @media (forced-colors: active) {
+        .btn,
+        .chip,
+        .badge,
+        .card,
+        .specimen {
+          border: 1px solid CanvasText;
+        }
+      }
+      /* ===== File-specific styles below ===== */
+      .coin {
+        color: rgb(var(--warning));
+        font-weight: 700;
+      }
+      .balance {
+        font:
+          800 28px/1.1 'Instrument Sans',
+          sans-serif;
+      }
+      .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .tile-grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .tile {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 14px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+      .tile .art {
+        height: 64px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 30px;
+        background: rgb(var(--accent) / 0.1);
+        position: relative;
+      }
+      .tile .art .corner {
+        position: absolute;
+        inset-block-start: 6px;
+        inset-inline-end: 6px;
+      }
+      .gift-opt {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 10px 4px;
+        border-radius: 14px;
+        border: 2px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-300));
+        font-size: 12px;
+        min-height: 44px;
+        cursor: pointer;
+        color: rgb(var(--text-primary));
+        font-family: inherit;
+      }
+      .gift-opt .ic {
+        font-size: 26px;
+      }
+      .gift-opt[aria-checked='true'] {
+        border-color: rgb(var(--accent));
+        background: rgb(var(--accent) / 0.1);
+      }
+      .stage {
+        position: relative;
+        height: 150px;
+        border-radius: 16px;
+        background: rgb(var(--surface-900) / 0.06);
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+      }
+      .particle {
+        position: absolute;
+        font-size: 16px;
+      }
+      .big-gift {
+        font-size: 64px;
+      }
+      .result {
+        text-align: center;
+        padding: 20px 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .result .emoji {
+        font-size: 44px;
+      }
+      .plan {
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 14px;
+        background: rgb(var(--surface-300));
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .plan.featured {
+        border: 2px solid rgb(var(--vip));
+      }
+      .plan .price {
+        font:
+          800 22px/1.1 'Instrument Sans',
+          sans-serif;
+      }
+      .seg {
+        display: inline-flex;
+        padding: 3px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+      }
+      .seg span {
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .seg span.on {
+        background: rgb(var(--surface-200));
+        box-shadow: 0 1px 3px rgb(var(--shadow) / 0.15);
+      }
+      .scroll-x {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-block-end: 2px;
+      }
+      .scroll-x > * {
+        flex: none;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        border-block-end: 1px solid rgb(var(--surface-100));
+      }
+      .tabs span {
+        flex: none;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        border-block-end: 2px solid transparent;
+      }
+      .tabs span.on {
+        color: rgb(var(--primary));
+        border-color: rgb(var(--primary));
+      }
+      code.key {
+        display: block;
+        font-size: 11px;
+        padding: 8px;
+        border-radius: 8px;
+        background: rgb(var(--surface-900) / 0.08);
+        overflow-wrap: anywhere;
+      }
+      .stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .stat b {
+        font:
+          800 18px/1.1 'Instrument Sans',
+          sans-serif;
+      }
+      .spinner {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 2px solid rgb(var(--primary) / 0.25);
+        border-block-start-color: rgb(var(--primary));
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .spinner {
+          animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1>Relay - Commerce &amp; gifting</h1>
+        <p>
+          Design-sync ID <code>feature.commerce</code> · every runtime surface in this area is one
+          specimen below
+        </p>
+      </div>
+      <div class="row">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme="light" aria-pressed="true">☀️ Light</button>
+          <button type="button" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+        <div class="toggle" role="group" aria-label="Direction">
+          <button type="button" data-dir="ltr" aria-pressed="true">LTR</button>
+          <button type="button" data-dir="rtl" aria-pressed="false">RTL</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="grid">
+      <section class="specimen" data-component="components/shop">
+        <header>
+          <h2>Shop</h2>
+          <code>components/shop</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow">
+              <div class="title display" style="font-size: 20px">Shop</div>
+              <div class="secondary">Browse virtual gifts and premium items</div>
+            </div>
+            <a class="btn secondary-btn" href="#">🛒 Shopping Cart</a>
+          </div>
+          <p class="alert success" aria-live="polite">Added to cart</p>
+          <div class="tile-grid" role="list">
+            <div class="tile" role="listitem">
+              <div class="art" aria-hidden="true">🎁</div>
+              <div class="title">Mystery Box</div>
+              <div class="muted">A surprise gift for your partner</div>
+              <div class="coin" aria-label="150 coins for Mystery Box">🪙 150 Coins</div>
+              <button class="btn block" aria-label="Add Mystery Box to cart">Add</button>
+            </div>
+            <div class="tile" role="listitem">
+              <div class="art" aria-hidden="true">🖼️</div>
+              <div class="title">Profile Frame</div>
+              <div class="muted">Gold frame for 30 days</div>
+              <div class="coin">🪙 300 Coins</div>
+              <button class="btn block">Add</button>
+            </div>
+          </div>
+        </div>
+        <footer>States shown: default · add-to-cart confirmation (aria-live)</footer>
+      </section>
+      <section class="specimen" data-component="components/cart">
+        <header>
+          <h2>Shopping cart</h2>
+          <code>components/cart</code>
+        </header>
+        <div class="body">
+          <div class="state-label">Filled</div>
+          <ul class="list" role="list" style="margin: 0; padding: 0; list-style: none">
+            <li class="row">
+              <div class="grow">
+                <div class="title">Mystery Box</div>
+                <div class="muted">x2</div>
+              </div>
+              <span class="coin">300 Coins</span
+              ><button class="btn secondary-btn" aria-label="Remove item">Remove</button>
+            </li>
+            <li class="row">
+              <div class="grow">
+                <div class="title">Profile Frame</div>
+                <div class="muted">x1</div>
+              </div>
+              <span class="coin">300 Coins</span><button class="btn secondary-btn">Remove</button>
+            </li>
+          </ul>
+          <div class="row">
+            <span class="grow title">Total</span
+            ><span class="coin" aria-label="Total 600 coins">600 Coins</span>
+          </div>
+          <button class="btn block">Checkout</button>
+          <div class="state-label">Empty</div>
+          <div class="card result" role="status">
+            <span class="emoji" aria-hidden="true">🛒</span
+            ><span class="secondary">Your cart is empty</span>
+          </div>
+        </div>
+        <footer>States shown: filled · empty · total</footer>
+      </section>
+      <section class="specimen" data-component="components/sticker-store">
+        <header>
+          <h2>Sticker store</h2>
+          <code>components/sticker-store</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow">
+              <div class="title display" style="font-size: 20px">Sticker Store</div>
+              <div class="secondary">Unlock expressive sticker packs for your chats</div>
+            </div>
+            <span class="chip" style="color: rgb(var(--warning))">🪙 240</span>
+          </div>
+          <div class="scroll-x" role="group" aria-label="Filter stickers">
+            <button class="chip on" aria-pressed="true">All</button
+            ><button class="chip" aria-pressed="false">Value</button
+            ><button class="chip" aria-pressed="false">Popular</button
+            ><button class="chip" aria-pressed="false">Premium</button>
+          </div>
+          <div class="tile-grid" role="list">
+            <div class="tile" role="listitem">
+              <div class="art duet" aria-hidden="true">
+                🐼<span class="corner badge warning">ANIMATED</span>
+              </div>
+              <div class="title">Panda Party</div>
+              <div class="muted">Animated stickers included</div>
+              <button class="btn block">🪙 120</button>
+            </div>
+            <div class="tile" role="listitem" style="opacity: 0.6">
+              <div class="art" aria-hidden="true">
+                🌸<span class="corner badge success">OWNED</span>
+              </div>
+              <div class="title">Sakura Days</div>
+              <div class="badge success" style="align-self: start">Unlocked</div>
+            </div>
+            <div class="tile" role="listitem">
+              <div class="art" aria-hidden="true">🦊</div>
+              <div class="title">Fox Phrases</div>
+              <button class="btn block" disabled>🪙 500</button>
+              <div class="muted">Not enough coins</div>
+            </div>
+            <div class="tile" role="listitem">
+              <div class="art" aria-hidden="true">☕</div>
+              <div class="title">Café Talk</div>
+              <button class="btn block" disabled>
+                <span class="spinner" aria-hidden="true"></span> Unlocking...
+              </button>
+            </div>
+          </div>
+          <div class="alert warning" role="status">
+            Purchases are not available while offline. Please check your internet connection.
+          </div>
+        </div>
+        <footer>States shown: animated · owned · insufficient coins · purchasing · offline</footer>
+      </section>
+      <section class="specimen" data-component="components/gift-picker">
+        <header>
+          <h2>Gift picker (Spartan dialog)</h2>
+          <code>components/gift-picker</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack" role="dialog" aria-labelledby="gp-t">
+            <div class="row">
+              <div class="grow">
+                <h3 id="gp-t" style="margin: 0; font-size: 16px">🎁 Send virtual gift to host</h3>
+                <div class="muted">Support language partners with animated tokens</div>
+              </div>
+              <button class="icon-btn" aria-label="Close">✕</button>
+            </div>
+            <div class="row card" style="padding: 10px">
+              <span aria-hidden="true">💰</span>
+              <div class="grow">
+                <div class="muted">Your coin balance:</div>
+                <div class="title" aria-live="polite">240 coins</div>
+              </div>
+              <button class="btn secondary-btn" style="min-height: 36px">+ Buy coins</button>
+            </div>
+            <div class="row card" style="padding: 10px; border-color: rgb(var(--accent))">
+              <span style="font-size: 24px" aria-hidden="true">👑</span>
+              <div class="grow">
+                <div class="title">Crown</div>
+                <div class="muted">🪙 100 Coins</div>
+              </div>
+            </div>
+            <div class="tile-grid three" role="radiogroup" aria-label="Virtual gifts">
+              <button
+                class="gift-opt"
+                role="radio"
+                aria-checked="false"
+                aria-label="Rose, 10 coins"
+              >
+                <span class="ic" aria-hidden="true">🌹</span><span>Rose</span
+                ><span class="coin">🪙 10</span>
+              </button>
+              <button
+                class="gift-opt"
+                role="radio"
+                aria-checked="false"
+                aria-label="Heart, 20 coins"
+              >
+                <span class="ic" aria-hidden="true">❤️</span><span>Heart</span
+                ><span class="coin">🪙 20</span>
+              </button>
+              <button
+                class="gift-opt"
+                role="radio"
+                aria-checked="false"
+                aria-label="Confetti Burst, 30 coins"
+              >
+                <span class="ic" aria-hidden="true">🎉</span><span>Confetti Burst</span
+                ><span class="coin">🪙 30</span>
+              </button>
+              <button
+                class="gift-opt"
+                role="radio"
+                aria-checked="false"
+                aria-label="Sparkle, 50 coins"
+              >
+                <span class="ic" aria-hidden="true">✨</span><span>Sparkle</span
+                ><span class="coin">🪙 50</span>
+              </button>
+              <button
+                class="gift-opt"
+                role="radio"
+                aria-checked="true"
+                aria-label="Crown, 100 coins"
+              >
+                <span class="ic" aria-hidden="true">👑</span><span>Crown</span
+                ><span class="coin">🪙 100</span>
+              </button>
+              <button
+                class="gift-opt"
+                role="radio"
+                aria-checked="false"
+                aria-label="Diamond, 200 coins"
+              >
+                <span class="ic" aria-hidden="true">💎</span><span>Diamond</span
+                ><span class="coin">🪙 200</span>
+              </button>
+            </div>
+            <div class="row">
+              <button class="btn secondary-btn grow">Cancel</button
+              ><button class="btn grow" style="background: rgb(var(--accent))">
+                🎁 Send 👑 (100 coins)
+              </button>
+            </div>
+          </div>
+        </div>
+        <footer>States shown: gift selected · balance · send CTA (accent)</footer>
+      </section>
+      <section class="specimen" data-component="components/gift-animation">
+        <header>
+          <h2>Gift received animation</h2>
+          <code>components/gift-animation</code>
+        </header>
+        <div class="body">
+          <div class="stage" role="status" aria-label="Chén Wěi sent you a Rose">
+            <span
+              class="particle"
+              style="inset-block-start: 18%; inset-inline-start: 20%"
+              aria-hidden="true"
+              >✨</span
+            >
+            <span
+              class="particle"
+              style="inset-block-start: 60%; inset-inline-start: 76%"
+              aria-hidden="true"
+              >🌹</span
+            >
+            <span
+              class="particle"
+              style="inset-block-start: 30%; inset-inline-start: 70%"
+              aria-hidden="true"
+              >💫</span
+            >
+            <div class="stack" style="align-items: center">
+              <span class="big-gift pulse" aria-hidden="true">🌹</span
+              ><span class="title">Rose</span><span class="coin">🪙 10</span>
+            </div>
+          </div>
+          <p class="muted">
+            Floating particles are suppressed under reduced motion; the status text is announced
+            once.
+          </p>
+        </div>
+        <footer>States shown: playing · reduced motion</footer>
+      </section>
+      <section class="specimen" data-component="components/gift-animation-overlay">
+        <header>
+          <h2>Gift broadcast overlay</h2>
+          <code>components/gift-animation-overlay</code>
+        </header>
+        <div class="body">
+          <div class="scrim">
+            <div
+              class="dialog stack"
+              role="alert"
+              aria-live="polite"
+              style="text-align: center; align-items: center"
+            >
+              <span style="font-size: 48px" aria-hidden="true">👑</span>
+              <h3 style="margin: 0" class="display">Crown Broadcast!</h3>
+              <p class="secondary" style="margin: 0">
+                🎉 Mariam gifted Chén Wěi a Crown! (🪙 100 Coins)
+              </p>
+              <button class="icon-btn" aria-label="Close">✕</button>
+            </div>
+          </div>
+        </div>
+        <footer>States shown: room-wide broadcast · dismissible</footer>
+      </section>
+      <section class="specimen" data-component="components/virtual-gift-modal">
+        <header>
+          <h2>Virtual gift modal - buy coins</h2>
+          <code>components/virtual-gift-modal</code>
+        </header>
+        <div class="body">
+          <div class="dialog stack" role="dialog" aria-labelledby="vg-t">
+            <div class="row">
+              <div class="grow">
+                <h3 id="vg-t" style="margin: 0; font-size: 16px">🎁 Send virtual gift to host</h3>
+                <div class="muted">Support language partners with animated tokens</div>
+              </div>
+              <button class="icon-btn" aria-label="Close">✕</button>
+            </div>
+            <div class="row card" style="padding: 10px">
+              <span aria-hidden="true">💰</span>
+              <div class="grow">
+                <div class="muted">Your coin balance:</div>
+                <div class="title">40 coins</div>
+              </div>
+              <button class="btn secondary-btn" style="min-height: 36px">Back to gifts</button>
+            </div>
+            <div class="secondary">Select a coin bundle to recharge:</div>
+            <div class="stack">
+              <div class="row card" style="padding: 10px">
+                <span aria-hidden="true">🪙</span>
+                <div class="grow">
+                  <div class="title" style="font-size: 13px">Starter Pouch (100 Coins)</div>
+                  <div class="muted">Great for sending roses and coffees</div>
+                </div>
+                <button class="btn" style="min-height: 36px; padding: 0 10px; font-size: 12px">
+                  4 UKP / $4.99 USD
+                </button>
+              </div>
+              <div class="row card" style="padding: 10px">
+                <span aria-hidden="true">🪙</span>
+                <div class="grow">
+                  <div class="title" style="font-size: 13px">Popular Chest (500 Coins)</div>
+                  <div class="muted">🔥 Most popular bundle</div>
+                </div>
+                <button class="btn" style="min-height: 36px; padding: 0 10px; font-size: 12px">
+                  16 UKP / $19.99 USD
+                </button>
+              </div>
+              <div class="row card" style="padding: 10px">
+                <span aria-hidden="true">🪙</span>
+                <div class="grow">
+                  <div class="title" style="font-size: 13px">Royal Vault (1200 Coins)</div>
+                  <div class="muted">Unlock crowns and rocket boosts</div>
+                </div>
+                <button class="btn" style="min-height: 36px; padding: 0 10px; font-size: 12px">
+                  32 UKP / $39.99 USD
+                </button>
+              </div>
+              <div class="row card" style="padding: 10px">
+                <span aria-hidden="true">🪙</span>
+                <div class="grow">
+                  <div class="title" style="font-size: 13px">Mega Hoard (3000 Coins)</div>
+                  <div class="muted">Best value for top gifters</div>
+                </div>
+                <button class="btn" style="min-height: 36px; padding: 0 10px; font-size: 12px">
+                  64 UKP / $79.99 USD
+                </button>
+              </div>
+            </div>
+            <button class="btn block" disabled>Select a gift</button>
+          </div>
+        </div>
+        <footer>States shown: coin top-up view · insufficient balance · send disabled</footer>
+      </section>
+      <section class="specimen" data-component="components/coin-economy-dashboard">
+        <header>
+          <h2>Coin economy dashboard</h2>
+          <code>components/coin-economy-dashboard</code>
+        </header>
+        <div class="body">
+          <div class="row">
+            <div class="grow">
+              <div class="title display" style="font-size: 20px">Virtual Coin Economy</div>
+              <div class="secondary">Manage your coins, gifts, stickers, and purchases</div>
+            </div>
+            <button class="btn ghost">Restart Tour</button>
+          </div>
+          <div class="card duet stack" style="border: 0">
+            <span style="font-size: 12px; font-weight: 600">Your Balance</span
+            ><span class="balance">🪙 1,240</span
+            ><button class="btn secondary-btn" style="align-self: start">Daily Check-in</button>
+          </div>
+          <div class="title">Quick Actions</div>
+          <div class="tile-grid">
+            <div class="tile">
+              <b>Buy Coins</b
+              ><span class="muted"
+                >Purchase coin packages to unlock gifts, stickers, and premium features.</span
+              ><button class="btn">Buy Coins</button>
+            </div>
+            <div class="tile">
+              <b>Send Virtual Gifts</b
+              ><span class="muted"
+                >Browse and send animated virtual gifts to your language partners.</span
+              ><button class="btn" style="background: rgb(var(--accent))">Go to Chat</button>
+            </div>
+            <div class="tile">
+              <b>Sticker Store</b
+              ><span class="muted">Browse and unlock sticker packs with your coins.</span
+              ><button class="btn secondary-btn">Browse Stickers</button>
+            </div>
+            <div class="tile">
+              <b>Shop</b><span class="muted">Spend coins on exclusive items and virtual goods.</span
+              ><button class="btn secondary-btn">Visit Shop</button>
+            </div>
+            <div class="tile">
+              <b>VIP Subscription</b
+              ><span class="muted">Upgrade to VIP for premium features and exclusive content.</span
+              ><button class="btn vip">View Plans</button>
+            </div>
+            <div class="tile">
+              <b>Escrow Payments</b
+              ><span class="muted"
+                >Securely hold coins until both parties confirm the transaction.</span
+              ><button class="btn tide">Manage Escrow</button>
+            </div>
+          </div>
+          <div class="title">Recent Activity</div>
+          <div class="list">
+            <div class="row">
+              <span class="grow">Gift Sent · 👑 Crown</span><span class="coin">−100</span>
+            </div>
+            <div class="row">
+              <span class="grow">Daily Check-in</span
+              ><span style="color: rgb(var(--success)); font-weight: 700">+10</span>
+            </div>
+            <div class="row">
+              <span class="grow">Coin Purchase</span
+              ><span style="color: rgb(var(--success)); font-weight: 700">+500</span>
+            </div>
+          </div>
+          <div class="state-label">Empty</div>
+          <div class="card result">
+            <span class="emoji" aria-hidden="true">🎁</span><b>No Gifts Yet</b
+            ><span class="muted">Popular gifts will show up here as you explore the economy.</span>
+          </div>
+        </div>
+        <footer>States shown: balance · quick actions · activity · empty</footer>
+      </section>
+      <section class="specimen" data-component="components/coins-success">
+        <header>
+          <h2>Coin checkout result</h2>
+          <code>components/coins-success</code>
+        </header>
+        <div class="body">
+          <div class="state-label">Pending</div>
+          <div class="card result" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span
+            ><span class="secondary">Confirming your purchase with our payment provider...</span>
+          </div>
+          <div class="state-label">Success</div>
+          <div class="card result">
+            <span class="emoji" aria-hidden="true">🎉</span>
+            <h3 class="display" style="margin: 0">🎉 Coins added!</h3>
+            <p class="secondary" style="margin: 0" role="status">
+              Thank you. Your coins have been credited to your balance.
+            </p>
+            <button class="btn">Go to Dashboard</button>
+          </div>
+          <div class="state-label">Failed verification</div>
+          <div class="card result">
+            <span class="emoji" aria-hidden="true">😕</span>
+            <h3 style="margin: 0">Purchase could not be confirmed</h3>
+            <p class="alert error" style="margin: 0" role="status">
+              We could not verify this purchase. If you were charged, please contact support.
+            </p>
+            <button class="btn">Go to Dashboard</button>
+          </div>
+        </div>
+        <footer>States shown: pending · success · failed</footer>
+      </section>
+      <section class="specimen" data-component="components/coins-cancel">
+        <header>
+          <h2>Coin checkout cancelled</h2>
+          <code>components/coins-cancel</code>
+        </header>
+        <div class="body">
+          <div class="card result" role="region" aria-labelledby="cc-t">
+            <span class="emoji" aria-hidden="true">↩️</span>
+            <h3 id="cc-t" class="display" style="margin: 0">Checkout Cancelled</h3>
+            <p class="secondary" style="margin: 0">
+              Your checkout was cancelled. No charges were made. You can try again anytime.
+            </p>
+            <button class="btn secondary-btn">Back to Dashboard</button>
+          </div>
+        </div>
+        <footer>States shown: cancelled</footer>
+      </section>
+      <section class="specimen" data-component="components/subscription-plans">
+        <header>
+          <h2>Subscription plans</h2>
+          <code>components/subscription-plans</code>
+        </header>
+        <div class="body">
+          <div class="title display" style="font-size: 20px">Choose your plan</div>
+          <div class="row">
+            <div class="seg" role="group" aria-label="Billing interval">
+              <span>Monthly</span><span class="on">Yearly</span>
+            </div>
+            <span class="badge success">Save 20%</span>
+          </div>
+          <div class="plan">
+            <div class="row"><b class="grow">Free</b></div>
+            <div class="price">Free</div>
+            <div class="muted">Text chat, moments and daily lessons</div>
+            <button class="btn secondary-btn block" disabled>Current plan</button>
+          </div>
+          <div class="plan featured">
+            <div class="row">
+              <b class="grow">Consumer VIP</b><span class="badge vip">Most popular</span>
+            </div>
+            <div class="price">£8 / $10 USD<span class="muted">/year</span></div>
+            <div class="muted">8 UKP / $10 USD per month if paid monthly</div>
+            <div class="stack secondary">
+              <span>✓ Unlimited translations</span><span>✓ Location filters</span
+              ><span>✓ Ad-free</span>
+            </div>
+            <button class="btn vip block">Get started</button>
+          </div>
+          <div class="plan">
+            <div class="row"><b class="grow">Developer</b></div>
+            <div class="price">£20 / $26 USD<span class="muted">/year</span></div>
+            <button class="btn block" disabled>
+              <span class="spinner" aria-hidden="true"></span> Processing...
+            </button>
+          </div>
+          <a class="btn ghost" href="#">Already subscribed? Restore purchases</a>
+        </div>
+        <footer>States shown: monthly/yearly · current · featured (VIP) · processing</footer>
+      </section>
+      <section class="specimen" data-component="components/subscription-success">
+        <header>
+          <h2>Subscription success</h2>
+          <code>components/subscription-success</code>
+        </header>
+        <div class="body">
+          <div class="card result">
+            <span class="emoji" aria-hidden="true">👑</span>
+            <h3 class="display" style="margin: 0; color: rgb(var(--vip))">Welcome to VIP</h3>
+            <p class="secondary" style="margin: 0">
+              Your subscription is active. Premium features are unlocked now.
+            </p>
+            <button class="btn">Go to Dashboard</button>
+          </div>
+        </div>
+        <footer>States shown: success</footer>
+      </section>
+      <section class="specimen" data-component="components/subscription-cancel">
+        <header>
+          <h2>Subscription checkout cancelled</h2>
+          <code>components/subscription-cancel</code>
+        </header>
+        <div class="body">
+          <div class="card result">
+            <span class="emoji" aria-hidden="true">↩️</span>
+            <h3 class="display" style="margin: 0">Checkout cancelled</h3>
+            <p class="secondary" style="margin: 0">
+              No charges were made. You can choose a plan again anytime.
+            </p>
+            <button class="btn secondary-btn">Back to plans</button>
+          </div>
+        </div>
+        <footer>States shown: cancelled</footer>
+      </section>
+      <section class="specimen" data-component="components/restore-purchases-button">
+        <header>
+          <h2>Restore purchases button</h2>
+          <code>components/restore-purchases-button</code>
+        </header>
+        <div class="body">
+          <div class="state-label">Idle</div>
+          <button class="btn secondary-btn block" aria-label="Restore purchases">
+            Restore purchases
+          </button>
+          <div class="state-label">Restoring</div>
+          <button class="btn secondary-btn block" disabled>
+            <span class="spinner" aria-hidden="true"></span> Restoring…
+          </button>
+          <div class="state-label">Result</div>
+          <p class="alert success" role="status" aria-live="polite" style="margin: 0">
+            Restored 1 purchase: Consumer VIP.
+          </p>
+          <p class="alert error" role="status" style="margin: 0">
+            No previous purchases were found for this account.
+          </p>
+        </div>
+        <footer>States shown: idle · restoring · restored · none found</footer>
+      </section>
+      <section class="specimen" data-component="components/escrow-payments">
+        <header>
+          <h2>Escrow payments</h2>
+          <code>components/escrow-payments</code>
+        </header>
+        <div class="body">
+          <div class="alert warning" role="alert">
+            You are offline. Escrow operations will be queued.
+          </div>
+          <button class="btn tide block">⟳ Sync 2 pending operation(s)</button>
+          <div class="row">
+            <button class="icon-btn" aria-label="Back">←</button>
+            <h3 class="grow display" style="margin: 0">Escrow Payments</h3>
+            <button class="icon-btn" aria-label="How escrow works">?</button>
+          </div>
+          <div class="scroll-x">
+            <span class="chip on">All</span><span class="chip">Pending</span
+            ><span class="chip">Released</span><span class="chip">Refunded</span
+            ><span class="chip">Disputed</span><span class="chip">Cancelled</span>
+          </div>
+          <div class="card stack">
+            <div class="row">
+              <span class="badge warning">Pending</span><span class="grow"></span
+              ><span class="coin">🪙 300</span>
+            </div>
+            <p style="margin: 0">30-min Japanese speaking lesson</p>
+            <div class="row muted"><span class="chip">Tutoring</span><span>20 Oct 2026</span></div>
+            <div class="row">
+              <button class="btn success grow" style="background: rgb(var(--success))">
+                Release</button
+              ><button class="btn secondary-btn grow">Refund</button
+              ><button class="btn danger grow">Dispute</button>
+            </div>
+          </div>
+          <div class="card stack">
+            <div class="row">
+              <span class="badge danger">Disputed</span><span class="grow"></span
+              ><span class="coin">🪙 120</span>
+            </div>
+            <p style="margin: 0">Essay correction</p>
+            <span class="muted">Disputed</span>
+          </div>
+          <div class="state-label">Empty</div>
+          <div class="card result"><span class="secondary">No escrow transactions yet.</span></div>
+        </div>
+        <footer>States shown: offline queue · filters · pending actions · disputed · empty</footer>
+      </section>
+      <section class="specimen" data-component="components/developer-dashboard">
+        <header>
+          <h2>Developer dashboard</h2>
+          <code>components/developer-dashboard</code>
+        </header>
+        <div class="body">
+          <div class="card duet stack" style="border: 0">
+            <span
+              class="badge"
+              style="align-self: start; background: rgb(var(--surface-900) / 0.25)"
+              >⚡ Developer tier &amp; AI Sandbox</span
+            ><b class="display" style="font-size: 17px"
+              >Programmatic API &amp; Diagnostics Platform</b
+            ><span style="font-size: 12px"
+              >Inspect PostGIS spatial queries, Centrifugo real-time fan-out, and LiveKit WebRTC
+              stage permissions.</span
+            >
+            <div class="row" style="flex-wrap: wrap">
+              <button class="btn secondary-btn">Upgrade developer tier (20 UKP / $26 USD)</button
+              ><button class="btn vip">Consumer VIP (8 UKP / $10 USD)</button>
+            </div>
+          </div>
+          <div class="tabs" role="tablist">
+            <span class="on" role="tab" aria-selected="true">📊 Telemetry Overview</span
+            ><span role="tab">🗺️ PostGIS Spatial Sandbox</span
+            ><span role="tab">⚡ Centrifugo &amp; Redis Fan-Out</span
+            ><span role="tab">🎙️ LiveKit SFU Stage Simulator</span>
+          </div>
+          <div class="card stack">
+            <div class="row">
+              <b class="grow">🔐 API key management</b
+              ><button class="btn" style="min-height: 36px">+ Generate key</button>
+            </div>
+            <span class="muted">Send key in Authorization header.</span
+            ><span class="muted">Active production key</span
+            ><code class="key">ht_live_9f2c…a71e</code
+            ><span
+              class="chip"
+              style="
+                align-self: start;
+                color: rgb(var(--success));
+                border-color: rgb(var(--success));
+              "
+              >Active (600 RPM)</span
+            >
+          </div>
+          <div class="tile-grid three">
+            <div class="tile stat">
+              <span class="muted">Total API calls today</span><b>4,812</b>
+            </div>
+            <div class="tile stat"><span class="muted">Rate limit</span><b>600 RPM</b></div>
+            <div class="tile stat"><span class="muted">Average latency</span><b>18 ms</b></div>
+          </div>
+          <div class="state-label">No key</div>
+          <div class="card muted">No API key yet. Activate developer tier and generate one.</div>
+        </div>
+        <footer>States shown: tier banner · overview tab · active key · no key</footer>
+      </section>
+    </main>
+
+    <script>
+      for (const b of document.querySelectorAll('[data-theme]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.classList.toggle('dark', b.dataset.theme === 'dark');
+          for (const o of document.querySelectorAll('[data-theme]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+      for (const b of document.querySelectorAll('[data-dir]')) {
+        b.addEventListener('click', () => {
+          document.documentElement.dir = b.dataset.dir;
+          for (const o of document.querySelectorAll('[data-dir]'))
+            o.setAttribute('aria-pressed', String(o === b));
+        });
+      }
+    </script>
+  </body>
+</html>
