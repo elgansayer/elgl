@@ -762,6 +762,7 @@ class GitHubClient:
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
             "factory-status": "0969da",
+            "factory-maintenance": "006b75",
             "superseded": "6e7781",
             "duplicate": "cfd3d7",
         }
