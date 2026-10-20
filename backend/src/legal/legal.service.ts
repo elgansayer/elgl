@@ -13,9 +13,6 @@ export interface LegalDocument {
   sections: LegalSection[];
 }
 
-const DEFAULT_EFFECTIVE_DATE = '2026-07-01';
-const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-
 @Injectable()
 export class LegalService {
   private readonly logger = new Logger(LegalService.name);
@@ -23,7 +20,8 @@ export class LegalService {
   constructor(@Optional() private readonly configService?: ConfigService) {}
 
   getTermsOfService(): LegalDocument {
-    const effectiveDate = this.resolveEffectiveDate('TOS_EFFECTIVE_DATE');
+    const effectiveDate =
+      this.configService?.get<string>('TOS_EFFECTIVE_DATE') ?? '2026-07-01';
 
     return {
       title: 'Terms of Service',
@@ -82,7 +80,8 @@ export class LegalService {
   }
 
   getPrivacyPolicy(): LegalDocument {
-    const effectiveDate = this.resolveEffectiveDate('PRIVACY_EFFECTIVE_DATE');
+    const effectiveDate =
+      this.configService?.get<string>('PRIVACY_EFFECTIVE_DATE') ?? '2026-07-01';
 
     return {
       title: 'Privacy Policy',
@@ -138,44 +137,5 @@ export class LegalService {
         },
       ],
     };
-  }
-
-  private resolveEffectiveDate(configKey: string): string {
-    const configured = this.configService?.get<string>(configKey)?.trim();
-    if (!configured) {
-      return DEFAULT_EFFECTIVE_DATE;
-    }
-
-    if (this.isIsoCalendarDate(configured)) {
-      return configured;
-    }
-
-    this.logger.warn(
-      `Ignoring invalid ${configKey}; using bundled legal effective date`,
-    );
-    return DEFAULT_EFFECTIVE_DATE;
-  }
-
-  private isIsoCalendarDate(value: string): boolean {
-    const match = ISO_CALENDAR_DATE_PATTERN.exec(value);
-    if (!match) {
-      return false;
-    }
-
-    const [, yearText, monthText, dayText] = match;
-    if (!yearText || !monthText || !dayText) {
-      return false;
-    }
-
-    const year = Number(yearText);
-    const month = Number(monthText);
-    const day = Number(dayText);
-    const date = new Date(Date.UTC(year, month - 1, day));
-
-    return (
-      date.getUTCFullYear() === year &&
-      date.getUTCMonth() === month - 1 &&
-      date.getUTCDate() === day
-    );
   }
 }

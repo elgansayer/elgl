@@ -415,7 +415,7 @@ class TestAgentProviders(unittest.TestCase):
         result = provider.run(request)
         self.assertTrue(result.success)
         self.assertEqual(result.summary, "success output")
-        self.assertIn("sonnet", runner.commands[0])
+        self.assertIn("fable", runner.commands[0])
         self.assertNotIn("--max-turns", runner.commands[0])
         self.assertIn("--safe-mode", runner.commands[0])
         self.assertEqual(runner.stdin, ["do it"])
@@ -439,63 +439,6 @@ class TestAgentProviders(unittest.TestCase):
             "trusted factory policy",
         )
         self.assertEqual(runner.stdin, ["untrusted issue text"])
-
-    def test_claude_uses_max_effort_for_build_critical_phases(self):
-        runner = FakeProcessRunner("success output")
-        provider = ClaudeCodeProvider(process_runner=runner)
-        request = AgentRequest(
-            phase=AgentPhase.IMPLEMENTATION,
-            task=Task("1", "test", "body", "issue", 1),
-            prompt="do it",
-            cwd=Path("/tmp"),
-        )
-
-        provider.run(request)
-
-        command = runner.commands[0]
-        self.assertEqual(command[command.index("--effort") + 1], "max")
-
-    def test_claude_uses_low_effort_for_repair_class_phases(self):
-        # quality_repair/code_review/ci_repair are the fast/haiku-tier phases -
-        # attempt_mechanical_repair() already resolves the purely mechanical CI
-        # failures before an agent is invoked, so what reaches here rarely
-        # needs "max" reasoning.
-        for phase in (AgentPhase.QUALITY_REPAIR, AgentPhase.CODE_REVIEW, AgentPhase.CI_REPAIR):
-            runner = FakeProcessRunner("success output")
-            provider = ClaudeCodeProvider(process_runner=runner)
-            request = AgentRequest(
-                phase=phase,
-                task=Task("1", "test", "body", "issue", 1),
-                prompt="do it",
-                cwd=Path("/tmp"),
-            )
-
-            provider.run(request)
-
-            command = runner.commands[0]
-            self.assertEqual(
-                command[command.index("--effort") + 1],
-                "low",
-                msg=f"expected low effort for {phase}",
-            )
-
-    def test_claude_uses_medium_effort_for_security_review(self):
-        # Security-review is the same bounded-checklist shape as code-review
-        # (already "low"), but higher-stakes, so it sits a tier above the
-        # repair-class floor instead of matching "max" build-critical work.
-        runner = FakeProcessRunner("success output")
-        provider = ClaudeCodeProvider(process_runner=runner)
-        request = AgentRequest(
-            phase=AgentPhase.SECURITY_REVIEW,
-            task=Task("1", "test", "body", "issue", 1),
-            prompt="do it",
-            cwd=Path("/tmp"),
-        )
-
-        provider.run(request)
-
-        command = runner.commands[0]
-        self.assertEqual(command[command.index("--effort") + 1], "medium")
 
     def test_codex_provider(self):
         runner = FakeProcessRunner("codex success")

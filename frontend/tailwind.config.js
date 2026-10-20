@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -98,15 +100,12 @@ module.exports = {
         },
       },
       fontFamily: {
-        // Display copy uses the platform-native stack too. This keeps
-        // production builds deterministic and avoids fetching external font
-        // stylesheets while retaining broad script coverage.
-        display: [
-          'ui-sans-serif',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          'sans-serif',
-        ],
+        // Body stays the platform-native stack deliberately - it's what
+        // reliably covers every script HelloTalk's users type in (CJK,
+        // Arabic, Cyrillic, Devanagari, etc). Never apply `font-display` to
+        // user-generated or translated content, only to guaranteed-Latin
+        // product copy (headlines, streak numerals, onboarding).
+        display: ['ui-sans-serif', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
       borderRadius: {
         app: '0.75rem', // controls: buttons, inputs - confident, not bubble-heavy
@@ -129,5 +128,22 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(function ({ addUtilities }) {
+      addUtilities({
+        '.pt-safe': {
+          paddingTop: 'env(safe-area-inset-top)',
+        },
+        '.pb-safe': {
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        },
+        '.pl-safe': {
+          paddingLeft: 'env(safe-area-inset-left)',
+        },
+        '.pr-safe': {
+          paddingRight: 'env(safe-area-inset-right)',
+        },
+      });
+    }),
+  ],
 };

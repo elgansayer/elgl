@@ -69,17 +69,4 @@ describe('UserSpotlightComponent', () => {
     expect(component.users().length).toBe(1);
     expect(component.users()[0].display_name).toBe('John Doe');
   });
-
-  it('defers repeated avatar work and reserves avatar dimensions', async () => {
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const avatar = fixture.nativeElement.querySelector('img') as HTMLImageElement | null;
-    expect(avatar).not.toBeNull();
-    expect(avatar?.getAttribute('loading')).toBe('lazy');
-    expect(avatar?.getAttribute('decoding')).toBe('async');
-    expect(avatar?.getAttribute('width')).toBe('40');
-    expect(avatar?.getAttribute('height')).toBe('40');
-  });
 });

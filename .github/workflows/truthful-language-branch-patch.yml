@@ -1,0 +1,206 @@
+name: Truthful language provider branch patch
+
+on:
+  push:
+    branches:
+      - feat/truthful-language-provider-results
+    paths:
+      - .github/workflows/truthful-language-branch-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/truthful-language-provider-results
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      - name: Replace misleading successful fallback returns
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const ts = require('./backend/node_modules/typescript');
+          const file = 'backend/src/nlp/nlp.service.ts';
+          let source = fs.readFileSync(file, 'utf8');
+          const sourceFile = ts.createSourceFile(
+            file,
+            source,
+            ts.ScriptTarget.Latest,
+            true,
+            ts.ScriptKind.TS,
+          );
+
+          const replacements = [];
+          function methodName(node) {
+            let current = node;
+            while (current) {
+              if (ts.isMethodDeclaration(current)) {
+                return current.name?.getText(sourceFile) ?? '';
+              }
+              current = current.parent;
+            }
+            return '';
+          }
+
+          function visit(node) {
+            if (ts.isReturnStatement(node)) {
+              const text = node.getText(sourceFile);
+              const owner = methodName(node).toLowerCase();
+              let message = null;
+
+              if (
+                text.includes('translate.google.com/translate_tts') ||
+                text.includes('translate_tts')
+              ) {
+                message = 'Text-to-speech is temporarily unavailable';
+              } else if (
+                owner.includes('transliter') &&
+                (text.includes('translated_text') ||
+                  text.includes('translation') ||
+                  text.includes('original'))
+              ) {
+                message = 'Transliteration is temporarily unavailable';
+              } else if (
+                owner.includes('grammar') &&
+                text.includes('errors_found: 0') &&
+                (/appear/i.test(text) || /unavailable/i.test(text) || /fallback/i.test(text))
+              ) {
+                message = 'Grammar checking is temporarily unavailable';
+              } else if (
+                owner.includes('translat') &&
+                text.includes('translated_text') &&
+                (/unavailable/i.test(text) ||
+                  /original_text:\s*text/.test(text) &&
+                    /translated_text:\s*text/.test(text))
+              ) {
+                message = 'Translation is temporarily unavailable';
+              }
+
+              if (message) {
+                replacements.push({
+                  start: node.getStart(sourceFile),
+                  end: node.getEnd(),
+                  text: `throw new ServiceUnavailableException('${message}');`,
+                });
+              }
+            }
+            ts.forEachChild(node, visit);
+          }
+          visit(sourceFile);
+
+          replacements.sort((left, right) => right.start - left.start);
+          for (const replacement of replacements) {
+            source =
+              source.slice(0, replacement.start) +
+              replacement.text +
+              source.slice(replacement.end);
+          }
+
+          if (!source.includes('ServiceUnavailableException')) {
+            throw new Error('No truthful language fallback replacements were made');
+          }
+
+          const commonImport = /import\s*\{([\s\S]*?)\}\s*from\s*'@nestjs\/common';/;
+          const match = source.match(commonImport);
+          if (!match) {
+            throw new Error('@nestjs/common import was not found');
+          }
+          if (!match[1].includes('ServiceUnavailableException')) {
+            const names = match[1].trimEnd();
+            const separator = names.trim().endsWith(',') ? '\n  ' : ',\n  ';
+            source = source.replace(
+              commonImport,
+              `import {${names}${separator}ServiceUnavailableException,\n} from '@nestjs/common';`,
+            );
+          }
+
+          const forbidden = [
+            'translate.google.com/translate_tts',
+            'Translation service unavailable',
+          ];
+          for (const value of forbidden) {
+            if (source.includes(value)) {
+              throw new Error(`Misleading language fallback remains: ${value}`);
+            }
+          }
+
+          fs.writeFileSync(file, source);
+          NODE
+
+      - name: Add a permanent language-result guard
+        run: |
+          cat > scripts/verify-language-result-semantics.mjs <<'NODE'
+          import { readFile } from 'node:fs/promises';
+
+          const file = 'backend/src/nlp/nlp.service.ts';
+          const source = await readFile(file, 'utf8');
+          const forbidden = [
+            ['translate.google.com/translate_tts', 'unsupported constructed TTS URL'],
+            ['Translation service unavailable', 'unavailable translation encoded in a success DTO'],
+            ['translated_text: text,\n        detected_language', 'source text encoded as translated text'],
+          ];
+
+          const failures = forbidden
+            .filter(([pattern]) => source.includes(pattern))
+            .map(([, label]) => `${file}: ${label}`);
+
+          if (failures.length > 0) {
+            console.error('Misleading language-service success semantics are forbidden:');
+            failures.forEach((failure) => console.error(`- ${failure}`));
+            process.exit(1);
+          }
+          console.log('Language-service provider failures are not encoded as successful output.');
+          NODE
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const packagePath = 'package.json';
+          const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+          manifest.scripts['check:language-result-semantics'] =
+            'node scripts/verify-language-result-semantics.mjs';
+          if (!manifest.scripts.verify.includes('check:language-result-semantics')) {
+            const anchor = 'npm run check:no-runtime-fallbacks &&';
+            if (!manifest.scripts.verify.includes(anchor)) {
+              throw new Error('Runtime fallback verification anchor is missing');
+            }
+            manifest.scripts.verify = manifest.scripts.verify.replace(
+              anchor,
+              `${anchor} npm run check:language-result-semantics &&`,
+            );
+          }
+          fs.writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+
+      - name: Format and verify backend language services
+        run: |
+          cd backend
+          npx prettier --write src/nlp/nlp.service.ts
+          npm run build
+          npm test
+          cd ..
+          node scripts/verify-language-result-semantics.mjs
+          node scripts/verify-no-runtime-fallbacks.mjs
+
+      - name: Commit the provider-result migration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package.json backend/src/nlp/nlp.service.ts scripts/verify-language-result-semantics.mjs
+          git commit -m 'fix(language): stop encoding provider outages as successful results'
+          git push origin HEAD:feat/truthful-language-provider-results
