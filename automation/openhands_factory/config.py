@@ -501,6 +501,7 @@ class FactoryConfig(BaseModel):
     maintenance_enabled: bool = False
     maintenance_interval_seconds: int = Field(default=1800, ge=300, le=86400)
     maintenance_daily_limit: int = Field(default=4, ge=1, le=24)
+    maintenance_analysis_interval_seconds: int = Field(default=0, ge=0, le=86400)
     maintenance_analysis_timeout_seconds: int = Field(default=180, ge=30, le=600)
     maintenance_peer_states: list[Path] = Field(default_factory=list)
 
@@ -820,6 +821,9 @@ class FactoryConfig(BaseModel):
                     env.get("FACTORY_MAINTENANCE_INTERVAL_SECONDS", "1800")
                 ),
                 maintenance_daily_limit=int(env.get("FACTORY_MAINTENANCE_DAILY_LIMIT", "4")),
+                maintenance_analysis_interval_seconds=int(
+                    env.get("FACTORY_MAINTENANCE_ANALYSIS_INTERVAL_SECONDS", "0")
+                ),
                 maintenance_analysis_timeout_seconds=int(
                     env.get("FACTORY_MAINTENANCE_ANALYSIS_TIMEOUT_SECONDS", "180")
                 ),
