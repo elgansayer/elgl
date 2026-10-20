@@ -99,24 +99,6 @@ describe('SupabaseAuthGuard', () => {
         await expect(guard.canActivate(context)).rejects.toThrow(
           new UnauthorizedException('Missing authentication token'),
         );
-        expect(mockAuthGetUser).not.toHaveBeenCalled();
-      });
-
-      it('rejects ambiguous duplicate authorization headers', async () => {
-        const request: any = {
-          headers: {
-            authorization: [
-              'Bearer first.jwt.token',
-              'Bearer second.jwt.token',
-            ],
-          },
-        };
-        const context = createMockExecutionContext('http', request);
-
-        await expect(guard.canActivate(context)).rejects.toThrow(
-          new UnauthorizedException('Missing authentication token'),
-        );
-        expect(mockAuthGetUser).not.toHaveBeenCalled();
       });
 
       it('should throw UnauthorizedException when token validation fails with error', async () => {

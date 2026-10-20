@@ -53,6 +53,18 @@ function estimateLocalCacheSize(): number {
 export class DataStorageService {
   readonly cellularAutoDownload = signal<boolean>(loadCellularPreference());
 
+  clearLocalCache(): void {
+    localStorage.clear();
+    sessionStorage.clear();
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => caches.delete(key));
+      });
+    }
+    // Re-persist the cellular preference since localStorage was cleared
+    persistCellularPreference(this.cellularAutoDownload());
+  }
+
   async estimateCacheSize(): Promise<number> {
     let total = estimateLocalCacheSize();
 
