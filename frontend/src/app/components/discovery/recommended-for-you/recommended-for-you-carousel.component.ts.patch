@@ -1,0 +1,12 @@
+--- frontend/src/app/components/discovery/recommended-for-you/recommended-for-you-carousel.component.ts
++++ frontend/src/app/components/discovery/recommended-for-you/recommended-for-you-carousel.component.ts
+@@ -128,6 +128,10 @@
+         return 'Recently active';
+       case 'study_streak':
+         return 'Active learner';
++      case 'proficiency_match':
++        return 'Proficiency match';
++      case 'helpful_corrector':
++        return 'Helpful corrector';
+     }
+   }

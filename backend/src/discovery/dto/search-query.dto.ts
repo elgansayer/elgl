@@ -6,6 +6,7 @@ import {
   IsString,
   Matches,
   Max,
+  MaxLength,
   Min,
   ValidateIf,
 } from 'class-validator';
@@ -119,11 +120,21 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Comma-separated interest tags. Partners matching any tag are returned via PostgreSQL array overlap query.',
-    example: 'sports,music,travel',
+      'Filter by one normalized interest tag. Partners whose interests array contains this tag are returned.',
+    example: 'photography',
+    maxLength: 50,
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.normalize('NFKC').trim().toLocaleLowerCase('en-US')
+      : value,
+  )
   @IsString()
+  @MaxLength(50)
+  @Matches(/^[^,\p{Cc}]+$/u, {
+    message: 'interests must be a single valid interest tag',
+  })
   interests?: string;
 
   @ApiPropertyOptional({

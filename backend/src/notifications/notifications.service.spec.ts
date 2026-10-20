@@ -59,6 +59,70 @@ describe('NotificationsService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('sendPushNotification', () => {
+    const defaultPreferences = {
+      userId: 'user-1',
+      direct_messages: { push: true, badge: true },
+      groups: { push: true, badge: true },
+      likes: { push: true, badge: true },
+      voice_rooms: { push: true, badge: true },
+      do_not_disturb: false,
+      updatedAt: '2026-08-23T10:00:00.000Z',
+    };
+
+    it('returns suppressed when the user has intentionally disabled the category', async () => {
+      vi.spyOn(service, 'getPreferences').mockResolvedValue({
+        ...defaultPreferences,
+        groups: { push: false, badge: true },
+      });
+
+      const result = await service.sendPushNotification('user-1', {
+        type: 'event_reminder',
+        title: 'Event Reminder',
+        body: 'Starts soon',
+        category: 'groups',
+      });
+
+      expect(result).toBe('suppressed');
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('returns suppressed when there are no registered push tokens', async () => {
+      vi.spyOn(service, 'getPreferences').mockResolvedValue(defaultPreferences);
+
+      const result = await service.sendPushNotification('user-1', {
+        type: 'event_reminder',
+        title: 'Event Reminder',
+        body: 'Starts soon',
+        category: 'groups',
+      });
+
+      expect(result).toBe('suppressed');
+    });
+
+    it('returns retry when the push-token lookup fails', async () => {
+      vi.spyOn(service, 'getPreferences').mockResolvedValue(defaultPreferences);
+      mockQueryBuilder.then.mockImplementationOnce(
+        (resolve: (value: any) => void) => {
+          resolve({ data: null, error: { message: 'temporary failure' } });
+          return Promise.resolve({
+            data: null,
+            error: { message: 'temporary failure' },
+          });
+        },
+      );
+
+      const result = await service.sendPushNotification('user-1', {
+        type: 'event_reminder',
+        title: 'Event Reminder',
+        body: 'Starts soon',
+        category: 'groups',
+      });
+
+      expect(result).toBe('retry');
+    });
+  });
+
   describe('createNotification', () => {
     it('should insert notification into Supabase when recipient is not actor', async () => {
       await service.createNotification('recipient-1', 'actor-1', 'follow');

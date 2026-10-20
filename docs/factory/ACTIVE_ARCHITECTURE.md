@@ -177,6 +177,13 @@ status as `PENDING` on the current SHA. A crash or timeout therefore leaves the 
 reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
 If GitHub reports the reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound to that exact head
 SHA. The resulting head is then rebuilt, verified, and reviewed again. Merge readiness requires all of the
+
+If GitHub reports a newly discovered head as `BEHIND`, the Factory asks GitHub for a base update bound to that
+exact head before local verification. The resulting head is then rebuilt, verified, and reviewed. If another
+serial Factory merge subsequently makes that already-verified head `BEHIND`, production may merge it without
+replaying the base when the repository required-check rule is non-strict. Merge
+readiness requires all of the
+
 following:
 
 - the PR head equals the reviewed SHA;
