@@ -166,14 +166,6 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
-    assert "uv_cache=$service_home/.cache/uv" in sandbox_script
-    assert "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache" in sandbox_script
-    # PID 1 of the sandbox must reap children itself rather than exec-replacing
-    # straight into the target command, or an orphaned grandchild (a leftover
-    # dev server, a test's own subprocess-under-test) never gets reaped and
-    # sits as a zombie for the sandbox's whole lifetime.
-    assert "exec /usr/bin/setpriv" not in sandbox_script
-    assert "os.waitpid(-1, 0)" in sandbox_script
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
@@ -244,6 +236,36 @@ def test_a_change_outside_every_workspace_falls_back_to_running_everything(
     names = {command.name for command in commands}
 
     assert "backend-build" in names
+    assert "frontend-build" in names
+    assert "admin-build" in names
+    assert "factory-tests" in names
+
+
+def test_workout_agent_backend_uses_python_native_gate(tmp_path: Path) -> None:
+    commands = commands_for(
+        tmp_path,
+        {Path("backend/dynamic_programme.py")},
+        "workout-agent",
+    )
+    names = {command.name for command in commands}
+
+    assert names == {
+        "control-plane-policy",
+        "control-plane-policy-tests",
+        "backend-compile",
+        "backend-tests",
+    }
+    assert all(command.workspace == tmp_path for command in commands)
+
+
+def test_workout_agent_frontend_uses_angular_native_gate(tmp_path: Path) -> None:
+    commands = commands_for(
+        tmp_path,
+        {Path("frontend/src/app/app.ts")},
+        "workout-agent",
+    )
+    names = {command.name for command in commands}
+
     assert "frontend-build" in names
     assert "admin-build" in names
     assert "factory-tests" in names

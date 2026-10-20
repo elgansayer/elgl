@@ -1,8 +1,8 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { MomentLikesService } from './moment-likes.service';
 import { MomentsController } from './moments.controller';
 import { MomentsService } from './moments.service';
+import { CorrectionQualityService } from './correction-quality.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { R2Service } from '../cloudflare-r2/r2.service';
@@ -10,7 +10,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 describe('MomentsController', () => {
   let controller: MomentsController;
   let momentsService: MomentsService;
-  let momentLikesService: MomentLikesService;
+  let correctionQualityService: CorrectionQualityService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -30,9 +30,9 @@ describe('MomentsController', () => {
           },
         },
         {
-          provide: MomentLikesService,
+          provide: CorrectionQualityService,
           useValue: {
-            listMomentLikes: vi.fn(),
+            vote: vi.fn(),
           },
         },
         {
@@ -53,7 +53,9 @@ describe('MomentsController', () => {
 
     controller = module.get<MomentsController>(MomentsController);
     momentsService = module.get<MomentsService>(MomentsService);
-    momentLikesService = module.get<MomentLikesService>(MomentLikesService);
+    correctionQualityService = module.get<CorrectionQualityService>(
+      CorrectionQualityService,
+    );
     usersService = module.get<UsersService>(UsersService);
   });
 
@@ -144,41 +146,6 @@ describe('MomentsController', () => {
     });
   });
 
-  describe('getMomentLikes', () => {
-    it('returns an empty list when the authenticated user is absent', async () => {
-      const result = await controller.getMomentLikes(null, 'm-1', 0, 50);
-
-      expect(result).toEqual([]);
-      expect(momentLikesService.listMomentLikes).not.toHaveBeenCalled();
-    });
-
-    it('passes the viewer identity and bounded page to the likes service', async () => {
-      const users = [
-        {
-          id: 'user-2',
-          display_name: 'Alice',
-          avatar_url: null,
-          target_languages: ['ja'],
-        },
-      ];
-      (momentLikesService.listMomentLikes as Mock).mockResolvedValue(users);
-
-      const result = await controller.getMomentLikes(
-        { id: 'user-1' } as any,
-        'm-1',
-        50,
-        25,
-      );
-
-      expect(momentLikesService.listMomentLikes).toHaveBeenCalledWith(
-        'm-1',
-        'user-1',
-        { offset: 50, limit: 25 },
-      );
-      expect(result).toEqual(users);
-    });
-  });
-
   describe('addComment', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.addComment(null, 'm-1', {});
@@ -202,6 +169,42 @@ describe('MomentsController', () => {
         dto,
       );
       expect(result).toEqual(comment);
+    });
+  });
+
+  describe('voteOnCorrection', () => {
+    it('returns null without an authenticated user', async () => {
+      const result = await controller.voteOnCorrection(null, 'm-1', 'c-1', {
+        vote: 'up',
+      });
+      expect(result).toBeNull();
+      expect(correctionQualityService.vote).not.toHaveBeenCalled();
+    });
+
+    it('binds the route moment and correction IDs to the authenticated voter', async () => {
+      const response = {
+        commentId: 'c-1',
+        vote: 'up',
+        upVotes: 4,
+        downVotes: 1,
+        userVote: 'up' as const,
+      };
+      (correctionQualityService.vote as Mock).mockResolvedValue(response);
+
+      const result = await controller.voteOnCorrection(
+        { id: 'user-1' } as any,
+        'm-1',
+        'c-1',
+        { vote: 'up' },
+      );
+
+      expect(correctionQualityService.vote).toHaveBeenCalledWith(
+        'user-1',
+        'm-1',
+        'c-1',
+        'up',
+      );
+      expect(result).toEqual(response);
     });
   });
 

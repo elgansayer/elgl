@@ -2,10 +2,8 @@ import {
   BadRequestException,
   Body,
   Controller,
-  DefaultValuePipe,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -24,16 +22,8 @@ import { AnswerLanguageQuestionDto } from './dto/answer-language-question.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
-import { MomentLikesService } from './moment-likes.service';
 import { MomentsService, MomentLikeUser } from './moments.service';
-
-const MOMENT_FEED_FILTERS = [
-  'All',
-  'Classmates',
-  'Following',
-  'For You',
-] as const;
-type MomentFeedFilter = (typeof MOMENT_FEED_FILTERS)[number];
+import { CorrectionQualityService } from './correction-quality.service';
 
 @Controller('moments')
 @UseGuards(SupabaseAuthGuard)
@@ -42,7 +32,7 @@ export class MomentsController {
     private readonly momentsService: MomentsService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
-    private readonly momentLikesService: MomentLikesService,
+    private readonly correctionQualityService: CorrectionQualityService,
   ) {}
 
   @Post()
@@ -57,56 +47,12 @@ export class MomentsController {
   @Get('feed')
   async getFeed(
     @CurrentUser() user: User | null,
-    @Query('filter') filter?: string,
+    @Query('filter') filter?: 'All' | 'Classmates' | 'Following' | 'For You',
     @Query('lang') lang?: string,
   ): Promise<MomentRecord[]> {
     if (!user) return [];
-
-    const activeFilter = this.parseFeedFilter(filter);
-    const targetLanguage =
-      activeFilter === 'Classmates'
-        ? await this.resolveClassmatesLanguage(user.id, lang)
-        : this.normaliseLanguage(lang);
-
-    if (activeFilter === 'Classmates' && !targetLanguage) {
-      return [];
-    }
-
-    const feed = await this.momentsService.getFeed(
-      user.id,
-      activeFilter,
-      targetLanguage ?? undefined,
-    );
-
-    return feed.filter(
-      (moment) =>
-        !moment.id.startsWith('mock-moment-') &&
-        (activeFilter !== 'Following' || moment.user_id !== user.id),
-    );
-  }
-
-  private parseFeedFilter(filter?: string): MomentFeedFilter {
-    if (!filter) return 'All';
-    if (!MOMENT_FEED_FILTERS.includes(filter as MomentFeedFilter)) {
-      throw new BadRequestException('Unsupported Moments feed filter');
-    }
-    return filter as MomentFeedFilter;
-  }
-
-  private normaliseLanguage(language?: string): string | null {
-    const normalised = language?.trim().toLowerCase();
-    return normalised || null;
-  }
-
-  private async resolveClassmatesLanguage(
-    userId: string,
-    requestedLanguage?: string,
-  ): Promise<string | null> {
-    const explicitLanguage = this.normaliseLanguage(requestedLanguage);
-    if (explicitLanguage) return explicitLanguage;
-
-    const profile = await this.usersService.getProfile(userId);
-    return this.normaliseLanguage(profile?.target_languages?.[0]);
+    const activeFilter = filter ?? 'All';
+    return await this.momentsService.getFeed(user.id, activeFilter, lang);
   }
 
   @Get('lifetime-counts')
@@ -215,19 +161,8 @@ export class MomentsController {
   async getMomentLikes(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-    @Query(
-      'limit',
-      new DefaultValuePipe(MomentLikesService.DEFAULT_LIMIT),
-      ParseIntPipe,
-    )
-    limit: number,
   ): Promise<MomentLikeUser[]> {
-    if (!user) return [];
-    return await this.momentLikesService.listMomentLikes(id, user.id, {
-      offset,
-      limit,
-    });
+    return await this.momentsService.getMomentLikes(id, user?.id);
   }
 
   @Post(':id/comments')
@@ -254,8 +189,9 @@ export class MomentsController {
     userVote: string | null;
   } | null> {
     if (!user) return null;
-    return await this.momentsService.voteOnCorrection(
+    return await this.correctionQualityService.vote(
       user.id,
+      momentId,
       commentId,
       dto.vote,
     );

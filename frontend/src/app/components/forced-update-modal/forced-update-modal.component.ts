@@ -46,6 +46,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           [href]="storeUrl()"
           target="_blank"
           rel="noopener"
+          (click)="allowUpdateNavigation($event)"
           class="inline-flex items-center justify-center px-6 py-3
                  font-bold text-white bg-primary rounded-full
                  hover:bg-primary-dark transition-colors shadow-lg"
@@ -83,6 +84,13 @@ export class ForcedUpdateModalComponent implements OnInit, OnDestroy {
   onDocumentClick(event: Event): void {
     event.stopPropagation();
     event.preventDefault();
+  }
+
+  /**
+   * Keep the update control actionable without allowing its click to reach the page.
+   */
+  allowUpdateNavigation(event: Event): void {
+    event.stopPropagation();
   }
 
   /**
