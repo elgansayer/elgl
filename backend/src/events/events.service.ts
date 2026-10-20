@@ -523,23 +523,18 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     status: 'attending' | 'interested',
   ) {
     const supabase = this.supabaseService.getClient();
-    // Delete existing RSVP for this user+event, then insert new one
-    const { error: deleteError } = await supabase
-      .from('event_rsvps')
-      .delete()
-      .eq('event_id', eventId)
-      .eq('user_id', userId);
-    if (deleteError) {
-      this.logger.error('Failed to remove existing RSVP', deleteError);
-      throw deleteError;
-    }
+    // ⚡ Bolt Optimization: Replaced sequential delete-then-insert with a single upsert
+    // to reduce additive network latency when modifying user RSVPs.
     const { data, error } = await supabase
       .from('event_rsvps')
-      .insert({ event_id: eventId, user_id: userId, status })
+      .upsert(
+        { event_id: eventId, user_id: userId, status },
+        { onConflict: 'event_id,user_id' },
+      )
       .select()
       .single();
     if (error) {
-      this.logger.error('Failed to create RSVP', error);
+      this.logger.error('Failed to create/update RSVP', error);
       throw error;
     }
     return data;
