@@ -14,7 +14,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { AuthService } from './services/auth.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
-import { FcmService } from './services/fcm.service';
+import { FirebaseMessagingService } from './services/firebase-messaging.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
 import {
@@ -87,7 +87,7 @@ export class AppComponent implements OnInit {
   economyStore = inject(EconomyStore);
   private tourService = inject(TourService);
   centrifugeService = inject(CentrifugeService);
-  fcmService = inject(FcmService);
+  fcmService = inject(FirebaseMessagingService);
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
@@ -249,7 +249,7 @@ export class AppComponent implements OnInit {
       await this.loadInitialUnreadCounts();
 
       // Request notification permission after user is authenticated
-      await this.fcmService.requestPermission();
+      await this.fcmService.requestPermissionAndGetToken();
       await this.fcmService.persistFcmToken(user.id);
     }
   }
@@ -262,30 +262,9 @@ export class AppComponent implements OnInit {
       // Silently ignore - real-time events will update counts
     }
 
-    // Load chat unread counts from backend
     try {
-      const rooms = await this.chatService.getRooms();
-      const currentUserId = this.authService.currentUser()?.id;
-      let totalChatUnread = 0;
-
-      // Fetch several rooms in parallel without creating an unbounded request burst for
-      // accounts with a large room history.
-      const unreadFetchConcurrency = 6;
-      for (let start = 0; start < rooms.length; start += unreadFetchConcurrency) {
-        const batch = rooms.slice(start, start + unreadFetchConcurrency);
-        const messageResults = await Promise.allSettled(
-          batch.map((room) => this.chatService.getMessages(room.id)),
-        );
-
-        for (const result of messageResults) {
-          if (result.status !== 'fulfilled') continue;
-          totalChatUnread += result.value.filter(
-            (message) => !message.is_read && message.sender_id !== currentUserId,
-          ).length;
-        }
-      }
-
-      this.unreadCounter.setChatUnread(totalChatUnread);
+      const chatCount = await this.chatService.getUnreadCount();
+      this.unreadCounter.setChatUnread(chatCount);
     } catch {
       // Silently ignore - real-time events will update counts
     }

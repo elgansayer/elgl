@@ -23,7 +23,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
         (AgentPhase.QUALITY_REPAIR, "low"),
         (AgentPhase.CODE_REVIEW, "medium"),
         (AgentPhase.CI_REPAIR, "low"),
-        (AgentPhase.GENERAL_ACTION, "medium"),
+        (AgentPhase.GENERAL_ACTION, "low"),
     ],
 )
 def test_pi_reasoning_is_phase_scoped(
