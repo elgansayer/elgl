@@ -86,7 +86,8 @@ export class ChatController {
       return null;
     }
 
-    const token = await this.chatService.generateConnectionToken(user.id);
+    const token =
+      (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
     const result = { token };
     response.json(result);
     return result;
@@ -115,6 +116,14 @@ export class ChatController {
   async getRooms(@CurrentUser() user: User | null): Promise<ChatRoomRecord[]> {
     if (!user) return [];
     return await this.chatService.getRooms(user.id);
+  }
+
+  @Get('unread-count')
+  async getUnreadCount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ unreadCount: number } | null> {
+    if (!user) return null;
+    return await this.chatService.getUnreadCount(user.id);
   }
 
   @Get('messages/:roomId')
