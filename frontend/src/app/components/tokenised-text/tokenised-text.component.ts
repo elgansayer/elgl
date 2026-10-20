@@ -11,7 +11,6 @@ import {
   FlashcardContextMenuDirective,
   type FlashcardSelectionRequest,
 } from '../../services/flashcard-context-menu.directive';
-import { FlashcardService } from '../../services/flashcard.service';
 import { ChatService } from '../../services/chat.service';
 import { showErrorToast, showToast } from '../../services/toast.service';
 
@@ -175,7 +174,6 @@ export class TokenisedTextComponent {
   readonly vocabStore = inject(VocabularyStore);
   readonly i18n = inject(I18nService);
   readonly transliterationService = inject(TransliterationService);
-  private readonly flashcardService = inject(FlashcardService);
   private readonly chatService = inject(ChatService);
   private readonly errorHandler = inject(ErrorHandler);
 
@@ -266,7 +264,7 @@ export class TokenisedTextComponent {
         throw new Error('Translation provider returned an invalid result');
       }
 
-      await this.flashcardService.createFlashcard({
+      await this.vocabStore.saveWord({
         word_token: selection.text,
         original_context: selection.context,
         translation,
