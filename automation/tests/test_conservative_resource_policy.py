@@ -17,7 +17,9 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.conservative import ConservativeAgentRouter
 from openhands_factory.exceptions import ProviderCapacityUnavailable
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import ReviewAdmissionGate
+from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
 
@@ -59,6 +61,37 @@ class OrderedPolicy:
 
     def candidates(self, phase, job, provider_health):
         return self.names
+
+
+@pytest.mark.parametrize("configured", [None, "1", "2", "3"])
+def test_global_admission_respects_configured_host_capacity(
+    monkeypatch: pytest.MonkeyPatch, configured: str | None
+) -> None:
+    monkeypatch.delenv("FACTORY_HOST_AGENT_CONCURRENCY", raising=False)
+    if configured is not None:
+        monkeypatch.setenv("FACTORY_HOST_AGENT_CONCURRENCY", configured)
+    router = ConservativeAgentRouter([Provider("first")], enabled=True)
+    expected = int(configured) if configured is not None else 2
+    for _ in range(expected):
+        assert router._global_agent_slots.acquire(blocking=False)
+    assert not router._global_agent_slots.acquire(blocking=False)
+    for _ in range(expected):
+        router._global_agent_slots.release()
+
+
+def test_configured_admission_does_not_override_shared_host_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FACTORY_HOST_AGENT_CONCURRENCY", "3")
+    gate = HostResourceGate(tmp_path / "host-resource-gate.json", shared_limit=1)
+    assert gate.acquire_shared("other-factory")
+    provider = Provider("first")
+    router = ConservativeAgentRouter([provider], enabled=True, host_resource_slots=gate)
+    task = Task("42", "Bounded admission", "", "github-issue", 0)
+    with pytest.raises(ProviderCapacityUnavailable, match="Host resource capacity"):
+        router.run(AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path), Job(task))
+    assert provider.calls == 0
+    gate.release_shared("other-factory")
 
 
 def review_request(tmp_path: Path, identifier: str, sha: str) -> tuple[AgentRequest, Job]:
@@ -120,6 +153,67 @@ def test_conservative_router_limits_one_phase_to_primary_plus_one_fallback(
     assert third.calls == 0
 
 
+def test_conservative_router_prefers_observed_phase_completions(tmp_path: Path) -> None:
+    providers = [Provider("first"), Provider("second"), Provider("third")]
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    for index in range(10):
+        metrics.record(
+            "first",
+            "model",
+            phase=AgentPhase.IMPLEMENTATION.value,
+            successful=index == 0,
+        )
+        metrics.record(
+            "second",
+            "model",
+            phase=AgentPhase.IMPLEMENTATION.value,
+            successful=index < 8,
+        )
+        metrics.record(
+            "third",
+            "model",
+            phase=AgentPhase.IMPLEMENTATION.value,
+            successful=index < 4,
+        )
+    router = ConservativeAgentRouter(
+        providers,
+        policy=OrderedPolicy(["first", "third", "second"]),
+        metrics_store=metrics,
+        enabled=True,
+    )
+    job = Job(Task("42", "Issue", "Body", "github-issue", 0))
+
+    candidates, _ = router._candidate_names(AgentPhase.IMPLEMENTATION, job)
+
+    assert candidates == ["second", "third"]
+
+
+@pytest.mark.parametrize("phase", [AgentPhase.CODE_REVIEW, AgentPhase.IMPLEMENTATION])
+def test_routing_scores_only_the_current_phase_model(tmp_path: Path, phase: AgentPhase) -> None:
+    class ModelProvider(Provider):
+        def model_for(self, requested_phase: AgentPhase) -> str:
+            return f"{self.name}-{requested_phase.value}-current"
+
+    reliable = ModelProvider("reliable")
+    replacement = ModelProvider("replacement")
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    for _ in range(20):
+        metrics.record("reliable", "retired-small-model", phase=phase.value, successful=False)
+        metrics.record("replacement", "retired-fast-model", phase=phase.value, successful=True)
+    for _ in range(8):
+        metrics.record("reliable", reliable.model_for(phase), phase=phase.value, successful=True)
+    router = ConservativeAgentRouter(
+        [replacement, reliable],
+        policy=OrderedPolicy(["replacement", "reliable"]),
+        metrics_store=metrics,
+        enabled=True,
+    )
+
+    candidates, _ = router._candidate_names(phase, Job(Task("42", "Review", "Body", "issue", 0)))
+
+    assert candidates == ["reliable", "replacement"]
+
+
 def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Path) -> None:
     first = Provider("first", AgentFailureKind.PROVIDER_TRANSPORT)
     second = Provider("second")
@@ -136,6 +230,33 @@ def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Pa
     assert router.same_provider_retries == 0
     assert first.calls == 1
     assert second.calls == 1
+
+
+def test_conservative_router_shares_host_capacity_with_exclusive_verification(
+    tmp_path: Path,
+) -> None:
+    host_resource_slots = HostResourceGate(tmp_path / "host-resources.json", 2)
+    assert host_resource_slots.acquire_shared("test:first")
+    assert host_resource_slots.acquire_shared("test:second")
+    provider = Provider("first")
+    task = Task("42", "Issue", "Body", "github-issue", 0)
+    request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
+    router = ConservativeAgentRouter(
+        [provider],
+        policy=OrderedPolicy(["first"]),
+        host_resource_slots=host_resource_slots,
+        enabled=True,
+    )
+
+    with pytest.raises(ProviderCapacityUnavailable, match="Host resource capacity is full"):
+        router.run(request, Job(task))
+
+    assert provider.calls == 0
+    host_resource_slots.release_shared("test:first")
+    host_resource_slots.release_shared("test:second")
+    assert router.run(request, Job(task)).success
+    assert host_resource_slots.acquire_shared("test:third")
+    assert host_resource_slots.acquire_shared("test:fourth")
 
 
 def test_conservative_router_enforces_global_hourly_agent_route_budget(
@@ -177,6 +298,7 @@ def test_conservative_router_caps_one_task_without_spending_review_admission(
     monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "6")
     monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_TASK_PER_INTERVAL", "2")
     monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    monkeypatch.setenv("FACTORY_REVIEWS_PER_INTERVAL", "2")
     provider = Provider("first")
     router = ConservativeAgentRouter(
         [provider],
@@ -238,7 +360,12 @@ def test_conservative_router_preserves_independent_review_before_candidate_cap(
     assert candidates == ["second", "third"]
 
 
-def test_conservative_router_enforces_two_review_shas_per_hour(tmp_path: Path) -> None:
+def test_conservative_router_enforces_configured_review_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEWS_PER_INTERVAL", "2")
+    monkeypatch.setenv("FACTORY_REVIEW_INTERVAL_SECONDS", "3600")
     provider = Provider("first")
     router = ConservativeAgentRouter(
         [provider],
@@ -253,13 +380,32 @@ def test_conservative_router_enforces_two_review_shas_per_hour(tmp_path: Path) -
 
     assert router.run(first_request, first_job).success
     assert router.run(second_request, second_job).success
-    with pytest.raises(ProviderCapacityUnavailable, match="2 reviews/hour"):
+    with pytest.raises(ProviderCapacityUnavailable, match="2 reviews per configured interval"):
         router.run(third_request, third_job)
 
     assert provider.calls == 2
 
 
-def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Path) -> None:
+def test_conservative_router_defaults_support_continuous_pr_drain(tmp_path: Path) -> None:
+    provider = Provider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 2},
+        enabled=True,
+    )
+
+    assert router._agent_route_admission is not None
+    assert router._agent_route_admission.max_admissions == 48
+    assert router._review_admission is not None
+    assert router._review_admission.max_admissions == 36
+
+
+def test_conservative_router_honours_single_review_lane(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")
     entered = threading.Event()
     release = threading.Event()
 
@@ -307,6 +453,65 @@ def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Pa
     assert not thread.is_alive()
     assert result and result[0].success
     assert provider.calls == 1
+
+
+def test_conservative_router_allows_configured_review_lanes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "2")
+    entered = threading.Barrier(3)
+    release = threading.Event()
+
+    class BlockingProvider(Provider):
+        def run(self, request: AgentRequest) -> AgentResult:
+            self.calls += 1
+            entered.wait(timeout=5)
+            assert release.wait(timeout=5)
+            now = datetime.now(UTC)
+            return AgentResult(
+                self.name,
+                request.phase,
+                True,
+                now,
+                now,
+                0,
+                "done",
+                None,
+                None,
+                "fake",
+                "fake-model",
+            )
+
+    provider = BlockingProvider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 2},
+        enabled=True,
+    )
+    requests = [
+        review_request(tmp_path, "10", "aaa"),
+        review_request(tmp_path, "11", "bbb"),
+    ]
+    results: list[AgentResult] = []
+    threads = [
+        threading.Thread(target=lambda pair=pair: results.append(router.run(*pair)))
+        for pair in requests
+    ]
+    for thread in threads:
+        thread.start()
+    try:
+        entered.wait(timeout=5)
+    finally:
+        release.set()
+        for thread in threads:
+            thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(results) == 2
+    assert all(result.success for result in results)
+    assert provider.calls == 2
 
 
 def test_conservative_budget_counts_fallback_provider_starts(
