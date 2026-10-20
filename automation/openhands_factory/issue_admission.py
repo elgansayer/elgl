@@ -77,21 +77,6 @@ class DurableAdmissionGate:
             self._write(active)
             return True
 
-    def revoke(self, task_id: str, admitted_at: datetime, now: datetime | None = None) -> bool:
-        """Remove one exact admission when coupled pre-start admission fails."""
-
-        if not self.enabled:
-            return False
-        current = now or datetime.now(UTC)
-        with self.lock:
-            active = self._active_admissions(current)
-            for index, admission in enumerate(active):
-                if admission.task_id == task_id and admission.admitted_at == admitted_at:
-                    del active[index]
-                    self._write(active)
-                    return True
-            return False
-
     def snapshot(self, now: datetime | None = None) -> dict[str, object]:
         current = now or datetime.now(UTC)
         if not self.enabled:
