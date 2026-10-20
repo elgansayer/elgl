@@ -5,6 +5,7 @@ import { SafetyModule } from '../safety/safety.module';
 import { UsersModule } from '../users/users.module';
 import { XpModule } from '../xp/xp.module';
 import { MomentsController } from './moments.controller';
+import { MomentsFeedService } from './moments-feed.service';
 import { MomentsModule } from './moments.module';
 import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService } from './moments.service';
@@ -22,6 +23,7 @@ describe('MomentsModule', () => {
     expect(metadata(MODULE_METADATA.PROVIDERS)).toEqual(
       expect.arrayContaining([
         MomentsService,
+        MomentsFeedService,
         MomentsRankingService,
         TimelineWorker,
       ]),

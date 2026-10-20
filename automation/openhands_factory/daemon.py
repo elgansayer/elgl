@@ -6,9 +6,10 @@ import logging
 import signal
 import time
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
@@ -32,6 +33,8 @@ from openhands_factory.generation import (
 from openhands_factory.host_diagnostics import gather_diagnostics
 from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.issue_admission import IssueAdmissionGate
+from openhands_factory.jobs import RECOVERABLE_ACTIVE_STATES
+from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.recovery_retention import prune_recovery_archives
@@ -42,6 +45,8 @@ from openhands_factory.worktree_cache import prune_inactive_worktree_caches
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
 MAX_ACTIONABLE_FAILURE_FINGERPRINTS = 5
+MAX_WATCHDOG_RECOVERED_TASK_IDS = 20
+MAINTENANCE_CYCLE_ID = "0"  # Reserved: GitHub issue identifiers are strictly positive.
 
 
 def provider_status_snapshot(
@@ -89,7 +94,35 @@ def review_lane_is_busy(jobs: Mapping[str, Job], task_ids: set[str]) -> bool:
 def is_new_github_issue(job: Job) -> bool:
     """Return whether the job is entering the Factory from issue discovery."""
 
-    return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
+    return (
+        job.state is JobState.DISCOVERED
+        and job.task.source == "github-issue"
+        and not is_maintenance_job(job)
+    )
+
+
+def is_maintenance_job(job: Job) -> bool:
+    return job.task.source == "github-issue" and MAINTENANCE_TAG in job.task.triage_tags
+
+
+def maintenance_selection(
+    jobs: dict[str, Job], excluded: set[str], now: datetime, limit: int
+) -> tuple[list[Job], dict[str, Job]]:
+    ordinary = {identifier: job for identifier, job in jobs.items() if not is_maintenance_job(job)}
+    if limit <= 0 or any(
+        is_maintenance_job(job) and identifier in excluded for identifier, job in jobs.items()
+    ):
+        return [], ordinary
+    ready = [
+        job
+        for identifier, job in jobs.items()
+        if is_maintenance_job(job)
+        and identifier not in excluded
+        and job.state not in {JobState.DONE, JobState.QUARANTINED}
+        and (job.next_attempt_at is None or job.next_attempt_at <= now)
+    ]
+    ready.sort(key=lambda job: (job.task.priority, job.updated_at, int(job.task.identifier)))
+    return ready[:1], ordinary
 
 
 # Lower value = closer to merged. Within a review-lane priority tier, jobs
@@ -111,6 +144,7 @@ _REVIEW_STATE_ORDER = {
     JobState.CI_PENDING: 6,
     JobState.PR_DRAFT: 7,
 }
+_ACTIONABLE_CI_PENDING_ORDER = _REVIEW_STATE_ORDER[JobState.REVIEWING] + 1
 
 
 def admission_slots_while_respecting_wip(
@@ -132,9 +166,15 @@ def admission_slots_while_respecting_wip(
 def _review_sort_key(job: Job) -> tuple[int, int, datetime, int]:
     """Prioritise merge proximity while rotating equally eligible PRs fairly."""
 
+    state_order = _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER))
+    if job.state is JobState.CI_PENDING and job.next_attempt_at is None:
+        # A first CI transition is actionable: one cheap status read can discover
+        # a changed head, a completed gate, or a merge candidate. Timed CI polls
+        # retain their lower priority so they cannot starve deterministic repair.
+        state_order = _ACTIONABLE_CI_PENDING_ORDER
     return (
         job.task.priority,
-        _REVIEW_STATE_ORDER.get(job.state, len(_REVIEW_STATE_ORDER)),
+        state_order,
         job.updated_at,
         int(job.task.identifier),
     )
@@ -160,6 +200,23 @@ def select_issue_admitted(
     return selected
 
 
+def host_admitted_jobs(jobs: dict[str, Job], available_host_slots: int) -> dict[str, Job]:
+    """Keep cheap GitHub transitions moving during exclusive verification.
+
+    These states poll CI, merge an approved head, or record a completed merge.
+    They do not start provider sessions. If a changed head needs verification,
+    the pipeline still acquires the ordinary exclusive verification gate.
+    """
+
+    if available_host_slots > 0:
+        return jobs
+    return {
+        task_id: job
+        for task_id, job in jobs.items()
+        if job.state in {JobState.CI_PENDING, JobState.MERGE_QUEUED, JobState.MERGED}
+    }
+
+
 def select_batch(
     jobs: dict[str, Job],
     limit: int,
@@ -174,6 +231,21 @@ def select_batch(
         return []
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
+    maintenance, jobs = maintenance_selection(jobs, excluded, current, limit)
+    if maintenance:
+        return [
+            *maintenance,
+            *select_batch(
+                jobs,
+                limit - 1,
+                excluded,
+                current,
+                new_issue_slots,
+                review_first,
+                review_lane_max_concurrent,
+                review_only,
+            ),
+        ]
     candidates = [
         job
         for job in jobs.values()
@@ -193,7 +265,7 @@ def select_batch(
     review_ready = sorted(
         (item for item in candidates if is_review_lane_job(item)),
         key=_review_sort_key,
-    )[:review_capacity]
+    )[: min(review_capacity, limit)]
 
     # Two shared host slots are deliberate on the 8 GiB production host. When
     # both are filled from a large PR backlog, issue implementation otherwise
@@ -233,13 +305,17 @@ def selection_diagnostics(
 ) -> dict[str, object]:
     """Expose bounded scheduler inputs without task bodies or credentials."""
 
+    maintenance, ordinary = maintenance_selection(jobs, excluded_task_ids, now, 1)
     candidates = [
-        job
-        for job in jobs.values()
-        if job.task.identifier not in excluded_task_ids
-        and job.state.value not in {"done", "quarantined"}
-        and (job.next_attempt_at is None or job.next_attempt_at <= now)
-        and (not review_only or is_review_lane_job(job))
+        *maintenance,
+        *[
+            job
+            for job in ordinary.values()
+            if job.task.identifier not in excluded_task_ids
+            and job.state.value not in {"done", "quarantined"}
+            and (job.next_attempt_at is None or job.next_attempt_at <= now)
+            and (not review_only or is_review_lane_job(job))
+        ],
     ]
     active_review_count = sum(
         1
@@ -289,6 +365,8 @@ def select_batch_failsafe(
 ) -> list[Job]:
     """Guarantee progress if the primary selector violates its runnable invariant."""
 
+    maintenance, jobs = maintenance_selection(jobs, excluded_task_ids, now, limit)
+    limit = max(0, limit - len(maintenance))
     eligible = [
         job
         for job in jobs.values()
@@ -316,6 +394,7 @@ def select_batch_failsafe(
     if limit > 1 and issue_candidate_available:
         reviews = reviews[: limit - 1]
     return [
+        *maintenance,
         *reviews,
         *select_issue_admitted(remaining, limit - len(reviews), new_issue_slots),
     ]
@@ -480,17 +559,83 @@ def queue_snapshot(
     }
 
 
+@dataclass
+class WatchdogRecoveries:
+    """Count the abandoned attempts this daemon generation actually recovered.
+
+    Kept apart from queue age on purpose. Work can wait for hours without anything
+    having crashed, and a ``last_error`` left behind by an earlier recovery is history,
+    not proof that the watchdog is recovering anything now. Only a real recovery moves
+    this counter.
+    """
+
+    total: int = 0
+    last_recovered_at: datetime | None = None
+    last_recovered_task_ids: list[str] = field(default_factory=list)
+
+    def record(self, task_ids: Iterable[str], recovered_at: datetime) -> None:
+        recovered = list(task_ids)
+        if not recovered:
+            return
+        self.total += len(recovered)
+        self.last_recovered_at = recovered_at
+        self.last_recovered_task_ids = recovered[:MAX_WATCHDOG_RECOVERED_TASK_IDS]
+
+
+def _queued_since(job: Job) -> datetime:
+    """Return when runnable work began waiting: its last update or its elapsed deadline."""
+
+    if job.next_attempt_at is None:
+        return job.updated_at
+    return max(job.updated_at, job.next_attempt_at)
+
+
+def watchdog_snapshot(
+    jobs: Mapping[str, Job],
+    active_task_ids: set[str],
+    recoveries: WatchdogRecoveries,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    """Report actual watchdog recoveries separately from how long work has queued.
+
+    ``queued_*`` covers mid-pipeline work that is runnable but has no attempt in
+    flight, the population an age-only watchdog once mistook for abandoned workers.
+    Its age says how long the work has waited for a worker, never that anything crashed.
+    """
+
+    current = now or datetime.now(UTC)
+    queued_ages = [
+        max(0.0, (current - _queued_since(job)).total_seconds())
+        for job in jobs.values()
+        if job.state in RECOVERABLE_ACTIVE_STATES
+        and job.task.identifier not in active_task_ids
+        and job.attempt_started_at is None
+        and (job.next_attempt_at is None or job.next_attempt_at <= current)
+    ]
+    return {
+        "recovered_total": recoveries.total,
+        "last_recovered_at": (
+            recoveries.last_recovered_at.isoformat()
+            if recoveries.last_recovered_at is not None
+            else None
+        ),
+        "last_recovered_task_ids": list(recoveries.last_recovered_task_ids),
+        "queued_count": len(queued_ages),
+        "oldest_queued_age_seconds": int(max(queued_ages, default=0.0)),
+    }
+
+
 class FactoryDaemon:
     def __init__(self, config: FactoryConfig) -> None:
         self.config = config
         self.stopping = False
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
-        # Two lightweight agent sessions may run together. The fair exclusive side
-        # prevents either session from overlapping an authoritative frontend gate.
+        # Lightweight agent sessions may run together. The fair exclusive side
+        # prevents them from overlapping an authoritative frontend gate.
         self.host_resource_slots = HostResourceGate(
             config.provider_capacity_dir / "host-resource-gate.json",
-            2,
+            config.host_agent_concurrency,
             lease_seconds=config.max_task_minutes * 60 + 300,
         )
         self.verification_slots = Semaphore(1)
@@ -505,6 +650,7 @@ class FactoryDaemon:
         self._next_worktree_cache_prune_at = 0.0
         self.stall_since: datetime | None = None
         self.stall_investigation_dispatched = False
+        self.watchdog_recoveries = WatchdogRecoveries()
         self.scheduler_snapshot: dict[str, object] = {
             "max_parallel_jobs": config.max_parallel_jobs,
             "capacity": config.max_parallel_jobs,
@@ -545,11 +691,12 @@ class FactoryDaemon:
         if blocked and now >= getattr(self, "_next_worktree_cache_prune_at", 0.0):
             self._next_worktree_cache_prune_at = now + self.config.cooldown_seconds
             reserve = int(self.config.minimum_free_disk_gib * 1024**3)
+            headroom = int(self.config.storage_free_headroom_gib * 1024**3)
             pruned = prune_inactive_worktree_caches(
                 self.config.worktree_dir,
                 active_task_ids or set(),
                 minimum_free_bytes=reserve,
-                target_free_bytes=reserve + 1024**3,
+                target_free_bytes=reserve + headroom,
             )
             if pruned:
                 failed = [check for check in disk_space_checks(self.config) if not check.passed]
@@ -616,7 +763,11 @@ class FactoryDaemon:
         # token used by JobStore/TaskStore to stop stale processes writing state.
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
-        self.pipeline = FactoryPipeline(self.config)
+        self.pipeline = FactoryPipeline(
+            self.config,
+            verification_slots=self.verification_slots,
+            host_resource_slots=self.host_resource_slots,
+        )
         self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",
@@ -700,6 +851,10 @@ class FactoryDaemon:
                 worker_capacity = self.config.max_parallel_jobs - len(active)
                 available_host_slots = self.host_resource_slots.available_shared_slots()
                 capacity = min(worker_capacity, available_host_slots)
+                if worker_capacity > 0 and available_host_slots == 0:
+                    # One spare worker may advance CI/merge state without taking
+                    # a provider slot from the exclusive verifier.
+                    capacity = 1
                 # storage_ready and everything in this block must run
                 # unconditionally, before the scheduling gate below and
                 # regardless of pause/capacity state: pruning is what's
@@ -789,6 +944,7 @@ class FactoryDaemon:
                                 task_id,
                             )
                         if recovered:
+                            self.watchdog_recoveries.record(recovered, datetime.now(UTC))
                             jobs = self.pipeline.jobs.load()
                     else:
                         jobs = self.pipeline.jobs.load()
@@ -796,6 +952,29 @@ class FactoryDaemon:
                     # Schedule only from that committed view, not from an intermediate
                     # mapping held across a slow GitHub refresh.
                     jobs = self.pipeline.jobs.load()
+                    if self.config.maintenance_enabled:
+                        maintenance_controller = MaintenanceController(self.pipeline)
+                        maintenance_controller.apply_recoveries(active_task_ids)
+                        jobs = self.pipeline.jobs.load()
+                        if (
+                            MAINTENANCE_CYCLE_ID not in active_task_ids
+                            and capacity > 0
+                            and available_host_slots > 0
+                            and maintenance_controller.due()
+                        ):
+                            maintenance_worker = FactoryPipeline(
+                                self.config,
+                                verification_slots=self.verification_slots,
+                                host_resource_slots=self.host_resource_slots,
+                                agent_router=self.pipeline.router,
+                            )
+                            future = workers.submit(maintenance_worker.run_maintenance_cycle)
+                            active[future] = MAINTENANCE_CYCLE_ID
+                            active_started_at[MAINTENANCE_CYCLE_ID] = datetime.now(UTC).isoformat()
+                            active_task_ids.add(MAINTENANCE_CYCLE_ID)
+                            capacity = max(0, capacity - 1)
+                            LOGGER.info("Scheduled bounded Factory maintenance cycle")
+                    jobs = host_admitted_jobs(jobs, available_host_slots)
                     # A refresh recalculates PR WIP from GitHub. Use that current
                     # result for this same scheduling pass instead of admitting one
                     # extra issue from the empty startup snapshot.
@@ -990,6 +1169,7 @@ class FactoryDaemon:
                 "scheduler": getattr(self, "scheduler_snapshot", {}),
                 "issue_admission": self.issue_admission.snapshot(),
                 "queue": queue_snapshot(jobs, active_task_ids),
+                "watchdog": watchdog_snapshot(jobs, active_task_ids, self.watchdog_recoveries),
                 "providers": provider_status_snapshot(self.provider_health),
             },
         )
