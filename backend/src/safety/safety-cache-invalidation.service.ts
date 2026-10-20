@@ -53,30 +53,29 @@ export class SafetyCacheInvalidationService {
    *  - For suffixed patterns (e.g. `admin:users:list:*`), scan and delete
    *    matching keys using SCAN to avoid blocking the Redis event loop.
    *  - For exact keys (e.g. `partner_of_week_ids`), delete directly.
-   *  - For prefix-only patterns (e.g. `recommendations:daily:`),
-   *    scan using SCAN to avoid blocking the Redis event loop.
+   *  - For prefix-only patterns (e.g. `recommendations:daily:`), scan and
+   *    delete matching keys using SCAN.
    */
   async invalidateTrustAndSafetyCaches(): Promise<void> {
     const redis = this.getRedis();
     try {
-      let totalDeleted = 0;
-
-      for (const pattern of SAFETY_AFFECTED_CACHE_PATTERNS) {
+      // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to drastically reduce network latency during bulk cache invalidation.
+      const deletePromises = SAFETY_AFFECTED_CACHE_PATTERNS.map((pattern) => {
         if (pattern.endsWith(':*')) {
           // Suffixed glob pattern – use SCAN for safety on larger key spaces
-          const prefix = pattern.slice(0, -1);
-          const deleted = await this.deleteByScan(redis, prefix);
-          totalDeleted += deleted;
+          const prefix = pattern.slice(0, -2);
+          return this.deleteByScan(redis, prefix);
         } else if (pattern.endsWith(':')) {
-          // Prefix pattern – use SCAN to avoid blocking the event loop
-          const deleted = await this.deleteByScan(redis, pattern);
-          totalDeleted += deleted;
+          // Prefix pattern: use SCAN to avoid blocking the Redis event loop.
+          return this.deleteByScan(redis, pattern);
         } else {
           // Exact single key
-          const deleted = await redis.del(pattern);
-          totalDeleted += deleted;
+          return redis.del(pattern);
         }
-      }
+      });
+
+      const results = await Promise.all(deletePromises);
+      const totalDeleted = results.reduce((sum, count) => sum + count, 0);
 
       if (totalDeleted > 0) {
         this.logger.log(
