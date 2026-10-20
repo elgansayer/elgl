@@ -554,7 +554,9 @@ class MaintenanceController:
             self.pipeline._run_agent(
                 analysis_job,
                 scratch,
-                "maintenance",
+                # Diagnosis and falsifiable experiment design need the planning
+                # route, not the catch-all cheap general-action model.
+                "planning",
                 prompt,
                 prepare_attempt=clear,
                 validate_output=validate,

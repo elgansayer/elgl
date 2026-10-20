@@ -112,7 +112,7 @@ def controller(tmp_path: Path) -> MaintenanceController:
 
     def run_agent(job, scratch, phase, prompt, **kwargs):
         pipeline.calls += 1
-        assert phase == "maintenance"
+        assert phase == "planning"
         assert kwargs["timeout_seconds"] == 180
         assert kwargs["read_only_reference"] == config.repository.resolve()
         assert "Untrusted diagnostic data" in prompt
