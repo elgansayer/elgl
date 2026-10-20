@@ -111,3 +111,10 @@ source access has been demonstrated.
 Models propose reviewed code changes, not arbitrary privileged host commands.
 Playbooks beyond existing deterministic cleanup and recovery controls are future
 reviewed work, not an unrestricted shell controlled by generated text.
+
+Verification cleans up a narrowly recognised, unstaged generated build-number
+change after both successful and failed checks, and before a stale-base merge.
+Only the known local build-number format matching the worktree's current HEAD is
+eligible. Version changes, staged edits, symlinks, executable files, untracked
+files and any other content changes are preserved. This does not discard product
+repairs, ignore build failures or relax CI.
