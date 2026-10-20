@@ -12,7 +12,7 @@ describe('App routes', () => {
     const root = routes.find((r) => r.path === '');
     expect(root).toBeDefined();
     if (root) {
-      expect(root.redirectTo).toBe('ai-conversation');
+      expect(root.redirectTo).toBe('learn/ai-chat');
       expect(root.pathMatch).toBe('full');
     }
   });
@@ -22,7 +22,7 @@ describe('App routes', () => {
     const expected = [
       'home',
       'discovery',
-      'proficiency',
+      'learn/assessment/proficiency',
       'moments',
       'chat',
       'chat/:id',
@@ -31,10 +31,11 @@ describe('App routes', () => {
       'settings',
       'admin',
       'admin/moderation',
-      'milestones',
-      'study-buddy',
-      'events',
-      'events/calendar',
+      'profile/me/milestones',
+      'learn/study-buddy',
+      'live/events',
+      'live/events/calendar',
+      'coin-economy',
     ];
     for (const p of expected) {
       expect(paths).toContain(p);
@@ -76,12 +77,36 @@ describe('App routes', () => {
     }
   });
 
+  it('should guard every admin feature route with the backend-backed adminGuard', () => {
+    const expectedAdminPaths = [
+      'admin',
+      'admin/lessons',
+      'admin/moderation',
+      'admin/blocks',
+      'admin/users',
+    ];
+
+    for (const path of expectedAdminPaths) {
+      const route = routes.find((candidate) => candidate.path === path);
+      expect(route, `missing route ${path}`).toBeDefined();
+      expect(route?.canActivate, `missing admin guard on ${path}`).toContain(adminGuard);
+    }
+  });
+
   it('should lazy-load milestones component route', () => {
-    const milestones = routes.find((r) => r.path === 'milestones');
+    const milestones = routes.find((r) => r.path === 'profile/me/milestones');
     expect(milestones).toBeDefined();
     if (milestones) {
       expect(milestones.loadComponent).toBeDefined();
       expect(typeof milestones.loadComponent).toBe('function');
     }
+  });
+
+  it('should keep the wildcard route last and redirect unknown paths safely', () => {
+    const wildcard = routes[routes.length - 1];
+
+    expect(wildcard?.path).toBe('**');
+    expect(wildcard?.redirectTo).toBe('learn/ai-chat');
+    expect(routes.some((route) => route.path === wildcard?.redirectTo)).toBe(true);
   });
 });

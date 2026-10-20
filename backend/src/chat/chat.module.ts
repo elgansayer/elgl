@@ -6,7 +6,9 @@ import { XpModule } from '../xp/xp.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { FavouritesModule } from '../favourites/favourites.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
+import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
@@ -35,7 +37,9 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     XpModule,
     LlmProxyModule,
     SupabaseModule,
+    FavouritesModule,
     CloudflareR2Module,
+    LearnerKnowledgeModule,
     forwardRef(() => UsersModule),
   ],
   controllers: [

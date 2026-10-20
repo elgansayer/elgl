@@ -389,7 +389,9 @@ export class LanguagePartiesComponent {
     },
   });
 
-  readonly parties = computed(() => this.partiesResource.value() ?? []);
+  readonly parties = computed(() =>
+    this.partiesResource.hasValue() ? this.partiesResource.value() : [],
+  );
 
   readonly activeFilterCount = computed(() => {
     let count = 0;
