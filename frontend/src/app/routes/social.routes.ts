@@ -15,11 +15,6 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'profile',
-    redirectTo: 'profile/me',
-    pathMatch: 'full',
-  },
-  {
-    path: 'profile/me',
     loadComponent: () =>
       import('../components/profile/profile.component').then((m) => m.ProfileComponent),
   },
@@ -91,11 +86,11 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'milestones',
-    redirectTo: 'profile/me/stats/milestones',
+    redirectTo: 'profile/me/milestones',
     pathMatch: 'full',
   },
   {
-    path: 'profile/me/stats/milestones',
+    path: 'profile/me/milestones',
     loadComponent: () =>
       import('../components/milestone/milestone.component').then((m) => m.MilestoneComponent),
     title: 'Milestones - HelloTalk',
@@ -113,11 +108,36 @@ export const socialRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'events',
+    redirectTo: 'live/events',
+    pathMatch: 'full',
+  },
+  {
+    path: 'events/calendar',
+    redirectTo: 'live/events/calendar',
+    pathMatch: 'full',
+  },
+  {
+    path: 'events/:eventId',
+    loadComponent: () =>
+      import('../components/event-detail/event-detail.component').then((m) => m.EventDetailComponent),
+    title: 'Event - HelloTalk',
+  },
+  {
+    path: 'language-parties',
+    redirectTo: 'live/events',
+    pathMatch: 'full',
+  },
+  {
+    path: 'language-islands',
+    redirectTo: 'live/events',
+    pathMatch: 'full',
+  },
+  {
     path: 'business-profile',
     loadComponent: () =>
       import('../components/business-profile/business-profile.component').then(
-        (m) => m.BusinessProfileComponent,
-      ),
+        (m) => m.BusinessProfileComponent),
     title: 'Business Profile - HelloTalk',
   },
 ];
