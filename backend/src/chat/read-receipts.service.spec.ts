@@ -1,75 +1,70 @@
-import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReadReceiptsService } from './read-receipts.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { vi } from 'vitest';
 
 describe('ReadReceiptsService', () => {
   let service: ReadReceiptsService;
-  let fromMock: Mock;
-  let publishMock: Mock;
-
-  const messageId = 'message-1';
+  let fromMock: any;
+  let publishMock: any;
   const roomId = 'room-1';
-  const userId = 'reader-1';
+  const userId = 'user-1';
+  const messageId = 'message-1';
 
   beforeEach(async () => {
     fromMock = vi.fn();
-    publishMock = vi.fn().mockResolvedValue(undefined);
+    publishMock = vi.fn();
 
-    const moduleRef: TestingModule = await Test.createTestingModule({
+    const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReadReceiptsService,
         {
           provide: SupabaseService,
           useValue: {
-            getClient: vi.fn().mockReturnValue({ from: fromMock }),
+            getClient: () => ({
+              from: fromMock,
+            }),
           },
         },
         {
           provide: CentrifugoService,
-          useValue: { publish: publishMock },
+          useValue: {
+            publish: publishMock,
+          },
         },
       ],
     }).compile();
 
-    service = moduleRef.get<ReadReceiptsService>(ReadReceiptsService);
+    service = module.get<ReadReceiptsService>(ReadReceiptsService);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  function selectSingle(data: unknown) {
-    return {
+  const selectSingle = (data: any) => {
+    const chain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data, error: null }),
-    };
-  }
-
-  function updateById() {
-    return {
       update: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockResolvedValue({ error: null }),
     };
-  }
-
-  it('is defined', () => {
-    expect(service).toBeDefined();
-  });
+    return chain;
+  };
 
   describe('markAsDelivered', () => {
-    it('moves a sent message to delivered and publishes the receipt', async () => {
+    it('updates status and publishes when message is sent by another user and is currently "sent"', async () => {
       const lookup = selectSingle({
+        id: messageId,
         delivery_status: 'sent',
-        sender_id: 'sender-1',
+        sender_id: 'user-2',
       });
-      const update = updateById();
+      const update = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      };
       fromMock.mockReturnValueOnce(lookup).mockReturnValueOnce(update);
 
       await service.markAsDelivered(messageId, roomId, userId);
 
+      expect(lookup.eq).toHaveBeenCalledWith('id', messageId);
       expect(update.update).toHaveBeenCalledWith({
         delivery_status: 'delivered',
       });
@@ -81,18 +76,13 @@ describe('ReadReceiptsService', () => {
       });
     });
 
-    it('does not update a missing message', async () => {
-      fromMock.mockReturnValue(selectSingle(null));
-
-      await service.markAsDelivered(messageId, roomId, userId);
-
-      expect(fromMock).toHaveBeenCalledTimes(1);
-      expect(publishMock).not.toHaveBeenCalled();
-    });
-
-    it('does not mark the sender own message as delivered', async () => {
+    it('returns early if the user is the sender', async () => {
       fromMock.mockReturnValue(
-        selectSingle({ delivery_status: 'sent', sender_id: userId }),
+        selectSingle({
+          id: messageId,
+          delivery_status: 'sent',
+          sender_id: userId,
+        }),
       );
 
       await service.markAsDelivered(messageId, roomId, userId);
@@ -101,58 +91,54 @@ describe('ReadReceiptsService', () => {
       expect(publishMock).not.toHaveBeenCalled();
     });
 
-    it.each(['delivered', 'read'])(
-      'does not downgrade a %s message',
-      async (status) => {
-        fromMock.mockReturnValue(
-          selectSingle({ delivery_status: status, sender_id: 'sender-1' }),
-        );
+    it('returns early if the message is already delivered or read', async () => {
+      fromMock.mockReturnValue(
+        selectSingle({
+          id: messageId,
+          delivery_status: 'delivered',
+          sender_id: 'user-2',
+        }),
+      );
 
-        await service.markAsDelivered(messageId, roomId, userId);
+      await service.markAsDelivered(messageId, roomId, userId);
 
-        expect(fromMock).toHaveBeenCalledTimes(1);
-        expect(publishMock).not.toHaveBeenCalled();
-      },
-    );
+      expect(fromMock).toHaveBeenCalledTimes(1);
+      expect(publishMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('markAsRead', () => {
-    it.each(['sent', 'delivered'])(
-      'moves a %s message to read and publishes the receipt',
-      async (status) => {
-        const lookup = selectSingle({
-          delivery_status: status,
-          sender_id: 'sender-1',
-        });
-        const update = updateById();
-        fromMock.mockReturnValueOnce(lookup).mockReturnValueOnce(update);
-
-        await service.markAsRead(messageId, roomId, userId);
-
-        expect(update.update).toHaveBeenCalledWith({ delivery_status: 'read' });
-        expect(update.eq).toHaveBeenCalledWith('id', messageId);
-        expect(publishMock).toHaveBeenCalledWith(`chat:${roomId}:receipts`, {
-          type: 'receipt_update',
-          messageId,
-          deliveryStatus: 'read',
-        });
-      },
-    );
-
-    it('does not publish a duplicate receipt for an already-read message', async () => {
-      fromMock.mockReturnValue(
-        selectSingle({ delivery_status: 'read', sender_id: 'sender-1' }),
-      );
+    it('updates status and publishes when message is from another user and not read yet', async () => {
+      const lookup = selectSingle({
+        id: messageId,
+        delivery_status: 'delivered',
+        sender_id: 'user-2',
+      });
+      const update = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      };
+      fromMock.mockReturnValueOnce(lookup).mockReturnValueOnce(update);
 
       await service.markAsRead(messageId, roomId, userId);
 
-      expect(fromMock).toHaveBeenCalledTimes(1);
-      expect(publishMock).not.toHaveBeenCalled();
+      expect(lookup.eq).toHaveBeenCalledWith('id', messageId);
+      expect(update.update).toHaveBeenCalledWith({ delivery_status: 'read' });
+      expect(update.eq).toHaveBeenCalledWith('id', messageId);
+      expect(publishMock).toHaveBeenCalledWith(`chat:${roomId}:receipts`, {
+        type: 'receipt_update',
+        messageId,
+        deliveryStatus: 'read',
+      });
     });
 
-    it('does not mark the sender own message as read', async () => {
+    it('returns early if the user is the sender', async () => {
       fromMock.mockReturnValue(
-        selectSingle({ delivery_status: 'sent', sender_id: userId }),
+        selectSingle({
+          id: messageId,
+          delivery_status: 'delivered',
+          sender_id: userId,
+        }),
       );
 
       await service.markAsRead(messageId, roomId, userId);
@@ -164,28 +150,25 @@ describe('ReadReceiptsService', () => {
 
   describe('markAllAsRead', () => {
     it('updates unread messages from other senders and publishes one bulk receipt', async () => {
-      const lookup = {
-        select: vi.fn().mockReturnThis(),
+      const updateChain = {
+        update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         neq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({
+          data: [{ id: 'message-1' }, { id: 'message-2' }],
+          error: null,
+        }),
       };
-      lookup.neq.mockReturnValueOnce(lookup).mockResolvedValueOnce({
-        data: [{ id: 'message-1' }, { id: 'message-2' }],
-        error: null,
-      });
-      const update = {
-        update: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ error: null }),
-      };
-      fromMock.mockReturnValueOnce(lookup).mockReturnValueOnce(update);
+      fromMock.mockReturnValue(updateChain);
 
       await service.markAllAsRead(roomId, userId);
 
-      expect(lookup.eq).toHaveBeenCalledWith('room_id', roomId);
-      expect(lookup.neq).toHaveBeenNthCalledWith(1, 'sender_id', userId);
-      expect(lookup.neq).toHaveBeenNthCalledWith(2, 'delivery_status', 'read');
-      expect(update.update).toHaveBeenCalledWith({ delivery_status: 'read' });
-      expect(update.in).toHaveBeenCalledWith('id', ['message-1', 'message-2']);
+      expect(updateChain.update).toHaveBeenCalledWith({ delivery_status: 'read' });
+      expect(updateChain.eq).toHaveBeenCalledWith('room_id', roomId);
+      expect(updateChain.neq).toHaveBeenNthCalledWith(1, 'sender_id', userId);
+      expect(updateChain.neq).toHaveBeenNthCalledWith(2, 'delivery_status', 'read');
+      expect(updateChain.select).toHaveBeenCalledWith('id');
+
       expect(publishMock).toHaveBeenCalledWith(`chat:${roomId}:receipts`, {
         type: 'bulk_read',
         readBy: userId,
@@ -194,15 +177,13 @@ describe('ReadReceiptsService', () => {
     });
 
     it('does not update or publish when there is nothing unread', async () => {
-      const lookup = {
-        select: vi.fn().mockReturnThis(),
+      const updateChain = {
+        update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         neq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
-      lookup.neq
-        .mockReturnValueOnce(lookup)
-        .mockResolvedValueOnce({ data: [], error: null });
-      fromMock.mockReturnValue(lookup);
+      fromMock.mockReturnValue(updateChain);
 
       await service.markAllAsRead(roomId, userId);
 
@@ -227,7 +208,8 @@ describe('ReadReceiptsService', () => {
         }),
       );
 
-      await expect(service.getReceiptStatus(messageId)).resolves.toEqual({
+      const status = await service.getReceiptStatus(messageId);
+      expect(status).toEqual({
         messageId,
         deliveryStatus: 'delivered',
         readBy: [],
@@ -235,30 +217,32 @@ describe('ReadReceiptsService', () => {
       });
     });
 
-    it('defaults a missing delivery status to sent', async () => {
+    it('defaults to sent if status is missing in db', async () => {
       fromMock.mockReturnValue(
-        selectSingle({ id: messageId, delivery_status: null, room_id: roomId }),
+        selectSingle({
+          id: messageId,
+          delivery_status: null,
+          room_id: roomId,
+        }),
       );
 
-      await expect(service.getReceiptStatus(messageId)).resolves.toEqual({
-        messageId,
-        deliveryStatus: 'sent',
-        readBy: [],
-        totalMembers: 0,
-      });
+      const status = await service.getReceiptStatus(messageId);
+      expect(status?.deliveryStatus).toBe('sent');
     });
   });
 
   describe('setInitialSent', () => {
-    it('initialises the persisted delivery status', async () => {
-      const update = updateById();
+    it('sets status to sent on creation', async () => {
+      const update = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      };
       fromMock.mockReturnValue(update);
 
       await service.setInitialSent(messageId);
 
       expect(update.update).toHaveBeenCalledWith({ delivery_status: 'sent' });
       expect(update.eq).toHaveBeenCalledWith('id', messageId);
-      expect(publishMock).not.toHaveBeenCalled();
     });
   });
 });

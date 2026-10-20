@@ -1,5 +1,17 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
+// ⚡ Bolt: Adding ChangeDetectionStrategy to reduce unnecessary main thread change detection overhead
+// This optimization prevents the component from being re-evaluated on every tick,
+// which is crucial for list items like chat messages that can exist in large numbers.
+import {
+  Component,
+  input,
+  output,
+  inject,
+  signal,
+  effect,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -18,6 +30,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
 @Component({
   selector: 'app-chat-message',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmButton,
     CommonModule,

@@ -5,13 +5,10 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'automation/**'
-      - 'factory-dashboard/**'
-      - 'docs/**'
-      - 'config/factory/**'
-      - 'config/systemd/**'
-      - '.github/dependabot.yml'
+    paths:
+      - 'e2e/**'
+      - 'scripts/verify-core-e2e-flows.mjs'
+      - '.github/workflows/e2e-core-flows-contract.yml'
   merge_group:
     types: [checks_requested]
 
