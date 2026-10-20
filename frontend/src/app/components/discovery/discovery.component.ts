@@ -21,14 +21,10 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
-import {
-  BrowserCoordinates,
-  BrowserGeolocationError,
-  BrowserGeolocationService,
-} from '../../services/browser-geolocation.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -49,19 +45,6 @@ import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
 const SEARCH_DEBOUNCE_MS = 300;
-const NEARBY_RADIUS_KM = 10;
-const NEARBY_COORDINATE_MAX_AGE_MS = 5 * 60 * 1000;
-
-type NearbyLocationStatus =
-  | 'idle'
-  | 'requesting'
-  | 'ready'
-  | 'stale'
-  | 'offline'
-  | 'unsupported'
-  | 'permission_denied'
-  | 'position_unavailable'
-  | 'timeout';
 
 @Component({
   selector: 'app-discovery',
@@ -93,13 +76,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   // audio playback uses imperative HTMLAudioElement API requiring manual teardown.
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
+  private readonly seriousLearnerModeService = inject(SeriousLearnerModeService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
   private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly matchmakingOnboarding = inject(MatchmakingOnboardingService);
-  private readonly browserGeolocation = inject(BrowserGeolocationService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
@@ -124,6 +107,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly hasError = computed(() => this.searchError() !== null);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
+  readonly primaryNativeLanguage = signal<string>('');
+  readonly primaryTargetLanguage = signal<string>('');
 
   readonly distanceBandsKm: readonly number[] = [10, 25, 50, 100, 250];
   readonly selectedDistanceKm = signal<number>(50);
@@ -133,23 +118,12 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedGender = signal<string>('');
   readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
-  readonly seriousLearnerMode = signal<boolean>(false);
+  readonly seriousLearnerMode = this.seriousLearnerModeService.enabled;
+  readonly seriousLearnerRelaxed = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
-
-  readonly nearbyLocationStatus = signal<NearbyLocationStatus>('idle');
-  private readonly nearbyCoordinates = signal<BrowserCoordinates | null>(null);
-  readonly nearbyLocationReady = computed(
-    () => this.selectedFilter() === 'nearby' && this.nearbyLocationStatus() === 'ready',
-  );
-  readonly nearbyLocationNeedsAction = computed(
-    () =>
-      this.selectedFilter() === 'nearby' &&
-      this.nearbyLocationStatus() !== 'ready' &&
-      this.nearbyLocationStatus() !== 'requesting',
-  );
 
   readonly commonInterestTags: readonly string[] = [
     'sports',
@@ -175,7 +149,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     partnerCount: this.partners().length,
     sortMode: this.selectedSort(),
     radiusKm: this.selectedDistanceKm(),
-    nearbyLocationStatus: this.nearbyLocationStatus(),
   }));
 
   /** RxJS Subject for debounced search triggering, auto-cleans up via takeUntilDestroyed. */
@@ -223,7 +196,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   });
 
   setSort(sort: string): void {
-    this.selectedSort.set(this.selectedFilter() === 'nearby' ? 'nearest' : sort);
+    this.selectedSort.set(sort);
     void this.searchPartners();
   }
 
@@ -253,20 +226,12 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.scheduleSearch();
   }
 
-  onFilterSelect(id: string): void {
+  onFilterSelect(id: string) {
     this.selectedFilter.set(id);
-    this.seriousLearnerOnly.set(id === 'serious');
+    this.seriousLearnerOnly.set(id === 'serious' || this.seriousLearnerMode());
     if (id === 'nearby') {
-      this.selectedDistanceKm.set(NEARBY_RADIUS_KM);
-      this.selectedSort.set('nearest');
-      void this.requestNearbyLocation();
-      return;
-    }
-
-    // Precise browser coordinates are ephemeral and only retained while Nearby is active.
-    this.nearbyCoordinates.set(null);
-    this.nearbyLocationStatus.set('idle');
-    if (id === 'city') {
+      this.selectedDistanceKm.set(10); // 10km for nearby
+    } else if (id === 'city') {
       this.selectedDistanceKm.set(25); // 25km for city-level
     } else {
       this.selectedDistanceKm.set(50);
@@ -274,48 +239,12 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
-  async requestNearbyLocation(): Promise<void> {
-    if (this.selectedFilter() !== 'nearby') return;
-
-    if (this.isOffline()) {
-      this.nearbyCoordinates.set(null);
-      this.nearbyLocationStatus.set('offline');
-      this.partners.set([]);
-      this.isLoading.set(false);
-      return;
-    }
-
-    this.searchAbortController?.abort();
-    this.searchAbortController = null;
-    this.searchError.set(null);
-    this.partners.set([]);
-    this.nearbyLocationStatus.set('requesting');
-    this.isLoading.set(false);
-
-    try {
-      const coordinates = await this.browserGeolocation.getCurrentPosition();
-      // A late permission response must not reactivate Nearby after the user left it.
-      if (this.selectedFilter() !== 'nearby') return;
-      this.nearbyCoordinates.set(coordinates);
-      this.nearbyLocationStatus.set('ready');
-      await this.searchPartners();
-    } catch (error) {
-      if (this.selectedFilter() !== 'nearby') return;
-      this.nearbyCoordinates.set(null);
-      const code =
-        error instanceof BrowserGeolocationError ? error.code : ('position_unavailable' as const);
-      this.nearbyLocationStatus.set(code);
-      this.partners.set([]);
-      this.isLoading.set(false);
-    }
-  }
-
-  setLanguage(code: string): void {
+  setLanguage(code: string) {
     this.selectedTargetLanguage.set(code);
     void this.searchPartners();
   }
 
-  setGender(gender: string): void {
+  setGender(gender: string) {
     this.selectedGender.set(gender);
     void this.searchPartners();
   }
@@ -337,6 +266,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         void this.searchPartners();
       });
 
+    // Refresh the app-level preference before the first discovery request. This
+    // avoids a flash of ordinary matching for users who saved Serious Learner mode.
+    await this.seriousLearnerModeService.refresh();
+
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
@@ -347,18 +280,17 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
             labelKey: `lang.${code.toLowerCase()}`,
           }));
           this.myTargetLangs.set(langs);
+          this.primaryTargetLanguage.set(profile.target_languages[0] ?? '');
         }
-        // Restore serious learner mode
-        if (profile.is_serious_learner != null) {
-          this.seriousLearnerMode.set(profile.is_serious_learner);
-          if (profile.is_serious_learner) {
-            this.seriousLearnerOnly.set(true);
-            this.selectedFilter.set('serious');
-          }
-        }
+        this.primaryNativeLanguage.set(profile.native_languages?.[0] ?? '');
       }
     } catch (e) {
       console.warn('Could not load user profile for target languages', e);
+    }
+
+    if (this.seriousLearnerMode()) {
+      this.seriousLearnerOnly.set(true);
+      this.selectedFilter.set('serious');
     }
 
     try {
@@ -368,40 +300,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       console.warn('Could not load blocked user IDs', e);
     }
 
-    // Ordinary discovery never asks for browser location on application boot.
     await this.searchPartners();
   }
 
   async searchPartners(): Promise<void> {
-    const isNearby = this.selectedFilter() === 'nearby';
-    let coordinates: BrowserCoordinates | null = null;
-
-    if (isNearby) {
-      if (this.isOffline()) {
-        this.nearbyLocationStatus.set('offline');
-        this.partners.set([]);
-        this.isLoading.set(false);
-        return;
-      }
-
-      coordinates = this.nearbyCoordinates();
-      if (!coordinates) {
-        if (this.nearbyLocationStatus() === 'ready') {
-          this.nearbyLocationStatus.set('idle');
-        }
-        this.partners.set([]);
-        this.isLoading.set(false);
-        return;
-      }
-      if (Date.now() - coordinates.capturedAt > NEARBY_COORDINATE_MAX_AGE_MS) {
-        this.nearbyCoordinates.set(null);
-        this.nearbyLocationStatus.set('stale');
-        this.partners.set([]);
-        this.isLoading.set(false);
-        return;
-      }
-    }
-
     // Cancel any in-flight request to prevent stale responses and reduce server load
     if (this.searchAbortController) {
       this.searchAbortController.abort();
@@ -415,22 +317,30 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
+      const seriousMode = this.seriousLearnerMode();
+      const strictLanguageGoals = seriousMode && !this.seriousLearnerRelaxed();
+      const strictCandidateNative = this.primaryTargetLanguage() || undefined;
+      const strictCandidateTarget = this.primaryNativeLanguage() || undefined;
       const results = await this.discoveryService.findPartners(
         {
-          latitude: coordinates?.latitude,
-          longitude: coordinates?.longitude,
           radius_metres: this.selectedDistanceKm() * 1000,
-          native_languages: this.selectedNativeLanguage() || undefined,
-          target_language: this.selectedTargetLanguage() || undefined,
-          serious_learner_only: this.seriousLearnerOnly(),
+          native_languages:
+            strictLanguageGoals && strictCandidateNative
+              ? strictCandidateNative
+              : this.selectedNativeLanguage() || undefined,
+          target_language:
+            strictLanguageGoals && strictCandidateTarget
+              ? strictCandidateTarget
+              : this.selectedTargetLanguage() || undefined,
+          serious_learner_only: seriousMode || this.seriousLearnerOnly(),
           gender: isVip ? genderVal : undefined,
           age_min: this.ageRangeMin(),
           age_max: this.ageRangeMax(),
-          serious_learner_mode: this.seriousLearnerMode(),
+          serious_learner_mode: seriousMode,
           proficiency_level: this.selectedProficiencyLevel() || undefined,
           available_time_start: this.availableTimeStart() || undefined,
           available_time_end: this.availableTimeEnd() || undefined,
-          sort: isNearby ? 'nearest' : this.selectedSort(),
+          sort: this.selectedSort(),
           voice_room_active: this.voiceRoomActive() || undefined,
           has_audio_intro: this.hasAudioIntroOnly() ? true : undefined,
           interests: this.selectedInterests() || undefined,
@@ -440,15 +350,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       // If request was aborted, don't update the UI with stale results
       if (signal.aborted) return;
 
-      // Filter out blocked users. Nearby additionally rejects non-spatial fallback rows:
-      // a location search must never silently become an unrelated global search.
+      // Filter out blocked users
       const blocked = this.blockedUserIds();
-      const filtered = results.filter(
-        (user) =>
-          (blocked.length === 0 || !blocked.includes(user.id)) &&
-          (!isNearby ||
-            (typeof user.distance_metres === 'number' && Number.isFinite(user.distance_metres))),
-      );
+      const filtered =
+        blocked.length > 0 ? results.filter((u) => !blocked.includes(u.id)) : results;
 
       const mapped = filtered.map((partner) => ({
         ...partner,
@@ -485,10 +390,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   retrySearch(): void {
-    if (this.selectedFilter() === 'nearby' && !this.nearbyLocationReady()) {
-      void this.requestNearbyLocation();
-      return;
-    }
     void this.searchPartners();
   }
 
@@ -498,42 +399,37 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   async toggleSeriousLearnerMode(): Promise<void> {
-    const newMode = !this.seriousLearnerMode();
-    try {
-      await this.userService.updateMyProfile({ is_serious_learner: newMode });
-      this.seriousLearnerMode.set(newMode);
-      if (newMode) {
-        this.seriousLearnerOnly.set(true);
-        this.selectedFilter.set('serious');
-      }
-      await this.searchPartners();
-    } catch (e) {
-      console.error('Failed to update serious learner mode', e);
+    const saved = await this.seriousLearnerModeService.toggle();
+    if (!saved) {
+      this.searchError.set(this.i18n.translate('discovery.searchError'));
+      return;
     }
+
+    this.seriousLearnerRelaxed.set(false);
+    if (this.seriousLearnerMode()) {
+      this.seriousLearnerOnly.set(true);
+      this.selectedFilter.set('serious');
+    } else if (this.selectedFilter() === 'serious') {
+      this.seriousLearnerOnly.set(false);
+      this.selectedFilter.set('all');
+    }
+    await this.searchPartners();
+  }
+
+  showBroaderSeriousLearnerMatches(): void {
+    if (!this.seriousLearnerMode()) return;
+    this.seriousLearnerRelaxed.set(true);
+    void this.searchPartners();
   }
 
   private formatDistanceHelper(metres: number | undefined): string {
-    if (metres == null || !Number.isFinite(metres) || metres < 0) return '';
-
-    const locale = this.i18n.currentLang();
-    const useMiles = locale.toLowerCase() === 'en-gb' || locale.toLowerCase() === 'en-us';
-
-    if (useMiles) {
-      const miles = metres / 1609.344;
-      if (miles < 1) {
-        const roundedFeet = Math.max(500, Math.round((metres * 3.28084) / 500) * 500);
-        return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(roundedFeet)} ft`;
-      }
-      const roundedMiles = Math.max(0.5, Math.round(miles * 2) / 2);
-      return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(roundedMiles)} mi`;
+    if (metres == null) return '';
+    const km = metres / 1000;
+    const miles = metres / 1609.344;
+    if (km < 1) {
+      return `${metres.toFixed(0)} m (${miles.toFixed(2)} mi)`;
     }
-
-    if (metres < 1000) {
-      const roundedMetres = Math.max(100, Math.round(metres / 100) * 100);
-      return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(roundedMetres)} m`;
-    }
-    const roundedKm = Math.max(0.5, Math.round((metres / 1000) * 2) / 2);
-    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(roundedKm)} km`;
+    return `${km.toFixed(1)} km · ${miles.toFixed(1)} mi`;
   }
 
   toggleAudioIntro(partnerId: string, audioIntroUrl: string | undefined, event: Event): void {
@@ -598,8 +494,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.searchAbortController.abort();
       this.searchAbortController = null;
     }
-    this.nearbyCoordinates.set(null);
-    this.nearbyLocationStatus.set('idle');
     // Debounce subscription auto-unsubscribed via takeUntilDestroyed
     this.searchTrigger$.complete();
     this.stopAudioIntro();
@@ -632,8 +526,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedTargetLanguage.set('');
     this.selectedProficiencyLevel.set('');
     this.selectedGender.set('');
-    this.seriousLearnerOnly.set(false);
-    this.seriousLearnerMode.set(false);
+    this.seriousLearnerOnly.set(this.seriousLearnerMode());
+    this.selectedFilter.set(this.seriousLearnerMode() ? 'serious' : 'all');
+    this.seriousLearnerRelaxed.set(false);
     this.ageRangeMin.set(18);
     this.ageRangeMax.set(100);
     this.availableTimeStart.set('');
@@ -643,9 +538,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.hasAudioIntroOnly.set(false);
     this.selectedInterests.set('');
     this.showAllInterests.set(false);
-    this.selectedFilter.set('all');
-    this.nearbyCoordinates.set(null);
-    this.nearbyLocationStatus.set('idle');
     void this.searchPartners();
   }
 

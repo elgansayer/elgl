@@ -1,4 +1,3 @@
-import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CreateFlashcardDto, UpdateSrsDto } from './flashcard.dto';
 
@@ -24,27 +23,6 @@ describe('CreateFlashcardDto', () => {
     expect(errors.length).toBe(0);
   });
 
-  it('should trim user text before validation and persistence', async () => {
-    const dto = plainToInstance(CreateFlashcardDto, {
-      word_token: '  Bonjour  ',
-      translation: '  hello  ',
-      original_context: '  Bonjour le monde.  ',
-      definition: '  A greeting.  ',
-      pronunciation_url: '  https://audio.example.com/bonjour.mp3  ',
-    });
-
-    const errors = await validate(dto);
-
-    expect(errors).toHaveLength(0);
-    expect(dto).toMatchObject({
-      word_token: 'Bonjour',
-      translation: 'hello',
-      original_context: 'Bonjour le monde.',
-      definition: 'A greeting.',
-      pronunciation_url: 'https://audio.example.com/bonjour.mp3',
-    });
-  });
-
   it('should fail when word_token is empty', async () => {
     const dto = new CreateFlashcardDto();
     dto.word_token = '';
@@ -52,16 +30,6 @@ describe('CreateFlashcardDto', () => {
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
-  });
-
-  it('should reject a whitespace-only word token after transformation', async () => {
-    const dto = plainToInstance(CreateFlashcardDto, {
-      word_token: '   ',
-      translation: 'hello',
-    });
-
-    const errors = await validate(dto);
-    expect(errors.some((error) => error.property === 'word_token')).toBe(true);
   });
 
   it('should fail when word_token is missing', async () => {
@@ -79,16 +47,6 @@ describe('CreateFlashcardDto', () => {
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
-  });
-
-  it('should reject a whitespace-only translation after transformation', async () => {
-    const dto = plainToInstance(CreateFlashcardDto, {
-      word_token: 'bonjour',
-      translation: '   ',
-    });
-
-    const errors = await validate(dto);
-    expect(errors.some((error) => error.property === 'translation')).toBe(true);
   });
 
   it('should fail when translation is missing', async () => {

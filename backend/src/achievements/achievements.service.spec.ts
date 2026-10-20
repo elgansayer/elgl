@@ -288,6 +288,78 @@ describe('AchievementsService', () => {
       ]);
     });
 
+    it('skips completed progress queries without reporting earned milestones as empty', async () => {
+      const definitions = [
+        {
+          code: 'first_message',
+          name: 'First Message',
+          description: 'Send your first message in a chat.',
+        },
+        {
+          code: '100_messages',
+          name: '100 Messages',
+          description: 'Send 100 messages in chats.',
+        },
+        {
+          code: '500_messages',
+          name: '500 Messages',
+          description: 'Send 500 messages in chats.',
+        },
+        {
+          code: '7_day_streak',
+          name: '7-Day Streak',
+          description: 'Keep a 7-day study streak.',
+        },
+        {
+          code: '30_day_streak',
+          name: '30-Day Streak',
+          description: 'Keep a 30-day study streak.',
+        },
+      ];
+      builders['achievements'] = makeBuilder({
+        data: definitions,
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({
+        data: definitions.map((achievement) => ({
+          achievements: achievement,
+        })),
+        error: null,
+      });
+
+      const achievements = await service.getFullAchievements('user-1');
+
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('users');
+      expect(achievements).toEqual([
+        expect.objectContaining({
+          code: 'first_message',
+          current: 500,
+          earned: true,
+        }),
+        expect.objectContaining({
+          code: '100_messages',
+          current: 500,
+          earned: true,
+        }),
+        expect.objectContaining({
+          code: '500_messages',
+          current: 500,
+          earned: true,
+        }),
+        expect.objectContaining({
+          code: '7_day_streak',
+          current: 30,
+          earned: true,
+        }),
+        expect.objectContaining({
+          code: '30_day_streak',
+          current: 30,
+          earned: true,
+        }),
+      ]);
+    });
+
     it('returns an empty array only when the catalogue is genuinely empty', async () => {
       builders['achievements'] = makeBuilder({ data: null, error: null });
 

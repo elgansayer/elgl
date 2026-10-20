@@ -6,8 +6,8 @@ import {
   IsString,
   Matches,
   Max,
+  MaxLength,
   Min,
-  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -19,10 +19,7 @@ export class SearchQueryDto {
     maximum: 90,
     example: 51.5074,
   })
-  @ValidateIf(
-    (query: SearchQueryDto) =>
-      query.latitude !== undefined || query.longitude !== undefined,
-  )
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -38,10 +35,7 @@ export class SearchQueryDto {
     maximum: 180,
     example: -0.1278,
   })
-  @ValidateIf(
-    (query: SearchQueryDto) =>
-      query.latitude !== undefined || query.longitude !== undefined,
-  )
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -87,7 +81,7 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Restrict to "serious learners": users with study_streak_days > 7 AND correction_ratio >= 0.8. Auto-enabled for users with serious_learner_mode profile setting.',
+      'Restrict to active serious learners: users with a study streak of at least 7 days and streak activity within the last 24 hours. Correction behaviour is not part of this predicate. Auto-enabled for users with the serious learner mode profile setting.',
     example: true,
   })
   @IsOptional()
@@ -119,11 +113,21 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Comma-separated interest tags. Partners matching any tag are returned via PostgreSQL array overlap query.',
-    example: 'sports,music,travel',
+      'Filter by one normalized interest tag. Partners whose interests array contains this tag are returned.',
+    example: 'photography',
+    maxLength: 50,
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.normalize('NFKC').trim().toLocaleLowerCase('en-US')
+      : value,
+  )
   @IsString()
+  @MaxLength(50)
+  @Matches(/^[^,\p{Cc}]+$/u, {
+    message: 'interests must be a single valid interest tag',
+  })
   interests?: string;
 
   @ApiPropertyOptional({

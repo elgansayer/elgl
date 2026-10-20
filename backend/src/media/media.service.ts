@@ -28,7 +28,7 @@ export class MediaService {
     'audio/x-m4a',
   ];
 
-  private static readonly MAX_OBJECT_KEY_LENGTH = 512;
+  private static readonly VOICE_NOTE_MAX_BYTES = 10 * 1024 * 1024;
 
   constructor(
     private readonly r2ObjectService: R2ObjectService,
@@ -40,14 +40,19 @@ export class MediaService {
   async generatePresignedUrl(
     userId: string,
     dto: PresignedUrlDto,
+    maximumBytes?: number,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
     const uniqueHash = randomBytes(8).toString('hex');
     const extension = this.safeExtension(dto.filename, 'bin');
     const objectKey = `${dto.folder}/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
-    const upload = this.r2ObjectService.createUploadUrl(
-      objectKey,
-      dto.contentType,
-    );
+    const upload =
+      maximumBytes === undefined
+        ? this.r2ObjectService.createUploadUrl(objectKey, dto.contentType)
+        : this.r2ObjectService.createUploadUrl(
+            objectKey,
+            dto.contentType,
+            maximumBytes,
+          );
 
     return {
       uploadUrl: upload.uploadUrl,
@@ -101,6 +106,26 @@ export class MediaService {
     });
   }
 
+  async generateVoiceNotePresignedUrl(
+    userId: string,
+    dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_AUDIO_CONTENT_TYPES,
+      'Unsupported voice note format',
+    );
+    return this.generatePresignedUrl(
+      userId,
+      {
+        filename: dto.filename,
+        contentType: dto.contentType,
+        folder: 'voice-notes',
+      },
+      MediaService.VOICE_NOTE_MAX_BYTES,
+    );
+  }
+
   async uploadAndCompressVoiceNote(
     userId: string,
     file: Express.Multer.File,
@@ -143,8 +168,6 @@ export class MediaService {
     userId: string,
     objectKey: string,
   ): Promise<{ coverUrl: string }> {
-    this.assertOwnedObjectKey(userId, objectKey, 'covers');
-
     const object = await this.r2ObjectService.downloadObject(objectKey);
     this.assertAllowedContentType(
       object.contentType,
@@ -304,35 +327,6 @@ export class MediaService {
       .toLowerCase();
     if (!allowedTypes.includes(normalisedContentType)) {
       throw new BadRequestException(message);
-    }
-  }
-
-  private assertOwnedObjectKey(
-    userId: string,
-    objectKey: string,
-    folder: string,
-  ): void {
-    if (
-      typeof objectKey !== 'string' ||
-      objectKey.length === 0 ||
-      objectKey.length > MediaService.MAX_OBJECT_KEY_LENGTH
-    ) {
-      throw new BadRequestException('Invalid media object key');
-    }
-
-    const prefix = `${folder}/${userId}/`;
-    const objectName = objectKey.startsWith(prefix)
-      ? objectKey.slice(prefix.length)
-      : '';
-
-    if (
-      objectName.length === 0 ||
-      objectName.includes('/') ||
-      objectName.includes('\\') ||
-      objectName === '.' ||
-      objectName === '..'
-    ) {
-      throw new BadRequestException('Media object is not owned by this user');
     }
   }
 
