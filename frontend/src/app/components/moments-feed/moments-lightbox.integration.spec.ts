@@ -19,7 +19,7 @@ const lightboxTemplate = readFileSync(
 );
 
 describe('Moments lightbox integration', () => {
-  it('registers the shared LightboxComponent on the Moments surface', () => {
+  it('registers the existing LightboxComponent on the Moments surface', () => {
     expect(feedComponentSource).toContain(
       "import { LightboxComponent } from '../lightbox/lightbox.component';",
     );

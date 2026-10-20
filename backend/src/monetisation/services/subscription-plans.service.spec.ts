@@ -60,6 +60,8 @@ describe('SubscriptionPlansService', () => {
   });
 
   it('fails clearly when a requested plan does not exist', () => {
-    expect(() => service.getPlanById('missing-plan')).toThrow(NotFoundException);
+    expect(() => service.getPlanById('missing-plan')).toThrow(
+      NotFoundException,
+    );
   });
 });

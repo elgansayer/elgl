@@ -110,9 +110,9 @@
     "architecture": 1800,
     "implementation": 3600,
     "security_review": 1800,
-    "quality_repair": 1800,
-    "code_review": 900,
-    "ci_repair": 1800,
+    "quality_repair": 3600,
+    "code_review": 1800,
+    "ci_repair": 3600,
     "general_action": 1800
   },
   "circuit_breaker": {

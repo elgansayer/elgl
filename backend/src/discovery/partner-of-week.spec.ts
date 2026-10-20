@@ -8,6 +8,7 @@ interface PartnerCandidate {
   target_languages: string[] | null;
   privacy_hide_from_search: boolean;
   is_deletion_pending: boolean;
+  scheduled_for_deletion_at: string | null;
   correction_ratio: number;
   study_streak_days: number;
 }
@@ -23,6 +24,7 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
     target_languages: ['ja'],
     privacy_hide_from_search: false,
     is_deletion_pending: false,
+    scheduled_for_deletion_at: null,
     correction_ratio: 0.8,
     study_streak_days: 14,
     ...overrides,
@@ -30,7 +32,7 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
 
   function createHarness() {
     const queryBuilder: Record<string, ReturnType<typeof vi.fn>> = {};
-    for (const method of ['select', 'eq', 'not', 'gt', 'gte', 'order']) {
+    for (const method of ['select', 'eq', 'is', 'not', 'gt', 'gte', 'order']) {
       queryBuilder[method] = vi.fn().mockReturnValue(queryBuilder);
     }
     queryBuilder['limit'] = vi.fn();
@@ -82,6 +84,10 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
       'is_deletion_pending',
       false,
     );
+    expect(queryBuilder['is']).toHaveBeenCalledWith(
+      'scheduled_for_deletion_at',
+      null,
+    );
     expect(queryBuilder['not']).toHaveBeenCalledWith(
       'display_name',
       'is',
@@ -112,6 +118,9 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
         makeCandidate('eligible'),
         makeCandidate('hidden', { privacy_hide_from_search: true }),
         makeCandidate('deleting', { is_deletion_pending: true }),
+        makeCandidate('scheduled', {
+          scheduled_for_deletion_at: '2026-09-02T00:00:00.000Z',
+        }),
         makeCandidate('no-name', { display_name: '   ' }),
         makeCandidate('no-native', { native_languages: [] }),
         makeCandidate('no-target', { target_languages: [] }),

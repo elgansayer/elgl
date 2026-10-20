@@ -35,7 +35,6 @@ import {
 } from './interfaces/nlp-results.interface';
 import { NlpService } from './nlp.service';
 import { NlpRateLimit, NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
-import { PronunciationScoringService } from './pronunciation-scoring.service';
 
 @Controller('nlp')
 @UseGuards(SupabaseAuthGuard, NlpRateLimiterGuard)
@@ -43,8 +42,6 @@ export class NlpController {
   constructor(
     private readonly nlpService: NlpService,
     private readonly usersService: UsersService,
-    private readonly grammarCheckService: GrammarCheckService,
-    private readonly grammarExplanationService: GrammarExplanationService,
   ) {}
 
   /**
@@ -103,8 +100,11 @@ export class NlpController {
   ): Promise<GrammarCheckResult | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
-    return await this.grammarCheckService.check(dto);
+    return await this.nlpService.grammarCheck(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
   }
 
   /**
@@ -124,8 +124,11 @@ export class NlpController {
   } | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
-    return await this.grammarExplanationService.explain(dto);
+    return await this.nlpService.explainGrammar(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
   }
 
   /**

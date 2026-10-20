@@ -7,6 +7,8 @@ import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { withRetry } from '../common/retry';
 import { MOCK_USERS } from '../mock-data';
+import { isActiveSeriousLearner } from '../discovery/serious-learner.policy';
+import { LearnerKnowledgeService, LearnerKnowledgeProfile } from '../learner-knowledge/learner-knowledge.service';
 
 export interface RecommendedUserDto {
   id: string;
@@ -55,6 +57,7 @@ export class RecommendationsService {
     private readonly metricsService: MetricsService,
     private readonly circuitBreakerService: CircuitBreakerService,
     private readonly crashReportService: MatchmakingCrashReportService,
+    private readonly learnerKnowledgeService: LearnerKnowledgeService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
@@ -130,12 +133,12 @@ export class RecommendationsService {
           return supabase
             .from('users')
             .select(
-              'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+              'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
             )
             .match(GDPR_MATCHMAKING_FILTERS)
             .overlaps('native_languages', [targetCode])
             .overlaps('target_languages', [nativeCode])
-            .order('is_serious_learner', { ascending: false })
+            .order('study_streak_days', { ascending: false })
             .limit(DAILY_LIMIT);
         });
 
@@ -161,7 +164,7 @@ export class RecommendationsService {
             nativeLanguage: m.native_languages?.[0] ?? null,
             targetLanguages: m.target_languages ?? null,
             sharedInterests: 0,
-            isSeriousLearner: m.is_serious_learner ?? null,
+            isSeriousLearner: isActiveSeriousLearner(m),
             studyStreakDays: m.study_streak_days ?? null,
             correctionRatio: m.correction_ratio ?? null,
           }));
@@ -274,8 +277,15 @@ export class RecommendationsService {
   }
 
   async getRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    let learnerKnowledge: LearnerKnowledgeProfile | null = null;
     try {
-      const interestResults = await this.recommendationsByInterests(userId);
+      learnerKnowledge = await this.learnerKnowledgeService.getProfile(userId, 'en');
+    } catch (e) {
+      this.logger.warn(`Failed to fetch learner knowledge profile for user ${userId}`, e);
+    }
+
+    try {
+      const interestResults = await this.recommendationsByInterests(userId, learnerKnowledge);
       if (interestResults.length > 0) {
         return interestResults;
       }
@@ -293,7 +303,7 @@ export class RecommendationsService {
 
     try {
       const languageMatches =
-        await this.recommendationsByLanguageExchange(userId);
+        await this.recommendationsByLanguageExchange(userId, learnerKnowledge);
       if (languageMatches.length > 0) {
         return languageMatches;
       }
@@ -332,8 +342,15 @@ export class RecommendationsService {
   async getRecommendationsWithFallback(
     userId: string,
   ): Promise<RecommendedUserDto[]> {
+    let learnerKnowledge: LearnerKnowledgeProfile | null = null;
     try {
-      const interestResults = await this.recommendationsByInterests(userId);
+      learnerKnowledge = await this.learnerKnowledgeService.getProfile(userId, 'en');
+    } catch (e) {
+      this.logger.warn(`Failed to fetch learner knowledge profile for user ${userId}`, e);
+    }
+
+    try {
+      const interestResults = await this.recommendationsByInterests(userId, learnerKnowledge);
       if (interestResults.length > 0) {
         return interestResults.map((r) => ({
           ...r,
@@ -354,7 +371,7 @@ export class RecommendationsService {
 
     try {
       const languageResults =
-        await this.recommendationsByLanguageExchange(userId);
+        await this.recommendationsByLanguageExchange(userId, learnerKnowledge);
       if (languageResults.length > 0) {
         return languageResults.map((r) => ({
           ...r,
@@ -427,23 +444,28 @@ export class RecommendationsService {
 
   private async recommendationsByInterests(
     userId: string,
+    learnerKnowledge: LearnerKnowledgeProfile | null = null,
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: ownTags, error: tagsError } = await withRetry(() =>
-      supabase.from('user_interests').select('tag').eq('user_id', userId),
-    );
+    let tags: string[] = [];
+    if (learnerKnowledge && learnerKnowledge.interests && learnerKnowledge.interests.length > 0) {
+      tags = learnerKnowledge.interests;
+    } else {
+      const { data: ownTags, error: tagsError } = await withRetry(() =>
+        supabase.from('user_interests').select('tag').eq('user_id', userId),
+      );
 
-    if (tagsError) {
-      throw new Error(tagsError.message);
-    }
+      if (tagsError) {
+        throw new Error(tagsError.message);
+      }
 
-    const tags: string[] = [];
-    if (Array.isArray(ownTags)) {
-      for (const row of ownTags) {
-        if (isRecord(row)) {
-          const value = row['tag'];
-          if (typeof value === 'string') tags.push(value);
+      if (Array.isArray(ownTags)) {
+        for (const row of ownTags) {
+          if (isRecord(row)) {
+            const value = row['tag'];
+            if (typeof value === 'string') tags.push(value);
+          }
         }
       }
     }
@@ -484,7 +506,7 @@ export class RecommendationsService {
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
       )
       .in('id', candidateIds)
       .match(GDPR_MATCHMAKING_FILTERS);
@@ -493,7 +515,7 @@ export class RecommendationsService {
       throw new Error(usersError.message);
     }
 
-    return (users ?? [])
+    return ((users ?? []) as UserRow[])
       .map((u) => ({
         id: u.id,
         displayName: u.display_name,
@@ -501,7 +523,7 @@ export class RecommendationsService {
         nativeLanguage: u.native_languages?.[0] ?? null,
         targetLanguages: u.target_languages,
         sharedInterests: sharedCount.get(u.id) ?? 0,
-        isSeriousLearner: u.is_serious_learner,
+        isSeriousLearner: isActiveSeriousLearner(u),
         studyStreakDays: u.study_streak_days,
         correctionRatio: u.correction_ratio,
       }))
@@ -519,25 +541,36 @@ export class RecommendationsService {
 
   private async recommendationsByLanguageExchange(
     userId: string,
+    learnerKnowledge: LearnerKnowledgeProfile | null = null,
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: user, error: userError } = await withRetry(() =>
-      supabase
-        .from('users')
-        .select('native_languages, target_languages')
-        .eq('id', userId)
-        .maybeSingle(),
-    );
+    let nativeLangs: string[] | null = null;
+    let targetLanguages: string[] | null = null;
 
-    if (userError || !user) {
-      throw new Error(
-        `Failed to fetch user profile: ${userError?.message ?? 'not found'}`,
-      );
+    if (learnerKnowledge && learnerKnowledge.nativeLanguages && learnerKnowledge.targetLanguages) {
+      nativeLangs = learnerKnowledge.nativeLanguages;
+      targetLanguages = learnerKnowledge.targetLanguages;
     }
 
-    const nativeLangs = user['native_languages'] as string[] | null;
-    const targetLanguages = user['target_languages'] as string[] | null;
+    if (!nativeLangs || !targetLanguages) {
+      const { data: user, error: userError } = await withRetry(() =>
+        supabase
+          .from('users')
+          .select('native_languages, target_languages')
+          .eq('id', userId)
+          .maybeSingle(),
+      );
+
+      if (userError || !user) {
+        throw new Error(
+          `Failed to fetch user profile: ${userError?.message ?? 'not found'}`,
+        );
+      }
+
+      nativeLangs = user['native_languages'] as string[] | null;
+      targetLanguages = user['target_languages'] as string[] | null;
+    }
 
     if (!nativeLangs?.length || !targetLanguages?.length) {
       return [];
@@ -546,13 +579,13 @@ export class RecommendationsService {
     const { data: matches, error: matchError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
       .overlaps('native_languages', targetLanguages)
       .overlaps('target_languages', nativeLangs)
-      .order('is_serious_learner', { ascending: false })
+      .order('study_streak_days', { ascending: false })
       .limit(FALLBACK_LIMIT);
 
     if (matchError) {
@@ -570,7 +603,7 @@ export class RecommendationsService {
       nativeLanguage: m.native_languages?.[0] ?? null,
       targetLanguages: m.target_languages ?? null,
       sharedInterests: 0,
-      isSeriousLearner: m.is_serious_learner ?? null,
+      isSeriousLearner: isActiveSeriousLearner(m),
       studyStreakDays: m.study_streak_days ?? null,
       correctionRatio: m.correction_ratio ?? null,
     }));
@@ -584,7 +617,7 @@ export class RecommendationsService {
     const { data: users, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
@@ -606,7 +639,7 @@ export class RecommendationsService {
       nativeLanguage: u.native_languages?.[0] ?? null,
       targetLanguages: u.target_languages ?? null,
       sharedInterests: 0,
-      isSeriousLearner: u.is_serious_learner ?? null,
+      isSeriousLearner: isActiveSeriousLearner(u),
       studyStreakDays: u.study_streak_days ?? null,
       correctionRatio: u.correction_ratio ?? null,
     }));
@@ -624,6 +657,7 @@ export class RecommendationsService {
       study_streak_days: number;
       correction_ratio: number;
       is_serious_learner: boolean;
+      last_active_at?: string | null;
       avatar_url: string;
     }>;
 
@@ -637,7 +671,7 @@ export class RecommendationsService {
         nativeLanguage: u.native_languages[0],
         targetLanguages: u.target_languages,
         sharedInterests: 0,
-        isSeriousLearner: u.is_serious_learner,
+        isSeriousLearner: isActiveSeriousLearner(u),
         studyStreakDays: u.study_streak_days,
         correctionRatio: u.correction_ratio,
         matchTier: 'mock' as const,

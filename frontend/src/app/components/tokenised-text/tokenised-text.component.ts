@@ -6,15 +6,11 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { TransliterationService } from '../../services/transliteration.service';
 import {
-  FLASHCARD_CONTEXT_MAX_LENGTH,
-  FLASHCARD_SELECTION_MAX_LENGTH,
   FlashcardContextMenuDirective,
   type FlashcardSelectionRequest,
 } from '../../services/flashcard-context-menu.directive';
 import { ChatService } from '../../services/chat.service';
 import { showErrorToast, showToast } from '../../services/toast.service';
-
-const FLASHCARD_TRANSLATION_MAX_LENGTH = 500;
 
 export interface TokenSegment {
   segment: string;
@@ -184,16 +180,9 @@ export class TokenisedTextComponent {
   }
 
   openFlashcardSelection(selection: FlashcardSelectionRequest): void {
-    const text = selection.text.trim();
-    if (!text || text.length > FLASHCARD_SELECTION_MAX_LENGTH) return;
-
+    if (!selection.text.trim()) return;
     this.flashcardError.set(false);
-    this.flashcardSelection.set({
-      ...selection,
-      text,
-      context: selection.context.trim().slice(0, FLASHCARD_CONTEXT_MAX_LENGTH),
-      sourceLanguage: selection.sourceLanguage?.trim() || undefined,
-    });
+    this.flashcardSelection.set(selection);
   }
 
   closeFlashcardSelection(): void {
@@ -218,9 +207,7 @@ export class TokenisedTextComponent {
         this.flashcardTargetLanguage(),
       );
       const translation = translated.translated_text?.trim();
-      if (!translation || translation.length > FLASHCARD_TRANSLATION_MAX_LENGTH) {
-        throw new Error('Translation provider returned an invalid result');
-      }
+      if (!translation) throw new Error('Translation provider returned an empty result');
 
       await this.vocabStore.saveWord({
         word_token: selection.text,

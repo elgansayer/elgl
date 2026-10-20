@@ -36,7 +36,6 @@ from openhands_factory.jobs import RECOVERABLE_ACTIVE_STATES
 from openhands_factory.maintenance import MAINTENANCE_TAG, MaintenanceController
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
-from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 

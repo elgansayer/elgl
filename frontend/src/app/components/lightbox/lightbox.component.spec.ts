@@ -17,8 +17,6 @@ describe('LightboxComponent', () => {
       if (key === 'lightbox.imageAlt')
         return `Image ${params?.['current']} of ${params?.['total']}`;
       if (key === 'lightbox.indicator') return `Go to image ${params?.['current']}`;
-      if (key === 'common.loading') return 'Loading...';
-      if (key === 'common.loadError') return 'Could not load image';
       return key;
     }),
     translations: signal({}),
@@ -37,222 +35,232 @@ describe('LightboxComponent', () => {
     component = fixture.componentInstance;
   });
 
-  function setup(images: string[], initialIndex = 0): void {
+  function setup(images: string[], initialIndex = 0) {
     fixture.componentRef.setInput('images', images);
     fixture.componentRef.setInput('initialIndex', initialIndex);
     fixture.detectChanges();
   }
 
-  function pointerDown(
-    x: number,
-    y: number,
-    pointerId = 1,
-    pointerType = 'touch',
-    isPrimary = true,
-  ): void {
-    component.onPointerDown({
-      clientX: x,
-      clientY: y,
-      pointerId,
-      pointerType,
-      isPrimary,
-    } as PointerEvent);
-  }
-
-  function pointerUp(x: number, y: number, pointerId = 1): ReturnType<typeof vi.fn> {
-    const preventDefault = vi.fn();
-    component.onPointerUp({
-      clientX: x,
-      clientY: y,
-      pointerId,
-      preventDefault,
-    } as unknown as PointerEvent);
-    return preventDefault;
-  }
-
-  it('creates and keeps the Spartan dialog open while mounted', () => {
+  it('should create the component', () => {
     setup(['a']);
-
     expect(component).toBeTruthy();
+  });
+
+  it('keeps the Spartan dialog open while the lightbox is mounted', () => {
+    setup(['a']);
     expect(component.dialogState()).toBe('open');
   });
 
-  it('normalises the initial index into the available image range', () => {
-    setup(['a', 'b', 'c'], 99);
+  it('should converge currentIndex to initialIndex via linked signal', () => {
+    setup(['a', 'b', 'c'], 2);
     expect(component.currentIndex()).toBe(2);
+  });
 
-    fixture.componentRef.setInput('initialIndex', -10);
-    fixture.detectChanges();
+  it('should default currentIndex to 0 when initialIndex is not provided', () => {
+    setup(['a', 'b']);
     expect(component.currentIndex()).toBe(0);
   });
 
-  it('defaults invalid initial indexes to the first image', () => {
-    setup(['a', 'b'], Number.NaN);
-    expect(component.currentIndex()).toBe(0);
-  });
-
-  it('moves forward and backward without crossing gallery bounds', () => {
+  it('should increase currentIndex on next', () => {
     setup(['a', 'b', 'c'], 0);
-
-    component.prev();
-    expect(component.currentIndex()).toBe(0);
-
     component.next();
-    component.next();
-    component.next();
-    expect(component.currentIndex()).toBe(2);
+    expect(component.currentIndex()).toBe(1);
+  });
 
+  it('should not exceed last index on next', () => {
+    setup(['a', 'b'], 1);
+    component.next();
+    expect(component.currentIndex()).toBe(1);
+  });
+
+  it('should decrease currentIndex on prev', () => {
+    setup(['a', 'b', 'c'], 2);
     component.prev();
     expect(component.currentIndex()).toBe(1);
   });
 
-  it('clamps direct indicator navigation to a valid image', () => {
-    setup(['a', 'b', 'c'], 0);
-
-    component.goTo(12);
-    expect(component.currentIndex()).toBe(2);
-
-    component.goTo(-4);
+  it('should not go below zero on prev', () => {
+    setup(['a', 'b'], 0);
+    component.prev();
     expect(component.currentIndex()).toBe(0);
   });
 
-  it('emits closed only when the Spartan dialog lifecycle closes', () => {
-    setup(['a']);
-    const closed = vi.fn();
-    component.closed.subscribe(closed);
+  it('should goTo a specific index', () => {
+    setup(['a', 'b', 'c'], 0);
+    component.goTo(2);
+    expect(component.currentIndex()).toBe(2);
+  });
 
-    component.onDialogStateChanged('open');
-    expect(closed).not.toHaveBeenCalled();
+  it('emits closed when the Spartan dialog lifecycle closes', () => {
+    setup(['a']);
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
 
     component.onDialogStateChanged('closed');
-    expect(closed).toHaveBeenCalledTimes(1);
+    expect(closed).toBe(true);
   });
 
-  it('supports arrow, Home and End keyboard navigation', () => {
-    setup(['a', 'b', 'c'], 1);
+  it('does not emit closed while the Spartan dialog remains open', () => {
+    setup(['a']);
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
 
-    const end = new KeyboardEvent('keydown', { key: 'End', cancelable: true });
-    component.handleKeyDown(end);
-    expect(end.defaultPrevented).toBe(true);
-    expect(component.currentIndex()).toBe(2);
+    component.onDialogStateChanged('open');
+    expect(closed).toBe(false);
+  });
 
-    const home = new KeyboardEvent('keydown', { key: 'Home', cancelable: true });
-    component.handleKeyDown(home);
-    expect(home.defaultPrevented).toBe(true);
-    expect(component.currentIndex()).toBe(0);
-
-    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
-    component.handleKeyDown(right);
-    expect(right.defaultPrevented).toBe(true);
+  it('should increase currentIndex on ArrowRight', () => {
+    setup(['a', 'b', 'c'], 0);
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     expect(component.currentIndex()).toBe(1);
+  });
 
-    const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
-    component.handleKeyDown(left);
-    expect(left.defaultPrevented).toBe(true);
+  it('should decrease currentIndex on ArrowLeft', () => {
+    setup(['a', 'b', 'c'], 1);
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
     expect(component.currentIndex()).toBe(0);
   });
 
-  it('does not consume unrelated keys or Escape, which belongs to Spartan Dialog', () => {
+  it('leaves Escape dismissal to the Spartan dialog lifecycle', () => {
     setup(['a', 'b'], 0);
-    const closed = vi.fn();
-    component.closed.subscribe(closed);
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
 
     component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(component.currentIndex()).toBe(0);
+    expect(closed).toBe(false);
+  });
+
+  it('should handle swipe left to go next', () => {
+    setup(['a', 'b', 'c'], 0);
+
+    const touchStartEvent = { changedTouches: [{ screenX: 200 }] } as unknown as TouchEvent;
+    const touchEndEvent = { changedTouches: [{ screenX: 100 }] } as unknown as TouchEvent;
+    component.onTouchStart(touchStartEvent);
+    component.onTouchEnd(touchEndEvent);
+    expect(component.currentIndex()).toBe(1);
+  });
+
+  it('should handle swipe right to go prev', () => {
+    setup(['a', 'b', 'c'], 1);
+
+    const touchStartEvent = { changedTouches: [{ screenX: 100 }] } as unknown as TouchEvent;
+    const touchEndEvent = { changedTouches: [{ screenX: 200 }] } as unknown as TouchEvent;
+    component.onTouchStart(touchStartEvent);
+    component.onTouchEnd(touchEndEvent);
+    expect(component.currentIndex()).toBe(0);
+  });
+
+  it('should stop propagation on next arrow click', () => {
+    setup(['a', 'b'], 0);
+
+    let propagated = false;
+    const event = new Event('click', { bubbles: true });
+    const originalStop = event.stopPropagation.bind(event);
+    event.stopPropagation = () => {
+      propagated = true;
+      originalStop();
+    };
+
+    component.next(event);
+    expect(propagated).toBe(true);
+    expect(component.currentIndex()).toBe(1);
+  });
+
+  it('should stop propagation on prev arrow click', () => {
+    setup(['a', 'b'], 0);
+
+    let propagated = false;
+    const event = new Event('click', { bubbles: true });
+    const originalStop = event.stopPropagation.bind(event);
+    event.stopPropagation = () => {
+      propagated = true;
+      originalStop();
+    };
+
+    component.prev(event);
+    expect(propagated).toBe(true);
+    expect(component.currentIndex()).toBe(0);
+  });
+
+  it('should emit closed when close button is clicked', () => {
+    setup(['a']);
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
+    component.closed.emit();
+    expect(closed).toBe(true);
+  });
+
+  it('should ignore non-navigation keys on keydown', () => {
+    setup(['a', 'b'], 0);
+
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
+
     component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }));
 
     expect(component.currentIndex()).toBe(0);
-    expect(closed).not.toHaveBeenCalled();
+    expect(closed).toBe(false);
+
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+
+    expect(component.currentIndex()).toBe(0);
+    expect(closed).toBe(false);
   });
 
-  it('swipes left and right with primary touch pointers', () => {
-    setup(['a', 'b', 'c'], 1);
+  it('should not change index on short horizontal swipe', () => {
+    setup(['a', 'b', 'c'], 0);
 
-    pointerDown(240, 100);
-    const leftPreventDefault = pointerUp(120, 104);
-    expect(leftPreventDefault).toHaveBeenCalledTimes(1);
-    expect(component.currentIndex()).toBe(2);
+    component.onTouchStart({
+      changedTouches: [{ screenX: 200 }],
+    } as unknown as TouchEvent);
+    component.onTouchEnd({
+      changedTouches: [{ screenX: 196 }],
+    } as unknown as TouchEvent);
 
-    pointerDown(120, 100, 2);
-    const rightPreventDefault = pointerUp(240, 96, 2);
-    expect(rightPreventDefault).toHaveBeenCalledTimes(1);
-    expect(component.currentIndex()).toBe(1);
+    expect(component.currentIndex()).toBe(0);
   });
 
-  it('ignores short and predominantly vertical gestures', () => {
-    setup(['a', 'b', 'c'], 1);
+  it('should ignore vertical swipe', () => {
+    setup(['a', 'b', 'c'], 0);
 
-    pointerDown(200, 100);
-    const shortPreventDefault = pointerUp(165, 102);
-    expect(shortPreventDefault).not.toHaveBeenCalled();
-    expect(component.currentIndex()).toBe(1);
+    component.onTouchStart({
+      changedTouches: [{ screenX: 100, screenY: 100 }],
+    } as unknown as TouchEvent);
+    component.onTouchEnd({
+      changedTouches: [{ screenX: 100, screenY: 300 }],
+    } as unknown as TouchEvent);
 
-    pointerDown(200, 100, 2);
-    const verticalPreventDefault = pointerUp(140, 230, 2);
-    expect(verticalPreventDefault).not.toHaveBeenCalled();
-    expect(component.currentIndex()).toBe(1);
+    expect(component.currentIndex()).toBe(0);
   });
 
-  it('ignores mouse, secondary and cancelled pointer gestures', () => {
-    setup(['a', 'b', 'c'], 1);
-
-    pointerDown(220, 100, 1, 'mouse');
-    pointerUp(100, 100, 1);
-    expect(component.currentIndex()).toBe(1);
-
-    pointerDown(220, 100, 2, 'touch', false);
-    pointerUp(100, 100, 2);
-    expect(component.currentIndex()).toBe(1);
-
-    pointerDown(220, 100, 3);
-    component.onPointerCancel({ pointerId: 3 } as PointerEvent);
-    pointerUp(100, 100, 3);
-    expect(component.currentIndex()).toBe(1);
-  });
-
-  it('ignores a pointer-up event from a different pointer', () => {
-    setup(['a', 'b', 'c'], 1);
-
-    pointerDown(220, 100, 10);
-    const preventDefault = pointerUp(100, 100, 11);
-
-    expect(preventDefault).not.toHaveBeenCalled();
-    expect(component.currentIndex()).toBe(1);
-  });
-
-  it('tracks image load failures without logging or blocking gallery navigation', () => {
+  it('should stop propagation on goTo click', () => {
     setup(['a', 'b'], 0);
 
-    component.onImageError('a');
-    expect(component.isImageFailed('a')).toBe(true);
-    expect(component.isImageLoaded('a')).toBe(false);
+    let propagated = false;
+    const event = new Event('click', { bubbles: true });
+    const originalStop = event.stopPropagation.bind(event);
+    event.stopPropagation = () => {
+      propagated = true;
+      originalStop();
+    };
 
-    component.next();
+    component.goTo(1, event);
+    expect(propagated).toBe(true);
     expect(component.currentIndex()).toBe(1);
-
-    component.onImageLoad('a');
-    expect(component.isImageFailed('a')).toBe(false);
-    expect(component.isImageLoaded('a')).toBe(true);
   });
 
-  it('records successful image loads independently', () => {
-    setup(['a', 'b'], 0);
+  it('should not change index when swipe threshold is exactly 50', () => {
+    setup(['a', 'b', 'c'], 0);
 
-    component.onImageLoad('a');
+    component.onTouchStart({
+      changedTouches: [{ screenX: 150 }],
+    } as unknown as TouchEvent);
+    component.onTouchEnd({
+      changedTouches: [{ screenX: 100 }],
+    } as unknown as TouchEvent);
 
-    expect(component.isImageLoaded('a')).toBe(true);
-    expect(component.isImageLoaded('b')).toBe(false);
-    expect(component.isImageFailed('a')).toBe(false);
-  });
-
-  it('stops propagation for explicit arrow and indicator controls', () => {
-    setup(['a', 'b'], 0);
-    const nextEvent = { stopPropagation: vi.fn() } as unknown as Event;
-    const indicatorEvent = { stopPropagation: vi.fn() } as unknown as Event;
-
-    component.next(nextEvent);
-    component.goTo(0, indicatorEvent);
-
-    expect(nextEvent.stopPropagation).toHaveBeenCalledTimes(1);
-    expect(indicatorEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(component.currentIndex()).toBe(0);
   });
 });

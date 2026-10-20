@@ -93,7 +93,7 @@
           </a>
         </div>
 
-        @if (profile()?.is_vip) {
+        @if (profile()?.is_vip && !profile()?.privacy_hide_vip_status) {
           <div
             class="mt-2 inline-block rounded bg-vip px-2 py-1 text-xs font-black uppercase italic text-on-fill shadow-[0_0_10px_rgba(255,215,0,0.5)]"
           >

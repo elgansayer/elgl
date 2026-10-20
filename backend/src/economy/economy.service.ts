@@ -283,28 +283,12 @@ export class EconomyService {
     private readonly httpService: HttpService,
     private readonly metricsService: MetricsService,
   ) {
-    let stripeSecret = this.configService.get<string>('STRIPE_SECRET_KEY');
-    const env = this.configService.get<string>('NODE_ENV') || 'development';
-
-    if (env === 'production') {
-      if (
-        !stripeSecret ||
-        stripeSecret === 'sk_test_123' ||
-        stripeSecret === 'sk_test'
-      ) {
-        throw new Error(
-          'STRIPE_SECRET_KEY must be configured securely in production',
-        );
-      }
-    } else {
-      if (!stripeSecret) {
-        stripeSecret = 'sk_test_123';
-      }
-    }
-
-    this.stripe = new Stripe(stripeSecret, {
-      apiVersion: '2023-10-16',
-    });
+    this.stripe = new Stripe(
+      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
+      {
+        apiVersion: '2023-10-16',
+      },
+    );
   }
 
   private static readonly CATALOG_CACHE_KEY = 'economy:catalog';
