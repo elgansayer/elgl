@@ -9,12 +9,4 @@ export class LivekitTokenDto {
   @IsString()
   @IsNotEmpty()
   room_name!: string;
-
-  @ApiProperty({
-    description: 'User identity for the LiveKit participant',
-    example: 'user_abc123',
-  })
-  @IsString()
-  @IsNotEmpty()
-  participant_identity!: string;
 }
