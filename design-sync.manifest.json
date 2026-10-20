@@ -443,6 +443,11 @@
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
       "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 narrows unknown voice-room publication data before property access and adds malformed-input tests. Valid publications and all templates, styles and interactions are unchanged. No preview or Claude Design reconciliation is claimed."
+      },
       "requiredStates": ["light", "dark", "error", "loading", "390px", "rtl", "reduced-motion"]
     },
     {
@@ -562,6 +567,11 @@
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
       "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 repairs duplicate imports and redundant framework-default change detection in the existing study-streak widget. Template formatting is whitespace-only; no content, style, token, layout or interaction changes. No preview or Claude Design reconciliation is claimed."
+      },
       "requiredStates": [
         "light",
         "dark",
