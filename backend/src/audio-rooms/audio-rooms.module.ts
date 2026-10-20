@@ -35,6 +35,8 @@ import { TranscriptEgressService } from './transcript-egress.service';
         const apiKey = configService.get<string>('LIVEKIT_API_KEY');
         const secretKey = configService.get<string>('LIVEKIT_SECRET');
 
+        const env = configService.get<string>('NODE_ENV') || 'development';
+
         if (!apiKey || !secretKey) {
           throw new Error(
             'LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured',

@@ -1661,7 +1661,7 @@ export class EconomyService {
    * Called after any mutation that changes balances or ownership
    * (purchaseCoins, sendGift, unlockStickerPack, claimDailyCheckIn).
    */
-  private invalidateUserEconomyCaches(userId: string): void {
+  protected invalidateUserEconomyCaches(userId: string): void {
     try {
       const redis = this.supabaseService.getRedisClient();
       redis

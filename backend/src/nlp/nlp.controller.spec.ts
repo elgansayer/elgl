@@ -27,6 +27,24 @@ describe('NlpController', () => {
           },
         },
         {
+          provide: GrammarCheckService,
+          useValue: {
+            check: vi.fn(),
+          },
+        },
+        {
+          provide: GrammarExplanationService,
+          useValue: {
+            explain: vi.fn(),
+          },
+        },
+        {
+          provide: PronunciationScoringService,
+          useValue: {
+            score: vi.fn(),
+          },
+        },
+        {
           provide: UsersService,
           useValue: {
             getProfile: vi.fn(),
