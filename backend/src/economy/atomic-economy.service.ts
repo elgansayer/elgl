@@ -2,6 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { randomInt } from 'node:crypto';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { withExponentialBackoff } from '../common/http-retry.helper';
 import { MetricsService } from '../metrics/metrics.service';
@@ -18,7 +19,7 @@ interface DailyCheckInResult {
 interface DailyCheckInRpcClient {
   rpc(
     functionName: string,
-    args: { p_user_id: string },
+    args: { p_user_id: string; p_reward: number },
   ): PromiseLike<{ data: unknown; error: unknown }>;
 }
 
@@ -41,6 +42,12 @@ function isDailyCheckInResult(value: unknown): value is DailyCheckInResult {
   return value.claimed
     ? value.coins_rewarded >= 5 && value.coins_rewarded <= 10
     : value.coins_rewarded === 0;
+}
+
+function firstResultRow(data: unknown): unknown {
+  if (!Array.isArray(data)) return data;
+  const rows: unknown[] = data;
+  return rows[0];
 }
 
 /**
@@ -74,12 +81,19 @@ export class AtomicEconomyService extends EconomyService {
     userId: string,
   ): Promise<DailyCheckInResult> {
     const startedAt = Date.now();
+    // Generate once outside the retry callback so every attempt uses the same
+    // CSPRNG reward while Postgres preserves atomicity and idempotency.
+    const reward = randomInt(5, 11);
 
     try {
       const rpcClient =
         this.atomicSupabaseService.getClient() as unknown as DailyCheckInRpcClient;
       const response = await withExponentialBackoff(
-        () => rpcClient.rpc('claim_daily_checkin', { p_user_id: userId }),
+        () =>
+          rpcClient.rpc('claim_daily_checkin', {
+            p_user_id: userId,
+            p_reward: reward,
+          }),
         'claimDailyCheckInAtomic',
         { logger: this.atomicLogger },
       );
@@ -88,9 +102,7 @@ export class AtomicEconomyService extends EconomyService {
         throw new Error('daily check-in RPC failed');
       }
 
-      const row = Array.isArray(response.data)
-        ? response.data[0]
-        : response.data;
+      const row = firstResultRow(response.data);
       if (!isDailyCheckInResult(row)) {
         throw new Error('daily check-in RPC returned an invalid result');
       }

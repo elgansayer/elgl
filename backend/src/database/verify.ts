@@ -206,7 +206,7 @@ async function verifyAchievements(
   }
 }
 
-async function runVerification() {
+function printDiagnosticHeader() {
   console.log(
     '================================================================',
   );
@@ -216,6 +216,30 @@ async function runVerification() {
   console.log(
     '================================================================\n',
   );
+}
+
+function printDiagnosticSummary(state: AssertionState) {
+  console.log(
+    '\n================================================================',
+  );
+  console.log(
+    `Diagnostic Summary: ${state.passed}/${state.total} checks passed successfully.`,
+  );
+  console.log(
+    '================================================================\n',
+  );
+
+  if (state.passed === state.total) {
+    console.log(
+      '🎉 ALL SYSTEM HEALTH CHECKS PASSED. Platform is ready for 24/7 VPS Deployment!',
+    );
+  } else {
+    process.exit(1);
+  }
+}
+
+async function runVerification() {
+  printDiagnosticHeader();
 
   const state: AssertionState = { passed: 0, total: 0 };
   const assertCheck = createAssertCheck(state);
@@ -235,23 +259,7 @@ async function runVerification() {
   await verifyDatabase(assertCheck, supabase);
   await verifyAchievements(assertCheck, supabase);
 
-  console.log(
-    '\n================================================================',
-  );
-  console.log(
-    `Diagnostic Summary: ${state.passed}/${state.total} checks passed successfully.`,
-  );
-  console.log(
-    '================================================================\n',
-  );
-
-  if (state.passed === state.total) {
-    console.log(
-      '🎉 ALL SYSTEM HEALTH CHECKS PASSED. Platform is ready for 24/7 VPS Deployment!',
-    );
-  } else {
-    process.exit(1);
-  }
+  printDiagnosticSummary(state);
 }
 
 runVerification().catch((err) => {
