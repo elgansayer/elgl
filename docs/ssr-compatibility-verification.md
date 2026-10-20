@@ -15,7 +15,7 @@ This document describes the executable migration gate for the SSR architecture d
 - the server entry still bootstraps the same `AppComponent` with the server config and request `BootstrapContext`;
 - server bootstrap/configuration files do not introduce direct browser-global access;
 - server rendering remains the default route mode;
-- only the reviewed device-heavy routes (`active-call`, `video-call`, `audio-rooms/**`, and `device-transfer`) are client-only;
+- only the reviewed device-heavy routes (`active-call`, `video-call`, `audio-rooms/**`, and `settings/device-transfer`) are client-only;
 - `preview/room/:id` and the catch-all route remain explicitly server-rendered;
 - representative Discovery, Chat, Vocabulary, and Moderation visual contracts retain light, dark, RTL, and 200% text-scale coverage.
 

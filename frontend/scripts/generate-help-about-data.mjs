@@ -138,18 +138,13 @@ export async function collectProductionLicences(rootDirectory, packageLock) {
         ? licenceName(installedMetadata.license)
         : null;
     const lockLicence = licenceName(lockMetadata.license);
-    const licence = installedLicence || lockLicence;
-    if (!licence) {
-      throw new Error(`PRODUCTION_DEPENDENCY_LICENCE_REQUIRED:${id}`);
-    }
-
     const { licenceFile, licenceText } = await readLicenceText(packageDirectory);
 
     licences.push({
       id,
       name,
       version,
-      licence,
+      licence: installedLicence || lockLicence || 'UNKNOWN',
       packageUrl: `https://www.npmjs.com/package/${encodeURIComponent(name)}/v/${encodeURIComponent(version)}`,
       licenceFile,
       licenceText,

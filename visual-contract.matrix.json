@@ -44,17 +44,18 @@
         "390px",
         "wide",
         "rtl",
-        "mobile-390-light",
-        "mobile-390-dark",
-        "mobile-390-rtl",
-        "mobile-390-text-200",
-        "mobile-390-text-400",
         "tablet-768-light",
         "tablet-768-dark",
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     },
     {
@@ -67,17 +68,18 @@
         "wide",
         "rtl",
         "400%-zoom",
-        "mobile-390-light",
-        "mobile-390-dark",
-        "mobile-390-rtl",
-        "mobile-390-text-200",
-        "mobile-390-text-400",
         "tablet-768-light",
         "tablet-768-dark",
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     },
     {
@@ -90,17 +92,18 @@
         "wide",
         "rtl",
         "400%-zoom",
-        "mobile-390-light",
-        "mobile-390-dark",
-        "mobile-390-rtl",
-        "mobile-390-text-200",
-        "mobile-390-text-400",
         "tablet-768-light",
         "tablet-768-dark",
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     },
     {
@@ -112,17 +115,18 @@
         "390px",
         "wide",
         "rtl",
-        "mobile-390-light",
-        "mobile-390-dark",
-        "mobile-390-rtl",
-        "mobile-390-text-200",
-        "mobile-390-text-400",
         "tablet-768-light",
         "tablet-768-dark",
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     }
   ]
