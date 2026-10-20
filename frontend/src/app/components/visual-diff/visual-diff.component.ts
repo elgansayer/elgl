@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { Component, computed, input, inject, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -17,7 +18,7 @@ interface DiffSegment {
 
 @Component({
   selector: 'app-visual-diff',
-  imports: [...HlmButtonImports, TranslatePipe, NgIcon],
+  imports: [HlmCheckbox, ...HlmButtonImports, TranslatePipe, NgIcon],
   providers: [provideIcons({ lucideLanguages })],
   template: `
     <div class="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
@@ -69,9 +70,8 @@ interface DiffSegment {
               <label class="text-[10px] uppercase tracking-wider font-bold text-text-secondary cursor-pointer" for="auto-translate-toggle">
                 Auto-translate
               </label>
-              <input
-                id="auto-translate-toggle"
-                type="checkbox"
+              <hlm-checkbox
+                inputId="auto-translate-toggle"
                 [checked]="isAutoTranslateEnabled()"
                 (change)="toggleAutoTranslate()"
                 class="h-3 w-3 accent-neon-blue cursor-pointer"
