@@ -1,12 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FavouritesComponent } from './favourites.component';
 import { I18nService } from '../../services/i18n.service';
-import { ChatService, FavouriteRecord } from '../../services/chat.service';
+import { FavouriteRecord } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 
 describe('FavouritesComponent', () => {
   let component: FavouritesComponent;
   let fixture: ComponentFixture<FavouritesComponent>;
-  let mockChatService: Partial<ChatService>;
+  let mockFavouriteService: {
+    getStarredMessages: ReturnType<typeof vi.fn>;
+    removeFavourite: ReturnType<typeof vi.fn>;
+  };
 
   const mockFavourites: FavouriteRecord[] = [
     {
@@ -81,9 +85,13 @@ describe('FavouritesComponent', () => {
   ];
 
   beforeEach(async () => {
-    mockChatService = {
-      getFavourites: vi.fn().mockResolvedValue(mockFavourites),
-      removeFavourite: vi.fn().mockResolvedValue(undefined),
+    mockFavouriteService = {
+      getStarredMessages: vi.fn().mockResolvedValue({
+        items: mockFavourites,
+        has_more: false,
+        next_offset: null,
+      }),
+      removeFavourite: vi.fn().mockResolvedValue({ success: true }),
     };
 
     await TestBed.configureTestingModule({
@@ -103,7 +111,7 @@ describe('FavouritesComponent', () => {
             },
           },
         },
-        { provide: ChatService, useValue: mockChatService },
+        { provide: FavouriteService, useValue: mockFavouriteService },
       ],
     }).compileComponents();
 
@@ -116,10 +124,68 @@ describe('FavouritesComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load favourites on init', async () => {
+  it('should load starred messages on init', async () => {
     await fixture.whenStable();
-    expect(mockChatService.getFavourites).toHaveBeenCalled();
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenCalledWith(100, 0);
     expect(component.favourites().length).toBe(3);
+  });
+
+  it('continues through bounded pages until the server reports completion', async () => {
+    mockFavouriteService.getStarredMessages
+      .mockResolvedValueOnce({
+        items: [mockFavourites[0]],
+        has_more: true,
+        next_offset: 100,
+      })
+      .mockResolvedValueOnce({
+        items: [mockFavourites[1]],
+        has_more: false,
+        next_offset: null,
+      });
+
+    await component.loadFavourites();
+
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenNthCalledWith(2, 100, 0);
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(100, 100);
+    expect(component.favourites().map((favourite) => favourite.id)).toEqual([
+      'fav-1',
+      'fav-2',
+    ]);
+  });
+
+  it('bounds sparse page scans by inspected offsets', async () => {
+    await fixture.whenStable();
+    mockFavouriteService.getStarredMessages.mockClear();
+    mockFavouriteService.getStarredMessages.mockImplementation(
+      (_limit: number, offset: number) =>
+        Promise.resolve({
+          items: [],
+          has_more: true,
+          next_offset: offset + 100,
+        }),
+    );
+
+    await component.loadFavourites();
+
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenCalledTimes(5);
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(
+      100,
+      400,
+    );
+    expect(component.loadError()).toBe(false);
+    expect(component.favourites()).toEqual([]);
+  });
+
+  it('fails safely if pagination does not advance', async () => {
+    mockFavouriteService.getStarredMessages.mockResolvedValue({
+      items: [mockFavourites[0]],
+      has_more: true,
+      next_offset: 0,
+    });
+
+    await component.loadFavourites();
+
+    expect(component.loadError()).toBe(true);
   });
 
   it('should default to "all" tab', () => {
@@ -180,8 +246,81 @@ describe('FavouritesComponent', () => {
     expect(component.favourites().length).toBe(3);
 
     await component.deleteFavourite(mockFavourites[0]);
-    expect(mockChatService.removeFavourite).toHaveBeenCalledWith('fav-1');
+    expect(mockFavouriteService.removeFavourite).toHaveBeenCalledWith('fav-1');
     expect(component.favourites().length).toBe(2);
+  });
+
+  it('should prevent duplicate delete requests while a favourite is pending', async () => {
+    await fixture.whenStable();
+    let resolveDelete: (() => void) | undefined;
+    const deletePromise = new Promise<{ success: true }>((resolve) => {
+      resolveDelete = () => resolve({ success: true });
+    });
+    mockFavouriteService.removeFavourite.mockReturnValue(deletePromise);
+
+    const firstDelete = component.deleteFavourite(mockFavourites[0]);
+    const duplicateDelete = component.deleteFavourite(mockFavourites[0]);
+
+    expect(component.isDeletingFavourite('fav-1')).toBe(true);
+    expect(mockFavouriteService.removeFavourite).toHaveBeenCalledTimes(1);
+
+    resolveDelete?.();
+    await Promise.all([firstDelete, duplicateDelete]);
+
+    expect(component.isDeletingFavourite('fav-1')).toBe(false);
+    expect(component.favourites().some((favourite) => favourite.id === 'fav-1')).toBe(false);
+  });
+
+  it('should expose list semantics and keep item type badges non-interactive', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="list"]')).not.toBeNull();
+    expect(host.querySelectorAll('[role="listitem"]').length).toBe(3);
+    expect(host.querySelectorAll('app-chip').length).toBe(5);
+  });
+
+  it('should only mark audio as playing after playback starts and stop it on destroy', async () => {
+    await fixture.whenStable();
+    const play = vi.fn().mockResolvedValue(undefined);
+    const pause = vi.fn();
+    const audio = {
+      play,
+      pause,
+      currentTime: 0,
+      onended: null as (() => void) | null,
+    };
+    vi.stubGlobal(
+      'Audio',
+      vi.fn(function () {
+        return audio;
+      }),
+    );
+
+    component.toggleAudio(mockFavourites[2]);
+    expect(component.audioPlayingId()).toBeNull();
+
+    await play.mock.results[0].value;
+    await Promise.resolve();
+    expect(component.audioPlayingId()).toBe('fav-3');
+
+    fixture.destroy();
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(audio.currentTime).toBe(0);
+    expect(component.audioPlayingId()).toBeNull();
+  });
+
+  it('should expose the correct accessible audio action for play and pause', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('button[aria-label="favourites.audioPlay"]')).not.toBeNull();
+
+    component.audioPlayingId.set('fav-3');
+    fixture.detectChanges();
+    expect(host.querySelector('button[aria-label="favourites.audioPause"]')).not.toBeNull();
   });
 
   it('should set active tab via setTab', () => {

@@ -13,9 +13,11 @@ import { ChatMessageComponent } from './chat-message.component';
 
 describe('ChatMessageComponent', () => {
   let fixture: ComponentFixture<ChatMessageComponent>;
+  let currentUser: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     const blockedUserIds = signal<ReadonlySet<string>>(new Set());
+    currentUser = vi.fn().mockReturnValue({ id: 'viewer-id' });
 
     await TestBed.configureTestingModule({
       imports: [ChatMessageComponent],
@@ -23,7 +25,7 @@ describe('ChatMessageComponent', () => {
         {
           provide: AuthService,
           useValue: {
-            currentUser: vi.fn().mockReturnValue({ id: 'viewer-id' }),
+            currentUser,
             getAccessToken: vi.fn().mockReturnValue('access-token'),
           },
         },
@@ -85,6 +87,57 @@ describe('ChatMessageComponent', () => {
       .map((button) => button.nativeElement.textContent.trim());
     expect(buttonLabels).toContain('context_menu.open');
     expect(buttonLabels).not.toContain('chatRoom.simplifyBtn');
+  });
+
+  it('renders the backend-provided rich link preview for text messages', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'message-id',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'text',
+      text_content: 'Read https://example.com/article',
+      link_preview: {
+        url: 'https://example.com/article',
+        title: 'Example article',
+        description: 'A useful preview',
+        image: 'https://example.com/preview.jpg',
+        siteName: 'Example',
+      },
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const preview = fixture.debugElement.query(By.directive(LinkPreviewCardComponent));
+    expect(preview).toBeTruthy();
+    expect(preview.componentInstance.url()).toBe('https://example.com/article');
+    expect(preview.componentInstance.title()).toBe('Example article');
+    expect(preview.componentInstance.description()).toBe('A useful preview');
+    expect(preview.componentInstance.image()).toBe('https://example.com/preview.jpg');
+    expect(preview.componentInstance.siteName()).toBe('Example');
+  });
+
+  it('does not render a rich link preview when the message has no preview payload', () => {
+    expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
+  });
+
+  it('updates memoized message ownership when the current user input changes', () => {
+    const component = fixture.componentInstance;
+
+    expect(component.isOwnMessage()).toBe(false);
+    expect(currentUser).toHaveBeenCalledOnce();
+
+    component.isOwnMessage();
+    component.isOwnMessage();
+    expect(currentUser).toHaveBeenCalledOnce();
+
+    fixture.componentRef.setInput('currentUserId', 'sender-id');
+    fixture.detectChanges();
+    expect(component.isOwnMessage()).toBe(true);
+
+    fixture.componentRef.setInput('currentUserId', 'another-user');
+    fixture.detectChanges();
+    expect(component.isOwnMessage()).toBe(false);
   });
 
   it('cycles voice playback speed through 1x, 1.5x, and 2x', () => {

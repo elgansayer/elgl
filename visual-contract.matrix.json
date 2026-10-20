@@ -49,7 +49,13 @@
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     },
     {
@@ -67,7 +73,13 @@
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     },
     {
@@ -85,7 +97,13 @@
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     },
     {
@@ -102,7 +120,13 @@
         "tablet-768-rtl",
         "tablet-768-text-200",
         "tablet-1024-light",
-        "tablet-1024-dark"
+        "tablet-1024-dark",
+        "desktop-1024-light",
+        "desktop-1024-dark",
+        "desktop-1024-rtl",
+        "desktop-1024-text-200",
+        "desktop-1280-light",
+        "desktop-1280-dark"
       ]
     }
   ]

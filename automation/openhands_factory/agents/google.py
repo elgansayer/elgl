@@ -218,6 +218,8 @@ class GoogleAgentProvider(CLIProvider):
                 "--add-dir",
                 str(request.cwd),
             ]
+            if request.read_only_reference is not None:
+                command.extend(("--add-dir", str(request.read_only_reference.resolve())))
             # Model names already ending in -high/-medium/-low (every model in
             # agy's own catalogue does) bake their effort tier into the model
             # itself; a separately-passed --effort that disagrees is a hard
@@ -241,5 +243,10 @@ class GoogleAgentProvider(CLIProvider):
             "--approval-mode",
             "yolo",
             "--skip-trust",
+            *(
+                ["--include-directories", str(request.read_only_reference.resolve())]
+                if request.read_only_reference is not None
+                else []
+            ),
             *self.extra_args,
         ]
