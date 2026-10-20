@@ -2,7 +2,7 @@ import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { OfflineReadingService } from './offline-reading.service';
 
-describe.skip('OfflineReadingService', () => {
+describe('OfflineReadingService', () => {
   let service: OfflineReadingService;
   let mockStores: Map<string, Map<string, unknown>>;
   let openCallbacks: {
@@ -106,10 +106,12 @@ describe.skip('OfflineReadingService', () => {
   }
 
   afterEach(() => {
+    TestBed.resetTestingModule();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  describe.skip('no IndexedDB', () => {
+  describe('no IndexedDB', () => {
     beforeEach(() => {
       vi.stubGlobal('indexedDB', undefined);
     });
@@ -151,7 +153,7 @@ describe.skip('OfflineReadingService', () => {
     });
   });
 
-  describe.skip('with IndexedDB', () => {
+  describe('with IndexedDB', () => {
     beforeEach(() => {
       autoIncrementCounter = 0;
       mockStores = new Map();

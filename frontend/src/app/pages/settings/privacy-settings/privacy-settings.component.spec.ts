@@ -87,6 +87,45 @@ describe('PrivacySettingsComponent', () => {
     expect(component.hubNavItems.length).toBeGreaterThan(0);
   });
 
+  it('keeps the privacy hub destinations wired to the dedicated privacy routes', () => {
+    const expectedRoutes = [
+      '/settings/blocks',
+      '/settings/gdpr',
+      '/settings/account/deletion',
+      '/privacy',
+    ];
+
+    expect(component.hubNavItems.map((item) => item.route)).toEqual(expectedRoutes);
+
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>,
+    );
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(expectedRoutes);
+  });
+
+  it('renders a title and description for every privacy hub destination', () => {
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>,
+    );
+
+    expect(links).toHaveLength(component.hubNavItems.length);
+    component.hubNavItems.forEach((item, index) => {
+      expect(links[index]?.textContent).toContain(item.titleKey);
+      expect(links[index]?.textContent).toContain(item.descriptionKey);
+    });
+  });
+
+  it('renders the blocked-user count in the blocked-users destination', () => {
+    component.blockedCount.set(3);
+    fixture.detectChanges();
+
+    const blockedUsersLink = fixture.nativeElement.querySelector(
+      'a[href="/settings/blocks"]',
+    ) as HTMLAnchorElement | null;
+
+    expect(blockedUsersLink?.textContent).toContain('3');
+  });
+
   it('loads and exposes the persisted profile visibility', () => {
     expect(getProfileVisibility).toHaveBeenCalledOnce();
     expect(component.profileVisibility()).toBe('everyone');
