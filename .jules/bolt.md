@@ -202,6 +202,10 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+## 2024-05-25 - [Optimize bulk cache invalidation via Promise.all]
+**Learning:** In both the `video-calls-cache-invalidation.service.ts` and `safety-cache-invalidation.service.ts` services, cache invalidation methods sequentially iterated over cache patterns invoking `await redis.del()` or `await redis.scan()` inside a `for...of` loop. This causes N separate sequential roundtrips to Redis, unnecessarily stalling the event loop and compounding network latency.
+**Action:** When invalidating multiple independent cache keys or patterns, replace sequential `await` loops with a concurrent `Promise.all` mapping. Summing up deleted counts using a `reduce` handles the aggregation efficiently.
+
 ## 2026-10-12 - [OnPush Change Detection for List Components]
 **Learning:** Components that render lists or are instantiated many times, especially those heavily utilizing Signals (`input()`, `computed()`), can significantly benefit from `ChangeDetectionStrategy.OnPush`. This prevents the framework from checking every instance during default change detection cycles, reducing main thread overhead.
 **Action:** Always proactively configure heavily instantiated view components (like chat messages or list items) that rely on static data or signals to use `changeDetection: ChangeDetectionStrategy.OnPush`.
@@ -270,6 +274,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
