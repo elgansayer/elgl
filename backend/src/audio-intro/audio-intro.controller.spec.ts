@@ -52,14 +52,14 @@ describe('AudioIntroController', () => {
   });
 
   describe('updateAudioIntro', () => {
-    it('should call the service with the given user id and audio url', async () => {
+    it('should call the service with the given user id and audio url when authenticated user matches', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
       const req = { user: { id: 'user-1' } };
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const result = await controller.updateAudioIntro(req as any, 'user-1', dto);
+      const result = await controller.updateAudioIntro(req, 'user-1', dto);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
         'user-1',
@@ -68,15 +68,17 @@ describe('AudioIntroController', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should throw ForbiddenException when updating another user audio intro', async () => {
+    it('should throw ForbiddenException if user id does not match param id', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
-      const req = { user: { id: 'user-1' } };
+      const req = { user: { id: 'user-2' } };
 
-      await expect(controller.updateAudioIntro(req as any, 'user-2', dto)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        controller.updateAudioIntro(req, 'user-1', dto),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockService.updateAudioIntro).not.toHaveBeenCalled();
     });
   });
 
