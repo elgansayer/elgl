@@ -57,7 +57,7 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
 
 
 def parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser(prog="repo-factory")
+    result = argparse.ArgumentParser(prog="hellotalk-factory")
     subcommands = result.add_subparsers(dest="command", required=True)
     doctor = subcommands.add_parser("doctor")
     doctor.add_argument("--online", action="store_true")
@@ -79,8 +79,6 @@ def parser() -> argparse.ArgumentParser:
     subcommands.add_parser("pause")
     subcommands.add_parser("resume")
     subcommands.add_parser("metrics")
-    maintenance = subcommands.add_parser("maintenance")
-    maintenance.add_argument("action", choices=("show",))
     dashboard = subcommands.add_parser("dashboard")
     dashboard.add_argument("action", choices=("show", "sync"))
     dashboard.add_argument("--force", action="store_true")
@@ -224,9 +222,9 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "daemon":
-            from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
+            from openhands_factory.daemon import FactoryDaemon
 
-            return MainCiGatedFactoryDaemon(config).run()
+            return FactoryDaemon(config).run()
         if args.command in {"pause", "resume"}:
             from openhands_factory.daemon import set_paused
 
@@ -239,9 +237,6 @@ def main(arguments: list[str] | None = None) -> int:
                     read_json(config.state_dir / "daemon.json", {"status": "unknown"}), indent=2
                 )
             )
-            return 0
-        if args.command == "maintenance":
-            print(json.dumps(read_json(config.state_dir / "maintenance.json", {}), indent=2))
             return 0
         if args.command == "metrics":
             from openhands_factory.pr_metrics import PullRequestMetricsStore

@@ -53,11 +53,23 @@ export const authRoutes: Routes = [
     title: 'Privacy Policy - HelloTalk',
   },
   {
+    path: 'help',
+    loadComponent: () =>
+      import('../pages/help-centre/help-centre.component').then((m) => m.HelpCentreComponent),
+    title: 'Help Centre - HelloTalk',
+  },
+  {
     path: 'support',
     loadComponent: () =>
       import('../pages/support-centre/support-centre.component').then(
         (m) => m.SupportCentreComponent,
       ),
     title: 'Support Centre - HelloTalk',
+  },
+  {
+    path: 'help-about',
+    loadComponent: () =>
+      import('../pages/help-about/help-about.component').then((m) => m.HelpAboutComponent),
+    title: 'Help & About - HelloTalk',
   },
 ];

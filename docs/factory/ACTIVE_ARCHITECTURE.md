@@ -85,7 +85,6 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 | `provider_capacity.py`       | Generation-aware cross-process provider leases                                            |
 | `conversation_runner.py`     | OpenHands SDK compatibility transport and inner-provider attribution                      |
 | `jobs.py`, `retry_policy.py` | Backwards-compatible durable state and restart-stable retry authority                     |
-| `task_source.py`            | Logical task claims, worker CAS leases and canonical branch/PR provenance                |
 | `git_workflow.py`            | Worktree, branch, commit, push, and recovery archive safety                               |
 | `review_report.py`           | Authoritative `.factory-review.json` schema and acceptance validation                     |
 | `architect_report.py`        | Authoritative `.factory-architect.json` schema                                            |
@@ -97,16 +96,13 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 State beneath `FACTORY_STATE_DIR` is written atomically, schema checked where applicable, and protected by a
 last-known-good backup:
 
-- `jobs.json`: state, branch, PR, reviewed SHA, attempts, retry evidence, findings, the in-flight attempt marker,
-  and the latest 500 provider provenance entries per job;
-- `leases.json`: persistent logical claims plus expiring worker ownership, canonical branch/PR identity, base and
-  verified SHAs, predecessor/successor links, path and failure fingerprints;
+- `jobs.json`: state, branch, PR, reviewed SHA, attempts, retry evidence, findings, and the latest 500 provider
+  provenance entries per job;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
 - `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
 - `generation.json`: active daemon ownership UUID and schema version;
-- `daemon.json`: heartbeat, PID, generation, queue counts, watchdog recoveries and queued age, active tasks,
-  pause state, and provider health;
+- `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
 - `control.json`: pause state;
 - `control_panel.json`: issue cursor, publication fingerprint, and last accepted bounded command;
 - `control_request.json`: optional mode-0600, single-use watchdog restart request;
@@ -121,15 +117,8 @@ A restart never assumes a provider process is alive. The daemon stops admitting 
 OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
 stopped. Stale generation leases are ignored. Malformed, timezone-naive, future-acquired, and overlong provider or
 task leases are bounded or discarded rather than suppressing work indefinitely. Task-lease and `jobs.json`
-read-modify-write operations use cross-process locks. A worker marks its attempt in flight in the same locked
-read that loads the job, and clears the marker in the write that commits the outcome. The watchdog recovers only
-a marked attempt that outlived the maximum task duration, through the normal timeout class and deterministic
-retry policy. Queued, unadmitted and backed-off work, an explicit future retry deadline, live futures and
-polling-only states are never recovered, however old they are. See
-[AUDIT-2026-10-16-ABANDONED-ATTEMPT.md](AUDIT-2026-10-16-ABANDONED-ATTEMPT.md).
-Released task leases retain canonical claim history. Before branch creation, Factory reconciles open and recently
-closed PRs using issue links, logical titles, branch metadata, changed paths and explicit supersession links. See
-[TASK-OWNERSHIP.md](TASK-OWNERSHIP.md).
+read-modify-write operations use cross-process locks. The watchdog recovers old execution states through the
+normal timeout class and deterministic retry policy while leaving live futures and polling-only states untouched.
 
 A repeated identical task-side failure opens a durable, recoverable quarantine after
 `FACTORY_MAX_CONSECUTIVE_FAILURES`. This bounded circuit stops deterministic bugs from retrying forever and adds
@@ -202,14 +191,12 @@ following:
 - `factory/independent-review` is present and reports literal `SUCCESS`;
 - any duplicate rollup entry for either required context also reports literal `SUCCESS`;
 - every visible terminal check is allowed;
-- mergeability is non-conflicting (`CLEAN` or, under non-strict checks, `BEHIND`);
+- mergeability is clean;
 - no human review reports `CHANGES_REQUESTED`.
 
-The daemon is the primary autonomous merge authority. It re-reads the live conditions, binds the
+The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
 squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
-administrator bypass. It serialises merge execution. Production does not wait for a full push CI run between
-each merge because the active required-check policy is non-strict; the newest integrated `main` push is still
-fully tested and superseded push runs are cancelled. A baseline ruleset requires pull requests and `CI / required`. A second,
+administrator bypass. A baseline ruleset requires pull requests and strict `CI / required`. A second,
 review-only ruleset requires `factory/independent-review`. The exact repository-owner user may be the sole
 pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI, review, or both without
 permitting direct pushes. Factory automation still requires literal success from both statuses and never invokes

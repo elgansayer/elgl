@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
   Post,
   Req,
   UnauthorizedException,
@@ -26,20 +25,13 @@ import {
   AdminNetworkImpactPreview,
   AdminNetworkReputation,
 } from './admin-network-abuse.service';
-import {
-  AdminNetworkRateLimitControl,
-  AdminNetworkRateLimitInspection,
-  AdminRateLimitControlService,
-} from './admin-rate-limit-control.service';
 import { AdminAuditService } from './admin-audit.service';
 import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
 import {
   AdminNetworkImpactDto,
   AdminNetworkLookupDto,
-  AdminNetworkRateLimitInspectDto,
   CreateAdminNetworkAllowlistDto,
   CreateAdminNetworkBlockDto,
-  CreateAdminNetworkRateLimitDto,
 } from './dto/admin-network-abuse.dto';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -55,7 +47,6 @@ interface AdminAuthRequest extends Request {
 export class AdminNetworkAbuseV1Controller {
   constructor(
     private readonly networkAbuse: AdminNetworkAbuseService,
-    private readonly rateLimits: AdminRateLimitControlService,
     private readonly audit: AdminAuditService,
   ) {}
 

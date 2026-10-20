@@ -63,37 +63,6 @@ class OrderedPolicy:
         return self.names
 
 
-@pytest.mark.parametrize("configured", [None, "1", "2", "3"])
-def test_global_admission_respects_configured_host_capacity(
-    monkeypatch: pytest.MonkeyPatch, configured: str | None
-) -> None:
-    monkeypatch.delenv("FACTORY_HOST_AGENT_CONCURRENCY", raising=False)
-    if configured is not None:
-        monkeypatch.setenv("FACTORY_HOST_AGENT_CONCURRENCY", configured)
-    router = ConservativeAgentRouter([Provider("first")], enabled=True)
-    expected = int(configured) if configured is not None else 2
-    for _ in range(expected):
-        assert router._global_agent_slots.acquire(blocking=False)
-    assert not router._global_agent_slots.acquire(blocking=False)
-    for _ in range(expected):
-        router._global_agent_slots.release()
-
-
-def test_configured_admission_does_not_override_shared_host_gate(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("FACTORY_HOST_AGENT_CONCURRENCY", "3")
-    gate = HostResourceGate(tmp_path / "host-resource-gate.json", shared_limit=1)
-    assert gate.acquire_shared("other-factory")
-    provider = Provider("first")
-    router = ConservativeAgentRouter([provider], enabled=True, host_resource_slots=gate)
-    task = Task("42", "Bounded admission", "", "github-issue", 0)
-    with pytest.raises(ProviderCapacityUnavailable, match="Host resource capacity"):
-        router.run(AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path), Job(task))
-    assert provider.calls == 0
-    gate.release_shared("other-factory")
-
-
 def review_request(tmp_path: Path, identifier: str, sha: str) -> tuple[AgentRequest, Job]:
     task = Task(identifier, f"PR {identifier}", "Body", "github-pull-request", 0)
     job = Job(task, pull_request=int(identifier), head_sha=sha)
@@ -151,67 +120,6 @@ def test_conservative_router_limits_one_phase_to_primary_plus_one_fallback(
     assert first.calls == 1
     assert second.calls == 1
     assert third.calls == 0
-
-
-def test_conservative_router_prefers_observed_phase_completions(tmp_path: Path) -> None:
-    providers = [Provider("first"), Provider("second"), Provider("third")]
-    metrics = MetricsStore(tmp_path / "metrics.json")
-    for index in range(10):
-        metrics.record(
-            "first",
-            "model",
-            phase=AgentPhase.IMPLEMENTATION.value,
-            successful=index == 0,
-        )
-        metrics.record(
-            "second",
-            "model",
-            phase=AgentPhase.IMPLEMENTATION.value,
-            successful=index < 8,
-        )
-        metrics.record(
-            "third",
-            "model",
-            phase=AgentPhase.IMPLEMENTATION.value,
-            successful=index < 4,
-        )
-    router = ConservativeAgentRouter(
-        providers,
-        policy=OrderedPolicy(["first", "third", "second"]),
-        metrics_store=metrics,
-        enabled=True,
-    )
-    job = Job(Task("42", "Issue", "Body", "github-issue", 0))
-
-    candidates, _ = router._candidate_names(AgentPhase.IMPLEMENTATION, job)
-
-    assert candidates == ["second", "third"]
-
-
-@pytest.mark.parametrize("phase", [AgentPhase.CODE_REVIEW, AgentPhase.IMPLEMENTATION])
-def test_routing_scores_only_the_current_phase_model(tmp_path: Path, phase: AgentPhase) -> None:
-    class ModelProvider(Provider):
-        def model_for(self, requested_phase: AgentPhase) -> str:
-            return f"{self.name}-{requested_phase.value}-current"
-
-    reliable = ModelProvider("reliable")
-    replacement = ModelProvider("replacement")
-    metrics = MetricsStore(tmp_path / "metrics.json")
-    for _ in range(20):
-        metrics.record("reliable", "retired-small-model", phase=phase.value, successful=False)
-        metrics.record("replacement", "retired-fast-model", phase=phase.value, successful=True)
-    for _ in range(8):
-        metrics.record("reliable", reliable.model_for(phase), phase=phase.value, successful=True)
-    router = ConservativeAgentRouter(
-        [replacement, reliable],
-        policy=OrderedPolicy(["replacement", "reliable"]),
-        metrics_store=metrics,
-        enabled=True,
-    )
-
-    candidates, _ = router._candidate_names(phase, Job(Task("42", "Review", "Body", "issue", 0)))
-
-    assert candidates == ["reliable", "replacement"]
 
 
 def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Path) -> None:

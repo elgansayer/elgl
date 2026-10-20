@@ -2,22 +2,23 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
-import { AuthenticatedRequest } from './authenticated-request.interface';
 import { SupabaseService } from '../supabase/supabase.service';
 
-type AuthorizationHeader = string | string[] | undefined;
+interface AuthenticatedRequest extends Request {
+  user?: User;
+}
 
 interface WsHandshakeClient {
   handshake?: {
     headers?: {
-      authorization?: AuthorizationHeader;
+      authorization?: string;
     };
     auth?: {
-      token?: unknown;
+      token?: string;
     };
   };
   user?: User;
@@ -25,8 +26,6 @@ interface WsHandshakeClient {
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
-  private readonly logger = new Logger(SupabaseAuthGuard.name);
-
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -37,16 +36,14 @@ export class SupabaseAuthGuard implements CanActivate {
     if (contextType === 'http') {
       const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
       targetObject = request;
-      request.user = undefined;
-      token = this.extractBearerToken(request.headers.authorization);
+      token = this.extractTokenFromHeader(request);
     } else if (contextType === 'ws') {
       const client = context.switchToWs().getClient<WsHandshakeClient>();
       targetObject = client;
-      client.user = undefined;
-
-      token =
-        this.extractBearerToken(client.handshake?.headers?.authorization) ??
-        this.extractHandshakeToken(client.handshake?.auth?.token);
+      const authHeader = client.handshake?.headers?.authorization;
+      token = authHeader
+        ? authHeader.split(' ')[1]
+        : client.handshake?.auth?.token;
     } else {
       throw new UnauthorizedException('Unsupported execution context');
     }
@@ -55,19 +52,10 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing authentication token');
     }
 
-    let result: Awaited<
-      ReturnType<ReturnType<SupabaseService['getClient']>['auth']['getUser']>
-    >;
+    const supabase = this.supabaseService.getClient();
+    const result = await supabase.auth.getUser(token);
 
-    try {
-      const supabase = this.supabaseService.getClient();
-      result = await supabase.auth.getUser(token);
-    } catch {
-      this.logger.warn('Supabase authentication verification unavailable');
-      throw new UnauthorizedException('Unable to verify authentication token');
-    }
-
-    if (result.error || !result.data?.user) {
+    if (result.error || !result.data || !result.data.user) {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
@@ -84,25 +72,15 @@ export class SupabaseAuthGuard implements CanActivate {
     return true;
   }
 
-  private extractBearerToken(header: AuthorizationHeader): string | undefined {
-    if (typeof header !== 'string') {
+  private extractTokenFromHeader(request: Request): string | undefined {
+    const authHeader = request.headers.authorization;
+    if (!authHeader) {
       return undefined;
     }
-
-    const match = /^\s*Bearer[\t ]+([^\s]+)\s*$/i.exec(header);
-    return match?.[1];
-  }
-
-  private extractHandshakeToken(token: unknown): string | undefined {
-    if (typeof token !== 'string') {
-      return undefined;
+    const parts = authHeader.split(' ');
+    if (parts.length === 2 && parts[0] === 'Bearer') {
+      return parts[1];
     }
-
-    const trimmed = token.trim();
-    if (!trimmed || /\s/.test(trimmed)) {
-      return undefined;
-    }
-
-    return trimmed;
+    return undefined;
   }
 }

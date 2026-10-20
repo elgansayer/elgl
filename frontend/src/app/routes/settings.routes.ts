@@ -69,6 +69,11 @@ export const settingsRoutes: Routes = [
     title: 'Blocked Users - HelloTalk',
   },
   {
+    path: 'settings/blocked-users',
+    redirectTo: 'settings/blocks',
+    pathMatch: 'full',
+  },
+  {
     path: 'settings/backup-restore',
     loadComponent: () =>
       import('../pages/settings/backup-restore.component').then((m) => m.BackupRestoreComponent),
