@@ -108,6 +108,38 @@ describe('DesktopSidebarComponent', () => {
     }
   });
 
+  it('should use Relay semantic surface and radius roles', () => {
+    unreadCounter.setCount('chat', 3);
+    fixture.detectChanges();
+
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
+    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector('a[href="/chat"] .ms-auto');
+
+    expect(nav.classList.toString().includes('bg-surface-200')).toBe(true);
+    expect(nav.classList.toString().includes('border-surface-100')).toBe(true);
+
+    for (const link of links) {
+      expect(link.classList.toString().includes('rounded-app')).toBe(true);
+      expect(link.classList.toString().includes('rounded-xl')).toBe(false);
+    }
+
+    expect(unreadBadge).toBeTruthy();
+    expect(unreadBadge.classList.toString().includes('bg-danger')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('text-on-fill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('rounded-pill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('rounded-full')).toBe(false);
+  });
+
+  it('should preserve the intentional desktop-only responsive contract', () => {
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const classes = nav.classList.toString();
+
+    expect(classes.includes('hidden')).toBe(true);
+    expect(classes.includes('lg:flex')).toBe(true);
+    expect(classes.includes('md:flex')).toBe(false);
+  });
+
   it('should expose the active primary route with aria-current="page"', async () => {
     await router.navigateByUrl('/chat');
     await fixture.whenStable();
