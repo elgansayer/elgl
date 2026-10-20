@@ -51,6 +51,23 @@ Current Playwright coverage includes authentication/onboarding pages, chat/messa
 
 Playwright is the better home for cross-browser, RTL, device-profile, and full-stack/infrastructure-sensitive flows. Cypress remains appropriate for existing Angular-centric feature flows.
 
+## Playwright web-server readiness contract
+
+Playwright starts the NestJS and Angular web servers as separate `webServer` entries. Playwright may launch entries in that array concurrently, so the Angular development/SSR server must not assume that NestJS is already accepting connections merely because the backend process has been spawned.
+
+`e2e/backend-readiness.mjs` is the explicit dependency gate. The Angular web-server command runs it before `npm run start`; the gate polls only the backend health endpoint, uses bounded per-request and overall timeouts, backs off between retries, and exits non-zero if the backend never becomes healthy. Expected connection-refusal errors during NestJS startup are intentionally not dumped to QA output because undici can surface them as noisy `AggregateError [ECONNREFUSED]` stacks that hide the real readiness state.
+
+The E2E endpoints use `127.0.0.1` consistently rather than mixing loopback spellings. This removes host-resolution differences between browser, Node/undici and CI environments. `E2E_BACKEND_HEALTH_URL` can override the health endpoint for an isolated harness; credential-bearing and non-HTTP(S) URLs are rejected. `E2E_BACKEND_READY_TIMEOUT_MS`, `E2E_BACKEND_ATTEMPT_TIMEOUT_MS` and `E2E_BACKEND_READY_INTERVAL_MS` are optional positive-integer tuning controls.
+
+Run the focused contract with:
+
+```bash
+cd e2e
+npm run test:readiness
+```
+
+A readiness timeout is an infrastructure/startup failure, not an application assertion failure. Diagnose the NestJS process/configuration first. Do not replace the gate with a fixed sleep or suppress the failure. The change is operational only: it creates no persisted data, changes no authorization boundary, and can be rolled back by restoring the previous Playwright web-server command.
+
 ## Current Playwright CI blocker
 
 Playwright is not currently wired into the canonical GitHub Actions workflows. Its config starts the real backend and frontend servers. Backend startup validates configuration for Supabase, database, Redis, Centrifugo, LiveKit, R2, translation services, and Stripe. A nightly Playwright job therefore needs a reproducible test harness/service stack or explicit test doubles before it can be added without becoming permanently red.

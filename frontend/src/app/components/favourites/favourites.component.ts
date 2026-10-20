@@ -1,8 +1,9 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { ChatService, FavouriteRecord, ChatMessage } from '../../services/chat.service';
+import { ChatMessage, FavouriteRecord } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
@@ -14,6 +15,9 @@ interface TabDefinition {
   labelKey: string;
   icon: string;
 }
+
+const STARRED_PAGE_SIZE = 100;
+const MAX_STARRED_MESSAGES = 500;
 
 @Component({
   selector: 'app-favourites',
@@ -28,14 +32,18 @@ interface TabDefinition {
   templateUrl: './favourites.component.html',
   styleUrls: ['./favourites.component.scss'],
 })
-export class FavouritesComponent {
-  private chatService = inject(ChatService);
+export class FavouritesComponent implements OnDestroy {
+  private favouriteService = inject(FavouriteService);
 
   readonly favourites = signal<FavouriteRecord[]>([]);
   readonly isLoading = signal<boolean>(true);
+  readonly loadError = signal<boolean>(false);
+  readonly deleteError = signal<boolean>(false);
   readonly activeTab = signal<FavouritesTab>('all');
   readonly audioPlayingId = signal<string | null>(null);
+  readonly pendingDeleteIds = signal<ReadonlySet<string>>(new Set<string>());
   private audioElement: HTMLAudioElement | null = null;
+  private loadGeneration = 0;
 
   readonly tabs: TabDefinition[] = [
     { id: 'all', labelKey: 'favourites.tabAll', icon: '\u2B50' },
@@ -85,18 +93,51 @@ export class FavouritesComponent {
   });
 
   constructor() {
-    this.loadFavourites();
+    void this.loadFavourites();
+  }
+
+  ngOnDestroy(): void {
+    this.loadGeneration++;
+    this.stopAudio();
   }
 
   async loadFavourites(): Promise<void> {
+    const generation = ++this.loadGeneration;
     this.isLoading.set(true);
+    this.loadError.set(false);
+
     try {
-      const data = await this.chatService.getFavourites();
-      this.favourites.set(data);
-    } catch (e) {
-      console.error('Failed to load favourites:', e);
+      const starred: FavouriteRecord[] = [];
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore && offset < MAX_STARRED_MESSAGES) {
+        const limit = Math.min(
+          STARRED_PAGE_SIZE,
+          MAX_STARRED_MESSAGES - offset,
+        );
+        const page = await this.favouriteService.getStarredMessages(limit, offset);
+        if (generation !== this.loadGeneration) return;
+
+        starred.push(...page.items);
+        hasMore = page.has_more;
+
+        if (!hasMore || page.next_offset === null) break;
+        if (page.next_offset <= offset) {
+          throw new Error('Invalid starred messages pagination');
+        }
+        offset = page.next_offset;
+      }
+
+      if (generation !== this.loadGeneration) return;
+      this.favourites.set(starred.slice(0, MAX_STARRED_MESSAGES));
+    } catch {
+      if (generation !== this.loadGeneration) return;
+      this.loadError.set(true);
     } finally {
-      this.isLoading.set(false);
+      if (generation === this.loadGeneration) {
+        this.isLoading.set(false);
+      }
     }
   }
 
@@ -104,12 +145,34 @@ export class FavouritesComponent {
     this.activeTab.set(tab);
   }
 
+  isDeletingFavourite(id: string): boolean {
+    return this.pendingDeleteIds().has(id);
+  }
+
   async deleteFavourite(fav: FavouriteRecord): Promise<void> {
+    if (this.isDeletingFavourite(fav.id)) return;
+
+    this.deleteError.set(false);
+    this.pendingDeleteIds.update((ids) => {
+      const next = new Set(ids);
+      next.add(fav.id);
+      return next;
+    });
+
     try {
-      await this.chatService.removeFavourite(fav.id);
+      await this.favouriteService.removeFavourite(fav.id);
+      if (this.audioPlayingId() === fav.id) {
+        this.stopAudio();
+      }
       this.favourites.update((list) => list.filter((f) => f.id !== fav.id));
-    } catch (e) {
-      console.error('Failed to delete favourite:', e);
+    } catch {
+      this.deleteError.set(true);
+    } finally {
+      this.pendingDeleteIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(fav.id);
+        return next;
+      });
     }
   }
 
@@ -124,16 +187,25 @@ export class FavouritesComponent {
 
     this.stopAudio();
     const audio = new Audio(url);
+    this.audioElement = audio;
     audio.onended = () => {
+      if (this.audioElement !== audio) return;
       this.audioPlayingId.set(null);
       this.audioElement = null;
     };
-    audio.play().catch(() => {
-      this.audioPlayingId.set(null);
-      this.audioElement = null;
-    });
-    this.audioElement = audio;
-    this.audioPlayingId.set(fav.id);
+    void audio
+      .play()
+      .then(() => {
+        if (this.audioElement === audio) {
+          this.audioPlayingId.set(fav.id);
+        }
+      })
+      .catch(() => {
+        if (this.audioElement === audio) {
+          this.audioElement = null;
+          this.audioPlayingId.set(null);
+        }
+      });
   }
 
   private stopAudio(): void {

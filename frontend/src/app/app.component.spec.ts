@@ -9,11 +9,11 @@ import { AuthService } from './services/auth.service';
 import { AppLockService } from './services/app-lock.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
-import { FcmService } from './services/fcm.service';
+import { FirebaseMessagingService } from './services/firebase-messaging.service';
 import { SafetyService } from './services/safety.service';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { UnreadCounterService } from './services/unread-counter.service';
-import { VersionCheckService } from './services/version-check.service';
+import { VersionService } from './services/version.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { NotificationService } from './services/notification.service';
@@ -60,7 +60,7 @@ describe('AppComponent', () => {
   };
 
   const fcmServiceMock = {
-    requestPermission: vi.fn(() => Promise.resolve()),
+    requestPermissionAndGetToken: vi.fn(() => Promise.resolve()),
     persistFcmToken: vi.fn(() => Promise.resolve()),
   };
 
@@ -87,9 +87,10 @@ describe('AppComponent', () => {
     decrementNotificationUnread: vi.fn(),
   };
 
-  const versionCheckServiceMock = {
-    checkVersion: vi.fn(),
+  const versionServiceMock = {
+    checkVersion: vi.fn(() => Promise.resolve(false)),
     isDeprecated: vi.fn(() => false),
+    updateUrl: vi.fn(() => 'https://github.com/elgansayer/elgl/releases/latest'),
   };
 
   const fontScaleServiceMock = {
@@ -109,8 +110,7 @@ describe('AppComponent', () => {
   };
 
   const chatServiceMock = {
-    getRooms: vi.fn(() => Promise.resolve([])),
-    getMessages: vi.fn(() => Promise.resolve([])),
+    getUnreadCount: vi.fn(() => Promise.resolve(0)),
   };
 
   const seriousLearnerModeMock = {
@@ -136,11 +136,11 @@ describe('AppComponent', () => {
         { provide: AppLockService, useValue: appLockServiceMock },
         { provide: EconomyStore, useValue: economyStoreMock },
         { provide: CentrifugeService, useValue: centrifugeServiceMock },
-        { provide: FcmService, useValue: fcmServiceMock },
+        { provide: FirebaseMessagingService, useValue: fcmServiceMock },
         { provide: SafetyService, useValue: safetyServiceMock },
         { provide: ReportUserModalService, useValue: reportModalServiceMock },
         { provide: UnreadCounterService, useValue: unreadCounterMock },
-        { provide: VersionCheckService, useValue: versionCheckServiceMock },
+        { provide: VersionService, useValue: versionServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
@@ -175,14 +175,39 @@ describe('AppComponent', () => {
   });
 
   it('should call core services during ngOnInit', () => {
-    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalledTimes(1);
+    expect(versionServiceMock.checkVersion).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.loadInitialData).toHaveBeenCalledTimes(1);
     expect(safetyServiceMock.loadBlockedUsers).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.claimDailyCheckIn).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
-    expect(fcmServiceMock.requestPermission).toHaveBeenCalledTimes(1);
+    expect(fcmServiceMock.requestPermissionAndGetToken).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
+  });
+
+  it('loads the initial chat unread count with one service call', async () => {
+    chatServiceMock.getUnreadCount.mockClear();
+    unreadCounterMock.setChatUnread.mockClear();
+    chatServiceMock.getUnreadCount.mockResolvedValueOnce(7);
+
+    await (
+      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
+    ).loadInitialUnreadCounts();
+
+    expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
+    expect(unreadCounterMock.setChatUnread).toHaveBeenLastCalledWith(7);
+  });
+
+  it('preserves the current chat count when the initial request fails', async () => {
+    chatServiceMock.getUnreadCount.mockClear();
+    unreadCounterMock.setChatUnread.mockClear();
+    chatServiceMock.getUnreadCount.mockRejectedValueOnce(new Error('unavailable'));
+
+    await (
+      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
+    ).loadInitialUnreadCounts();
+
+    expect(unreadCounterMock.setChatUnread).not.toHaveBeenCalled();
   });
 
   it('should trigger gift animation when receiving a virtual_gift payload', () => {
@@ -266,8 +291,8 @@ describe('AppComponent', () => {
     expect(component.biometricBusy()).toBe(false);
   });
 
-  it('should call versionCheckService on init', () => {
-    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalled();
-    expect(component.versionCheckService.isDeprecated()).toBe(false);
+  it('should call versionService on init', () => {
+    expect(versionServiceMock.checkVersion).toHaveBeenCalled();
+    expect(component.versionService.isDeprecated()).toBe(false);
   });
 });

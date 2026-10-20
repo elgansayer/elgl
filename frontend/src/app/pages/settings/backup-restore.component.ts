@@ -118,7 +118,7 @@ export class BackupRestoreComponent {
   readonly roomsResource = resource({
     loader: async (): Promise<BackupRoom[]> => {
       try {
-        const rooms = await firstValueFrom(this.http.get<unknown>(`${this.apiBase}/chat/rooms`));
+        const rooms = await firstValueFrom(this.http.get<unknown>(`${environment.apiUrl}/chat/rooms`));
         if (isBackupRoomArray(rooms)) {
           return rooms;
         }

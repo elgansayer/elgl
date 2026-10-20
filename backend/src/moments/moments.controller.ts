@@ -23,6 +23,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
 import { MomentsService, MomentLikeUser } from './moments.service';
+import { CorrectionQualityService } from './correction-quality.service';
 
 @Controller('moments')
 @UseGuards(SupabaseAuthGuard)
@@ -31,6 +32,7 @@ export class MomentsController {
     private readonly momentsService: MomentsService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
+    private readonly correctionQualityService: CorrectionQualityService,
   ) {}
 
   @Post()
@@ -187,8 +189,9 @@ export class MomentsController {
     userVote: string | null;
   } | null> {
     if (!user) return null;
-    return await this.momentsService.voteOnCorrection(
+    return await this.correctionQualityService.vote(
       user.id,
+      momentId,
       commentId,
       dto.vote,
     );

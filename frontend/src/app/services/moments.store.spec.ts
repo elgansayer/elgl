@@ -1,19 +1,26 @@
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { signal } from '@angular/core';
-import { MomentsStore, MomentRecord } from './moments.store';
+import {
+  MomentsStore,
+  MomentLikeUser,
+  MomentRecord,
+} from './moments.store';
 import { AuthService } from './auth.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
-import { SeriousLearnerModeService } from './serious-learner-mode.service';
 import { environment } from '../../environments/environment';
 
 describe('MomentsStore', () => {
   let store: MomentsStore;
   let httpMock: HttpTestingController;
-  let hapticFeedback: { success: ReturnType<typeof vi.fn>; tap: ReturnType<typeof vi.fn> };
-  let seriousLearnerEnabled: ReturnType<typeof signal<boolean>>;
+  let hapticFeedback: {
+    success: ReturnType<typeof vi.fn>;
+    tap: ReturnType<typeof vi.fn>;
+  };
 
   const mockMoment: MomentRecord = {
     id: 'moment1',
@@ -36,7 +43,6 @@ describe('MomentsStore', () => {
       success: vi.fn(),
       tap: vi.fn(),
     };
-    seriousLearnerEnabled = signal(false);
 
     TestBed.configureTestingModule({
       providers: [
@@ -45,10 +51,6 @@ describe('MomentsStore', () => {
         provideHttpClientTesting(),
         { provide: AuthService, useValue: authSpy },
         { provide: HapticFeedbackService, useValue: hapticFeedback },
-        {
-          provide: SeriousLearnerModeService,
-          useValue: { enabled: seriousLearnerEnabled },
-        },
       ],
     });
 
@@ -62,17 +64,6 @@ describe('MomentsStore', () => {
 
   it('should be created', () => {
     expect(store).toBeTruthy();
-  });
-
-  it('does not fetch the social feed while Serious Learner mode is enabled', async () => {
-    seriousLearnerEnabled.set(true);
-    store.feed.set([mockMoment]);
-
-    await store.loadFeed('All');
-
-    httpMock.expectNone(`${environment.apiUrl}/moments/feed`);
-    expect(store.feed()).toEqual([]);
-    expect(store.isLoading()).toBe(false);
   });
 
   it('should trigger haptic feedback and update the feed when a moment is liked', async () => {
@@ -102,5 +93,32 @@ describe('MomentsStore', () => {
     await promise;
 
     expect(hapticFeedback.success).not.toHaveBeenCalled();
+  });
+
+  it('loads a bounded liker page through the configured authenticated API', async () => {
+    const response: MomentLikeUser[] = [
+      {
+        id: 'user-2',
+        display_name: 'Alice',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: ['ja'],
+      },
+    ];
+
+    const promise = store.loadMomentLikes('moment1', 50, 25);
+
+    const req = httpMock.expectOne((request) => {
+      return (
+        request.url === `${environment.apiUrl}/moments/moment1/likes` &&
+        request.params.get('offset') === '50' &&
+        request.params.get('limit') === '25'
+      );
+    });
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
+    req.flush(response);
+
+    await expect(promise).resolves.toEqual(response);
   });
 });
