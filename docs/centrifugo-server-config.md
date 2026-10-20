@@ -22,7 +22,7 @@ The Compose services map the existing application variables into the Centrifugo 
 - `CENTRIFUGO_SECRET` -> `CENTRIFUGO_TOKEN_HMAC_SECRET_KEY`
 - `CENTRIFUGO_API_KEY` -> `CENTRIFUGO_API_KEY`
 
-The NestJS `CentrifugoService` consumes the same `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` values when minting client tokens and calling the Centrifugo HTTP API. Production startup rejects missing, blank, whitespace-padded and repository-known placeholder credentials through the global environment validator. Production Compose additionally requires both values during interpolation and waits for the validated API health check before starting Centrifugo.
+The NestJS `CentrifugeService` consumes the same `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` values when minting client tokens and calling the Centrifugo HTTP API. Production startup rejects missing, blank, whitespace-padded and repository-known placeholder credentials through the global environment validator. Production Compose additionally requires both values during interpolation and waits for the validated API health check before starting Centrifugo.
 
 Do not commit real signing keys, API keys, connection tokens or Redis credentials. They belong in the deployment secret store or runtime environment. The browser never needs either Centrifugo server credential.
 
