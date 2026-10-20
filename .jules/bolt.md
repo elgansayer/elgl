@@ -20,6 +20,11 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-08 - [Batch Archive Cleanup Queries with Promise.allSettled]
+
+**Learning:** Sequential awaits in GDPR archive cleanup add storage and database latency, while unbounded fan-out can overload Supabase and amplify provider failures.
+**Action:** Process archive cleanup in bounded `Promise.allSettled` chunks. Preserve partial progress and report only privacy-safe aggregate failure counts.
+
 
 ## 2026-09-09 - [Redis Invalidation DoS Fix]
 **Learning:** This codebase uses Redis cache tags and user lists. Using `redis.keys` with wildcards like `admin:users:list:*` runs blocking `KEYS` command which can freeze the Redis event loop, creating a DoS vulnerability or scaling bottleneck as the key count grows.
@@ -421,6 +426,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
