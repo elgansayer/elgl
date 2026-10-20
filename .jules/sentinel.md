@@ -111,6 +111,13 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+
+## 2026-10-06 - [Strict Path Traversal Protection]
+
+**Vulnerability:** The factory-dashboard was vulnerable to path traversal due to reliance on regex `.replace(/^(\.\.[/\\])+/, '')` which could be bypassed with URL encoding (e.g. `%2e%2e`).
+**Learning:** Fragile regex replacements for `../` sequences in Node.js static file servers are not sufficient as they can be bypassed with URL encoding.
+**Prevention:** Always use `decodeURIComponent` on the path, strip leading slashes to prevent absolute path resolution, resolve to an absolute path with `path.resolve`, and verify it strictly starts with the base directory using `targetPath.startsWith(PUBLIC_DIR + path.sep)`.
+
 ## 2026-10-05 - Auth Bypass in LiveKit Token Generation
 **Vulnerability:** The LiveKit controller (`backend/src/livekit/livekit.controller.ts`) generates LiveKit access tokens using an arbitrary `participant_identity` provided in the request body, ignoring the authenticated user's actual ID.
 **Learning:** Even though the endpoint is protected by `@UseGuards(SupabaseAuthGuard)`, failing to tie the action to the `@CurrentUser()` leads to Insecure Direct Object Reference (IDOR) / authorization bypass, allowing users to impersonate others in video rooms.
@@ -179,6 +186,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
