@@ -147,8 +147,12 @@ export class DiscoveryCacheInvalidationService {
   async handleDailyRecommendationsUpdated(): Promise<void> {
     // ⚡ Bolt Optimization: Group sequential cache invalidations into a concurrent Promise.all execution to reduce latency.
     const results = await Promise.all([
-      this.deleteByPattern(`${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`),
-      this.deleteByPattern(`${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`),
+      this.deleteByPattern(
+        `${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`,
+      ),
+      this.deleteByPattern(
+        `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
+      ),
     ]);
     const total = results.reduce((acc, curr) => acc + curr, 0);
     if (total > 0) {
@@ -164,7 +168,9 @@ export class DiscoveryCacheInvalidationService {
     const results = await Promise.all([
       this.deleteByPattern(`discovery:partner_search:user:${payload.userId}:*`),
       this.deleteByPattern(`discovery:language_pair:user:${payload.userId}:*`),
-      this.deleteByPattern(`discovery:location_search:user:${payload.userId}:*`),
+      this.deleteByPattern(
+        `discovery:location_search:user:${payload.userId}:*`,
+      ),
       this.deleteByPattern(`discovery:audio_intros:user:${payload.userId}:*`),
     ]);
     const total = results.reduce((acc, curr) => acc + curr, 0);
@@ -196,7 +202,9 @@ export class DiscoveryCacheInvalidationService {
   async handleUserLocationUpdated(payload: { userId: string }): Promise<void> {
     // ⚡ Bolt Optimization: Group sequential cache invalidations into a concurrent Promise.all execution to reduce latency.
     const results = await Promise.all([
-      this.deleteByPattern(`discovery:location_search:user:${payload.userId}:*`),
+      this.deleteByPattern(
+        `discovery:location_search:user:${payload.userId}:*`,
+      ),
       this.deleteByPattern(`discovery:partner_search:user:${payload.userId}:*`),
     ]);
     const total = results.reduce((acc, curr) => acc + curr, 0);
@@ -212,8 +220,12 @@ export class DiscoveryCacheInvalidationService {
     const redis = this.getRedis();
     // ⚡ Bolt Optimization: Group sequential cache invalidations into a concurrent Promise.all execution to reduce latency.
     const results = await Promise.all([
-      this.deleteByPattern(`${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`),
-      this.deleteByPattern(`${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`),
+      this.deleteByPattern(
+        `${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`,
+      ),
+      this.deleteByPattern(
+        `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
+      ),
       redis.del(DiscoveryCacheNamespace.RECENT_NATIVE),
       redis.del(DiscoveryCacheNamespace.SPOTLIGHT),
     ]);

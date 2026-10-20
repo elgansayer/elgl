@@ -82,7 +82,9 @@ export class MomentsService {
         .from('moment_comments')
         .select('id', { count: 'exact', head: true })
         .not('correction_payload', 'is', null),
-      supabase.from('translations').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('translations')
+        .select('id', { count: 'exact', head: true }),
     ]);
 
     if (momentsError || correctionsError || translationsError) {
