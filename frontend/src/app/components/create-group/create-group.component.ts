@@ -1,6 +1,6 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,8 +23,13 @@ export class CreateGroupComponent {
   private readonly router = inject(Router);
   private searchRequestId = 0;
 
-  // Group chats are capped at 19 total participants, including the creator.
-  readonly MAX_MEMBERS = 18;
+  @ViewChild('groupNameInput', { read: ElementRef })
+  private groupNameInput?: ElementRef<HTMLInputElement>;
+
+  @ViewChild('memberSearchInput', { read: ElementRef })
+  private memberSearchInput?: ElementRef<HTMLInputElement>;
+
+  readonly MAX_MEMBERS = 50;
 
   groupName = '';
   searchQuery = '';
@@ -87,6 +92,17 @@ export class CreateGroupComponent {
   addMember(profile: UserProfile): void {
     if (!this.canAddMore()) return;
     if (this.selectedMemberIds().includes(profile.id)) return;
+
+    // The activated search-result button is removed immediately after selection.
+    // Move focus to a stable control first so keyboard users are never stranded on
+    // a detached element. At the member cap the search field becomes disabled, so
+    // the group-name field is the nearest stable form control instead.
+    const reachesMemberLimit = this.selectedCount() + 1 >= this.MAX_MEMBERS;
+    const nextFocusTarget = reachesMemberLimit
+      ? this.groupNameInput?.nativeElement
+      : this.memberSearchInput?.nativeElement;
+    nextFocusTarget?.focus();
+
     this.selectedMembers.update((members) => [...members, profile]);
     this.searchRequestId += 1;
     this.isSearching.set(false);
@@ -94,7 +110,25 @@ export class CreateGroupComponent {
     this.searchQuery = '';
   }
 
-  removeMember(profile: UserProfile): void {
+  removeMember(profile: UserProfile, event?: Event): void {
+    if (!this.selectedMemberIds().includes(profile.id)) return;
+
+    // Preserve DOM focus before the current remove button disappears. Prefer the
+    // next selected member, then the previous member, then return to search.
+    const currentButton = event?.currentTarget;
+    if (currentButton instanceof HTMLElement) {
+      const currentItem = currentButton.closest('.selected-item');
+      const adjacentRemoveButton =
+        currentItem?.nextElementSibling?.querySelector<HTMLButtonElement>('.remove-btn') ??
+        currentItem?.previousElementSibling?.querySelector<HTMLButtonElement>('.remove-btn');
+
+      if (adjacentRemoveButton) {
+        adjacentRemoveButton.focus();
+      } else {
+        this.memberSearchInput?.nativeElement.focus();
+      }
+    }
+
     this.selectedMembers.update((members) => members.filter((m) => m.id !== profile.id));
   }
 
@@ -113,9 +147,9 @@ export class CreateGroupComponent {
 
     try {
       const memberIds = this.selectedMembers().map((m) => m.id);
-      const room = await this.chatService.createGroup(this.groupName.trim(), memberIds);
+      await this.chatService.createGroup(this.groupName.trim(), memberIds);
       this.success.set(true);
-      await this.router.navigate(['/chat', room.id]);
+      await this.router.navigate(['/']);
     } catch (err: unknown) {
       const message =
         err instanceof Error

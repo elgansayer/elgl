@@ -8,6 +8,7 @@ import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
 
 vi.mock('../common/retry', async () => {
   const actual =
@@ -181,6 +182,12 @@ describe('RecommendationsService', () => {
         {
           provide: MatchmakingCrashReportService,
           useValue: mockCrashReportService,
+        },
+        {
+          provide: LearnerKnowledgeService,
+          useValue: {
+            getProfile: vi.fn().mockResolvedValue(null),
+          },
         },
       ],
     }).compile();

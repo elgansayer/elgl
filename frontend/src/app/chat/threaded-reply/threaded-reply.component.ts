@@ -1,9 +1,10 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatMessage } from '../../services/chat.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-reply-preview',
   imports: [HlmButton, TranslatePipe],
   template: `
