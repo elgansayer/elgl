@@ -38,7 +38,7 @@ ST_DWithin(
 
 If `user.is_vip === true`, override real GPS coordinates with `mock_location` before performing spatial matching.
 
-### Centrifugo Real-Time Messaging (`CentrifugeService`)
+### Centrifuge Real-Time Messaging (`CentrifugeService`)
 
 Every chat room connects to Centrifugo channels (`room_{id}`). Messages route via `POST /chat/messages` on NestJS, which validates and persists to `chat_messages` table before publishing via `/api/publish` to Centrifugo.
 

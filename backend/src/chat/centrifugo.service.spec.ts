@@ -111,6 +111,37 @@ describe('CentrifugoService', () => {
       expect(configService.get).toHaveBeenCalledWith('CENTRIFUGO_SECRET');
     });
 
+    it.each([
+      ['CENTRIFUGO_API_KEY', undefined],
+      ['CENTRIFUGO_API_KEY', 'test-centrifugo-api-key'],
+      ['CENTRIFUGO_SECRET', undefined],
+      ['CENTRIFUGO_SECRET', 'test-centrifugo-secret'],
+    ])(
+      'rejects insecure production %s before connecting to Redis',
+      async (key, value) => {
+        vi.mocked(configService.get).mockImplementation((name: string) => {
+          if (name === 'NODE_ENV') return 'production';
+          if (name === key) return value;
+          if (name === 'CENTRIFUGO_API_KEY') return 'production-api-key';
+          if (name === 'CENTRIFUGO_SECRET') return 'production-token-secret';
+          return undefined;
+        });
+        mockRedis.connect.mockClear();
+        await expect(service.onModuleInit()).rejects.toThrow(key);
+        expect(mockRedis.connect).not.toHaveBeenCalled();
+      },
+    );
+
+    it('accepts independently configured production credentials', async () => {
+      vi.mocked(configService.get).mockImplementation((name: string) => {
+        if (name === 'NODE_ENV') return 'production';
+        if (name === 'CENTRIFUGO_API_KEY') return 'production-api-key';
+        if (name === 'CENTRIFUGO_SECRET') return 'production-token-secret';
+        return undefined;
+      });
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+    });
+
     it('should connect to Redis and load Lua script', () => {
       expect(mockRedis.connect).toHaveBeenCalled();
       expect(mockRedis.script).toHaveBeenCalledWith('LOAD', expect.any(String));
@@ -235,17 +266,18 @@ describe('CentrifugoService', () => {
   });
 
   describe('generateConnectionToken', () => {
-    it('should generate a JWT connection token using secret', () => {
+    it('should generate an HS256 JWT connection token using the authenticated user as sub', () => {
       (jwt.sign as Mock).mockReturnValue('mock-jwt-token');
       const result = service.generateConnectionToken('user-123');
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({ sub: 'user-123', exp: expect.any(Number) }),
         'test-secret',
+        { algorithm: 'HS256' },
       );
       expect(result).toEqual({ token: 'mock-jwt-token' });
     });
 
-    it('should set expiry to 24 hours in the future', () => {
+    it('should set expiry to one hour in the future', () => {
       const now = Math.floor(Date.now() / 1000);
       const signMock = jwt.sign as Mock;
       signMock.mockClear();
@@ -253,8 +285,65 @@ describe('CentrifugoService', () => {
       service.generateConnectionToken('user-abc');
       const payload = signMock.mock.calls[0][0] as { sub: string; exp: number };
       expect(payload.sub).toEqual('user-abc');
-      expect(payload.exp).toBeGreaterThanOrEqual(now + 86400 - 5);
-      expect(payload.exp).toBeLessThanOrEqual(now + 86400 + 5);
+      expect(payload.exp).toBeGreaterThanOrEqual(now + 3600 - 5);
+      expect(payload.exp).toBeLessThanOrEqual(now + 3600 + 5);
+    });
+  });
+
+  describe('signJwt', () => {
+    it('should sign only a bounded connection-token payload with HS256', async () => {
+      const exp = Math.floor(Date.now() / 1000) + 3600;
+      (jwt.sign as Mock).mockReturnValue('signed-token');
+
+      await expect(service.signJwt({ sub: 'user-1', exp })).resolves.toBe(
+        'signed-token',
+      );
+      expect(jwt.sign).toHaveBeenCalledWith(
+        { sub: 'user-1', exp },
+        'test-secret',
+        { algorithm: 'HS256' },
+      );
+    });
+
+    it('should reject missing subject claims without calling jsonwebtoken', async () => {
+      const exp = Math.floor(Date.now() / 1000) + 3600;
+      (jwt.sign as Mock).mockClear();
+
+      await expect(service.signJwt({ exp })).rejects.toThrow(
+        'Centrifugo connection token signing unavailable',
+      );
+      expect(jwt.sign).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        {
+          event: 'centrifugo_connection_token_mint_failed',
+          reason: 'signing_failed',
+        },
+        'Centrifugo connection token mint failed',
+      );
+    });
+
+    it('should reject connection tokens with an expiry beyond one hour', async () => {
+      const exp = Math.floor(Date.now() / 1000) + 7200;
+      (jwt.sign as Mock).mockClear();
+
+      await expect(service.signJwt({ sub: 'user-1', exp })).rejects.toThrow(
+        'Centrifugo connection token signing unavailable',
+      );
+      expect(jwt.sign).not.toHaveBeenCalled();
+    });
+
+    it('should sanitise signing failures without logging token claims or provider errors', async () => {
+      const exp = Math.floor(Date.now() / 1000) + 3600;
+      (jwt.sign as Mock).mockImplementation(() => {
+        throw new Error('raw signing provider detail');
+      });
+
+      await expect(
+        service.signJwt({ sub: 'sensitive-user-id', exp }),
+      ).rejects.toThrow('Centrifugo connection token signing unavailable');
+      const logged = JSON.stringify(mockLogger.error.mock.calls);
+      expect(logged).not.toContain('sensitive-user-id');
+      expect(logged).not.toContain('raw signing provider detail');
     });
   });
 
