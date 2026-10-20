@@ -250,6 +250,7 @@ export class ReadingEngineCacheService {
         this.deletePattern(this.buildUserPattern(ns, payload.userId)),
       ),
     );
+
     this.logger.log(
       { userId: payload.userId },
       'Bulk-invalidated all reading-engine caches for user (user_data_cleared)',

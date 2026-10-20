@@ -20,6 +20,11 @@
 
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-22 - [Avoid Replacing IndexedDB store.put() Loops with .map()]
+**Learning:** Calling `store.put(item)` inside an IndexedDB transaction simply queues the requests synchronously. Replacing a `for...of` loop of `store.put()` calls with `.map()` does not change the concurrency model and actually degrades performance by allocating an unnecessary array of `IDBRequest` objects that are immediately discarded.
+**Action:** Retain `for...of` loops for queuing operations inside IndexedDB transactions instead of attempting to "parallelise" them with `.map()`.
+
 ## 2026-08-30 - [IDBRequest Overhead in Promise.all]
 **Learning:** Calling `store.put(item)` inside an IndexedDB transaction queues the requests synchronously. Replacing a `for...of` loop of `store.put()` calls with `.map()` (to try to use Promise.all) does not make the queueing concurrent. It instead degrades performance by allocating an unnecessary array of IDBRequest objects.
 **Action:** Reverted the Promise.all IDB optimization and replaced it with a direct synchronous `for...of` loop executing `store.put()`, wrapping the block in a single Promise resolved by `transaction.oncomplete`.
@@ -373,6 +378,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
