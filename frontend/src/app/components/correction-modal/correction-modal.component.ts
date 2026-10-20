@@ -1,4 +1,4 @@
-import { Component, input, OnInit, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, OnInit, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
@@ -9,6 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-correction-modal',
   imports: [
     HlmTextarea,

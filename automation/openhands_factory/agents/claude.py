@@ -76,4 +76,6 @@ class ClaudeCodeProvider(JsonAuthProbeMixin, CLIProvider):
         ]
         if request.system_prompt:
             command.extend(("--append-system-prompt", request.system_prompt))
+        if request.read_only_reference is not None:
+            command.extend(("--add-dir", str(request.read_only_reference.resolve())))
         return [*command, *self.extra_args]

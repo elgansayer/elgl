@@ -51,6 +51,7 @@ describe('ChatController', () => {
             generateConnectionToken: vi.fn(),
             sendMessage: vi.fn(),
             getRooms: vi.fn(),
+            getUnreadCount: vi.fn(),
             getMessages: vi.fn(),
             addFavourite: vi.fn(),
             getFavourites: vi.fn(),
@@ -164,6 +165,30 @@ describe('ChatController', () => {
       expect(res.json).toHaveBeenCalledWith({ token: 'ws-token' });
     });
 
+    it('should fail closed when connection token signing fails', async () => {
+      (centrifugoService.checkConnectionRateLimit as Mock).mockResolvedValue({
+        allowed: true,
+        retryAfterMs: 0,
+      });
+      (chatService.generateConnectionToken as Mock).mockRejectedValue(
+        new Error('signing unavailable'),
+      );
+
+      const res = mockRes();
+
+      await expect(
+        controller.getConnectionToken(mockUser(), mockReq(), res),
+      ).resolves.toBeNull();
+      expect(res.status).toHaveBeenCalledWith(503);
+      expect(res.json).toHaveBeenCalledWith({
+        statusCode: 503,
+        message: 'Realtime authentication is temporarily unavailable.',
+      });
+      expect(JSON.stringify(res.json.mock.calls)).not.toContain(
+        'signing unavailable',
+      );
+    });
+
     it('should respond with 429 when rate limit is exceeded', async () => {
       (centrifugoService.checkConnectionRateLimit as Mock).mockResolvedValue({
         allowed: false,
@@ -223,6 +248,24 @@ describe('ChatController', () => {
       const result = await controller.getRooms(mockUser());
       expect(chatService.getRooms).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(rooms);
+    });
+  });
+
+  describe('getUnreadCount', () => {
+    it('returns null without an authenticated user', async () => {
+      await expect(controller.getUnreadCount(null)).resolves.toBeNull();
+      expect(chatService.getUnreadCount).not.toHaveBeenCalled();
+    });
+
+    it('returns the authenticated user count', async () => {
+      (chatService.getUnreadCount as Mock).mockResolvedValue({
+        unreadCount: 4,
+      });
+
+      await expect(controller.getUnreadCount(mockUser())).resolves.toEqual({
+        unreadCount: 4,
+      });
+      expect(chatService.getUnreadCount).toHaveBeenCalledWith('user-1');
     });
   });
 
