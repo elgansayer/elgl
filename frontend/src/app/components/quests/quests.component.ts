@@ -1,14 +1,19 @@
-import { Component, inject, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject, resource } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { Quest, QuestStore } from '../../services/quests.store';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-quests',
   imports: [CommonModule, HlmButton, TranslatePipe],
   template: `
-    <div class="p-4 bg-surface text-start" role="region" aria-label="{{ 'quests.title' | t }}">
+    <div
+      class="p-4 bg-surface text-start"
+      role="region"
+      aria-label="{{ 'quests.title' | t }}"
+      [attr.aria-busy]="store.loading()"
+    >
       <h2 class="text-xl font-bold mb-4">{{ 'quests.title' | t }}</h2>
       @if (store.loading() && store.quests().length === 0) {
         <p role="status" aria-live="polite">{{ 'quests.loading' | t }}</p>
@@ -19,7 +24,9 @@ import { Quest, QuestStore } from '../../services/quests.store';
             <button
               hlmBtn
               type="button"
-              class="rounded-md border border-border px-3 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              variant="outline"
+              size="touch"
+              [disabled]="store.loading()"
               (click)="retry()"
             >
               {{ 'common.retry' | t }}
@@ -78,6 +85,7 @@ export class QuestsComponent {
   });
 
   retry(): void {
+    if (this.store.loading()) return;
     void this.store.fetchQuests();
   }
 
