@@ -8,7 +8,7 @@
   </div>
 
   <ul class="flex flex-col gap-1 px-3">
-    @for (item of navItems; track item.path) {
+    @for (item of navItems(); track item.path) {
       <li>
         <a
           [routerLink]="item.path"
@@ -73,7 +73,7 @@
     </li>
     <li>
       <a
-        routerLink="/vip"
+        routerLink="/subscription"
         routerLinkActive="bg-surface-100 text-primary"
         ariaCurrentWhenActive="page"
         class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"

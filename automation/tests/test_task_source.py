@@ -43,6 +43,22 @@ def test_explicit_logical_key_survives_substantial_retitle() -> None:
     assert first.logical_key == successor.logical_key == "explicit:discovery-overlay"
 
 
+def test_full_logical_key_marker_round_trips_into_pull_request_metadata() -> None:
+    key = logical_task_key("Stable title")
+
+    assert logical_task_key("Decorated PR", f"Logical-Task-Key: {key}\n") == key
+
+
+def test_changed_path_fingerprint_is_order_independent_and_non_empty() -> None:
+    first = changed_path_fingerprint(["backend/src/a.py", "docs/contract.md"])
+    second = changed_path_fingerprint(["docs/contract.md", "backend\\src\\a.py"])
+
+    assert first == second
+    assert first is not None
+    assert changed_path_fingerprint([]) is None
+    assert changed_path_fingerprint([" ", "/"]) is None
+
+
 def test_priority_and_duplicate_lease_rejection(tmp_path: Path) -> None:
     store = TaskStore(tmp_path)
     lower = Task("issue-2", "Feature", "body", "github", 3)
