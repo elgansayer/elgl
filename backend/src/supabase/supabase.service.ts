@@ -42,6 +42,11 @@ export type UsersRow = {
   bio_text?: string | null;
   status_text?: string | null;
   proficiency_level?: string | null;
+  availability_morning?: boolean | null;
+  availability_afternoon?: boolean | null;
+  availability_evening?: boolean | null;
+  available_time_start?: string | null;
+  available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
   mock_country?: string | null;
@@ -1469,24 +1474,18 @@ export interface Database {
           user_id: string;
           room_id: string;
           is_locked: boolean;
-          is_archived: boolean;
-          archived_at: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
-          is_archived?: boolean;
-          archived_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
-          is_archived?: boolean;
-          archived_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [

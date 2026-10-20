@@ -1,7 +1,9 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
   selector: 'app-audio-equalizer',
+  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   host: {
     '[class]': 'customClass()',
