@@ -23,6 +23,8 @@ export interface ChatMessage {
   is_read: boolean;
   delivery_status?: 'sent' | 'delivered' | 'read' | (string & {});
   created_at: string;
+  /** Absolute server-assigned expiry for disappearing messages; null means normal retention. */
+  expires_at?: string | null;
   sender?: {
     id: string;
     display_name?: string | null;
