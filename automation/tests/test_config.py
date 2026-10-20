@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -424,6 +425,11 @@ def test_default_repository_is_production_clone() -> None:
     assert config.recovery_retention_hours == 72
     assert config.stall_alert_minutes == 20
     assert config.max_parallel_jobs == 5
+    assert config.max_open_pull_requests == 40
+    assert config.max_queued_ci == 12
+    assert config.pull_request_history_limit == 2000
+    assert config.lane_wip_limits == {"architect": 1, "dependency": 12, "factory": 8}
+    assert config.component_wip_limits["automation"] == 4
     assert config.review_lane_max_concurrent == 2
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
@@ -529,7 +535,7 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["google"].enabled is True
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
-    assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
+    assert factory_config.agents.providers["google"].model == "gemini-3.8-flash-high"
     assert factory_config.agents.providers["opencode"].model == "opencode-go/deepseek-v4-flash"
     assert not factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
@@ -538,21 +544,24 @@ def test_production_agent_configuration_loads() -> None:
     ]
     assert factory_config.agents.providers["openhands"].emergency_only
     assert not factory_config.agents.providers["openhands"].enabled
-    assert not factory_config.agents.providers["pi"].enabled
+    assert factory_config.agents.providers["pi"].enabled
     assert factory_config.agents.providers["pi"].model == "github-copilot/claude-sonnet-5"
     assert factory_config.agents.providers["pi"].credential_paths == [".pi"]
     assert factory_config.agents.routing.implementation == [
         "google",
         "claude",
         "codex",
+        "pi",
     ]
     assert factory_config.agents.routing.code_review == [
         "claude",
         "google",
         "codex",
+        "pi",
     ]
     assert factory_config.agents.routing.general_action == [
         "google",
+        "pi",
         "claude",
         "codex",
     ]
@@ -667,6 +676,13 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_AGENTS_CONFIG=/etc/hellotalk-factory/agents.json" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
     assert "FACTORY_MAX_PARALLEL_JOBS=3" in template
+    assert "FACTORY_HOST_AGENT_CONCURRENCY=2" in template
+    assert "FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES=true" in template
+    assert "FACTORY_MAX_OPEN_PULL_REQUESTS=40" in template
+    assert "FACTORY_MAX_QUEUED_CI=12" in template
+    assert "FACTORY_PULL_REQUEST_HISTORY_LIMIT=2000" in template
+    assert "FACTORY_LANE_WIP_LIMITS=architect=1,dependency=12,factory=8" in template
+    assert "FACTORY_COMPONENT_WIP_LIMITS=" in template
     assert "FACTORY_LABEL_RECONCILIATION_BATCH_SIZE=25" in template
     assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in template
     assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in template
@@ -700,6 +716,9 @@ def test_host_repair_preserves_the_production_parallelism_limit() -> None:
     )
 
     assert "FACTORY_MAX_PARALLEL_JOBS=3" in repair
+    assert "FACTORY_MAX_OPEN_PULL_REQUESTS=40" in repair
+    assert "FACTORY_MAX_QUEUED_CI=12" in repair
+    assert "FACTORY_LANE_WIP_LIMITS=architect=1,dependency=12,factory=8" in repair
     assert "FACTORY_MAX_PARALLEL_JOBS=5" not in repair
     assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in repair
     assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in repair
@@ -746,9 +765,43 @@ def test_cli_protects_process_before_loading_secret_configuration(
     assert events == ["process-protected", "configuration-loaded"]
 
 
+def test_cli_metrics_reports_pull_request_capacity_and_summary_alongside_providers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    expected = FactoryConfig.from_environment(environment()).model_copy(
+        update={"state_dir": tmp_path}
+    )
+    monkeypatch.setattr(cli, "protect_process_credentials", lambda: None)
+    monkeypatch.setattr(cli, "_config", lambda: expected)
+
+    assert cli.main(["metrics"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "providers" in payload
+    assert payload["pull_requests"] == {"capacity": {}, "summary": {}}
+
+
 def test_parallel_job_limit_must_be_positive() -> None:
     with pytest.raises(ConfigurationError, match="factory limits must be positive"):
         FactoryConfig.from_environment(environment(FACTORY_MAX_PARALLEL_JOBS="0"))
+
+
+def test_host_agent_concurrency_and_merge_fence_are_configurable() -> None:
+    configured = FactoryConfig.from_environment(
+        environment(
+            FACTORY_HOST_AGENT_CONCURRENCY="3",
+            FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES="false",
+        )
+    )
+
+    assert configured.host_agent_concurrency == 3
+    assert configured.require_green_main_between_merges is False
+
+    with pytest.raises(ConfigurationError, match="factory limits must be positive"):
+        FactoryConfig.from_environment(environment(FACTORY_HOST_AGENT_CONCURRENCY="0"))
 
 
 def test_disk_reserve_cannot_be_disabled() -> None:
@@ -759,6 +812,31 @@ def test_disk_reserve_cannot_be_disabled() -> None:
 def test_recovery_retention_must_be_positive() -> None:
     with pytest.raises(ConfigurationError, match="recovery retention must be positive"):
         FactoryConfig.from_environment(environment(FACTORY_RECOVERY_RETENTION_HOURS="0"))
+
+
+def test_pull_request_wip_limits_are_configurable_and_validated() -> None:
+    configured = FactoryConfig.from_environment(
+        environment(
+            FACTORY_MAX_OPEN_PULL_REQUESTS="9",
+            FACTORY_MAX_QUEUED_CI="4",
+            FACTORY_PULL_REQUEST_HISTORY_LIMIT="500",
+            FACTORY_LANE_WIP_LIMITS="factory=3,architect=1",
+            FACTORY_COMPONENT_WIP_LIMITS="automation=2,frontend=5",
+        )
+    )
+
+    assert configured.max_open_pull_requests == 9
+    assert configured.max_queued_ci == 4
+    assert configured.pull_request_history_limit == 500
+    assert configured.lane_wip_limits == {"factory": 3, "architect": 1}
+    assert configured.component_wip_limits == {"automation": 2, "frontend": 5}
+
+    with pytest.raises(ConfigurationError, match="WIP maps"):
+        FactoryConfig.from_environment(environment(FACTORY_LANE_WIP_LIMITS="factory=0"))
+    with pytest.raises(ConfigurationError, match="Invalid FACTORY_COMPONENT_WIP_LIMITS"):
+        FactoryConfig.from_environment(environment(FACTORY_COMPONENT_WIP_LIMITS="missing-limit"))
+    with pytest.raises(ConfigurationError, match="history limit"):
+        FactoryConfig.from_environment(environment(FACTORY_PULL_REQUEST_HISTORY_LIMIT="10001"))
 
 
 def test_stall_alert_threshold_must_be_positive() -> None:
@@ -790,14 +868,18 @@ def test_workout_instance_is_hourly_single_job_and_uses_shared_capacity() -> Non
     assert "GITHUB_REPOSITORY=elgansayer/workout-agent" in profile
 
 
-def test_hellotalk_instance_uses_two_review_lanes() -> None:
+def test_hellotalk_instance_uses_three_review_lanes_and_pr_scoped_merge_gate() -> None:
     root = Path(__file__).parents[2]
     profile = (root / "config/factory/instances/hellotalk.env").read_text(encoding="utf-8")
 
-    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=2" in profile
+    assert "FACTORY_MAX_PARALLEL_JOBS=4" in profile
+    assert "FACTORY_HOST_AGENT_CONCURRENCY=3" in profile
+    assert "FACTORY_REVIEW_LANE_MAX_CONCURRENT=3" in profile
+    assert "FACTORY_REQUIRE_GREEN_MAIN_BETWEEN_MERGES=false" in profile
+    assert "FACTORY_REVIEW_HEAD_STABILITY_SECONDS=30" in profile
     assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in profile
-    assert "FACTORY_AGENT_ROUTES_PER_INTERVAL=48" in profile
-    assert "FACTORY_REVIEWS_PER_INTERVAL=36" in profile
+    assert "FACTORY_AGENT_ROUTES_PER_INTERVAL=72" in profile
+    assert "FACTORY_REVIEWS_PER_INTERVAL=60" in profile
 
 
 def test_instance_installer_preserves_legacy_rollback_path() -> None:
