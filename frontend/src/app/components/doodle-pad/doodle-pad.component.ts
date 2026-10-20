@@ -1,7 +1,7 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import {
-  Component,
+  Component, ChangeDetectionStrategy,
   ElementRef,
   afterNextRender,
   output,
@@ -18,6 +18,7 @@ const CANVAS_HEIGHT = 400;
 const CANVAS_BACKGROUND = '#1e1e1e';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-doodle-pad',
   imports: [
     HlmButton,

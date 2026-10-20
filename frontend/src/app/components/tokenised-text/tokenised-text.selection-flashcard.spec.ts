@@ -2,7 +2,10 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatService } from '../../services/chat.service';
-import { FlashcardService } from '../../services/flashcard.service';
+import {
+  FLASHCARD_CONTEXT_MAX_LENGTH,
+  FLASHCARD_SELECTION_MAX_LENGTH,
+} from '../../services/flashcard-context-menu.directive';
 import { I18nService } from '../../services/i18n.service';
 import { TransliterationService } from '../../services/transliteration.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -18,12 +21,12 @@ class I18nStub {
 }
 
 describe('TokenisedTextComponent selection flashcards', () => {
-  const createFlashcard = vi.fn();
+  const saveWord = vi.fn();
   const translateText = vi.fn();
   let i18n: I18nStub;
 
   beforeEach(async () => {
-    createFlashcard.mockReset().mockResolvedValue({ id: 'card-1' });
+    saveWord.mockReset().mockResolvedValue({ id: 'card-1' });
     translateText.mockReset().mockResolvedValue({ translated_text: 'hello brave world' });
     i18n = new I18nStub();
 
@@ -34,11 +37,11 @@ describe('TokenisedTextComponent selection flashcards', () => {
           provide: VocabularyStore,
           useValue: {
             getWordStatus: () => ({ colorClass: '', colourClass: '' }),
+            saveWord,
           },
         },
         { provide: I18nService, useValue: i18n },
         { provide: TransliterationService, useValue: { transliterate: () => '' } },
-        { provide: FlashcardService, useValue: { createFlashcard } },
         { provide: ChatService, useValue: { translateText } },
       ],
     }).compileComponents();
@@ -59,7 +62,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
     await component.createSelectionFlashcard();
 
     expect(translateText).toHaveBeenCalledWith('brave', 'en');
-    expect(createFlashcard).toHaveBeenCalledWith({
+    expect(saveWord).toHaveBeenCalledWith({
       word_token: 'brave',
       original_context: 'Hola brave mundo',
       translation: 'hello brave world',
@@ -78,6 +81,54 @@ describe('TokenisedTextComponent selection flashcards', () => {
     await component.createSelectionFlashcard();
 
     expect(translateText).toHaveBeenCalledWith('hola', 'fr');
+  });
+
+  it('rejects oversized selections before opening the create action', () => {
+    const fixture = TestBed.createComponent(TokenisedTextComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.openFlashcardSelection({
+      text: 'x'.repeat(FLASHCARD_SELECTION_MAX_LENGTH + 1),
+      context: 'context',
+    });
+
+    expect(component.flashcardSelection()).toBeNull();
+    expect(translateText).not.toHaveBeenCalled();
+    expect(saveWord).not.toHaveBeenCalled();
+  });
+
+  it('defensively bounds persisted source context to the API contract', () => {
+    const fixture = TestBed.createComponent(TokenisedTextComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.openFlashcardSelection({
+      text: 'hola',
+      context: 'c'.repeat(FLASHCARD_CONTEXT_MAX_LENGTH + 50),
+      sourceLanguage: ' es ',
+    });
+
+    expect(component.flashcardSelection()).toEqual({
+      text: 'hola',
+      context: 'c'.repeat(FLASHCARD_CONTEXT_MAX_LENGTH),
+      sourceLanguage: 'es',
+    });
+  });
+
+  it('keeps the action retryable when translation exceeds the flashcard API limit', async () => {
+    translateText.mockResolvedValue({ translated_text: 't'.repeat(501) });
+    const fixture = TestBed.createComponent(TokenisedTextComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.openFlashcardSelection({ text: 'hola', context: 'hola mundo' });
+
+    await component.createSelectionFlashcard();
+
+    expect(saveWord).not.toHaveBeenCalled();
+    expect(component.flashcardSelection()?.text).toBe('hola');
+    expect(component.flashcardError()).toBe(true);
+    expect(component.flashcardCreating()).toBe(false);
   });
 
   it('prevents duplicate in-flight creation', async () => {
@@ -99,7 +150,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
 
     resolveTranslation({ translated_text: 'hello' });
     await Promise.all([first, second]);
-    expect(createFlashcard).toHaveBeenCalledTimes(1);
+    expect(saveWord).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the Spartan action open and retryable when translation fails', async () => {
@@ -111,7 +162,7 @@ describe('TokenisedTextComponent selection flashcards', () => {
 
     await component.createSelectionFlashcard();
 
-    expect(createFlashcard).not.toHaveBeenCalled();
+    expect(saveWord).not.toHaveBeenCalled();
     expect(component.flashcardSelection()?.text).toBe('hola');
     expect(component.flashcardError()).toBe(true);
     expect(component.flashcardCreating()).toBe(false);

@@ -42,6 +42,12 @@ describe('NlpController', () => {
           },
         },
         {
+          provide: PronunciationScoringService,
+          useValue: {
+            score: vi.fn(),
+          },
+        },
+        {
           provide: UsersService,
           useValue: {
             getProfile: vi.fn(),
