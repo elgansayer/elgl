@@ -112,9 +112,9 @@ def test_maintenance_refreshes_only_its_helper_without_downgrading_the_guard(tmp
         [
             "bash",
             "-ec",
-            'trusted_runtime_commit() { echo verified-previous; }; '
+            "trusted_runtime_commit() { echo verified-previous; }; "
             'install_runtime_file_from_commit() { printf "%s\\n" "$*"; }; '
-            'install_runtime_bundle() { echo unsafe-bundle-refresh; return 99; }; '
+            "install_runtime_bundle() { echo unsafe-bundle-refresh; return 99; }; "
             'RUNTIME_MAINTENANCE="$1"; '
             "run_storage_maintenance() {" + function + "\n}; run_storage_maintenance",
             "_",
@@ -188,6 +188,7 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     assert updater.count('runuser -u "$FACTORY_USER" -- env') == 4
     assert updater.count('runuser -u "$FACTORY_USER" --preserve-environment -- env') == 2
     assert "GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}" in updater
+    assert "--active --frozen --inexact --no-editable --extra development" in updater
     assert "git -c safe.directory=" not in updater
     assert 'git -C "$REPOSITORY" reset --hard' not in updater
     assert "--reinstall-package repo-factory" in updater

@@ -722,6 +722,11 @@
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
       "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 removes duplicate Angular imports and redundant explicit default change detection from the existing component. No template, style, token, layout or interaction change. No preview or Claude Design reconciliation is claimed."
+      },
       "requiredStates": ["light", "dark", "390px", "wide"]
     },
     {
