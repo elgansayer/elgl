@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';

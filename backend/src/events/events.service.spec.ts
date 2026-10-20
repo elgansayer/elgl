@@ -227,6 +227,14 @@ describe('EventsService', () => {
         host: { display_name: 'Host Name', avatar_url: 'https://avatar.url' },
       };
 
+      const createCountQuery = (result: { count: number }) => ({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ count: result.count }),
+          }),
+        }),
+      });
+
       const mockClient = {
         from: vi.fn().mockImplementation((table: string) => {
           if (table === 'events') {
