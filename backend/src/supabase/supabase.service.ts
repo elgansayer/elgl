@@ -42,6 +42,11 @@ export type UsersRow = {
   bio_text?: string | null;
   status_text?: string | null;
   proficiency_level?: string | null;
+  availability_morning?: boolean | null;
+  availability_afternoon?: boolean | null;
+  availability_evening?: boolean | null;
+  available_time_start?: string | null;
+  available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
   mock_country?: string | null;
@@ -2252,20 +2257,10 @@ export class SupabaseService implements OnModuleDestroy {
     const supabaseKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
     );
-    const env = this.configService.get<string>('NODE_ENV') || 'development';
-
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
-    }
-
-    if (env === 'production') {
-      if (supabaseKey === 'test-service-role-key') {
-        throw new Error(
-          'SUPABASE_SERVICE_ROLE_KEY must be securely configured in production',
-        );
-      }
     }
     this.client = createClient<Database>(supabaseUrl, supabaseKey);
 

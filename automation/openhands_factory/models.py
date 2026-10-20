@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -16,11 +15,6 @@ _TASK_KEY_MARKER = re.compile(
 _ISSUE_PREFIX = re.compile(r"^(?:fix(?:es|ed)?|close[sd]?|resolve[sd]?)\s+#\d+\s*:\s*", re.I)
 _TITLE_DECORATION = re.compile(r"\s*(?:\(#\d+\)|#\d+)\s*$")
 _TITLE_SPACE = re.compile(r"\s+")
-_SUPERSESSION_REFERENCE = re.compile(
-    r"(?i)\b(?:supersedes?|superseded\s+by|predecessor(?:\s+pr)?|"
-    r"successor(?:\s+pr)?|replaces?|replaced\s+by)\s*:?\s*"
-    r"(?:https://github\.com/[^\s/]+/[^\s/]+/(?:issues|pull)/)?#?(\d+)\b"
-)
 
 
 def _normalise_task_title(title: str) -> str:
@@ -44,31 +38,10 @@ def logical_task_key(title: str, body: str = "") -> str:
 
     marker = _TASK_KEY_MARKER.search(body)
     if marker:
-        value = marker.group(1).casefold()
-        if value.startswith(("explicit:", "title:")):
-            return value
-        return f"explicit:{value}"
+        return f"explicit:{marker.group(1).casefold()}"
     normalized = _normalise_task_title(title)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
     return f"title:{digest}"
-
-
-def changed_path_fingerprint(paths: Iterable[str]) -> str | None:
-    """Return a stable identity for a non-empty set of repository-relative paths."""
-
-    normalised = sorted(
-        {value for path in paths if (value := path.strip().replace("\\", "/").strip("/"))}
-    )
-    if not normalised:
-        return None
-    digest = hashlib.sha256("\0".join(normalised).encode("utf-8")).hexdigest()
-    return f"paths:{digest[:24]}"
-
-
-def supersession_references(text: str) -> frozenset[str]:
-    """Extract explicit predecessor or successor object references from prose."""
-
-    return frozenset(_SUPERSESSION_REFERENCE.findall(text))
 
 
 MAX_PROVIDER_HISTORY = 500
@@ -142,13 +115,6 @@ class Job:
     branch: str | None = None
     pull_request: int | None = None
     head_sha: str | None = None
-    canonical_task_id: str | None = None
-    producer_identity: str | None = None
-    initial_base_sha: str | None = None
-    latest_verified_sha: str | None = None
-    predecessor_pull_request: int | None = None
-    successor_pull_request: int | None = None
-    changed_path_fingerprint: str | None = None
     attempts: int = 0
     repair_attempts: int = 0
     quality_repairs: int = 0
@@ -196,20 +162,8 @@ class ProviderUsage:
 @dataclass
 class Lease:
     task_id: str
-    owner: str | None
+    owner: str
     acquired_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime | None = None
     factory_generation: str = "unknown"
     task_key: str | None = None
-    claimed_at: datetime | None = None
-    producer_identity: str | None = None
-    canonical_branch: str | None = None
-    canonical_pull_request: int | None = None
-    initial_base_sha: str | None = None
-    latest_verified_sha: str | None = None
-    predecessor_pull_request: int | None = None
-    successor_pull_request: int | None = None
-    failure_fingerprint: str | None = None
-    changed_path_fingerprint: str | None = None
-    completed_at: datetime | None = None
-    predecessor_task_id: str | None = None

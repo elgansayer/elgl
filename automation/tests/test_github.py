@@ -2,14 +2,12 @@ import base64
 import json
 import os
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
-from openhands_factory.models import Task, changed_path_fingerprint
 from openhands_factory.repository_guard import ProcessResult
 
 
@@ -560,7 +558,9 @@ def test_equivalent_pr_search_combines_all_supported_identity_signals(
     assert matches[3].reasons == frozenset({"changed-path-fingerprint"})
     assert not matches[3].is_open_canonical
     assert "--state" in runner.calls[0] and "all" in runner.calls[0]
-    assert any("closingIssuesReferences,files" in argument for argument in runner.calls[0])
+    json_fields = runner.calls[0][runner.calls[0].index("--json") + 1]
+    assert "closingIssuesReferences" not in json_fields
+    assert json_fields.endswith("author,files")
 
 
 def test_equivalent_pr_search_does_not_trust_factory_branch_prefix(
