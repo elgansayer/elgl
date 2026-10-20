@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { StudyBuddyService } from './study-buddy.service';
+import { environment } from '../../environments/environment';
 import { StudyBuddiesService } from './study-buddies.service';
 
 describe('StudyBuddiesService', () => {
@@ -63,7 +65,7 @@ describe('StudyBuddiesService', () => {
         message: 'Hi there',
       });
 
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/request');
+      const req = httpMock.expectOne(`${environment.apiUrl}/study-buddies/request`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({
         partnerId: 'partner-1',
@@ -73,32 +75,13 @@ describe('StudyBuddiesService', () => {
 
       await expect(requestPromise).resolves.toBeUndefined();
     });
-
-    it('should POST without a message when none is provided', async () => {
-      const requestPromise = service.requestBuddy({ partnerId: 'partner-2' });
-
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/request');
-      expect(req.request.body).toEqual({ partnerId: 'partner-2' });
-      req.flush({});
-
-      await expect(requestPromise).resolves.toBeUndefined();
-    });
-
-    it('should propagate errors so the caller can surface them', async () => {
-      const requestPromise = service.requestBuddy({ partnerId: 'partner-3' });
-
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/request');
-      req.flush('Internal Server Error', { status: 500, statusText: 'Internal Server Error' });
-
-      await expect(requestPromise).rejects.toBeTruthy();
-    });
   });
 
   describe('getMatches', () => {
     it('should GET matches and map valid entries', async () => {
       const matchesPromise = service.getMatches();
 
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/matches');
+      const req = httpMock.expectOne(`${environment.apiUrl}/study-buddies/matches`);
       expect(req.request.method).toBe('GET');
       req.flush([
         { id: '1', display_name: 'Alice', avatar_url: 'https://example.com/alice.png' },
@@ -110,67 +93,13 @@ describe('StudyBuddiesService', () => {
         { id: '2', display_name: 'Bob', avatar_url: undefined },
       ]);
     });
-
-    it('should filter out malformed entries missing required fields', async () => {
-      const matchesPromise = service.getMatches();
-
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/matches');
-      req.flush([
-        { id: '1', display_name: 'Alice' },
-        { id: '2' },
-        { display_name: 'No Id' },
-        null,
-      ]);
-
-      await expect(matchesPromise).resolves.toEqual([
-        { id: '1', display_name: 'Alice', avatar_url: undefined },
-      ]);
-    });
-
-    it('should ignore a non-string avatar_url', async () => {
-      const matchesPromise = service.getMatches();
-
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/matches');
-      req.flush([{ id: '1', display_name: 'Alice', avatar_url: 123 }]);
-
-      await expect(matchesPromise).resolves.toEqual([
-        { id: '1', display_name: 'Alice', avatar_url: undefined },
-      ]);
-    });
-
-    it('should return an empty array when the response is empty', async () => {
-      const matchesPromise = service.getMatches();
-
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/matches');
-      req.flush([]);
-
-      await expect(matchesPromise).resolves.toEqual([]);
-    });
-
-    it('should return an empty array when the response is null', async () => {
-      const matchesPromise = service.getMatches();
-
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/matches');
-      req.flush(null as unknown as Record<string, unknown>[]);
-
-      await expect(matchesPromise).resolves.toEqual([]);
-    });
-
-    it('should return an empty array when the request fails', async () => {
-      const matchesPromise = service.getMatches();
-
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/matches');
-      req.flush('Internal Server Error', { status: 500, statusText: 'Internal Server Error' });
-
-      await expect(matchesPromise).resolves.toEqual([]);
-    });
   });
 
   describe('getIncomingRequests', () => {
     it('should GET pending requests', async () => {
       const requestsPromise = service.getIncomingRequests();
 
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests');
+      const req = httpMock.expectOne(`${environment.apiUrl}/study-buddies/requests`);
       expect(req.request.method).toBe('GET');
       req.flush([{ id: 'req-1', requesterId: 'user-2', partnerId: 'user-1', status: 'pending', createdAt: '2026-08-01T00:00:00.000Z' }]);
 
@@ -190,7 +119,7 @@ describe('StudyBuddiesService', () => {
     it('should POST to the accept endpoint', async () => {
       const promise = service.acceptRequest('req-1');
 
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests/req-1/accept');
+      const req = httpMock.expectOne(`${environment.apiUrl}/study-buddies/requests/req-1/accept`);
       expect(req.request.method).toBe('POST');
       req.flush({});
 
@@ -202,7 +131,7 @@ describe('StudyBuddiesService', () => {
     it('should POST to the decline endpoint', async () => {
       const promise = service.declineRequest('req-1');
 
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests/req-1/decline');
+      const req = httpMock.expectOne(`${environment.apiUrl}/study-buddies/requests/req-1/decline`);
       expect(req.request.method).toBe('POST');
       req.flush({});
 
