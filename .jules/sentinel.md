@@ -66,6 +66,12 @@
 **Vulnerability:** Monetisation service `EconomyService` relied on weak development fallback values for critical secrets (`STRIPE_SECRET_KEY`) when environment variables were missing.
 **Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, avoiding startup crashes but preventing secure operations.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`sk_test_123`), preventing the backend from initializing insecurely.
+
+## 2024-08-24 - Fail-Secure Initialization for LiveKit Secrets
+**Vulnerability:** LiveKit API Key and Secret were missing strict production validation in several services (`audio-rooms.module.ts`, `transcript-egress.service.ts`, `audio-rooms.service.ts`, `calls.service.ts`), allowing fallback values to potentially be used in production environments.
+**Learning:** Services that instantiate third-party clients (like LiveKit `RoomServiceClient`) must apply the same fail-fast/fail-secure secret validation pattern as the centralised config, throwing errors if development keys are used in production.
+**Prevention:** Apply a uniform pattern across the codebase checking `NODE_ENV === 'production'` alongside explicit matching of known default/test dummy secret values before passing them to external SDKs.
+
 ## 2026-08-25 - [Fail-Fast SUPABASE_SERVICE_ROLE_KEY in Production]
 **Vulnerability:** The SupabaseService could initialize using a well-known test default for `SUPABASE_SERVICE_ROLE_KEY` (e.g., `test-service-role-key`) if the environment variable was missing in a production environment, putting backend service authentication at risk.
 **Learning:** Even though environment validation exists at the configuration module boundary, relying solely on global schemas is insufficient defense-in-depth. A missing production environment variable could still silently fall back to test defaults in the validation schema before injection.
@@ -262,6 +268,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
