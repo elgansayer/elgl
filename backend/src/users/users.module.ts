@@ -7,6 +7,8 @@ import { DataExportWorker } from './data-export.worker';
 import { MediaModule } from '../media/media.module';
 import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
+import { LegacyProfileVisitorsPrivacyInterceptor } from './interceptors/legacy-profile-visitors-privacy.interceptor';
+import { ProfileUpdateIntegrityInterceptor } from './interceptors/profile-update-integrity.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -29,6 +31,14 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: LastActiveInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LegacyProfileVisitorsPrivacyInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ProfileUpdateIntegrityInterceptor,
     },
   ],
   exports: [UsersService, DataExportWorker],
