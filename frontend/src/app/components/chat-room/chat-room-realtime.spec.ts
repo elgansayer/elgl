@@ -13,6 +13,19 @@ const baseMessage: ChatMessage = {
   created_at: '2026-08-21T12:00:00.000Z',
 };
 
+const systemMessage: ChatMessage = {
+  id: 'sys-message-1',
+  room_id: 'room-1',
+  sender_id: '',
+  message_type: 'system',
+  system_event: {
+    type: 'profileUpdated',
+    name: 'Language Partner',
+  },
+  is_read: false,
+  created_at: '2026-08-21T12:01:00.000Z',
+};
+
 describe('applyChatRoomRealtimeEvent', () => {
   it('appends an incoming message once and requests a read acknowledgement', () => {
     const result = applyChatRoomRealtimeEvent(
@@ -24,6 +37,87 @@ describe('applyChatRoomRealtimeEvent', () => {
 
     expect(result.messages).toEqual([baseMessage]);
     expect(result.incomingMessageToMarkRead).toEqual(baseMessage);
+  });
+
+  it.each(['profileUpdated', 'missedCall'])(
+    'accepts the %s system event published by Centrifugo without a sender id',
+    (eventType) => {
+      const eventMessage: ChatMessage = {
+        ...systemMessage,
+        id: `sys-${eventType}`,
+        system_event: { type: eventType },
+      };
+      const result = applyChatRoomRealtimeEvent(
+        [],
+        { message: eventMessage },
+        'room-1',
+        'current-user',
+      );
+
+      expect(result.messages).toEqual([eventMessage]);
+      expect(result.incomingMessageToMarkRead).toBeNull();
+    },
+  );
+
+  it('rejects malformed system events instead of rendering an empty system bubble', () => {
+    const result = applyChatRoomRealtimeEvent(
+      [],
+      {
+        message: {
+          ...systemMessage,
+          system_event: {},
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+
+    expect(result.messages).toEqual([]);
+    expect(result.incomingMessageToMarkRead).toBeNull();
+  });
+
+  it('rejects oversized and nested system-event params from realtime payloads', () => {
+    const oversized = applyChatRoomRealtimeEvent(
+      [],
+      {
+        message: {
+          ...systemMessage,
+          system_event: { type: 'announcement', message: 'x'.repeat(501) },
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+    const nested = applyChatRoomRealtimeEvent(
+      [],
+      {
+        message: {
+          ...systemMessage,
+          system_event: { type: 'announcement', metadata: { unsafe: true } },
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+
+    expect(oversized.messages).toEqual([]);
+    expect(nested.messages).toEqual([]);
+  });
+
+  it('rejects invalid system-event type names', () => {
+    const result = applyChatRoomRealtimeEvent(
+      [],
+      {
+        message: {
+          ...systemMessage,
+          system_event: { type: 'system.<script>' },
+        },
+      },
+      'room-1',
+      'current-user',
+    );
+
+    expect(result.messages).toEqual([]);
   });
 
   it('merges duplicate message events instead of rendering duplicate bubbles', () => {

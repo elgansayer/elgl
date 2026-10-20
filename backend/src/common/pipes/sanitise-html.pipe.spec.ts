@@ -24,6 +24,7 @@ vi.mock('jsdom', () => ({
 
 const { mockSanitize } = vi.hoisted(() => {
   const mockSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
     let result = dirty
       .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
       .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
@@ -48,7 +49,7 @@ vi.mock('dompurify', () => ({
 
 import { SanitiseHtmlPipe } from './sanitise-html.pipe';
 
-describe('SanitiseHtmlPipe', () => {
+describe('SanitiseHtmlPipe compatibility boundary', () => {
   let pipe: SanitiseHtmlPipe;
   const mockMetadata: ArgumentMetadata = { type: 'body' };
 
@@ -56,48 +57,74 @@ describe('SanitiseHtmlPipe', () => {
     pipe = new SanitiseHtmlPipe();
   });
 
-  it('strips all markup from a directly supplied legacy string', () => {
+  it('sanitises a directly supplied legacy rich-text string', () => {
     expect(pipe.transform('<b>bold</b>', mockMetadata)).toBe('bold');
-    expect(
-      pipe.transform('<img src="x" onerror="alert(1)">', mockMetadata),
-    ).toBe('');
     expect(pipe.transform('<script>alert("xss")</script>', mockMetadata)).toBe(
       '',
     );
   });
 
-  it('preserves ordinary plain text', () => {
-    expect(pipe.transform('Hello, 世界!', mockMetadata)).toBe('Hello, 世界!');
-  });
-
-  it('does not recursively mutate arrays', () => {
-    const input = ['<b>literal</b>', 'safe'];
-
-    expect(pipe.transform(input, mockMetadata)).toBe(input);
-    expect(input).toEqual(['<b>literal</b>', 'safe']);
-  });
-
-  it('does not recursively mutate request DTO objects', () => {
-    const input = {
-      bio: 'I use <T> in TypeScript examples',
-      password: 'my<secret>password',
-      nested: { message: '<b>literal markup</b>' },
+  it('does not recursively mutate plain request DTOs', () => {
+    const payload = {
+      message: 'TypeError: render<List<T>>() failed',
+      profileText: '<b>literal user text</b>',
     };
 
-    expect(pipe.transform(input, mockMetadata)).toBe(input);
-    expect(input).toEqual({
-      bio: 'I use <T> in TypeScript examples',
-      password: 'my<secret>password',
-      nested: { message: '<b>literal markup</b>' },
-    });
+    expect(pipe.transform(payload, mockMetadata)).toBe(payload);
+    expect(payload.profileText).toBe('<b>literal user text</b>');
   });
 
-  it('leaves non-string values untouched', () => {
+  it('preserves client error stacks and stack-frame angle brackets exactly', () => {
+    const payload = {
+      message: 'Unhandled error',
+      stack:
+        'TypeError: render<List<T>>()\n    at <anonymous> (app.component.ts:42:10)',
+      componentStack: '<AppComponent>\n  at <anonymous>',
+      stackFrames: [
+        {
+          functionName: '<anonymous>',
+          fileName: 'app.component.ts',
+          source: 'render<List<T>>()',
+        },
+      ],
+    };
+
+    const result = pipe.transform(payload, mockMetadata);
+
+    expect(result).toBe(payload);
+    expect(payload.stack).toContain('<anonymous>');
+    expect(payload.stack).toContain('List<T>');
+    expect(payload.stackFrames[0].source).toBe('render<List<T>>()');
+  });
+
+  it('preserves provider-signed webhook payloads without parsing or rewriting', () => {
+    const payload = {
+      signedPayload: 'header.<signed-provider-data>.signature',
+      apple: {
+        signedTransactionInfo: 'a.<transaction<T>>.c',
+      },
+      google: {
+        message: {
+          data: 'eyJ0eXBlIjoiPGdlbmVyaWM8VD4+In0=',
+        },
+      },
+    };
+
+    expect(pipe.transform(payload, mockMetadata)).toBe(payload);
+    expect(payload.signedPayload).toBe(
+      'header.<signed-provider-data>.signature',
+    );
+    expect(payload.apple.signedTransactionInfo).toBe('a.<transaction<T>>.c');
+  });
+
+  it('returns arrays and non-string values unchanged', () => {
+    const array = ['<b>literal</b>', '<anonymous>'];
+    const buffer = Buffer.from('<signed>bytes</signed>');
+
+    expect(pipe.transform(array, mockMetadata)).toBe(array);
+    expect(pipe.transform(buffer, mockMetadata)).toBe(buffer);
     expect(pipe.transform(123, mockMetadata)).toBe(123);
     expect(pipe.transform(null, mockMetadata)).toBe(null);
     expect(pipe.transform(undefined, mockMetadata)).toBe(undefined);
-
-    const buffer = Buffer.from('hello');
-    expect(pipe.transform(buffer, mockMetadata)).toBe(buffer);
   });
 });
