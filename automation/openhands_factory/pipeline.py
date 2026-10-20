@@ -1964,19 +1964,22 @@ class FactoryPipeline:
         # before spending minutes in the host-wide verification slot.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
-        run_verification(shared)
-        if not exclusive:
-            return changed
-        if self.verification_slots is None:
-            run_verification(exclusive)
-            return changed
-        with self.verification_slots:
-            if self.host_resource_slots is None:
+        try:
+            run_verification(shared)
+            if not exclusive:
+                return changed
+            if self.verification_slots is None:
                 run_verification(exclusive)
-            else:
-                with self.host_resource_slots.exclusive():
+                return changed
+            with self.verification_slots:
+                if self.host_resource_slots is None:
                     run_verification(exclusive)
-        return changed
+                else:
+                    with self.host_resource_slots.exclusive():
+                        run_verification(exclusive)
+            return changed
+        finally:
+            workflow.discard_transient_build_metadata()
 
     def _verify_or_schedule_quality_repair(
         self,
