@@ -514,7 +514,7 @@ class TestAgentProviders(unittest.TestCase):
         self.assertIn("--approve-for-me", runner.commands[0])
         self.assertNotIn("--sandbox", runner.commands[0])
         self.assertNotIn("-s", runner.commands[0])
-        self.assertIn('model_reasoning_effort="max"', runner.commands[0])
+        self.assertIn('model_reasoning_effort="high"', runner.commands[0])
         self.assertIn("gpt-5.6-sol", runner.commands[0])
         self.assertIn("--ignore-user-config", runner.commands[0])
         self.assertIn("--ignore-rules", runner.commands[0])
@@ -554,9 +554,9 @@ class TestAgentProviders(unittest.TestCase):
         self.assertEqual(result.summary, "google success")
         self.assertIn("--dangerously-skip-permissions", runner.commands[0])
         self.assertIn("--disable-slash-commands", runner.commands[0])
-        self.assertIn("gemini-3.1-pro-high", runner.commands[0])
+        self.assertIn("gemini-3.8-flash-high", runner.commands[0])
         self.assertNotIn("auto", runner.commands[0])
-        # gemini-3.1-pro-high already bakes its effort tier into the model
+        # gemini-3.8-flash-high already bakes its effort tier into the model
         # name; a separately-passed --effort is what breaks flash-tier
         # models below, so it must not be added when the model supplies its
         # own tier suffix.
@@ -578,11 +578,11 @@ class TestAgentProviders(unittest.TestCase):
         # agy hard-errors ("--model X conflicts with --effort=Y") when a
         # model whose name already encodes an effort tier is combined with
         # a disagreeing --effort flag - this broke every phase routed to
-        # gemini-3.7-flash-low until --effort stopped being forced to
+        # gemini-3.8-flash-low until --effort stopped being forced to
         # "high" unconditionally.
         runner = FakeProcessRunner("google success")
         provider = GoogleAgentProvider(
-            model="gemini-3.7-flash-low",
+            model="gemini-3.8-flash-low",
             process_runner=runner,
         )
         task = Task("1", "test", "body", "issue", 1)
@@ -595,7 +595,7 @@ class TestAgentProviders(unittest.TestCase):
 
         result = provider.run(request)
         self.assertTrue(result.success)
-        self.assertIn("gemini-3.7-flash-low", runner.commands[0])
+        self.assertIn("gemini-3.8-flash-low", runner.commands[0])
         self.assertNotIn("--effort", runner.commands[0])
 
     def test_antigravity_passes_effort_high_for_an_untiered_model(self):
@@ -658,7 +658,7 @@ class TestAgentProviders(unittest.TestCase):
         self.assertEqual(runner.commands, [("agy", "--version")])
 
     def test_current_antigravity_release_probes_account_models(self):
-        runner = FakeProcessRunner("1.1.13\ngemini-3.1-pro-high")
+        runner = FakeProcessRunner("1.2.14\ngemini-3.8-flash-high")
         provider = GoogleAgentProvider(process_runner=runner)
 
         with patch("openhands_factory.agents.cli.shutil.which", return_value="/usr/bin/agy"):
@@ -688,7 +688,7 @@ class TestAgentProviders(unittest.TestCase):
             health = provider.health()
 
         self.assertEqual(health.status, ProviderStatus.UNAVAILABLE)
-        self.assertIn("gemini-3.1-pro-high", health.detail or "")
+        self.assertIn("gemini-3.8-flash-high", health.detail or "")
 
     def test_opencode_health_verifies_authentication_and_configured_model(self):
         runner = FakeProcessRunner("OpenCode Go\nopencode-go/kimi-k3")

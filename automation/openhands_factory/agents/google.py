@@ -24,7 +24,7 @@ from openhands_factory.agents.process import (
 class GoogleAgentProvider(CLIProvider):
     name = "google"
     default_command = "agy"
-    default_model = "gemini-3.1-pro-high"
+    default_model = "gemini-3.8-flash-high"
     default_credential_paths = (".gemini",)
     default_runtime_paths = (".local/bin", ".npm-global")
     minimum_antigravity_version = (1, 1, 1)
@@ -218,6 +218,8 @@ class GoogleAgentProvider(CLIProvider):
                 "--add-dir",
                 str(request.cwd),
             ]
+            if request.read_only_reference is not None:
+                command.extend(("--add-dir", str(request.read_only_reference.resolve())))
             # Model names already ending in -high/-medium/-low (every model in
             # agy's own catalogue does) bake their effort tier into the model
             # itself; a separately-passed --effort that disagrees is a hard
@@ -241,5 +243,10 @@ class GoogleAgentProvider(CLIProvider):
             "--approval-mode",
             "yolo",
             "--skip-trust",
+            *(
+                ["--include-directories", str(request.read_only_reference.resolve())]
+                if request.read_only_reference is not None
+                else []
+            ),
             *self.extra_args,
         ]
