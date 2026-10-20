@@ -23,10 +23,21 @@ export class StripeService {
     @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {
-    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    if (!secretKey) {
-      throw new Error('STRIPE_SECRET_KEY is required');
+    let secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
+    if (env === 'production') {
+      if (!secretKey || /^sk_test(?:_|$)/i.test(secretKey.trim())) {
+        throw new Error(
+          'STRIPE_SECRET_KEY must be configured securely in production',
+        );
+      }
+    } else {
+      if (!secretKey) {
+        secretKey = 'sk_test_123';
+      }
     }
+
     this.stripe = new Stripe(secretKey, {
       apiVersion: '2023-10-16',
     });
@@ -62,7 +73,8 @@ export class StripeService {
 
     // For yearly, we need to create a price or use a fixed one
     let priceData:
-      Stripe.Checkout.SessionCreateParams.LineItem.PriceData | undefined;
+      | Stripe.Checkout.SessionCreateParams.LineItem.PriceData
+      | undefined;
     if (interval === 'year' || !priceId) {
       priceData = {
         currency: 'usd',
