@@ -8,7 +8,7 @@ Issue #1134 is implemented through the shared `TokenisedTextComponent` used by c
 - Desktop keeps the browser context menu untouched when there is no eligible selection. An eligible selection is intercepted only when it belongs entirely to the rendered message/post and fits the flashcard API contract.
 - Touch users can invoke the same action with a 650 ms long press after selecting text. Moving more than 12 px cancels the long-press action so scrolling remains usable.
 - The selected phrase and surrounding source context are shown/preserved through the existing Spartan dialog flow.
-- Saving translates the selection into the current app language, then persists the selected phrase, translation, and source context through `FlashcardService`.
+- Saving translates the selection into the current app language, then persists the selected phrase, translation, and source context through `VocabularyStore`.
 - Duplicate Save actions are ignored while translation or persistence is in flight.
 - Translation or persistence failure leaves the dialog open and retryable; no partial success is presented as a completed save.
 
@@ -26,7 +26,7 @@ These frontend checks are usability and bandwidth protections only. The NestJS D
 
 ## Surface ownership
 
-`FlashcardContextMenuDirective` owns selection detection and desktop/touch gesture handling. `TokenisedTextComponent` owns the accessible create dialog, translation request, duplicate-submit protection, and retry state. `FlashcardService` owns authenticated persistence.
+`FlashcardContextMenuDirective` owns selection detection and desktop/touch gesture handling. `TokenisedTextComponent` owns the accessible create dialog, translation request, duplicate-submit protection, and retry state. `VocabularyStore` owns authenticated persistence.
 
 Both current product surfaces route text through the same component:
 

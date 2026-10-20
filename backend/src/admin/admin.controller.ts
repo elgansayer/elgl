@@ -259,9 +259,7 @@ export class AdminController {
     @Req() req: AuthRequest,
   ): Promise<{ message: string }> {
     const adminUserId = req.user.id ?? req.user.sub;
-    if (!adminUserId) {
-      throw new UnauthorizedException();
-    }
+    if (!adminUserId) throw new UnauthorizedException('Invalid user ID');
     await this.adminService.banUser(id, adminUserId);
     return { message: 'User banned' };
   }
@@ -300,9 +298,7 @@ export class AdminController {
     @Req() req: AuthRequest,
   ): Promise<{ message: string }> {
     const adminUserId = req.user.id ?? req.user.sub;
-    if (!adminUserId) {
-      throw new UnauthorizedException();
-    }
+    if (!adminUserId) throw new UnauthorizedException('Invalid user ID');
     await this.adminService.warnUser(id, adminUserId);
     return { message: 'User warned' };
   }
