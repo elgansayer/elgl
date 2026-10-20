@@ -205,7 +205,7 @@ Any semantic concern created by shared `AppCardComponent` host roles belongs at 
 | Pause/stop audio | browser `pause()` plus reset | clear active media state | None | None |
 | Destroy | browser audio stop plus load-generation invalidation | clear/guard state | None | None |
 | Translate correction explanation | shared Visual Diff request | nested shared state/cache | None | None |
-| Create correction flashcard | shared `FlashcardService` request | server flashcard collection | None | None |
+| Create correction flashcard | shared `VocabularyStore` request | server flashcard collection | None | None |
 
 No direct Favourites analytics call is present in the reviewed implementation.
 
