@@ -6,7 +6,7 @@ import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { Component, inject, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { EventsService, Event } from '../../services/events.service';
+import { EventsService, Event, EventCategory } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -206,9 +206,12 @@ export class CreateEventModalComponent {
     title: ['', [Validators.required, Validators.pattern(/\S/)]],
     date_time: ['', Validators.required],
     language_pair: [''],
-    category: ['audio_room', Validators.required],
+    category: this.fb.control<EventCategory>('audio_room', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
     location: ['', [Validators.required, Validators.pattern(/\S/)]],
-    max_participants: [null as number | null],
+    max_participants: this.fb.control<number | null>(null),
     description: ['', [Validators.required, Validators.pattern(/\S/)]],
   });
 
