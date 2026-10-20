@@ -190,6 +190,18 @@ factory_git_read() {
     git -C "$REPOSITORY" "$@"
 }
 
+factory_git_authenticated() {
+  # Keep the credential in the child environment, never in runuser/env argv.
+  # A function-local export also leaves the caller's GH_TOKEN unchanged.
+  local GH_TOKEN=${GITHUB_TOKEN:-}
+  export GH_TOKEN
+  timeout "${GIT_TIMEOUT}s" \
+    runuser -u "$FACTORY_USER" --preserve-environment -- env \
+      HOME="$FACTORY_HOME" PATH=/usr/local/bin:/usr/bin:/bin \
+      git -c credential.helper='!gh auth git-credential' \
+      -C "$REPOSITORY" "$@"
+}
+
 verify_commit_identity() {
   local actual commit=$1
   [[ "$commit" =~ ^[0-9a-f]{40,64}$ ]] || return 1
@@ -536,11 +548,7 @@ all_factories_idle() {
 }
 
 log 'Fetching origin/main'
-timeout "${GIT_TIMEOUT}s" \
-  runuser -u "$FACTORY_USER" -- env \
-    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
-    git -c credential.helper='!gh auth git-credential' \
-    -C "$REPOSITORY" fetch --quiet origin main
+factory_git_authenticated fetch --quiet origin main
 
 local_sha=$(factory_git_read rev-parse HEAD)
 remote_sha=$(factory_git_read rev-parse origin/main)
@@ -621,11 +629,7 @@ fi
 
 if [ "$local_sha" != "$remote_sha" ]; then
   log 'Pulling main'
-  timeout "${GIT_TIMEOUT}s" \
-    runuser -u "$FACTORY_USER" -- env \
-    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
-    git -c credential.helper='!gh auth git-credential' \
-    -C "$REPOSITORY" pull --ff-only origin main
+  factory_git_authenticated pull --ff-only origin main
 fi
 
 pulled_sha=$(factory_git_read rev-parse HEAD)
