@@ -159,8 +159,7 @@ export class VideoCallsCacheInvalidationService {
         }),
       );
       const totalDeleted = results.reduce((sum, count) => sum + count, 0);
-      const totalDeleted = deletionResults.reduce((acc, curr) => acc + curr, 0);      if (totalDeleted > 0) {
-        this.logger.log(
+      const totalDeleted = deletionResults.reduce((acc, curr) => acc + curr, 0);      if (totalDeleted > 0) {        this.logger.log(
           `Bulk-invalidated ${totalDeleted} video-classroom cache key(s)`,
         );
       }

@@ -1,3 +1,4 @@
+import { Component, ChangeDetectionStrategy, inject, resource } from '@angular/core';
 import { Component, inject, resource, ChangeDetectionStrategy } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
