@@ -2,17 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { StudyBuddyService } from './study-buddy.service';
+import { StudyBuddiesService } from './study-buddies.service';
 
-describe('StudyBuddyService', () => {
-  let service: StudyBuddyService;
+describe('StudyBuddiesService', () => {
+  let service: StudyBuddiesService;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
-    service = TestBed.inject(StudyBuddyService);
+    service = TestBed.inject(StudyBuddiesService);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
