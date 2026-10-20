@@ -198,7 +198,7 @@ text direction locally without a product requirement.
 
 ## Theme and token contract
 
-Current presentation uses semantic-looking utilities rather than raw colors:
+Current presentation uses semantic-looking utilities rather than raw colours:
 
 - `border-accent`
 - `bg-surface-2`
@@ -211,10 +211,10 @@ The implementation pass must validate `bg-surface-2` against the current Relay t
 rather than preserving an obsolete token name.
 
 The accent edge should also remain semantically intentional. A cultural hint is informational, so
-conversion must not substitute success, warning or destructive semantic colors solely for visual
+conversion must not substitute success, warning or destructive semantic colours solely for visual
 similarity.
 
-No hard-coded hex/RGB colors should be introduced. Light/dark/high-contrast behavior remains owned
+No hard-coded hex/RGB colours should be introduced. Light/dark/high-contrast behavior remains owned
 by the Relay semantic token layer.
 
 ## Navigation, overlays and analytics
