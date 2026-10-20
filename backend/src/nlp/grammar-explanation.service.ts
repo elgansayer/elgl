@@ -38,6 +38,7 @@ export class GrammarExplanationService {
               'Provide Meaningful Feedback by explaining the *why* behind corrections in a clear, pedagogical way.',
               'Use plain text, no Markdown tables, no HTML, and no preamble.',
               'Prefer 2-6 short sentences. Name the relevant rule when useful and explain why the correction is more natural.',
+              'Conclude by asking the user to write a new sentence using the corrected grammar rule to practice active production.',
               'Do not invent differences that are not present.',
             ].join(' '),
           },

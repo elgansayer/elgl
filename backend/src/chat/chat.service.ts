@@ -853,7 +853,7 @@ export class ChatService {
     try {
       const response = await this.chatLlmService.generateText(prompt, {
         system:
-          'You are a helpful language learning conversation assistant. Provide concise, natural suggestions that fit the given context. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
+          "You are a helpful language learning conversation assistant. Provide concise, natural suggestions that fit the given context. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1).",
         temperature: 0.8,
         maxTokens: 150,
       });
@@ -2288,7 +2288,7 @@ export class ChatService {
     }
     const prompt = [
       'You are a friendly language learning conversation partner.',
-      'Keep responses short, natural, and helpful. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
+      "Keep responses short, natural, and helpful. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1).",
       `The user wrote: "${messageText}"`,
     ];
 
@@ -2309,7 +2309,7 @@ export class ChatService {
 
         if (tokensToPractice.length > 0) {
           prompt.push(
-            `Try to naturally incorporate some of these words to help them practice: ${tokensToPractice.join(', ')}.`,
+            `Try to naturally incorporate some of these words to help them practice: ${tokensToPractice.join(', ')}. Then, encourage Active Production by asking the user to use one of these words in their next reply.`,
           );
         }
       }

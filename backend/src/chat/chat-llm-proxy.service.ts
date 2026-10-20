@@ -18,7 +18,7 @@ export class ChatLlmProxyService {
       {
         role: 'system',
         content:
-          'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
+          "You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1). If the user provides recent vocabulary or struggling concepts, naturally weave them into your response for Retrieval Practice.",
       },
       ...history.map((m) => ({
         role: m.role,
@@ -42,7 +42,7 @@ export class ChatLlmProxyService {
       {
         role: 'system',
         content:
-          'You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user\'s level (i+1).',
+          "You are a helpful conversation partner for language learners. Reply in a friendly, concise manner. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1). If the user provides recent vocabulary or struggling concepts, naturally weave them into your response for Retrieval Practice.",
       },
       ...conversation.map((m) => ({
         role: m.role,
