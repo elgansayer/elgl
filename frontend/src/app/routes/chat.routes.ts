@@ -17,6 +17,11 @@ export const chatRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'groups',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
     path: 'chat/groups',
     loadComponent: () =>
       import('../components/groups-discovery/groups-discovery.component').then(
