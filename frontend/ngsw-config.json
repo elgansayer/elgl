@@ -49,7 +49,6 @@
     {
       "name": "api-performance",
       "urls": [
-        "/api/discovery/**",
         "/api/moments/feed**",
         "/api/users/profile/**",
         "/api/languages/**",
