@@ -21,6 +21,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2024-09-27 - [Optimize Lifetime Counts by using exact count]
+**Learning:** Using `.select('id')` to fetch full rows over the network just to determine their length creates N+1 latency, wastes memory, and causes bottleneck for operations aggregating multiple queries, like fetching stats.
+**Action:** When determining the length of rows, use `.select('*', { count: 'exact', head: true })` instead and extract `count` from the response. This asks Supabase for only the headers and row count instead of transferring any body data.
+
 ## 2026-09-27 - [Optimize Counting Queries using HEAD requests]
 **Learning:** Fetching full rows from a database over a network exclusively to count them using `.length` in Node.js (e.g., `momentsData.length`) scales poorly and creates a massive performance penalty. Supabase supports native counting without returning the payload.
 **Action:** Always append `{ count: 'exact', head: true }` to the Supabase `.select()` call when only the total number of records is needed, ensuring the backend receives just the integer count.
@@ -344,6 +348,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
