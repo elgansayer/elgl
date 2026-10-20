@@ -1,28 +1,33 @@
-import { Component, inject } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal } from '@angular/core';
+import { Location } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
+import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { BlockedUserResponse, BlockedUsersService } from '../../services/blocked-users.service';
-import { ConfirmService } from '../../services/confirm.service';
-import { I18nService } from '../../services/i18n.service';
-import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-block-management',
-  imports: [HlmButton, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    AppCardComponent,
+  ],
   templateUrl: './block-management.component.html',
   styles: [],
 })
 export class BlockManagementComponent {
   private readonly blockedUsersService = inject(BlockedUsersService);
-  private readonly confirmService = inject(ConfirmService);
-  private readonly i18n = inject(I18nService);
+  private readonly location = inject(Location);
 
   readonly blockedUsers = this.blockedUsersService.blockedUsers;
   readonly isLoading = this.blockedUsersService.isLoading;
   readonly loadError = this.blockedUsersService.error;
-  readonly unblockingUserIds = this.blockedUsersService.unblockingUserIds;
   readonly unblockError = this.blockedUsersService.unblockError;
+  readonly confirmUnblockId = signal<string | null>(null);
 
   hasTargetLanguages(user: BlockedUserResponse): boolean {
     return !!user.target_languages && user.target_languages.length > 0;
@@ -33,23 +38,36 @@ export class BlockManagementComponent {
     return user.target_languages.join(', ');
   }
 
-  isUnblocking(userId: string): boolean {
-    return this.unblockingUserIds().has(userId);
+  requestUnblock(userId: string): void {
+    if (!userId || this.isUnblocking(userId)) return;
+    this.blockedUsersService.clearUnblockError();
+    this.confirmUnblockId.set(userId);
   }
 
-  async onUnblock(user: BlockedUserResponse): Promise<void> {
-    if (this.isUnblocking(user.id)) return;
+  cancelUnblock(): void {
+    this.blockedUsersService.clearUnblockError();
+    this.confirmUnblockId.set(null);
+  }
 
-    const name = user.display_name?.trim() || this.i18n.translate('common.unknownUser');
-    const confirmed = await this.confirmService.confirm(
-      this.i18n.translate('safety.blockManagement.unblockAria', { name }),
-    );
-    if (!confirmed) return;
+  async confirmUnblock(userId: string): Promise<void> {
+    if (this.confirmUnblockId() !== userId || this.isUnblocking(userId)) return;
+    try {
+      await this.blockedUsersService.unblockUser(userId);
+      this.confirmUnblockId.set(null);
+    } catch {
+      // The service exposes a privacy-safe failure state and keeps the row for retry.
+    }
+  }
 
-    await this.blockedUsersService.unblockUser(user.id);
+  isUnblocking(userId: string): boolean {
+    return this.blockedUsersService.isUnblocking(userId);
   }
 
   retryLoad(): void {
     void this.blockedUsersService.loadBlockedUsers();
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 }

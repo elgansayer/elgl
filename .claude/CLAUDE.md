@@ -20,12 +20,6 @@ Spartan UI is the canonical component architecture for frontend UI work.
 
 See `frontend/AGENTS.md` for the scoped frontend Spartan rules.
 
-## Open CoDesign (Local Desktop Tool)
-
-Open CoDesign v0.2.1 is installed at `~/.local/bin/open-codesign`.
-Launch it to generate prototypes and UI mockups locally with your own API key.
-It reads `DESIGN.md` from the project root for brand tokens and component primitives.
-
 ## Claude Design (Web)
 
 `docs/claude-design-two-way-sync.md` is the authoritative contract for design-first, code-first, and reconciliation workflows.

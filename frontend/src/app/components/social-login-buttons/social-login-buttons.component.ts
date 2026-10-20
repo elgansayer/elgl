@@ -1,8 +1,9 @@
-import { Component, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, output } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-social-login-buttons',
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
