@@ -1,6 +1,8 @@
 import { Component, inject, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { Quest, QuestStore } from '../../services/quests.store';
 import { QuestStore } from '../../services/quests.store';
 
 @Component({
@@ -12,6 +14,19 @@ import { QuestStore } from '../../services/quests.store';
       @if (store.loading()) {
         <p role="status" aria-live="polite">{{ 'quests.loading' | t }}</p>
       } @else {
+        @if (store.error()) {
+          <div class="mb-3 flex flex-wrap items-center gap-2" role="alert">
+            <span>{{ 'common.error' | t }}</span>
+            <button
+              hlmBtn
+              type="button"
+              class="rounded-md border border-border px-3 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              (click)="retry()"
+            >
+              {{ 'common.retry' | t }}
+            </button>
+          </div>
+        }
         <ul class="space-y-3" role="list" aria-label="{{ 'quests.listLabel' | t }}">
           @for (quest of store.quests(); track quest.id) {
             <li
@@ -61,4 +76,18 @@ export class QuestsComponent {
       await this.store.fetchQuests();
     },
   });
+
+  retry(): void {
+    void this.store.fetchQuests();
+  }
+
+  clampedProgress(quest: Quest): number {
+    if (!Number.isFinite(quest.progress) || quest.target <= 0) return 0;
+    return Math.max(0, Math.min(quest.progress, quest.target));
+  }
+
+  progressPercent(quest: Quest): number {
+    if (!Number.isFinite(quest.target) || quest.target <= 0) return 0;
+    return (this.clampedProgress(quest) / quest.target) * 100;
+  }
 }

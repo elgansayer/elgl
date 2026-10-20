@@ -3,6 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
+import { GrammarCheckService } from './grammar-check.service';
+import { GrammarExplanationService } from './grammar-explanation.service';
+import { PronunciationScoringService } from './pronunciation-scoring.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
@@ -10,6 +13,8 @@ import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
 describe('NlpController', () => {
   let controller: NlpController;
   let nlpService: NlpService;
+  let grammarCheckService: GrammarCheckService;
+  let pronunciationScoringService: PronunciationScoringService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -62,6 +67,10 @@ describe('NlpController', () => {
 
     controller = module.get<NlpController>(NlpController);
     nlpService = module.get<NlpService>(NlpService);
+    grammarCheckService = module.get<GrammarCheckService>(GrammarCheckService);
+    pronunciationScoringService = module.get<PronunciationScoringService>(
+      PronunciationScoringService,
+    );
     usersService = module.get<UsersService>(UsersService);
   });
 

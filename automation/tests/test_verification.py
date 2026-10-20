@@ -166,6 +166,16 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
+    assert "/run/containerd/containerd.sock /run/docker.sock" in sandbox_script
+    assert 'mount --bind /dev/null "$container_socket"' in sandbox_script
+    assert "uv_cache=$service_home/.cache/uv" in sandbox_script
+    assert "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache" in sandbox_script
+    # PID 1 of the sandbox must reap children itself rather than exec-replacing
+    # straight into the target command, or an orphaned grandchild (a leftover
+    # dev server, a test's own subprocess-under-test) never gets reaped and
+    # sits as a zombie for the sandbox's whole lifetime.
+    assert "exec /usr/bin/setpriv" not in sandbox_script
+    assert "os.waitpid(-1, 0)" in sandbox_script
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"

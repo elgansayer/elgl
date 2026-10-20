@@ -59,7 +59,6 @@ class ProviderName(StrEnum):
 
 class FailureKind(StrEnum):
     TRANSIENT = "transient"
-    INFRASTRUCTURE = "infrastructure"
     AUTHENTICATION = "authentication"
     CONFIGURATION = "configuration"
     BUDGET = "budget"

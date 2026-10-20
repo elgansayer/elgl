@@ -56,4 +56,27 @@ describe('DocumentViewerComponent', () => {
     expect(card.classList).toContain('sm:p-6');
     expect(card.classList).toContain('lg:p-8');
   });
+
+  it('does not manufacture command controls or synthetic keyboard behaviour', () => {
+    const host: HTMLElement = fixture.nativeElement;
+
+    expect(host.querySelector('button')).toBeNull();
+    expect(host.querySelector('[role="button"]')).toBeNull();
+    expect(host.querySelector('[tabindex]')).toBeNull();
+  });
+
+  it('leaves projected link and button semantics owned by the caller', () => {
+    const hostFixture = TestBed.createComponent(ProjectedContentHostComponent);
+    hostFixture.detectChanges();
+
+    const link: HTMLAnchorElement | null = hostFixture.nativeElement.querySelector('a');
+    const button: HTMLButtonElement | null = hostFixture.nativeElement.querySelector('button');
+
+    expect(link?.getAttribute('href')).toBe('#retention');
+    expect(link?.getAttribute('role')).toBeNull();
+    expect(link?.getAttribute('tabindex')).toBeNull();
+    expect(button?.type).toBe('button');
+    expect(button?.getAttribute('role')).toBeNull();
+    expect(button?.getAttribute('tabindex')).toBeNull();
+  });
 });

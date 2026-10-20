@@ -35,6 +35,7 @@ import {
 } from './interfaces/nlp-results.interface';
 import { NlpService } from './nlp.service';
 import { NlpRateLimit, NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
+import { PronunciationScoringService } from './pronunciation-scoring.service';
 
 @Controller('nlp')
 @UseGuards(SupabaseAuthGuard, NlpRateLimiterGuard)
@@ -42,6 +43,9 @@ export class NlpController {
   constructor(
     private readonly nlpService: NlpService,
     private readonly usersService: UsersService,
+    private readonly grammarCheckService: GrammarCheckService,
+    private readonly grammarExplanationService: GrammarExplanationService,
+    private readonly pronunciationScoringService: PronunciationScoringService,
   ) {}
 
   /**

@@ -1,5 +1,13 @@
 import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
 import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import {
   ApiTags,
   ApiOperation,
   ApiQuery,
@@ -15,6 +23,7 @@ export class LinkPreviewController {
   constructor(private readonly linkPreviewService: LinkPreviewService) {}
 
   @Get()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
     summary: 'Fetch an OpenGraph link preview',
     description:

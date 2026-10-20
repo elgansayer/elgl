@@ -77,6 +77,9 @@ services:
     image: centrifugo/centrifugo:v5
     restart: always
     command: centrifugo -c /centrifugo/config.json
+    environment:
+      - CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=${CENTRIFUGO_SECRET}
+      - CENTRIFUGO_API_KEY=${CENTRIFUGO_API_KEY}
     ports:
       - '8000:8000'
     expose:
