@@ -90,10 +90,12 @@ function verifyLinguistics(assertCheck: AssertCheckFn) {
 function verifyLiveKit(assertCheck: AssertCheckFn) {
   // 3. Verify LiveKit & Centrifugo Token Cryptography
   try {
-    const lkSecret =
-      process.env.LIVEKIT_SECRET || 'dev_livekit_secret_test_value_123';
-    const lkApiKey =
-      process.env.LIVEKIT_API_KEY || 'dev_livekit_key_test_value_123';
+    const lkSecret = process.env.LIVEKIT_SECRET;
+    const lkApiKey = process.env.LIVEKIT_API_KEY;
+
+    if (!lkSecret || !lkApiKey) {
+      throw new Error('LIVEKIT_SECRET and LIVEKIT_API_KEY must be configured in environment variables');
+    }
 
     const lkToken = jwt.sign(
       {
@@ -204,7 +206,7 @@ async function verifyAchievements(
   }
 }
 
-async function runVerification() {
+function printDiagnosticHeader() {
   console.log(
     '================================================================',
   );
@@ -214,6 +216,30 @@ async function runVerification() {
   console.log(
     '================================================================\n',
   );
+}
+
+function printDiagnosticSummary(state: AssertionState) {
+  console.log(
+    '\n================================================================',
+  );
+  console.log(
+    `Diagnostic Summary: ${state.passed}/${state.total} checks passed successfully.`,
+  );
+  console.log(
+    '================================================================\n',
+  );
+
+  if (state.passed === state.total) {
+    console.log(
+      '🎉 ALL SYSTEM HEALTH CHECKS PASSED. Platform is ready for 24/7 VPS Deployment!',
+    );
+  } else {
+    process.exit(1);
+  }
+}
+
+async function runVerification() {
+  printDiagnosticHeader();
 
   const state: AssertionState = { passed: 0, total: 0 };
   const assertCheck = createAssertCheck(state);
@@ -233,23 +259,7 @@ async function runVerification() {
   await verifyDatabase(assertCheck, supabase);
   await verifyAchievements(assertCheck, supabase);
 
-  console.log(
-    '\n================================================================',
-  );
-  console.log(
-    `Diagnostic Summary: ${state.passed}/${state.total} checks passed successfully.`,
-  );
-  console.log(
-    '================================================================\n',
-  );
-
-  if (state.passed === state.total) {
-    console.log(
-      '🎉 ALL SYSTEM HEALTH CHECKS PASSED. Platform is ready for 24/7 VPS Deployment!',
-    );
-  } else {
-    process.exit(1);
-  }
+  printDiagnosticSummary(state);
 }
 
 runVerification().catch((err) => {
