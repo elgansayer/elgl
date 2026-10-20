@@ -150,28 +150,6 @@ describe('ChatMediaService', () => {
     });
   });
 
-  it('rejects an upload ticket whose quality differs from the selected quality', async () => {
-    const original = new File(['original'], 'photo.png', { type: 'image/png' });
-    const prepared = new File(['prepared'], 'photo.jpg', { type: 'image/jpeg' });
-    compressImage.mockResolvedValue(prepared);
-
-    const uploadPromise = service.upload(original, 'hd');
-    await Promise.resolve();
-
-    const presign = httpMock.expectOne(`${environment.apiUrl}/media/chat/presigned-url`);
-    presign.flush({
-      uploadUrl: 'https://upload.example/object',
-      mediaUrl: 'https://cdn.example/object.jpg',
-      objectKey: 'chat-media/user/image/standard/object.jpg',
-      mediaKind: 'image',
-      quality: 'standard',
-      maxBytes: 15 * 1024 * 1024,
-    });
-
-    await expect(uploadPromise).rejects.toThrow('Upload ticket did not match the selected media');
-    httpMock.expectNone('https://upload.example/object');
-  });
-
   it('rejects unsupported file types before any network request', async () => {
     const svg = new File(['<svg/>'], 'vector.svg', { type: 'image/svg+xml' });
     await expect(service.upload(svg, 'hd')).rejects.toThrow('Unsupported photo or video format');

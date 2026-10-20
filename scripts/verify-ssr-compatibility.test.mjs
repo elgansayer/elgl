@@ -47,7 +47,7 @@ function validFiles() {
         { path: 'active-call', renderMode: RenderMode.Client },
         { path: 'video-call', renderMode: RenderMode.Client },
         { path: 'audio-rooms/**', renderMode: RenderMode.Client },
-        { path: 'device-transfer', renderMode: RenderMode.Client },
+        { path: 'settings/device-transfer', renderMode: RenderMode.Client },
         { path: 'preview/room/:id', renderMode: RenderMode.Server },
         { path: '**', renderMode: RenderMode.Server },
       ];
@@ -77,6 +77,16 @@ function expectFailure(files, fragment) {
 
 test('accepts the canonical shared SSR/browser architecture', () => {
   assert.deepEqual(collectSsrCompatibilityFailures(validFiles()), []);
+});
+
+test('does not widen the existing device-session exception to a second route', () => {
+  const files = validFiles();
+  files.serverRoutes = files.serverRoutes.replace(
+    "{ path: 'settings/device-transfer', renderMode: RenderMode.Client },",
+    "{ path: 'settings/device-transfer', renderMode: RenderMode.Client },\n" +
+      "{ path: 'device-transfer', renderMode: RenderMode.Client },",
+  );
+  expectFailure(files, 'new client-only route requires SSR architecture review before allowlisting: device-transfer');
 });
 
 test('rejects accidental loss of the Angular server build', () => {
