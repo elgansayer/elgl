@@ -120,9 +120,11 @@ def test_health_snapshot_does_not_consume_half_open_quota_probe(tmp_path) -> Non
     assert unleased.state == "open"
     assert unleased.consecutive_failures == 1
 
-    route_health = router._health()
+    route_health = router._health(allow_recovery=True)
+    assert store.load()["quota-provider"].state == "open"
+    assert router._permit_attempt("quota-provider")
     half_open = store.load()["quota-provider"]
-    concurrent = router._health()
+    concurrent = router._health(allow_recovery=True)
     observational = router.health_snapshot()
 
     assert route_health["quota-provider"].status is ProviderStatus.HEALTHY
