@@ -252,18 +252,17 @@ export class DiscoveryCacheInvalidationService {
       `discovery:audio_intros:user:${payload.userId}`,
     ];
     // Delete exact keys and prefixed patterns
-    // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to drastically reduce network latency during bulk cache invalidation.
-    const results = await Promise.all(
-      prefixes.map(async (prefix) => {
-        let count = 0;
-        if (prefix.includes(':')) {
-          count += await this.deleteByPattern(`${prefix}:*`);
-        }
-        count += await this.getRedis().del(prefix);
-        return count;
-      }),
-    );
-    const total = results.reduce((sum, count) => sum + count, 0);
+    // ⚡ Bolt Optimization: Replace sequential await loop with Promise.all to drastically reduce latency
+    const deletePromises = prefixes.flatMap((prefix) => {
+      const promises = [this.getRedis().del(prefix)];
+      if (prefix.includes(':')) {
+        promises.push(this.deleteByPattern(`${prefix}:*`));
+      }
+      return promises;
+    });
+
+    const results = await Promise.all(deletePromises);
+    const total = results.reduce((acc, count) => acc + count, 0);
     if (total > 0) {
       this.logger.info(
         `Bulk-invalidated ${total} discovery cache key(s) for user ${payload.userId}`,

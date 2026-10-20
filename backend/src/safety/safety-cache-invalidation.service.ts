@@ -53,31 +53,29 @@ export class SafetyCacheInvalidationService {
    *  - For suffixed patterns (e.g. `admin:users:list:*`), scan and delete
    *    matching keys using SCAN to avoid blocking the Redis event loop.
    *  - For exact keys (e.g. `partner_of_week_ids`), delete directly.
-   *  - For prefix-only patterns (e.g. `recommendations:daily:`),
-   *    scan using KEYS (the Redis instance is small enough that this is
-   *    safe for pattern-only prefixes; SCAN does not support glob-style
-   *    matching natively).
+   *  - For prefix-only patterns (e.g. `recommendations:daily:`), scan and
+   *    delete matching keys using SCAN.
    */
   async invalidateTrustAndSafetyCaches(): Promise<void> {
     const redis = this.getRedis();
     try {
-      // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to execute cache invalidations concurrently.
-      const results = await Promise.all(
-        SAFETY_AFFECTED_CACHE_PATTERNS.map(async (pattern) => {
-          if (pattern.endsWith(':*')) {
-            // Suffixed glob pattern – use SCAN for safety on larger key spaces
-            const prefix = pattern.slice(0, -2);
-            return this.deleteByScan(redis, prefix);
-          } else if (pattern.endsWith(':')) {
-            // Prefix pattern – use KEYS (acceptable for small-to-medium instances)
-            return this.deleteByPattern(redis, `${pattern}*`);
-          } else {
-            // Exact single key
-            return redis.del(pattern);
-          }
-        }),
-      );
-      const totalDeleted = results.reduce((acc, val) => acc + val, 0);
+      // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to drastically reduce network latency during bulk cache invalidation.
+      const deletePromises = SAFETY_AFFECTED_CACHE_PATTERNS.map((pattern) => {
+        if (pattern.endsWith(':*')) {
+          // Suffixed glob pattern – use SCAN for safety on larger key spaces
+          const prefix = pattern.slice(0, -2);
+          return this.deleteByScan(redis, prefix);
+        } else if (pattern.endsWith(':')) {
+          // Prefix pattern: use SCAN to avoid blocking the Redis event loop.
+          return this.deleteByScan(redis, pattern);
+        } else {
+          // Exact single key
+          return redis.del(pattern);
+        }
+      });
+
+      const results = await Promise.all(deletePromises);
+      const totalDeleted = results.reduce((sum, count) => sum + count, 0);
 
       if (totalDeleted > 0) {
         this.logger.log(
@@ -188,16 +186,5 @@ export class SafetyCacheInvalidationService {
       }
     } while (cursor !== '0');
     return deleted;
-  }
-
-  private async deleteByPattern(
-    redis: Redis,
-    pattern: string,
-  ): Promise<number> {
-    const keys = await redis.keys(pattern);
-    if (keys.length === 0) {
-      return 0;
-    }
-    return redis.del(...keys);
   }
 }
