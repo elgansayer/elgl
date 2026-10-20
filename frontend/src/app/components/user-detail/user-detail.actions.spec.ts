@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { AuthService } from '../../services/auth.service';
@@ -14,9 +14,13 @@ import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
 
+const CURRENT_USER_ID = '11111111-1111-4111-8111-111111111111';
+const PARTNER_ID = '22222222-2222-4222-8222-222222222222';
+const ROOM_ID = '33333333-3333-5333-8333-333333333333';
+
 function makeProfile(partial: Partial<UserProfile> = {}): UserProfile {
   return {
-    id: 'partner-1',
+    id: PARTNER_ID,
     display_name: 'Partner One',
     native_languages: ['ja'],
     target_languages: ['en'],
@@ -38,6 +42,7 @@ function makeProfile(partial: Partial<UserProfile> = {}): UserProfile {
 describe('UserDetailComponent external profile actions', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
+  let router: Router;
   let getUserProfile: ReturnType<typeof vi.fn>;
   let follow: ReturnType<typeof vi.fn>;
   let unfollow: ReturnType<typeof vi.fn>;
@@ -55,7 +60,7 @@ describe('UserDetailComponent external profile actions', () => {
     getUserProfile = vi.fn();
     follow = vi.fn().mockResolvedValue(undefined);
     unfollow = vi.fn().mockResolvedValue(undefined);
-    openOrCreate = vi.fn().mockResolvedValue('room-123');
+    openOrCreate = vi.fn().mockResolvedValue(ROOM_ID);
 
     await TestBed.configureTestingModule({
       imports: [UserDetailComponent],
@@ -65,7 +70,7 @@ describe('UserDetailComponent external profile actions', () => {
         provideHttpClientTesting(),
         {
           provide: AuthService,
-          useValue: { currentUser: signal({ id: 'current-user' }) },
+          useValue: { currentUser: signal({ id: CURRENT_USER_ID }) },
         },
         {
           provide: UserService,
@@ -104,6 +109,7 @@ describe('UserDetailComponent external profile actions', () => {
 
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
   });
 
   it('renders direct Send Message and Follow actions for an external profile', async () => {
@@ -124,6 +130,47 @@ describe('UserDetailComponent external profile actions', () => {
     expect(followButton?.textContent?.trim()).toBe('userProfile.follow');
   });
 
+  it('does not render follow or message actions on the current users own profile', async () => {
+    await render(makeProfile({ id: CURRENT_USER_ID }));
+
+    expect(
+      fixture.nativeElement.querySelector('button[aria-label="userProfile.follow"]'),
+    ).toBeNull();
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    );
+    expect(
+      buttons.some((button) => button.textContent?.trim() === 'chatList.tapToChat'),
+    ).toBe(false);
+  });
+
+  it('opens the canonical direct conversation and navigates to the returned room', async () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    await render(makeProfile());
+
+    await component.openConversation();
+
+    expect(openOrCreate).toHaveBeenCalledTimes(1);
+    expect(openOrCreate).toHaveBeenCalledWith(PARTNER_ID);
+    expect(navigate).toHaveBeenCalledWith(['/chat', ROOM_ID]);
+    expect(component.chatErrorKey()).toBe('');
+    expect(component.isOpeningChat()).toBe(false);
+  });
+
+  it('keeps the profile usable and exposes retryable status when opening chat fails', async () => {
+    openOrCreate.mockRejectedValue(new Error('provider unavailable'));
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    await render(makeProfile());
+
+    await component.openConversation();
+    fixture.detectChanges();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(component.chatErrorKey()).toBe('common.error_generic');
+    expect(component.isOpeningChat()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[role="status"]')).not.toBeNull();
+  });
+
   it('follows the displayed partner and updates the action state', async () => {
     await render(makeProfile({ is_followed_by_me: false }));
 
@@ -131,7 +178,7 @@ describe('UserDetailComponent external profile actions', () => {
     fixture.detectChanges();
 
     expect(follow).toHaveBeenCalledTimes(1);
-    expect(follow).toHaveBeenCalledWith('partner-1');
+    expect(follow).toHaveBeenCalledWith(PARTNER_ID);
     expect(unfollow).not.toHaveBeenCalled();
     expect(component.isFollowing()).toBe(true);
 
@@ -148,7 +195,7 @@ describe('UserDetailComponent external profile actions', () => {
     fixture.detectChanges();
 
     expect(unfollow).toHaveBeenCalledTimes(1);
-    expect(unfollow).toHaveBeenCalledWith('partner-1');
+    expect(unfollow).toHaveBeenCalledWith(PARTNER_ID);
     expect(follow).not.toHaveBeenCalled();
     expect(component.isFollowing()).toBe(false);
   });
