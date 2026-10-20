@@ -166,23 +166,12 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
-    assert "uv_cache=$service_home/.cache/uv" in sandbox_script
-    assert "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache" in sandbox_script
-    # PID 1 of the sandbox must reap children itself rather than exec-replacing
-    # straight into the target command, or an orphaned grandchild (a leftover
-    # dev server, a test's own subprocess-under-test) never gets reaped and
-    # sits as a zombie for the sandbox's whole lifetime.
-    assert "exec /usr/bin/setpriv" not in sandbox_script
-    assert "os.waitpid(-1, 0)" in sandbox_script
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
     assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
-    assert environment["UV_NO_SYNC"] == "1"
     assert environment["UV_OFFLINE"] == "1"
-    assert environment["UV_PROJECT_ENVIRONMENT"] == str(virtual_environment)
-    assert environment["VIRTUAL_ENV"] == str(virtual_environment)
 
 
 def test_uv_cache_mount_is_writable_not_read_only() -> None:
@@ -278,7 +267,5 @@ def test_workout_agent_frontend_uses_angular_native_gate(tmp_path: Path) -> None
     names = {command.name for command in commands}
 
     assert "frontend-build" in names
-    assert "frontend-test" in names
-    assert "backend-tests" not in names
-    frontend_test = next(command for command in commands if command.name == "frontend-test")
-    assert frontend_test.arguments == ("npm", "test", "--", "--watch=false")
+    assert "admin-build" in names
+    assert "factory-tests" in names

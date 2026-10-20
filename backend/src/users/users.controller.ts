@@ -41,32 +41,21 @@ export class UsersController {
     private readonly mediaService: MediaService,
   ) {}
 
-  private parsePaginationInteger(
-    value: string | number | undefined,
-    name: 'limit' | 'offset',
-    defaultValue: number,
-    minimum: number,
-    maximum?: number,
-  ): number {
-    if (value === undefined || value === '') return defaultValue;
+  private applyMemberVisibility<T extends Partial<UserProfile>>(
+    profile: T,
+    isSelf: boolean,
+  ): T {
+    if (isSelf) return profile;
 
-    const parsed =
-      typeof value === 'number'
-        ? value
-        : /^\d+$/.test(value)
-          ? Number(value)
-          : Number.NaN;
-    const outsideRange =
-      parsed < minimum || (maximum !== undefined && parsed > maximum);
-    if (!Number.isSafeInteger(parsed) || outsideRange) {
-      const range =
-        maximum === undefined
-          ? `at least ${minimum}`
-          : `between ${minimum} and ${maximum}`;
-      throw new BadRequestException(`${name} must be an integer ${range}`);
+    const visibleProfile = { ...profile };
+    if (profile.privacy_hide_online_status) {
+      visibleProfile.last_active_at = undefined;
     }
-
-    return parsed;
+    if (profile.privacy_hide_vip_status) {
+      visibleProfile.is_vip = false;
+      visibleProfile.vip_tier = '';
+    }
+    return visibleProfile;
   }
 
   @UseGuards(TwoFactorGuard)
@@ -289,20 +278,13 @@ export class UsersController {
   async searchUsers(
     @Query('q') query: string,
     @CurrentUser() user: User | null,
-    @Query('limit') limit: string | number | undefined,
+    @Query('limit') limit: number | undefined,
   ): Promise<
     { id: string; display_name: string; avatar_url: string | null }[]
   > {
     if (!user) throw new UnauthorizedException();
     if (!query || query.trim().length === 0) return [];
-    const boundedLimit = this.parsePaginationInteger(
-      limit,
-      'limit',
-      10,
-      1,
-      100,
-    );
-    return this.usersService.searchUsers(query.trim(), user.id, boundedLimit);
+    return this.usersService.searchUsers(query.trim(), user.id, limit ?? 10);
   }
 
   @Get('me/badges')
@@ -343,39 +325,35 @@ export class UsersController {
       }
     }
 
-    return profile;
+    return this.applyMemberVisibility(
+      profile,
+      id === (currentUser?.id ?? ''),
+    );
   }
 
   @Get(':id/stats')
-  async getUserStats(@Param('id') id: string): Promise<Partial<UserProfile>> {
-    return this.usersService.getUserStats(id);
+  async getUserStats(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: User | null,
+  ): Promise<Partial<UserProfile>> {
+    const stats = await this.usersService.getUserStats(id);
+    return this.applyMemberVisibility(
+      stats,
+      id === (currentUser?.id ?? ''),
+    );
   }
 
   @Get(':id/followers')
   async getFollowers(
     @Param('id') id: string,
-    @Query('limit') limit: string | number | undefined,
-    @Query('offset') offset: string | number | undefined,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
     @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    const boundedLimit = this.parsePaginationInteger(
-      limit,
-      'limit',
-      20,
-      1,
-      100,
-    );
-    const boundedOffset = this.parsePaginationInteger(
-      offset,
-      'offset',
-      0,
-      0,
-      10_000,
-    );
     return this.usersService.getFollowers(
       id,
-      boundedLimit,
-      boundedOffset,
+      limit ?? 20,
+      offset ?? 0,
       user?.id,
     );
   }
@@ -383,28 +361,14 @@ export class UsersController {
   @Get(':id/following')
   async getFollowing(
     @Param('id') id: string,
-    @Query('limit') limit: string | number | undefined,
-    @Query('offset') offset: string | number | undefined,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
     @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    const boundedLimit = this.parsePaginationInteger(
-      limit,
-      'limit',
-      20,
-      1,
-      100,
-    );
-    const boundedOffset = this.parsePaginationInteger(
-      offset,
-      'offset',
-      0,
-      0,
-      10_000,
-    );
     return this.usersService.getFollowing(
       id,
-      boundedLimit,
-      boundedOffset,
+      limit ?? 20,
+      offset ?? 0,
       user?.id,
     );
   }
