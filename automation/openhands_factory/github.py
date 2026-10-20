@@ -66,6 +66,9 @@ class PullRequestStatus:
     failed_checks: frozenset[str] = frozenset()
     merge_state_status: str = "CLEAN"
     workflow_run_ids: frozenset[str] = frozenset()
+    ci_required_passed: bool = False
+    ci_required_pending: bool = False
+    ci_required_failed: bool = False
 
 
 @dataclass(frozen=True)
@@ -759,6 +762,7 @@ class GitHubClient:
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
             "factory-status": "0969da",
+            "factory-maintenance": "006b75",
             "superseded": "6e7781",
             "duplicate": "cfd3d7",
         }
@@ -1128,6 +1132,16 @@ class GitHubClient:
                 pending = True
 
         failed_checks = failed_check_names(check_rollup)
+        ci_required_observed = "CI / required" in observed_checks
+        ci_required_pending = not ci_required_observed or any(
+            str(check.get("name") or check.get("context") or "") == "CI / required"
+            and (
+                str(check.get("status") or "").upper() in _PENDING_CHECK_STATES
+                or str(check.get("state") or "").upper() in _PENDING_CHECK_STATES
+            )
+            for check in check_rollup
+        )
+        ci_required_failed = "CI / required" in failed_checks
         missing_required = REQUIRED_FACTORY_MERGE_CHECKS - observed_checks
         if missing_required:
             # GitHub creates workflow check-runs asynchronously. Treat an absent
@@ -1161,4 +1175,11 @@ class GitHubClient:
             failed_checks=failed_checks,
             merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN").upper(),
             workflow_run_ids=PullRequestRecord.from_payload(item).workflow_run_ids,
+            ci_required_passed=(
+                "CI / required" in successful_checks
+                and not ci_required_pending
+                and not ci_required_failed
+            ),
+            ci_required_pending=ci_required_pending,
+            ci_required_failed=ci_required_failed,
         )

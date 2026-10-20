@@ -8,6 +8,21 @@ import { NetworkStatusService } from './network-status.service';
 import { AuthService } from './auth.service';
 import { EscrowOfflineService, EscrowRow } from './escrow-offline.service';
 
+function createMockBackendEscrow(overrides: any = {}): any {
+  return {
+    id: 'escrow-1',
+    payer_id: 'sender-1',
+    payee_id: 'receiver-1',
+    amount_coins: 100,
+    status: 'pending',
+    reason: 'Test escrow',
+    metadata: { service_type: 'lesson' },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
 function createMockEscrow(overrides: Partial<EscrowRow> = {}): EscrowRow {
   return {
     id: 'escrow-1',
@@ -17,6 +32,9 @@ function createMockEscrow(overrides: Partial<EscrowRow> = {}): EscrowRow {
     status: 'pending',
     description: 'Test escrow',
     service_type: 'lesson',
+    dispute_reason: null,
+    dispute_evidence: null,
+    admin_note: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...overrides,
@@ -77,16 +95,18 @@ describe('EscrowService', () => {
   // ── listUserEscrows ───────────────────────────────────────
 
   it('should fetch escrows and cache them when online', async () => {
-    const escrows = [createMockEscrow()];
+    const backendEscrows = [createMockBackendEscrow()];
 
     const promise = service.listUserEscrows();
-    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/transactions');
     expect(req.request.method).toBe('GET');
-    req.flush(escrows);
+    req.flush(backendEscrows);
 
-    await promise;
-    expect(mockOfflineStore.cacheEscrows).toHaveBeenCalledWith(escrows);
-    expect(service.escrows()).toEqual(escrows);
+    const result = await promise;
+    expect(mockOfflineStore.cacheEscrows).toHaveBeenCalledWith(result);
+    expect(result[0].id).toEqual('escrow-1');
+    expect(result[0].sender_id).toEqual('sender-1');
+    expect(result[0].amount).toEqual(100);
   });
 
   it('should fall back to cached escrows when offline', async () => {
@@ -105,7 +125,7 @@ describe('EscrowService', () => {
     const dto = { partner_id: 'partner-1', amount: 100, description: 'Test' };
 
     const promise = service.createEscrow(dto);
-    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/create');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/hold');
     expect(req.request.method).toBe('POST');
     req.flush({ id: 'esc-1', status: 'pending', amount_held: 100, coins_remaining: 400 });
 
@@ -171,7 +191,7 @@ describe('EscrowService', () => {
 
   it('should dispute escrow via API when online', async () => {
     vi.spyOn(mockNetwork, 'isOnline').mockReturnValue(true as unknown as boolean);
-    const disputeResult = createMockEscrow({ status: 'disputed', dispute_reason: 'Issue' });
+    const disputeResult = createMockBackendEscrow({ status: 'disputed', metadata: { dispute_reason: 'Issue' } });
 
     const promise = service.disputeEscrow('escrow-1', 'Issue');
     const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/dispute');
@@ -180,6 +200,7 @@ describe('EscrowService', () => {
 
     const result = await promise;
     expect(result.status).toBe('disputed');
+    expect(result.dispute_reason).toBe('Issue');
   });
 
   it('should queue dispute when offline', async () => {
@@ -193,16 +214,17 @@ describe('EscrowService', () => {
   // ── getEscrow ─────────────────────────────────────────────
 
   it('should fetch single escrow via API', async () => {
-    const escrow = createMockEscrow();
+    const escrow = createMockBackendEscrow();
 
     const promise = service.getEscrow('escrow-1');
-    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/escrow-1');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/transactions/escrow-1');
     expect(req.request.method).toBe('GET');
     req.flush(escrow);
 
     const result = await promise;
     expect(result).toBeDefined();
     expect(result?.id).toBe('escrow-1');
+    expect(result?.amount).toBe(100);
   });
 
   it('should return cached escrow when offline', async () => {

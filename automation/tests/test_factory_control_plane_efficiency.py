@@ -66,29 +66,13 @@ def test_static_product_contracts_only_run_when_their_inputs_change() -> None:
             assert f"      - '{path}'\n" in workflow
 
 
-def test_clean_project_lint_skips_factory_only_pull_requests_before_runner_allocation() -> None:
+def test_clean_project_lint_is_post_merge_or_manual_only() -> None:
     workflow = _workflow("clean-project-lint.yml")
 
-    assert "  pull_request:\n    branches: [main]\n    #" in workflow
-    assert "    paths-ignore:\n" in workflow
-    for path in (
-        "automation/**",
-        "factory-dashboard/**",
-        "config/factory/**",
-        "config/systemd/**",
-        "docs/**",
-        ".github/workflows/factory-merge.yml",
-        ".github/workflows/factory-format-evidence.yml",
-        ".github/workflows/on-failure.yml",
-        ".github/workflows/branch-pr-hygiene.yml",
-    ):
-        assert f"      - '{path}'\n" in workflow
-
-    # Keep changes to the classifier and canonical CI fail-open: they are not
-    # ignored by the workflow-level guard and therefore still allocate the
-    # ordinary application lint verification path.
-    assert "      - 'scripts/classify-ci-impact.sh'\n" not in workflow
-    assert "      - '.github/workflows/ci.yml'\n" not in workflow
+    assert "  push:\n    branches: [main, develop]\n" in workflow
+    assert "  workflow_dispatch:\n" in workflow
+    assert "  pull_request:\n" not in workflow
+    assert "  merge_group:\n" not in workflow
 
 
 def test_factory_format_evidence_only_runs_for_its_actual_daemon_input() -> None:
@@ -99,33 +83,18 @@ def test_factory_format_evidence_only_runs_for_its_actual_daemon_input() -> None
     assert "uv run --frozen ruff format openhands_factory/daemon.py" in workflow
 
 
-def test_dependency_review_skips_dependency_free_factory_pull_requests() -> None:
+def test_dependency_review_only_runs_for_dependency_inputs() -> None:
     workflow = _workflow("dependency-review.yml")
 
-    assert "    paths-ignore:\n" in workflow
+    assert "    paths:\n" in workflow
     for path in (
-        "automation/openhands_factory/**",
-        "automation/tests/**",
-        "automation/prompts/**",
-        "factory-dashboard/src/**",
-        "factory-dashboard/test/**",
-        "factory-dashboard/README.md",
-        "factory-dashboard/.env.example",
-        "config/factory/**",
-        "config/systemd/**",
-        "docs/**",
+        "**/package.json",
+        "**/package-lock.json",
+        "automation/pyproject.toml",
+        "automation/uv.lock",
+        ".github/workflows/**",
     ):
         assert f"      - '{path}'\n" in workflow
-
-    # Dependency inputs and GitHub Actions references are intentionally absent
-    # from the ignore set so pyproject/uv.lock, dashboard package/infrastructure,
-    # and workflow action changes keep the vulnerability gate.
-    assert "      - 'automation/pyproject.toml'\n" not in workflow
-    assert "      - 'automation/uv.lock'\n" not in workflow
-    assert "      - 'factory-dashboard/package.json'\n" not in workflow
-    assert "      - 'factory-dashboard/Dockerfile'\n" not in workflow
-    assert "      - 'factory-dashboard/docker-compose.yml'\n" not in workflow
-    assert "      - '.github/workflows/**'\n" not in workflow
 
 
 def test_mock_boundary_skips_only_non_production_factory_surfaces() -> None:
