@@ -108,6 +108,45 @@ def test_pressure_cleanup_removes_generated_build_and_test_outputs(
     assert all(not path.exists() for path in generated_paths)
 
 
+def test_pressure_cleanup_removes_real_dependency_trees_but_preserves_symlinks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    generated_paths = (
+        tmp_path / "issue-11/node_modules",
+        tmp_path / "issue-11/backend/node_modules",
+        tmp_path / "issue-11/frontend/node_modules",
+        tmp_path / "issue-11/admin-portal/node_modules",
+        tmp_path / "issue-11/automation/.venv",
+    )
+    for generated_path in generated_paths:
+        generated_path.mkdir(parents=True)
+        (generated_path / "generated.txt").write_text("generated", encoding="utf-8")
+
+    shared_dependencies = tmp_path / "shared-node-modules"
+    shared_dependencies.mkdir()
+    dependency_symlink = tmp_path / "issue-12/frontend/node_modules"
+    dependency_symlink.parent.mkdir(parents=True)
+    dependency_symlink.symlink_to(shared_dependencies, target_is_directory=True)
+
+    free = iter([_usage(10), *[_usage(10) for _ in generated_paths[:-1]], _usage(30)])
+    monkeypatch.setattr(
+        "openhands_factory.worktree_cache.shutil.disk_usage", lambda path: next(free)
+    )
+
+    removed = prune_inactive_worktree_caches(
+        tmp_path,
+        set(),
+        minimum_free_bytes=20,
+        target_free_bytes=30,
+    )
+
+    assert set(removed) == set(generated_paths)
+    assert all(not path.exists() for path in generated_paths)
+    assert dependency_symlink.is_symlink()
+    assert shared_dependencies.is_dir()
+
+
 def test_cleanup_rejects_target_below_reserve(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="below minimum"):
         prune_inactive_worktree_caches(
