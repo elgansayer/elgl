@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from openhands_factory.models import Task, logical_task_key
+from openhands_factory.models import Task, changed_path_fingerprint, logical_task_key
 from openhands_factory.state import atomic_write_json
 from openhands_factory.task_source import TaskStore
 
