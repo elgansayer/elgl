@@ -3,10 +3,10 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StudyBuddyComponent } from './study-buddy.component';
 import {
-  StudyBuddyService,
+  StudyBuddiesService,
   StudyBuddyMatch,
   BuddyRequest,
-} from '../../services/study-buddy.service';
+} from '../../services/study-buddies.service';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -56,7 +56,7 @@ describe('StudyBuddyComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [StudyBuddyComponent],
-      providers: [{ provide: StudyBuddyService, useValue: serviceMock }],
+      providers: [{ provide: StudyBuddiesService, useValue: serviceMock }],
     })
       .overrideComponent(StudyBuddyComponent, {
         set: { imports: [MockTranslatePipe] },
