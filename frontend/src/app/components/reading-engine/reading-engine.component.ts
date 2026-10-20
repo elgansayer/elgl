@@ -7,6 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { OfflineReadingService } from '../../services/offline-reading.service';
+import { ReadingEngineApiService } from '../../services/reading-engine-api.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../primitives/card/card.component';
@@ -436,6 +437,7 @@ export class ReadingEngineComponent {
   private vocabStore = inject(VocabularyStore);
   private networkStatus = inject(NetworkStatusService);
   private offlineReading = inject(OfflineReadingService);
+  private readingEngineApi = inject(ReadingEngineApiService);
 
   readonly tabIds = TAB_IDS;
 
@@ -572,65 +574,53 @@ export class ReadingEngineComponent {
 
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
-      return [
-        {
-          id: '1',
-          title: 'A Day in the Life of a Language Learner',
-          content:
-            'Every morning I wake up and start my day with a cup of coffee. I open my favourite language learning app and review my flashcards for ten minutes. Then I listen to a podcast in my target language while getting ready. During my commute I read news articles and look up new words. In the evening I practice speaking with my language exchange partner.',
-          language: 'en-GB',
-          difficulty: 'beginner',
-          topic: 'daily-life',
-          audioUrl: undefined,
-          wordCount: 73,
-        },
-        {
-          id: '2',
-          title: 'The Benefits of Bilingualism',
-          content:
-            'Research has shown that speaking multiple languages can have profound effects on the brain. Bilingual individuals often demonstrate enhanced executive function, better attention control, and delayed onset of dementia in later life. The cognitive benefits extend beyond language processing to improved problem-solving skills and greater mental flexibility.',
-          language: 'en-GB',
-          difficulty: 'intermediate',
-          topic: 'science',
-          audioUrl: undefined,
-          wordCount: 54,
-        },
-        {
-          id: '3',
-          title: 'Exploring Cultural Nuances Through Language',
-          content:
-            'Language is inextricably woven into the fabric of culture. When we learn a new language, we are not merely acquiring vocabulary and grammar rules; we are gaining access to an entirely different worldview. Idiomatic expressions, honourifics, and even the way colours are categorised can reveal profound insights about how a society thinks and what it values.',
-          language: 'en-GB',
-          difficulty: 'advanced',
-          topic: 'culture',
-          audioUrl: undefined,
-          wordCount: 63,
-        },
-        {
-          id: '4',
-          title: 'How to Order Food Like a Local',
-          content:
-            'When travelling abroad, ordering food can be one of the most intimidating yet rewarding experiences. Learn the essential phrases for greeting the waiter, asking about ingredients, specifying dietary restrictions, and complimenting the chef. Understanding local dining customs will help you avoid cultural faux pas and make your meals more enjoyable.',
-          language: 'en-GB',
-          difficulty: 'beginner',
-          topic: 'travel',
-          audioUrl: undefined,
-          wordCount: 58,
-        },
-        {
-          id: '5',
-          title: 'The Future of Machine Translation',
-          content:
-            'Neural machine translation has made remarkable strides in recent years, with transformer-based architectures achieving near-human performance on many language pairs. However, significant challenges remain: handling low-resource languages, preserving nuance and tone, and maintaining contextual coherence across long passages. The future likely lies in human-AI collaboration.',
-          language: 'en-GB',
-          difficulty: 'advanced',
-          topic: 'technology',
-          audioUrl: undefined,
-          wordCount: 67,
-        },
-      ];
+      if (this.isOffline()) {
+        const cached = await this.offlineReading.getCachedArticles();
+        if (cached && cached.length > 0) {
+          return cached.map(c => ({
+            ...c,
+            difficulty: c.difficulty as 'beginner' | 'intermediate' | 'advanced'
+          })) as ReadingArticle[];
+        }
+      }
+
+      const resources = await this.readingEngineApi.getResources();
+
+      const mappedArticles: ReadingArticle[] = resources.map(r => ({
+        id: r.id,
+        title: r.title,
+        content: r.content,
+        language: r.language,
+        difficulty: (r.difficulty as 'beginner' | 'intermediate' | 'advanced') || 'intermediate',
+        topic: r.topic || 'uncategorized',
+        audioUrl: r.sourceUrl,
+        wordCount: r.content.split(/\s+/).filter(w => w.length > 0).length,
+      }));
+
+      // Cache for offline use
+      if (mappedArticles.length > 0) {
+        await this.offlineReading.cacheArticles(mappedArticles.map(a => ({
+          ...a,
+          cachedAt: Date.now()
+        })));
+      }
+
+      return mappedArticles;
     } catch {
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
+      // Fallback to cache if API fails
+      try {
+        const cached = await this.offlineReading.getCachedArticles();
+        if (cached && cached.length > 0) {
+          this.fetchError.set(null); // Clear error if we have cached data
+          return cached.map(c => ({
+            ...c,
+            difficulty: c.difficulty as 'beginner' | 'intermediate' | 'advanced'
+          })) as ReadingArticle[];
+        }
+      } catch {
+        // ignore cache errors here
+      }
       return [];
     }
   }
