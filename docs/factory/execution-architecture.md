@@ -89,15 +89,15 @@ Review excludes every provider that may have mutated the current worktree. Same-
 when no alternative can run and is recorded as a diversity fallback. `.factory-review.json` is removed before
 each attempt and validated before success. Every PR-backed AI phase, refresh, and base update removes review
 labels and marks the current SHA-scoped status `PENDING` before work starts. A changed review head is marked
-pending before verification. Any newly discovered or previously reviewed head that falls behind `main` is updated
-through GitHub with an expected-head guard before local verification, then returns to independent review.
+pending before verification. An otherwise reviewed head that falls behind `main` is updated through GitHub with
+an expected-head guard, then returns to local verification and independent review.
 
 Autonomous merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present
 and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human
 review may report `CHANGES_REQUESTED`. The scheduled merge workflow is the only autonomous merge authority and
 enforces the same boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`.
 
-GitHub applies a baseline ruleset requiring pull requests and strict `CI / required`, plus a second review-only
+GitHub applies a baseline ruleset requiring pull requests and non-strict `CI / required`, plus a second review-only
 ruleset requiring `factory/independent-review`. Only the exact repository-owner user may bypass either ruleset,
 and only through an existing pull request. This permits a deliberate human waiver of CI, review, or both while
 Factory automation continues to require literal success from both statuses. Roles, apps, teams, deploy keys,

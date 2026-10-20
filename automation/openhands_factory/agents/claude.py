@@ -31,11 +31,7 @@ _DEFAULT_EFFORT = "max"
 class ClaudeCodeProvider(JsonAuthProbeMixin, CLIProvider):
     name = "claude"
     default_command = "claude"
-    # Fable requires separately purchased usage credits even when Claude Code is
-    # authenticated with a Pro subscription. Sonnet is the strongest verified
-    # subscription-backed default; phase-specific routing still selects Opus or
-    # Haiku where appropriate.
-    default_model = "sonnet"
+    default_model = "fable"
     default_credential_paths = (".claude", ".claude.json")
     default_runtime_paths = (".local/bin", ".local/share/claude", ".npm-global")
 
@@ -80,4 +76,6 @@ class ClaudeCodeProvider(JsonAuthProbeMixin, CLIProvider):
         ]
         if request.system_prompt:
             command.extend(("--append-system-prompt", request.system_prompt))
+        if request.read_only_reference is not None:
+            command.extend(("--add-dir", str(request.read_only_reference.resolve())))
         return [*command, *self.extra_args]
