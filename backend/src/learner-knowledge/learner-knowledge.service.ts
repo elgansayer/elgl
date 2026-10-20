@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { VocabularyResultItem } from '../hobby-tags/hobby-tags.service';
-import { LessonRecord } from '../lessons/lessons.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
+import { UsersService } from '../users/users.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 export interface CEFRLevel {
   level: string;
@@ -34,8 +34,8 @@ export interface RecentEncounter {
 export interface LearnerKnowledgeProfile {
   userId: string;
   language: string;
-  globalProficiency: CEFRLevel;
-  globalSkills: {
+  overallProficiency: CEFRLevel;
+  skills: {
     speaking: number;
     listening: number;
     reading: number;
@@ -43,9 +43,8 @@ export interface LearnerKnowledgeProfile {
     grammar: number;
     vocabulary: number;
   };
-  globalKnowledgeItems: Map<string, KnowledgeItem>;
-  languageKnowledgeItems: Map<string, KnowledgeItem>;
-  globalRecentEncounters: RecentEncounter[];
+  knowledgeItems: Map<string, KnowledgeItem>;
+  recentEncounters: RecentEncounter[];
 }
 
 @Injectable()
@@ -57,6 +56,8 @@ export class LearnerKnowledgeService {
     private readonly hobbyTagsService: HobbyTagsService,
     private readonly lessonsService: LessonsService,
     private readonly momentsService: MomentsService,
+    private readonly usersService: UsersService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   async getProfile(
@@ -67,20 +68,38 @@ export class LearnerKnowledgeService {
       `Fetching unified learner profile for user ${userId} in ${language}`,
     );
 
-    // Fetch data from various sources concurrently
-    const [flashcards, vocabulary, lessons, momentsCounts] = await Promise.all([
+    const supabase = this.supabaseService.getClient();
+    // Fetch data from various sources
+    const [
+      flashcards,
+      vocabulary,
+      lessons,
+      momentsCounts,
+      userProfile,
+      recentMomentsResponse,
+    ] = await Promise.all([
       this.flashcardsService
-        .getFlashcards(userId, undefined, 50)
+        .getFlashcards(userId, undefined, 20)
         .catch(() => []),
       this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
-      this.lessonsService.listLessons().catch(() => []),
+      this.lessonsService.listLessons().catch(() => []), // Placeholder
       this.momentsService
         .getLifetimeCounts(userId)
         .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+      this.usersService.getProfile(userId).catch(() => null),
+      Promise.resolve(
+        supabase
+          .from('moments')
+          .select('target_language, post_type, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(3),
+      ).catch(() => ({ data: [] })),
     ]);
 
-    const globalKnowledgeItems = new Map<string, KnowledgeItem>();
-    const languageKnowledgeItems = new Map<string, KnowledgeItem>();
+    const { data: recentMoments } = recentMomentsResponse || { data: [] };
+
+    const knowledgeItems = new Map<string, KnowledgeItem>();
 
     // Process flashcards to populate knowledge items
     (flashcards as Flashcard[]).forEach((f) => {
@@ -93,71 +112,55 @@ export class LearnerKnowledgeService {
         status = 'learning';
       }
 
-      globalKnowledgeItems.set(`vocab:${f.word_token}`, {
+      knowledgeItems.set(`vocab:${f.word_token}`, {
         id: `vocab:${f.word_token}`,
         type: 'vocabulary',
         status,
         confidenceScore: f.easiness_factor,
-        errorFrequency: status === 'struggling' ? 0.5 : 0,
+        errorFrequency: status === 'struggling' ? 0.5 : 0, // Mocked
         sourceIds: { flashcardId: f.id },
-        lastEncounteredAt: new Date(f.next_review_at),
+        lastEncounteredAt: new Date(f.next_review_at), // Using next_review_at as a proxy for last encountered
       });
     });
 
     // Extract recent encounters from lessons
     const recentEncounters: RecentEncounter[] = lessons
-      .slice(0, 5)
-      .map((l: LessonRecord) => ({
+      .slice(0, 3)
+      .map((l: any) => ({
         topic: l.title || 'Unknown Topic',
         source: 'lesson',
         timestamp: new Date(l.created_at || Date.now()),
       }));
 
-    // Process vocabulary from hobby tags
-    if (Array.isArray(vocabulary)) {
-      vocabulary.forEach((v: VocabularyResultItem) => {
-        const id = `vocab:${v.word}`;
-        if (!languageKnowledgeItems.has(id)) {
-          languageKnowledgeItems.set(id, {
-            id,
-            type: 'vocabulary',
-            status: 'new',
-            confidenceScore: 0,
-            errorFrequency: 0,
-            sourceIds: {},
-            lastEncounteredAt: new Date(),
-          });
-        }
+    // Add recent encounters from moments
+    (recentMoments || []).forEach((m: any) => {
+      recentEncounters.push({
+        topic: m.post_type || 'Unknown Topic',
+        source: 'moment',
+        timestamp: new Date(m.created_at || Date.now()),
       });
-    }
+    });
+    recentEncounters.sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+    );
 
-    // Evaluate skills heuristically from counts
-    const calculateSkill = (
-      base: number,
-      bonusCounts: number,
-      divisor: number,
-    ) => {
-      return Math.min(1.0, base + bonusCounts / divisor);
-    };
-
-    const baseLevel = 'A1'; // Fallback to validated CEFR default until language-scoped assessment data exists
+    const level = userProfile?.proficiency_level || 'beginner';
 
     // Synthesize the profile
     return {
       userId,
       language,
-      globalProficiency: { level: baseLevel },
-      globalSkills: {
-        speaking: calculateSkill(0.2, momentsCounts.moments, 50),
-        listening: calculateSkill(0.2, lessons.length, 20),
-        reading: calculateSkill(0.2, momentsCounts.translations, 100),
-        writing: calculateSkill(0.2, momentsCounts.moments, 50),
-        grammar: calculateSkill(0.2, momentsCounts.corrections, 40),
-        vocabulary: calculateSkill(0.2, flashcards.length, 200),
+      overallProficiency: { level },
+      skills: {
+        speaking: 0.5,
+        listening: 0.6,
+        reading: 0.7,
+        writing: 0.4,
+        grammar: 0.5,
+        vocabulary: 0.6,
       },
-      globalKnowledgeItems,
-      languageKnowledgeItems,
-      globalRecentEncounters: recentEncounters,
+      knowledgeItems,
+      recentEncounters: recentEncounters.slice(0, 3),
     };
   }
 }

@@ -2,16 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LearnerKnowledgeService } from './learner-knowledge.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
+import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
+import { UsersService } from '../users/users.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('LearnerKnowledgeService', () => {
   let service: LearnerKnowledgeService;
   let flashcardsService: { getFlashcards: ReturnType<typeof vi.fn> };
   let hobbyTagsService: { getUserVocabulary: ReturnType<typeof vi.fn> };
+  let assessmentsService: { getQuestions: ReturnType<typeof vi.fn> };
   let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
   let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
+  let usersService: { getProfile: ReturnType<typeof vi.fn> };
+  let supabaseService: { getClient: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     flashcardsService = {
@@ -20,11 +26,27 @@ describe('LearnerKnowledgeService', () => {
     hobbyTagsService = {
       getUserVocabulary: vi.fn(),
     };
+    assessmentsService = {
+      getQuestions: vi.fn(),
+    };
     lessonsService = {
       listLessons: vi.fn(),
     };
     momentsService = {
       getLifetimeCounts: vi.fn(),
+    };
+    usersService = {
+      getProfile: vi.fn(),
+    };
+    const mockSupabaseClient = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: [] }),
+    };
+    supabaseService = {
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -32,8 +54,11 @@ describe('LearnerKnowledgeService', () => {
         LearnerKnowledgeService,
         { provide: FlashcardsService, useValue: flashcardsService },
         { provide: HobbyTagsService, useValue: hobbyTagsService },
+        { provide: AssessmentsService, useValue: assessmentsService },
         { provide: LessonsService, useValue: lessonsService },
         { provide: MomentsService, useValue: momentsService },
+        { provide: UsersService, useValue: usersService },
+        { provide: SupabaseService, useValue: supabaseService },
       ],
     }).compile();
 
@@ -105,110 +130,59 @@ describe('LearnerKnowledgeService', () => {
       ];
       lessonsService.listLessons.mockResolvedValue(mockLessons);
 
-      hobbyTagsService.getUserVocabulary.mockResolvedValue([
-        { word: 'hobbyWord' },
-      ]);
+      hobbyTagsService.getUserVocabulary.mockResolvedValue([]);
+      assessmentsService.getQuestions.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 10,
         corrections: 2,
         translations: 5,
       });
 
+      const mockMoments = [
+        { post_type: 'moment', created_at: '2026-01-03T10:00:00Z' },
+        { post_type: 'question', created_at: '2026-01-04T10:00:00Z' },
+      ];
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: mockMoments }),
+      });
+
+      usersService.getProfile.mockResolvedValue({ proficiency_level: 'B1' });
+
       const profile = await service.getProfile('user1', 'es');
 
       // Assert profile metadata
       expect(profile.userId).toBe('user1');
       expect(profile.language).toBe('es');
-      expect(profile.globalProficiency.level).toBe('A1'); // Should fallback to A1 regardless of user profile
+      expect(profile.overallProficiency.level).toBe('B1');
 
       // Assert knowledge items
-      expect(profile.globalKnowledgeItems.size).toBe(4);
-      expect(profile.languageKnowledgeItems.size).toBe(1);
+      expect(profile.knowledgeItems.size).toBe(4);
 
-      const known = profile.globalKnowledgeItems.get('vocab:knownWord');
+      const known = profile.knowledgeItems.get('vocab:knownWord');
       expect(known?.status).toBe('known');
       expect(known?.confidenceScore).toBe(2.5);
       expect(known?.errorFrequency).toBe(0);
 
-      const struggling = profile.globalKnowledgeItems.get(
-        'vocab:strugglingWord',
-      );
+      const struggling = profile.knowledgeItems.get('vocab:strugglingWord');
       expect(struggling?.status).toBe('struggling');
       expect(struggling?.confidenceScore).toBe(1.5);
       expect(struggling?.errorFrequency).toBe(0.5);
 
-      const learning = profile.globalKnowledgeItems.get('vocab:learningWord');
+      const learning = profile.knowledgeItems.get('vocab:learningWord');
       expect(learning?.status).toBe('learning');
       expect(learning?.confidenceScore).toBe(2.1);
 
-      const newWord = profile.globalKnowledgeItems.get('vocab:newWord');
+      const newWord = profile.knowledgeItems.get('vocab:newWord');
       expect(newWord?.status).toBe('new');
 
-      const hobbyWord = profile.languageKnowledgeItems.get('vocab:hobbyWord');
-      expect(hobbyWord?.status).toBe('new');
-
       // Assert recent encounters
-      expect(profile.globalRecentEncounters.length).toBe(2);
-      expect(profile.globalRecentEncounters[0].topic).toBe('Lesson 1');
-      expect(profile.globalRecentEncounters[0].source).toBe('lesson');
-    });
-
-    it('should explicitly fallback to A1 for multi-language requests until language-scoped assessments exist, and separate language items', async () => {
-      flashcardsService.getFlashcards.mockResolvedValue([
-        {
-          word_token: 'globalFlashcard',
-          repetitions: 1,
-          srs_level: 2,
-          easiness_factor: 2.1,
-          id: 'f1',
-          next_review_at: '2026-01-01T00:00:00Z',
-          translation: 'w1',
-          user_id: 'user-multi',
-          interval_days: 10,
-          created_at: '2026-01-01T00:00:00Z',
-        },
-      ]);
-
-      lessonsService.listLessons.mockResolvedValue([]);
-      momentsService.getLifetimeCounts.mockResolvedValue({
-        moments: 0,
-        corrections: 0,
-        translations: 0,
-      });
-
-      hobbyTagsService.getUserVocabulary.mockImplementation(
-        async (userId, language) => {
-          if (language === 'fr') {
-            return [{ word: 'bonjour' }];
-          }
-          if (language === 'de') {
-            return [{ word: 'hallo' }];
-          }
-          return [];
-        },
-      );
-
-      const profileFr = await service.getProfile('user-multi', 'fr');
-      const profileDe = await service.getProfile('user-multi', 'de');
-
-      // Regardless of the invalid profile value, it should always return A1 until language-scoped assessments exist
-      expect(profileFr.globalProficiency.level).toBe('A1');
-      expect(profileDe.globalProficiency.level).toBe('A1');
-
-      // Global items should be the same
-      expect(profileFr.globalKnowledgeItems.has('vocab:globalFlashcard')).toBe(
-        true,
-      );
-      expect(profileDe.globalKnowledgeItems.has('vocab:globalFlashcard')).toBe(
-        true,
-      );
-
-      // Language items should be distinct
-      expect(profileFr.languageKnowledgeItems.has('vocab:bonjour')).toBe(true);
-      expect(profileFr.languageKnowledgeItems.has('vocab:hallo')).toBe(false);
-
-      expect(profileDe.languageKnowledgeItems.has('vocab:hallo')).toBe(true);
-      expect(profileDe.languageKnowledgeItems.has('vocab:bonjour')).toBe(false);
+      expect(profile.recentEncounters.length).toBe(3);
+      expect(profile.recentEncounters[0].topic).toBe('question');
+      expect(profile.recentEncounters[0].source).toBe('moment');
     });
 
     it('should handle service failures gracefully', async () => {
@@ -218,19 +192,28 @@ describe('LearnerKnowledgeService', () => {
       hobbyTagsService.getUserVocabulary.mockRejectedValue(
         new Error('Tags failed'),
       );
+      assessmentsService.getQuestions.mockRejectedValue(
+        new Error('Assessments failed'),
+      );
       lessonsService.listLessons.mockRejectedValue(new Error('Lessons failed'));
       momentsService.getLifetimeCounts.mockRejectedValue(
         new Error('Moments failed'),
       );
+      usersService.getProfile.mockRejectedValue(new Error('Users failed'));
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockRejectedValue(new Error('Supabase failed')),
+      });
 
       const profile = await service.getProfile('user2', 'fr');
 
       expect(profile.userId).toBe('user2');
       expect(profile.language).toBe('fr');
-      expect(profile.globalKnowledgeItems.size).toBe(0);
-      expect(profile.languageKnowledgeItems.size).toBe(0);
-      expect(profile.globalRecentEncounters.length).toBe(0);
-      expect(profile.globalProficiency.level).toBe('A1');
+      expect(profile.knowledgeItems.size).toBe(0);
+      expect(profile.recentEncounters.length).toBe(0);
     });
   });
 });

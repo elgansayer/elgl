@@ -51,4 +51,10 @@ export class HelpService {
       this.http.get<string[]>(`${this.baseUrl}/categories`),
     );
   }
+
+  async getQuickReplies(): Promise<string[]> {
+    return firstValueFrom(
+      this.http.get<string[]>(`${this.baseUrl}/quick-replies`),
+    );
+  }
 }
