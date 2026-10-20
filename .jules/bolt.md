@@ -202,6 +202,10 @@
 ## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
 **Learning:** In the backend `reading-engine-cache.service.ts`, the `handleUserDataCleared` event listener sequentially iterated over cache namespaces, invoking `deletePattern` (which scans Redis) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during user data deletion, unnecessarily stalling the event loop and compounding network latency.
 **Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+## 2026-10-15 - [Optimize bulk cache invalidation via Promise.all]
+**Learning:** In the backend \`safety-cache-invalidation.service.ts\`, the \`invalidateTrustAndSafetyCaches\` method sequentially iterated over cache patterns, invoking Redis deletion methods using \`await\` inside a \`for...of\` loop. This caused N separate sequential roundtrips to Redis during trust and safety cache invalidation, unnecessarily stalling the event loop and compounding network latency.
+**Action:** When invalidating multiple independent cache keys or patterns within a single event handler, replace sequential \`await\` loops with a concurrent \`Promise.all\` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+
 
 ## 2026-10-10 - Angular Change Detection Defaults
 **Learning:** In this NestJS + Angular architecture, many components that render static data or use signals/observables fall back to default change detection, causing unnecessary main thread overhead during app-wide updates.
@@ -249,6 +253,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
