@@ -54,7 +54,9 @@ export class AdminGuard implements CanActivate {
     outcome: 'denied' | 'failed',
   ): Promise<void> {
     const requestId = request.headers?.['x-request-id'];
-    const rawCorrelationId = Array.isArray(requestId) ? requestId[0] : requestId;
+    const rawCorrelationId = Array.isArray(requestId)
+      ? requestId[0]
+      : requestId;
     const correlationId =
       typeof rawCorrelationId === 'string' &&
       SAFE_CORRELATION_ID.test(rawCorrelationId)
@@ -65,10 +67,11 @@ export class AdminGuard implements CanActivate {
     try {
       await this.audit.record({
         actorUserId,
-        action: `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
-          0,
-          160,
-        ),
+        action:
+          `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
+            0,
+            160,
+          ),
         targetType: 'admin-resource',
         outcome,
         correlationId,

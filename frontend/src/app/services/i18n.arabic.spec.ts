@@ -40,6 +40,8 @@ describe('I18nService Arabic rendering contract', () => {
     localStorage.setItem('hellotalk_dict_ar', JSON.stringify({}));
 
     await service.setLanguage('ar');
+    document.documentElement.classList.toggle('dark', darkMode);
+    await service.setLanguage('ar');
 
     expect(service.currentLang()).toBe('ar');
     expect(service.direction()).toBe('rtl');

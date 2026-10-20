@@ -12,7 +12,9 @@ interface AuthenticatedRequest {
 @Controller('media/chat')
 @UseGuards(SupabaseAuthGuard)
 export class ChatMediaSendController {
-  constructor(private readonly chatMediaMessageService: ChatMediaMessageService) {}
+  constructor(
+    private readonly chatMediaMessageService: ChatMediaMessageService,
+  ) {}
 
   @Post('send')
   @Throttle({ default: { limit: 60, ttl: 60000 } })

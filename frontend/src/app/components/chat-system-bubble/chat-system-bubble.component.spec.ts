@@ -59,6 +59,22 @@ describe('ChatSystemBubbleComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('system.unknownEventType');
   });
 
+  it.each(['constructor', 'toString', 'valueOf'])(
+    'treats inherited Object key %s as an unknown event rather than a configured event',
+    (eventType) => {
+      fixture.componentRef.setInput('eventType', eventType);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.i18nKey()).toBe('notifications.systemAlert');
+      expect(fixture.componentInstance.config()).toMatchObject({
+        icon: '🔔',
+        bgClass: 'bg-surface-200',
+      });
+      expect(fixture.nativeElement.textContent).toContain('System alert');
+      expect(fixture.nativeElement.textContent).not.toContain(`system.${eventType}`);
+    },
+  );
+
   it('falls back instead of exposing an unresolved translation placeholder', () => {
     fixture.componentRef.setInput('eventType', 'missedCall');
     fixture.componentRef.setInput('params', { isVideo: true });
@@ -82,6 +98,21 @@ describe('ChatSystemBubbleComponent', () => {
     expect(params['nested']).toBeUndefined();
     expect(params['count']).toBeUndefined();
     expect(String(params['message'])).toHaveLength(500);
+  });
+
+  it('isolates interpolation params from Object prototype members', () => {
+    fixture.componentRef.setInput('eventType', 'announcement');
+    fixture.componentRef.setInput('params', {
+      message: 'Maintenance starts soon',
+      constructor: 'untrusted',
+      toString: 'untrusted',
+    });
+
+    const params = fixture.componentInstance.displayParams();
+    expect(Object.getPrototypeOf(params)).toBeNull();
+    expect(params['constructor']).toBe('untrusted');
+    expect(params['toString']).toBe('untrusted');
+    expect(params['message']).toBe('Maintenance starts soon');
   });
 
   it('exposes the bubble as an atomic polite status region for assistive technology', () => {

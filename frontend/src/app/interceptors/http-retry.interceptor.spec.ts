@@ -17,7 +17,7 @@ describe.skip('httpRetryInterceptor', () => {
     const mockNext: HttpHandlerFn = () =>
       of(new HttpResponse<string>({ body: 'OK', status: 200 }));
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     const res = await firstValueFrom(httpRetryInterceptor(req, mockNext));
     expect((res as HttpResponse<string>).body).toBe('OK');
   });
@@ -31,7 +31,7 @@ describe.skip('httpRetryInterceptor', () => {
       );
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     try {
       await firstValueFrom(httpRetryInterceptor(req, mockNext));
       expect(true).toBe(false); // should not reach here
@@ -48,7 +48,7 @@ describe.skip('httpRetryInterceptor', () => {
       return throwError(() => new Error('Network failure'));
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     try {
       await firstValueFrom(httpRetryInterceptor(req, mockNext));
       expect(true).toBe(false); // should not reach here
@@ -70,7 +70,7 @@ describe.skip('httpRetryInterceptor', () => {
       return of(new HttpResponse({ status: 200, body: 'OK' }));
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     const res = await firstValueFrom(httpRetryInterceptor(req, mockNext));
     expect((res as HttpResponse<string>).body).toBe('OK');
     expect(attempt).toBe(3);
@@ -85,7 +85,7 @@ describe.skip('httpRetryInterceptor', () => {
       );
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     try {
       await firstValueFrom(httpRetryInterceptor(req, mockNext));
       expect(true).toBe(false); // should not reach here

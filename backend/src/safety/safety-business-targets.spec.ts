@@ -35,7 +35,9 @@ describe('SafetyService business target contract', () => {
       single: vi.fn(),
       maybeSingle: vi.fn(),
       response: { data: null, error: null },
-      then: vi.fn((resolve: (value: unknown) => void) => resolve(query.response)),
+      then: vi.fn((resolve: (value: unknown) => void) =>
+        resolve(query.response),
+      ),
     };
     from = vi.fn().mockReturnValue(query);
     metrics = {
