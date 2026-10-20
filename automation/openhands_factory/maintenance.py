@@ -200,6 +200,69 @@ def collect_incidents(jobs: dict[str, Job]) -> list[Incident]:
     )
 
 
+def measurement_summary(value: object) -> dict[str, object] | None:
+    """Bounded observational evidence, without recursively copying prior plans."""
+    if not isinstance(value, dict):
+        return None
+    throughput = value.get("throughput")
+    rolling = throughput.get("rolling_throughput") if isinstance(throughput, dict) else None
+    window = rolling.get("24h") if isinstance(rolling, dict) else None
+    window = window if isinstance(window, dict) else {}
+    components = window.get("merged_pr_count_by_component")
+    components = components if isinstance(components, dict) else {}
+    states = value.get("jobs_by_state")
+    states = states if isinstance(states, dict) else {}
+
+    def counts(items: dict[object, object]) -> dict[str, int]:
+        return {
+            key[:80]: count
+            for key, count in list(items.items())[:40]
+            if isinstance(key, str) and type(count) is int and count >= 0
+        }
+
+    merged = window.get("merged_pr_count")
+    return {
+        "observed_at": value.get("observed_at"),
+        "merged_pr_count_24h": merged if type(merged) is int and merged >= 0 else None,
+        "merged_pr_count_by_component_24h": counts(components),
+        "jobs_by_state": counts(states),
+    }
+
+
+def maintenance_feedback(record: dict[str, object]) -> dict[str, object]:
+    """Never promote observations, failed canaries or unknown attribution to success."""
+    feedback = {
+        key: record.get(key)
+        for key in (
+            "key",
+            "status",
+            "issue",
+            "created_at",
+            "deployed_at",
+            "completed_at",
+            "canary_task",
+            "canary_verified_sha",
+            "canary_canonical_task",
+        )
+    }
+    for key in ("diagnosis", "change"):
+        value = record.get(key)
+        feedback[key] = redact_agent_output(value)[:2000] if isinstance(value, str) else None
+    criteria = record.get("acceptance_criteria")
+    feedback["acceptance_criteria"] = (
+        [redact_agent_output(item)[:1000] for item in criteria[:6] if isinstance(item, str)]
+        if isinstance(criteria, list)
+        else []
+    )
+    feedback["measurement"] = {
+        "interpretation": "observational before/after, not causal proof or acceptance verification",
+        "baseline": measurement_summary(record.get("baseline")),
+        "outcome": measurement_summary(record.get("outcome")),
+        "attribution": "Unknown components must not count as verified application throughput",
+    }
+    return feedback
+
+
 class MaintenanceController:
     def __init__(self, pipeline: FactoryPipeline) -> None:
         self.pipeline = pipeline
@@ -311,10 +374,7 @@ class MaintenanceController:
                 for name, provider in self.config.agents.providers.items()
                 if provider.enabled
             },
-            "recent_maintenance": [
-                {key: record.get(key) for key in ("key", "status", "diagnosis")}
-                for record in self.records()[-10:]
-            ],
+            "recent_maintenance": [maintenance_feedback(record) for record in self.records()[-10:]],
             "programme": read_json(
                 self.pipeline.prompt_dir.parent.parent
                 / "config/factory/maintenance-programme.json",
@@ -375,10 +435,22 @@ class MaintenanceController:
             if record.get("status") == "awaiting-deployment" and self.deployment_ready():
                 record["status"] = "canary-ready" if record.get("affected") else "measuring"
                 record["deployed_at"] = now.isoformat()
-            if record.get("status") == "measuring":
+            if (
+                record.get("status")
+                in {
+                    "measuring",
+                    "recovered",
+                    "canary-failed",
+                    "canary-delayed",
+                    "canary-obsolete",
+                }
+                and "outcome" not in record
+            ):
                 deployed_at = timestamp(record.get("deployed_at"))
                 if deployed_at is not None and now - deployed_at >= timedelta(hours=24):
-                    record.update({"status": "measured", "outcome": snapshot})
+                    record.update({"outcome": snapshot, "measured_at": now.isoformat()})
+                    if record.get("status") == "measuring":
+                        record["status"] = "measured"
         if any(
             record.get("status")
             in {"repairing", "awaiting-deployment", "canary-ready", "canary", "recovering"}
@@ -482,7 +554,9 @@ class MaintenanceController:
             self.pipeline._run_agent(
                 analysis_job,
                 scratch,
-                "maintenance",
+                # Diagnosis and falsifiable experiment design need the planning
+                # route, not the catch-all cheap general-action model.
+                "planning",
                 prompt,
                 prepare_attempt=clear,
                 validate_output=validate,
@@ -541,6 +615,8 @@ class MaintenanceController:
             "created_at": now.isoformat(),
             "baseline": snapshot,
             "diagnosis": redact_agent_output(plan.diagnosis),
+            "change": redact_agent_output(plan.change),
+            "acceptance_criteria": [redact_agent_output(item) for item in plan.acceptance_criteria],
             "evidence_fingerprint": incident.fingerprint() if incident else None,
             "affected": {
                 job.task.identifier: {"error": error_identity(job), "head": job.head_sha}

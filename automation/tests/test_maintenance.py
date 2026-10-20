@@ -22,6 +22,7 @@ from openhands_factory.maintenance import (
     MaintenancePlan,
     collect_incidents,
     error_identity,
+    maintenance_feedback,
     runtime_signature,
     validate_proposal,
 )
@@ -111,7 +112,7 @@ def controller(tmp_path: Path) -> MaintenanceController:
 
     def run_agent(job, scratch, phase, prompt, **kwargs):
         pipeline.calls += 1
-        assert phase == "maintenance"
+        assert phase == "planning"
         assert kwargs["timeout_seconds"] == 180
         assert kwargs["read_only_reference"] == config.repository.resolve()
         assert "Untrusted diagnostic data" in prompt
@@ -174,11 +175,131 @@ def test_one_deduplicated_repair_with_durable_schedule_and_daily_report(controll
     assert "regression test" in pipeline.github.created[0][1]
     assert controller.state()["analyses_today"] == 1
     assert len(controller.state()["reports"]) == 1
+    record = controller.records()[0]
+    assert record["change"] == pipeline.plan["change"]
+    assert record["acceptance_criteria"] == pipeline.plan["acceptance_criteria"]
     controller.run()
     make_due(controller)
     controller.run()
     assert pipeline.calls == 1
     assert len(pipeline.github.created) == 1
+
+
+def test_planner_receives_measured_outcomes_without_recursive_history(controller):
+    baseline = {
+        "observed_at": "2026-10-18T00:00:00+00:00",
+        "throughput": {
+            "rolling_throughput": {
+                "24h": {
+                    "merged_pr_count": 2,
+                    "merged_pr_count_by_component": {"unknown": 2},
+                }
+            }
+        },
+        "jobs_by_state": {"repairing": 12},
+        "recent_maintenance": [{"recursive": "must not be copied"}],
+        "provider_usage_lifetime": [{"irrelevant": "must not be copied"}],
+    }
+    outcome = {
+        **baseline,
+        "observed_at": "2026-10-19T00:00:00+00:00",
+        "jobs_by_state": {"repairing": 8},
+    }
+    record = {
+        "key": "experiment",
+        "status": "measured",
+        "change": "targeted repair",
+        "acceptance_criteria": ["verified source and new-head canary"],
+        "baseline": baseline,
+        "outcome": outcome,
+    }
+    atomic_write_json(controller.path, {"records": [record]})
+    feedback = controller.snapshot(controller.pipeline.jobs.load())["recent_maintenance"][0]
+    assert feedback["change"] == "targeted repair"
+    assert feedback["acceptance_criteria"] == record["acceptance_criteria"]
+    measurement = feedback["measurement"]
+    assert measurement["baseline"]["jobs_by_state"] == {"repairing": 12}
+    assert measurement["outcome"]["jobs_by_state"] == {"repairing": 8}
+    assert measurement["outcome"]["merged_pr_count_by_component_24h"] == {"unknown": 2}
+    assert "not causal proof" in measurement["interpretation"]
+    assert "must not be copied" not in json.dumps(feedback)
+
+
+@pytest.mark.parametrize(
+    "status", ["observing", "canary-failed", "canary-delayed", "canary-obsolete"]
+)
+def test_feedback_preserves_unverified_outcomes_and_legacy_records(status):
+    feedback = maintenance_feedback({"key": "old", "status": status})
+    assert feedback["status"] == status
+    assert feedback["change"] is None
+    assert feedback["acceptance_criteria"] == []
+    assert feedback["canary_verified_sha"] is None
+    assert feedback["measurement"]["baseline"] is None
+    assert feedback["measurement"]["outcome"] is None
+
+
+def test_feedback_bounds_and_redacts_historical_model_text():
+    feedback = maintenance_feedback(
+        {
+            "diagnosis": "token=fixture-secret " + "x" * 4000,
+            "change": "token=fixture-secret",
+            "acceptance_criteria": ["token=fixture-secret"] * 20,
+            "outcome": {
+                "jobs_by_state": {"valid": 1, "bad": True, "negative": -1},
+                "throughput": {"rolling_throughput": {"24h": {"merged_pr_count": True}}},
+            },
+        }
+    )
+    assert "fixture-secret" not in json.dumps(feedback)
+    assert len(feedback["diagnosis"]) <= 2000
+    assert len(feedback["acceptance_criteria"]) == 6
+    assert feedback["measurement"]["outcome"]["jobs_by_state"] == {"valid": 1}
+    assert feedback["measurement"]["outcome"]["merged_pr_count_24h"] is None
+
+
+@pytest.mark.parametrize(
+    "status", ["measuring", "recovered", "canary-failed", "canary-delayed", "canary-obsolete"]
+)
+def test_incident_outcomes_are_measured_once_without_relabelling_failed_canaries(
+    controller, status
+):
+    record = {
+        "key": "old",
+        "status": status,
+        "deployed_at": (datetime.now(UTC) - timedelta(hours=25)).isoformat(),
+    }
+    atomic_write_json(
+        controller.path,
+        {
+            "records": [record],
+            "analysis_day": datetime.now(UTC).date().isoformat(),
+            "analyses_today": controller.config.maintenance_daily_limit,
+        },
+    )
+    controller.run()
+    measured = controller.records()[0]
+    assert measured["status"] == ("measured" if status == "measuring" else status)
+    assert measured["outcome"]["jobs_by_state"] == {"repairing": 3}
+    first_measurement = measured["measured_at"]
+    assert controller.pipeline.calls == 0
+    make_due(controller)
+    controller.run()
+    assert controller.records()[0]["measured_at"] == first_measurement
+
+
+def test_outcome_is_not_measured_before_a_full_day_after_deployment(controller):
+    atomic_write_json(
+        controller.path,
+        {
+            "records": [
+                {"key": "new", "status": "recovered", "deployed_at": datetime.now(UTC).isoformat()}
+            ],
+            "analysis_day": datetime.now(UTC).date().isoformat(),
+            "analyses_today": controller.config.maintenance_daily_limit,
+        },
+    )
+    controller.run()
+    assert "outcome" not in controller.records()[0]
 
 
 def test_only_controller_recorded_issue_receives_maintenance_admission(controller) -> None:
