@@ -3,10 +3,27 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { EscrowService } from './escrow.service';
+import { EscrowService, EscrowTransactionResponse } from './escrow.service';
 import { NetworkStatusService } from './network-status.service';
 import { AuthService } from './auth.service';
 import { EscrowOfflineService, EscrowRow } from './escrow-offline.service';
+
+function createMockBackendEscrow(
+  overrides: Partial<EscrowTransactionResponse> = {},
+): EscrowTransactionResponse {
+  return {
+    id: 'escrow-1',
+    payer_id: 'sender-1',
+    payee_id: 'receiver-1',
+    amount_coins: 100,
+    status: 'pending',
+    reason: 'Test escrow',
+    metadata: { service_type: 'lesson' },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 function createMockEscrow(overrides: Partial<EscrowRow> = {}): EscrowRow {
   return {
@@ -17,6 +34,9 @@ function createMockEscrow(overrides: Partial<EscrowRow> = {}): EscrowRow {
     status: 'pending',
     description: 'Test escrow',
     service_type: 'lesson',
+    dispute_reason: null,
+    dispute_evidence: null,
+    admin_note: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...overrides,
@@ -77,16 +97,18 @@ describe('EscrowService', () => {
   // ── listUserEscrows ───────────────────────────────────────
 
   it('should fetch escrows and cache them when online', async () => {
-    const escrows = [createMockEscrow()];
+    const backendEscrows = [createMockBackendEscrow()];
 
     const promise = service.listUserEscrows();
-    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/transactions');
     expect(req.request.method).toBe('GET');
-    req.flush(escrows);
+    req.flush(backendEscrows);
 
-    await promise;
-    expect(mockOfflineStore.cacheEscrows).toHaveBeenCalledWith(escrows);
-    expect(service.escrows()).toEqual(escrows);
+    const result = await promise;
+    expect(mockOfflineStore.cacheEscrows).toHaveBeenCalledWith(result);
+    expect(result[0].id).toEqual('escrow-1');
+    expect(result[0].sender_id).toEqual('sender-1');
+    expect(result[0].amount).toEqual(100);
   });
 
   it('should fall back to cached escrows when offline', async () => {
@@ -99,13 +121,13 @@ describe('EscrowService', () => {
     expect(mockOfflineStore.getCachedEscrows).toHaveBeenCalled();
   });
 
-    // ── createEscrow ─────────────────────────────────────────
+  // ── createEscrow ─────────────────────────────────────────
   it('should create escrow via API when online', async () => {
     vi.spyOn(mockNetwork, 'isOnline').mockReturnValue(true as unknown as boolean);
     const dto = { partner_id: 'partner-1', amount: 100, description: 'Test' };
 
     const promise = service.createEscrow(dto);
-    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/create');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/hold');
     expect(req.request.method).toBe('POST');
     req.flush({ id: 'esc-1', status: 'pending', amount_held: 100, coins_remaining: 400 });
 
@@ -131,7 +153,12 @@ describe('EscrowService', () => {
     const promise = service.releaseEscrow('escrow-1');
     const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/release');
     expect(req.request.method).toBe('POST');
-    req.flush({ id: 'escrow-1', status: 'released', amount_released: 100, receiver_new_balance: 600 });
+    req.flush({
+      id: 'escrow-1',
+      status: 'released',
+      amount_released: 100,
+      receiver_new_balance: 600,
+    });
 
     const result = await promise;
     expect(result.status).toBe('released');
@@ -153,7 +180,12 @@ describe('EscrowService', () => {
     const promise = service.refundEscrow('escrow-1', 'Changed mind');
     const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/refund');
     expect(req.request.method).toBe('POST');
-    req.flush({ id: 'escrow-1', status: 'refunded', amount_refunded: 100, sender_new_balance: 500 });
+    req.flush({
+      id: 'escrow-1',
+      status: 'refunded',
+      amount_refunded: 100,
+      sender_new_balance: 500,
+    });
 
     const result = await promise;
     expect(result.status).toBe('refunded');
@@ -171,7 +203,10 @@ describe('EscrowService', () => {
 
   it('should dispute escrow via API when online', async () => {
     vi.spyOn(mockNetwork, 'isOnline').mockReturnValue(true as unknown as boolean);
-    const disputeResult = createMockEscrow({ status: 'disputed', dispute_reason: 'Issue' });
+    const disputeResult = createMockBackendEscrow({
+      status: 'disputed',
+      metadata: { dispute_reason: 'Issue' },
+    });
 
     const promise = service.disputeEscrow('escrow-1', 'Issue');
     const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/dispute');
@@ -180,6 +215,7 @@ describe('EscrowService', () => {
 
     const result = await promise;
     expect(result.status).toBe('disputed');
+    expect(result.dispute_reason).toBe('Issue');
   });
 
   it('should queue dispute when offline', async () => {
@@ -192,17 +228,35 @@ describe('EscrowService', () => {
 
   // ── getEscrow ─────────────────────────────────────────────
 
+  it.each([
+    null,
+    {},
+    { service_type: 42, dispute_reason: {}, dispute_evidence: false, admin_note: [] },
+  ])('uses safe adapter defaults for optional or malformed metadata: %j', async (metadata) => {
+    const promise = service.getEscrow('escrow-1');
+    httpMock
+      .expectOne('http://127.0.0.1:3000/api/escrow/transactions/escrow-1')
+      .flush(createMockBackendEscrow({ metadata }));
+    expect(await promise).toMatchObject({
+      service_type: 'other',
+      dispute_reason: null,
+      dispute_evidence: null,
+      admin_note: null,
+    });
+  });
+
   it('should fetch single escrow via API', async () => {
-    const escrow = createMockEscrow();
+    const escrow = createMockBackendEscrow();
 
     const promise = service.getEscrow('escrow-1');
-    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/escrow-1');
+    const req = httpMock.expectOne('http://127.0.0.1:3000/api/escrow/transactions/escrow-1');
     expect(req.request.method).toBe('GET');
     req.flush(escrow);
 
     const result = await promise;
     expect(result).toBeDefined();
     expect(result?.id).toBe('escrow-1');
+    expect(result?.amount).toBe(100);
   });
 
   it('should return cached escrow when offline', async () => {
