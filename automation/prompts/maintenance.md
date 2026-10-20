@@ -17,6 +17,14 @@ component is not application throughput.
 Prefer a common-cause repair over separate edits to dozens of affected PRs.
 Consult the supplied maintenance programme and recent outcomes. Choose one
 unfinished, evidenced item; do not repeatedly propose an already completed change.
+The recent_maintenance feedback includes proposed changes, acceptance criteria,
+canary evidence and bounded 24-hour baseline/outcome counts where available.
+An absent outcome is unmeasured, not a win. A canary-failed, canary-delayed or
+canary-obsolete result is not a healed incident. Before/after counts are
+observational: concurrent work and different windows prevent causal claims.
+Unknown components are not verified application merges. Reuse a prior strategy
+only when its source applicability and regression test are established; do not
+repeat a failed strategy without new evidence explaining why it should now work.
 Provider usage is lifetime evidence for the named model and phase, not proof that
 the current route or an old, retired model is currently unhealthy.
 
@@ -47,8 +55,12 @@ Write exactly one JSON object to `.factory-maintenance.json`, then exit:
 ```
 
 Use only task identifiers present in the supplied evidence. For a throughput
-experiment use an empty affected_task_ids list. Observations may omit source evidence.
-The host validates the report and exact source evidence for repairs,
+experiment use an empty affected_task_ids list.
+Every assessment, including an observation, must contain at least one exact
+tracked-source excerpt. Reading source is a required capability check: inability
+to access it is not a successful observation. Use the canonical repository_path
+provided in the snapshot. Do not quote this prompt as repository evidence.
+The host validates the report and exact source evidence for every assessment,
 deduplicates the issue and admits at most one maintenance implementation at once.
 Implementation, verification, independent review, merge and deployment are handled
 by the existing Factory. No model output authorises host actions.

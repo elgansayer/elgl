@@ -97,6 +97,8 @@ class AgentRequest:
     max_output_bytes: int | None = None
     prepare_attempt: Callable[[], None] | None = None
     validate_output: Callable[[], None] | None = None
+    # Host-selected source context, mounted read-only by the outer sandbox.
+    read_only_reference: Path | None = None
 
 
 class AgentProvider(Protocol):
