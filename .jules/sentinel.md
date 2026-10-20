@@ -111,6 +111,11 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2024-05-18 - Missing IDOR Check on Audio Intro Update
+**Vulnerability:** The `/audio-intro/:userId` PATCH endpoint lacked an authorization check to verify that the authenticated user's ID matched the requested `:userId` parameter, allowing any authenticated user to overwrite another user's audio intro.
+**Learning:** Even when `SupabaseAuthGuard` is present to ensure authentication, we must explicitly verify authorization (ownership) for parameterized endpoints using `@Req() req: { user: { id: string } }` or `@CurrentUser()`.
+**Prevention:** Always extract the authenticated user's ID and explicitly compare it against path parameters that identify resources, throwing a `ForbiddenException` if they do not match.
+
 ## 2025-01-07 - Insecure Direct Object Reference (IDOR) in AudioIntroController
 **Vulnerability:** The PATCH `/audio-intro/:userId` endpoint allowed users to modify the audio intro of other users because it did not check if the authenticated user matched the requested `userId`.
 **Learning:** This vulnerability existed due to the assumption that since `SupabaseAuthGuard` is present, the request is secure. We need to explicitly check that the parameter ID and the authenticated user ID match when a request tries to mutate data associated with a specific user.
@@ -237,6 +242,7 @@
 **Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
 **Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
 **Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
 
 
 
