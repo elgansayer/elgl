@@ -245,9 +245,7 @@ export class ReadingEngineCacheService {
       ReadingEngineCacheNamespace.TRANSLATION,
       ReadingEngineCacheNamespace.SESSION,
     ];
-
-    // ⚡ Bolt Optimization: Resolved cache deletions concurrently to eliminate sequential blocking delay
-    await Promise.all(
+    // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to drastically reduce network latency during bulk cache invalidation.    await Promise.all(
       prefixes.map((ns) =>
         this.deletePattern(this.buildUserPattern(ns, payload.userId)),
       ),
