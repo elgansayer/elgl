@@ -142,6 +142,11 @@ class AgentRouter:
         with self._review_capacity_lock:
             self._review_capacity_tasks.discard(task_id)
 
+    def observe_review_head(self, job: Job, now: datetime | None = None) -> None:
+        """Record an exact review head when the active routing policy needs it."""
+
+        del job, now
+
     def _capacity_limit(self, provider: str, job: Job) -> int:
         limit = self.provider_limits.get(provider, 1)
         with self._review_capacity_lock:
@@ -167,25 +172,23 @@ class AgentRouter:
             return self._memory_breakers
         return self.health_store.load(defaults)
 
-    def _health(self, *, reserve_half_open: bool = True) -> dict[str, ProviderHealth]:
+    def _health(self, *, allow_recovery: bool = False) -> dict[str, ProviderHealth]:
         defaults = self._default_breakers()
         breakers = self._breakers()
         health: dict[str, ProviderHealth] = {}
         for name, provider in self.providers.items():
             breaker = breakers[name]
-            if not reserve_half_open and breaker.state != "closed":
+            if not allow_recovery and breaker.state != "closed":
                 # Status/diagnostic snapshots are observational. A due open circuit
                 # must be leased by the routed operation that can immediately use
                 # the single half-open recovery probe, not by monitoring immediately
                 # before the scheduler dispatches workers.
                 health[name] = breaker.get_health()
                 continue
-            if self.health_store is None:
-                with self._memory_breakers_lock:
-                    permitted = breaker.permits_call()
-            else:
-                permitted, breaker = self.health_store.permit(name, defaults)
-            if not permitted:
+            # Candidate enumeration must not lease recovery for providers that
+            # the policy never selects. Test a copy, then atomically lease only
+            # the selected provider after its capacity has been reserved.
+            if not replace(breaker).permits_call():
                 health[name] = breaker.get_health()
                 continue
             try:
@@ -244,6 +247,13 @@ class AgentRouter:
             )
         return health
 
+    def _permit_attempt(self, name: str) -> bool:
+        if self.health_store is not None:
+            permitted, _ = self.health_store.permit(name, self._default_breakers())
+            return permitted
+        with self._memory_breakers_lock:
+            return self._memory_breakers[name].permits_call()
+
     @staticmethod
     def _eligible(
         provider: AgentProvider,
@@ -260,7 +270,7 @@ class AgentRouter:
         phase: AgentPhase,
         job: Job,
     ) -> tuple[list[str], dict[str, ProviderHealth]]:
-        health = self._health()
+        health = self._health(allow_recovery=True)
         preferred = (
             self.policy.candidates(phase, job, health) if self.policy else list(self.providers)
         )
@@ -291,7 +301,7 @@ class AgentRouter:
 
     def health_snapshot(self) -> dict[str, ProviderHealth]:
         """Return non-secret health without consuming a half-open recovery lease."""
-        return self._health(reserve_half_open=False)
+        return self._health()
 
     def has_usable_provider(self) -> bool:
         return any(
@@ -408,7 +418,11 @@ class AgentRouter:
         *,
         request_prompt_chars: int | None = None,
     ) -> None:
-        if self.metrics_store is None or result.provider == "openhands":
+        if (
+            self.metrics_store is None
+            or result.provider == "openhands"
+            or (result.failure is not None and result.failure.kind is AgentFailureKind.CANCELLED)
+        ):
             return
         failure = result.failure
         duration = max((result.finished_at - result.started_at).total_seconds(), 0)
@@ -575,6 +589,9 @@ class AgentRouter:
                     job.provider_failover_count += 1
                 continue
             try:
+                if not self._permit_attempt(name):
+                    any_busy = True
+                    continue
                 for provider_attempt in range(1, self.same_provider_retries + 2):
                     if self._stopping.is_set():
                         raise ProviderCapacityUnavailable("Agent routing is stopping")
