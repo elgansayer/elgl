@@ -176,6 +176,10 @@
 
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
+## 2026-09-30 - Cache Invalidation Latency
+**Learning:** Sequential await calls for cache invalidation (like Redis del or pattern scan deletions) add significant network latency, particularly when user actions trigger bulk cache clears across multiple namespaces.
+**Action:** Group independent cache invalidation promises and resolve them concurrently using Promise.all to collapse the network roundtrips into a single wait time.
+
 ## 2026-08-30 - [Optimize bulk cache invalidations via Promise.all]
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts` (and similar invalidation services), iterating sequentially through cache pattern arrays using `await redis.del()` inside a `for...of` loop forces each invalidation to wait for the previous roundtrip. This additive latency drastically degrades performance during bulk resets.
 **Action:** Always map pattern arrays into an array of concurrent promises, resolving them together via `Promise.all`. This effectively batches the network calls and minimizes the overall blocking time, ensuring O(1) latency overhead regardless of the pattern count.
@@ -311,6 +315,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
