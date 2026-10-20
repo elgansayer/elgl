@@ -45,6 +45,14 @@ describe('MomentsController', () => {
           provide: R2Service,
           useValue: {},
         },
+        {
+          provide: MomentsRankingService,
+          useValue: {
+            rankForYou: vi
+              .fn()
+              .mockImplementation(async (_userId, moments) => moments),
+          },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
