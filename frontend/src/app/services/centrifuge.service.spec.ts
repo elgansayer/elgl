@@ -128,6 +128,39 @@ describe('CentrifugeService', () => {
     expect(second).toHaveBeenCalledWith({ hello: 'world' });
   });
 
+  it('delivers publications to the primary handler and additive listeners without replacing either', () => {
+    const primary = vi.fn();
+    const additive = vi.fn();
+    const sub = service.subscribe('chat:room-1', primary) as unknown as MockSubscription;
+
+    const unlisten = service.listen('chat:room-1', additive);
+    expect(sub.listenerCount('publication')).toBe(1);
+
+    sub.emit('publication', { data: 'hello' });
+    expect(primary).toHaveBeenCalledWith('hello');
+    expect(additive).toHaveBeenCalledWith('hello');
+
+    unlisten();
+    sub.emit('publication', { data: 'after' });
+    expect(primary).toHaveBeenLastCalledWith('after');
+    expect(additive).toHaveBeenCalledTimes(1);
+    expect(sub.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('keeps the channel subscribed for additive listeners when the primary owner unsubscribes', () => {
+    const primary = vi.fn();
+    const additive = vi.fn();
+    service.listen('chat:room-1', additive);
+    const sub = service.subscribe('chat:room-1', primary) as unknown as MockSubscription;
+
+    service.unsubscribe('chat:room-1');
+    expect(sub.unsubscribe).not.toHaveBeenCalled();
+
+    sub.emit('publication', { data: 'reaction' });
+    expect(primary).not.toHaveBeenCalled();
+    expect(additive).toHaveBeenCalledWith('reaction');
+  });
+
   it('only calls the message handler once per publication', () => {
     const handler = vi.fn();
     const sub = service.subscribe('chat:room-1', handler) as unknown as MockSubscription;
