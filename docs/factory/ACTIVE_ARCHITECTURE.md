@@ -97,15 +97,16 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 State beneath `FACTORY_STATE_DIR` is written atomically, schema checked where applicable, and protected by a
 last-known-good backup:
 
-- `jobs.json`: state, branch, PR, reviewed SHA, attempts, retry evidence, findings, and the latest 500 provider
-  provenance entries per job;
+- `jobs.json`: state, branch, PR, reviewed SHA, attempts, retry evidence, findings, the in-flight attempt marker,
+  and the latest 500 provider provenance entries per job;
 - `leases.json`: persistent logical claims plus expiring worker ownership, canonical branch/PR identity, base and
   verified SHAs, predecessor/successor links, path and failure fingerprints;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
 - `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
 - `generation.json`: active daemon ownership UUID and schema version;
-- `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
+- `daemon.json`: heartbeat, PID, generation, queue counts, watchdog recoveries and queued age, active tasks,
+  pause state, and provider health;
 - `control.json`: pause state;
 - `control_panel.json`: issue cursor, publication fingerprint, and last accepted bounded command;
 - `control_request.json`: optional mode-0600, single-use watchdog restart request;
@@ -120,8 +121,12 @@ A restart never assumes a provider process is alive. The daemon stops admitting 
 OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
 stopped. Stale generation leases are ignored. Malformed, timezone-naive, future-acquired, and overlong provider or
 task leases are bounded or discarded rather than suppressing work indefinitely. Task-lease and `jobs.json`
-read-modify-write operations use cross-process locks. The watchdog recovers old execution states through the
-normal timeout class and deterministic retry policy while leaving live futures and polling-only states untouched.
+read-modify-write operations use cross-process locks. A worker marks its attempt in flight in the same locked
+read that loads the job, and clears the marker in the write that commits the outcome. The watchdog recovers only
+a marked attempt that outlived the maximum task duration, through the normal timeout class and deterministic
+retry policy. Queued, unadmitted and backed-off work, an explicit future retry deadline, live futures and
+polling-only states are never recovered, however old they are. See
+[AUDIT-2026-10-16-ABANDONED-ATTEMPT.md](AUDIT-2026-10-16-ABANDONED-ATTEMPT.md).
 Released task leases retain canonical claim history. Before branch creation, Factory reconciles open and recently
 closed PRs using issue links, logical titles, branch metadata, changed paths and explicit supersession links. See
 [TASK-OWNERSHIP.md](TASK-OWNERSHIP.md).
@@ -183,6 +188,13 @@ status as `PENDING` on the current SHA. A crash or timeout therefore leaves the 
 reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
 If GitHub reports the reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound to that exact head
 SHA. The resulting head is then rebuilt, verified, and reviewed again. Merge readiness requires all of the
+
+If GitHub reports a newly discovered head as `BEHIND`, the Factory asks GitHub for a base update bound to that
+exact head before local verification. The resulting head is then rebuilt, verified, and reviewed. If another
+serial Factory merge subsequently makes that already-verified head `BEHIND`, production may merge it without
+replaying the base when the repository required-check rule is non-strict. Merge
+readiness requires all of the
+
 following:
 
 - the PR head equals the reviewed SHA;

@@ -44,7 +44,7 @@ only what they resolve to changed - so no template touch was needed for this pha
 | `neon`                | `violet #8B6CF0` / `pink #E8578F` / `cyan #2FC6D9` / `blue #5B8DEF` / `orange #F0954A` | same (static)         | Decorative-only gamification accents (streaks, leaderboard, gift flourishes). **Not for text** - most of these fail on-fill text contrast; pair with a scrim or use as background only.                                                                                                                                                  |
 | `text-primary`        | `#12151C`                                                                              | `#F3F4F7`             |                                                                                                                                                                                                                                                                                                                                          |
 | `text-secondary`      | `#4A5163`                                                                              | `#B4BAC9`             |                                                                                                                                                                                                                                                                                                                                          |
-| `text-muted`          | `#6B7182`                                                                              | `#7E8494`             |                                                                                                                                                                                                                                                                                                                                          |
+| `text-muted`          | `#656A7A`                                                                              | `#898F9D`             |                                                                                                                                                                                                                                                                                                                                          |
 
 Every pairing above was contrast-audited: all text/surface and on-fill/fill combinations clear
 4.5:1 (WCAG AA) in both themes. `neon` is intentionally left as a static (non-branched) scale -
@@ -82,9 +82,9 @@ Unchanged - Tailwind's stock 0.25rem-based scale.
 
 ## Shadow & Motion
 
-- **shadow-card:** `0 1px 2px rgb(var(--shadow-color-rgb) / 0.04), 0 4px 14px rgb(var(--shadow-color-rgb) / 0.08)`
-- **shadow-lift:** `0 12px 32px rgb(var(--shadow-color-rgb) / 0.16), 0 4px 10px rgb(var(--shadow-color-rgb) / 0.08)`
-- Both theme-aware via `--shadow-color-rgb` (near-ink in light mode, pure black in dark mode) -
+- **shadow-card:** `0 1px 2px rgb(var(--shadow-colour-rgb) / 0.04), 0 4px 14px rgb(var(--shadow-colour-rgb) / 0.08)`
+- **shadow-lift:** `0 12px 32px rgb(var(--shadow-colour-rgb) / 0.16), 0 4px 10px rgb(var(--shadow-colour-rgb) / 0.08)`
+- Both theme-aware via `--shadow-colour-rgb` (near-ink in light mode, pure black in dark mode) -
   much softer than the old heavy black-glow shadows, and nearly invisible in dark mode by design:
   dark-mode elevation reads primarily through the surface-lightness steps and a hairline border,
   not a shadow.
