@@ -59,9 +59,8 @@ export class SafetyCacheInvalidationService {
   async invalidateTrustAndSafetyCaches(): Promise<void> {
     const redis = this.getRedis();
     try {
-      // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all
-      // Transforms N sequential Redis roundtrips into 1 concurrent block.
-      const deletionPromises = SAFETY_AFFECTED_CACHE_PATTERNS.map((pattern) => {
+      // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.all to drastically reduce network latency during bulk cache invalidation.
+      const deletePromises = SAFETY_AFFECTED_CACHE_PATTERNS.map((pattern) => {
         if (pattern.endsWith(':*')) {
           // Suffixed glob pattern – use SCAN for safety on larger key spaces
           const prefix = pattern.slice(0, -2);
@@ -75,11 +74,8 @@ export class SafetyCacheInvalidationService {
         }
       });
 
-      const results = await Promise.all(deletionPromises);
-      const totalDeleted = results.reduce(
-        (sum, deletedCount) => sum + deletedCount,
-        0,
-      );
+      const results = await Promise.all(deletePromises);
+      const totalDeleted = results.reduce((sum, count) => sum + count, 0);
 
       if (totalDeleted > 0) {
         this.logger.log(

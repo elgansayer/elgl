@@ -1,9 +1,105 @@
+import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 REPOSITORY_ROOT = Path(__file__).parents[2]
+
+
+@pytest.mark.parametrize(
+    "evidence,allowed",
+    [
+        ([{"status": "completed", "conclusion": "success"}], True),
+        ([{"status": "completed", "conclusion": "failure"}], False),
+        ([{"status": "in_progress", "conclusion": ""}], False),
+        ([{"status": "completed", "conclusion": "cancelled"}], False),
+        ([], False),
+        ("malformed", False),
+        ("network-error", False),
+        ({"status": "completed", "conclusion": "success"}, False),
+        ([None, "invalid"], False),
+        ([{"headSha": "b" * 40, "status": "completed", "conclusion": "success"}], False),
+        (
+            [
+                {"status": "in_progress", "conclusion": ""},
+                {"status": "completed", "conclusion": "success"},
+            ],
+            False,
+        ),
+    ],
+)
+def test_deployment_requires_latest_exact_commit_ci(tmp_path, evidence, allowed):
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    function = updater.split("candidate_ci_green() {", 1)[1].split("\n}\n", 1)[0]
+    probe = function.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    commit = "a" * 40
+    if isinstance(evidence, list):
+        evidence = [
+            {"headSha": commit, **item} if isinstance(item, dict) else item for item in evidence
+        ]
+    fake_gh = tmp_path / "gh"
+    expected_arguments = [
+        "run",
+        "list",
+        "--repo",
+        "owner/repo",
+        "--workflow",
+        "ci.yml",
+        "--branch",
+        "main",
+        "--event",
+        "push",
+        "--commit",
+        commit,
+        "--limit",
+        "20",
+        "--json",
+        "headSha,status,conclusion",
+    ]
+    output = "{" if evidence == "malformed" else json.dumps(evidence)
+    fake_gh.write_text(
+        f"#!{sys.executable}\nimport json, os, sys\n"
+        "assert os.environ['GH_TOKEN'] == 'fixture-token'\n"
+        "assert 'fixture-token' not in ' '.join(sys.argv)\n"
+        f"assert sys.argv[1:] == {expected_arguments!r}\n"
+        f"print({output!r})\n"
+        f"sys.exit({1 if evidence == 'network-error' else 0})\n"
+    )
+    fake_gh.chmod(0o700)
+    result = subprocess.run(
+        [sys.executable, "-", "owner/repo", commit, "main"],
+        input=probe,
+        env={**os.environ, "PATH": str(tmp_path), "GH_TOKEN": "fixture-token"},
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=5,
+    )
+    assert result.returncode == (0 if allowed else 1), result.stderr
+    assert result.stdout == ""  # Remote bodies/errors must not enter privileged logs.
+
+
+def test_deployment_ci_gate_precedes_pause_and_rechecks_before_service_stop():
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    first = updater.index('if ! candidate_ci_green "$remote_sha"; then')
+    pause = updater.index("log 'Pausing new Factory scheduling while active jobs drain'")
+    second = updater.index('if ! candidate_ci_green "$remote_sha"; then', first + 1)
+    stop = updater.index("log 'Stopping factory service'")
+    pull = updater.index("log 'Pulling main'")
+    assert first < updater.index("log 'Refreshing verified current service units before drain'")
+    assert first < pause < second < stop < pull
+
+
+def test_maintenance_runtime_prefers_completed_deployment_without_network():
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    function = updater.split("trusted_runtime_commit() {", 1)[1].split("\n}\n", 1)[0]
+    assert function.index('read -r recorded < "$DEPLOYED_RUNTIME_SHA_FILE"') < function.index(
+        "branch=$(factory_git_read symbolic-ref"
+    )
+    assert "candidate_ci_green" not in function
 
 
 def test_factory_updater_bounds_network_git_and_preserves_repository_ownership() -> None:
@@ -12,12 +108,15 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     )
 
     assert updater.count('timeout "${GIT_TIMEOUT}s"') == 2
-    # The generic factory_git_read wrapper plus fetch, pull, uv sync, uv cache
+    assert "factory_git_authenticated fetch --quiet origin main" in updater
+    assert "factory_git_authenticated pull --ff-only origin main" in updater
+    # The generic factory_git_read and authenticated Git wrappers, uv sync, uv cache
     # prune, and the rootless worker image build all cross the privilege boundary
     # through runuser. This keeps Git reads and every network/package operation
     # under the unprivileged Factory account instead of leaving root-owned state
     # in the repository or ~dev caches.
-    assert updater.count('runuser -u "$FACTORY_USER" -- env') == 6
+    assert updater.count('runuser -u "$FACTORY_USER" -- env') == 4
+    assert updater.count('runuser -u "$FACTORY_USER" --preserve-environment -- env') == 2
     assert "GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}" in updater
     assert "git -c safe.directory=" not in updater
     assert 'git -C "$REPOSITORY" reset --hard' not in updater
@@ -29,6 +128,74 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     assert "restore_services_on_failure" in updater
     assert "Unknown state is not idle" in updater
     assert "raise SystemExit(1)" in updater
+
+
+@pytest.mark.parametrize("operation", ["fetch --quiet", "pull --ff-only"])
+def test_authenticated_update_git_keeps_credentials_out_of_argv(
+    tmp_path: Path, operation: str
+) -> None:
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text()
+    function = (
+        "factory_git_authenticated() {"
+        + updater.split("factory_git_authenticated() {", 1)[1].split("\n}", 1)[0]
+        + "\n}"
+    )
+    fake_runuser = tmp_path / "runuser"
+    fake_runuser.write_text(
+        f"#!{sys.executable}\n"
+        "import json, os, sys, time\n"
+        "time.sleep(float(os.environ.get('PROBE_SLEEP', '0')))\n"
+        "print(json.dumps({'argv': sys.argv[1:], 'token': os.environ.get('GH_TOKEN')}))\n"
+    )
+    fake_runuser.chmod(0o700)
+    environment = {
+        **os.environ,
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "FACTORY_USER": "fixture-user",
+        "FACTORY_HOME": str(tmp_path),
+        "REPOSITORY": str(tmp_path / "repository"),
+        "GIT_TIMEOUT": "2",
+        "GITHUB_TOKEN": "fixture-only-credential",
+        "GH_TOKEN": "caller-token",
+    }
+    command = (
+        function
+        + f"\nfactory_git_authenticated {operation} origin main"
+        + '\nprintf "%s\\n" "$GH_TOKEN"'
+    )
+    result = subprocess.run(
+        ["bash", "-ec", command], env=environment, text=True, capture_output=True, check=True
+    )
+    probe, caller = result.stdout.splitlines()
+    observed = json.loads(probe)
+    assert observed["token"] == "fixture-only-credential"
+    assert caller == "caller-token"
+    assert not any("fixture-only-credential" in item for item in observed["argv"])
+    assert observed["argv"] == [
+        "-u",
+        "fixture-user",
+        "--preserve-environment",
+        "--",
+        "env",
+        f"HOME={tmp_path}",
+        "PATH=/usr/local/bin:/usr/bin:/bin",
+        "git",
+        "-c",
+        "credential.helper=!gh auth git-credential",
+        "-C",
+        str(tmp_path / "repository"),
+        *operation.split(),
+        "origin",
+        "main",
+    ]
+    bounded = subprocess.run(
+        ["bash", "-ec", function + f"\nfactory_git_authenticated {operation} origin main"],
+        env={**environment, "GIT_TIMEOUT": "0.05", "PROBE_SLEEP": "2"},
+        capture_output=True,
+        check=False,
+        timeout=5,
+    )
+    assert bounded.returncode == 124
 
 
 def test_factory_updater_drains_continuously_busy_daemons_only_when_needed() -> None:

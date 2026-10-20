@@ -111,6 +111,22 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-10-05 - Auth Bypass in LiveKit Token Generation
+**Vulnerability:** The LiveKit controller (`backend/src/livekit/livekit.controller.ts`) generates LiveKit access tokens using an arbitrary `participant_identity` provided in the request body, ignoring the authenticated user's actual ID.
+**Learning:** Even though the endpoint is protected by `@UseGuards(SupabaseAuthGuard)`, failing to tie the action to the `@CurrentUser()` leads to Insecure Direct Object Reference (IDOR) / authorization bypass, allowing users to impersonate others in video rooms.
+**Prevention:** Always extract identity from the `@CurrentUser()` decorator rather than trusting client-provided identifiers for sensitive actions.
+
+
+## 2026-10-02 - Permissive CORS Configuration
+**Vulnerability:** Permissive CORS configuration with localhost fallback in non-production environments.
+**Learning:** Fallbacks to localhost in CORS configurations can inadvertently expose APIs if an environment is misconfigured or if non-production environments are exposed to the public internet.
+**Prevention:** Strictly require and validate origin variables (like `FRONTEND_URL`) across all environments without hardcoded fallbacks in application bootstrap code.
+
+## 2026-10-06 - Remove hardcoded Firebase configuration placeholders
+**Vulnerability:** The service worker `frontend/src/firebase-messaging-sw.js` used a fallback of `|| 'YOUR_API_KEY'` which acts as an explicit invitation for developers to commit raw secret string literals into source control.
+**Learning:** Having placeholders for secrets directly in source files often leads to those placeholders being overwritten by the real secrets and committed.
+**Prevention:** Remove all fallback strings for configuration keys. Instead, parse them securely from query parameters injected dynamically by the framework at registration, or fetch them dynamically via a designated init endpoint like `/__/firebase/init.json`.
+
 ## 2026-09-13 - Basic Auth Timing Attack Vulnerability in Node.js
 
 **Vulnerability:** The basic authentication check in `factory-dashboard/src/server.js` was implemented using standard string inequality `!==` to compare passwords, making the server vulnerable to timing attacks where attackers could measure validation time to guess the length and characters of the password.
@@ -146,3 +162,23 @@
 **Vulnerability:** IDOR in audio intro update endpoint where any authenticated user could overwrite the audio intro for any other user because the route parameter `userId` was not compared against the authenticated user's ID.
 **Learning:** Endpoints mapped by `userId` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
 **Prevention:** Always extract the authenticated user ID via `@Req() req: { user: { id: string } }` (or similar decorators like `CurrentUser`) and assert it matches the target resource ID with a `ForbiddenException` or `UnauthorizedException`.
+
+## 2024-10-09 - Path Traversal Vulnerability in Static File Server
+**Vulnerability:** The factory-dashboard static file server used `path.normalize(pathname).replace(/^(\.\.[/\\])+/, '')` which is vulnerable to path traversal via URL encoding (e.g., `%2e%2e`).
+**Learning:** URL encoded strings can bypass simple regex-based path traversal protections because the `URL` object parser retains encoded sequences.
+**Prevention:** Always use `decodeURIComponent` on the path, strip leading slashes to prevent absolute path resolution, resolve it to an absolute path using `path.resolve`, and verify it strictly starts with the intended base directory using `targetPath.startsWith(PUBLIC_DIR + path.sep)`.
+## 2026-10-09 - [Fix IDOR in Resource Library]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) in `ResourceLibraryController`. The `update` and `remove` endpoints accepted an `id` parameter from the path and performed database modifications without verifying if the authenticated user owned the resource.
+**Learning:** Endpoints mapped by `id` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
+**Prevention:** Always extract the authenticated user ID via `@CurrentUser() user: any` and pass it to the service layer to assert it matches the target resource owner ID with an `.eq('created_by', userId)` condition in the database query.
+## 2026-10-11 - [Admin Authorization ID Extraction Fallback]
+**Vulnerability:** The Admin API `banUser` and `warnUser` endpoints relied solely on `req.user.sub` to extract the admin's user ID for auditing and blocking actions. Depending on the `SupabaseAuthGuard` implementation and JWT structure, the user ID might be mapped to `req.user.id` instead of `sub`, leading to an undefined user ID being passed to the `AdminService` without failing fast.
+**Learning:** Hardcoding a specific property name for authenticated user IDs when multiple representations exist in the request context (e.g., `id` and `sub`) can lead to authorization bypass or unexpected application state. Furthermore, failing to validate the presence of the extracted ID before initiating destructive actions like bans introduces a risk.
+**Prevention:** Update authentication interfaces (like `AuthRequest`) to reflect the union of possible ID properties. In controller handlers, explicitly extract the ID using a nullish coalescing operator (`req.user.id ?? req.user.sub`) and immediately throw an `UnauthorizedException` if the resolved ID is falsy before passing it to services.
+## 2026-10-12 - Improper Authentication Extraction in NestJS Controllers
+**Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
+**Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
+**Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
+
+
+

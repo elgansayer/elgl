@@ -59,6 +59,50 @@ runtime_inputs_match() {
   factory_git_read diff --quiet "$1" "$2" -- automation config/factory config/systemd scripts
 }
 
+candidate_ci_green() {
+  # This standard-library probe must work before the new package is installed.
+  # Inherit authentication privately, never through process arguments.
+  local GH_TOKEN=${GITHUB_TOKEN:-}
+  export GH_TOKEN
+  timeout "${GIT_TIMEOUT}s" \
+    runuser -u "$FACTORY_USER" --preserve-environment -- env \
+      HOME="$FACTORY_HOME" PATH=/usr/local/bin:/usr/bin:/bin \
+      "$FACTORY_VENV/bin/python" - "${GITHUB_REPOSITORY:-}" "$1" \
+      "${FACTORY_BASE_BRANCH:-main}" <<'PY'
+import json
+import re
+import subprocess
+import sys
+
+repository, commit, branch = sys.argv[1:]
+if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+    raise SystemExit(1)
+if not re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", commit):
+    raise SystemExit(1)
+try:
+    result = subprocess.run(
+        ["gh", "run", "list", "--repo", repository, "--workflow", "ci.yml",
+         "--branch", branch, "--event", "push", "--commit", commit, "--limit", "20",
+         "--json", "headSha,status,conclusion"],
+        capture_output=True, text=True, timeout=30, check=False,
+    )
+    if result.returncode:
+        raise SystemExit(1)
+    runs = json.loads(result.stdout)
+    if not isinstance(runs, list):
+        raise SystemExit(1)
+    # GitHub returns newest first: a pending/failed rerun beats an older success.
+    for run in runs:
+        if not isinstance(run, dict) or run.get("headSha") != commit:
+            continue
+        raise SystemExit(0 if run.get("status") == "completed"
+                         and run.get("conclusion") == "success" else 1)
+except (OSError, ValueError, subprocess.TimeoutExpired):
+    pass
+raise SystemExit(1)
+PY
+}
+
 validate_agents_config() {
   "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
 import sys
@@ -190,6 +234,18 @@ factory_git_read() {
     git -C "$REPOSITORY" "$@"
 }
 
+factory_git_authenticated() {
+  # Keep the credential in the child environment, never in runuser/env argv.
+  # A function-local export also leaves the caller's GH_TOKEN unchanged.
+  local GH_TOKEN=${GITHUB_TOKEN:-}
+  export GH_TOKEN
+  timeout "${GIT_TIMEOUT}s" \
+    runuser -u "$FACTORY_USER" --preserve-environment -- env \
+      HOME="$FACTORY_HOME" PATH=/usr/local/bin:/usr/bin:/bin \
+      git -c credential.helper='!gh auth git-credential' \
+      -C "$REPOSITORY" "$@"
+}
+
 verify_commit_identity() {
   local actual commit=$1
   [[ "$commit" =~ ^[0-9a-f]{40,64}$ ]] || return 1
@@ -203,6 +259,16 @@ verify_commit_identity() {
 
 trusted_runtime_commit() {
   local branch head recorded tracking
+  # Maintenance must not promote a checkout advanced by another process into
+  # privileged runtime code. Prefer the last completed deployment, offline.
+  if [ -r "$DEPLOYED_RUNTIME_SHA_FILE" ]; then
+    read -r recorded < "$DEPLOYED_RUNTIME_SHA_FILE" || recorded=''
+    if verify_commit_identity "$recorded"; then
+      printf '%s\n' "$recorded"
+      return 0
+    fi
+    return 1
+  fi
   branch=$(factory_git_read symbolic-ref --quiet --short HEAD 2>/dev/null || true)
   head=$(factory_git_read rev-parse --verify HEAD 2>/dev/null || true)
   tracking=$(
@@ -536,14 +602,14 @@ all_factories_idle() {
 }
 
 log 'Fetching origin/main'
-timeout "${GIT_TIMEOUT}s" \
-  runuser -u "$FACTORY_USER" -- env \
-    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
-    git -c credential.helper='!gh auth git-credential' \
-    -C "$REPOSITORY" fetch --quiet origin main
+factory_git_authenticated fetch --quiet origin main
 
 local_sha=$(factory_git_read rev-parse HEAD)
 remote_sha=$(factory_git_read rev-parse origin/main)
+if ! candidate_ci_green "$remote_sha"; then
+  log 'Candidate main has no successful canonical push CI - leaving running factories untouched'
+  exit 0
+fi
 verify_commit_identity "$local_sha" || {
   log 'ERROR: current checkout identity could not be verified'
   exit 1
@@ -552,7 +618,8 @@ verify_commit_identity "$local_sha" || {
 # unit can otherwise conflict with the two-minute health timers and be terminated
 # repeatedly before it ever reaches the post-pull installation step.
 log 'Refreshing verified current service units before drain'
-install_service_configuration "$local_sha"
+bootstrap_sha=$(trusted_runtime_commit) || exit 1
+install_service_configuration "$bootstrap_sha"
 config_is_current=false
 config_path=$(canonical_agents_config_path "$AGENTS_CONFIG" 2>/dev/null || true)
 if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
@@ -609,6 +676,12 @@ while ! all_factories_idle; do
 done
 log 'Factory is drained and ready to update'
 
+# CI can be rerun while we drain. Recheck before stopping services or pulling.
+if ! candidate_ci_green "$remote_sha"; then
+  log 'Candidate CI is no longer green - resuming scheduling without deployment'
+  exit 0
+fi
+
 if [ "$runtime_update_needed" = true ]; then
   log 'Stopping factory service'
   systemctl stop "$SERVICE" || true
@@ -621,11 +694,7 @@ fi
 
 if [ "$local_sha" != "$remote_sha" ]; then
   log 'Pulling main'
-  timeout "${GIT_TIMEOUT}s" \
-    runuser -u "$FACTORY_USER" -- env \
-    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
-    git -c credential.helper='!gh auth git-credential' \
-    -C "$REPOSITORY" pull --ff-only origin main
+  factory_git_authenticated pull --ff-only origin main
 fi
 
 pulled_sha=$(factory_git_read rev-parse HEAD)
