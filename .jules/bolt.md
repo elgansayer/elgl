@@ -19,6 +19,11 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-16 - [Angular Chat Page Performance Optimization]
+**Learning:** In the frontend `chat-page.component.ts`, large chat message arrays (where new messages stream in dynamically via Centrifugo and push into the signal array) and long chat room lists cause excessive, repetitive full-list DOM reconstructions when rendered with `@for (item of items; track item)`. Tracking by object reference (`item`) instead of a unique ID forces Angular's differ to re-render nodes unnecessarily on every signal update. Furthermore, without `ChangeDetectionStrategy.OnPush`, global zone events constantly trigger change detection for these heavy lists.
+**Action:** When working with frequently updated list items (like real-time chat messages or active chat room rosters), always add `changeDetection: ChangeDetectionStrategy.OnPush` to the `@Component` decorator, and strictly track items by their unique identifier (e.g. `@for (msg of messages(); track msg.id)`) rather than by object reference to prevent widespread DOM recreation overhead.
+
 ## 2026-09-16 - Prevent package-lock.json drift on minor edits
 **Learning:** Running `npm install` just to fetch tools like `ng` or `@angular/cli` on a minor UI change can catastrophically alter `package-lock.json` and strip critical build dependencies if the sandbox Node environment differs slightly from what generated the lock file.
 **Action:** When asked to make small component optimizations without explicitly modifying dependencies, do not run `npm install`. Use `npx` with precise tools, or if a global tool requires an updated node via `nvm`, do not subsequently run `npm install` on the whole project unless instructed, or ensure to `git restore package-lock.json` before committing.
@@ -40,6 +45,7 @@
 ## 2026-09-13 - Angular Change Detection Strategy Optimization
 **Learning:** Found an opportunity to improve frontend performance by setting `ChangeDetectionStrategy.OnPush` on frequently rendered list and message components (`chat-message.component.ts` and `chat-list.component.ts`), which prevents unnecessary change detection cycles. Combined with memoizing expensive method calls in templates (converting `isOwnMessage()` into a computed signal) this creates a substantial reduction in rendering overhead for long lists.
 **Action:** Always check frequently instantiated components (like chat messages or list items) for missing `OnPush` strategy and ensure template methods are converted to computed signals to prevent repeated evaluation during change detection cycles.
+
 
 
 
