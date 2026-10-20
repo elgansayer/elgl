@@ -308,11 +308,11 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    // 1) Get blocked+blocker user IDs (bidirectional)
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
-
-    // 2) Get current user's native language for targeted visibility routing
-    const profile = await this.usersService.getProfile(userId);
+    // 1 & 2) ⚡ Bolt Optimization: Fetch blocked IDs and profile concurrently
+    const [blockedIds, profile] = await Promise.all([
+      this.safetyService.getBlockedAndBlockerIds(userId),
+      this.usersService.getProfile(userId),
+    ]);
     const userNativeLang = profile?.native_languages?.[0] ?? null;
 
     let moments: MomentRecord[] = [];
