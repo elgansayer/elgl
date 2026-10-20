@@ -6,8 +6,8 @@ import {
   Body,
   Post,
   UseGuards,
-  ForbiddenException,
   Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AudioIntroService } from './audio-intro.service';
 import { UpdateAudioIntroDto } from './dto/update-audio-intro.dto';
@@ -30,7 +30,7 @@ export class AudioIntroController {
     @Body() dto: UpdateAudioIntroDto,
   ) {
     if (req.user.id !== userId) {
-      throw new ForbiddenException('Cannot update audio intro for another user');
+      throw new ForbiddenException();
     }
     return this.audioIntroService.updateAudioIntro(userId, dto.audio_url);
   }
