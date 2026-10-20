@@ -21,6 +21,14 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-11 - [Start Independent User Statistics Queries Together]
+**Learning:** Awaiting the user lookup before starting four independent statistics queries added one avoidable network-latency interval to successful requests.
+**Action:** Start the five independent queries in one `Promise.all`. This preserves the query count while removing the separate user-lookup wait from the successful request's critical path.
+
+## 2026-09-15 - [Avoid Redis KEYS in Cache Invalidation]
+**Learning:** Using the `KEYS` command in Redis for prefix-based cache invalidation (`deleteByPattern`) blocks the Redis event loop, creating a bottleneck and potential DoS vector as the keyspace grows.
+**Action:** Replaced `deleteByPattern` entirely with `deleteByScan` to asynchronously batch fetch and delete matching cache keys, preventing main thread blocking.
+
 ## 2026-08-31 - [Batch Archive Cleanup Queries with Promise.allSettled]
 
 **Learning:** Sequential awaits in `for...of` loops during maintenance jobs like `purgeExpiredArchives` create significant N+1 database latency, especially since each loop execution awaits both object storage deletion and database table row updates.
@@ -181,3 +189,17 @@
 ## 2026-10-16 - [Optimize Main Thread Render via ChangeDetectionStrategy.OnPush]
 **Learning:** Found multiple Angular components rendering static or signal-driven data that were missing `changeDetection: ChangeDetectionStrategy.OnPush`. Without this strategy, Angular performs unnecessary main-thread change detection cycles, reducing application responsiveness and performance.
 **Action:** Proactively configure Angular components that render static data or rely entirely on signals/observables to use `ChangeDetectionStrategy.OnPush` to minimize main thread change detection overhead.
+
+## 2026-08-25 - [Optimize bulk cache invalidation via Promise.all]
+**Learning:** In the backend `safety-cache-invalidation.service.ts` and `video-calls-cache-invalidation.service.ts`, the `invalidateTrustAndSafetyCaches` and `invalidateAllVideoClassroomCaches` methods sequentially iterated over cache namespaces, invoking Redis commands (like `deleteByScan` or `del`) using `await` inside a `for...of` loop. This caused N separate sequential roundtrips to Redis during invalidation, unnecessarily stalling the event loop and compounding network latency.
+**Action:** When invalidating multiple independent cache keys or patterns within a single method, replace sequential `await` loops with a concurrent `Promise.all` mapping. This groups all Redis deletions into a single concurrent block, significantly reducing execution time.
+
+## 2026-10-17 - [Optimize main thread via OnPush change detection]
+**Learning:** In the Angular frontend, proactively configure components that render static data or rely entirely on signals/observables to use `changeDetection: ChangeDetectionStrategy.OnPush`. Many structural or stateless components currently default to the default change detection strategy, leading to unnecessary main thread checks during heavy user interaction.
+**Action:** When creating or reviewing Angular components that use `signal`s or `computed` exclusively for reactive state, add `changeDetection: ChangeDetectionStrategy.OnPush` to their `@Component` decorator to reduce change detection overhead.
+
+## 2026-10-18 - [Optimize bulk cache invalidation via Promise.all mapping]
+
+**Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
+**Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+

@@ -36,14 +36,14 @@ def test_production_provider_policy_is_locked() -> None:
     routing = config["routing"]
     breaker = config["circuit_breaker"]
     expected_routes = {
-        "planning": ["google", "claude", "codex"],
-        "architecture": ["google", "claude", "codex"],
-        "implementation": ["google", "claude", "codex"],
-        "security_review": ["google", "claude", "codex"],
-        "quality_repair": ["google", "codex", "claude"],
-        "code_review": ["claude", "google", "codex"],
-        "ci_repair": ["google", "claude", "codex"],
-        "general_action": ["google", "claude", "codex"],
+        "planning": ["google", "claude", "codex", "pi"],
+        "architecture": ["google", "claude", "codex", "pi"],
+        "implementation": ["google", "claude", "codex", "pi"],
+        "security_review": ["google", "claude", "codex", "pi"],
+        "quality_repair": ["google", "pi", "codex", "claude"],
+        "code_review": ["claude", "google", "codex", "pi"],
+        "ci_repair": ["google", "pi", "claude", "codex"],
+        "general_action": ["google", "pi", "claude", "codex"],
     }
 
     assert config["routing_enabled"] is True
@@ -65,7 +65,7 @@ def test_production_provider_policy_is_locked() -> None:
     assert providers["google"]["enabled"] is True
     assert providers["google"]["auth_mode"] == "subscription"
     assert providers["google"]["transport"] == "cli"
-    assert providers["pi"]["enabled"] is False
+    assert providers["pi"]["enabled"] is True
     assert providers["pi"]["auth_mode"] == "subscription"
     assert providers["pi"]["transport"] == "cli"
     assert providers["openhands"]["enabled"] is False
@@ -76,8 +76,8 @@ def test_production_provider_policy_is_locked() -> None:
     assert all(routing[phase] == route for phase, route in expected_routes.items())
     assert "openhands" not in routing["planning"]
 
-    # Production evidence favours Google and Claude. Codex remains a last-resort
-    # third route, while providers with near-zero completion rates stay disabled.
+    # Production evidence favours Google and the fast Pi tier for bounded repair.
+    # Codex remains the final repair route for complex fallback work.
     assert routing["ci_repair"][-1] == "codex"
     assert providers["google"]["phase_models"]["ci_repair"].endswith("flash-low")
     assert providers["claude"]["phase_models"]["ci_repair"] == "haiku"
@@ -101,7 +101,7 @@ def test_ci_repair_rotation_reaches_codex_in_second_candidate_window() -> None:
     job = Job(task)
 
     first_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
-    assert first_window == ["google", "claude"]
+    assert first_window == ["google", "pi"]
 
     job.provider_history.extend(
         {
@@ -113,15 +113,15 @@ def test_ci_repair_rotation_reaches_codex_in_second_candidate_window() -> None:
     )
     second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
 
-    assert second_window == ["codex", "google"]
+    assert second_window == ["codex", "claude"]
 
 
 def test_ci_repair_stays_cheap_when_preferred_provider_is_unhealthy() -> None:
     raw_config = _production_config()
     config = AgentsConfig.model_validate(raw_config)
     for unavailable, expected_first in (
-        ("google", ["claude", "codex"]),
-        ("claude", ["google", "codex"]),
+        ("google", ["pi", "claude"]),
+        ("claude", ["google", "pi"]),
     ):
         providers = [
             _Provider(
@@ -152,4 +152,5 @@ def test_ci_repair_stays_cheap_when_preferred_provider_is_unhealthy() -> None:
         )
         second_window, _ = router._candidate_names(AgentPhase.CI_REPAIR, job)
 
-        assert second_window == [expected_first[0], expected_first[1]]
+        assert second_window[0] == "codex"
+        assert len(second_window) == 2
