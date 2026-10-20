@@ -18,12 +18,7 @@ export interface EscrowTransaction {
 }
 
 export type EscrowStatus =
-  | 'pending'
-  | 'held'
-  | 'released'
-  | 'refunded'
-  | 'cancelled'
-  | 'failed';
+  'pending' | 'held' | 'released' | 'refunded' | 'cancelled' | 'failed';
 
 export interface EscrowReleaseResult {
   success: boolean;
