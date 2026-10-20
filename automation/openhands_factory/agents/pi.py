@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from openhands_factory.agents.base import AgentPhase, AgentRequest, ProviderHealth, ProviderStatus
+from openhands_factory.agents.base import AgentRequest, ProviderHealth, ProviderStatus
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure
 from openhands_factory.agents.process import ProcessResult
 
@@ -92,14 +92,13 @@ class PiProvider(CLIProvider):
         prompt_path: Path | None,
     ) -> Sequence[str]:
         del prompt_path
-        thinking = _THINKING_BY_PHASE.get(request.phase, _DEFAULT_THINKING)
         command = [
             *self._prefix(),
             "-p",
             "--model",
             model,
             "--thinking",
-            thinking,
+            "max",
             "--no-approve",
             "--no-context-files",
             "--no-extensions",
