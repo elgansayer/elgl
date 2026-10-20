@@ -14,7 +14,7 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
-describe.skip('LeaderboardComponent', () => {
+describe('LeaderboardComponent', () => {
   let fixture: ComponentFixture<LeaderboardComponent>;
   let httpTesting: HttpTestingController;
 
@@ -64,7 +64,7 @@ describe.skip('LeaderboardComponent', () => {
       schemas: [NO_ERRORS_SCHEMA],
     })
       .overrideComponent(LeaderboardComponent, {
-        set: { imports: [MockTranslatePipe] },
+        add: { imports: [MockTranslatePipe] },
       })
       .compileComponents();
 
