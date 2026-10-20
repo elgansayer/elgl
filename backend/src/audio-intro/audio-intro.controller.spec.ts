@@ -52,13 +52,13 @@ describe('AudioIntroController', () => {
   });
 
   describe('updateAudioIntro', () => {
-    it('should call the service with the given user id and audio url', async () => {
+    it('should call the service with the given user id and audio url when authenticated user matches', async () => {
       const dto: UpdateAudioIntroDto = {
         audio_url: 'https://example.com/audio.mp3',
       };
+      const req = { user: { id: 'user-1' } };
       mockService.updateAudioIntro.mockResolvedValue(undefined);
 
-      const req = { user: { id: 'user-1' } };
       const result = await controller.updateAudioIntro(req, 'user-1', dto);
 
       expect(mockService.updateAudioIntro).toHaveBeenCalledWith(
@@ -77,6 +77,8 @@ describe('AudioIntroController', () => {
       await expect(
         controller.updateAudioIntro(req, 'user-1', dto),
       ).rejects.toThrow(ForbiddenException);
+
+      expect(mockService.updateAudioIntro).not.toHaveBeenCalled();
     });
   });
 

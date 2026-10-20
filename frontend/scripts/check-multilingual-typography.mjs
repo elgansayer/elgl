@@ -12,11 +12,13 @@ function requireFragment(source, fragment, description) {
 }
 
 requireFragment(styles, 'font-sans', 'Global body must use the universal system font stack');
-requireFragment(tailwind, '"Instrument Sans"', 'Display font declaration');
 requireFragment(tailwind, 'ui-sans-serif', 'Display fallback stack');
 requireFragment(tailwind, '-apple-system', 'Display fallback stack');
 requireFragment(tailwind, 'BlinkMacSystemFont', 'Display fallback stack');
 requireFragment(tailwind, 'sans-serif', 'Display fallback stack');
+if (/@import\s+url\(/.test(styles)) {
+  failures.push('Global styles must not import remote stylesheets');
+}
 
 const allowedExtensions = new Set(['.html', '.ts', '.scss', '.css']);
 const languageContentPathFragments = [
