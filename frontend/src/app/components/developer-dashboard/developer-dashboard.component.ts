@@ -1,5 +1,6 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmTabs, HlmTabsContent, HlmTabsList, HlmTabsTrigger } from '@spartan-ng/helm/tabs';
 import { Component, inject, signal, resource } from '@angular/core';
 import { UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,11 +16,17 @@ import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
+type DeveloperDashboardTab = 'overview' | 'postgis' | 'centrifugo' | 'livekit';
+
 @Component({
   selector: 'app-developer-dashboard',
   imports: [
     HlmCheckbox,
     HlmButton,
+    HlmTabs,
+    HlmTabsList,
+    HlmTabsTrigger,
+    HlmTabsContent,
     FormsModule,
     TranslatePipe,
     UpperCasePipe,
@@ -38,8 +45,7 @@ export class DeveloperDashboardComponent {
   readonly discoveryService = inject(DiscoveryService);
   readonly centrifugeService = inject(CentrifugeService);
 
-  readonly activeTab = signal<'overview' | 'postgis' | 'centrifugo' | 'livekit'>('overview');
-  readonly isGeneratingApiKey = signal<boolean>(false);
+  readonly activeTab = signal<DeveloperDashboardTab>('overview');
 
   // PostGIS Matchmaking Sandbox Signals
   readonly searchLatitude = signal<number>(51.5074); // London center
@@ -63,8 +69,10 @@ export class DeveloperDashboardComponent {
     },
   });
 
-  setTab(tab: 'overview' | 'postgis' | 'centrifugo' | 'livekit'): void {
-    this.activeTab.set(tab);
+  setTab(tab: string): void {
+    if (tab === 'overview' || tab === 'postgis' || tab === 'centrifugo' || tab === 'livekit') {
+      this.activeTab.set(tab);
+    }
   }
 
   async upgrade(tier: 'consumer' | 'developer'): Promise<void> {
@@ -80,26 +88,8 @@ export class DeveloperDashboardComponent {
   }
 
   async generateKey(): Promise<void> {
-    if (this.isGeneratingApiKey()) return;
-
-    this.isGeneratingApiKey.set(true);
-    try {
-      const issuedKey = await this.store.generateApiKey();
-      if (!issuedKey) {
-        await this.addLog(
-          'REDIS',
-          'Developer API key generation failed; no credential was issued.',
-          'warn',
-        );
-        return;
-      }
-
-      // Never include the reusable credential in diagnostics. The raw key is
-      // deliberately limited to the issuance response/UI path.
-      await this.addLog('REDIS', 'Generated new production API key (600 RPM).', 'success');
-    } finally {
-      this.isGeneratingApiKey.set(false);
-    }
+    await this.store.generateApiKey();
+    await this.addLog('REDIS', 'Generated new production API key (600 RPM).', 'success');
   }
 
   async runPostGisSearch(): Promise<void> {

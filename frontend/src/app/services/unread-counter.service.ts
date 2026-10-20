@@ -3,8 +3,6 @@ import { Injectable, signal, computed, effect } from '@angular/core';
 /** Identifies a navigation tab for per-tab badge counts. */
 export type NavTab = 'chat' | 'moments' | 'discovery' | 'audioRooms' | 'profile';
 
-const MAX_VISIBLE_BADGE_COUNT = 99;
-
 @Injectable({
   providedIn: 'root',
 })
@@ -15,7 +13,7 @@ export class UnreadCounterService {
   readonly audioRoomsUnread = signal<number>(0);
   readonly notificationUnread = signal<number>(0);
 
-  /** Per-tab lookup so navigation surfaces bind to one shared state owner. */
+  /** Per-tab lookup so the template can bind to a single `tabCount(tab)` call. */
   readonly tabCount = (tab: NavTab): number => {
     switch (tab) {
       case 'chat':
@@ -46,29 +44,18 @@ export class UnreadCounterService {
     });
   }
 
-  /**
-   * Returns the compact value rendered by navigation badges while preserving
-   * the full counter value in service state for totals and later decrements.
-   */
-  badgeText(tab: NavTab): string {
-    const count = this.tabCount(tab);
-    return count > MAX_VISIBLE_BADGE_COUNT ? `${MAX_VISIBLE_BADGE_COUNT}+` : String(count);
-  }
-
   // Generic helpers
 
   set(tab: NavTab, count: number): void {
-    this.signalFor(tab).set(this.normaliseCount(count));
+    this.signalFor(tab).set(Math.max(0, count));
   }
 
   increment(tab: NavTab): void {
-    this.signalFor(tab).update((count) =>
-      Math.min(Number.MAX_SAFE_INTEGER, this.normaliseCount(count) + 1),
-    );
+    this.signalFor(tab).update((c) => c + 1);
   }
 
   decrement(tab: NavTab): void {
-    this.signalFor(tab).update((count) => Math.max(0, this.normaliseCount(count) - 1));
+    this.signalFor(tab).update((c) => Math.max(0, c - 1));
   }
 
   resetAll(): void {
@@ -116,14 +103,6 @@ export class UnreadCounterService {
       profile: this.notificationUnread,
     };
     return map[tab];
-  }
-
-  private normaliseCount(count: number): number {
-    if (!Number.isFinite(count) || count <= 0) {
-      return 0;
-    }
-
-    return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(count));
   }
 
   private updateAppBadge(count: number): void {

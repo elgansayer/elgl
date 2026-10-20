@@ -9,7 +9,7 @@ metadata:
 
 # Angular Developer Guidelines
 
-> **PROJECT OVERRIDE:** This project uses Angular v20+ (latest stable). The hard rules from `frontend/AGENTS.md` supersede any reference material below. Key mandates: ZERO `@Input()`/`@Output()` decorators, ZERO `.subscribe()`, ZERO `Subject`/`BehaviorSubject` for state, ALL data fetching via `resource()`, ALL state via `signal()`/`computed()`/`linkedSignal()`, ALL inputs via `input()`, ALL outputs via `output()`, ALL queries via `viewChild()`.
+> **PROJECT OVERRIDE:** This project uses Angular v20+ (latest stable). The hard rules from `AGENTS.md` Section 5 supersede any reference material below. Key mandates: ZERO `@Input()`/`@Output()` decorators, ZERO `.subscribe()`, ZERO `Subject`/`BehaviorSubject` for state, ALL data fetching via `resource()`, ALL state via `signal()`/`computed()`/`linkedSignal()`, ALL inputs via `input()`, ALL outputs via `output()`, ALL queries via `viewChild()`.
 
 1. Always analyze the project's Angular version before providing guidance, as best practices and available features can vary significantly between versions. If creating a new project with Angular CLI, do not specify a version unless prompted by the user.
 
