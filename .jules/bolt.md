@@ -21,6 +21,10 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
+## 2026-09-07 - [Parallelize Multiple Redis Cache Invalidations in NestJS Services]
+**Learning:** Sequential `await` calls for independent `invalidateCache` methods in mutative admin API routes create unnecessary additive latency during actions like blocking or warning users, degrading performance.
+**Action:** Group independent, concurrent cache invalidations (e.g., user lists, blocks, login history) into a single `Promise.all` array to execute them in parallel and reduce request roundtrip times.
+
 ## 2026-09-08 - [Memoize Chat Message Ownership]
 
 **Learning:** Angular 22 already uses its signal-aware change detection strategy by default, so explicit `OnPush` metadata is redundant. The chat message template reads message ownership repeatedly for layout, colour, bubble-tail, and delivery-state bindings, making that derived value a better optimization target.
@@ -432,6 +436,7 @@
 
 **Learning:** In the backend `video-calls-cache-invalidation.service.ts`, `invalidateAllVideoClassroomCaches` and `invalidateRoomCaches` sequentially awaited `deleteByScan` and `del` operations in loops. These calls were independent but incurred additive network latency when executed sequentially.
 **Action:** When performing multiple independent cache deletions or scans, group the promises using array maps and pass them into `Promise.all` (or `Promise.allSettled`) to reduce total execution time from O(N) database roundtrips to an O(1) concurrent batch block. Ensure to sum up the resulting deletion counts after concurrent resolution.
+
 
 
 
