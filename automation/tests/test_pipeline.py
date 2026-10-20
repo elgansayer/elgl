@@ -980,6 +980,107 @@ def test_unverified_pull_request_refreshes_a_locally_stale_base(
     assert github.updated_branches == [(77, "old-head")]
 
 
+@pytest.mark.parametrize("merge_state", ["UNKNOWN", "BLOCKED", "UNSTABLE"])
+@pytest.mark.parametrize("refresh_existing", [False, True])
+@pytest.mark.parametrize("strict", [False, True])
+def test_exact_green_review_honours_the_base_policy_without_rebuilding(
+    tmp_path, monkeypatch, merge_state, refresh_existing, strict
+):
+    factory_config = config(tmp_path)
+    factory_config.require_green_main_between_merges = strict
+    github = GitHub()
+    github.tasks = []
+    github.pull_requests = [
+        Task("77", "Green candidate", "Body", "github-pull-request", 1, pr_branch="fix/green")
+    ]
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "green-head",
+            False,
+            True,
+            merge_state_status=merge_state,
+            ci_required_passed=True,
+        )
+    ]
+    probes = []
+
+    def prepare(workflow, worktree, branch):
+        worktree.mkdir(parents=True)
+
+    def contains_base(workflow):
+        probes.append(True)
+        return False
+
+    monkeypatch.setattr(GitWorkflow, "prepare_pull_request_worktree", prepare)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "green-head")
+    monkeypatch.setattr(GitWorkflow, "contains_current_base", contains_base)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: pytest.fail("Exact green CI must not be run twice"),
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)
+    pipeline.refresh()
+    monkeypatch.setattr(
+        pipeline,
+        "_record_verified_head",
+        lambda job, owner, paths: setattr(job, "latest_verified_sha", job.head_sha),
+    )
+    if refresh_existing:
+        result = pipeline.jobs.load()["77"]
+        result.branch = "fix/green"
+        result.pull_request = 77
+        pipeline._refresh_pull_request_for_review(
+            result, factory_config.worktree_dir / "issue-77", "test"
+        )
+    else:
+        result = pipeline.run_job("77")
+    assert result is not None
+    assert result.state is (JobState.CI_PENDING if strict else JobState.REVIEWING)
+    assert github.updated_branches == ([(77, "green-head")] if strict else [])
+    assert len(probes) == int(strict)
+
+
+@pytest.mark.parametrize(
+    "state,passed,pending,failed,head",
+    [
+        ("BEHIND", True, False, False, "head"),
+        ("BLOCKED", False, False, False, "head"),
+        ("BLOCKED", True, True, False, "head"),
+        ("BLOCKED", True, False, True, "head"),
+        ("BLOCKED", True, False, False, "different-head"),
+    ],
+)
+def test_non_strict_base_policy_does_not_reuse_unproven_or_strict_candidates(
+    tmp_path, monkeypatch, state, passed, pending, failed, head
+):
+    factory_config = config(tmp_path)
+    factory_config.require_green_main_between_merges = False
+    pipeline = FactoryPipeline(factory_config, github=GitHub())
+    job = Job(Task("77", "Candidate", "", "github-pull-request", 1), head_sha="head")
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        head,
+        False,
+        True,
+        merge_state_status=state,
+        ci_required_passed=passed,
+        ci_required_pending=pending,
+        ci_required_failed=failed,
+    )
+    monkeypatch.setattr(GitWorkflow, "contains_current_base", lambda workflow: False)
+    assert pipeline._review_needs_base_update(job, GitWorkflow(tmp_path, "main"), status)
+
+
 def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
