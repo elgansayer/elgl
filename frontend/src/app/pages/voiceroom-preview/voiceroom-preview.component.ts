@@ -118,7 +118,7 @@ export class VoiceroomPreviewComponent {
       }
 
       const room = await firstValueFrom(
-        this.http.get<RoomPreview>(`${environment.apiUrl}/audio-rooms/${roomId}`),
+        this.http.get<RoomPreview>(`${environment.apiUrl}/audio-rooms/preview/${roomId}`),
       );
 
       this.transferState.set(stateKey, room);

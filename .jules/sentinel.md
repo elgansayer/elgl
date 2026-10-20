@@ -111,12 +111,38 @@
 **Vulnerability:** The `factory-dashboard/src/server.js` file claimed in its comment and README that Basic Auth was enforced on all routes except `/health`. However, the implementation was completely missing, leaving all endpoints (including state data and GitHub integration) exposed without any authentication check.
 **Learning:** Comments and documentation do not guarantee security mechanisms are actually implemented. The `createServer` callback was blindly invoking `handleRoute(req, res)` without inspecting `req.headers.authorization`.
 **Prevention:** Implement programmatic assertions or integration tests that specifically attempt to access protected endpoints without credentials and expect 401 Unauthorized responses to ensure auth middleware is active.
+## 2026-09-13 - Basic Auth Timing Attack Vulnerability in Node.js
+
+**Vulnerability:** The basic authentication check in `factory-dashboard/src/server.js` was implemented using standard string inequality `!==` to compare passwords, making the server vulnerable to timing attacks where attackers could measure validation time to guess the length and characters of the password.
+**Learning:** Basic string comparison operators short-circuit, causing the comparison time to vary based on how many characters match. This is a well-known vulnerability for authentication paths.
+**Prevention:** Always use `crypto.timingSafeEqual(userBuf, expectedUserBuf)` from the native `crypto` module when validating passwords, tokens, or hashes to ensure a constant time comparison.
+
+## 2024-05-18 - Fix Redis DoS vulnerability by replacing KEYS with SCAN
+
+**Vulnerability:** The codebase was using the blocking `redis.keys()` command in production cache invalidation paths (`admin.service.ts`, `safety-cache-invalidation.service.ts`) and metrics aggregation (`recommendations-metrics.aggregator.ts`).
+**Learning:** `KEYS` blocks the Redis event loop, creating a Denial of Service (DoS) vulnerability. An attacker or normal system usage could trigger cache invalidations or metrics collection that blocks all services relying on Redis. The codebase relies heavily on prefix matching for cache invalidation.
+**Prevention:** Always use the non-blocking `SCAN` command with a cursor loop to search for keys by pattern instead of `KEYS`.
+
+## 2026-09-15 - [Fix IDOR in Safety Controller Block Lists]
+
+**Vulnerability:** Insecure Direct Object Reference (IDOR) on `getBlockedUserIds`, `getBlockerUserIds`, and `getBlockedAndBlockerIds` allowed any authenticated user to view the block lists of any other user.
+**Learning:** Endpoints that accept a `userId` parameter in route paths must explicitly verify that the requesting user's identity matches the requested `userId` when exposing sensitive relationships.
+**Prevention:** Always compare the `userId` parameter against the authenticated user's ID (`req.user.id`) and throw a `ForbiddenException` if they differ on endpoints dealing with personal data.
+
+## 2026-09-15 - Hardcoded Test Secrets allowed in Production
+
+**Vulnerability:** The application was allowing insecure placeholder/test credentials (e.g. 'test-centrifugo-api-key', 'test-centrifugo-secret') to be successfully loaded and used in production environments.
+**Learning:** Checking for the presence of a secret (`!secret`) is insufficient if the configuration system falls back to default test credentials when environment variables are omitted or misconfigured.
+**Prevention:** Always implement explicit fail-fast validations that check the configured secrets against known insecure default/placeholder strings, especially in production environments, to prevent the system from booting into a vulnerable state.
+
 ## 2026-09-17 - [Fail-Fast LiveKit Credentials in Production (Video Calls)]
+
 **Vulnerability:** LiveKit API keys and secrets used in video-calls service (`LIVEKIT_API_KEY`, `LIVEKIT_SECRET`) could default to insecure test values (e.g., `test-livekit-api-key`) if environment variables were missing in a production environment.
 **Learning:** Default fallbacks for critical external service secrets present a high risk in production by allowing silent initialization into an insecure, predictable state. Consistent validation must occur anywhere a secret is injected into a service, missing checks in just one module (VideoCalls) can circumvent valid checks in others.
 **Prevention:** Always apply strict fail-fast validation checks where `NODE_ENV === 'production'` alongside explicit validation for known development fallback credentials, directly within every module or service initialization.
 
 ## 2024-05-24 - IDOR in Audio Intro Update
+
 **Vulnerability:** IDOR in audio intro update endpoint where any authenticated user could overwrite the audio intro for any other user because the route parameter `userId` was not compared against the authenticated user's ID.
 **Learning:** Endpoints mapped by `userId` or updating user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only modify their own data.
 **Prevention:** Always extract the authenticated user ID via `@Req() req: { user: { id: string } }` (or similar decorators like `CurrentUser`) and assert it matches the target resource ID with a `ForbiddenException` or `UnauthorizedException`.
@@ -125,3 +151,7 @@
 **Vulnerability:** The Admin API `banUser` and `warnUser` endpoints relied solely on `req.user.sub` to extract the admin's user ID for auditing and blocking actions. Depending on the `SupabaseAuthGuard` implementation and JWT structure, the user ID might be mapped to `req.user.id` instead of `sub`, leading to an undefined user ID being passed to the `AdminService` without failing fast.
 **Learning:** Hardcoding a specific property name for authenticated user IDs when multiple representations exist in the request context (e.g., `id` and `sub`) can lead to authorization bypass or unexpected application state. Furthermore, failing to validate the presence of the extracted ID before initiating destructive actions like bans introduces a risk.
 **Prevention:** Update authentication interfaces (like `AuthRequest`) to reflect the union of possible ID properties. In controller handlers, explicitly extract the ID using a nullish coalescing operator (`req.user.id ?? req.user.sub`) and immediately throw an `UnauthorizedException` if the resolved ID is falsy before passing it to services.
+## 2026-10-12 - Improper Authentication Extraction in NestJS Controllers
+**Vulnerability:** IDOR and authorization bypass risks due to trusting internal `req` object for extracting `user.id`.
+**Learning:** `req.user` might not always be rigorously validated depending on the execution context or misconfigured guards.
+**Prevention:** Always use `@CurrentUser()` to extract the authenticated user securely and assert its validity before using its properties.
