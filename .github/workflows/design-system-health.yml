@@ -50,7 +50,7 @@ jobs:
           "
         env:
           # Ratchet: known token contrast findings at the time this gate landed. Lower it as fixes merge.
-          KNOWN_TOKEN_FINDINGS: '6'
+          KNOWN_TOKEN_FINDINGS: '3'
       - name: Job summary
         if: always()
         run: cat reports/design-audit.md >> "$GITHUB_STEP_SUMMARY" || true
