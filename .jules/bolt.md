@@ -177,6 +177,10 @@
 **Learning:** In `backend/src/achievements/achievements.service.ts`, `getFullAchievements` sequentially awaited three database queries (`getUserAchievements`, `getUserMessageCount`, `getStudyStreakDays`). These queries are completely independent. Fetching them sequentially introduces unnecessary additive network latency.
 **Action:** When gathering independent data sources or counts for an entity overview, group the asynchronous fetches into a single `Promise.all` structure to execute them concurrently. Use array destructuring matching the exact order of the promises to properly assign the variables.
 
+## 2026-10-06 - [Optimize Moments feed initialization via Promise.all]
+
+**Learning:** In the backend `moments.service.ts`, the `getFeed` method sequentially awaited `safetyService.getBlockedAndBlockerIds` and `usersService.getProfile`. These two data fetches are independent and awaiting them sequentially introduces unnecessary additive network/database latency during a high-traffic operation.
+**Action:** When a method requires multiple independent initialization parameters or lookups, combine them into a single `Promise.all` concurrent call to minimize the total blocking time before executing the core business logic.
 ## 2024-05-24 - [Replaced sequential safety checks with Promise.all in chat.service.ts]
 **Learning:** Found sequential calls to `getBlockedAndBlockerIds` for sender and receiver in both `sendMessage` and `sendContact` functions of `chat.service.ts`. These independent queries cause unnecessary additive network latency.
 **Action:** Used `Promise.all` to fetch both `receiverBlockedIds` and `senderBlockedIds` concurrently to optimize the database query execution and reduce wait times.
