@@ -15,14 +15,15 @@ from openhands_factory.agents.process import ProcessResult
 # ``--thinking max`` for every phase. That is disproportionate for bounded
 # repair/review/control-plane work, especially because production already routes
 # those phases to Haiku. Preserve maximum reasoning for open-ended build work,
-# keep a strong security-review tier, and align the remaining bounded phases with
-# the effort policy already used by Claude/Codex.
+# keep a strong security-review tier, and align bounded repair/control-plane work
+# with the effort policy already used by Claude/Codex. Independent review keeps
+# its existing medium floor because it remains part of the merge safety chain.
 _THINKING_BY_PHASE: dict[AgentPhase, str] = {
     AgentPhase.SECURITY_REVIEW: "high",
     AgentPhase.QUALITY_REPAIR: "low",
     AgentPhase.CODE_REVIEW: "medium",
     AgentPhase.CI_REPAIR: "low",
-    AgentPhase.GENERAL_ACTION: "medium",
+    AgentPhase.GENERAL_ACTION: "low",
 }
 _DEFAULT_THINKING = "max"
 
