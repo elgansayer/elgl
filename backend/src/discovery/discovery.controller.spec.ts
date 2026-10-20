@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
 import { DISCOVERY_CACHE_NO_STORE } from './cache.interceptor';
+import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 
 vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,

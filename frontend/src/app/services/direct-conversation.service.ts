@@ -8,21 +8,25 @@ import { AuthService } from './auth.service';
 export class DirectConversationService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
-  private readonly baseUrl = `${environment.apiUrl}/chat/direct-conversations`;
 
   async openOrCreate(targetUserId: string): Promise<string> {
     const token = this.authService.getAccessToken();
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
     const response = await firstValueFrom(
-      this.http.post<{ roomId: string }>(
-        this.baseUrl,
-        { targetUserId },
-        { headers: { Authorization: `Bearer ${token ?? ''}` } },
+      this.http.post<{ room_id: string }>(
+        `${environment.apiUrl}/chat/direct`,
+        { target_user_id: targetUserId },
+        { headers: { Authorization: `Bearer ${token}` } },
       ),
     );
 
-    if (!response.roomId) {
-      throw new Error('Direct conversation response did not include a room ID');
+    if (!response.room_id) {
+      throw new Error('Conversation unavailable');
     }
-    return response.roomId;
+
+    return response.room_id;
   }
 }

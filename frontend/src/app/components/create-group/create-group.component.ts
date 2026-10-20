@@ -29,7 +29,7 @@ export class CreateGroupComponent {
   @ViewChild('memberSearchInput', { read: ElementRef })
   private memberSearchInput?: ElementRef<HTMLInputElement>;
 
-  readonly MAX_MEMBERS = 49;
+  readonly MAX_MEMBERS = 50;
 
   groupName = '';
   searchQuery = '';

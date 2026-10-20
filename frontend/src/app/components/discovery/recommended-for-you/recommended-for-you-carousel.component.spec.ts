@@ -1,12 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DiscoveryRecommendation,
   RecommendationsService,
 } from '../../../services/recommendations.service';
-import { I18nService } from '../../../services/i18n.service';
-import { StudyBuddiesService } from '../../../services/study-buddies.service';
 import { RecommendedForYouCarouselComponent } from './recommended-for-you-carousel.component';
 
 function recommendation(id: string, name = id): DiscoveryRecommendation {
@@ -24,26 +22,17 @@ function recommendation(id: string, name = id): DiscoveryRecommendation {
 describe('RecommendedForYouCarouselComponent', () => {
   let fixture: ComponentFixture<RecommendedForYouCarouselComponent>;
   let component: RecommendedForYouCarouselComponent;
-  let router: Router;
   let getRecommendations: ReturnType<typeof vi.fn>;
-  let followUser: ReturnType<typeof vi.fn>;
-  let getOrCreateChannel: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     getRecommendations = vi.fn().mockResolvedValue([
       {
         ...recommendation('p-1', 'Aiko'),
         shared_interest_count: 2,
-        recommendation_reasons: [
-          'language_exchange',
-          'shared_interests',
-          'active_recently',
-        ],
+        recommendation_reasons: ['language_exchange', 'shared_interests', 'active_recently'],
       },
       recommendation('p-2', 'Ren'),
     ]);
-    followUser = vi.fn().mockResolvedValue(undefined);
-    getOrCreateChannel = vi.fn().mockResolvedValue({ channel: 'room-1' });
 
     await TestBed.configureTestingModule({
       imports: [RecommendedForYouCarouselComponent],
@@ -62,15 +51,28 @@ describe('RecommendedForYouCarouselComponent', () => {
         },
         {
           provide: I18nService,
-          useValue: { translate: (key: string) => key },
+          useValue: {
+            translate: (key: string, params?: Record<string, unknown>) => {
+              const labels: Record<string, string> = {
+                'discovery.recommendation.languageExchange': 'Language exchange match',
+                'discovery.recommendation.sharedInterest': '{{count}} shared interest',
+                'discovery.recommendation.sharedInterests': '{{count}} shared interests',
+                'discovery.recommendation.activeRecently': 'Recently active',
+                'discovery.recommendation.activeLearner': 'Active learner',
+                'discovery.recommendation.proficiencyMatch': 'Similar proficiency',
+                'discovery.recommendation.availabilityMatch': 'Matching availability',
+                'discovery.recommendation.helpfulCorrector': 'Helpful corrector',
+                'discovery.recommendation.learningGoalMatch': 'Shared learning goal',
+              };
+              return (labels[key] ?? key).replace('{{count}}', String(params?.['count'] ?? ''));
+            },
+          },
         },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RecommendedForYouCarouselComponent);
     component = fixture.componentInstance;
-    router = TestBed.inject(Router);
-    vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -90,6 +92,15 @@ describe('RecommendedForYouCarouselComponent', () => {
     expect(cards[0].textContent).toContain('2 shared interests');
     expect(cards[0].textContent).toContain('Recently active');
     expect(component.recommendations()[0]).not.toHaveProperty('recommendation_score');
+  });
+
+  it('renders every multidimensional recommendation reason', () => {
+    const match = recommendation('p-3');
+
+    expect(component.reasonLabel('proficiency_match', match)).toBe('Similar proficiency');
+    expect(component.reasonLabel('availability_match', match)).toBe('Matching availability');
+    expect(component.reasonLabel('high_correction_ratio', match)).toBe('Helpful corrector');
+    expect(component.reasonLabel('learning_goal_match', match)).toBe('Shared learning goal');
   });
 
   it('bounds the client contract to ten recommendations', async () => {
@@ -126,9 +137,7 @@ describe('RecommendedForYouCarouselComponent', () => {
   });
 
   it('links recommendations to the canonical profile route', () => {
-    const link = fixture.nativeElement.querySelector(
-      '.recommended-profile-link',
-    ) as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector('.recommended-card') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toContain('/profile/p-1');
   });
 
@@ -138,7 +147,9 @@ describe('RecommendedForYouCarouselComponent', () => {
     ) as HTMLElement[];
 
     for (const card of cards) {
-      const actions = Array.from(card.querySelectorAll('button.recommended-action')) as HTMLButtonElement[];
+      const actions = Array.from(
+        card.querySelectorAll('button.recommended-action'),
+      ) as HTMLButtonElement[];
       expect(actions).toHaveLength(2);
       expect(actions[0].textContent?.trim()).toBe('chat.sendMessage');
       expect(actions[1].textContent?.trim()).toBe('userProfile.follow');

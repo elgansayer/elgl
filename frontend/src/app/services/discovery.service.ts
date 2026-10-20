@@ -1,12 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, catchError, of, timeout, retry, Subject, takeUntil } from 'rxjs';
+import { MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { UserProfile, UserService } from './user.service';
 import { ChatService, ChatMessage } from './chat.service';
 import { OfflineDiscoveryCacheService } from './offline-discovery-cache.service';
+import { MatchmakingAlgorithmService } from './matchmaking-algorithm.service';
 
 export interface SearchFilterParams {
   latitude?: number;
@@ -45,6 +47,7 @@ export class DiscoveryService {
   private chatService = inject(ChatService);
   private userService = inject(UserService);
   private offlineCache = inject(OfflineDiscoveryCacheService);
+  private matchmakingAlgorithm = inject(MatchmakingAlgorithmService);
   private baseUrl = `${environment.apiUrl}/discovery`;
 
   private getHeaders() {
@@ -76,6 +79,16 @@ export class DiscoveryService {
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
     abortSignal?: AbortSignal,
   ): Promise<UserProfile[]> {
+    const hasLocation =
+      filters.latitude !== undefined || filters.longitude !== undefined;
+    const cacheFilters = Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => value !== undefined),
+    );
+    // Precise-location results must stay in memory. Persisting them either
+    // exposes coordinates in a key or lets a different origin reuse them.
+    const filtersKey = hasLocation
+      ? null
+      : this.offlineCache.buildFiltersKey(cacheFilters);
     const isOnline = this.offlineCache.isOnline();
 
     let params = new HttpParams();
@@ -134,18 +147,42 @@ export class DiscoveryService {
     if (filters.voice_room_active !== undefined)
       params = params.set('voice_room_active', filters.voice_room_active.toString());
 
-    // Discovery visibility depends on current privacy, deletion, and block
-    // state. None of those security boundaries can be revalidated offline, so
-    // never serve persisted or synthetic profiles without the API.
-    if (!isOnline) {
+    // Location results require a live proximity query; persisted discovery
+    // data cannot prove that it belongs to the current origin.
+    if (!isOnline && hasLocation) {
       return [];
+    }
+
+    // Offline-first: attempt cached results before making network request
+    if (!isOnline) {
+      const cached = await this.offlineCache.getCachedSearchResults(filtersKey!);
+      if (cached && cached.length > 0) {
+        return this.enrichPartnersFallback(cached, filters);
+      }
+      // Fall back to all cached partners and apply client-side matchmaking algorithm
+      const allCached = await this.offlineCache.getAllCachedPartners();
+      if (allCached.length > 0) {
+        return this.enrichPartnersFallback(allCached, filters);
+      }
+      // Ultimate fallback: mock data with algorithm-based ranking
+      const currentUser = this.authService.currentUser();
+      if (currentUser?.id) {
+        const profile = await this.userService.getMyProfile().catch((): UserProfile | null => null);
+        if (profile) {
+          const scored = this.matchmakingAlgorithm.scoreAndRank(profile, MOCK_PARTNERS);
+          const scoreFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored.data, filters);
+          const fallbackUsers = scoreFiltered.data.map((s) => s.partner);
+          return this.enrichPartnersFallback(fallbackUsers, filters);
+        }
+      }
+      return MOCK_PARTNERS;
     }
 
     // Build cancellation notifier from AbortSignal
     const cancel$ = new Subject<void>();
     if (abortSignal) {
       if (abortSignal.aborted) {
-        return [];
+        return MOCK_PARTNERS;
       }
       abortSignal.addEventListener('abort', () => cancel$.next(), { once: true });
     }
@@ -157,9 +194,15 @@ export class DiscoveryService {
           timeout(15000),
           retry({ count: 1, delay: 1000 }),
           takeUntil(cancel$),
-          catchError(() => of<UserProfile[]>([])),
+          catchError(() => of<UserProfile[]>(MOCK_PARTNERS)),
         ),
     );
+
+    // Cache only origin-independent results for offline use.
+    if (users !== MOCK_PARTNERS && filtersKey) {
+      void this.offlineCache.cacheSearchResults(filtersKey, users);
+      void this.offlineCache.cachePartners(users);
+    }
 
     return this.enrichPartners(users, filters);
   }
@@ -168,8 +211,17 @@ export class DiscoveryService {
     users: UserProfile[],
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
   ): Promise<UserProfile[]> {
-    const filtered = await this.filterByVerifiedBlockGraph(users);
-    if (filtered.length === 0) return [];
+    // Filter out blocked users client-side
+    const currentUser = this.authService.currentUser();
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
 
     // Attach is_partner_of_week flag using separate endpoint
     const partnerIds = await this.getPartnerOfWeekIds();
@@ -192,20 +244,39 @@ export class DiscoveryService {
     return enriched;
   }
 
-  private async filterByVerifiedBlockGraph(users: UserProfile[]): Promise<UserProfile[]> {
-    if (users.length === 0) return [];
-
+  /**
+   * Offline enrichment path that uses client-side matchmaking algorithm to
+   * score and rank cached partners. Skips server-dependent operations
+   * (partner-of-week flags) but still filters blocked users from cached data.
+   */
+  private async enrichPartnersFallback(
+    users: UserProfile[],
+    filters: SearchFilterParams & { serious_learner_mode?: boolean },
+  ): Promise<UserProfile[]> {
     const currentUser = this.authService.currentUser();
-    if (!currentUser?.id) return [];
 
-    try {
-      const blockedIds = await this.safetyService.getBlockedAndBlockerIdsStrict(currentUser.id);
-      if (blockedIds.length === 0) return users;
-      const blockedSet = new Set(blockedIds);
-      return users.filter((user) => !blockedSet.has(user.id));
-    } catch {
-      return [];
+    // Filter out blocked users from cached data
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
     }
+
+    // Apply client-side matchmaking algorithm scoring when we have user profile data
+    if (currentUser?.id) {
+      const profile = await this.userService.getMyProfile().catch((): UserProfile | null => null);
+      if (profile) {
+        const scored = this.matchmakingAlgorithm.scoreAndRank(profile, filtered);
+        const rankFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored.data, filters);
+        return rankFiltered.data.map((s) => s.partner);
+      }
+    }
+
+    return filtered;
   }
 
   async searchByCountryCity(country?: string, city?: string): Promise<UserProfile[]> {
@@ -222,9 +293,9 @@ export class DiscoveryService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of<UserProfile[]>([]))),
+        .pipe(catchError(() => of<UserProfile[]>(MOCK_PARTNERS))),
     );
-    return this.filterByVerifiedBlockGraph(users);
+    return users;
   }
 
   async getAudioIntros(filters?: SearchFilterParams): Promise<UserProfile[]> {
@@ -241,12 +312,24 @@ export class DiscoveryService {
     if (filters?.country !== undefined) params = params.set('country', filters.country);
     if (filters?.city !== undefined) params = params.set('city', filters.city);
     const users = await firstValueFrom(
-      this.http.get<UserProfile[]>(`${this.baseUrl}/audio-intros`, {
-        headers: this.getHeaders(),
-        params,
-      }),
+      this.http
+        .get<UserProfile[]>(`${this.baseUrl}/audio-intros`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(catchError(() => of<UserProfile[]>([]))),
     );
-    return this.filterByVerifiedBlockGraph(users);
+    const currentUser = this.authService.currentUser();
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
+    return filtered;
   }
 
   async getRecentNativeSpeakers(): Promise<UserProfile[]> {
@@ -257,7 +340,17 @@ export class DiscoveryService {
         })
         .pipe(catchError(() => of<UserProfile[]>([]))),
     );
-    return this.filterByVerifiedBlockGraph(users);
+    const currentUser = this.authService.currentUser();
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
+    return filtered;
   }
 
   async getSpotlightUsers(): Promise<UserProfile[]> {
@@ -269,7 +362,17 @@ export class DiscoveryService {
           })
           .pipe(catchError(() => of<UserProfile[]>([]))),
       );
-      return this.filterByVerifiedBlockGraph(users);
+      const currentUser = this.authService.currentUser();
+      let filtered = users;
+      if (currentUser?.id) {
+        const blockedIds = await this.safetyService
+          .getBlockedAndBlockerIds(currentUser.id)
+          .catch((): string[] => []);
+        if (blockedIds.length > 0) {
+          filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+        }
+      }
+      return filtered;
     } catch {
       return [];
     }
@@ -300,7 +403,17 @@ export class DiscoveryService {
         })
         .pipe(catchError(() => of<UserProfile[]>([]))),
     );
-    return this.filterByVerifiedBlockGraph(users);
+    const currentUser = this.authService.currentUser();
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
+    return filtered;
   }
 
   async translateBio(targetUserId: string, targetLanguage: string): Promise<string> {
@@ -309,8 +422,8 @@ export class DiscoveryService {
         this.http.post<{ translated_text: string }>(
           `${environment.apiUrl}/nlp/translate-bio`,
           { target_user_id: targetUserId, target_language: targetLanguage },
-          { headers: this.getHeaders() },
-        ),
+          { headers: this.getHeaders() }
+        )
       );
       return result.translated_text;
     } catch {

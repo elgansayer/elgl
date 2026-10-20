@@ -4,19 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    # Dependency Review is valuable when dependency graph inputs or workflow
-    # action references can change. Factory Python, its tests/prompts, deployment
-    # configuration and documentation do not change a manifest/lockfile and were
-    # still allocating a runner for an inevitably empty dependency diff. Do not
-    # ignore automation/pyproject.toml or automation/uv.lock, and do not ignore
-    # workflows, so real Python or GitHub Actions dependency changes still run.
-    paths-ignore:
-      - 'automation/openhands_factory/**'
-      - 'automation/tests/**'
-      - 'automation/prompts/**'
-      - 'config/factory/**'
-      - 'config/systemd/**'
-      - 'docs/**'
 
 permissions:
   contents: read

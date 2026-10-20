@@ -261,6 +261,7 @@ describe('DiscoveryService', () => {
       scheduled_for_deletion_at: string | null;
       correction_ratio: number;
       study_streak_days: number;
+      last_active_at: string;
     }> =>
       Array.from({ length: count }, (_, i) => ({
         id: `u${i + 1}`,
@@ -272,6 +273,7 @@ describe('DiscoveryService', () => {
         scheduled_for_deletion_at: null,
         correction_ratio: 0.6 + (count - i) * 0.005,
         study_streak_days: 10 + (count - i),
+        last_active_at: new Date().toISOString(),
       }));
 
     it('should store partner IDs in redis when users qualify', async () => {
@@ -485,7 +487,7 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should apply native language, target language, and serious learner filters', async () => {
+    it('should apply native language, target language, and active serious learner filters', async () => {
       const partners = [{ id: 'partner-2', display_name: 'Serious Partner' }];
       stubLimitResponse(partners);
 
@@ -503,8 +505,12 @@ describe('DiscoveryService', () => {
         'target_languages',
         ['EN'],
       );
-      expect(mockQueryBuilder.gt).toHaveBeenCalledWith('study_streak_days', 7);
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
       expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
+        'last_active_at',
+        expect.any(String),
+      );
+      expect(mockQueryBuilder.gte).not.toHaveBeenCalledWith(
         'correction_ratio',
         0.8,
       );
@@ -513,13 +519,13 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should enforce serious_learner_mode from user profile', async () => {
-      // NOTE: serious_learner_mode sets query.serious_learner_only=true at line 234,
-      // which comes AFTER the serious_learner_only filter check at line 223.
-      // The queryBuilder still has the filter applied via query modification
-      // for the RPC path (serious_only flag), but gt/gte on queryBuilder won't be called.
+    it('should enforce serious_learner_mode from user profile before building filters', async () => {
       const partners = [
-        { id: 'p1', study_streak_days: 10, correction_ratio: 0.9 },
+        {
+          id: 'p1',
+          study_streak_days: 10,
+          last_active_at: new Date().toISOString(),
+        },
       ];
       stubLimitResponse(partners);
 
@@ -531,7 +537,11 @@ describe('DiscoveryService', () => {
         },
       );
 
-      // serious_learner_only is set on the query object for downstream use (enrich/RPC)
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
+        'last_active_at',
+        expect.any(String),
+      );
       expect(result).toEqual(
         partners.map((p) => ({ ...p, is_partner_of_week: false })),
       );
@@ -1150,7 +1160,7 @@ describe('DiscoveryService', () => {
   // Sort algorithms
   // ---------------------------------------------------------------------------
   describe('sort algorithms', () => {
-    it('best_match: promotes partner-of-week first, then study streak, then correction ratio', async () => {
+    it('best_match: promotes partner-of-week first, then calculates match score', async () => {
       mockRedisClient.get.mockResolvedValue(JSON.stringify(['partner-c']));
       const partners = [
         { id: 'partner-a', study_streak_days: 3, correction_ratio: 0.9 },
@@ -1163,11 +1173,100 @@ describe('DiscoveryService', () => {
         sort: 'best_match',
       });
 
+      // partner-a has score 36 (0.9 * 40)
+      // partner-b has score 20 (0.5 * 40)
       expect(result.map((u) => u.id)).toEqual([
         'partner-c',
-        'partner-b',
         'partner-a',
+        'partner-b',
       ]);
+    });
+
+    it('best_match: computes composite score when user profile is present', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify([])); // No partner of the week
+
+      const currentUserProfile: any = {
+        id: 'user-1',
+        native_languages: ['en'],
+        target_languages: ['ja'],
+        proficiency_level: 'B1',
+        available_time_start: '18:00',
+        available_time_end: '20:00',
+        interests: ['music', 'travel'],
+      };
+
+      // Mock date to ensure deterministic scoring for 'recent activity'
+      const mockNow = new Date('2026-08-20T12:00:00Z');
+      vi.setSystemTime(mockNow);
+
+      const partners = [
+        {
+          id: 'partner-1-perfect',
+          native_languages: ['ja'],
+          target_languages: ['en'],
+          proficiency_level: 'B2', // Gap 1 (10 pts)
+          available_time_start: '19:00', // Overlap (15 pts)
+          available_time_end: '21:00',
+          interests: ['music'], // Match 1 (2 pts)
+          last_active_at: '2026-08-20T10:00:00Z', // Recent (<1 day, 10 pts)
+          correction_ratio: 1.0, // (15 pts)
+          study_streak_days: 10, // (10 pts)
+          country: 'Japan',
+          age: 25,
+          // Base complementary: 20
+          // Total: 20+10+15+2+10+15+10 + 5 + 5 (country/age match) = 92
+        },
+        {
+          id: 'partner-2-poor',
+          native_languages: ['ko'],
+          target_languages: ['fr'],
+          proficiency_level: 'A1', // Gap 2 (0 pts)
+          available_time_start: '08:00', // No overlap (0 pts)
+          available_time_end: '10:00',
+          interests: ['sports'], // No match (0 pts)
+          last_active_at: '2026-07-20T10:00:00Z', // Not recent (>7 days, 0 pts)
+          correction_ratio: 0.1, // (1.5 pts)
+          study_streak_days: 1, // (1 pt)
+          country: 'Korea',
+          age: 20,
+          // Base complementary: 0
+          // Total: 2.5
+        },
+        {
+          id: 'partner-3-tie',
+          native_languages: ['ko'],
+          target_languages: ['fr'],
+          proficiency_level: 'A1',
+          available_time_start: '08:00',
+          available_time_end: '10:00',
+          interests: ['sports'],
+          last_active_at: '2026-07-20T10:00:00Z',
+          correction_ratio: 0.1,
+          study_streak_days: 1,
+          country: 'Korea',
+          age: 20,
+          // Identical score to partner-2-poor, should be sorted by id ascending
+        },
+      ];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartners(
+        'user-1',
+        currentUserProfile,
+        {
+          sort: 'best_match',
+          country: 'japan',
+          age_min: 21,
+        },
+      );
+
+      expect(result.map((u) => u.id)).toEqual([
+        'partner-1-perfect',
+        'partner-2-poor',
+        'partner-3-tie',
+      ]);
+
+      vi.useRealTimers();
     });
 
     it('online_now: orders by most recent last_active_at first', async () => {
