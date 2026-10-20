@@ -99,7 +99,7 @@ The daemon may retain multiple workers because many state transitions are cheap 
 
 Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 
-Independent code review has a three-agent concurrency cap for HelloTalk. WIP pressure switches the scheduler to review-only mode so all available slots converge existing PRs instead of adding more issue work.
+Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 
 Independent code review has a stricter one-agent concurrency cap. This prevents two review workers from spending both hourly review admissions simultaneously while leaving room for an implementation or repair agent.
 
