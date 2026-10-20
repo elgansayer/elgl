@@ -88,7 +88,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export class SoundboardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly soundboardService = inject(SoundboardService);
-  private readonly centrifugeService = inject(CentrifugeService);
+  private readonly centrifugoService = inject(CentrifugeService);
   private readonly authService = inject(AuthService);
   private readonly hapticFeedback = inject(HapticFeedbackService);
 
@@ -110,7 +110,6 @@ export class SoundboardComponent {
 
   private playbackAudio: HTMLAudioElement | null = null;
   private loadGeneration = 0;
-  private lastProcessedEventCount = 0;
 
   constructor() {
     effect(() => {
@@ -119,28 +118,21 @@ export class SoundboardComponent {
       untracked(() => void this.loadSounds(room));
     });
 
-    effect(() => {
+    effect((onCleanup) => {
       const room = this.roomId().trim();
-      const events = this.centrifugeService.events();
-      if (!room || events.length === 0 || events.length === this.lastProcessedEventCount) {
-        return;
-      }
-
-      this.lastProcessedEventCount = events.length;
-      const latest = events.at(-1);
-      if (!latest || latest.channel !== `room_${room}` || !isRecord(latest.data)) {
-        return;
-      }
-      if (latest.data['type'] !== 'soundboard_play') return;
-
-      const soundId =
-        typeof latest.data['sound_id'] === 'string'
-          ? latest.data['sound_id'].trim()
-          : '';
-      const clip = getBundledSoundboardClip(soundId);
-      if (!clip) return;
-
-      untracked(() => this.playRemoteSound(clip.audioDataUrl));
+      if (!room) return;
+      const channel = `room_${room}`;
+      const handler = (data: unknown) => {
+        if (!isRecord(data) || data['type'] !== 'soundboard_play') return;
+        const soundId = typeof data['sound_id'] === 'string' ? data['sound_id'].trim() : '';
+        const clip = getBundledSoundboardClip(soundId);
+        if (!clip) return;
+        untracked(() => this.playRemoteSound(clip.audioDataUrl));
+      };
+      this.centrifugoService.subscribe(channel, handler);
+      onCleanup(() => {
+        this.centrifugoService.unsubscribe(channel);
+      });
     });
 
     this.destroyRef.onDestroy(() => {

@@ -30,7 +30,7 @@ describe('ChatPageComponent', () => {
     currentUser: signal({ id: 'test-user' }),
   };
 
-  const centrifugoServiceMock = {
+  const centrifugeServiceMock = {
     subscribe: vi.fn(),
     unsubscribe: vi.fn(),
     publish: vi.fn(),
@@ -77,8 +77,8 @@ describe('ChatPageComponent', () => {
     chatServiceMock.replyToStatusUpdate.mockReset();
     chatServiceMock.markMessageStatus.mockReset();
     chatServiceMock.markMessageStatus.mockResolvedValue(undefined);
-    centrifugoServiceMock.subscribe.mockReset();
-    centrifugoServiceMock.unsubscribe.mockReset();
+    centrifugeServiceMock.subscribe.mockReset();
+    centrifugeServiceMock.unsubscribe.mockReset();
     aiConversationServiceMock.getScenarios.mockReset();
     aiConversationServiceMock.sendMessage.mockReset();
 
@@ -87,7 +87,7 @@ describe('ChatPageComponent', () => {
       providers: [
         { provide: ChatService, useValue: chatServiceMock },
         { provide: AuthService, useValue: authServiceMock },
-        { provide: CentrifugeService, useValue: centrifugoServiceMock },
+        { provide: CentrifugeService, useValue: centrifugeServiceMock },
         { provide: AiConversationService, useValue: aiConversationServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
       ],

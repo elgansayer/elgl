@@ -57,13 +57,13 @@ export class VoiceroomNotesComponent {
     effect(() => {
       const currentRoomId = this.roomId();
       if (this.subscribedRoomId && this.subscribedRoomId !== currentRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifugo.unsubscribe('room_' + this.subscribedRoomId);
         this.subscribedRoomId = undefined;
       }
 
       if (currentRoomId) {
         this.subscribedRoomId = currentRoomId;
-        this.centrifugo.subscribeLiveRoom(currentRoomId, (data) => {
+        this.centrifugo.subscribe('room_' + currentRoomId, (data: any) => {
           if (data.type === 'voice_room_note') {
             this.refreshCounter.update((value) => value + 1);
           } else if (data.type === 'voice_room_note_deleted') {
@@ -75,7 +75,7 @@ export class VoiceroomNotesComponent {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifugo.unsubscribe('room_' + this.subscribedRoomId);
       }
     });
   }

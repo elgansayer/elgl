@@ -112,7 +112,20 @@ export class LocationService {
     userId: string,
     callback: (data: LiveLocationData) => void,
   ): () => void {
-    this.centrifugoService.subscribeLiveLocation(userId, callback);
-    return () => this.centrifugoService.unsubscribeLiveLocation(userId);
+    const channel = `location_live_${userId}`;
+    const handler = (data: unknown) => {
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'latitude' in data &&
+        'longitude' in data &&
+        'sharer_user_id' in data &&
+        'updated_at' in data
+      ) {
+        callback(data as LiveLocationData);
+      }
+    };
+    this.centrifugoService.subscribe(channel, handler);
+    return () => this.centrifugoService.unsubscribe(channel);
   }
 }
