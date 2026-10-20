@@ -5,16 +5,16 @@ import {
   Body,
   Query,
   UseGuards,
-  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
+import { CurrentUser } from '../../auth/current-user.decorator';
 import {
   UserInterestsService,
   VocabularyEntry,
 } from './user-interests.service';
 import { UpdateInterestsDto } from './dto/update-interests.dto';
-
-type AuthenticatedRequest = { user?: { id: string } };
+import type { User } from '@supabase/supabase-js';
 
 @Controller('user-interests')
 @UseGuards(SupabaseAuthGuard)
@@ -23,30 +23,30 @@ export class UserInterestsController {
 
   @Get('tags')
   async getUserInterests(
-    @Req() req: AuthenticatedRequest,
+    @CurrentUser() user: User | null,
   ): Promise<{ tags: string[] }> {
-    const userId = req.user?.id ?? '';
-    const tags = await this.interestsService.getUserInterests(userId);
+    if (!user?.id) throw new UnauthorizedException();
+    const tags = await this.interestsService.getUserInterests(user.id);
     return { tags };
   }
 
   @Post('tags')
   async updateUserInterests(
-    @Req() req: AuthenticatedRequest,
+    @CurrentUser() user: User | null,
     @Body() dto: UpdateInterestsDto,
   ): Promise<{ success: boolean }> {
-    const userId = req.user?.id ?? '';
-    await this.interestsService.updateUserInterests(userId, dto.tags);
+    if (!user?.id) throw new UnauthorizedException();
+    await this.interestsService.updateUserInterests(user.id, dto.tags);
     return { success: true };
   }
 
   @Get('vocabulary')
   async getVocabulary(
-    @Req() req: AuthenticatedRequest,
+    @CurrentUser() user: User | null,
     @Query('language') language: string,
   ): Promise<{ entries: VocabularyEntry[] }> {
-    const userId = req.user?.id ?? '';
-    const userTags = await this.interestsService.getUserInterests(userId);
+    if (!user?.id) throw new UnauthorizedException();
+    const userTags = await this.interestsService.getUserInterests(user.id);
     if (userTags.length === 0) return { entries: [] };
     const entries = await this.interestsService.getVocabularyForInterests(
       userTags,
