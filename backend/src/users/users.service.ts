@@ -82,37 +82,38 @@ export class UsersService {
 
     const profile = response.data as UserProfile;
 
-    // Attach corrector score if available
-    let correctorScore = 0;
-    if (this.correctorScoreService) {
-      const score = await this.correctorScoreService.getCorrectorScore(userId);
-      correctorScore = score.averageScore ?? 0;
-    }
-    profile.corrector_score = correctorScore;
+    // Fetch related profile data concurrently to improve performance
+    const [scoreRes, fcRes, fngRes, xpTotal] = await Promise.all([
+      this.correctorScoreService
+        ? this.correctorScoreService.getCorrectorScore(userId)
+        : Promise.resolve({ averageScore: 0 }),
+      (async () => {
+        try {
+          return await supabase
+            .from('user_follows')
+            .select('*', { count: 'exact', head: true })
+            .eq('following_id', userId);
+        } catch {
+          return { count: 0 };
+        }
+      })(),
+      (async () => {
+        try {
+          return await supabase
+            .from('user_follows')
+            .select('*', { count: 'exact', head: true })
+            .eq('follower_id', userId);
+        } catch {
+          return { count: 0 };
+        }
+      })(),
+      this.xpService.getTotalXp(userId),
+    ]);
 
-    // ⚡ Bolt Optimization: Replace sequential database queries with a concurrent Promise.all execution to improve profile latency.
-    // Attach follower / following counts
-    let followersCount = 0;
-    let followingCount = 0;
-    try {
-      const [fcResult, fngResult] = await Promise.all([
-        supabase
-          .from('user_follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('following_id', userId),
-        supabase
-          .from('user_follows')
-          .select('*', { count: 'exact', head: true })
-          .eq('follower_id', userId),
-      ]);
-      followersCount = fcResult.count ?? 0;
-      followingCount = fngResult.count ?? 0;
-    } catch {
-      // leave zero.
-    }
-    profile.followers_count = followersCount;
-    profile.following_count = followingCount;
-    profile.xp_total = await this.xpService.getTotalXp(userId);
+    profile.corrector_score = scoreRes?.averageScore ?? 0;
+    profile.followers_count = fcRes?.count ?? 0;
+    profile.following_count = fngRes?.count ?? 0;
+    profile.xp_total = xpTotal;
 
     return profile;
   }
@@ -859,7 +860,10 @@ export class UsersService {
           .status_visibility ?? 'public',
       profile_visibility:
         (privacyRecord.profile_visibility as
-          'everyone' | 'vips_only' | 'hidden' | undefined) ?? 'everyone',
+          | 'everyone'
+          | 'vips_only'
+          | 'hidden'
+          | undefined) ?? 'everyone',
     };
   }
 
