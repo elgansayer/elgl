@@ -145,15 +145,13 @@ export class DiscoveryCacheInvalidationService {
 
   @OnEvent('discovery.daily_recommendations_updated')
   async handleDailyRecommendationsUpdated(): Promise<void> {
-    const results = await Promise.all([
-      this.deleteByPattern(
-        `${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`,
-      ),
-      this.deleteByPattern(
-        `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
-      ),
-    ]);
-    const total = results.reduce((acc, val) => acc + val, 0);
+    let total = 0;
+    total += await this.deleteByPattern(
+      `${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`,
+    );
+    total += await this.deleteByPattern(
+      `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
+    );
     if (total > 0) {
       this.logger.info(
         `Invalidated ${total} daily recommendation cache key(s)`,
@@ -163,15 +161,19 @@ export class DiscoveryCacheInvalidationService {
 
   @OnEvent('discovery.user_profile_updated', { async: true })
   async handleUserProfileUpdated(payload: { userId: string }): Promise<void> {
-    const results = await Promise.all([
-      this.deleteByPattern(`discovery:partner_search:user:${payload.userId}:*`),
-      this.deleteByPattern(`discovery:language_pair:user:${payload.userId}:*`),
-      this.deleteByPattern(
-        `discovery:location_search:user:${payload.userId}:*`,
-      ),
-      this.deleteByPattern(`discovery:audio_intros:user:${payload.userId}:*`),
-    ]);
-    const total = results.reduce((acc, val) => acc + val, 0);
+    let total = 0;
+    total += await this.deleteByPattern(
+      `discovery:partner_search:user:${payload.userId}:*`,
+    );
+    total += await this.deleteByPattern(
+      `discovery:language_pair:user:${payload.userId}:*`,
+    );
+    total += await this.deleteByPattern(
+      `discovery:location_search:user:${payload.userId}:*`,
+    );
+    total += await this.deleteByPattern(
+      `discovery:audio_intros:user:${payload.userId}:*`,
+    );
     if (total > 0) {
       this.logger.info(
         `Invalidated ${total} user-scoped discovery cache key(s) for ${payload.userId}`,
@@ -181,11 +183,10 @@ export class DiscoveryCacheInvalidationService {
 
   @OnEvent('discovery.user_vip_updated')
   async handleUserVipUpdated(): Promise<void> {
-    const total = await this.getRedis().del(
-      DiscoveryCacheNamespace.PARTNER_OF_WEEK,
-      DiscoveryCacheNamespace.RECENT_NATIVE,
-      DiscoveryCacheNamespace.SPOTLIGHT,
-    );
+    let total = 0;
+    total += await this.getRedis().del(DiscoveryCacheNamespace.PARTNER_OF_WEEK);
+    total += await this.getRedis().del(DiscoveryCacheNamespace.RECENT_NATIVE);
+    total += await this.getRedis().del(DiscoveryCacheNamespace.SPOTLIGHT);
     if (total > 0) {
       this.logger.info(
         `Invalidated ${total} shared discovery cache key(s) after VIP change`,
@@ -195,13 +196,13 @@ export class DiscoveryCacheInvalidationService {
 
   @OnEvent('discovery.user_location_updated', { async: true })
   async handleUserLocationUpdated(payload: { userId: string }): Promise<void> {
-    const results = await Promise.all([
-      this.deleteByPattern(
-        `discovery:location_search:user:${payload.userId}:*`,
-      ),
-      this.deleteByPattern(`discovery:partner_search:user:${payload.userId}:*`),
-    ]);
-    const total = results.reduce((acc, val) => acc + val, 0);
+    let total = 0;
+    total += await this.deleteByPattern(
+      `discovery:location_search:user:${payload.userId}:*`,
+    );
+    total += await this.deleteByPattern(
+      `discovery:partner_search:user:${payload.userId}:*`,
+    );
     if (total > 0) {
       this.logger.info(
         `Invalidated ${total} location-scoped discovery cache key(s) for ${payload.userId}`,
@@ -211,19 +212,15 @@ export class DiscoveryCacheInvalidationService {
 
   @OnEvent('discovery.user_metrics_updated')
   async handleUserMetricsUpdated(): Promise<void> {
-    const results = await Promise.all([
-      this.deleteByPattern(
-        `${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`,
-      ),
-      this.deleteByPattern(
-        `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
-      ),
-      this.getRedis().del(
-        DiscoveryCacheNamespace.RECENT_NATIVE,
-        DiscoveryCacheNamespace.SPOTLIGHT,
-      ),
-    ]);
-    const total = results.reduce((acc, val) => acc + val, 0);
+    let total = 0;
+    total += await this.deleteByPattern(
+      `${DiscoveryCacheNamespace.DAILY_RECOMMENDATIONS}:*`,
+    );
+    total += await this.deleteByPattern(
+      `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
+    );
+    total += await this.getRedis().del(DiscoveryCacheNamespace.RECENT_NATIVE);
+    total += await this.getRedis().del(DiscoveryCacheNamespace.SPOTLIGHT);
     if (total > 0) {
       this.logger.info(
         `Invalidated ${total} discovery cache key(s) after metrics update`,
@@ -233,14 +230,10 @@ export class DiscoveryCacheInvalidationService {
 
   @OnEvent('discovery.new_user_onboarded')
   async handleNewUserOnboarded(): Promise<void> {
-    const results = await Promise.all([
-      this.getRedis().del(
-        DiscoveryCacheNamespace.RECENT_NATIVE,
-        DiscoveryCacheNamespace.SPOTLIGHT,
-      ),
-      this.deleteByPattern(`discovery:partner_search:user:*`),
-    ]);
-    const total = results.reduce((acc, val) => acc + val, 0);
+    let total = 0;
+    total += await this.getRedis().del(DiscoveryCacheNamespace.RECENT_NATIVE);
+    total += await this.getRedis().del(DiscoveryCacheNamespace.SPOTLIGHT);
+    total += await this.deleteByPattern(`discovery:partner_search:user:*`);
     if (total > 0) {
       this.logger.info(
         `Invalidated ${total} discovery cache key(s) after new user onboarded`,
@@ -259,15 +252,17 @@ export class DiscoveryCacheInvalidationService {
       `discovery:audio_intros:user:${payload.userId}`,
     ];
     // Delete exact keys and prefixed patterns
-    const promises: Promise<number>[] = [];
-    promises.push(this.getRedis().del(...prefixes));
-    for (const prefix of prefixes) {
+    // ⚡ Bolt Optimization: Replace sequential await loop with Promise.all to drastically reduce latency
+    const deletePromises = prefixes.flatMap((prefix) => {
+      const promises = [this.getRedis().del(prefix)];
       if (prefix.includes(':')) {
         promises.push(this.deleteByPattern(`${prefix}:*`));
       }
-    }
-    const results = await Promise.all(promises);
-    const total = results.reduce((acc, val) => acc + val, 0);
+      return promises;
+    });
+
+    const results = await Promise.all(deletePromises);
+    const total = results.reduce((acc, count) => acc + count, 0);
     if (total > 0) {
       this.logger.info(
         `Bulk-invalidated ${total} discovery cache key(s) for user ${payload.userId}`,
