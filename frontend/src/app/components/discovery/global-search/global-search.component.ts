@@ -1,7 +1,7 @@
+import { Component, computed, inject, output, signal } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
-import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, output, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { I18nService } from '../../../services/i18n.service';
 import { SearchFilterParams } from '../../../services/discovery.service';
@@ -39,6 +39,7 @@ export class GlobalSearchComponent {
   readonly targetLanguage = signal<string>('');
   readonly level = signal<string>('');
   readonly hasAudioIntro = signal<boolean>(false);
+  readonly audioIntroId = `global-hasAudioIntro-${crypto.randomUUID()}`;
 
   readonly levels = [
     { value: 'a1', key: 'levels.a1' },
@@ -78,37 +79,18 @@ export class GlobalSearchComponent {
   });
 
   applyFilters(): void {
+    // Emit an explicit snapshot so the parent can clear a previously selected filter.
+    // DiscoveryComponent converts inactive values back to omitted API query parameters.
     this.searchFilters.emit({
-      native_languages: this.nativeLanguages() || undefined,
-      target_language: this.targetLanguage() || undefined,
-      proficiency_level: this.level() || undefined,
-      has_audio_intro: this.hasAudioIntro() ? true : undefined,
+      native_languages: this.nativeLanguages(),
+      target_language: this.targetLanguage(),
+      proficiency_level: this.level(),
+      has_audio_intro: this.hasAudioIntro(),
     });
   }
 
-  toggleHasAudioIntro(): void {
-    this.hasAudioIntro.update((value) => !value);
+  onAudioIntroChange(checked: boolean): void {
+    this.hasAudioIntro.set(checked);
     this.applyFilters();
-  }
-
-  onNativeLanguageChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.nativeLanguages.set(target.value);
-    }
-  }
-
-  onTargetLanguageChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.targetLanguage.set(target.value);
-    }
-  }
-
-  onLevelChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.level.set(target.value);
-    }
   }
 }

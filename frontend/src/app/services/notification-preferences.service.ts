@@ -37,10 +37,21 @@ export interface NotificationPreferences {
 }
 
 export type NotificationCategory =
-  | 'direct_messages' | 'groups' | 'likes' | 'voice_rooms'
-  | 'new_message' | 'call_invite' | 'moment_like' | 'moment_comment'
-  | 'correction' | 'gift' | 'profile_view' | 'study_reminder'
-  | 'friend_request' | 'audio_room_invite' | 'new_follower';
+  | 'direct_messages'
+  | 'groups'
+  | 'likes'
+  | 'voice_rooms'
+  | 'new_message'
+  | 'call_invite'
+  | 'moment_like'
+  | 'moment_comment'
+  | 'correction'
+  | 'gift'
+  | 'profile_view'
+  | 'study_reminder'
+  | 'friend_request'
+  | 'audio_room_invite'
+  | 'new_follower';
 
 export type NotificationChannel = 'push' | 'badge' | 'email' | 'in_app' | 'badges';
 
@@ -65,6 +76,13 @@ export type LegacyCategory = keyof Omit<
 >;
 
 export type LegacyChannel = 'push' | 'badge';
+
+const LEGACY_CATEGORIES: LegacyCategory[] = [
+  'direct_messages',
+  'groups',
+  'likes',
+  'voice_rooms',
+];
 
 @Injectable({
   providedIn: 'root',
@@ -121,21 +139,26 @@ export class NotificationPreferencesService {
     });
   }
 
-  getLegacyPreferences(): Promise<LegacyNotificationPreferences> {
-    return firstValueFrom(
-      this.http.get<LegacyNotificationPreferences>(`${this.notificationsUrl}/preferences`),
-    );
+  async getLegacyPreferences(): Promise<LegacyNotificationPreferences> {
+    const raw = await firstValueFrom(this.http.get<unknown>(`${this.notificationsUrl}/preferences`));
+    return this.parseLegacyPreferences(raw);
   }
 
-  updateLegacyPreferences(
+  async updateLegacyPreferences(
     dto: Partial<LegacyNotificationPreferences>,
   ): Promise<{ success: boolean; preferences: LegacyNotificationPreferences }> {
-    return firstValueFrom(
-      this.http.put<{ success: boolean; preferences: LegacyNotificationPreferences }>(
-        `${this.notificationsUrl}/preferences`,
-        dto,
-      ),
+    const raw = await firstValueFrom(
+      this.http.put<unknown>(`${this.notificationsUrl}/preferences`, dto),
     );
+
+    if (!this.isRecord(raw) || raw['success'] !== true) {
+      throw new Error('Invalid notification preference update response');
+    }
+
+    return {
+      success: true,
+      preferences: this.parseLegacyPreferences(raw['preferences']),
+    };
   }
 
   updateCustomizationPreferences(
@@ -163,5 +186,54 @@ export class NotificationPreferencesService {
       customToneUrl: raw.custom_tone_url,
       vibrationPattern: raw.vibration_pattern,
     };
+  }
+
+  private parseLegacyPreferences(raw: unknown): LegacyNotificationPreferences {
+    if (!this.isRecord(raw)) {
+      throw new Error('Invalid notification preferences response');
+    }
+
+    const userId = raw['userId'];
+    const updatedAt = raw['updatedAt'];
+    const doNotDisturb = raw['do_not_disturb'];
+
+    if (
+      typeof userId !== 'string' ||
+      userId.length === 0 ||
+      userId.length > 128 ||
+      typeof updatedAt !== 'string' ||
+      updatedAt.length === 0 ||
+      updatedAt.length > 64 ||
+      typeof doNotDisturb !== 'boolean'
+    ) {
+      throw new Error('Invalid notification preferences response');
+    }
+
+    const parsed = {
+      userId,
+      do_not_disturb: doNotDisturb,
+      updatedAt,
+    } as LegacyNotificationPreferences;
+
+    for (const category of LEGACY_CATEGORIES) {
+      const value = raw[category];
+      if (
+        !this.isRecord(value) ||
+        typeof value['push'] !== 'boolean' ||
+        typeof value['badge'] !== 'boolean'
+      ) {
+        throw new Error('Invalid notification preferences response');
+      }
+      parsed[category] = {
+        push: value['push'],
+        badge: value['badge'],
+      };
+    }
+
+    return parsed;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 }

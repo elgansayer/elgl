@@ -1,5 +1,6 @@
 import { validate } from 'class-validator';
 import { UpdateProfileDto } from './update-profile.dto';
+import { PROFICIENCY_LEVELS } from '../proficiency-level';
 
 describe('UpdateProfileDto', () => {
   it('should be defined', () => {
@@ -7,7 +8,7 @@ describe('UpdateProfileDto', () => {
     expect(dto).toBeDefined();
   });
 
-  it.each(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'])(
+  it.each(PROFICIENCY_LEVELS)(
     'accepts the supported CEFR proficiency level %s',
     async (proficiencyLevel) => {
       const dto = Object.assign(new UpdateProfileDto(), {

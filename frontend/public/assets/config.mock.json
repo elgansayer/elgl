@@ -1,0 +1,11 @@
+{
+  "apiEndpoint": "http://localhost:3000/api",
+  "appName": "ELGL Offline Demo",
+  "version": "1.0.0",
+  "environment": "demo",
+  "mockBackendMode": "demo",
+  "features": {
+    "enableVIP": true,
+    "enableVideoCalling": true
+  }
+}

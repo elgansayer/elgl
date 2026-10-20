@@ -4,7 +4,6 @@ import { ErrorHandler } from '@angular/core';
 import { SuggestFlashcardsComponent } from './suggest-flashcards.component';
 import { SuggestFlashcardsService } from '../../services/suggest-flashcards.service';
 import { I18nService } from '../../services/i18n.service';
-import { AuthService } from '../../services/auth.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 
 describe('SuggestFlashcardsComponent', () => {
@@ -37,11 +36,7 @@ describe('SuggestFlashcardsComponent', () => {
               if (key === 'suggest_flashcards.error') return 'Failed to suggest flashcards';
               return key;
             }),
-          } as any,
-        },
-        {
-          provide: AuthService,
-          useValue: { getAccessToken: () => 'mock-token' },
+          },
         },
         { provide: ErrorHandler, useValue: mockErrorHandler },
       ],
@@ -52,60 +47,88 @@ describe('SuggestFlashcardsComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it('creates with an empty initial state', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('should have initial empty state', () => {
     expect(component.suggestions()).toEqual([]);
     expect(component.loading()).toBe(false);
     expect(component.error()).toBeNull();
     expect(component.hasAttempted()).toBe(false);
   });
 
-  it('should provide error context with metadata', () => {
+  it('provides privacy-safe error context metadata', () => {
     component.messageInput.set('test message');
-    const ctx = component.errorContext();
-    expect(ctx.component).toBe('suggest-flashcards');
-    expect(ctx.operation).toBe('suggest');
-    expect(ctx.metadata).toBeDefined();
+
+    const context = component.errorContext();
+
+    expect(context.component).toBe('suggest-flashcards');
+    expect(context.operation).toBe('suggest');
+    expect(context.metadata).toEqual({
+      messageLength: 12,
+      hasExternalMessage: false,
+    });
   });
 
-  it('should set error message on suggest failure', async () => {
+  it('requests suggestions without a caller-controlled user id', async () => {
+    component.messageInput.set('Hello world');
+
+    await component.manualSuggest();
+
+    expect(mockSuggestService.suggestFromMessage).toHaveBeenCalledWith(
+      'Hello world',
+      undefined,
+      true,
+    );
+    expect(component.suggestions()).toEqual(['word1', 'word2']);
+    expect(component.hasAttempted()).toBe(true);
+    expect(component.loading()).toBe(false);
+  });
+
+  it('passes the configured target language to segmentation', async () => {
+    fixture.componentRef.setInput('externalTargetLanguage', 'ja');
+    fixture.detectChanges();
+    component.messageInput.set('こんにちは世界');
+
+    await component.manualSuggest();
+
+    expect(mockSuggestService.suggestFromMessage).toHaveBeenCalledWith(
+      'こんにちは世界',
+      'ja',
+      true,
+    );
+  });
+
+  it('sets a translated retryable error on suggestion failure', async () => {
     mockSuggestService.suggestFromMessage.mockRejectedValueOnce(new Error('API error'));
     component.messageInput.set('test message');
 
     await component.manualSuggest();
 
     expect(component.error()).toBe('Failed to suggest flashcards');
+    expect(component.loading()).toBe(false);
+    expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle retry when message input has content', async () => {
+  it('retries the current message after a failure', async () => {
     component.messageInput.set('retry message');
     mockSuggestService.suggestFromMessage.mockRejectedValueOnce(new Error('First fail'));
     await component.manualSuggest();
 
     mockSuggestService.suggestFromMessage.mockResolvedValueOnce({ suggestions: ['retry-word'] });
     component.handleRetry();
+    await fixture.whenStable();
 
     expect(mockSuggestService.suggestFromMessage).toHaveBeenCalledTimes(2);
   });
 
-  it('should not call api when message is empty', async () => {
+  it('does not call the API for blank input', async () => {
+    component.messageInput.set('   ');
+
     await component.manualSuggest();
+
     expect(mockSuggestService.suggestFromMessage).not.toHaveBeenCalled();
   });
 
-  it('should populate suggestions on successful suggest call', async () => {
-    component.messageInput.set('Hello world');
-    await component.manualSuggest();
-
-    expect(component.suggestions()).toEqual(['word1', 'word2']);
-    expect(component.hasAttempted()).toBe(true);
-    expect(component.loading()).toBe(false);
-  });
-
-  it('should add a word to the vocabulary deck', async () => {
+  it('adds a suggestion to the vocabulary deck with bounded local context', async () => {
     component.messageInput.set('Hello world');
     component.suggestions.set(['hello', 'world']);
 
@@ -119,7 +142,7 @@ describe('SuggestFlashcardsComponent', () => {
     expect(component.addedWords().has('hello')).toBe(true);
   });
 
-  it('should not add the same word twice', async () => {
+  it('does not add the same word twice', async () => {
     component.messageInput.set('test');
     component.suggestions.set(['hello']);
     component.addedWords.set(new Set(['hello']));
@@ -127,5 +150,16 @@ describe('SuggestFlashcardsComponent', () => {
     await component.addWordToDeck('hello');
 
     expect(mockVocabStore.saveWord).not.toHaveBeenCalled();
+  });
+
+  it('reports failed deck writes without marking the word as added', async () => {
+    mockVocabStore.saveWord.mockRejectedValueOnce(new Error('write failed'));
+    component.messageInput.set('Hello world');
+
+    await component.addWordToDeck('hello');
+
+    expect(component.addedWords().has('hello')).toBe(false);
+    expect(component.addingWords().has('hello')).toBe(false);
+    expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
   });
 });
