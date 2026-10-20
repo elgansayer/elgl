@@ -21,6 +21,10 @@ if (/@import\s+url\(/.test(styles)) {
   failures.push('Global styles must not import remote stylesheets');
 }
 
+if (/https?:\/\//.test(styles) || /@import\s+url\(/i.test(styles)) {
+  failures.push('Global styles must not depend on remote stylesheets');
+}
+
 const allowedExtensions = new Set(['.html', '.ts', '.scss', '.css']);
 const languageContentPathFragments = [
   '/chat',
