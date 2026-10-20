@@ -30,6 +30,11 @@ export const chatRoutes: Routes = [
     title: 'Group Chats - HelloTalk',
   },
   {
+    path: 'groups',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
+  },
+  {
     path: 'groups/create',
     redirectTo: 'chat/groups/create',
     pathMatch: 'full',

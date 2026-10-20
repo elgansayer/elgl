@@ -31,12 +31,9 @@ describe('standalone route lazy-loading contract', () => {
     const nonCriticalPaths = [
       'chat/groups',
       'learn/vocabulary',
-      'live/events',
-
-
       'discovery',
       'moments',
-
+      'live/events',
       'settings',
       'chat',
     ];

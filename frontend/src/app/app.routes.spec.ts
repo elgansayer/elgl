@@ -22,17 +22,17 @@ describe('App routes', () => {
     const expected = [
       'home',
       'discovery',
-      'proficiency',
+      'learn/assessment/proficiency',
       'moments',
       'chat',
       'chat/:id',
-      'profile/me',
+      'profile',
       'profile/:userId',
       'settings',
       'admin',
       'admin/moderation',
-      'profile/me/stats',
-      'study-buddy',
+      'profile/me/milestones',
+      'learn/study-buddy',
       'live/events',
       'live/events/calendar',
       'coin-economy',
@@ -94,7 +94,7 @@ describe('App routes', () => {
   });
 
   it('should lazy-load milestones component route', () => {
-    const milestones = routes.find((r) => r.path === 'profile/me/stats');
+    const milestones = routes.find((r) => r.path === 'profile/me/milestones');
     expect(milestones).toBeDefined();
     if (milestones) {
       expect(milestones.loadComponent).toBeDefined();
