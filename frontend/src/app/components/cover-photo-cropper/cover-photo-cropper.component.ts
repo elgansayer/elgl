@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { ImageCropperComponent } from 'ngx-image-cropper';
@@ -6,6 +6,7 @@ import { ImageCropperComponent } from 'ngx-image-cropper';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-cover-photo-cropper',
   imports: [TranslatePipe, ImageCropperComponent, ...HlmButtonImports, ...HlmDialogImports],
   template: `

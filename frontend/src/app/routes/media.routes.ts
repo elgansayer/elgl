@@ -2,22 +2,17 @@ import { Routes } from '@angular/router';
 
 export const mediaRoutes: Routes = [
   {
-    path: 'audio-rooms',
-    redirectTo: 'rooms/audio',
-    pathMatch: 'full',
-  },
-  {
-    path: 'rooms/audio',
+    path: 'live/audio',
     loadComponent: () =>
       import('../components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
-    path: 'classrooms',
-    redirectTo: 'rooms/video',
+    path: 'audio-rooms',
+    redirectTo: 'live/audio',
     pathMatch: 'full',
   },
   {
-    path: 'rooms/video',
+    path: 'live/video',
     loadComponent: () =>
       import('../components/classrooms-marketplace/classrooms-marketplace').then(
         (m) => m.ClassroomsMarketplace,
@@ -25,44 +20,43 @@ export const mediaRoutes: Routes = [
     title: 'Video Classrooms - HelloTalk',
   },
   {
-    path: 'video-call',
-    redirectTo: 'calls/video',
+    path: 'classrooms',
+    redirectTo: 'live/video',
     pathMatch: 'full',
   },
   {
-    path: 'calls/video',
+    path: 'live/events',
+    loadComponent: () =>
+      import('../components/events-feed/events-feed.component').then((m) => m.EventsFeedComponent),
+    title: 'Events - HelloTalk',
+  },
+  {
+    path: 'live/events/calendar',
+    loadComponent: () =>
+      import('../components/events-calendar/events-calendar.component').then(
+        (m) => m.EventsCalendarComponent,
+      ),
+    title: 'Event Calendar - HelloTalk',
+  },
+  {
+    path: 'video-call',
     loadComponent: () =>
       import('../components/video-call/video-call.component').then((m) => m.VideoCallComponent),
   },
   {
     path: 'call-logs',
-    redirectTo: 'calls/logs',
-    pathMatch: 'full',
-  },
-  {
-    path: 'calls/logs',
     loadComponent: () =>
       import('../pages/call-logs/call-logs.component').then((m) => m.CallLogsComponent),
     title: 'Call Logs - HelloTalk',
   },
   {
     path: 'active-call',
-    redirectTo: 'calls/active',
-    pathMatch: 'full',
-  },
-  {
-    path: 'calls/active',
     loadComponent: () =>
       import('../components/active-call/active-call.component').then((m) => m.ActiveCallComponent),
     title: 'Active Call - HelloTalk',
   },
   {
     path: 'voiceroom-notes/:roomId',
-    redirectTo: 'rooms/audio/:roomId/notes',
-    pathMatch: 'full',
-  },
-  {
-    path: 'rooms/audio/:roomId/notes',
     loadComponent: () =>
       import('../components/voiceroom-notes/voiceroom-notes.component').then(
         (m) => m.VoiceroomNotesComponent,
@@ -71,11 +65,6 @@ export const mediaRoutes: Routes = [
   },
   {
     path: 'preview/room/:id',
-    redirectTo: 'rooms/preview/:id',
-    pathMatch: 'full',
-  },
-  {
-    path: 'rooms/preview/:id',
     loadComponent: () =>
       import('../pages/voiceroom-preview/voiceroom-preview.component').then(
         (m) => m.VoiceroomPreviewComponent,
