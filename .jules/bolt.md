@@ -563,3 +563,7 @@
 
 
 
+
+## 2026-10-21 - [Optimize Main Thread Render via ChangeDetectionStrategy.OnPush]
+**Learning:** Found multiple Angular components rendering static or signal-driven data that were missing `changeDetection: ChangeDetectionStrategy.OnPush`. Without this strategy, Angular performs unnecessary main-thread change detection cycles, reducing application responsiveness and performance.
+**Action:** Proactively configure Angular components that render static data or rely entirely on signals/observables to use `ChangeDetectionStrategy.OnPush` to minimize main thread change detection overhead.

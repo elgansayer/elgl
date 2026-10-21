@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, resource  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyDashboardComponent } from '../vocabulary-dashboard/vocabulary-dashboard.component';
 
@@ -38,6 +38,7 @@ type TabId = (typeof TAB_IDS)[number];
 
 @Component({
   selector: 'app-reading-engine',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     HlmButton,

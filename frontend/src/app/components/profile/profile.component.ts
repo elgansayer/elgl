@@ -2,7 +2,7 @@ import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, viewChild, computed, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, viewChild, computed, OnInit  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -41,6 +41,7 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
 
 @Component({
   selector: 'app-profile',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmCheckbox,
     HlmNativeSelect,

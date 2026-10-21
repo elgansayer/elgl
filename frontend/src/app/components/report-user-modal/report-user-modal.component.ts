@@ -1,7 +1,7 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, output, signal  } from '@angular/core';
 import { form, required, FormField } from '@angular/forms/signals';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
@@ -18,6 +18,7 @@ interface ReportFormModel {
 
 @Component({
   selector: 'app-report-user-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmCheckbox,
     HlmTextarea,

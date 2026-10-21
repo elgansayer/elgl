@@ -1,8 +1,9 @@
-import { Component, input, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, computed  } from '@angular/core';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-discovery-skeleton-card',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [AppSkeletonLoaderComponent],
   template: `
     <article

@@ -1,11 +1,12 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, output, inject, signal, computed  } from '@angular/core';
 
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-virtual-gift-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
   template: `
     <div

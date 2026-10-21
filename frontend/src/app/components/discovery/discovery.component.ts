@@ -1,7 +1,7 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
-import {
+import { ChangeDetectionStrategy,
   Component,
   inject,
   signal,
@@ -10,7 +10,7 @@ import {
   OnInit,
   OnDestroy,
   DestroyRef,
-} from '@angular/core';
+ } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
@@ -48,6 +48,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 @Component({
   selector: 'app-discovery',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmCheckbox,
     HlmNativeSelect,

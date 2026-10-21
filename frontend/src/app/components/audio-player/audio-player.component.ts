@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import {
+import { ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
@@ -10,12 +10,13 @@ import {
   signal,
   untracked,
   viewChild,
-} from '@angular/core';
+ } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-audio-player',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
   templateUrl: './audio-player.component.html',
   styleUrl: './audio-player.component.scss',

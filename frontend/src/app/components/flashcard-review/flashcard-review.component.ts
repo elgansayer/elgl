@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import {
+import { ChangeDetectionStrategy,
   Component,
   inject,
   signal,
@@ -9,7 +9,7 @@ import {
   ElementRef,
   effect,
   ErrorHandler,
-} from '@angular/core';
+ } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -30,6 +30,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-flashcard-review',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     RouterLink,

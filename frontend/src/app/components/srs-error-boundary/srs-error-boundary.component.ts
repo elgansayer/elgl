@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, signal, inject, ErrorHandler, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, output, signal, inject, ErrorHandler, computed  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
@@ -68,6 +68,7 @@ function parseStackFrames(stack: string): SrsCrashPayload['stackFrames'] {
 
 @Component({
   selector: 'app-srs-error-boundary',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
   template: `

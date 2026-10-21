@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject  } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -15,6 +15,7 @@ interface SidebarNavItem {
 
 @Component({
   selector: 'app-desktop-sidebar',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, RouterLinkActive, TranslatePipe, JoyrideModule],
   templateUrl: './desktop-sidebar.component.html',
 })

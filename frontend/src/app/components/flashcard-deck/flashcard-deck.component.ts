@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, ErrorHandler } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, ErrorHandler  } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
@@ -48,6 +48,7 @@ const DECK_ICONS = [
 
 @Component({
   selector: 'app-flashcard-deck',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     HlmButton,

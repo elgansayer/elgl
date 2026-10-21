@@ -3,7 +3,7 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { showToast } from '../../services/toast.service';
-import {
+import { ChangeDetectionStrategy,
   Component,
   DestroyRef,
   inject,
@@ -12,7 +12,7 @@ import {
   resource,
   effect,
   afterNextRender,
-} from '@angular/core';
+ } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -68,6 +68,7 @@ export function formatMentionSuggestion(
 
 @Component({
   selector: 'app-moments-feed',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmTextarea,
     HlmInput,

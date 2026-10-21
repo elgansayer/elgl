@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, resource, afterNextRender } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, resource, afterNextRender  } from '@angular/core';
 import { Location } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +23,7 @@ type StatusFilter = 'all' | EscrowStatus;
 
 @Component({
   selector: 'app-escrow-payments',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })

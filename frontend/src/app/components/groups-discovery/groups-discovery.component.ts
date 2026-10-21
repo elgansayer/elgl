@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, input, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, input, resource  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -28,6 +28,7 @@ interface InterestTopic {
 
 @Component({
   selector: 'app-groups-discovery',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, CommonModule, RouterLink, TranslatePipe, SanitiseHtmlPipe],
   template: `
     <div class="flex flex-col h-full">

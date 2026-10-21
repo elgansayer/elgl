@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import {
+import { ChangeDetectionStrategy,
   Component,
   OnInit,
   OnDestroy,
@@ -11,7 +11,7 @@ import {
   inject,
   viewChild,
   ElementRef,
-} from '@angular/core';
+ } from '@angular/core';
 import { interval } from 'rxjs';
 import {
   Room,
@@ -32,6 +32,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-video-call',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmButton,
     AppButtonSecondaryComponent,

@@ -2,7 +2,7 @@ import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, output, signal, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, output, signal, inject, OnInit  } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
@@ -29,6 +29,7 @@ interface FriendProfile {
 
 @Component({
   selector: 'app-private-party-create-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
   templateUrl: './private-party-create-modal.component.html',
 })

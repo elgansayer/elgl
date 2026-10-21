@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, OnDestroy, OnInit, computed, inject, input, signal  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 import {
@@ -9,6 +9,7 @@ import { MessageReactionBarComponent } from '../message-reaction-bar/message-rea
 
 @Component({
   selector: 'app-message-reaction-control',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MessageReactionBarComponent, TranslatePipe],
   template: `
     @if (currentUserId()) {

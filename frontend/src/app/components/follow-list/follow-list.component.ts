@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, input, resource  } from '@angular/core';
 import { Location, UpperCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -9,6 +9,7 @@ import { UserQuickActionsComponent } from '../user-quick-actions/user-quick-acti
 
 @Component({
   selector: 'app-follow-list',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
     UpperCasePipe,

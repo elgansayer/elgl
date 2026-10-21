@@ -1,4 +1,4 @@
-import { Component, inject, input, computed, DestroyRef } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, input, computed, DestroyRef  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
@@ -7,6 +7,7 @@ let nextInstanceId = 0;
 
 @Component({
   selector: 'app-text-to-speech',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <button

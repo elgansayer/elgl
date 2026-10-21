@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, inject, input, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, input, resource  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UpperCasePipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
@@ -24,6 +24,7 @@ export interface LanguageQuestion {
 
 @Component({
   selector: 'app-language-questions',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe, UpperCasePipe],
   template: `
     <section class="space-y-4" role="region" aria-label="{{ 'moments.questions' | t }}">

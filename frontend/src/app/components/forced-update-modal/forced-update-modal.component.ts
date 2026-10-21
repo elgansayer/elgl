@@ -1,4 +1,4 @@
-import { Component, input, OnInit, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, OnInit, OnDestroy, inject  } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -15,6 +15,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
  */
 @Component({
   selector: 'app-forced-update-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     <div

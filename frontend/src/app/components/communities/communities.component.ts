@@ -1,12 +1,13 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, resource  } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CommunitiesService } from '../../services/communities.service';
 
 @Component({
   selector: 'app-communities',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, HlmButton, FormsModule, TranslatePipe],
   template: `
     <main

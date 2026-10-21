@@ -1,7 +1,7 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, OnInit, signal  } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AppSelectComponent } from '../primitives/select/select.component';
 import { EventRsvpControlsComponent } from '../event-rsvp-controls/event-rsvp-controls.component';
@@ -13,6 +13,7 @@ const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-events-feed',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmButton,
     HlmRadio,

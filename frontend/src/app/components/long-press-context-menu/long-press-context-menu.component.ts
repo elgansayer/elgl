@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, DestroyRef, computed, inject, input, output, signal  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -24,6 +24,7 @@ function isAbortError(error: unknown): boolean {
 
 @Component({
   selector: 'app-long-press-context-menu',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
     MessageReactionControlComponent,

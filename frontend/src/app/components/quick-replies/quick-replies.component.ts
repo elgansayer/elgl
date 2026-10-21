@@ -1,10 +1,11 @@
-import { Component, inject, computed, resource, output, input } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, computed, resource, output, input  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { QuickRepliesService, QuickReply } from '../../services/quick-replies.service';
 
 @Component({
   selector: 'app-quick-replies',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     @if (replies().length > 0) {

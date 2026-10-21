@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, computed, signal, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, computed, signal, resource  } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { EventsService, type Event } from '../../services/events.service';

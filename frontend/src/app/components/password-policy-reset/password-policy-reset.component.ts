@@ -1,6 +1,6 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, signal, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, signal, computed, inject  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 
@@ -11,6 +11,7 @@ function getInputValue(event: Event): string {
 
 @Component({
   selector: 'app-password-policy-reset',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [HlmInput, HlmButton, TranslatePipe],
   template: `

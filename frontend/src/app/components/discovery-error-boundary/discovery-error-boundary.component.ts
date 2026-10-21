@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, signal, inject, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, output, signal, inject, computed  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
@@ -72,6 +72,7 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
 
 @Component({
   selector: 'app-discovery-error-boundary',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
   template: `

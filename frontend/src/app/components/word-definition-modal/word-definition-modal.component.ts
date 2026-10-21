@@ -1,4 +1,4 @@
-import {
+import { ChangeDetectionStrategy,
   Component,
   ErrorHandler,
   OnDestroy,
@@ -8,7 +8,7 @@ import {
   input,
   output,
   signal,
-} from '@angular/core';
+ } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
@@ -24,6 +24,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
 
 @Component({
   selector: 'app-word-definition-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, ...HlmButtonImports, ...HlmDialogImports, TranslatePipe],
   template: `
     <hlm-dialog state="open" (stateChanged)="onDialogStateChanged($event)">

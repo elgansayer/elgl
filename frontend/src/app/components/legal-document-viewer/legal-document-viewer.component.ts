@@ -1,4 +1,4 @@
-import { Component, input, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, computed  } from '@angular/core';
 import { DatePipe } from '@angular/common';
 
 export interface LegalSection {
@@ -9,6 +9,7 @@ export interface LegalSection {
 
 @Component({
   selector: 'app-legal-document-viewer',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   host: {
     class: 'block min-h-screen bg-surface-500 text-text-secondary',

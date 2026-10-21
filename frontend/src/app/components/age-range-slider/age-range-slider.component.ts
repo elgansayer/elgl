@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal, effect } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, input, output, signal, effect  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -10,6 +10,7 @@ export interface AgeRange {
 
 @Component({
   selector: 'app-age-range-slider',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flex flex-col" role="group" [attr.aria-label]="'age_range' | t">

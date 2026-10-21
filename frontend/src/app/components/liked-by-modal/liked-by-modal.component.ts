@@ -1,4 +1,4 @@
-import {
+import { ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -6,7 +6,7 @@ import {
   input,
   output,
   signal,
-} from '@angular/core';
+ } from '@angular/core';
 import { UpperCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -20,6 +20,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-liked-by-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
     UpperCasePipe,

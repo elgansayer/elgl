@@ -1,4 +1,4 @@
-import { Component, input, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, computed  } from '@angular/core';
 import { GiftPayload } from '../../services/chat.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -19,6 +19,7 @@ const PARTICLE_COLOURS = [
 
 @Component({
   selector: 'app-gift-animation',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     @if (giftPayload(); as gift) {

@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, resource  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -16,6 +16,7 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto p-4">
