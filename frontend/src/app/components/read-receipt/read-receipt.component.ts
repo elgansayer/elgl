@@ -1,4 +1,4 @@
-import { Component, input, inject, signal, effect } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, inject, signal, effect  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatService, ReadReceiptUser, MessageReceiptStatus } from '../../services/chat.service';
 import { I18nService } from '../../services/i18n.service';
@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-read-receipt',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div

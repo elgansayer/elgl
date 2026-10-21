@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, resource, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, resource, computed  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
@@ -14,6 +14,7 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmButton,
     CommonModule,

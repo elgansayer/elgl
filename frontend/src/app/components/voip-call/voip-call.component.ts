@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import {
+import { ChangeDetectionStrategy,
   Component,
   inject,
   input,
@@ -8,7 +8,7 @@ import {
   computed,
   OnDestroy,
   effect,
-} from '@angular/core';
+ } from '@angular/core';
 
 import { interval } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +22,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
 
 @Component({
   selector: 'app-voip-call',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, FormsModule],
   template: `
     @if (showCallUI()) {

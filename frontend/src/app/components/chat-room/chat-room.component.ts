@@ -1,7 +1,7 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast, showErrorToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, OnDestroy, input, effect  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -39,6 +39,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-chat-room',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmButton,
     ...HlmAutocompleteImports,

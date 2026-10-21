@@ -2,7 +2,7 @@ import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, OnInit, signal  } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
@@ -15,6 +15,7 @@ import { I18nService } from '../../services/i18n.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 @Component({
   selector: 'app-settings',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmCheckbox,
     HlmNativeSelect,

@@ -1,4 +1,4 @@
-import { Component, ErrorHandler, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, ErrorHandler, computed, inject, input, output, signal  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 
@@ -25,6 +25,7 @@ interface ParsedTokens {
 
 @Component({
   selector: 'app-tokenised-text',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FlashcardContextMenuDirective, ...HlmButtonImports, ...HlmDialogImports],
   template: `
     <div

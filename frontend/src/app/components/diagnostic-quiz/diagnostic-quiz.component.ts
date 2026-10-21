@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, effect, inject, input, output, resource, signal  } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
 import {
@@ -11,6 +11,7 @@ import { showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-diagnostic-quiz',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, HlmRadioGroup, HlmRadio, TranslatePipe],
   template: `
     @if (loading()) {

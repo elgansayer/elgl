@@ -1,6 +1,6 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, resource, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, resource, signal, computed  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { MilestoneService, Milestone, MilestoneProgress } from '../../services/milestone.service';
 
@@ -8,6 +8,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
 
 @Component({
   selector: 'app-milestone',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, HlmButton, TranslatePipe],
   template: `
     <section class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8 lg:py-10">

@@ -1,4 +1,4 @@
-import { Component, inject, computed, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, computed, resource  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
@@ -18,6 +18,7 @@ interface Corrector {
 
 @Component({
   selector: 'app-leaderboard',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [AppCardComponent, AppPillComponent, TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto ps-4 pe-4 pt-6 pb-6">

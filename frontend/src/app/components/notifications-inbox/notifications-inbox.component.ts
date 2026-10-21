@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, resource, signal  } from '@angular/core';
 import { Router } from '@angular/router';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { I18nService } from '../../services/i18n.service';
@@ -16,6 +16,7 @@ export type NotificationTab = NotificationFilter;
 
 @Component({
   selector: 'app-notifications-inbox',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './notifications-inbox.component.html',
   styleUrls: ['./notifications-inbox.component.scss'],

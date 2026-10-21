@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, input, signal, viewChild, inject, ErrorHandler } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, input, signal, viewChild, inject, ErrorHandler  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -13,6 +13,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe, SrsErrorBoundaryComponent, A11yClickableDirective],
   template: `
     <app-srs-error-boundary

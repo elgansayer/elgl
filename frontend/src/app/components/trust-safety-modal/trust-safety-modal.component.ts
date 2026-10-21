@@ -1,5 +1,5 @@
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
-import { Component, inject, input, output, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, input, output, signal, computed  } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
@@ -11,6 +11,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
 
 @Component({
   selector: 'app-trust-safety-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     HlmNativeSelect,
     FormsModule,

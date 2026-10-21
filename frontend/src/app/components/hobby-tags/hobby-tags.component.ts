@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject, resource, input } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, signal, inject, resource, input  } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
@@ -15,6 +15,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
 @Component({
   selector: 'app-hobby-tags',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     AppCardComponent,

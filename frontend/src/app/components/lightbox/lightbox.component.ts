@@ -1,10 +1,11 @@
-import { Component, computed, input, linkedSignal, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, input, linkedSignal, output, signal  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-lightbox',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   host: {
     '(window:keydown)': 'handleKeyDown($event)',

@@ -1,10 +1,11 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject  } from '@angular/core';
 import { FontScaleService } from '../../services/font-scale.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-font-scale-slider',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     <div class="flex items-center gap-2 ps-4 text-sm" role="group" aria-label="{{ 'settings.fontScale' | t }}">

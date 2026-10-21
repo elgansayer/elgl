@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, effect, inject, input, signal  } from '@angular/core';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -8,6 +8,7 @@ import { DiscoveryService } from '../../services/discovery.service';
 
 @Component({
   selector: 'app-profile-discovery-card',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, SanitiseHtmlPipe, TranslatePipe],
   template: `
     <article

@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, signal  } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,6 +7,7 @@ import { UserService, VisitorLog, UserProfile } from '../../services/user.servic
 
 @Component({
   selector: 'app-visitor-logs',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, DatePipe, RouterLink, TranslatePipe],
   templateUrl: './visitor-logs.component.html',
   styleUrls: ['./visitor-logs.component.scss'],

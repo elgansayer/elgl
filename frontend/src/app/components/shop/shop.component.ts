@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, resource  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
@@ -19,6 +19,7 @@ interface CatalogItem {
 
 @Component({
   selector: 'app-shop',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [HlmButton, JoyrideModule, TranslatePipe, RouterLink],
   template: `

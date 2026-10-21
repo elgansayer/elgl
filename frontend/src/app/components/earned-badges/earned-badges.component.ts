@@ -1,9 +1,10 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject  } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-earned-badges',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
     <div class="flex flex-wrap gap-2">

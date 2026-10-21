@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, input  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AudioPlayerComponent } from '../audio-player/audio-player.component';
 
@@ -13,6 +13,7 @@ export interface MultiMediaMessage {
 
 @Component({
   selector: 'app-media-attachments',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [TranslatePipe, AudioPlayerComponent],
   templateUrl: './media-attachments.component.html',

@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, output } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, input, output  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
@@ -12,6 +12,7 @@ export interface DiscoveryMapErrorContext {
 
 @Component({
   selector: 'app-discovery-map-error-boundary',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     @if (!hasError()) {

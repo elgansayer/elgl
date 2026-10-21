@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, input  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { AuthService } from '../../services/auth.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,6 +6,7 @@ import { UserQuickActionsService } from '../../services/user-quick-actions.servi
 
 @Component({
   selector: 'app-user-quick-actions',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     @if (!isSelf()) {

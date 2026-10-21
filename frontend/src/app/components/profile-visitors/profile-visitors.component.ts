@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, effect  } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { UserService, ProfileVisitor } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-visitors',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, DatePipe, RouterLink, TranslatePipe],
   template: `
     <div class="profile-visitors">

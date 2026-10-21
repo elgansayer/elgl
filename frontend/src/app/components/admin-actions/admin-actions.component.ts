@@ -1,4 +1,4 @@
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, resource, signal  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService } from '../../services/admin.service';
@@ -15,6 +15,7 @@ interface ModerationActionState {
 
 @Component({
   selector: 'app-admin-actions',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="m-4" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">

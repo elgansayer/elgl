@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, signal, inject, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, output, signal, inject, computed  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
@@ -71,6 +71,7 @@ function parseStackFrames(stack: string): VideoClassroomCrashPayload['stackFrame
 
 @Component({
   selector: 'app-video-classroom-error-boundary',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
   template: `

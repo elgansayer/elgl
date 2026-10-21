@@ -1,6 +1,6 @@
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, computed, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, computed, resource, signal  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { RouterModule } from '@angular/router';

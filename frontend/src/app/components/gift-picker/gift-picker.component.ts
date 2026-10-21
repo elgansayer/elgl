@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, output, inject, signal, computed  } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,6 +6,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
 
 @Component({
   selector: 'app-gift-picker',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   template: `
     <hlm-dialog state="open" (stateChanged)="onDialogStateChanged($event)">

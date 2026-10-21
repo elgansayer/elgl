@@ -1,4 +1,4 @@
-import { Component, computed, inject, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, resource  } from '@angular/core';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -20,6 +20,7 @@ interface MyStatsResponse {
 
 @Component({
   selector: 'app-my-stats',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgChartsModule, TranslatePipe],
   template: `
     <div class="p-4 max-w-4xl mx-auto space-y-6">

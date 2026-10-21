@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, resource, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, resource, signal, computed  } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import {
   StudyBuddiesService,
@@ -9,6 +9,7 @@ import {
 
 @Component({
   selector: 'app-study-buddy',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
   template: `
     <div class="p-4">

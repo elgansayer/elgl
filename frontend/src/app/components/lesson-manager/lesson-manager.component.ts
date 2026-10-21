@@ -1,7 +1,7 @@
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, signal, computed, inject, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, signal, computed, inject, resource  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Lesson, LessonService } from '../../services/lesson.service';
@@ -10,6 +10,7 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-lesson-manager',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmTextarea, HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe],
   templateUrl: './lesson-manager.component.html',
 })

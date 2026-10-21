@@ -1,6 +1,6 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, ElementRef, ViewChild, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, ElementRef, ViewChild, inject, signal, computed  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,6 +12,7 @@ import { UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-create-group',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe],
   templateUrl: './create-group.component.html',
   styleUrls: ['./create-group.component.scss'],

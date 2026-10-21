@@ -1,6 +1,6 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmInput } from '@spartan-ng/helm/input';
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, effect, input, output, signal  } from '@angular/core';
 import { Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 import {
@@ -13,6 +13,7 @@ const MAX_ANSWER_LENGTH = 256;
 
 @Component({
   selector: 'app-flashcard-answer-check',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [HlmButton, HlmInput, TranslatePipe],
   template: `

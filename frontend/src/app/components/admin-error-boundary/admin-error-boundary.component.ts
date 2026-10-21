@@ -1,4 +1,4 @@
-import { Component, inject, input, signal, ErrorHandler } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, input, signal, ErrorHandler  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -8,6 +8,7 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
 
 @Component({
   selector: 'app-admin-error-boundary',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, TranslatePipe, ...HlmButtonImports],
   template: `
     @if (hasError()) {

@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, inject, signal, computed, effect, viewChild, ElementRef  } from '@angular/core';
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
@@ -10,6 +10,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
 
 @Component({
   selector: 'app-video-room',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe, LiveChatOverlayComponent, AppSkeletonLoaderComponent],
   template: `
     @if (store.currentRoom(); as room) {

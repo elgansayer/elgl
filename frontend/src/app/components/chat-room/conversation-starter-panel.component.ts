@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, resource } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, computed, inject, input, output, resource  } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { AuthService } from '../../services/auth.service';
 import { ChatService } from '../../services/chat.service';
@@ -14,6 +14,7 @@ const MAX_STARTER_LENGTH = 160;
 
 @Component({
   selector: 'app-conversation-starter-panel',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
   template: `
     @if (starterResource.isLoading() && canShow()) {

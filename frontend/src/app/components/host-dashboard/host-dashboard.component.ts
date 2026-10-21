@@ -1,4 +1,4 @@
-import { Component, input, computed, inject, signal, effect } from '@angular/core';
+import { ChangeDetectionStrategy,  Component, input, computed, inject, signal, effect  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { interval, from, switchMap, startWith } from 'rxjs';
@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-host-dashboard',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, AppCardComponent, TranslatePipe],
   template: `
     <app-card

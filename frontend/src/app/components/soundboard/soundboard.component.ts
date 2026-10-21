@@ -1,4 +1,4 @@
-import {
+import { ChangeDetectionStrategy,
   Component,
   DestroyRef,
   computed,
@@ -7,7 +7,7 @@ import {
   input,
   signal,
   untracked,
-} from '@angular/core';
+ } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CentrifugeService } from '../../services/centrifuge.service';
@@ -25,6 +25,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 @Component({
   selector: 'app-soundboard',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     @if (canPlay()) {
