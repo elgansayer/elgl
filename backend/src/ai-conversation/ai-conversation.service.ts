@@ -244,11 +244,23 @@ The user's role: Someone practising casual English.
   ): Promise<string> {
     const scenario = this.scenarios.find((s) => s.id === scenarioId);
     let learnerKnowledge: LearnerKnowledgeProfile | null = null;
+    const profile = await this.usersService
+      .getProfile(userId)
+      .catch(() => null);
+
+    // Find the requested target language or omit if ambiguous
+    let targetLanguage: string | undefined = undefined;
+    if (profile?.target_languages && profile.target_languages.length === 1) {
+      targetLanguage = profile.target_languages[0];
+    }
+
     try {
-      learnerKnowledge = await this.learnerKnowledgeService.getProfile(
-        userId,
-        'en',
-      );
+      if (targetLanguage) {
+        learnerKnowledge = await this.learnerKnowledgeService.getProfile(
+          userId,
+          targetLanguage,
+        );
+      }
     } catch (e) {
       this.logger.warn(
         `Failed to fetch learner knowledge profile for user ${userId}`,
@@ -259,8 +271,7 @@ The user's role: Someone practising casual English.
     let systemPrompt = scenario?.systemPrompt;
 
     if (!systemPrompt) {
-      const [profile, flashcards, streak] = await Promise.all([
-        this.usersService.getProfile(userId).catch(() => null),
+      const [flashcards, streak] = await Promise.all([
         this.flashcardsService
           .getFlashcards(userId, undefined, 10)
           .catch(() => []),
@@ -305,7 +316,7 @@ The user's role: Someone practising casual English.
     const targetLanguages = profile?.target_languages?.join(', ') || 'English';
     const interests = profile?.interests?.join(', ') || 'various topics';
     const level =
-      learnerKnowledge?.overallProficiency?.level ||
+      learnerKnowledge?.globalProficiency?.level ||
       profile?.proficiency_level ||
       'beginner/intermediate';
 
@@ -317,9 +328,10 @@ The user's role: Someone practising casual English.
 
     let knowledgeContext = '';
     if (learnerKnowledge) {
-      const strugglingItems = Array.from(
-        learnerKnowledge.knowledgeItems.values(),
-      )
+      const strugglingItems = Array.from([
+        ...learnerKnowledge.globalKnowledgeItems.values(),
+        ...learnerKnowledge.languageKnowledgeItems.values(),
+      ])
         .filter((item) => item.status === 'struggling')
         .map((item) => item.id.replace('vocab:', ''))
         .join(', ');

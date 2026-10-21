@@ -50,8 +50,8 @@ describe('AiConversationService', () => {
 
     learnerKnowledgeService = {
       getProfile: vi.fn().mockResolvedValue({
-        overallProficiency: { level: 'B2' },
-        knowledgeItems: new Map([
+        globalProficiency: { level: 'B2' },
+        globalKnowledgeItems: new Map([
           ['vocab:gato', { id: 'vocab:gato', status: 'struggling' }],
         ]),
       }),
@@ -174,6 +174,50 @@ describe('AiConversationService', () => {
   });
 
   describe('generateReply', () => {
+    it('should generate a reply without English-only vocabulary for Spanish prompts', async () => {
+      // Set target language to 'es'
+      usersService.getProfile.mockResolvedValue({
+        target_languages: ['es'],
+        proficiency_level: 'A2',
+        interests: ['culture'],
+      });
+
+      // Provide both global and language items
+      learnerKnowledgeService.getProfile.mockResolvedValue({
+        globalProficiency: { level: 'A2' },
+        globalKnowledgeItems: new Map([
+          [
+            'vocab:globalWord',
+            { id: 'vocab:globalWord', status: 'struggling' },
+          ],
+        ]),
+        languageKnowledgeItems: new Map([
+          ['vocab:hola', { id: 'vocab:hallo', status: 'struggling' }],
+        ]),
+      });
+
+      llmProxy.chatCompletion.mockResolvedValue('Hola! ¿Cómo estás?');
+
+      const reply = await service.generateReply('user1', 'Hola', undefined);
+
+      expect(reply).toBe('Hola! ¿Cómo estás?');
+      expect(usersService.getProfile).toHaveBeenCalledWith('user1');
+      expect(learnerKnowledgeService.getProfile).toHaveBeenCalledWith(
+        'user1',
+        'es',
+      );
+
+      const llmMessages = llmProxy.chatCompletion.mock.calls[0][0];
+      const systemPrompt = llmMessages.find(
+        (m: any) => m.role === 'system',
+      ).content;
+
+      // Should contain the Spanish struggling word 'hallo' and the global one 'globalWord'
+      // It should NOT fetch 'en' explicitly
+      expect(systemPrompt).toContain('globalWord');
+      expect(systemPrompt).toContain('hallo');
+    });
+
     it('should call llmProxy.chatCompletion with system prompt from scenario', async () => {
       llmProxy.chatCompletion.mockResolvedValue(
         'Would you like a latte or cappuccino?',
@@ -216,6 +260,11 @@ describe('AiConversationService', () => {
     });
 
     it('should use default system prompt when no scenarioId provided', async () => {
+      learnerKnowledgeService.getProfile.mockResolvedValue({
+        globalProficiency: { level: 'A2' },
+        globalKnowledgeItems: new Map(),
+        languageKnowledgeItems: new Map(),
+      });
       llmProxy.chatCompletion.mockResolvedValue('Interesting!');
 
       await service.generateReply('user-123', 'Tell me about yourself');
