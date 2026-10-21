@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyController } from './safety.controller';
 import { SafetyService } from './safety.service';
@@ -134,9 +135,18 @@ describe('SafetyController', () => {
       const ids = ['bad-1'];
       (safetyService.getBlockedUserIds as Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockedUserIds('user-1');
+      const result = await controller.getBlockedUserIds(
+        { user: { id: 'user-1' } },
+        'user-1',
+      );
       expect(safetyService.getBlockedUserIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
+    });
+
+    it('should throw ForbiddenException if user id does not match param userId', async () => {
+      await expect(
+        controller.getBlockedUserIds({ user: { id: 'user-2' } }, 'user-1'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 
@@ -145,9 +155,18 @@ describe('SafetyController', () => {
       const ids = ['blocker-1'];
       (safetyService.getBlockerUserIds as Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockerUserIds('user-1');
+      const result = await controller.getBlockerUserIds(
+        { user: { id: 'user-1' } },
+        'user-1',
+      );
       expect(safetyService.getBlockerUserIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
+    });
+
+    it('should throw ForbiddenException if user id does not match param userId', async () => {
+      await expect(
+        controller.getBlockerUserIds({ user: { id: 'user-2' } }, 'user-1'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 
@@ -218,11 +237,23 @@ describe('SafetyController', () => {
       const ids = ['blocked-1', 'blocker-1'];
       (safetyService.getBlockedAndBlockerIds as Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockedAndBlockerIds('user-1');
+      const result = await controller.getBlockedAndBlockerIds(
+        { user: { id: 'user-1' } },
+        'user-1',
+      );
       expect(safetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
         'user-1',
       );
       expect(result).toEqual(ids);
+    });
+
+    it('should throw ForbiddenException if user id does not match param userId', async () => {
+      await expect(
+        controller.getBlockedAndBlockerIds(
+          { user: { id: 'user-2' } },
+          'user-1',
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 
