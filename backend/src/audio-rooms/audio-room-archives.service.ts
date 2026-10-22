@@ -472,11 +472,17 @@ export class AudioRoomArchivesService {
       chunks.push(bounded.slice(offset, offset + this.llmChunkChars));
     }
 
+    // ⚡ Bolt Optimization: Replaced sequential LLM API calls with a concurrent Promise.allSettled execution
+    // to drastically reduce latency during audio room transcript summarization.
+    const results = await Promise.allSettled(
+      chunks.map((chunk) => this.summariseChunk(chunk)),
+    );
+
     const parts: ChunkSummary[] = [];
-    for (const chunk of chunks) {
-      try {
-        parts.push(await this.summariseChunk(chunk));
-      } catch {
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        parts.push(result.value);
+      } else {
         this.logger.warn('One audio-room transcript summary chunk failed');
       }
     }

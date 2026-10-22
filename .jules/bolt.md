@@ -563,3 +563,8 @@
 
 
 
+
+## 2026-10-22 - [Optimize sequential LLM API calls via concurrent Promise.allSettled execution]
+
+**Learning:** In the backend `audio-room-archives.service.ts`, the `generateSummary` method was iteratively performing LLM queries (`summariseChunk`) across transcript chunks inside a `for...of` loop using `await`. Because network latency is compounding, this O(N) sequential structure acts as a major performance bottleneck for larger transcripts.
+**Action:** When performing independent network queries against external APIs, restructure the code to map the data to an array of promises and execute them concurrently using `Promise.all` or `Promise.allSettled`. This drops the wait time from the sum of all latencies to simply the latency of the single slowest chunk.
