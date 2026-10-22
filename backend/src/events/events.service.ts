@@ -357,19 +357,26 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Fetch RSVP counts
-    const { count: attendingCount, error: aErr } = await supabase
-      .from('event_rsvps')
-      .select('id', { head: true, count: 'exact' })
-      .eq('event_id', eventId)
-      .eq('status', 'attending');
+    // ⚡ Bolt: Execute both counts concurrently to avoid sequential roundtrips
+    const [
+      { count: attendingCount, error: aErr },
+      { count: interestedCount, error: iErr },
+    ] = await Promise.all([
+      supabase
+        .from('event_rsvps')
+        .select('id', { head: true, count: 'exact' })
+        .eq('event_id', eventId)
+        .eq('status', 'attending'),
+      supabase
+        .from('event_rsvps')
+        .select('id', { head: true, count: 'exact' })
+        .eq('event_id', eventId)
+        .eq('status', 'interested'),
+    ]);
+
     if (aErr) {
       this.logger.warn('Failed to fetch attending count', aErr);
     }
-    const { count: interestedCount, error: iErr } = await supabase
-      .from('event_rsvps')
-      .select('id', { head: true, count: 'exact' })
-      .eq('event_id', eventId)
-      .eq('status', 'interested');
     if (iErr) {
       this.logger.warn('Failed to fetch interested count', iErr);
     }

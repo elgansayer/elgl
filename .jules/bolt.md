@@ -563,3 +563,8 @@
 
 
 
+
+## 2026-10-22 - [Optimize sequential RSVP count fetching via Promise.all]
+
+**Learning:** In `backend/src/events/events.service.ts`, the `getEvent` method sequentially awaited two separate Supabase queries for `attendingCount` and `interestedCount`. This forced two independent database roundtrips to execute synchronously, doubling the database latency required to load a single event's details.
+**Action:** When performing multiple independent aggregation queries against the database (like fetching different status counts for the same record), execute them concurrently by wrapping the promises in a `Promise.all` block. This reduces N sequential database roundtrips to an O(1) concurrent latency window.
