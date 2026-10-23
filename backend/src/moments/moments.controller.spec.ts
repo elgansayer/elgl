@@ -1,3 +1,5 @@
+import { MomentsFeedService } from './moments-feed.service';
+import { MomentsRankingService } from './moments-ranking.service';
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MomentsController } from './moments.controller';
@@ -6,11 +8,11 @@ import { CorrectionQualityService } from './correction-quality.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { R2Service } from '../cloudflare-r2/r2.service';
-import { MomentsRankingService } from './moments-ranking.service';
 
 describe('MomentsController', () => {
   let controller: MomentsController;
   let momentsService: MomentsService;
+  let momentsFeedService: MomentsFeedService;
   let correctionQualityService: CorrectionQualityService;
   let usersService: UsersService;
 
@@ -18,6 +20,20 @@ describe('MomentsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MomentsController],
       providers: [
+        {
+          provide: MomentsFeedService,
+          useValue: { getFeed: vi.fn().mockResolvedValue([]) },
+        },
+        {
+          provide: MomentsRankingService,
+          useValue: {
+            rankForYou: vi
+              .fn()
+              .mockImplementation((_userId, moments) =>
+                Promise.resolve(moments),
+              ),
+          },
+        },
         {
           provide: MomentsService,
           useValue: {
@@ -62,6 +78,7 @@ describe('MomentsController', () => {
 
     controller = module.get<MomentsController>(MomentsController);
     momentsService = module.get<MomentsService>(MomentsService);
+    momentsFeedService = module.get<MomentsFeedService>(MomentsFeedService);
     correctionQualityService = module.get<CorrectionQualityService>(
       CorrectionQualityService,
     );
@@ -104,33 +121,25 @@ describe('MomentsController', () => {
       expect(momentsService.getFeed).not.toHaveBeenCalled();
     });
 
-    it('should call service getFeed with active filter and lang when user is provided', async () => {
+    it('delegates the selected filter and normalised language to the feed service', async () => {
       const feed: any[] = [{ id: 'm-1' }];
-      (momentsService.getFeed as Mock).mockResolvedValue(feed);
+      const feedService = momentsFeedService;
+      (feedService.getFeed as Mock).mockResolvedValue(feed);
 
-      const result = await controller.getFeed(
-        { id: 'user-1' } as any,
-        'Classmates',
-        'fr',
-      );
-      expect(momentsService.getFeed).toHaveBeenCalledWith(
-        'user-1',
-        'Classmates',
-        'fr',
-      );
+      const result = await controller.getFeed({ id: 'user-1' } as any, 'All', 'fr');
+      // Classmates membership resolution is covered by moments.feed-filters.spec.ts.
+      expect(feedService.getFeed).toHaveBeenCalledWith('user-1', 'All', 'fr');
+      expect(momentsService.getFeed).not.toHaveBeenCalled();
       expect(result).toEqual(feed);
     });
 
     it('should use All as default filter when filter is undefined', async () => {
       const feed: any[] = [{ id: 'm-1' }];
-      (momentsService.getFeed as Mock).mockResolvedValue(feed);
+      const feedService = momentsFeedService;
+      (feedService.getFeed as Mock).mockResolvedValue(feed);
 
       const result = await controller.getFeed({ id: 'user-1' } as any);
-      expect(momentsService.getFeed).toHaveBeenCalledWith(
-        'user-1',
-        'All',
-        undefined,
-      );
+      expect(feedService.getFeed).toHaveBeenCalledWith('user-1', 'All', undefined);
       expect(result).toEqual(feed);
     });
   });
