@@ -626,5 +626,8 @@
   "call.mute": "ミュート",
   "call.unmute": "ミュート解除",
   "call.hang_up": "通話を終了",
-  "moments.viewAuthorProfile": "{{name}}さんのプロフィールを表示"
+  "moments.viewAuthorProfile": "{{name}}さんのプロフィールを表示",
+  "chat_settings.load_unavailable": "チャット設定は一時的に利用できません。",
+  "chat_settings.load_unavailable_desc": "保存済みの設定は引き続き有効です。読み込みが完了するまで保存期間の設定は無効になります。",
+  "chat_settings.save_failed": "変更を保存できませんでした。以前の設定に戻しました。"
 }
