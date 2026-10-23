@@ -100,6 +100,7 @@ const venueLocationValidator: ValidatorFn = (
               <input
                 hlmInput
                 id="titleInput"
+                required
                 formControlName="title"
                 type="text"
                 maxlength="120"
@@ -122,6 +123,7 @@ const venueLocationValidator: ValidatorFn = (
               <input
                 hlmInput
                 id="dateTimeInput"
+                required
                 formControlName="date_time"
                 type="datetime-local"
                 [min]="minimumDateTime"
@@ -159,6 +161,7 @@ const venueLocationValidator: ValidatorFn = (
               <input
                 hlmInput
                 id="locationInput"
+                required
                 formControlName="location"
                 [type]="eventForm.controls.venue_type.value === 'zoom' ? 'url' : 'text'"
                 maxlength="500"
@@ -245,6 +248,7 @@ const venueLocationValidator: ValidatorFn = (
               <textarea
                 hlmTextarea
                 id="descriptionInput"
+                required
                 formControlName="description"
                 rows="3"
                 maxlength="2000"
