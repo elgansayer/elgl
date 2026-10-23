@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { of, Subject, throwError } from 'rxjs';
 import { LanguagePartiesComponent } from './language-parties.component';
 import { I18nService } from '../../services/i18n.service';
+import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
+import { environment } from '../../../environments/environment';
 
 describe('LanguagePartiesComponent', () => {
   let component: LanguagePartiesComponent;
@@ -44,13 +46,21 @@ describe('LanguagePartiesComponent', () => {
       }),
       setLanguage: vi.fn(),
     };
+    httpClientMock = {
+      get: vi.fn().mockReturnValue(of([])),
+      post: vi.fn(),
+    };
+    audioRoomsStoreMock = {
+      joinRoom: vi.fn().mockResolvedValue(undefined),
+    };
 
     await TestBed.configureTestingModule({
       imports: [LanguagePartiesComponent],
       providers: [
-        provideHttpClient(),
         provideRouter([]),
+        { provide: HttpClient, useValue: httpClientMock },
         { provide: I18nService, useValue: i18nServiceMock },
+        { provide: AudioRoomsStore, useValue: audioRoomsStoreMock },
       ],
     }).compileComponents();
 
@@ -58,10 +68,20 @@ describe('LanguagePartiesComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('requests only language parties using the backend-supported type query parameter', () => {
+    expect(httpClientMock.get).toHaveBeenCalledWith(
+      `${environment.apiUrl}/audio-rooms/list?type=language_party`,
+    );
+    expect(httpClientMock.get).not.toHaveBeenCalledWith(
+      expect.stringContaining('party_type=language_party'),
+    );
   });
 
   it('should have default filter values', () => {

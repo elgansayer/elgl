@@ -16,8 +16,8 @@ function createMockContext(): {
 } {
   const setHeader = vi.fn();
   const removeHeader = vi.fn();
-  const response = { setHeader, removeHeader };
   const request = { headers: {} };
+  const response = { setHeader, removeHeader };
 
   const executionContext = {
     switchToHttp: () => ({

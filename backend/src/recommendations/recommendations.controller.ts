@@ -14,13 +14,13 @@ import {
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
-  RecommendationsService,
-  RecommendedUserDto,
-} from './recommendations.service';
-import {
   DiscoveryRecommendationDto,
   DiscoveryRecommendationsService,
 } from './discovery-recommendations.service';
+import {
+  RecommendationsService,
+  RecommendedUserDto,
+} from './recommendations.service';
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 
 interface AuthenticatedRequest {

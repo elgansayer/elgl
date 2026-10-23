@@ -43,35 +43,6 @@ This report provides an evidence-based audit of the mobile application interface
 - **Severity:** N/A (Functioning as intended).
 
 
-## 4. Overlays & Modal Stacking
-- **Observation (Verified):** A deliberate Z-index hierarchy is defined at the layout level (`app.component.html`): `z-50` for the bottom navigation, `z-[100]` for lightboxes, and `z-[11000]` for critical forced update modals. Semantic modals utilize `@spartan-ng/helm/dialog` to trap focus and handle layering natively via the `<dialog>` element.
-- **Severity:** N/A (Functioning as intended).
-
-## 5. Safe Areas
-- **Observation (Verified):** Safe areas are implemented natively using CSS environment variables. Global padding rules (`styles.scss:117-119`) apply `env(safe-area-inset-top)` and corresponding logical directions to prevent content from rendering beneath mobile notches or home indicators.
-- **Severity:** N/A (Functioning as intended).
-
-## 6. Back-Navigation
-- **Observation (Verified):** The application uses the standard Angular router for view management. All semantic dialogs (`hlm-dialog`) correctly support dismissal via the `Escape` key, mapping properly to keyboard accessibility guidelines.
-- **Severity:** N/A (Functioning as intended).
-
-## 7. Touch Targets
-- **Observation (Verified):** Primary interactive elements satisfy touch target guidelines. For example, navigation tab items enforce a `w-16` width (`app.component.html`), and standard icon buttons use `p-2` with `rounded-full` padding (`app.component.html:63`) to create sufficient hit areas.
-- **Severity:** N/A (Functioning as intended).
-
-## 8. Media Capture & Voice Recording
-- **Observation (Verified):** Media capture relies directly on native Web APIs (`navigator.mediaDevices.getUserMedia`) for audio (`audio-recorder.component.ts:47`) and video (`instant-video-recorder.component.ts:162`). Recorded audio is compressed on the client side via the `AudioCompressionService` before network transmission.
-- **Severity:** N/A (Functioning as intended).
-
-## 9. Long Presses
-- **Observation (Verified):** Long press interactions are captured via `LongPressContextMenuComponent`. To support this on mobile without triggering native selection loops, global styles are configured to disable default text selection and touch callouts (`user-select: none`, `-webkit-touch-callout: none` in `styles.scss:115-116`), while explicitly permitting selection inside text inputs (`styles.scss:124-125`).
-- **Severity:** N/A (Functioning as intended).
-
-## 10. Transitions
-- **Observation (Verified):** Interaction states (hover, focus) are provided using standard CSS transitions (e.g., `transition-colors` on utility buttons in `app.component.html`).
-- **Severity:** N/A (Functioning as intended).
-
-
 This report provides an evidence-based audit of the mobile application interface, documenting verified implementations based strictly on the current codebase.
 
 ## 1. Thumb Reach
@@ -242,7 +213,6 @@ This report provides an evidence-based audit of the mobile application interface
 - **Severity:** N/A (Functioning as intended).
 
 The device matrix should include iOS Safari, Android Chrome, keyboard and screen-reader navigation, 320 CSS-pixel reflow, long translated text, RTL, light/dark themes and reduced motion. Record the build, device/browser, steps and measured result for each finding. Until that evidence exists, recommendations remain candidates for testing rather than confirmed defects or completed fixes.
-
 
 
 

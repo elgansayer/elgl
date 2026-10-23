@@ -80,6 +80,15 @@ export class FontScaleService {
     this.chatTextSize.set(size);
   }
 
+  setTextSizePreference(size: TextSizePreference): void {
+    this.setScale(TEXT_SIZE_SCALES[size]);
+  }
+
+  setChatTextSize(size: ChatTextSizePreference): void {
+    if (!isChatTextSize(size)) return;
+    this.chatTextSize.set(size);
+  }
+
   reset(): void {
     this.setScale(DEFAULT_SCALE);
   }
