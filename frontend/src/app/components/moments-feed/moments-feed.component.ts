@@ -189,6 +189,7 @@ export class MomentsFeedComponent {
   private mentionRangeStartMap: Record<string, number> = {};
   private mentionRangeEndMap: Record<string, number> = {};
   private readonly mentionItemToStringMap = new Map<string, (value: unknown) => string>();
+  private mentionRequestVersionMap: Record<string, number> = {};
 
   // New Comment / Correction form states per momentId
   commentInputMap: Record<string, string> = {};
@@ -514,7 +515,7 @@ export class MomentsFeedComponent {
       this.mentionQueryMap.update((m) => ({ ...m, [momentId]: match[1] }));
       void this.loadMentionSuggestions(momentId);
     } else {
-      this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+      this.closeMentionSuggestions(momentId);
     }
   }
 
@@ -553,16 +554,39 @@ export class MomentsFeedComponent {
 
   private async loadMentionSuggestions(momentId: string): Promise<void> {
     const query = this.mentionQueryMap()[momentId];
+    const requestVersion = (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
+    this.mentionRequestVersionMap[momentId] = requestVersion;
+
     if (!query) {
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
       return;
     }
+
     try {
       const results = await this.userService.searchUsers(query, 5);
+      if (
+        this.mentionRequestVersionMap[momentId] !== requestVersion ||
+        this.mentionQueryMap()[momentId] !== query
+      ) {
+        return;
+      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: results }));
     } catch {
+      if (
+        this.mentionRequestVersionMap[momentId] !== requestVersion ||
+        this.mentionQueryMap()[momentId] !== query
+      ) {
+        return;
+      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
     }
+  }
+
+  protected closeMentionSuggestions(momentId: string): void {
+    this.mentionRequestVersionMap[momentId] =
+      (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
+    this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+    this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
   }
 
   selectMention(momentId: string, member: MentionSuggestion | undefined): void {
@@ -574,7 +598,7 @@ export class MomentsFeedComponent {
       this.mentionRangeEndMap[momentId],
       displayName,
     );
-    this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+    this.closeMentionSuggestions(momentId);
   }
 
   openGhostCorrection(moment: MomentRecord, textToCorrect?: string): void {

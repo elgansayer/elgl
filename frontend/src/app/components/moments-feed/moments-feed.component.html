@@ -477,6 +477,7 @@
                       (searchChange)="commentInputMap[moment.id] = $event"
                       [itemToString]="mentionItemToStringFor(moment.id)"
                       (valueChange)="onMentionSelected(moment.id, $event)"
+                      (closed)="closeMentionSuggestions(moment.id)"
                       autoHighlight
                     >
                       <hlm-autocomplete-input
