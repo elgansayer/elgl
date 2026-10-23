@@ -112,12 +112,11 @@ describe('CentrifugoService', () => {
       expect(configService.get).toHaveBeenCalledWith('CENTRIFUGO_SECRET');
     });
 
-    it('connects with the v5-compatible RESP2 protocol and loads the Lua script', () => {
+    it('connects with bounded retries and loads the Lua script', () => {
       expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
         enableOfflineQueue: false,
-        protocol: 2,
       });
       expect(mockRedis.connect).toHaveBeenCalled();
       expect(mockRedis.script).toHaveBeenCalledWith('LOAD', expect.any(String));
