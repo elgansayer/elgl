@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { DiscoveryService } from '../../services/discovery.service';
@@ -116,6 +116,9 @@ describe('UserDetailComponent bio translation', () => {
         },
       })
       .compileComponents();
+
+    const router = TestBed.inject(Router);
+    navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;

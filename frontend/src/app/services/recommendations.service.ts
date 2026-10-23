@@ -48,6 +48,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseBoundedText(value: unknown, maxLength: number): string {
   if (typeof value !== 'string') invalidResponse();
   const trimmed = value.trim();
+  // eslint-disable-next-line no-control-regex -- reject control characters in API text
   if (!trimmed || trimmed.length > maxLength || /[\u0000-\u001f\u007f]/u.test(trimmed)) {
     invalidResponse();
   }

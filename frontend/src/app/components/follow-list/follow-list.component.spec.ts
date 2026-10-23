@@ -9,7 +9,6 @@ import { DirectConversationService } from '../../services/direct-conversation.se
 import { UserQuickActionsService } from '../../services/user-quick-actions.service';
 
 describe('FollowListComponent', () => {
-  let component: FollowListComponent;
   let fixture: ComponentFixture<FollowListComponent>;
   let mockUserService: {
     getFollowers: ReturnType<typeof vi.fn>;
@@ -74,7 +73,6 @@ describe('FollowListComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(FollowListComponent);
-    component = fixture.componentInstance;
     fixture.componentRef.setInput('userId', 'target-user');
   });
 

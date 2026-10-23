@@ -32,7 +32,8 @@ export class ChatSettingsService {
   readonly settingsLoadError = signal<boolean>(false);
   readonly loaded = signal<boolean>(false);
 
-  async loadSettings(): Promise<void> {
+  /** Loads the authoritative chat settings; resolves false when they could not be read. */
+  async loadSettings(): Promise<boolean> {
     this.loaded.set(false);
     this.settingsLoadError.set(false);
     try {
@@ -45,24 +46,29 @@ export class ChatSettingsService {
       this.disappearingMessagesTtl.set(
         this.normalizeDisappearingMessagesTtl(result.disappearingMessagesTtl),
       );
+      return true;
     } catch {
       // Do not claim a destructive setting is off when the authoritative value
       // could not be read. The UI disables retention editing until a retry works.
       this.settingsLoadError.set(true);
+      return false;
     } finally {
       this.loaded.set(true);
     }
   }
 
-  async updateSetting(key: keyof ChatSettings, value: ChatSettingValue): Promise<void> {
+  /** Persists one setting optimistically; resolves false after reverting a failed save. */
+  async updateSetting(key: keyof ChatSettings, value: ChatSettingValue): Promise<boolean> {
     const previous = this.getLocal(key);
     this.setLocal(key, value);
     try {
       const headers = this.auth.getBearerHeaders();
       await firstValueFrom(this.http.put(this.baseUrl, { [key]: value }, { headers }));
+      return true;
     } catch {
       // revert on failure
       this.setLocal(key, previous);
+      return false;
     }
   }
 
