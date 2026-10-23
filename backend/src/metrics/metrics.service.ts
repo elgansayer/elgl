@@ -84,6 +84,11 @@ export class MetricsService {
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
 
+  // Moments For You feed metrics
+  readonly momentsForYouRankingDuration: Histogram<string>;
+  readonly momentsForYouCandidates: Histogram<string>;
+  readonly momentsForYouDegradedTotal: Counter<string>;
+
   // Admin Moderation Dashboard metrics
   readonly adminBanActions: Counter<string>;
   readonly adminWarnActions: Counter<string>;
@@ -530,6 +535,31 @@ export class MetricsService {
       registers: [this.register],
     });
 
+    // --- Moments For You Metrics ---
+
+    this.momentsForYouRankingDuration = new Histogram({
+      name: 'hellotalk_moments_for_you_ranking_duration_seconds',
+      help: 'Duration of For You ranking, including viewer context loading',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5],
+    });
+
+    this.momentsForYouCandidates = new Histogram({
+      name: 'hellotalk_moments_for_you_candidates',
+      help: 'Number of Moments at each stage of the For You pipeline',
+      labelNames: ['stage'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 25, 50, 75, 100, 150],
+    });
+
+    this.momentsForYouDegradedTotal = new Counter({
+      name: 'hellotalk_moments_for_you_degraded_total',
+      help: 'Number of For You requests served without an optional candidate source or personalisation context',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
     // --- Admin Moderation Dashboard Metrics ---
 
     this.adminBanActions = new Counter({
@@ -878,6 +908,31 @@ export class MetricsService {
 
   setMatchmakingTierSuccessRate(rate: number): void {
     this.matchmakingTierSuccessRate.set(rate);
+  }
+
+  // --- Moments For You metric helpers ---
+
+  observeMomentsForYouRanking(
+    outcome: 'ranked' | 'degraded' | 'empty',
+    durationSeconds: number,
+  ): void {
+    this.momentsForYouRankingDuration.observe({ outcome }, durationSeconds);
+  }
+
+  observeMomentsForYouCandidates(
+    stage: 'recent_source' | 'in_network_source' | 'pool' | 'served',
+    count: number,
+  ): void {
+    this.momentsForYouCandidates.observe({ stage }, count);
+  }
+
+  recordMomentsForYouDegraded(
+    reason:
+      | 'viewer_context_unavailable'
+      | 'recent_source_unavailable'
+      | 'in_network_source_unavailable',
+  ): void {
+    this.momentsForYouDegradedTotal.inc({ reason });
   }
 
   // --- Escrow Payment metric helpers ---
