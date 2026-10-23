@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryComponent } from './discovery.component';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserService } from '../../services/user.service';
@@ -20,8 +20,13 @@ describe('DiscoveryComponent serious learner mode', () => {
   let findPartners: ReturnType<typeof vi.fn>;
   let seriousLearnerModeFake: Pick<
     SeriousLearnerModeService,
-    'enabled' | 'saving' | 'error' | 'toggle'
+    'enabled' | 'saving' | 'error' | 'refresh' | 'toggle'
   >;
+
+  afterEach(() => {
+    // Never leak the stubbed navigator into other specs (I18nService reads navigator.language).
+    vi.unstubAllGlobals();
+  });
 
   beforeEach(async () => {
     updateMyProfile = vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>().mockResolvedValue(undefined);
@@ -34,6 +39,7 @@ describe('DiscoveryComponent serious learner mode', () => {
       enabled: seriousEnabled,
       saving: seriousSaving,
       error: seriousError,
+      refresh: vi.fn(async () => undefined),
       async toggle(): Promise<boolean> {
         if (seriousSaving()) return false;
         const next = !seriousEnabled();
@@ -189,6 +195,8 @@ describe('DiscoveryComponent serious learner mode', () => {
           success({ coords: { latitude: 51.5, longitude: -0.12 } } as GeolocationPosition),
       },
     });
+    // Let ngOnInit's preference refresh and first search settle before composing pills.
+    await fixture.whenStable();
     component.seriousLearnerMode.set(true);
     findPartners.mockClear();
 

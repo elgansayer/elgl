@@ -458,7 +458,8 @@ export class LongPressContextMenuComponent {
     // should never have the context menu appear underneath that gesture.
     this.cancelTimer();
 
-    if (event.touches.length !== 1) {
+    // Synthetic or malformed events may omit the TouchList; treat them as non-swipes.
+    if ((event.touches?.length ?? 0) !== 1) {
       this.touchSwipeCancelled = true;
       return;
     }
