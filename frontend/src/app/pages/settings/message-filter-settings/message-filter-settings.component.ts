@@ -4,7 +4,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { MessageFilterService } from '../../../services/message-filter.service';
+import { MessageFilterService, MessageFilters } from '../../../services/message-filter.service';
 
 interface LanguageOption {
   code: string;
@@ -67,6 +67,13 @@ export class MessageFilterSettingsComponent implements OnInit {
   readonly ageMax = signal<number | null>(null);
   readonly selectedLanguages = signal<string[]>([]);
   readonly selectedGenders = signal<string[]>([]);
+  // Settings this page does not edit yet are round-tripped so saving never resets them.
+  private readonly matchPreferences = signal<
+    Pick<
+      MessageFilters,
+      'same_native_language' | 'same_target_language' | 'same_gender' | 'same_age'
+    >
+  >({});
 
   readonly languages = COMMON_LANGUAGES;
   readonly genderOptions = GENDER_OPTIONS;
@@ -95,6 +102,12 @@ export class MessageFilterSettingsComponent implements OnInit {
       this.ageMax.set(filters.age_max ?? null);
       this.selectedLanguages.set(filters.allowed_native_languages ?? []);
       this.selectedGenders.set(filters.allowed_genders ?? []);
+      this.matchPreferences.set({
+        same_native_language: filters.same_native_language,
+        same_target_language: filters.same_target_language,
+        same_gender: filters.same_gender,
+        same_age: filters.same_age,
+      });
     } catch {
       this.loadFailed.set(true);
     } finally {
@@ -122,12 +135,20 @@ export class MessageFilterSettingsComponent implements OnInit {
     this.isSaving.set(true);
 
     try {
+      const match = this.matchPreferences();
       await this.messageFilterService.save({
+        enabled: true,
+        allow_everyone: false,
         age_min: this.ageMin() ?? undefined,
         age_max: this.ageMax() ?? undefined,
         allowed_native_languages:
           this.selectedLanguages().length > 0 ? this.selectedLanguages() : undefined,
-        allowed_genders: this.selectedGenders().length > 0 ? this.selectedGenders() : undefined,
+        // An empty list clears a previously saved gender restriction.
+        allowed_genders: this.selectedGenders(),
+        same_native_language: match.same_native_language ?? false,
+        same_target_language: match.same_target_language ?? false,
+        same_gender: match.same_gender ?? false,
+        same_age: match.same_age ?? false,
       });
       this.successMessage.set('settings.messageFilters.saved');
     } catch {

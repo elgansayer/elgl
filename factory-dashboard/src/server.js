@@ -11,6 +11,7 @@ import { createReadStream } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { projectFor, projects, stateFile } from './projects.js';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -254,9 +255,23 @@ async function handleRoute(req, res) {
   }
 
   // Serve static - normalise path to prevent directory traversal
-  const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
-  const filePath = path.join(PUBLIC_DIR, safePath === '/' ? 'index.html' : safePath);
-  serveStatic(res, filePath);
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch (err) {
+    return sendJson(res, 400, { error: 'Bad request' });
+  }
+
+  // Strip leading slashes to prevent absolute path resolution
+  const normalizedPath = decodedPath.replace(/^[\/\\]+/, '');
+  const targetPath = path.resolve(PUBLIC_DIR, normalizedPath === '' ? 'index.html' : normalizedPath);
+
+  // Ensure the resolved path strictly starts with PUBLIC_DIR
+  if (!targetPath.startsWith(PUBLIC_DIR + path.sep) && targetPath !== PUBLIC_DIR) {
+    return sendJson(res, 403, { error: 'Forbidden' });
+  }
+
+  serveStatic(res, targetPath);
 }
 
 // ---- Server ----
@@ -272,9 +287,16 @@ const server = createServer(async (req, res) => {
 
       const b64 = authHeader.substring(6);
       const decoded = Buffer.from(b64, 'base64').toString('utf8');
-      const [username, password] = decoded.split(':', 2);
+      // Compare fixed-size digests of the complete credential pair. This preserves
+      // colons in passwords and avoids branching on the configured secret's length.
+      const supplied = crypto.createHash('sha256').update(decoded).digest();
+      const expected = crypto
+        .createHash('sha256')
+        .update(`${DASHBOARD_USER}:${DASHBOARD_PASSWORD}`)
+        .digest();
+      const isAuthorized = crypto.timingSafeEqual(supplied, expected);
 
-      if (username !== DASHBOARD_USER || password !== DASHBOARD_PASSWORD) {
+      if (!isAuthorized) {
         res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
         return res.end('Unauthorized');
       }

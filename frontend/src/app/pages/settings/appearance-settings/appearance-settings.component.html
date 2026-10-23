@@ -130,7 +130,7 @@
           >
             @for (opt of chatTextSizeOptions; track opt) {
               <button
-                hlmBtn
+                hlmBtn size="touch"
                 type="button"
                 (click)="setChatTextSize(opt)"
                 class="min-h-11 min-w-24 flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors"
@@ -179,7 +179,7 @@
           <div class="flex gap-3 flex-wrap">
             @for (color of availableColors; track color) {
               <button
-                hlmBtn
+                hlmBtn size="touch"
                 type="button"
                 (click)="setAccentColor(color)"
                 [disabled]="!isVip()"

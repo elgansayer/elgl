@@ -13,6 +13,11 @@ export interface SystemEventPayload {
   [key: string]: SystemEventParam;
 }
 
+export interface MessageReaction {
+  user_id: string;
+  emoji: string;
+}
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -25,11 +30,14 @@ export interface ChatMessage {
   is_read: boolean;
   delivery_status?: 'sent' | 'delivered' | 'read' | (string & {});
   created_at: string;
+  /** Absolute server-assigned expiry for disappearing messages; null means normal retention. */
+  expires_at?: string | null;
   sender?: {
     id: string;
     display_name?: string | null;
     avatar_url?: string | null;
   } | null;
+  reactions?: MessageReaction[] | null;
   link_preview?: LinkPreview | null;
   /** Original text detected by the translation service */
   original_text?: string | null;
