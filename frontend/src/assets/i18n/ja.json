@@ -217,6 +217,7 @@
   "chatRoom.bookmarkError": "保存済みか、失敗しました。",
   "chatRoom.savedLingqAlert": "📚 文をLingQ SRS学習デッキに保存しました:\n\"{{text}}\"",
   "chatRoom.saveLingqError": "文の保存に失敗したか、SRSデッキに既にあります。",
+  "chatList.online": "オンライン",
   "chatList.title": "チャット",
   "chatList.subtitle": "メッセージ、添削、即時言語交換。",
   "chatList.openFirstBtn": "+ 最初のルームを開く",
@@ -616,5 +617,14 @@
   "helpAbout.title": "ヘルプ＆アバウト",
   "helpAbout.appVersion": "アプリバージョン",
   "helpAbout.buildNumber": "ビルド番号",
-  "helpAbout.openSourceLicences": "オープンソースライセンス"
+  "helpAbout.openSourceLicences": "オープンソースライセンス",
+  "legal.documentSections": "文書のセクション",
+  "call.accept": "通話に応答",
+  "call.decline": "通話を拒否",
+  "call.videoOn": "カメラをオン",
+  "call.videoOff": "カメラをオフ",
+  "call.mute": "ミュート",
+  "call.unmute": "ミュート解除",
+  "call.hang_up": "通話を終了",
+  "moments.viewAuthorProfile": "{{name}}さんのプロフィールを表示"
 }

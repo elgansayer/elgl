@@ -4,6 +4,7 @@ import { GrammarCheckService } from './grammar-check.service';
 import { GrammarExplanationService } from './grammar-explanation.service';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
+import { PronunciationScoringService } from './pronunciation-scoring.service';
 
 describe('NlpController explainGrammar', () => {
   let checkRateLimit: ReturnType<typeof vi.fn>;
@@ -25,6 +26,7 @@ describe('NlpController explainGrammar', () => {
       { getProfile } as unknown as UsersService,
       {} as unknown as GrammarCheckService,
       { explain } as unknown as GrammarExplanationService,
+      {} as unknown as PronunciationScoringService,
     );
   });
 

@@ -48,7 +48,9 @@
               "optimization": {
                 "scripts": true,
                 "styles": true,
-                "fonts": false
+                "fonts": {
+                  "inline": false
+                }
               },
               "budgets": [
                 {

@@ -56,7 +56,34 @@ export class NotificationsController {
     @Body() body: UpdateNotificationPreferencesDto,
   ): Promise<{ success: boolean; preferences: unknown }> {
     if (!user) throw new UnauthorizedException();
-    await this.notificationsService.updatePreferences(user.id, body);
+
+    // The legacy settings surface updates one category/channel at a time.
+    // NotificationsService persists the four legacy categories as a single JSON
+    // object, so always merge with the authenticated user's current state before
+    // writing. Otherwise toggling one switch would reset every untouched category
+    // to its defaults.
+    const current = await this.notificationsService.getPreferences(user.id);
+    const merged = {
+      direct_messages: {
+        ...current.direct_messages,
+        ...(body.direct_messages ?? {}),
+      },
+      groups: {
+        ...current.groups,
+        ...(body.groups ?? {}),
+      },
+      likes: {
+        ...current.likes,
+        ...(body.likes ?? {}),
+      },
+      voice_rooms: {
+        ...current.voice_rooms,
+        ...(body.voice_rooms ?? {}),
+      },
+      do_not_disturb: body.do_not_disturb ?? current.do_not_disturb,
+    };
+
+    await this.notificationsService.updatePreferences(user.id, merged);
     const updated = await this.notificationsService.getPreferences(user.id);
     return { success: true, preferences: updated };
   }

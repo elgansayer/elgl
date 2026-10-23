@@ -10,7 +10,7 @@ interface AngularWorkspace {
           configurations?: {
             production?: {
               optimization?: {
-                fonts?: boolean;
+                fonts?: boolean | { inline?: boolean };
               };
             };
           };
@@ -25,10 +25,16 @@ describe('external font build contract', () => {
     const workspace: AngularWorkspace = JSON.parse(
       readFileSync(resolve(process.cwd(), 'angular.json'), 'utf8'),
     );
-
-    expect(
+    const fonts =
       workspace.projects?.frontend?.architect?.build?.configurations?.production?.optimization
-        ?.fonts,
-    ).toBe(false);
+        ?.fonts;
+
+    // Either disable font optimisation entirely (`false`) or keep it without inlining
+    // remote font CSS (`{ inline: false }`); both avoid a build-time Google Fonts fetch.
+    const inlinesRemoteFonts =
+      fonts === true || (typeof fonts === 'object' && fonts.inline !== false);
+
+    expect(fonts).toBeDefined();
+    expect(inlinesRemoteFonts).toBe(false);
   });
 });

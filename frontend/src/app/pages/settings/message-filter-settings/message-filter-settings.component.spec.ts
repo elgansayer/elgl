@@ -32,6 +32,8 @@ describe('MessageFilterSettingsComponent', () => {
 
   it('loads persisted age, language, and gender filters without changing their meaning', async () => {
     messageFilterService.load.mockResolvedValue({
+      enabled: true,
+      allow_everyone: false,
       age_min: 21,
       age_max: 40,
       allowed_native_languages: ['ja', 'ko'],
@@ -71,10 +73,16 @@ describe('MessageFilterSettingsComponent', () => {
     await component.saveFilters();
 
     expect(messageFilterService.save).toHaveBeenCalledWith({
+      enabled: true,
+      allow_everyone: false,
       age_min: 25,
       age_max: undefined,
       allowed_native_languages: ['ja'],
-      allowed_genders: undefined,
+      allowed_genders: [],
+      same_native_language: false,
+      same_target_language: false,
+      same_gender: false,
+      same_age: false,
     });
     expect(component.successMessage()).toBe('settings.messageFilters.saved');
     expect(component.errorMessage()).toBe('');
