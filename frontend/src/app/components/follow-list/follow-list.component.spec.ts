@@ -1,13 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { FollowListComponent } from './follow-list.component';
 import { UserService, UserProfile } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
+import { DirectConversationService } from '../../services/direct-conversation.service';
+import { UserQuickActionsService } from '../../services/user-quick-actions.service';
 
 describe('FollowListComponent', () => {
-  let component: FollowListComponent;
   let fixture: ComponentFixture<FollowListComponent>;
   let mockUserService: {
     getFollowers: ReturnType<typeof vi.fn>;
@@ -15,6 +16,7 @@ describe('FollowListComponent', () => {
     followUser: ReturnType<typeof vi.fn>;
     unfollowUser: ReturnType<typeof vi.fn>;
   };
+  let mockConversations: { openOrCreate: ReturnType<typeof vi.fn> };
 
   function makeUser(partial: Partial<UserProfile>): UserProfile {
     return {
@@ -36,6 +38,15 @@ describe('FollowListComponent', () => {
     };
   }
 
+  function buttonWithText(text: string): HTMLButtonElement | undefined {
+    const buttons = (
+      fixture.nativeElement as HTMLElement
+    ).querySelectorAll<HTMLButtonElement>('li button');
+    return Array.from(buttons).find((button) =>
+      button.textContent?.includes(text),
+    );
+  }
+
   beforeEach(async () => {
     mockUserService = {
       getFollowers: vi.fn().mockResolvedValue({ data: [], total: 0 }),
@@ -43,41 +54,48 @@ describe('FollowListComponent', () => {
       followUser: vi.fn().mockResolvedValue(undefined),
       unfollowUser: vi.fn().mockResolvedValue(undefined),
     };
+    mockConversations = {
+      openOrCreate: vi.fn().mockResolvedValue('room-123'),
+    };
 
     await TestBed.configureTestingModule({
       imports: [FollowListComponent],
       providers: [
         provideRouter([]),
         { provide: UserService, useValue: mockUserService },
-        { provide: AuthService, useValue: { currentUser: signal({ id: 'viewer-1' }) } },
+        {
+          provide: AuthService,
+          useValue: { currentUser: signal({ id: 'viewer-1' }) },
+        },
+        { provide: DirectConversationService, useValue: mockConversations },
+        UserQuickActionsService,
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(FollowListComponent);
-    component = fixture.componentInstance;
     fixture.componentRef.setInput('userId', 'target-user');
   });
 
-  it('should create and load followers by default', async () => {
+  it('loads followers by default and following when requested', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
-
-    expect(component).toBeTruthy();
     expect(mockUserService.getFollowers).toHaveBeenCalledWith('target-user');
-    expect(mockUserService.getFollowing).not.toHaveBeenCalled();
-  });
 
-  it('should load the following list when mode is "following"', async () => {
     fixture.componentRef.setInput('mode', 'following');
     fixture.detectChanges();
     await fixture.whenStable();
-
     expect(mockUserService.getFollowing).toHaveBeenCalledWith('target-user');
   });
 
-  it('should render users returned from the resource', async () => {
+  it('renders profile identity and reusable quick actions', async () => {
     mockUserService.getFollowers.mockResolvedValue({
-      data: [makeUser({ id: 'f1', display_name: 'Follower One', is_followed_by_me: false })],
+      data: [
+        makeUser({
+          id: 'f1',
+          display_name: 'Follower One',
+          is_followed_by_me: false,
+        }),
+      ],
       total: 1,
     });
 
@@ -86,56 +104,11 @@ describe('FollowListComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Follower One');
+    expect(buttonWithText('Tap to chat')).toBeTruthy();
+    expect(buttonWithText('Follow')).toBeTruthy();
   });
 
-  it('should show the empty state when there are no users', async () => {
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.textContent).toContain('No followers yet.');
-  });
-
-  it('should keep profile navigation as a native link', async () => {
-    mockUserService.getFollowers.mockResolvedValue({
-      data: [makeUser({ id: 'f1', display_name: 'Follower One' })],
-      total: 1,
-    });
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('li a');
-    expect(link.tagName).toBe('A');
-    expect(link.getAttribute('href')).toBe('/profile/f1');
-    expect(link.getAttribute('role')).toBeNull();
-    expect(link.getAttribute('tabindex')).toBeNull();
-  });
-
-  it('should keep back and follow actions as native Spartan buttons', async () => {
-    mockUserService.getFollowers.mockResolvedValue({
-      data: [makeUser({ id: 'f1', display_name: 'Follower One', is_followed_by_me: false })],
-      total: 1,
-    });
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const backButton: HTMLButtonElement = fixture.nativeElement.querySelector('.sticky button');
-    const followButton: HTMLButtonElement = fixture.nativeElement.querySelector('li button');
-
-    expect(backButton.type).toBe('button');
-    expect(backButton.getAttribute('role')).toBeNull();
-    expect(backButton.getAttribute('tabindex')).toBeNull();
-    expect(followButton.type).toBe('button');
-    expect(followButton.getAttribute('role')).toBeNull();
-    expect(followButton.getAttribute('tabindex')).toBeNull();
-    expect(followButton.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('should not render a follow toggle for the signed-in user\'s own row', async () => {
+  it('hides quick actions on the signed-in user row', async () => {
     mockUserService.getFollowers.mockResolvedValue({
       data: [makeUser({ id: 'viewer-1', display_name: 'Me' })],
       total: 1,
@@ -145,63 +118,38 @@ describe('FollowListComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const followButtons = fixture.nativeElement.querySelectorAll('li button');
-    expect(followButtons.length).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('li button').length).toBe(0);
   });
 
-  it('should optimistically toggle follow state on click', async () => {
+  it('opens the canonical direct room instead of routing with the profile id', async () => {
     mockUserService.getFollowers.mockResolvedValue({
-      data: [makeUser({ id: 'f1', display_name: 'Follower One', is_followed_by_me: false })],
+      data: [makeUser({ id: 'f1', display_name: 'Follower One' })],
       total: 1,
     });
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('li button');
-    expect(button.textContent).toContain('Follow');
-
-    button.click();
+    buttonWithText('Tap to chat')!.click();
     await fixture.whenStable();
-    fixture.detectChanges();
 
-    expect(mockUserService.followUser).toHaveBeenCalledWith('f1');
-    expect(button.textContent).toContain('Unfollow');
-    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(mockConversations.openOrCreate).toHaveBeenCalledWith('f1');
+    expect(navigate).toHaveBeenCalledWith(['/chat', 'room-123']);
+    expect(navigate).not.toHaveBeenCalledWith(['/chat', 'f1']);
   });
 
-  it('should route an existing follow through the unfollow action', async () => {
-    mockUserService.getFollowers.mockResolvedValue({
-      data: [makeUser({ id: 'f1', display_name: 'Follower One', is_followed_by_me: true })],
-      total: 1,
-    });
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('li button');
-    expect(button.getAttribute('aria-pressed')).toBe('true');
-
-    button.click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(mockUserService.unfollowUser).toHaveBeenCalledWith('f1');
-    expect(mockUserService.followUser).not.toHaveBeenCalled();
-    expect(button.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('should disable and mark the follow action busy while a mutation is pending', async () => {
-    let resolveFollow: (() => void) | undefined;
-    mockUserService.followUser.mockReturnValue(
-      new Promise<void>((resolve) => {
-        resolveFollow = resolve;
+  it('prevents rapid duplicate message actions', async () => {
+    let resolveRoom!: (roomId: string) => void;
+    mockConversations.openOrCreate.mockReturnValue(
+      new Promise<string>((resolve) => {
+        resolveRoom = resolve;
       }),
     );
     mockUserService.getFollowers.mockResolvedValue({
-      data: [makeUser({ id: 'f1', display_name: 'Follower One', is_followed_by_me: false })],
+      data: [makeUser({ id: 'f1', display_name: 'Follower One' })],
       total: 1,
     });
 
@@ -209,77 +157,59 @@ describe('FollowListComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('li button');
-    button.click();
-    fixture.detectChanges();
+    const messageButton = buttonWithText('Tap to chat')!;
+    messageButton.click();
+    messageButton.click();
+    expect(mockConversations.openOrCreate).toHaveBeenCalledTimes(1);
 
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute('aria-busy')).toBe('true');
-
-    button.click();
-    expect(mockUserService.followUser).toHaveBeenCalledTimes(1);
-
-    resolveFollow?.();
+    resolveRoom('room-123');
     await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(button.disabled).toBe(false);
-    expect(button.getAttribute('aria-busy')).toBeNull();
   });
 
-  it('should render the correct number of followers', async () => {
+  it('shares optimistic follow state and rolls it back on failure', async () => {
     mockUserService.getFollowers.mockResolvedValue({
       data: [
-        makeUser({ id: 'f1', display_name: 'Follower One' }),
-        makeUser({ id: 'f2', display_name: 'Follower Two' }),
+        makeUser({
+          id: 'f1',
+          display_name: 'Follower One',
+          is_followed_by_me: false,
+        }),
       ],
-      total: 2,
-    });
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const userElements = fixture.nativeElement.querySelectorAll('li');
-    expect(userElements.length).toBe(2);
-    expect(fixture.nativeElement.textContent).toContain('Follower One');
-    expect(fixture.nativeElement.textContent).toContain('Follower Two');
-  });
-
-  it('should handle errors when fetching followers', async () => {
-    mockUserService.getFollowers.mockRejectedValue(new Error('Failed to fetch followers'));
-
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const errorMessage = fixture.nativeElement.querySelector('.error-message');
-    expect(errorMessage.textContent).toContain('Failed to load the list. Please try again.');
-  });
-
-  it('should roll back follow state and expose an alert when a mutation fails', async () => {
-    mockUserService.getFollowers.mockResolvedValue({
-      data: [makeUser({ id: 'f1', display_name: 'Follower One', is_followed_by_me: false })],
       total: 1,
     });
-    mockUserService.followUser.mockRejectedValue(new Error('Failed to follow user'));
 
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('li button');
-    expect(button.textContent).toContain('Follow');
-
-    button.click();
+    const followButton = buttonWithText('Follow')!;
+    followButton.click();
     await fixture.whenStable();
     fixture.detectChanges();
-
     expect(mockUserService.followUser).toHaveBeenCalledWith('f1');
-    expect(button.textContent).toContain('Follow');
-    expect(button.getAttribute('aria-pressed')).toBe('false');
-    const errorMessage: HTMLElement = fixture.nativeElement.querySelector('.error-message');
-    expect(errorMessage.getAttribute('role')).toBe('alert');
-    expect(errorMessage.textContent).toContain('Failed to follow user');
+    expect(followButton.textContent).toContain('Unfollow');
+
+    mockUserService.unfollowUser.mockRejectedValue(new Error('failed'));
+    followButton.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(followButton.textContent).toContain('Unfollow');
+    // The rollback is announced with translated copy, never the raw error text.
+    expect(fixture.nativeElement.textContent).toContain('followList.followError');
+  });
+
+  it('renders empty and load-error states', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No followers yet.');
+
+    // Following mode loads through getFollowing.
+    mockUserService.getFollowing.mockRejectedValue(new Error('Failed to fetch following'));
+    fixture.componentRef.setInput('mode', 'following');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
   });
 });

@@ -6,8 +6,10 @@ import { QuestsModule } from '../quests/quests.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 import { MomentsCacheInvalidationService } from './moments-cache-invalidation.service';
 import { MomentsController } from './moments.controller';
+import { MomentsFeedService } from './moments-feed.service';
 import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService } from './moments.service';
+import { CorrectionQualityService } from './correction-quality.service';
 import { TimelineWorker } from './timeline.worker';
 
 @Module({
@@ -21,7 +23,9 @@ import { TimelineWorker } from './timeline.worker';
   controllers: [MomentsController],
   providers: [
     MomentsService,
+    MomentsFeedService,
     MomentsRankingService,
+    CorrectionQualityService,
     TimelineWorker,
     MomentsCacheInvalidationService,
   ],

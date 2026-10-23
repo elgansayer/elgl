@@ -3,14 +3,13 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandler } from '@angular/core';
 import { VocabularyDisplayComponent } from './vocabulary-display.component';
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
-import { FlashcardService } from '../../services/flashcard.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { signal } from '@angular/core';
 import * as toastService from '../../services/toast.service';
 
 describe.skip('VocabularyDisplayComponent', () => {
-  const mockCreateFlashcard = vi.fn().mockResolvedValue({});
-  const mockFlashcardService = { createFlashcard: mockCreateFlashcard };
+  const mockSaveWord = vi.fn().mockResolvedValue({});
   const mockI18n = {
     translate: vi.fn((key: string, params?: Record<string, string>) => {
       if (key === 'vocabDisplay.contextSentence') return `Vocabulary from hobby: ${params?.['tag'] ?? ''}`;
@@ -23,7 +22,7 @@ describe.skip('VocabularyDisplayComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
-    mockCreateFlashcard.mockReset().mockResolvedValue({});
+    mockSaveWord.mockReset().mockResolvedValue({});
     mockErrorHandler.handleError.mockReset();
     vi.clearAllMocks();
     const mockStore = {
@@ -37,7 +36,7 @@ describe.skip('VocabularyDisplayComponent', () => {
       imports: [VocabularyDisplayComponent],
       providers: [
         { provide: HobbyTagsStore, useValue: mockStore },
-        { provide: FlashcardService, useValue: mockFlashcardService },
+        { provide: VocabularyStore, useValue: { saveWord: mockSaveWord } },
         { provide: I18nService, useValue: mockI18n },
         { provide: ErrorHandler, useValue: mockErrorHandler },
       ],
@@ -63,17 +62,16 @@ describe.skip('VocabularyDisplayComponent', () => {
   describe.skip('addToFlashcards', () => {
     const item = { word: 'hello', translation: 'hola', hobbyTagName: 'Spanish' };
 
-    it('should call flashcardService.createFlashcard with correct dto', async () => {
+    it('should call vocabStore.saveWord with correct dto', async () => {
       const fixture = TestBed.createComponent(VocabularyDisplayComponent);
       const component = fixture.componentInstance;
 
       await component.addToFlashcards(item);
 
-      expect(mockCreateFlashcard).toHaveBeenCalledOnce();
-      expect(mockCreateFlashcard).toHaveBeenCalledWith({
-        word: 'hello',
-        sourceLanguage: 'en',
-        contextSentence: 'Vocabulary from hobby: Spanish',
+      expect(mockSaveWord).toHaveBeenCalledOnce();
+      expect(mockSaveWord).toHaveBeenCalledWith({
+        word_token: 'hello',
+        original_context: 'Vocabulary from hobby: Spanish',
         translation: 'hola',
       });
     });
@@ -91,7 +89,7 @@ describe.skip('VocabularyDisplayComponent', () => {
 
     it('should show error toast when flashcard creation fails', async () => {
       const showErrorToastSpy = vi.spyOn(toastService, 'showErrorToast');
-      mockCreateFlashcard.mockRejectedValueOnce(new Error('Network error'));
+      mockSaveWord.mockRejectedValueOnce(new Error('Network error'));
       const fixture = TestBed.createComponent(VocabularyDisplayComponent);
       const component = fixture.componentInstance;
 

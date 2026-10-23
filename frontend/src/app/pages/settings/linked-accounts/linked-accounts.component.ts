@@ -7,7 +7,6 @@ import {
   type LinkableAccountProvider,
   type LinkedAccountProvider,
 } from '../../../services/linked-accounts.service';
-import { AppButtonSecondaryComponent } from '../../../components/primitives/button-secondary/button-secondary.component';
 
 interface ProviderInfo {
   readonly id: LinkedAccountProvider;
@@ -19,7 +18,7 @@ interface ProviderInfo {
 
 @Component({
   selector: 'app-linked-accounts-settings',
-  imports: [HlmButton, TranslatePipe, AppButtonSecondaryComponent],
+  imports: [HlmButton, TranslatePipe],
   templateUrl: './linked-accounts.component.html',
   styleUrl: './linked-accounts.component.scss',
 })

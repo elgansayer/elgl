@@ -6,7 +6,6 @@ import { AdminModerationQueryService } from './admin-moderation-query.service';
 import { AdminRoleInventoryService } from './admin-role-inventory.service';
 import { AdminService } from './admin.service';
 import { AdminSystemHealthService } from './admin-system-health.service';
-import { AdminUserDetailService } from './admin-user-detail.service';
 import { AdminV1Controller } from './admin-v1.controller';
 
 describe('AdminV1Controller system health auditing', () => {
@@ -20,7 +19,6 @@ describe('AdminV1Controller system health auditing', () => {
     const controller = new AdminV1Controller(
       {} as AdminAuthorizationService,
       {} as AdminService,
-      {} as AdminUserDetailService,
       {} as AdminLoginHistoryQueryService,
       audit as unknown as AdminAuditService,
       {} as AdminAuditQueryService,

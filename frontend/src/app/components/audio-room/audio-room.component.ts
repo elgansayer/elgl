@@ -1,4 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
+import { environment } from '../../../environments/environment';
 import { showToast } from '../../services/toast.service';
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -8,6 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
+import { AudioRoomArchivesService } from '../../services/audio-room-archives.service';
 import { AuthService } from '../../services/auth.service';
 import { QuickPollService } from '../../services/quick-poll.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
@@ -36,7 +38,6 @@ import {
   buildStageViewModel,
   normaliseAudienceCount,
 } from './audio-room-view-model';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-audio-room',
@@ -70,6 +71,7 @@ export class AudioRoomComponent implements OnInit {
   readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly archiveService = inject(AudioRoomArchivesService);
   private readonly apiBase = environment.apiUrl;
 
   readonly showCreateModal = signal<boolean>(false);
@@ -239,11 +241,20 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async archive(): Promise<void> {
+    const room = this.store.currentRoom();
+    if (!room) return;
     const confirmed = await this.confirmService.confirm(
       this.i18n.translate('audioRoom.archiveConfirm'),
     );
     if (!confirmed) return;
-    await this.store.archiveRoom();
+
+    try {
+      await this.archiveService.finalize(room.id);
+      this.store.leaveRoom();
+    } catch (error) {
+      console.error('Archive room error:', error);
+      showToast(this.i18n.translate('common.error_generic'));
+    }
   }
 
   readonly quickPollService = inject(QuickPollService);

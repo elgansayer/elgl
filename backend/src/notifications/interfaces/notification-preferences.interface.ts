@@ -20,6 +20,7 @@ export interface NotificationPreferences {
   new_follower: CategoryPreference;
   quiet_hours_start?: string;
   quiet_hours_end?: string;
+  quiet_hours_timezone?: string;
   do_not_disturb: boolean;
   customToneUrl?: string;
   vibrationPattern?: string;

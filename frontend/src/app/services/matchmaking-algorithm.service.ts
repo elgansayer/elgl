@@ -157,6 +157,20 @@ export class MatchmakingAlgorithmService {
     if (filters.availability_evening && !partner.availability_evening) return false;
     if (filters.has_audio_intro && !partner.audio_intro_url?.trim()) return false;
 
+    const requestedInterests = (filters.interests ?? '')
+      .split(',')
+      .map((interest) => interest.trim().toLowerCase())
+      .filter((interest) => interest.length > 0);
+    if (requestedInterests.length > 0) {
+      // Cached profiles may still carry the legacy hobbies field.
+      const partnerInterests = new Set(
+        [...(partner.interests ?? []), ...(partner.hobbies ?? [])].map((interest) =>
+          interest.trim().toLowerCase(),
+        ),
+      );
+      if (!requestedInterests.some((interest) => partnerInterests.has(interest))) return false;
+    }
+
     if (filters.age_min !== undefined || filters.age_max !== undefined) {
       const age = partner.age;
       if (age === undefined || age === null) return true;
@@ -240,8 +254,12 @@ export class MatchmakingAlgorithmService {
       return 0;
     }
 
-    const myGoals = new Set(currentUser.learning_goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean));
-    const partnerGoals = partner.learning_goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean);
+    const myGoals = new Set(
+      currentUser.learning_goals.map((goal) => goal.trim().toLowerCase()).filter(Boolean),
+    );
+    const partnerGoals = partner.learning_goals
+      .map((goal) => goal.trim().toLowerCase())
+      .filter(Boolean);
 
     if (myGoals.size === 0 || partnerGoals.length === 0) return 0;
 

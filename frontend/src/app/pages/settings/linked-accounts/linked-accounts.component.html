@@ -27,9 +27,16 @@
       @if (linkedAccountsResource.error()) {
         <div role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-4 space-y-3">
           <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
-          <app-button-secondary (clicked)="retryLoad()" [disabled]="linkedAccountsResource.isLoading()">
+          <button
+            hlmBtn
+            type="button"
+            variant="secondary"
+            size="touch"
+            (click)="retryLoad()"
+            [disabled]="linkedAccountsResource.isLoading()"
+          >
             {{ 'common.retry' | t }}
-          </app-button-secondary>
+          </button>
         </div>
       } @else {
         <div
@@ -70,14 +77,18 @@
                     {{ 'settings.linkedAccounts.unlink' | t }}
                   </button>
                 } @else {
-                  <app-button-secondary
-                    (clicked)="link(provider.id)"
-                    customClass="min-h-11 text-sm px-3 rounded-lg disabled:opacity-40"
+                  <button
+                    hlmBtn
+                    type="button"
+                    variant="secondary"
+                    size="touch"
+                    class="text-sm"
+                    (click)="link(provider.id)"
                     [disabled]="loading()"
-                    [ariaLabel]="provider.labelKey | t"
+                    [attr.aria-label]="provider.labelKey | t"
                   >
                     {{ 'settings.linkBtn' | t }}
-                  </app-button-secondary>
+                  </button>
                 }
               }
             </div>
@@ -99,11 +110,18 @@
           {{ 'settings.linkedAccounts.subtitle' | t }}
         </p>
         <div class="flex flex-wrap gap-2">
-          <app-button-secondary (clicked)="cancelUnlink()" [disabled]="loading()">
-            {{ 'common.cancel' | t }}
-          </app-button-secondary>
           <button
             hlmBtn
+            type="button"
+            variant="secondary"
+            size="touch"
+            (click)="cancelUnlink()"
+            [disabled]="loading()"
+          >
+            {{ 'common.cancel' | t }}
+          </button>
+          <button
+            hlmBtn size="touch"
             (click)="confirmUnlink()"
             class="min-h-11 rounded-lg bg-danger px-4 text-sm font-semibold text-on-fill disabled:opacity-40"
             [disabled]="loading()"

@@ -35,6 +35,7 @@ from openhands_factory.exceptions import (
     FactoryError,
     ProviderCapacityUnavailable,
 )
+from openhands_factory.host_resource_gate import HostResourceGate
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, ProviderName, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -158,6 +159,8 @@ def test_provider_sandbox_restores_only_explicit_home_mounts(tmp_path: Path) -> 
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
     assert "for masked_root in /mnt /srv /media" in sandbox_script
+    assert "/run/containerd/containerd.sock /run/docker.sock" in sandbox_script
+    assert 'mount --bind /dev/null "$container_socket"' in sandbox_script
 
 
 def test_provider_sandbox_staging_does_not_mask_a_protected_source(tmp_path: Path) -> None:
@@ -286,6 +289,9 @@ def test_shutdown_terminates_registered_agent_processes(tmp_path: Path) -> None:
 
     assert not worker.is_alive()
     assert results and results[0].exit_code != 0
+    assert results[0].cancelled
+    assert classify_process_failure(results[0]).kind is AgentFailureKind.CANCELLED
+    assert AgentProcessRunner._cancelled_processes == set()
 
 
 def test_shutdown_gate_prevents_a_late_provider_process_start(tmp_path: Path) -> None:
@@ -304,6 +310,46 @@ def test_shutdown_gate_prevents_a_late_provider_process_start(tmp_path: Path) ->
         AgentProcessRunner.reset_shutdown()
 
     assert AgentProcessRunner._processes == set()
+
+
+def test_routing_leases_only_the_provider_that_actually_runs(tmp_path: Path) -> None:
+    preferred, recovering = Provider("preferred"), Provider("recovering")
+    store = AgentHealthStore(tmp_path / "health.json")
+    breaker = AgentCircuitBreaker("recovering", 1, 1)
+    breaker.record_failure(
+        AgentFailureKind.PROVIDER_TRANSPORT, datetime.now(UTC) - timedelta(minutes=5)
+    )
+    store.save({"recovering": breaker})
+    router = AgentRouter([preferred, recovering], health_store=store)
+    task = Task("canary", "Bounded routing", "", "issue", 1)
+    request = AgentRequest(AgentPhase.CODE_REVIEW, task, "review", tmp_path)
+    assert router.run(request, Job(task)).provider == "preferred"
+    assert store.load()["recovering"].state == "open"
+    assert recovering.calls == 0
+    assert router.run(request, Job(task), exclude={"preferred"}).provider == "recovering"
+    assert store.load()["recovering"].state == "closed"
+
+
+def test_cancelled_attempt_does_not_poison_provider_health_or_metrics(tmp_path: Path) -> None:
+    provider = Provider("cancelled")
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    router = AgentRouter([provider], metrics_store=metrics)
+    now = datetime.now(UTC)
+    result = AgentResult(
+        provider.name,
+        AgentPhase.CODE_REVIEW,
+        False,
+        now,
+        now,
+        -15,
+        None,
+        None,
+        failure=AgentFailure(AgentFailureKind.CANCELLED, "Factory requested cancellation"),
+    )
+    router._record_breaker(result)
+    router._record_metrics(result, 0)
+    assert router._breakers()[provider.name].consecutive_failures == 0
+    assert metrics.snapshot()["providers"] == []
 
 
 def test_terminate_reaps_process_after_direct_kill_fallback(
@@ -547,6 +593,46 @@ def test_router_skips_cross_process_busy_provider(tmp_path: Path) -> None:
     assert second.calls == 1
     assert job.provider_failover_count == 1
     assert job.last_provider_failure == "first:busy"
+
+
+def test_router_holds_host_reader_for_provider_lifetime(tmp_path: Path) -> None:
+    provider_started = threading.Event()
+    provider_release = threading.Event()
+
+    class BlockingProvider(Provider):
+        def run(self, request: AgentRequest) -> AgentResult:
+            provider_started.set()
+            assert provider_release.wait(timeout=2)
+            return super().run(request)
+
+    gate_path = tmp_path / "host-resources.json"
+    gate = HostResourceGate(gate_path, 2)
+    other_daemon_gate = HostResourceGate(gate_path, 2)
+    agent_request, job = request(tmp_path)
+    router = AgentRouter([BlockingProvider("first")], host_resource_slots=gate)
+    result: list[AgentResult] = []
+    worker = threading.Thread(target=lambda: result.append(router.run(agent_request, job)))
+
+    worker.start()
+    assert provider_started.wait(timeout=1)
+    assert other_daemon_gate.acquire_shared("other:first")
+    assert other_daemon_gate.acquire_shared("other:blocked") is False
+
+    provider_release.set()
+    worker.join(timeout=1)
+    assert worker.is_alive() is False
+    assert result[0].success
+    assert other_daemon_gate.acquire_shared("other:after")
+
+
+def test_router_derives_host_gate_from_durable_provider_capacity(tmp_path: Path) -> None:
+    capacity = ProviderCapacityStore(tmp_path, max_lease_seconds=900)
+
+    router = AgentRouter([Provider("first")], capacity_store=capacity)
+
+    assert router.host_resource_slots is not None
+    assert router.host_resource_slots.path == tmp_path / "host-resource-gate.json"
+    assert router.host_resource_slots.lease_seconds == 900
 
 
 def test_router_reserves_provider_slot_for_pull_request_review(tmp_path: Path) -> None:
@@ -843,6 +929,14 @@ def test_metrics_restore_legacy_records_without_failure_counts(tmp_path: Path) -
     assert providers[0]["successes"] == 1
     assert providers[0]["failures"] == 2
     assert providers[0]["failure_counts"] == {}
+    assert providers[0]["successful_outputs_per_model_minute"] is None
+
+
+def test_metrics_measure_successes_per_total_model_minute(tmp_path: Path) -> None:
+    metrics = MetricsStore(tmp_path / "metrics.json")
+    metrics.record("google", "current", successful=True, duration_seconds=30)
+    metrics.record("google", "current", successful=False, duration_seconds=90)
+    assert metrics.snapshot()["providers"][0]["successful_outputs_per_model_minute"] == 0.5
 
 
 def test_capacity_store_discards_malformed_and_expired_entries(tmp_path: Path) -> None:
