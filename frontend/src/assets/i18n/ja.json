@@ -618,5 +618,13 @@
   "helpAbout.appVersion": "アプリバージョン",
   "helpAbout.buildNumber": "ビルド番号",
   "helpAbout.openSourceLicences": "オープンソースライセンス",
-  "legal.documentSections": "文書のセクション"
+  "legal.documentSections": "文書のセクション",
+  "call.accept": "通話に応答",
+  "call.decline": "通話を拒否",
+  "call.videoOn": "カメラをオン",
+  "call.videoOff": "カメラをオフ",
+  "call.mute": "ミュート",
+  "call.unmute": "ミュート解除",
+  "call.hang_up": "通話を終了",
+  "moments.viewAuthorProfile": "{{name}}さんのプロフィールを表示"
 }

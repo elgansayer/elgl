@@ -558,5 +558,13 @@
   "forcedUpdateModal.message": "يتوفر إصدار جديد من التطبيق. يرجى التحديث للمتابعة.",
   "forcedUpdateModal.title": "التحديث مطلوب",
   "forcedUpdateModal.updateButton": "تحديث الآن",
-  "legal.documentSections": "أقسام المستند"
+  "legal.documentSections": "أقسام المستند",
+  "call.accept": "قبول المكالمة",
+  "call.decline": "رفض المكالمة",
+  "call.videoOn": "تشغيل الكاميرا",
+  "call.videoOff": "إيقاف الكاميرا",
+  "call.mute": "كتم الصوت",
+  "call.unmute": "إلغاء كتم الصوت",
+  "call.hang_up": "إنهاء المكالمة",
+  "moments.viewAuthorProfile": "عرض الملف الشخصي لـ {{name}}"
 }

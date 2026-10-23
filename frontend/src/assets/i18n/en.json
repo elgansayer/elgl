@@ -918,5 +918,10 @@
   "notifications.followedYou": "started following you",
   "notifications.viewedProfile": "viewed your profile",
   "notifications.mentionedInChat": "mentioned you in a chat",
-  "notifications.systemAlert": "System alert"
+  "notifications.systemAlert": "System alert",
+  "call.accept": "Accept call",
+  "call.decline": "Decline call",
+  "call.videoOn": "Turn camera on",
+  "call.videoOff": "Turn camera off",
+  "moments.viewAuthorProfile": "View {{name}}'s profile"
 }
