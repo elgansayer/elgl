@@ -14,10 +14,6 @@ import {
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
-  DiscoveryRecommendationDto,
-  DiscoveryRecommendationsService,
-} from './discovery-recommendations.service';
-import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
@@ -35,7 +31,6 @@ interface AuthenticatedRequest {
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,
-    private readonly discoveryRecommendationsService: DiscoveryRecommendationsService,
   ) {}
 
   /**
