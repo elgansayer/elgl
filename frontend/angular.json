@@ -41,24 +41,13 @@
               }
             ],
             "styles": ["src/styles.scss", "src/forced-colors.scss", "src/reduced-motion.scss"],
-            "serviceWorker": "ngsw-config.json",
-            "optimization": {
-              "scripts": true,
-              "styles": {
-                "minify": true,
-                "inlineCritical": true
-              },
-              "fonts": false
-            }
+            "serviceWorker": "ngsw-config.json"
           },
           "configurations": {
             "production": {
               "optimization": {
                 "scripts": true,
-                "styles": {
-                  "minify": true,
-                  "inlineCritical": true
-                },
+                "styles": true,
                 "fonts": {
                   "inline": false
                 }
