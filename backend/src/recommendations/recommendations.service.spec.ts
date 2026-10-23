@@ -847,6 +847,7 @@ describe('RecommendationsService', () => {
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 100,
+          last_active_at: new Date().toISOString(),
           correction_ratio: 0.9,
         },
         {
@@ -857,6 +858,7 @@ describe('RecommendationsService', () => {
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 10,
+          last_active_at: new Date().toISOString(),
           correction_ratio: 0.9,
         },
         {
@@ -865,6 +867,7 @@ describe('RecommendationsService', () => {
           avatar_url: null,
           native_languages: ['es'],
           target_languages: ['en'],
+          // Qualification is computed (streak + recent activity), not the stored flag.
           is_serious_learner: false,
           study_streak_days: 50,
           correction_ratio: 0.9,
@@ -1273,6 +1276,7 @@ describe('RecommendationsService', () => {
           target_languages: ['en', 'pt'],
           is_serious_learner: true,
           study_streak_days: 42,
+          last_active_at: new Date().toISOString(),
           correction_ratio: 0.92,
         },
       ]);

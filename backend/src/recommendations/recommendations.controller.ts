@@ -18,6 +18,10 @@ import {
   RecommendedUserDto,
 } from './recommendations.service';
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
+import {
+  DiscoveryRecommendationDto,
+  DiscoveryRecommendationsService,
+} from './discovery-recommendations.service';
 
 interface AuthenticatedRequest {
   user?: { id: string };
@@ -31,6 +35,7 @@ interface AuthenticatedRequest {
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,
+    private readonly discoveryRecommendationsService: DiscoveryRecommendationsService,
   ) {}
 
   /**
