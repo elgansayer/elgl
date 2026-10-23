@@ -567,3 +567,7 @@
 ## 2023-10-23 - Concurrent Chunk Processing for LLM Summarization
 **Learning:** Replaced sequential API calls (summarization of chunks) with `Promise.all`. Sequential calls block the execution loop and cause additive latency when dealing with large payloads.
 **Action:** Always batch independent asynchronous external API queries with `Promise.all` instead of sequential `await` loops inside data processing pipelines, unless causality or strict boundaries are required.
+
+## 2026-10-23 - [Optimize sequential awaits inside for loops with Promise.all]
+**Learning:** Found sequential `await` operations inside `for...of` loops (e.g., `areUsersBlocked` in `ProfileVisitsService` and `invalidateEscrowCaches` in `EscrowService`). This blocks the execution loop and causes additive latency for external API calls, database queries, and Redis operations.
+**Action:** Replace `for...of` loops containing sequential `await` calls with `Promise.all` mapping to process independent operations concurrently. This significantly reduces total execution time from O(N) database/network roundtrips to an O(1) concurrent batch block.
