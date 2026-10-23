@@ -923,5 +923,8 @@
   "call.decline": "Decline call",
   "call.videoOn": "Turn camera on",
   "call.videoOff": "Turn camera off",
-  "moments.viewAuthorProfile": "View {{name}}'s profile"
+  "moments.viewAuthorProfile": "View {{name}}'s profile",
+  "chat_settings.load_unavailable": "Chat settings are temporarily unavailable.",
+  "chat_settings.load_unavailable_desc": "Your saved settings remain active. Retention controls are disabled until they can be loaded.",
+  "chat_settings.save_failed": "That change could not be saved. Your previous setting has been restored."
 }
