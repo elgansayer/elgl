@@ -172,7 +172,10 @@ describe('DistanceSliderComponent', () => {
   it('uses only Relay semantic colour tokens for the track and thumb', () => {
     const styles = (
       DistanceSliderComponent as unknown as { ɵcmp: { styles: string[] } }
-    ).ɵcmp.styles.join('\n');
+    )
+      .ɵcmp.styles.join('\n')
+      // Angular 22 namespaces component custom properties as --%NS%name.
+      .replaceAll('%NS%', '');
 
     expect(styles).toContain('rgb(var(--surface-100-rgb))');
     expect(styles).toContain('rgb(var(--surface-500-rgb))');
