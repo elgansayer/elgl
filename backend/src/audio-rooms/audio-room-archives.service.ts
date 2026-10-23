@@ -473,11 +473,21 @@ export class AudioRoomArchivesService {
     }
 
     const parts: ChunkSummary[] = [];
-    for (const chunk of chunks) {
-      try {
-        parts.push(await this.summariseChunk(chunk));
-      } catch {
-        this.logger.warn('One audio-room transcript summary chunk failed');
+    // ⚡ Bolt: Batching chunks using Promise.allSettled instead of sequential awaits
+    // reduces O(N) network roundtrips to O(N/10) concurrent blocks, significantly
+    // lowering total LLM summary execution latency while adhering to concurrency limits.
+    const CHUNK_BATCH_SIZE = 10;
+    for (let i = 0; i < chunks.length; i += CHUNK_BATCH_SIZE) {
+      const batch = chunks.slice(i, i + CHUNK_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((chunk) => this.summariseChunk(chunk)),
+      );
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          parts.push(result.value);
+        } else {
+          this.logger.warn('One audio-room transcript summary chunk failed');
+        }
       }
     }
 

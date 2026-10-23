@@ -564,3 +564,8 @@
 
 
 
+
+## 2024-05-25 - [Optimize bulk LLM generation via bounded concurrent Promise.allSettled chunking in audio rooms]
+
+**Learning:** In `audio-room-archives.service.ts`, `generateTranscriptSummary` sequentially iterated over transcript chunks calling `summariseChunk` with `await`. The sequential execution of network calls for large datasets compounds latency to O(N) limits, causing severe performance bottlenecks.
+**Action:** When making bulk external API calls (e.g. LLM prompts) across numerous rows or chunks, implement a bounded chunking approach (e.g., slicing an array into chunks of 10) mapped into a concurrent `Promise.allSettled` execution block within an outer `for` loop. This drastically speeds up processing time while maintaining safe rate-limited bounds.
