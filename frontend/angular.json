@@ -52,10 +52,11 @@
             "production": {
               "optimization": {
                 "scripts": true,
-                "styles": true,
-                "fonts": {
-                  "inline": false
-                }
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
+                "fonts": false
               },
               "budgets": [
                 {
