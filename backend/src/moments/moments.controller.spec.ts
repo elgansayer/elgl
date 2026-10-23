@@ -6,6 +6,7 @@ import { CorrectionQualityService } from './correction-quality.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { MomentsRankingService } from './moments-ranking.service';
 
 describe('MomentsController', () => {
   let controller: MomentsController;

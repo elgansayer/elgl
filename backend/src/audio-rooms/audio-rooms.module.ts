@@ -47,6 +47,7 @@ import { TranscriptEgressService } from './transcript-egress.service';
           'https://mock.livekit.cloud';
         const apiKey = configService.get<string>('LIVEKIT_API_KEY');
         const secretKey = configService.get<string>('LIVEKIT_SECRET');
+        const env = configService.get<string>('NODE_ENV') || 'development';
 
         const env = configService.get<string>('NODE_ENV') || 'development';
 
@@ -54,6 +55,19 @@ import { TranscriptEgressService } from './transcript-egress.service';
           throw new Error(
             'LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured',
           );
+        }
+
+        if (env === 'production') {
+          if (
+            apiKey === 'test-livekit-api-key' ||
+            apiKey === 'dev_livekit_key_test_value_123' ||
+            secretKey === 'test-livekit-secret' ||
+            secretKey === 'dev_livekit_secret_test_value_123'
+          ) {
+            throw new Error(
+              'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+            );
+          }
         }
 
         return new RoomServiceClient(livekitUrl, apiKey, secretKey);

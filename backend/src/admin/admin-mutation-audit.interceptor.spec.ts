@@ -10,18 +10,29 @@ function contextFor(
   baseUrl: string,
   path: string,
   user: { sub: string } | undefined = { sub: 'admin-user' },
+  options: {
+    body?: Record<string, unknown>;
+    requestId?: string;
+    params?: Record<string, string>;
+    handlerName?: string;
+    controllerName?: string;
+  } = {},
 ): ExecutionContext {
-  const handler = function testHandler() {};
-  const controller = class TestController {};
+  const handler = Object.defineProperty(function testHandler() {}, 'name', {
+    value: options.handlerName ?? 'testHandler',
+  });
+  const controller = Object.defineProperty(class TestController {}, 'name', {
+    value: options.controllerName ?? 'TestController',
+  });
   const request = {
     method,
     baseUrl,
     path,
     route: { path },
-    params: { id: 'target-user' },
-    headers: { 'x-request-id': 'request-123' },
+    params: options.params ?? { id: 'target-user' },
+    headers: { 'x-request-id': options.requestId ?? 'request-123' },
     user,
-    body: { password: 'must-never-be-audited' },
+    body: options.body ?? { password: 'must-never-be-audited' },
   };
 
   return {
@@ -57,18 +68,62 @@ function interceptorWithAudit() {
 }
 
 describe('AdminMutationAuditInterceptor', () => {
-  it('does not audit safe admin reads', async () => {
+  it('audits privileged reads and records only bounded result metadata', async () => {
     const { interceptor, audit } = interceptorWithAudit();
-    const next: CallHandler = { handle: () => of({ ok: true }) };
+    const next: CallHandler = {
+      handle: () =>
+        of({ users: [{ id: 'one' }, { id: 'two' }], secret: 'never-copy-me' }),
+    };
+
+    const result = await firstValueFrom(
+      interceptor.intercept(contextFor('GET', '/api/admin', '/users'), next),
+    );
+
+    expect(result).toMatchObject({ users: expect.any(Array) });
+    expect(audit.record).toHaveBeenCalledTimes(1);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorUserId: 'admin-user',
+        action: 'get /api/admin/users',
+        targetId: 'target-user',
+        targetType: 'user',
+        outcome: 'success',
+        correlationId: 'request-123',
+        metadata: expect.objectContaining({
+          source: 'admin-request-interceptor',
+          resultCount: 2,
+        }),
+      }),
+    );
+    expect(JSON.stringify(audit.record.mock.calls[0][0])).not.toContain(
+      'never-copy-me',
+    );
+  });
+
+  it('does not duplicate reads that already have richer route-level audits', async () => {
+    const { interceptor, audit } = interceptorWithAudit();
+    const next: CallHandler = { handle: () => of({ events: [] }) };
 
     await firstValueFrom(
-      interceptor.intercept(contextFor('GET', '/api/admin', '/users'), next),
+      interceptor.intercept(
+        contextFor(
+          'GET',
+          '/api/admin/v1',
+          '/audit',
+          { sub: 'admin-user' },
+          {
+            controllerName: 'AdminV1Controller',
+            handlerName: 'listAudit',
+          },
+        ),
+        next,
+      ),
     );
 
     expect(audit.record).not.toHaveBeenCalled();
   });
 
-  it('does not audit non-admin mutations', async () => {
+  it('does not audit non-admin requests', async () => {
     const { interceptor, audit } = interceptorWithAudit();
     const next: CallHandler = { handle: () => of({ ok: true }) };
 
@@ -85,7 +140,9 @@ describe('AdminMutationAuditInterceptor', () => {
 
     const result = await firstValueFrom(
       interceptor.intercept(
-        contextFor('POST', '/api/admin', '/users/:id/ban'),
+        contextFor('POST', '/api/admin', '/users/:id/ban', {
+          sub: 'admin-user',
+        }),
         next,
       ),
     );
@@ -105,20 +162,104 @@ describe('AdminMutationAuditInterceptor', () => {
     expect(JSON.stringify(recorded)).not.toContain('must-never-be-audited');
   });
 
-  it('persists a failed audit and preserves the original mutation error', async () => {
+  it('does not misclassify a failed success-audit write as an operation failure', async () => {
     const { interceptor, audit } = interceptorWithAudit();
-    const failure = new Error('mutation failed');
+    const auditFailure = new Error('audit unavailable');
+    audit.record.mockRejectedValueOnce(auditFailure);
+    const next: CallHandler = { handle: () => of({ ok: true }) };
+
+    await expect(
+      firstValueFrom(
+        interceptor.intercept(
+          contextFor('POST', '/api/admin', '/users/:id/ban', {
+            sub: 'admin-user',
+          }),
+          next,
+        ),
+      ),
+    ).rejects.toBe(auditFailure);
+
+    expect(audit.record).toHaveBeenCalledTimes(1);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'success' }),
+    );
+  });
+
+  it('captures an allow-listed reason without copying the request body', async () => {
+    const { interceptor, audit } = interceptorWithAudit();
+    const next: CallHandler = { handle: () => of({ ok: true }) };
+
+    await firstValueFrom(
+      interceptor.intercept(
+        contextFor(
+          'POST',
+          '/api/admin',
+          '/users/:id/ban',
+          { sub: 'admin-user' },
+          {
+            body: {
+              reasonCode: 'fraud_or_abuse',
+              operatorNote: 'Repeated automated abuse confirmed by review.',
+              token: 'never-copy-this',
+            },
+          },
+        ),
+        next,
+      ),
+    );
+
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reasonCode: 'fraud_or_abuse',
+        operatorNote: 'Repeated automated abuse confirmed by review.',
+      }),
+    );
+    expect(JSON.stringify(audit.record.mock.calls[0][0])).not.toContain(
+      'never-copy-this',
+    );
+  });
+
+  it('drops an untrusted request ID rather than persisting arbitrary header data', async () => {
+    const { interceptor, audit } = interceptorWithAudit();
+    const next: CallHandler = { handle: () => of({ ok: true }) };
+
+    await firstValueFrom(
+      interceptor.intercept(
+        contextFor(
+          'GET',
+          '/api/admin',
+          '/users',
+          { sub: 'admin-user' },
+          {
+            requestId: 'Bearer secret-token-value',
+          },
+        ),
+        next,
+      ),
+    );
+
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ correlationId: undefined }),
+    );
+  });
+
+  it('persists a failed audit and preserves the original operation error', async () => {
+    const { interceptor, audit } = interceptorWithAudit();
+    const failure = new Error('operation failed');
     const next: CallHandler = { handle: () => throwError(() => failure) };
 
     await expect(
       firstValueFrom(
         interceptor.intercept(
-          contextFor('DELETE', '/api/admin', '/blocks/:blockId'),
+          contextFor('DELETE', '/api/admin', '/blocks/:blockId', {
+            sub: 'admin-user',
+          }),
           next,
         ),
       ),
-    ).rejects.toThrow('mutation failed');
+    ).rejects.toThrow('operation failed');
 
+    expect(audit.record).toHaveBeenCalledTimes(1);
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         outcome: 'failed',

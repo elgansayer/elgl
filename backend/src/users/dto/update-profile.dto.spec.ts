@@ -1,4 +1,5 @@
 import { UpdateProfileDto } from './update-profile.dto';
+import { PROFICIENCY_LEVELS } from '../proficiency-level';
 
 describe('UpdateProfileDto', () => {
   it('should be defined', () => {
@@ -45,6 +46,30 @@ describe('UpdateProfileDto', () => {
 
     expect(errors.some((error) => error.property === 'proficiency_level')).toBe(
       false,
+    );
+  });
+
+  it('accepts the five-language transport ceiling used by Pro and Developer tiers', async () => {
+    const dto = Object.assign(new UpdateProfileDto(), {
+      target_languages: ['ja', 'fr', 'es', 'de', 'it'],
+    });
+
+    const errors = await validate(dto);
+
+    expect(
+      errors.filter((error) => error.property === 'target_languages'),
+    ).toHaveLength(0);
+  });
+
+  it('rejects more than five target languages before entitlement checks', async () => {
+    const dto = Object.assign(new UpdateProfileDto(), {
+      target_languages: ['ja', 'fr', 'es', 'de', 'it', 'pt'],
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.some((error) => error.property === 'target_languages')).toBe(
+      true,
     );
   });
 });
