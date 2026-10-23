@@ -185,9 +185,11 @@ describe('UserDetailComponent bio translation', () => {
   });
 
   it('shows a VIP badge when the member has not hidden it', async () => {
-    getUserProfile.mockResolvedValueOnce(
+    getUserProfile.mockResolvedValue(
       makeProfile('vip-visible', 'Bio', { is_vip: true, privacy_hide_vip_status: false }),
     );
+    fixture.componentRef.setInput('userId', 'vip-visible');
+    fixture.detectChanges();
     await component.loadProfile('vip-visible');
     fixture.detectChanges();
 
@@ -195,9 +197,11 @@ describe('UserDetailComponent bio translation', () => {
   });
 
   it('does not render the VIP badge when the member hides VIP status', async () => {
-    getUserProfile.mockResolvedValueOnce(
+    getUserProfile.mockResolvedValue(
       makeProfile('vip-hidden', 'Bio', { is_vip: true, privacy_hide_vip_status: true }),
     );
+    fixture.componentRef.setInput('userId', 'vip-hidden');
+    fixture.detectChanges();
     await component.loadProfile('vip-hidden');
     fixture.detectChanges();
 
