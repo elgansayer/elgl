@@ -1,5 +1,8 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   OnModuleDestroy,
@@ -10,6 +13,22 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
+
+export type EventRsvpStatus = 'attending' | 'interested';
+
+export interface EventRsvpSummary {
+  event_id: string;
+  attending_count: number;
+  interested_count: number;
+  viewer_status: EventRsvpStatus | null;
+}
+
+interface EventRsvpSummaryRpcRow {
+  event_id: string;
+  attending_count: number | string;
+  interested_count: number | string;
+  viewer_status: string | null;
+}
 
 export interface EventWithHost {
   id: string;
