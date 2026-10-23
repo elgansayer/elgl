@@ -38,7 +38,7 @@ describe('DiscoveryComponent serious learner mode', () => {
           provide: SafetyService,
           useValue: { getBlockedIdsAsync: vi.fn().mockResolvedValue([]) },
         },
-        { provide: AuthService, useValue: { currentUser: signal(null) } },
+        { provide: AuthService, useValue: { currentUser: signal(null), getAccessToken: () => undefined } },
         {
           provide: OfflineDiscoveryCacheService,
           useValue: {
