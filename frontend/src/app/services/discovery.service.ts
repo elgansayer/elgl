@@ -102,8 +102,7 @@ export class DiscoveryService {
 
     if (filters.sort) params = params.set('sort', filters.sort);
 
-    if (filters.has_audio_intro !== undefined)
-      params = params.set('has_audio_intro', filters.has_audio_intro.toString());
+    if (filters.has_audio_intro === true) params = params.set('has_audio_intro', 'true');
 
     if (filters.country !== undefined) params = params.set('country', filters.country);
 
@@ -168,7 +167,10 @@ export class DiscoveryService {
     users: UserProfile[],
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
   ): Promise<UserProfile[]> {
-    const filtered = await this.filterByVerifiedBlockGraph(users);
+    const filtered = this.applyRequiredFilters(
+      await this.filterByVerifiedBlockGraph(users),
+      filters,
+    );
     if (filtered.length === 0) return [];
 
     // Attach is_partner_of_week flag using separate endpoint
@@ -206,6 +208,12 @@ export class DiscoveryService {
     } catch {
       return [];
     }
+  }
+
+  private applyRequiredFilters(users: UserProfile[], filters: SearchFilterParams): UserProfile[] {
+    if (filters.has_audio_intro !== true) return users;
+
+    return users.filter((user) => Boolean(user.audio_intro_url?.trim()));
   }
 
   async searchByCountryCity(country?: string, city?: string): Promise<UserProfile[]> {
@@ -311,8 +319,8 @@ export class DiscoveryService {
         this.http.post<{ translated_text: string }>(
           `${environment.apiUrl}/nlp/translate-bio`,
           { target_user_id: targetUserId, target_language: targetLanguage },
-          { headers: this.getHeaders() }
-        )
+          { headers: this.getHeaders() },
+        ),
       );
       return result.translated_text;
     } catch {

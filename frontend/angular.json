@@ -41,6 +41,11 @@
               }
             ],
             "styles": ["src/styles.scss", "src/forced-colors.scss", "src/reduced-motion.scss"],
+            "optimization": {
+              "fonts": {
+                "inline": false
+              }
+            },
             "serviceWorker": "ngsw-config.json"
           },
           "configurations": {
