@@ -30,6 +30,22 @@ jobs:
       - name: Build production web image
         run: docker build --pull --target production --tag "elgl-web-ci:${GITHUB_SHA}" frontend
 
+      # Released images up to 82f20b959 served nginx's default welcome page
+      # because the SSR build names the client shell index.csr.html.
+      - name: Verify production image serves the application shell
+        run: |
+          set -euo pipefail
+          container=$(docker run -d -p 127.0.0.1:8080:80 "elgl-web-ci:${GITHUB_SHA}")
+          trap 'docker rm -f "$container" >/dev/null' EXIT
+          for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:8080/ >/dev/null 2>&1 && break; sleep 1; done
+          for route in / /chat /settings; do
+            body=$(curl -fsS "http://127.0.0.1:8080${route}")
+            if ! grep -q '<app-root' <<<"$body" || grep -qi 'Welcome to nginx' <<<"$body"; then
+              echo "Route ${route} did not return the application shell"
+              exit 1
+            fi
+          done
+
       - name: Report production runtime package versions
         run: |
           docker run --rm "elgl-web-ci:${GITHUB_SHA}" sh -ec '
