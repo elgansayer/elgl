@@ -1,4 +1,11 @@
-import { Controller, Get, Req, UseFilters, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  Req,
+  UseFilters,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -7,14 +14,14 @@ import {
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
-  DiscoveryRecommendationDto,
-  DiscoveryRecommendationsService,
-} from './discovery-recommendations.service';
-import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
+import {
+  DiscoveryRecommendationDto,
+  DiscoveryRecommendationsService,
+} from './discovery-recommendations.service';
 
 interface AuthenticatedRequest {
   user?: { id: string };
@@ -40,6 +47,7 @@ export class RecommendationsController {
    * revalidated before a profile is returned.
    */
   @Get('discovery')
+  @Header('Cache-Control', 'private, no-store')
   @ApiOperation({
     summary: 'Get privacy-safe Discovery carousel recommendations',
     description:
@@ -83,6 +91,10 @@ export class RecommendationsController {
                 'shared_interests',
                 'active_recently',
                 'study_streak',
+                'proficiency_match',
+                'availability_match',
+                'high_correction_ratio',
+                'learning_goal_match',
               ],
             },
           },
@@ -125,6 +137,7 @@ export class RecommendationsController {
    * Blocked users are excluded at every tier.
    */
   @Get('for-you')
+  @Header('Cache-Control', 'private, no-store')
   @ApiOperation({
     summary: 'Get personalised "For You" recommendations',
     description:
@@ -200,6 +213,7 @@ export class RecommendationsController {
    * empty array if nothing is available.
    */
   @Get('daily')
+  @Header('Cache-Control', 'private, no-store')
   @ApiOperation({
     summary: 'Get daily cached language exchange recommendations',
     description:

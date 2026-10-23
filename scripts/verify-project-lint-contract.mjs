@@ -8,9 +8,15 @@ const LINT_CHECK_COMMAND = 'npm run lint:check';
 
 // Canonical CI must run each required project's non-mutating lint gate as a matrix entry of its own.
 const CI_LINT_GATES = [
-  { directory: 'backend', check: 'lint', message: 'CI must run backend npm run lint:check' },
+  {
+    directory: 'backend',
+    job: 'backend-checks',
+    check: 'lint',
+    message: 'CI must run backend npm run lint:check',
+  },
   {
     directory: 'frontend',
+    job: 'frontend-checks',
     check: 'static-analysis',
     message: 'CI must run frontend npm run lint:check as part of static analysis',
   },
@@ -71,6 +77,17 @@ function runsLintCheck(command) {
   return command.split('&&').some((step) => step.trim() === LINT_CHECK_COMMAND);
 }
 
+function readJob(workflow, jobName) {
+  const lines = workflow.split(/\r?\n/);
+  const start = lines.findIndex((line) => line === `  ${jobName}:`);
+  if (start === -1) {
+    return '';
+  }
+
+  const end = lines.findIndex((line, index) => index > start && /^  [\w-]+:\s*$/.test(line));
+  return lines.slice(start, end === -1 ? undefined : end).join('\n');
+}
+
 export function verifyProjectLintContract(rootDir) {
   const ciPath = path.join(rootDir, '.github', 'workflows', 'ci.yml');
   const cleanLintPath = path.join(rootDir, CLEAN_LINT_WORKFLOW);
@@ -99,13 +116,17 @@ export function verifyProjectLintContract(rootDir) {
 
   const ciEntries = readListEntries(ci);
   for (const gate of CI_LINT_GATES) {
+    const jobEntries = readListEntries(readJob(ci, gate.job));
     assert(
       ciEntries.some(
         (entry) =>
           entry.directory === gate.directory &&
           entry.check === gate.check &&
           runsLintCheck(entry.command ?? ''),
-      ),
+      ) ||
+        jobEntries.some(
+          (entry) => entry.check === gate.check && runsLintCheck(entry.command ?? ''),
+        ),
       gate.message,
     );
   }

@@ -45,6 +45,18 @@ function writeCi(rootDir, entries = ciEntries()) {
   );
 }
 
+function writeProjectJobs(rootDir, backendEntries, frontendEntries) {
+  const renderEntries = (entries) =>
+    entries
+      .map(({ check, command }) => `          - check: ${check}\n            command: ${command}\n`)
+      .join('');
+
+  writeCiText(
+    rootDir,
+    `jobs:\n  backend-checks:\n    strategy:\n      matrix:\n        include:\n${renderEntries(backendEntries)}  frontend-checks:\n    strategy:\n      matrix:\n        include:\n${renderEntries(frontendEntries)}  admin-checks:\n    strategy:\n      matrix:\n        include:\n          - check: lint\n            command: npm run lint:check\n`,
+  );
+}
+
 function writeCleanLintWorkflow(rootDir, overrides = {}) {
   const workflowDir = path.join(rootDir, '.github', 'workflows');
   fs.mkdirSync(workflowDir, { recursive: true });
@@ -225,6 +237,36 @@ test('accepts lint:check in any position of a quoted, commented matrix command',
       },
     ]);
     assert.deepEqual(verifyProjectLintContract(rootDir).projects, ['backend', 'frontend']);
+  });
+});
+
+test('accepts lint gates scoped by the current backend and frontend CI jobs', () => {
+  withFixture((rootDir) => {
+    writeProjectJobs(
+      rootDir,
+      [{ check: 'lint', command: 'npm run lint:check' }],
+      [
+        {
+          check: 'static-analysis',
+          command: 'npm run check:control-flow && npm run lint:check',
+        },
+      ],
+    );
+    assert.deepEqual(verifyProjectLintContract(rootDir).projects, ['backend', 'frontend']);
+  });
+});
+
+test('does not let the admin job satisfy a missing backend lint gate', () => {
+  withFixture((rootDir) => {
+    writeProjectJobs(
+      rootDir,
+      [{ check: 'build', command: 'npm run build' }],
+      [{ check: 'static-analysis', command: 'npm run lint:check' }],
+    );
+    assert.throws(
+      () => verifyProjectLintContract(rootDir),
+      /CI must run backend npm run lint:check/,
+    );
   });
 });
 

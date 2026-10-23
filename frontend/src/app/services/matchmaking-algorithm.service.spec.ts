@@ -24,7 +24,7 @@ function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
     privacy_hide_location: false,
     privacy_hide_from_search: false,
     privacy_hide_gender: false,
-    learning_goals: 'conversation,vocabulary',
+    learning_goals: ['conversation', 'vocabulary'],
     availability_morning: false,
     availability_afternoon: true,
     availability_evening: true,
@@ -74,7 +74,7 @@ describe('MatchmakingAlgorithmService', () => {
         target_languages: ['en'],
         study_streak_days: 100,
         is_serious_learner: true,
-        learning_goals: 'conversation,vocabulary',
+        learning_goals: ['conversation', 'vocabulary'],
       });
 
       const medium = makeUser({
@@ -83,7 +83,7 @@ describe('MatchmakingAlgorithmService', () => {
         target_languages: ['fr'],
         study_streak_days: 5,
         is_serious_learner: false,
-        learning_goals: 'conversation',
+        learning_goals: ['conversation'],
       });
 
       const worst = makeUser({
@@ -92,7 +92,7 @@ describe('MatchmakingAlgorithmService', () => {
         target_languages: ['de'],
         study_streak_days: 0,
         is_serious_learner: false,
-        learning_goals: 'grammar',
+        learning_goals: ['grammar'],
       });
 
       const results = service.scoreAndRank(current, [worst, best, medium]);
@@ -110,14 +110,14 @@ describe('MatchmakingAlgorithmService', () => {
         native_languages: ['en'],
         target_languages: ['ja'],
         is_serious_learner: true,
-        learning_goals: 'conversation,vocabulary',
+        learning_goals: ['conversation', 'vocabulary'],
       });
       const perfect = makeUser({
         native_languages: ['ja'],
         target_languages: ['en'],
         study_streak_days: 400,
         is_serious_learner: true,
-        learning_goals: 'conversation,vocabulary',
+        learning_goals: ['conversation', 'vocabulary'],
       });
 
       const results = service.scoreAndRank(current, [perfect]);
@@ -168,8 +168,8 @@ describe('MatchmakingAlgorithmService', () => {
 
   describe('shared interests scoring', () => {
     it('should score based on shared learning goals', () => {
-      const current = makeUser({ learning_goals: 'conversation,vocabulary,grammar' });
-      const partner = makeUser({ learning_goals: 'conversation,grammar' });
+      const current = makeUser({ learning_goals: ['conversation', 'vocabulary', 'grammar'] });
+      const partner = makeUser({ learning_goals: ['conversation', 'grammar'] });
 
       const results = service.scoreAndRank(current, [partner]);
       expect(results.data[0].breakdown.sharedInterests).toBeCloseTo(20, 1);
@@ -177,7 +177,7 @@ describe('MatchmakingAlgorithmService', () => {
 
     it('should give zero when no learning goals set', () => {
       const current = makeUser({ learning_goals: undefined });
-      const partner = makeUser({ learning_goals: 'conversation' });
+      const partner = makeUser({ learning_goals: ['conversation'] });
 
       const results = service.scoreAndRank(current, [partner]);
       expect(results.data[0].breakdown.sharedInterests).toBe(0);
@@ -298,6 +298,19 @@ describe('MatchmakingAlgorithmService', () => {
       const filtered = service.applyOfflineFilters(scored.data, { availability_morning: true });
       expect(filtered.data).toHaveLength(1);
       expect(filtered.data[0].partner.id).toBe('morning');
+    });
+
+    it('should require a non-blank audio introduction when requested', () => {
+      const current = makeUser();
+      const scored = service.scoreAndRank(current, [
+        makeUser({ id: 'with-audio', audio_intro_url: 'https://media.example.test/intro.webm' }),
+        makeUser({ id: 'without-audio', audio_intro_url: undefined }),
+        makeUser({ id: 'blank-audio', audio_intro_url: '   ' }),
+      ]);
+
+      const filtered = service.applyOfflineFilters(scored.data, { has_audio_intro: true });
+
+      expect(filtered.data.map(({ partner }) => partner.id)).toEqual(['with-audio']);
     });
   });
 

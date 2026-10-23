@@ -2,14 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { CentrifugoService } from '../centrifugo.service';
-import { ChatMessage } from '../interfaces/chat-message.interface';
+import {
+  ChatMessage,
+  SystemEventParam,
+} from '../interfaces/chat-message.interface';
 
 const SYSTEM_EVENT_TYPE_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 const SYSTEM_EVENT_PARAM_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 const MAX_SYSTEM_EVENT_PARAMS = 12;
 const MAX_SYSTEM_EVENT_PARAM_LENGTH = 500;
-
-type SystemEventParam = string | number | boolean | null;
 
 @Injectable()
 export class SystemMessageService {
@@ -78,13 +79,24 @@ export class SystemMessageService {
     roomId: string,
     eventType: string,
     params: Record<string, unknown> = {},
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (!roomId.trim()) {
       throw new Error('System event room id is required');
     }
 
     const message = this.buildMessage(roomId, eventType, params);
-    await this.centrifugoService.publish(`chat:${roomId}`, { message });
+    const published = await this.centrifugoService.publish(`chat:${roomId}`, {
+      message,
+    });
+
+    if (!published) {
+      this.logger.warn(
+        { roomId, eventType: message.system_event?.type },
+        'System event publish failed',
+      );
+    }
+
+    return published;
   }
 
   /**
@@ -123,7 +135,7 @@ export class SystemMessageService {
       roomIds.map((roomId) => this.publishToRoom(roomId, eventType, params)),
     );
     const failed = results.filter(
-      (result) => result.status === 'rejected',
+      (result) => result.status === 'rejected' || result.value === false,
     ).length;
 
     if (failed > 0) {
