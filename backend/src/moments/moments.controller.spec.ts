@@ -126,7 +126,11 @@ describe('MomentsController', () => {
       const feedService = momentsFeedService;
       (feedService.getFeed as Mock).mockResolvedValue(feed);
 
-      const result = await controller.getFeed({ id: 'user-1' } as any, 'All', 'fr');
+      const result = await controller.getFeed(
+        { id: 'user-1' } as any,
+        'All',
+        'fr',
+      );
       // Classmates membership resolution is covered by moments.feed-filters.spec.ts.
       expect(feedService.getFeed).toHaveBeenCalledWith('user-1', 'All', 'fr');
       expect(momentsService.getFeed).not.toHaveBeenCalled();
@@ -139,7 +143,11 @@ describe('MomentsController', () => {
       (feedService.getFeed as Mock).mockResolvedValue(feed);
 
       const result = await controller.getFeed({ id: 'user-1' } as any);
-      expect(feedService.getFeed).toHaveBeenCalledWith('user-1', 'All', undefined);
+      expect(feedService.getFeed).toHaveBeenCalledWith(
+        'user-1',
+        'All',
+        undefined,
+      );
       expect(result).toEqual(feed);
     });
   });

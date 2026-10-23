@@ -227,7 +227,10 @@ describe('AiConversationService', () => {
 
       // Knowledge for the learner's target language reaches the prompt.
       expect(systemPrompt).toContain('hallo');
-      expect(learnerKnowledgeService.getProfile).not.toHaveBeenCalledWith('user1', 'en');
+      expect(learnerKnowledgeService.getProfile).not.toHaveBeenCalledWith(
+        'user1',
+        'en',
+      );
     });
 
     it('should call llmProxy.chatCompletion with system prompt from scenario', async () => {
