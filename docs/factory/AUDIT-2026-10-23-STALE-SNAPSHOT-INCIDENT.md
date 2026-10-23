@@ -141,12 +141,20 @@ Current config already orders codex last in every lane. Proposed next steps:
 2. Add task-level outcome (did a mutation pass verification).
 3. Only then trial cheaper lanes against a matched benchmark.
 
-## 9. Schedules
+## 9. Schedules (confirmed by `atq` on the factory host, 2026-10-23 21:12 UTC)
 
 | What | Mechanism | When | Expiry | Status |
 |---|---|---|---|---|
-| Resume hellotalk factory scheduling | `at` job 1, runs `/home/dev/factory-ops/auto-resume-hellotalk.sh` | 2026-10-23 22:37 UTC | one-shot | scheduled (confirmed by `atq`) |
+| 24 h storm-fix measurement (repair dispatch rate, cap trips, merges) | `at` job 2, runs `/home/dev/factory-ops/measure-factory.py storm-24h` | 2026-10-24 17:35 UTC | one-shot | scheduled |
+| 7-day routing evidence from `metrics-daily.json` (#9582) | `at` job 3, runs `measure-factory.py routing-7d` | 2026-10-30 18:00 UTC | one-shot | scheduled |
 
-No recurring automation was created in this session.
+Both jobs are read-only and deterministic, with no model calls. The 2026-10-23 resume job was removed after the factory was resumed manually at 16:01 UTC.
+
+First measurement, 17:32 to 21:12 UTC (3.7 h after the storm fix was deployed):
+- 39 "Repair limit exceeded" cap trips (previously the cap never tripped).
+- Repair dispatches at 19.4 per hour against a storm baseline of 21.2 calls per hour. These are not like-for-like, and the wave of PR refreshes after main turned green confounds the rate.
+- 11 PRs merged.
+
+No routing change is made until the 7-day evidence exists.
 
 Resumable checkpoint (host-local): `/home/dev/factory-ops/CHECKPOINT.md`.
