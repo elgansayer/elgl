@@ -1,4 +1,4 @@
-# Consolidated Backlog
+# Consolidated Product Backlog
 
 This backlog consolidates open issues into complete user outcomes rather than individual technical chores.
 
@@ -23,7 +23,7 @@ The current Communities UI (`communities.component.ts`) lacks clear spatial navi
 - Include unread notification badges for communities/groups with new activity, using a small, pill-shaped red div (`bg-red-500 text-white rounded-full px-1.5 text-[10px]`).
 - Create a separate component for the community creation form.
 - Create a separate component for rendering the community list item.
-- Refactor `communities.component.ts` to use these new components, passing data via `@Input` and handling events via `@Output`.
+- Refactor `communities.component.ts` to use these new components, passing data via `input.required<T>()` or `input<T>()` and handling events via `output<T>()`.
 
 ## Objective 2: Ensure Robustness in Community Operations
 
@@ -46,12 +46,56 @@ The `create()` and `delete()` methods in `communities.component.ts` lack error h
 - Implement Angular CDK Virtual Scrolling for Chat and Reading Views
 
 **Description**:
-Data-heavy components like `chat-page.component.ts` and `reading-engine.component.ts` currently lack virtual scrolling. Rendering large chat histories or extensive reading texts causes severe DOM bloat, increased memory usage, and UI lag, degrading performance on browsers. This objective integrates `@angular/cdk/scrolling` to replace standard rendering loops with `<cdk-virtual-scroll-viewport>`, implementing virtualized rendering/windowing.
+Data-heavy components like `chat-page.component.ts` and `reading-engine.component.ts` currently lack virtual scrolling. Rendering large chat histories or extensive reading texts causes severe DOM bloat, increased memory usage, and UI lag, degrading performance on browsers. This objective integrates `@angular/cdk/scrolling` to replace standard rendering loops with `<cdk-virtual-scroll-viewport>`, implementing virtualized rendering/windowing. **Important note**: As per review, we should profile first and if justified, preserve dynamic item heights, pagination, scroll position when prepending messages, keyboard navigation, search, selection and screen-reader access.
 
 **Acceptance Criteria**:
+- Profile representative article and chat histories before deciding. If virtualization is justified:
 - Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into the relevant Angular standalone components (e.g., `chat-page.component.ts`, `reading-engine.component.ts`).
 - Replace standard loops rendering chat messages with `<cdk-virtual-scroll-viewport>`.
 - Implement virtualised rendering or windowing in the reading components for extensive texts.
 - Ensure dynamic height recalculation works correctly for chat messages with varying content lengths (text, media, audio).
 - Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
 - Write or update unit tests to verify that the virtual scroller correctly limits the rendered DOM nodes to the visible viewport slice.
+
+## Objective 4: Optimize API performance for Chat
+
+**Status**: To Do
+**Consolidated Issues**:
+- N+1 API Request Explosion on Message Status Updates
+
+**Description**:
+In `chat-page.component.ts`, when a user selects a room, the component auto-marks unread messages from others as 'delivered' and then 'read' in a loop, firing two unawaited API calls per message (`this.chatService.markMessageStatus(msg.id, 'delivered')` and `this.chatService.markMessageStatus(msg.id, 'read')`). This causes an N+1 explosion of HTTP requests.
+
+**Acceptance Criteria**:
+- The two separate API calls per message are replaced with a single bulk update endpoint, or the backend logic is updated such that marking a message as 'read' automatically implies 'delivered'.
+- The component only sends a single batched request for all unread message IDs.
+- No race conditions or rate-limiting issues occur when loading a room with hundreds of unread messages.
+
+## Objective 5: Fix Chat Bugs and Tech Debt
+
+**Status**: To Do
+**Consolidated Issues**:
+- Redundant Message Deletion Logic in Centrifugo Event Handler
+- Race Condition in Room Selection (Message Overwrite)
+
+**Description**:
+Fix two specific bugs in `chat-page.component.ts`: a redundant logic check in `message_deleted` handling and a race condition when switching rooms quickly.
+
+**Acceptance Criteria**:
+- In `message_deleted` handler, the redundant `if` statement for 'deleted for me' vs 'everyone' is corrected or unified if behavior is identical.
+- A guard condition is added after `await this.chatService.getMessages(room.id)` to verify that `this.selectedRoom()?.id === room.id` before calling `this.messages.set(messages)` in `selectRoom`.
+
+## Objective 6: Architectural Enhancements for Language Learning Synergy
+
+**Status**: To Do
+**Consolidated Issues**:
+- Architectural Enhancements for Language Learning Synergy
+
+**Description**:
+Core language learning principles are siloed. AI conversations don't feed the Spaced Repetition System (SRS).
+
+**Acceptance Criteria**:
+- Build a background worker in `nlp.service.ts` that automatically extracts and suggests new vocabulary (flashcards) from completed AI Conversations and Voice Transcriptions.
+- Integrate the Pronunciation Scoring service with the SRS engine.
+- Map the user's dynamic Assessment proficiency score to the LingQ Reading Engine.
+- Modify the Visual Diff tool in Corrections to automatically queue corrected words into the user's flashcard deck for spaced repetition.
