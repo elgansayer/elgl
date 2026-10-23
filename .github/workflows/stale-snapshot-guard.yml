@@ -10,15 +10,18 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
-concurrency:
-  group: stale-snapshot-guard-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+# No cancel-in-progress: the Factory adds and removes review labels, and a
+# cancelled run is reported as a failed check that sends PRs to repair.
 
 permissions:
   contents: read
 
 jobs:
   stale-snapshot:
+    # Label events only matter for the intentional-revert acknowledgement.
+    if: >-
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
+      || github.event.label.name == 'intentional-revert'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
