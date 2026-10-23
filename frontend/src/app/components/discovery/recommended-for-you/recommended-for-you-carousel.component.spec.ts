@@ -103,12 +103,13 @@ describe('RecommendedForYouCarouselComponent', () => {
     expect(component.recommendations()[0]).not.toHaveProperty('recommendation_score');
   });
 
-  // availability_match, high_correction_ratio and learning_goal_match were
-  // specified in 1d9988243 but never shipped on any layer; tracked separately.
-  it('renders the proficiency recommendation reason', () => {
+  it('renders every multidimensional recommendation reason', () => {
     const match = recommendation('p-3');
 
     expect(component.reasonLabel('proficiency_match', match)).toBe('Similar proficiency');
+    expect(component.reasonLabel('availability_match', match)).toBe('Matching availability');
+    expect(component.reasonLabel('high_correction_ratio', match)).toBe('Helpful corrector');
+    expect(component.reasonLabel('learning_goal_match', match)).toBe('Shared learning goal');
   });
 
   it('bounds the client contract to ten recommendations', async () => {
