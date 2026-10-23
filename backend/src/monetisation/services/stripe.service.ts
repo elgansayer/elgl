@@ -251,8 +251,24 @@ export class StripeService {
   }
 
   private getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+    // Newer Stripe API versions nest the subscription under invoice.parent,
+    // which the pinned SDK types do not declare yet.
+    const parent: unknown = Reflect.get(invoice, 'parent');
+    const details: unknown =
+      typeof parent === 'object' && parent !== null
+        ? Reflect.get(parent, 'subscription_details')
+        : undefined;
+    const nested: unknown =
+      typeof details === 'object' && details !== null
+        ? Reflect.get(details, 'subscription')
+        : undefined;
     const currentSubscription =
-      (invoice as any).parent?.subscription_details?.subscription;
+      typeof nested === 'string' ||
+      (typeof nested === 'object' &&
+        nested !== null &&
+        typeof Reflect.get(nested, 'id') === 'string')
+        ? (nested as string | { id: string })
+        : undefined;
     const legacySubscription = (
       invoice as Stripe.Invoice & {
         subscription?: string | { id: string } | null;

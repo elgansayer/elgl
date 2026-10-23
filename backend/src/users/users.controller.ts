@@ -325,10 +325,7 @@ export class UsersController {
       }
     }
 
-    return this.applyMemberVisibility(
-      profile,
-      id === (currentUser?.id ?? ''),
-    );
+    return this.applyMemberVisibility(profile, id === (currentUser?.id ?? ''));
   }
 
   @Get(':id/stats')
@@ -337,10 +334,7 @@ export class UsersController {
     @CurrentUser() currentUser: User | null,
   ): Promise<Partial<UserProfile>> {
     const stats = await this.usersService.getUserStats(id);
-    return this.applyMemberVisibility(
-      stats,
-      id === (currentUser?.id ?? ''),
-    );
+    return this.applyMemberVisibility(stats, id === (currentUser?.id ?? ''));
   }
 
   @Get(':id/followers')

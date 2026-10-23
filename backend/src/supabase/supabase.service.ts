@@ -2278,6 +2278,15 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_host_dashboard_earnings: {
+        Args: {
+          p_room_id: string;
+          p_host_id: string;
+        };
+        Returns: {
+          earned_coins: number;
+        }[];
+      };
       claim_daily_checkin_reward: {
         Args: {
           p_user_id: string;

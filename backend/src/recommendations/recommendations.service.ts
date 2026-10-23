@@ -8,7 +8,10 @@ import { MatchmakingCrashReportService } from './matchmaking-crash-report.servic
 import { withRetry } from '../common/retry';
 import { MOCK_USERS } from '../mock-data';
 import { isActiveSeriousLearner } from '../discovery/serious-learner.policy';
-import { LearnerKnowledgeService, LearnerKnowledgeProfile } from '../learner-knowledge/learner-knowledge.service';
+import {
+  LearnerKnowledgeService,
+  LearnerKnowledgeProfile,
+} from '../learner-knowledge/learner-knowledge.service';
 
 export interface RecommendedUserDto {
   id: string;
@@ -288,13 +291,22 @@ export class RecommendationsService {
   async getRecommendations(userId: string): Promise<RecommendedUserDto[]> {
     let learnerKnowledge: LearnerKnowledgeProfile | null = null;
     try {
-      learnerKnowledge = await this.learnerKnowledgeService.getProfile(userId, 'en');
+      learnerKnowledge = await this.learnerKnowledgeService.getProfile(
+        userId,
+        'en',
+      );
     } catch (e) {
-      this.logger.warn(`Failed to fetch learner knowledge profile for user ${userId}`, e);
+      this.logger.warn(
+        `Failed to fetch learner knowledge profile for user ${userId}`,
+        e,
+      );
     }
 
     try {
-      const interestResults = await this.recommendationsByInterests(userId, learnerKnowledge);
+      const interestResults = await this.recommendationsByInterests(
+        userId,
+        learnerKnowledge,
+      );
       if (interestResults.length > 0) {
         return interestResults;
       }
@@ -311,8 +323,10 @@ export class RecommendationsService {
     }
 
     try {
-      const languageMatches =
-        await this.recommendationsByLanguageExchange(userId, learnerKnowledge);
+      const languageMatches = await this.recommendationsByLanguageExchange(
+        userId,
+        learnerKnowledge,
+      );
       if (languageMatches.length > 0) {
         return languageMatches;
       }
@@ -353,13 +367,22 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     let learnerKnowledge: LearnerKnowledgeProfile | null = null;
     try {
-      learnerKnowledge = await this.learnerKnowledgeService.getProfile(userId, 'en');
+      learnerKnowledge = await this.learnerKnowledgeService.getProfile(
+        userId,
+        'en',
+      );
     } catch (e) {
-      this.logger.warn(`Failed to fetch learner knowledge profile for user ${userId}`, e);
+      this.logger.warn(
+        `Failed to fetch learner knowledge profile for user ${userId}`,
+        e,
+      );
     }
 
     try {
-      const interestResults = await this.recommendationsByInterests(userId, learnerKnowledge);
+      const interestResults = await this.recommendationsByInterests(
+        userId,
+        learnerKnowledge,
+      );
       if (interestResults.length > 0) {
         return interestResults.map((r) => ({
           ...r,
@@ -379,8 +402,10 @@ export class RecommendationsService {
     }
 
     try {
-      const languageResults =
-        await this.recommendationsByLanguageExchange(userId, learnerKnowledge);
+      const languageResults = await this.recommendationsByLanguageExchange(
+        userId,
+        learnerKnowledge,
+      );
       if (languageResults.length > 0) {
         return languageResults.map((r) => ({
           ...r,
@@ -458,7 +483,11 @@ export class RecommendationsService {
     const supabase = this.supabaseService.getClient();
 
     let tags: string[] = [];
-    if (learnerKnowledge && learnerKnowledge.interests && learnerKnowledge.interests.length > 0) {
+    if (
+      learnerKnowledge &&
+      learnerKnowledge.interests &&
+      learnerKnowledge.interests.length > 0
+    ) {
       tags = learnerKnowledge.interests;
     } else {
       const { data: ownTags, error: tagsError } = await withRetry(() =>
@@ -557,7 +586,11 @@ export class RecommendationsService {
     let nativeLangs: string[] | null = null;
     let targetLanguages: string[] | null = null;
 
-    if (learnerKnowledge && learnerKnowledge.nativeLanguages && learnerKnowledge.targetLanguages) {
+    if (
+      learnerKnowledge &&
+      learnerKnowledge.nativeLanguages &&
+      learnerKnowledge.targetLanguages
+    ) {
       nativeLangs = learnerKnowledge.nativeLanguages;
       targetLanguages = learnerKnowledge.targetLanguages;
     }

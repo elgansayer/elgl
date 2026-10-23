@@ -237,7 +237,9 @@ export class DiscoveryRecommendationsService {
 
     const { data: currentUser, error: currentUserError } = await supabase
       .from('users')
-      .select('native_languages, target_languages, proficiency_level, country, learning_goals')
+      .select(
+        'native_languages, target_languages, proficiency_level, country, learning_goals',
+      )
       .eq('id', userId)
       .maybeSingle();
 
@@ -248,9 +250,17 @@ export class DiscoveryRecommendationsService {
     const currentSignals: CurrentUserSignals = {
       nativeLanguages: normaliseLanguages(currentUser['native_languages']),
       targetLanguages: normaliseLanguages(currentUser['target_languages']),
-      proficiencyLevel: typeof currentUser['proficiency_level'] === 'string' ? currentUser['proficiency_level'] : undefined,
-      country: typeof currentUser['country'] === 'string' ? currentUser['country'] : undefined,
-      learningGoals: normaliseLearningGoals(currentUser['learning_goals'] as string | undefined),
+      proficiencyLevel:
+        typeof currentUser['proficiency_level'] === 'string'
+          ? currentUser['proficiency_level']
+          : undefined,
+      country:
+        typeof currentUser['country'] === 'string'
+          ? currentUser['country']
+          : undefined,
+      learningGoals: normaliseLearningGoals(
+        currentUser['learning_goals'] as string | undefined,
+      ),
     };
 
     if (
@@ -274,9 +284,8 @@ export class DiscoveryRecommendationsService {
     // Cached profile data itself is never returned: all IDs are re-hydrated below
     // through the current privacy/deletion/block boundary before ranking.
     try {
-      const daily = await this.recommendationsService.getDailyRecommendations(
-        userId,
-      );
+      const daily =
+        await this.recommendationsService.getDailyRecommendations(userId);
       for (const recommendation of daily.slice(0, CANDIDATE_LIMIT)) {
         if (recommendation.id && recommendation.id !== userId) {
           candidateIds.add(recommendation.id);

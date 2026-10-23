@@ -28,7 +28,7 @@ describe('NlpController explainGrammar', () => {
       {} as unknown as TranslationRouterService,
       {} as unknown as GrammarCheckService,
       { explain } as unknown as GrammarExplanationService,
-      {} as unknown as PronunciationScoringService,
+      {},
     );
   });
 

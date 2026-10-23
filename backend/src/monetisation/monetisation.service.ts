@@ -801,7 +801,8 @@ export class MonetisationService {
         ? {
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             currentPeriodEnd: new Date(
-              ((item as any).current_period_end ?? subscription.current_period_end) * 1000,
+              (readItemPeriodEnd(item) ?? subscription.current_period_end) *
+                1000,
             ).toISOString(),
             nextBillingAmount:
               item.price?.unit_amount != null
@@ -938,4 +939,13 @@ export class MonetisationService {
 
     return { url: session.url };
   }
+}
+
+/**
+ * Newer Stripe API versions report the billing period on each subscription
+ * item; the pinned SDK types only declare it on the subscription.
+ */
+function readItemPeriodEnd(item: object): number | undefined {
+  const value: unknown = Reflect.get(item, 'current_period_end');
+  return typeof value === 'number' ? value : undefined;
 }

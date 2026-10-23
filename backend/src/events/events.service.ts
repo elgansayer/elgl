@@ -444,11 +444,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }));
   }
 
-  async createRsvp(
-    userId: string,
-    eventId: string,
-    status: EventRsvpStatus,
-  ) {
+  async createRsvp(userId: string, eventId: string, status: EventRsvpStatus) {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('event_rsvps')
@@ -496,7 +492,9 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }
 
     const code = this.getDatabaseErrorCode(error);
-    this.logger.error(`RSVP mutation failed for event ${eventId} (code=${code})`);
+    this.logger.error(
+      `RSVP mutation failed for event ${eventId} (code=${code})`,
+    );
     throw new InternalServerErrorException('Could not update RSVP');
   }
 

@@ -16,7 +16,10 @@ describe('CreateEventDto', () => {
   });
 
   it('accepts and trims a bounded valid payload', async () => {
-    const instance: CreateEventDto = plainToInstance(CreateEventDto, validInput());
+    const instance: CreateEventDto = plainToInstance(
+      CreateEventDto,
+      validInput(),
+    );
     const errors = await validate(instance);
 
     expect(errors).toHaveLength(0);
@@ -62,6 +65,8 @@ describe('CreateEventDto', () => {
     });
     const errors = await validate(tooMany);
 
-    expect(errors.some((error) => error.property === 'max_participants')).toBe(true);
+    expect(errors.some((error) => error.property === 'max_participants')).toBe(
+      true,
+    );
   });
 });

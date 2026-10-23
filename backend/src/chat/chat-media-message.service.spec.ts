@@ -18,9 +18,7 @@ describe('ChatMediaMessageService', () => {
   const from = vi.fn(() => query);
   const getClient = vi.fn(() => ({ from }));
   const supabaseService = { getClient } as unknown as SupabaseService;
-  const publicUrlForKey = vi.fn(
-    (key: string) => `https://cdn.example/${key}`,
-  );
+  const publicUrlForKey = vi.fn((key: string) => `https://cdn.example/${key}`);
   const r2ObjectService = { publicUrlForKey } as unknown as R2ObjectService;
   const sendMessage = vi.fn();
   const chatService = { sendMessage } as unknown as ChatService;

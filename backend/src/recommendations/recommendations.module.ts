@@ -7,7 +7,6 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { DiscoveryRecommendationsService } from './discovery-recommendations.service';
 import { RecommendationsController } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';
-import { DiscoveryRecommendationsService } from './discovery-recommendations.service';
 import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 
