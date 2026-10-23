@@ -320,7 +320,7 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
                   <h2 class="text-xl font-bold mb-2">{{ 'languageParty.emptyTitle' | t }}</h2>
                   <p class="text-text-secondary mb-6">{{ 'languageParty.emptySubtitle' | t }}</p>
                   <button
-                    hlmBtn
+                    hlmBtn size="touch"
                     type="button"
                     (click)="openCreateModal()"
                     class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 active:scale-95 transition-all shadow-lg shadow-primary/20"

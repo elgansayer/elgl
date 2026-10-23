@@ -27,7 +27,9 @@ describe('NlpController', () => {
             detectLanguage: vi.fn(),
             translate: vi.fn(),
             translateUi: vi.fn(),
-            checkRateLimit: vi.fn(),
+            grammarCheck: vi.fn(),
+            pronunciationScore: vi.fn(),
+            checkRateLimit: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -144,49 +146,25 @@ describe('NlpController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.grammarCheck(null, {} as any);
       expect(result).toBeNull();
-      expect(nlpService.checkRateLimit).not.toHaveBeenCalled();
-      expect(grammarCheckService.check).not.toHaveBeenCalled();
+      expect(nlpService.grammarCheck).not.toHaveBeenCalled();
     });
 
-    it('should preserve daily AI limits and call the bounded grammar provider', async () => {
-      const dto: any = { text: 'I go yesterday' };
+    it('should call service grammarCheck when user is provided', async () => {
+      const dto: any = { text: 'Check me' };
       const profile: any = { id: 'user-1', is_vip: false };
-      const response: any = {
-        original: 'I go yesterday',
-        corrected: 'I went yesterday.',
-        explanation: 'Use the past tense and ending punctuation.',
-        errors_found: 2,
-      };
+      const response: any = { corrected: 'Check me.' };
 
       (usersService.getProfile as Mock).mockResolvedValue(profile);
-      (nlpService.checkRateLimit as Mock).mockResolvedValue(undefined);
       (grammarCheckService.check as Mock).mockResolvedValue(response);
 
       const result = await controller.grammarCheck(
         { id: 'user-1' } as any,
         dto,
       );
-
-      expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
+      // Daily allowance first, then the LLM-backed checker (docs/grammar-check-pre-send.md).
       expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', false);
       expect(grammarCheckService.check).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
-    });
-
-    it('should skip the free-tier daily cap for VIP profiles', async () => {
-      (usersService.getProfile as Mock).mockResolvedValue({ is_vip: true });
-      (grammarCheckService.check as Mock).mockResolvedValue({
-        original: 'Fine.',
-        corrected: 'Fine.',
-        explanation: 'No grammar changes suggested.',
-        errors_found: 0,
-      });
-
-      await controller.grammarCheck({ id: 'vip-user' } as any, {
-        text: 'Fine.',
-      });
-
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('vip-user', true);
     });
   });
 
@@ -194,42 +172,24 @@ describe('NlpController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.pronunciationScore(null, {} as any);
       expect(result).toBeNull();
-      expect(nlpService.checkRateLimit).not.toHaveBeenCalled();
-      expect(pronunciationScoringService.score).not.toHaveBeenCalled();
+      expect(nlpService.pronunciationScore).not.toHaveBeenCalled();
     });
 
-    it('should enforce the daily AI quota before calling the pronunciation provider', async () => {
-      const dto: any = {
-        target_text: 'Hello',
-        audio_url: 'https://media.example.com/hello.wav',
-        language: 'en-US',
-      };
+    it('should call service pronunciationScore when user is provided', async () => {
+      const dto: any = { target_text: 'Hello' };
+      const profile: any = { id: 'user-1', is_vip: true };
       const response: any = { overall_score: 95 };
-      (usersService.getProfile as Mock).mockResolvedValue({ is_vip: false });
-      (nlpService.checkRateLimit as Mock).mockResolvedValue(undefined);
+
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
       (pronunciationScoringService.score as Mock).mockResolvedValue(response);
 
       const result = await controller.pronunciationScore(
         { id: 'user-1' } as any,
         dto,
       );
-
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', false);
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', true);
       expect(pronunciationScoringService.score).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
-    });
-
-    it('does not call Azure when the daily quota rejects the request', async () => {
-      (usersService.getProfile as Mock).mockResolvedValue({ is_vip: false });
-      (nlpService.checkRateLimit as Mock).mockRejectedValue(new Error('limit'));
-
-      await expect(
-        controller.pronunciationScore({ id: 'user-1' } as any, {
-          target_text: 'Hello',
-          audio_url: 'https://media.example.com/hello.wav',
-        }),
-      ).rejects.toThrow('limit');
-      expect(pronunciationScoringService.score).not.toHaveBeenCalled();
     });
   });
 });

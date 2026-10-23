@@ -9,12 +9,17 @@ import { AuthService } from '../../services/auth.service';
 import { DirectConversationService } from '../../services/direct-conversation.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
 
-function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile {
+function makeProfile(
+  id: string,
+  bioText = 'Original profile bio',
+  overrides: Partial<UserProfile> = {},
+): UserProfile {
   return {
     id,
     display_name: `Partner ${id}`,
@@ -32,26 +37,26 @@ function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile 
     privacy_hide_from_search: false,
     privacy_hide_gender: false,
     created_at: '2026-01-01T00:00:00.000Z',
+    ...overrides,
   };
 }
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((resolver, rejecter) => {
+  const promise = new Promise<T>((resolver) => {
     resolve = resolver;
-    reject = rejecter;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 }
 
-describe('UserDetailComponent', () => {
+describe('UserDetailComponent bio translation', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
   let currentLang: ReturnType<typeof signal<string>>;
   let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
   let translateBio: ReturnType<typeof vi.fn>;
   let getUserProfile: ReturnType<typeof vi.fn>;
+  let recordVisit: ReturnType<typeof vi.fn>;
   let openOrCreate: ReturnType<typeof vi.fn>;
   let follow: ReturnType<typeof vi.fn>;
   let unfollow: ReturnType<typeof vi.fn>;
@@ -62,6 +67,9 @@ describe('UserDetailComponent', () => {
     currentUser = signal<{ id: string } | null>({ id: 'current-user' });
     translateBio = vi.fn();
     getUserProfile = vi.fn().mockResolvedValue(makeProfile('user-1'));
+    recordVisit = vi
+      .fn()
+      .mockResolvedValue({ recorded: true, ignored: false, visit_id: 'visit-1' });
     openOrCreate = vi.fn().mockResolvedValue('room-123');
     follow = vi.fn().mockResolvedValue(undefined);
     unfollow = vi.fn().mockResolvedValue(undefined);
@@ -80,8 +88,14 @@ describe('UserDetailComponent', () => {
           provide: UserService,
           useValue: {
             getUserProfile,
+            followUser: vi.fn(),
+            unfollowUser: vi.fn(),
             likeProfile: vi.fn(),
           },
+        },
+        {
+          provide: ProfileVisitsService,
+          useValue: { recordVisit },
         },
         {
           provide: DirectConversationService,
@@ -119,33 +133,79 @@ describe('UserDetailComponent', () => {
     fixture.componentRef.setInput('userId', 'user-1');
     fixture.detectChanges();
     await Promise.resolve();
+    await Promise.resolve();
     fixture.detectChanges();
   });
 
-  it('loads the requested profile', () => {
+  it('loads the requested profile and records the successful external profile view', () => {
     expect(component).toBeTruthy();
     expect(getUserProfile).toHaveBeenCalledWith('user-1');
     expect(component.profile()?.id).toBe('user-1');
+    expect(recordVisit).toHaveBeenCalledWith('user-1');
   });
 
-  it('ignores a stale profile response after the route target changes', async () => {
-    const stale = createDeferred<UserProfile | null>();
-    getUserProfile.mockReturnValueOnce(stale.promise);
-    getUserProfile.mockResolvedValueOnce(makeProfile('user-fast'));
+  it('does not record a self view', async () => {
+    recordVisit.mockClear();
+    currentUser.set({ id: 'user-1' });
 
-    fixture.componentRef.setInput('userId', 'user-slow');
-    fixture.detectChanges();
-    fixture.componentRef.setInput('userId', 'user-fast');
+    await component.loadProfile('user-1');
+
+    expect(recordVisit).not.toHaveBeenCalled();
+  });
+
+  it('does not let visitor-log failure break profile rendering and permits a later safe retry', async () => {
+    recordVisit.mockClear();
+    getUserProfile.mockResolvedValue(makeProfile('user-2'));
+    recordVisit.mockRejectedValueOnce(new Error('visit API unavailable'));
+
+    fixture.componentRef.setInput('userId', 'user-2');
     fixture.detectChanges();
     await Promise.resolve();
-
-    stale.resolve(makeProfile('user-slow'));
-    await stale.promise;
     await Promise.resolve();
+    expect(component.profile()?.id).toBe('user-2');
+    expect(component.errorMessage()).toBe('');
+
+    recordVisit.mockResolvedValueOnce({ recorded: false, ignored: true, reason: 'duplicate' });
+    await component.loadProfile('user-2');
+    expect(recordVisit).toHaveBeenCalledTimes(2);
+  });
+
+  it('coalesces repeated component loads after a successful visitor-log call', async () => {
+    recordVisit.mockClear();
+    getUserProfile.mockResolvedValue(makeProfile('user-3'));
+
+    fixture.componentRef.setInput('userId', 'user-3');
+    fixture.detectChanges();
+    await Promise.resolve();
+    await Promise.resolve();
+    await component.loadProfile('user-3');
+
+    expect(recordVisit).toHaveBeenCalledTimes(1);
+    expect(recordVisit).toHaveBeenCalledWith('user-3');
+  });
+
+  it('shows a VIP badge when the member has not hidden it', async () => {
+    getUserProfile.mockResolvedValue(
+      makeProfile('vip-visible', 'Bio', { is_vip: true, privacy_hide_vip_status: false }),
+    );
+    fixture.componentRef.setInput('userId', 'vip-visible');
+    fixture.detectChanges();
+    await component.loadProfile('vip-visible');
     fixture.detectChanges();
 
-    expect(component.profile()?.id).toBe('user-fast');
-    expect(component.isLoading()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('discovery.vipBadge');
+  });
+
+  it('does not render the VIP badge when the member hides VIP status', async () => {
+    getUserProfile.mockResolvedValue(
+      makeProfile('vip-hidden', 'Bio', { is_vip: true, privacy_hide_vip_status: true }),
+    );
+    fixture.componentRef.setInput('userId', 'vip-hidden');
+    fixture.detectChanges();
+    await component.loadProfile('vip-hidden');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('discovery.vipBadge');
   });
 
   it('translates into the active UI language and can show the original again', async () => {
@@ -163,6 +223,46 @@ describe('UserDetailComponent', () => {
     expect(component.showTranslated()).toBe(false);
     expect(component.displayBio).toBe('Original profile bio');
     expect(translateBio).toHaveBeenCalledTimes(1);
+  });
+
+  it('links the translation action to a live mixed-direction bio region', async () => {
+    translateBio.mockResolvedValue('مرحبا من ملفي الشخصي');
+
+    const initialButton = fixture.nativeElement.querySelector(
+      `button[aria-controls="${component.translationBioId()}"]`,
+    ) as HTMLButtonElement;
+    const bio = fixture.nativeElement.querySelector(`#${component.translationBioId()}`) as HTMLElement;
+
+    expect(initialButton.getAttribute('aria-label')).toBe('profile.translateBio: Partner user-1');
+    expect(initialButton.getAttribute('aria-pressed')).toBe('false');
+    expect(initialButton.classList.contains('min-h-11')).toBe(true);
+    expect(bio.getAttribute('dir')).toBe('auto');
+    expect(bio.getAttribute('aria-live')).toBe('polite');
+
+    await component.toggleTranslation();
+    fixture.detectChanges();
+
+    const translatedButton = fixture.nativeElement.querySelector(
+      `button[aria-controls="${component.translationBioId()}"]`,
+    ) as HTMLButtonElement;
+    const translatedBio = fixture.nativeElement.querySelector(
+      `#${component.translationBioId()}`,
+    ) as HTMLElement;
+    expect(translatedButton.getAttribute('aria-pressed')).toBe('true');
+    expect(translatedButton.getAttribute('aria-label')).toBe('profile.showOriginal: Partner user-1');
+    expect(translatedBio.getAttribute('aria-atomic')).toBe('true');
+    expect(translatedBio.textContent).toContain('مرحبا من ملفي الشخصي');
+  });
+
+  it('does not offer or request translation for a blank bio', async () => {
+    component.profile.set(makeProfile('user-1', '   '));
+    fixture.detectChanges();
+
+    expect(component.displayBio).toBe('');
+    expect(fixture.nativeElement.querySelector(`button[aria-controls="${component.translationBioId()}"]`)).toBeNull();
+
+    await component.toggleTranslation();
+    expect(translateBio).not.toHaveBeenCalled();
   });
 
   it('resets cached translation when the UI language changes', async () => {
@@ -277,7 +377,9 @@ describe('UserDetailComponent', () => {
     expect(component.chatErrorKey()).toBe('common.error_generic');
     expect(component.isOpeningChat()).toBe(false);
     expect(navigate).not.toHaveBeenCalled();
-    const status = fixture.nativeElement.querySelector(`#${component.chatStatusId()}`) as HTMLElement;
+    const status = fixture.nativeElement.querySelector(
+      `#${component.chatStatusId()}`,
+    ) as HTMLElement;
     expect(status.getAttribute('role')).toBe('status');
   });
 

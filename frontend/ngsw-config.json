@@ -29,10 +29,6 @@
         "files": [
           "/assets/**",
           "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
-        ],
-        "urls": [
-          "https://fonts.googleapis.com/**",
-          "https://fonts.gstatic.com/**"
         ]
       }
     },
@@ -53,7 +49,6 @@
     {
       "name": "api-performance",
       "urls": [
-        "/api/discovery/**",
         "/api/moments/feed**",
         "/api/users/profile/**",
         "/api/languages/**",

@@ -7,6 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { AuthService } from '../../services/auth.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { DirectConversationService } from '../../services/direct-conversation.service';
 import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
@@ -31,10 +32,12 @@ export class UserDetailComponent {
   private userService = inject(UserService);
   private discoveryService = inject(DiscoveryService);
   private authService = inject(AuthService);
+  private profileVisitsService = inject(ProfileVisitsService);
   private directConversationService = inject(DirectConversationService);
   private relationshipService = inject(ProfileRelationshipService);
   private readonly i18n = inject(I18nService);
   private translationContextKey = '';
+  private readonly visitAttempts = new Set<string>();
 
   userId = input.required<string>();
 
@@ -95,6 +98,7 @@ export class UserDetailComponent {
         this.profile.set(data);
         this.isFollowing.set(data.is_followed_by_me || false);
         this.isLiked.set(data.is_liked_by_me || false);
+        void this.recordVisibleProfileVisit(data.id);
       } else {
         this.errorMessage.set(this.i18n.translate('userProfile.notFound'));
       }
@@ -111,7 +115,7 @@ export class UserDetailComponent {
 
   get displayBio(): string {
     const p = this.profile();
-    if (!p?.bio_text) return '';
+    if (!p?.bio_text?.trim()) return '';
     if (this.showTranslated() && this.translatedBioText()) {
       return this.translatedBioText();
     }
@@ -121,6 +125,16 @@ export class UserDetailComponent {
   get translationLabelKey(): string {
     if (this.isTranslating()) return 'profile.translatingBio';
     return this.showTranslated() ? 'profile.showOriginal' : 'profile.translateBio';
+  }
+
+  get translationActionLabel(): string {
+    const action = this.i18n.translate(this.translationLabelKey);
+    const displayName = this.profile()?.display_name?.trim();
+    return displayName ? `${action}: ${displayName}` : action;
+  }
+
+  translationBioId(): string {
+    return `user-detail-bio-${this.userId()}`;
   }
 
   translationStatusId(): string {
@@ -137,7 +151,7 @@ export class UserDetailComponent {
 
   async toggleTranslation(): Promise<void> {
     const p = this.profile();
-    if (!p?.bio_text) return;
+    if (!p?.bio_text?.trim()) return;
 
     if (this.isTranslating()) return;
 
@@ -253,6 +267,22 @@ export class UserDetailComponent {
     if (!url) return;
     const audio = new Audio(url);
     audio.play();
+  }
+
+  private async recordVisibleProfileVisit(profileId: string): Promise<void> {
+    if (this.authService.currentUser()?.id === profileId || this.visitAttempts.has(profileId)) {
+      return;
+    }
+
+    this.visitAttempts.add(profileId);
+    try {
+      await this.profileVisitsService.recordVisit(profileId);
+    } catch {
+      // Profile rendering must not fail because the audit trail is temporarily unavailable.
+      // Remove the attempt marker so a later successful reload can retry; the backend's
+      // daily unique key makes that retry safe if the first request actually committed.
+      this.visitAttempts.delete(profileId);
+    }
   }
 
   private getTranslationContext(): string {
