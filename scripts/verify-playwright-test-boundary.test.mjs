@@ -52,7 +52,7 @@ test('does not borrow an e2e working directory from another workflow step', () =
   });
 
   assert.deepEqual(violations, [
-    '.github/workflows/e2e.yml:5 invokes Playwright without the e2e working directory or explicit e2e config',
+    '.github/workflows/e2e.yml:5 invokes Playwright without the e2e working directory or explicit e2e config; set "working-directory: e2e" on the same workflow step',
   ]);
 });
 

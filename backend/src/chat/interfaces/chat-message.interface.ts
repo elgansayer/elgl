@@ -8,7 +8,7 @@ export interface CorrectionPayload {
 
 export interface SystemEventPayload {
   type: string; // e.g., 'user_joined', 'correction_given', 'call_ended', 'language_exchange'
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface MessageReaction {

@@ -147,7 +147,11 @@ function logicalCommandLines(lines, path) {
         parts.push(next.trim());
       }
       let command = '';
-      for (const rawPart of parts) {
+      let reportIndex = index;
+      for (const [partIndex, rawPart] of parts.entries()) {
+        if (reportIndex === index && /playwright/.test(rawPart)) {
+          reportIndex = index + 1 + partIndex;
+        }
         const part = literalRun ? stripUnquotedShellComment(rawPart) : rawPart;
         if (!part) {
           continue;
@@ -159,7 +163,7 @@ function logicalCommandLines(lines, path) {
       if (foldedRun) {
         command = stripUnquotedShellComment(command);
       }
-      commands.push({ command, index });
+      commands.push({ command, index, reportIndex });
       index = cursor - 1;
       continue;
     }
@@ -169,12 +173,11 @@ function logicalCommandLines(lines, path) {
     if (/\.ya?ml$/.test(path) && !inlineRun) {
       continue;
     }
-    let command = inlineRun?.[1] ?? line;
+    let command = stripUnquotedShellComment(inlineRun?.[1] ?? line);
     while (/\\\s*$/.test(command) && index + 1 < lines.length) {
-      command = `${command.replace(/\\\s*$/, '')} ${lines[index + 1].trim()}`;
+      command = `${command.replace(/\\\s*$/, '')} ${stripUnquotedShellComment(lines[index + 1].trim())}`;
       index += 1;
     }
-    command = stripUnquotedShellComment(command);
     commands.push({ command, index: startIndex });
   }
 
@@ -459,23 +462,38 @@ function commandEntries(content, path) {
 
 function cwdAfterSegment(cwdState, baseCwdIsE2e, segment, separatorAfter, precedingSeparator) {
   let { cwdIsE2e, cwdIsConditional } = cwdState;
+  const stack = [...(cwdState.stack ?? [])];
+  const leadingParens = /^\s*(?:[-\w.]+\s*:\s*)?(\(*)/.exec(segment)?.[1].length ?? 0;
+  for (let depth = 0; depth < leadingParens; depth += 1) {
+    stack.push({ cwdIsE2e, cwdIsConditional });
+  }
   const cdMatch = /^\s*(?:[-\w.]+\s*:\s*)?\(?\s*cd\s+([^\s;&|)]+)/i.exec(segment);
   if (cdMatch) {
     const target = normalizePath(cdMatch[1].replace(/^['"]|['"]$/g, '')).replace(/\/+$/, '');
     cwdIsE2e =
       precedingSeparator === '||' || precedingSeparator === '|'
         ? baseCwdIsE2e
-        : target === 'e2e' || target.startsWith('e2e/');
+        : /(?:^|\/)e2e(?:\/|$)/.test(target);
     cwdIsConditional = precedingSeparator === '&&';
   }
 
-  if (/\)\s*$/.test(segment) || !['&&', ';', null].includes(separatorAfter)) {
-    return { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+  const trailingParens = /(\)*)\s*$/.exec(segment)?.[1].length ?? 0;
+  for (let depth = 0; depth < trailingParens; depth += 1) {
+    const outer = stack.pop();
+    if (outer) {
+      ({ cwdIsE2e, cwdIsConditional } = outer);
+    } else {
+      cwdIsE2e = baseCwdIsE2e;
+      cwdIsConditional = false;
+    }
+  }
+  if (!['&&', ';', null].includes(separatorAfter)) {
+    return { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false, stack };
   }
   if (separatorAfter === ';' && cwdIsConditional) {
-    return { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+    return { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false, stack };
   }
-  return { cwdIsE2e, cwdIsConditional };
+  return { cwdIsE2e, cwdIsConditional, stack };
 }
 
 function isPlaywrightTestInvocation(invocation) {
@@ -578,7 +596,7 @@ function scanPlaywrightInvocations(files) {
       cwdIsE2e: path.startsWith('e2e/'),
       cwdIsConditional: false,
     };
-    for (const { command, index, location } of commandEntries(content, path)) {
+    for (const { command, index, reportIndex, location } of commandEntries(content, path)) {
       const normalizedLine = command.replace(/\\\s*/g, ' ').replace(/\s+/g, ' ').trim();
       const baseCwdIsE2e = persistsCwd
         ? fileCwdState.cwdIsE2e
@@ -597,7 +615,9 @@ function scanPlaywrightInvocations(files) {
           )
         ) {
           violations.push(
-            `${location ?? `${path}:${index + 1}`} invokes Playwright without the e2e working directory or explicit e2e config`,
+            `${location ?? `${path}:${(reportIndex ?? index) + 1}`} invokes Playwright without the e2e working directory or explicit e2e config${
+              /\.ya?ml$/.test(path) ? '; set "working-directory: e2e" on the same workflow step' : ''
+            }`,
           );
         }
         cwdState = cwdAfterSegment(
