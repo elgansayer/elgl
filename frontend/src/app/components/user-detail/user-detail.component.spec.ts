@@ -5,6 +5,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
+import { AuthService } from '../../services/auth.service';
+import { DirectConversationService } from '../../services/direct-conversation.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
 import { ProfileVisitsService } from '../../services/profile-visits.service';
@@ -51,6 +53,7 @@ describe('UserDetailComponent bio translation', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
   let currentLang: ReturnType<typeof signal<string>>;
+  let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
   let translateBio: ReturnType<typeof vi.fn>;
   let getUserProfile: ReturnType<typeof vi.fn>;
   let recordVisit: ReturnType<typeof vi.fn>;
@@ -61,6 +64,7 @@ describe('UserDetailComponent bio translation', () => {
 
   beforeEach(async () => {
     currentLang = signal('en-GB');
+    currentUser = signal<{ id: string } | null>({ id: 'current-user' });
     translateBio = vi.fn();
     getUserProfile = vi.fn().mockResolvedValue(makeProfile('user-1'));
     recordVisit = vi
@@ -76,6 +80,10 @@ describe('UserDetailComponent bio translation', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: { currentUser },
+        },
         {
           provide: UserService,
           useValue: {

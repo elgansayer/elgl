@@ -84,11 +84,11 @@ describe('DiagnosticQuizComponent', () => {
   it('uses Relay semantic surface, radius, border, and elevation roles', async () => {
     await load();
 
-    const surface: HTMLElement = fixture.nativeElement.querySelector('section');
-    const counter: HTMLElement = surface.querySelector('span.rounded-pill');
-    const progress: HTMLElement = surface.querySelector('[role="progressbar"]');
+    const surface: HTMLElement = fixture.nativeElement.querySelector('section') as HTMLElement;
+    const counter: HTMLElement = surface.querySelector<HTMLElement>('span.rounded-pill') as HTMLElement;
+    const progress: HTMLElement = surface.querySelector<HTMLElement>('[role="progressbar"]') as HTMLElement;
     const progressFill: HTMLElement = progress.firstElementChild as HTMLElement;
-    const option: HTMLElement = surface.querySelector('hlm-radio');
+    const option: HTMLElement = surface.querySelector<HTMLElement>('hlm-radio') as HTMLElement;
 
     expect(surface.classList.toString()).toContain('rounded-card');
     expect(surface.classList.toString()).toContain('border-surface-100');
@@ -114,10 +114,10 @@ describe('DiagnosticQuizComponent', () => {
   it('uses a mobile-first layout that expands at the small breakpoint', async () => {
     await load();
 
-    const surface: HTMLElement = fixture.nativeElement.querySelector('section');
-    const headerRow: HTMLElement = surface.querySelector('div.mb-4');
-    const footer: HTMLElement = surface.querySelector('div.border-t');
-    const actionRow: HTMLElement = footer.querySelector('div.flex');
+    const surface: HTMLElement = fixture.nativeElement.querySelector('section') as HTMLElement;
+    const headerRow: HTMLElement = surface.querySelector<HTMLElement>('div.mb-4') as HTMLElement;
+    const footer: HTMLElement = surface.querySelector<HTMLElement>('div.border-t') as HTMLElement;
+    const actionRow: HTMLElement = footer.querySelector<HTMLElement>('div.flex') as HTMLElement;
     const buttons: NodeListOf<HTMLButtonElement> = actionRow.querySelectorAll('button');
 
     expect(headerRow.classList.toString()).toContain('flex-col');
@@ -134,8 +134,8 @@ describe('DiagnosticQuizComponent', () => {
   it('keeps option content wrap-safe while preserving a circular index marker', async () => {
     await load();
 
-    const option: HTMLElement = fixture.nativeElement.querySelector('hlm-radio');
-    const content: HTMLElement = option.querySelector('span.flex');
+    const option: HTMLElement = fixture.nativeElement.querySelector('hlm-radio') as HTMLElement;
+    const content: HTMLElement = option.querySelector<HTMLElement>('span.flex') as HTMLElement;
     const marker: HTMLElement = content.firstElementChild as HTMLElement;
     const label: HTMLElement = content.lastElementChild as HTMLElement;
 

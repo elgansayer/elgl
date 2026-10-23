@@ -76,11 +76,7 @@ describe('CreateEventModalComponent', () => {
       component.eventForm.controls[field].setValue('   ');
       expect(component.eventForm.controls[field].invalid).toBe(true);
       component.eventForm.controls[field].setValue(
-        field === 'title'
-          ? 'Conversation meetup'
-          : field === 'location'
-            ? 'Zoom'
-            : 'Practice together',
+        field === 'title' ? 'Conversation meetup' : field === 'location' ? 'Zoom' : 'Practice together',
       );
     }
 

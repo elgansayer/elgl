@@ -1,11 +1,10 @@
-import { Component } from '@angular/core';
-import { Component, signal } from '@angular/core';
+import { Component, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
 import { DesktopSidebarComponent } from './desktop-sidebar.component';
 import { I18nService } from '../../services/i18n.service';
-import { UnreadCounterService } from '../../services/unread-counter.service';
+import { NavTab, UnreadCounterService } from '../../services/unread-counter.service';
 import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 
 @Component({ template: '' })
@@ -18,8 +17,41 @@ class MockI18nService {
 }
 
 class MockUnreadCounterService {
-  tabCount(): number {
-    return 0;
+  // Backed by signals - like the real service - so template reads via
+  // tabCount() register as reactive dependencies and the zoneless fixture
+  // re-renders when a test calls setCount().
+  private readonly counts = new Map<NavTab, WritableSignal<number>>();
+
+  private signalFor(tab: NavTab): WritableSignal<number> {
+    let value = this.counts.get(tab);
+    if (!value) {
+      value = signal(0);
+      this.counts.set(tab, value);
+    }
+    return value;
+  }
+
+  tabCount(tab: NavTab): number {
+    return this.signalFor(tab)();
+  }
+
+  badgeText(tab: NavTab): string {
+    const count = this.tabCount(tab);
+    return count > 99 ? '99+' : String(count);
+  }
+
+  setCount(tab: NavTab, count: number): void {
+    this.signalFor(tab).set(count);
+  }
+
+  // Reuses each tab's existing signal instance rather than discarding it -
+  // the template's reactive subscription is tied to that specific signal
+  // object, so replacing it with a fresh one on the next setCount() would
+  // leave the template pointed at an orphaned signal that never updates.
+  reset(): void {
+    for (const value of this.counts.values()) {
+      value.set(0);
+    }
   }
 }
 
@@ -27,6 +59,7 @@ describe('DesktopSidebarComponent', () => {
   let fixture: ComponentFixture<DesktopSidebarComponent>;
   let component: DesktopSidebarComponent;
   let router: Router;
+  let unreadCounter: MockUnreadCounterService;
   let seriousLearnerEnabled: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
@@ -53,6 +86,7 @@ describe('DesktopSidebarComponent', () => {
     fixture = TestBed.createComponent(DesktopSidebarComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
+    unreadCounter = TestBed.inject(UnreadCounterService) as unknown as MockUnreadCounterService;
     fixture.detectChanges();
   });
 
