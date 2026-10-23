@@ -564,3 +564,6 @@
 
 
 
+## 2023-10-23 - Concurrent Chunk Processing for LLM Summarization
+**Learning:** Replaced sequential API calls (summarization of chunks) with `Promise.all`. Sequential calls block the execution loop and cause additive latency when dealing with large payloads.
+**Action:** Always batch independent asynchronous external API queries with `Promise.all` instead of sequential `await` loops inside data processing pipelines, unless causality or strict boundaries are required.
