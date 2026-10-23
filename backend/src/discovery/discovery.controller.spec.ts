@@ -165,7 +165,7 @@ describe('DiscoveryController', () => {
     });
 
     it('should enable the algorithmic filter for profiles enrolled in serious learner mode', async () => {
-      const mockProfile: any = { id: 'user-1', is_serious_learner: true };
+      const mockProfile: any = { id: 'user-1', serious_learner_mode: true };
       const query: any = {};
 
       (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
@@ -211,7 +211,7 @@ describe('DiscoveryController', () => {
 
   describe('getAudioIntros', () => {
     it('should apply the same serious learner filter to audio-intro discovery', async () => {
-      const mockProfile: any = { id: 'user-1', is_serious_learner: true };
+      const mockProfile: any = { id: 'user-1', serious_learner_mode: true };
       const query: any = {};
 
       (usersService.getProfile as Mock).mockResolvedValue(mockProfile);

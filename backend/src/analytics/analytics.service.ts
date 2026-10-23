@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ClientErrorDto } from './dto/client-error.dto';
 
@@ -38,7 +42,8 @@ function sanitiseUrl(value: string | undefined): string | null {
   if (!value) return null;
   try {
     const parsed = new URL(value);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
+      return null;
     return `${parsed.origin}${parsed.pathname}`.slice(0, 2048);
   } catch {
     return null;
@@ -75,7 +80,9 @@ export class AnalyticsService {
     } catch (error: unknown) {
       if (error instanceof ServiceUnavailableException) throw error;
       this.logger.warn('Client crash analytics persistence threw unexpectedly');
-      throw new ServiceUnavailableException('Client crash analytics unavailable');
+      throw new ServiceUnavailableException(
+        'Client crash analytics unavailable',
+      );
     }
   }
 }

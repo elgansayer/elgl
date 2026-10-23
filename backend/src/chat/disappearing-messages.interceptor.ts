@@ -28,13 +28,17 @@ export class DisappearingMessagesInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const stripLegacyMessageMocks = /(?:^|\/)chat\/(?:messages|search)(?:\/|\?|$)/.test(url);
+    const stripLegacyMessageMocks =
+      /(?:^|\/)chat\/(?:messages|search)(?:\/|\?|$)/.test(url);
     return next
       .handle()
       .pipe(map((value) => this.filterExpired(value, stripLegacyMessageMocks)));
   }
 
-  private filterExpired(value: unknown, stripLegacyMessageMocks: boolean): unknown {
+  private filterExpired(
+    value: unknown,
+    stripLegacyMessageMocks: boolean,
+  ): unknown {
     if (Array.isArray(value)) {
       return value
         .filter(
@@ -92,11 +96,17 @@ export class DisappearingMessagesInterceptor implements NestInterceptor {
     // Only records with the core chat-message shape are subject to retention.
     // This prevents unrelated chat response objects with an expires_at field
     // from being altered by the interceptor.
-    if (typeof value['room_id'] !== 'string' || typeof value['sender_id'] !== 'string') {
+    if (
+      typeof value['room_id'] !== 'string' ||
+      typeof value['sender_id'] !== 'string'
+    ) {
       return false;
     }
 
-    if (typeof value['expires_at'] !== 'string' || value['expires_at'].length === 0) {
+    if (
+      typeof value['expires_at'] !== 'string' ||
+      value['expires_at'].length === 0
+    ) {
       return false;
     }
 

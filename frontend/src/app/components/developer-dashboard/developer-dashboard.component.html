@@ -117,6 +117,7 @@
           </div>
           <app-button-primary
             (clicked)="generateKey()"
+            [disabled]="isGeneratingApiKey()"
             customClass="ps-4 pe-4 pt-2.5 pb-2.5 text-xs"
             [attr.aria-label]="'developer.generateBtn' | t"
           >

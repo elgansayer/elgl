@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -54,7 +55,7 @@ describe('ChatSettingsService', () => {
       };
 
       const promise = service.loadSettings();
-      const req = httpTesting.expectOne('http://localhost:3000/api/chat/settings');
+      const req = httpTesting.expectOne(`${environment.apiUrl}/chat/settings`);
       expect(req.request.method).toBe('GET');
       expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
       req.flush(mockSettings);
@@ -71,7 +72,7 @@ describe('ChatSettingsService', () => {
     it('should fall back to defaults when textSize is missing', async () => {
       const promise = service.loadSettings();
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .flush({ autoTranslate: false, readReceipts: false, enterToSend: false });
 
       await promise;
@@ -82,7 +83,7 @@ describe('ChatSettingsService', () => {
     it('should fall back to defaults on API error', async () => {
       const promise = service.loadSettings();
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .error(new ProgressEvent('error'));
 
       await promise;
@@ -99,7 +100,7 @@ describe('ChatSettingsService', () => {
     it('should update autoTranslate and call the API', async () => {
       const promise = service.updateSetting('autoTranslate', true);
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .flush({ autoTranslate: true });
 
       await promise;
@@ -109,7 +110,7 @@ describe('ChatSettingsService', () => {
     it('should update readReceipts and call the API', async () => {
       const promise = service.updateSetting('readReceipts', true);
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .flush({ readReceipts: true });
 
       await promise;
@@ -119,7 +120,7 @@ describe('ChatSettingsService', () => {
     it('should update enterToSend and call the API', async () => {
       const promise = service.updateSetting('enterToSend', true);
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .flush({ enterToSend: true });
 
       await promise;
@@ -129,7 +130,7 @@ describe('ChatSettingsService', () => {
     it('should update textSize and call the API', async () => {
       const promise = service.updateSetting('textSize', 'small');
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .flush({ textSize: 'small' });
 
       await promise;
@@ -141,7 +142,7 @@ describe('ChatSettingsService', () => {
 
       const promise = service.updateSetting('autoTranslate', true);
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .error(new ProgressEvent('error'));
 
       await promise;
@@ -153,7 +154,7 @@ describe('ChatSettingsService', () => {
 
       const promise = service.updateSetting('textSize', 'large');
       httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
+        .expectOne(`${environment.apiUrl}/chat/settings`)
         .error(new ProgressEvent('error'));
 
       await promise;

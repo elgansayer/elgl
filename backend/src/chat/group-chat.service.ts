@@ -58,7 +58,9 @@ export class GroupChatService {
       message.includes('group_membership_required') ||
       message.includes('chat_room_membership_required')
     ) {
-      throw new ForbiddenException('You do not have permission to modify this group');
+      throw new ForbiddenException(
+        'You do not have permission to modify this group',
+      );
     }
     if (
       message.includes('group_not_found') ||
@@ -82,13 +84,19 @@ export class GroupChatService {
     requesterId: string,
     memberIds: string[],
   ): Promise<void> {
-    const blocked = await this.safetyService.getBlockedAndBlockerIds(requesterId);
+    const blocked =
+      await this.safetyService.getBlockedAndBlockerIds(requesterId);
     if (memberIds.some((memberId) => blocked.includes(memberId))) {
-      throw new ForbiddenException('Blocked users cannot be added to a group chat');
+      throw new ForbiddenException(
+        'Blocked users cannot be added to a group chat',
+      );
     }
   }
 
-  private async ensureMembership(userId: string, roomId: string): Promise<void> {
+  private async ensureMembership(
+    userId: string,
+    roomId: string,
+  ): Promise<void> {
     const supabase = this.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
@@ -116,14 +124,21 @@ export class GroupChatService {
       .maybeSingle();
 
     if (error || !data) {
-      throw new ForbiddenException('Only the group admin can perform this action');
+      throw new ForbiddenException(
+        'Only the group admin can perform this action',
+      );
     }
   }
 
-  async create(userId: string, dto: CreateGroupChatDto): Promise<GroupChatRecord> {
+  async create(
+    userId: string,
+    dto: CreateGroupChatDto,
+  ): Promise<GroupChatRecord> {
     const memberIds = [...new Set(dto.memberIds)].filter((id) => id !== userId);
     if (memberIds.length < 1 || memberIds.length > 18) {
-      throw new BadRequestException('Group chats must contain between 2 and 19 people');
+      throw new BadRequestException(
+        'Group chats must contain between 2 and 19 people',
+      );
     }
     await this.assertNoBlockedMembers(userId, memberIds);
 
@@ -135,30 +150,33 @@ export class GroupChatService {
     });
     if (error || typeof roomId !== 'string') this.throwDbError(error);
 
-    await this.systemMessageService.publishToRoom(roomId as string, 'groupCreated', {
+    await this.systemMessageService.publishToRoom(roomId, 'groupCreated', {
       actorId: userId,
       memberCount: memberIds.length + 1,
     });
-    return this.get(userId, roomId as string);
+    return this.get(userId, roomId);
   }
 
   async get(userId: string, roomId: string): Promise<GroupChatRecord> {
     await this.ensureMembership(userId, roomId);
     const supabase = this.getClient();
 
-    const [{ data: room, error }, { count, error: countError }] = await Promise.all([
-      supabase
-        .from('chat_rooms')
-        .select('id, type, title, topic, avatar_url, admin_id, max_members, created_at')
-        .eq('id', roomId)
-        .eq('type', 'group')
-        .eq('is_deleted', false)
-        .single(),
-      supabase
-        .from('chat_room_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('room_id', roomId),
-    ]);
+    const [{ data: room, error }, { count, error: countError }] =
+      await Promise.all([
+        supabase
+          .from('chat_rooms')
+          .select(
+            'id, type, title, topic, avatar_url, admin_id, max_members, created_at',
+          )
+          .eq('id', roomId)
+          .eq('type', 'group')
+          .eq('is_deleted', false)
+          .single(),
+        supabase
+          .from('chat_room_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('room_id', roomId),
+      ]);
 
     if (error || countError || !room || !room.admin_id) {
       throw new NotFoundException('Group not found');
@@ -189,7 +207,7 @@ export class GroupChatService {
       .order('joined_at', { ascending: true });
 
     if (error) throw new NotFoundException('Unable to load group members');
-    return (data ?? []) as unknown as GroupChatMember[];
+    return data ?? [];
   }
 
   async update(
@@ -206,7 +224,8 @@ export class GroupChatService {
       updates['name'] = title;
     }
     if (dto.topic !== undefined) updates['topic'] = dto.topic.trim() || null;
-    if (dto.avatarUrl !== undefined) updates['avatar_url'] = dto.avatarUrl.trim() || null;
+    if (dto.avatarUrl !== undefined)
+      updates['avatar_url'] = dto.avatarUrl.trim() || null;
 
     if (Object.keys(updates).length > 0) {
       const supabase = this.getClient();
@@ -220,11 +239,17 @@ export class GroupChatService {
         .select('id')
         .maybeSingle();
       if (error || !data) {
-        throw new ForbiddenException('Only the current group admin can edit group info');
+        throw new ForbiddenException(
+          'Only the current group admin can edit group info',
+        );
       }
-      await this.systemMessageService.publishToRoom(roomId, 'groupInfoUpdated', {
-        actorId: userId,
-      });
+      await this.systemMessageService.publishToRoom(
+        roomId,
+        'groupInfoUpdated',
+        {
+          actorId: userId,
+        },
+      );
     }
     return this.get(userId, roomId);
   }
@@ -253,7 +278,11 @@ export class GroupChatService {
     return this.members(userId, roomId);
   }
 
-  async removeMember(userId: string, roomId: string, memberId: string): Promise<void> {
+  async removeMember(
+    userId: string,
+    roomId: string,
+    memberId: string,
+  ): Promise<void> {
     const supabase = this.getClient();
     const { error } = await supabase.rpc('remove_group_chat_member', {
       p_requester_id: userId,
@@ -281,10 +310,14 @@ export class GroupChatService {
     });
     if (error) this.throwDbError(error);
 
-    await this.systemMessageService.publishToRoom(roomId, 'groupAdminTransferred', {
-      previousAdminId: userId,
-      adminId: dto.memberId,
-    });
+    await this.systemMessageService.publishToRoom(
+      roomId,
+      'groupAdminTransferred',
+      {
+        previousAdminId: userId,
+        adminId: dto.memberId,
+      },
+    );
     return this.get(dto.memberId, roomId);
   }
 

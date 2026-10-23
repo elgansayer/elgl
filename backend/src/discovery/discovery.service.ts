@@ -1,4 +1,8 @@
-import { Injectable, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
@@ -99,10 +103,11 @@ export class DiscoveryService {
       const { data: candidates, error } = await supabase
         .from('users')
         .select(
-          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days, last_active_at',
+          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, scheduled_for_deletion_at, correction_ratio, study_streak_days, last_active_at',
         )
         .eq('privacy_hide_from_search', false)
         .eq('is_deletion_pending', false)
+        .is('scheduled_for_deletion_at', null)
         .not('display_name', 'is', null)
         .not('native_languages', 'is', null)
         .not('target_languages', 'is', null)
@@ -125,6 +130,7 @@ export class DiscoveryService {
         (candidate) =>
           candidate.privacy_hide_from_search === false &&
           candidate.is_deletion_pending === false &&
+          candidate.scheduled_for_deletion_at === null &&
           typeof candidate.display_name === 'string' &&
           candidate.display_name.trim().length > 0 &&
           Array.isArray(candidate.native_languages) &&
@@ -197,7 +203,10 @@ export class DiscoveryService {
 
         const correctionRatio = candidate.correction_ratio ?? 0;
         // Normalise average rating to 0-1 (1-5 scale)
-        const avgRatingNorm = (ratings.averageScore - 1) / 4;
+        const avgRatingNorm =
+          Number.isFinite(ratings.averageScore) && ratings.averageScore > 0
+            ? Math.min(1, Math.max(0, (ratings.averageScore - 1) / 4))
+            : 0;
         // Log-scale the ratings count so it doesn't dominate
         const ratingsCountLog =
           ratings.totalRatings > 0
@@ -270,6 +279,7 @@ export class DiscoveryService {
         .from('users')
         .select('id, native_languages, target_languages')
         .eq('is_deletion_pending', false)
+        .is('scheduled_for_deletion_at', null)
         .not('native_languages', 'is', null)
         .not('target_languages', 'is', null)
         .limit(1000);
@@ -325,6 +335,7 @@ export class DiscoveryService {
             .select('id')
             .eq('privacy_hide_from_search', false)
             .eq('is_deletion_pending', false)
+            .is('scheduled_for_deletion_at', null)
             .contains('native_languages', [targetCode])
             .contains('target_languages', [nativeCode])
             .order('study_streak_days', { ascending: false })
@@ -396,27 +407,71 @@ export class DiscoveryService {
     }
   }
 
-  // Expose the current Partner of the Week IDs
-  async getPartnerOfWeekIds(userId?: string): Promise<string[]> {
+  // Expose only Partner of the Week IDs that remain discoverable now. The
+  // weekly Redis ranking is intentionally revalidated on every read so a
+  // privacy, account-deletion, or viewer block change cannot remain visible
+  // for its 7-day TTL.
+  async getPartnerOfWeekIds(viewerId: string): Promise<string[]> {
     const redis = this.supabaseService.getRedisClient();
     const raw = await redis.get('partner_of_week_ids');
-    return sanitiseDiscoveryData(this.parseStringArray(raw));
+    const cachedIds = this.parseStringArray(raw);
+    if (cachedIds.length === 0) return [];
+
+    try {
+      const blockedIds = new Set(
+        await this.safetyService.getBlockedAndBlockerIds(viewerId),
+      );
+      const { data, error } = await this.supabaseService
+        .getClient()
+        .from('users')
+        .select('id')
+        .in('id', cachedIds)
+        .eq('privacy_hide_from_search', false)
+        .eq('is_deletion_pending', false)
+        .is('scheduled_for_deletion_at', null)
+        .limit(cachedIds.length);
+
+      if (error || !data) {
+        this.logger.error(
+          'Failed to revalidate Partner of the Week privacy state',
+        );
+        return [];
+      }
+
+      const discoverableIds = new Set(
+        (data as Array<{ id?: unknown }>)
+          .map((row) => row.id)
+          .filter((id): id is string => typeof id === 'string'),
+      );
+      return sanitiseDiscoveryData(
+        cachedIds.filter(
+          (id) => discoverableIds.has(id) && !blockedIds.has(id),
+        ),
+      );
+    } catch {
+      this.logger.error(
+        'Failed to revalidate Partner of the Week privacy state',
+      );
+      return [];
+    }
   }
 
   async searchPartners(
     currentUserId: string,
     _currentUserProfile: UserProfile | null,
     query: SearchQueryDto,
+    verifiedBlockedIds?: string[],
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
 
     const blockedIds =
-      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+      verifiedBlockedIds ??
+      (await this.safetyService.getBlockedAndBlockerIds(currentUserId));
 
     const seriousLearnerOnly =
       query.serious_learner_only === true ||
       query.serious_learner_mode === true ||
-      _currentUserProfile?.is_serious_learner === true;
+      _currentUserProfile?.serious_learner_mode === true;
     if (seriousLearnerOnly) {
       query.serious_learner_only = true;
     }
@@ -459,6 +514,15 @@ export class DiscoveryService {
       }
     }
 
+    // Serious Learner mode must be resolved before the standard Supabase query
+    // is constructed so every discovery path applies the same thresholds.
+    if (
+      _currentUserProfile?.serious_learner_mode === true ||
+      query.serious_learner_mode
+    ) {
+      query.serious_learner_only = true;
+    }
+
     let queryBuilder = supabase
       .from('users')
       .select(
@@ -466,7 +530,8 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false);
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null);
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder
@@ -498,11 +563,6 @@ export class DiscoveryService {
 
     if (query.level) {
       queryBuilder = queryBuilder.eq('proficiency_level', query.level);
-    }
-
-    // When the user has serious_learner_mode enabled, force serious learner filter
-    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
-      query.serious_learner_only = true;
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
@@ -710,6 +770,11 @@ export class DiscoveryService {
     currentUserProfile: UserProfile | null,
     query: SearchQueryDto,
   ): Promise<DiscoveryResult> {
+    // The complete block graph is a security boundary, not an availability
+    // dependency. Resolve it before entering the circuit breaker so a failed or
+    // malformed lookup can never fall through to unfiltered fallback profiles.
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
     const marker: DegradationMarker = {
       degraded: false,
       fallbackSource: 'none',
@@ -718,7 +783,13 @@ export class DiscoveryService {
     try {
       const result = await this.degradationService.executeWithBreaker(
         'discovery_partners',
-        () => this.searchPartners(currentUserId, currentUserProfile, query),
+        () =>
+          this.searchPartners(
+            currentUserId,
+            currentUserProfile,
+            query,
+            blockedIds,
+          ),
         () => {
           marker.fallbackSource = 'basic_query';
           return [] as UserProfile[];
@@ -727,7 +798,7 @@ export class DiscoveryService {
       );
 
       if (marker.degraded && result.length === 0) {
-        const mockData = this.getMockDiscoveryData(query, []);
+        const mockData = this.getMockDiscoveryData(query, blockedIds);
         await this.degradationService.recordDegradationEvent(
           '/discovery/partners',
           marker.reason ?? 'Search failed, using mock data',
@@ -753,7 +824,7 @@ export class DiscoveryService {
         'mock',
         currentUserId,
       );
-      const mockData = this.getMockDiscoveryData(query, []);
+      const mockData = this.getMockDiscoveryData(query, blockedIds);
       return {
         data: mockData,
         marker: {
@@ -777,7 +848,7 @@ export class DiscoveryService {
     const seriousLearnerOnly =
       query.serious_learner_only === true ||
       query.serious_learner_mode === true ||
-      currentUserProfile?.is_serious_learner === true;
+      currentUserProfile?.serious_learner_mode === true;
     if (seriousLearnerOnly) {
       query.serious_learner_only = true;
     }
@@ -802,7 +873,8 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false);
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null);
 
     queryBuilder = queryBuilder
       .not('audio_intro_url', 'is', null)
@@ -850,7 +922,12 @@ export class DiscoveryService {
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data) {
-      return sanitiseDiscoveryData([]);
+      const errorCode =
+        response.error?.code?.match(/^[a-z0-9_-]{1,32}$/i)?.[0] ?? 'unknown';
+      this.logger.error({ errorCode }, 'Audio intro discovery query failed');
+      throw new ServiceUnavailableException(
+        'Audio introductions are temporarily unavailable',
+      );
     }
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
@@ -881,6 +958,8 @@ export class DiscoveryService {
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -924,6 +1003,8 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -980,7 +1061,9 @@ export class DiscoveryService {
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null);
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
@@ -1114,10 +1197,10 @@ export class DiscoveryService {
       return users.filter((u) => activeHostSet.has(u.id));
     } catch (err) {
       this.logger.error(
-        'Voice room active filter failed, returning unfiltered results',
+        'Voice room active filter failed, returning no active hosts',
         err,
       );
-      return users;
+      return [];
     }
   }
 
@@ -1397,7 +1480,9 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null);
     if (blockedIds.length > 0) {
       qb = qb.not('id', 'in', blockedIds);
     }

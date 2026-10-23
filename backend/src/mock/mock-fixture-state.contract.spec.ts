@@ -73,9 +73,9 @@ describe('mock fixture reset and reseed contract', () => {
     expect(() => service.resetMockFixtures('not allowed!')).toThrow(
       BadRequestException,
     );
-    expect(() =>
-      service.captureMockFixtureSnapshot('', 'worker-a'),
-    ).toThrow(BadRequestException);
+    expect(() => service.captureMockFixtureSnapshot('', 'worker-a')).toThrow(
+      BadRequestException,
+    );
     expect(() => service.reseedMockFixtures('invalid', 'worker-a')).toThrow(
       'unsigned 32-bit integer',
     );

@@ -402,9 +402,13 @@ export class DiscoveryController {
     profile: UserProfile | null,
     query: SearchQueryDto,
   ): void {
-    // The product mode is a persisted user preference. Do not conflate it with
-    // is_serious_learner, which is an earned/behavioural qualification signal.
-    if (profile?.serious_learner_mode !== true) return;
+    // The mode comes from the request (Serious filter pill) or the persisted
+    // preference. Never from is_serious_learner, which is an earned/behavioural
+    // qualification signal (docs/serious-learner-mode.md).
+    const modeEnabled =
+      query.serious_learner_mode === true ||
+      profile?.serious_learner_mode === true;
+    if (!modeEnabled) return;
 
     query.serious_learner_mode = true;
     // Set this before DiscoveryService builds its Supabase query so both
