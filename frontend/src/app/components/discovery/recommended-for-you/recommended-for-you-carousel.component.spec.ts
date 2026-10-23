@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DiscoveryRecommendation,
   RecommendationsService,
 } from '../../../services/recommendations.service';
+import { I18nService } from '../../../services/i18n.service';
+import { StudyBuddiesService } from '../../../services/study-buddies.service';
 import { RecommendedForYouCarouselComponent } from './recommended-for-you-carousel.component';
 
 function recommendation(id: string, name = id): DiscoveryRecommendation {
@@ -22,7 +24,10 @@ function recommendation(id: string, name = id): DiscoveryRecommendation {
 describe('RecommendedForYouCarouselComponent', () => {
   let fixture: ComponentFixture<RecommendedForYouCarouselComponent>;
   let component: RecommendedForYouCarouselComponent;
+  let router: Router;
   let getRecommendations: ReturnType<typeof vi.fn>;
+  let followUser: ReturnType<typeof vi.fn>;
+  let getOrCreateChannel: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     getRecommendations = vi.fn().mockResolvedValue([
@@ -33,6 +38,8 @@ describe('RecommendedForYouCarouselComponent', () => {
       },
       recommendation('p-2', 'Ren'),
     ]);
+    followUser = vi.fn().mockResolvedValue(undefined);
+    getOrCreateChannel = vi.fn().mockResolvedValue({ channel: 'room-1' });
 
     await TestBed.configureTestingModule({
       imports: [RecommendedForYouCarouselComponent],
@@ -73,6 +80,8 @@ describe('RecommendedForYouCarouselComponent', () => {
 
     fixture = TestBed.createComponent(RecommendedForYouCarouselComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -137,7 +146,9 @@ describe('RecommendedForYouCarouselComponent', () => {
   });
 
   it('links recommendations to the canonical profile route', () => {
-    const link = fixture.nativeElement.querySelector('.recommended-card') as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector(
+      '.recommended-profile-link',
+    ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toContain('/profile/p-1');
   });
 

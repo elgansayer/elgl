@@ -84,7 +84,7 @@ const ACCEPTED_MEDIA =
         <hlm-checkbox
           class="h-5 w-5"
           [checked]="quality() === 'hd'"
-          (checkedChange)="onQualityChanged($event)"
+          (checkedChange)="onQualityCheckedChange($event)"
           aria-label="Send in HD quality"
         />
       </label>
@@ -156,7 +156,7 @@ export class ChatMediaPickerComponent implements OnDestroy {
     this.error.set(null);
   }
 
-  onQualityChanged(checked: boolean): void {
+  onQualityCheckedChange(checked: boolean): void {
     this.quality.set(checked ? 'hd' : 'standard');
     this.error.set(null);
   }

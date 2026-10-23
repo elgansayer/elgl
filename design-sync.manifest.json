@@ -19,7 +19,7 @@
       "claudeDesignPath": "foundations/tokens.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1094-appearance-settings-2026-08-23; rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1094-appearance-settings-2026-08-23; rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "forced-colours", "accent-override"]
     },
     {
@@ -51,7 +51,7 @@
       "claudeDesignPath": "components/primitives/card-inputs.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; card-consumer-role-override-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; card-consumer-role-override-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "focus-visible", "error", "390px", "rtl"]
     },
     {
@@ -66,7 +66,7 @@
       "claudeDesignPath": "components/primitives/chip-pill-badges.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "rtl"]
     },
     {
@@ -78,7 +78,7 @@
       "claudeDesignPath": "components/primitives/feedback-states.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "error", "loading", "empty", "rtl"]
     },
     {
@@ -90,7 +90,7 @@
       "claudeDesignPath": "components/primitives/indicators-media.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "reduced-motion"]
     },
     {
@@ -98,7 +98,10 @@
       "kind": "primitive",
       "ownerLayer": "spartan-helm",
       "repositoryPaths": ["frontend/src/app/components/ui/dialog"],
-      "previewPaths": ["frontend/design-preview/components/primitives/overlays-menus.html"],
+      "previewPaths": [
+        "frontend/design-preview/components/primitives/overlays-menus.html",
+        "frontend/design-preview/components/confirm-dialog.html"
+      ],
       "claudeDesignPath": "components/primitives/overlays-menus.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
@@ -147,7 +150,7 @@
       "claudeDesignPath": "screens/shell.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-6068-correction-modal-relay-tokens-2026-08-21; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-6068-correction-modal-relay-tokens-2026-08-21; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -176,7 +179,7 @@
       "claudeDesignPath": "screens/chat.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
     },
     {
@@ -188,7 +191,7 @@
       "claudeDesignPath": "screens/discovery.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -219,7 +222,7 @@
       "claudeDesignPath": "screens/settings.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -230,7 +233,9 @@
         "frontend/src/app/pages/escrow",
         "frontend/src/app/pages/escrow-detail",
         "frontend/src/app/pages/my-subscription",
-        "frontend/src/app/pages/subscription"
+        "frontend/src/app/pages/subscription",
+        "frontend/src/app/pages/vip",
+        "frontend/src/app/pages/vip-subscription"
       ],
       "previewPaths": ["frontend/design-preview/screens/monetisation.html"],
       "claudeDesignPath": "screens/monetisation.html",
@@ -251,7 +256,7 @@
       "claudeDesignPath": "screens/moderation.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -370,7 +375,7 @@
       "claudeDesignPath": "features/auth-access.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "error", "loading", "disabled", "390px", "rtl"]
     },
     {
@@ -405,7 +410,8 @@
         "frontend/src/app/chat/threaded-reply",
         "frontend/src/app/chat/wallpaper-picker",
         "frontend/src/app/features/premium-ai",
-        "frontend/src/app/ai-conversation"
+        "frontend/src/app/ai-conversation",
+        "frontend/src/app/components/message-reaction-control"
       ],
       "previewPaths": ["frontend/design-preview/features/chat-messaging.html"],
       "claudeDesignPath": "features/chat-messaging.html",
@@ -441,7 +447,8 @@
         "frontend/src/app/components/language-parties",
         "frontend/src/app/components/classrooms-marketplace",
         "frontend/src/app/components/video-classroom-error-boundary",
-        "frontend/src/app/components/instant-video-recorder"
+        "frontend/src/app/components/instant-video-recorder",
+        "frontend/src/app/components/audio-room-archive"
       ],
       "previewPaths": ["frontend/design-preview/features/calls-live.html"],
       "claudeDesignPath": "features/calls-live.html",
@@ -481,9 +488,13 @@
         "frontend/src/app/components/topic-following",
         "frontend/src/app/components/language-questions",
         "frontend/src/app/achievements",
-        "frontend/src/app/features/settings"
+        "frontend/src/app/features/settings",
+        "frontend/src/app/components/user-quick-actions"
       ],
-      "previewPaths": ["frontend/design-preview/features/profile-identity.html"],
+      "previewPaths": [
+        "frontend/design-preview/features/profile-identity.html",
+        "frontend/design-preview/components/cover-photo-cropper.html"
+      ],
       "claudeDesignPath": "features/profile-identity.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
@@ -517,9 +528,14 @@
         "frontend/src/app/components/notification-customization",
         "frontend/src/app/pages/language-islands",
         "frontend/src/app/components/report-user-modal",
-        "frontend/src/app/components/trust-safety-modal"
+        "frontend/src/app/components/trust-safety-modal",
+        "frontend/src/app/components/event-rsvp-controls"
       ],
-      "previewPaths": ["frontend/design-preview/features/discovery-community.html"],
+      "previewPaths": [
+        "frontend/design-preview/features/discovery-community.html",
+        "frontend/design-preview/components/distance-slider.html",
+        "frontend/design-preview/screens/audio-intros.html"
+      ],
       "claudeDesignPath": "features/discovery-community.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
@@ -565,7 +581,8 @@
         "frontend/src/app/components/streak-counter",
         "frontend/src/app/components/study-streak-counter",
         "frontend/src/app/components/study-streak-widget",
-        "frontend/src/app/components/celebration-overlay"
+        "frontend/src/app/components/celebration-overlay",
+        "frontend/src/app/components/language-challenges"
       ],
       "previewPaths": ["frontend/design-preview/features/learning.html"],
       "claudeDesignPath": "features/learning.html",
@@ -614,7 +631,7 @@
       "claudeDesignPath": "features/commerce.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": [
         "light",
         "dark",
@@ -649,7 +666,7 @@
       "claudeDesignPath": "features/settings-system.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": [
         "light",
         "dark",
@@ -674,7 +691,8 @@
         "frontend/src/app/components/user-detail",
         "frontend/src/app/components/moderation",
         "frontend/src/app/components/lesson-manager",
-        "frontend/src/app/moderation"
+        "frontend/src/app/moderation",
+        "frontend/src/app/admin/user-management"
       ],
       "previewPaths": ["frontend/design-preview/features/admin-console.html"],
       "claudeDesignPath": "features/admin-console.html",
@@ -697,7 +715,8 @@
         "frontend/src/app/components/ui/native-select",
         "frontend/src/app/components/ui/popover",
         "frontend/src/app/components/ui/radio-group",
-        "frontend/src/app/components/ui/textarea"
+        "frontend/src/app/components/ui/textarea",
+        "frontend/src/app/components/ui/tabs"
       ],
       "previewPaths": ["frontend/design-preview/components/primitives/helm-controls.html"],
       "claudeDesignPath": "components/primitives/helm-controls.html",
@@ -724,7 +743,7 @@
       "claudeDesignPath": "components/correction-modal.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "focus-visible", "390px", "rtl"]
     },
     {
@@ -736,7 +755,7 @@
       "claudeDesignPath": "components/daily-learning-tip.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
@@ -753,7 +772,7 @@
       "claudeDesignPath": "components/daily-login-modal.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide"]
     },
     {
@@ -765,7 +784,7 @@
       "claudeDesignPath": "components/doodle-pad.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide"]
     }
   ]

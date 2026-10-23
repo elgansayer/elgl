@@ -17,11 +17,11 @@ import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
+import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import {
   DiscoveryRecommendationDto,
   DiscoveryRecommendationsService,
 } from './discovery-recommendations.service';
-import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 
 interface AuthenticatedRequest {
   user?: { id: string };

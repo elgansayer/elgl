@@ -23,16 +23,25 @@ describe('GdprService', () => {
     const request = httpTesting.expectOne(`${environment.apiUrl}/privacy/status`);
 
     expect(request.request.method).toBe('GET');
+    // Mirrors PrivacyController.getStatus: legacy flat fields plus the
+    // authoritative nested deletion lifecycle the client consumes.
     request.flush({
       is_deletion_pending: true,
       scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
       latest_archive: null,
+      deletion: {
+        pending: true,
+        scheduled_for: '2026-09-29T00:00:00.000Z',
+        requested_at: null,
+      },
     });
 
     await expect(resultPromise).resolves.toEqual({
-      is_deletion_pending: true,
-      scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
-      latest_archive: null,
+      deletion: {
+        pending: true,
+        scheduled_for: '2026-09-29T00:00:00.000Z',
+        requested_at: null,
+      },
     });
   });
 

@@ -1,5 +1,9 @@
 /* Chat room styles */
 
+.chat-message > div {
+  font-size: var(--chat-message-font-size, 0.875rem);
+}
+
 .chat-bubble-tail {
   position: absolute;
   bottom: 0;

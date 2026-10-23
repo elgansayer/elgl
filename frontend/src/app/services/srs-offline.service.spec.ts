@@ -20,6 +20,8 @@ describe('SrsOfflineService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // The fake IndexedDB must not leak into later spec files.
+    vi.unstubAllGlobals();
   });
 
   describe('initial state (no IndexedDB)', () => {
@@ -201,10 +203,11 @@ describe('SrsOfflineService', () => {
             set: (fn) => { _onupgradeneeded = fn; },
           });
           setTimeout(() => {
+            // Like real IndexedDB, the result is available before onupgradeneeded fires.
+            req.result = mockDB;
             if (_onupgradeneeded) {
               _onupgradeneeded({ target: { result: mockDB } });
             }
-            req.result = mockDB;
             if (_onsuccess) {
               _onsuccess();
             }

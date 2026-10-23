@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { buildMockFixtureSnapshot } from './mock-data';
 import { resolveMockFixtureSeed } from './mock/deterministic-fixtures';
 
@@ -103,7 +107,10 @@ export class AppService {
       'checkpoint',
     );
     const state = this.getMockFixtureNamespaceState(normalizedNamespace);
-    state.checkpoints.set(normalizedCheckpoint, structuredClone(state.snapshot));
+    state.checkpoints.set(
+      normalizedCheckpoint,
+      structuredClone(state.snapshot),
+    );
     return {
       ...this.toMockFixtureResponse(normalizedNamespace, state),
       operation: 'snapshot',

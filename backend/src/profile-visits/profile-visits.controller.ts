@@ -2,6 +2,7 @@ import {
   Controller,
   DefaultValuePipe,
   Get,
+  Header,
   Param,
   ParseIntPipe,
   Post,
@@ -9,6 +10,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -24,6 +26,7 @@ export class ProfileVisitsController {
   constructor(private readonly profileVisitsService: ProfileVisitsService) {}
 
   @Post(':viewedId')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async recordVisit(
     @CurrentUser() user: User | null,
     @Param('viewedId') viewedId: string,
@@ -33,6 +36,8 @@ export class ProfileVisitsController {
   }
 
   @Get('my-visitors')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Header('Cache-Control', 'private, no-store')
   async getMyVisitors(
     @CurrentUser() user: User | null,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
