@@ -27,7 +27,7 @@ The requirement is intentionally session/UI state. It is not written to the user
 
 The filter does not expose audio URLs for profiles that the authenticated discovery query would otherwise be unable to see. Existing discovery authorization, blocked-user filtering, visibility rules, pagination/bounds, and provider failure behavior remain authoritative.
 
-If discovery is unavailable, the existing retryable Discovery error state is used. The filter itself performs no destructive mutation and can be toggled safely after a failed request.
+If discovery is unavailable, the existing retryable Discovery error state is used. The filter itself performs no destructive mutation and can be toggled safely after a failed request. Cached and degraded fallback results apply the same nonblank-audio requirement, so an outage cannot silently broaden a checked filter.
 
 No audio content, URL, user identifier, or filter choice is added to application logs or analytics by this change.
 
