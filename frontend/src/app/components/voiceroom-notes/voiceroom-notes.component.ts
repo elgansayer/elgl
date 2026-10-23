@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { environment } from '../../../environments/environment';
 
 interface VoiceRoomNote {
@@ -28,7 +28,7 @@ interface VoiceRoomNote {
 export class VoiceroomNotesComponent {
   private readonly http = inject(HttpClient);
   private readonly i18n = inject(I18nService);
-  private readonly centrifugo = inject(CentrifugoService);
+  private readonly centrifugo = inject(CentrifugeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly apiBase = environment.apiUrl;
   private subscribedRoomId?: string;
@@ -57,13 +57,14 @@ export class VoiceroomNotesComponent {
     effect(() => {
       const currentRoomId = this.roomId();
       if (this.subscribedRoomId && this.subscribedRoomId !== currentRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifugo.unsubscribe('room_' + this.subscribedRoomId);
         this.subscribedRoomId = undefined;
       }
 
       if (currentRoomId) {
         this.subscribedRoomId = currentRoomId;
-        this.centrifugo.subscribeLiveRoom(currentRoomId, (data) => {
+        this.centrifugo.subscribe('room_' + currentRoomId, (data: unknown) => {
+          if (typeof data !== 'object' || data === null || !('type' in data)) return;
           if (data.type === 'voice_room_note') {
             this.refreshCounter.update((value) => value + 1);
           } else if (data.type === 'voice_room_note_deleted') {
@@ -75,7 +76,7 @@ export class VoiceroomNotesComponent {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifugo.unsubscribe('room_' + this.subscribedRoomId);
       }
     });
   }

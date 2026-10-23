@@ -569,9 +569,7 @@ export class MonetisationService {
         );
 
       if (!purchaseDetails) {
-        this.logger.warn(
-          `Android restore: no purchase details for token ${purchaseToken}`,
-        );
+        this.logger.warn('Android restore: purchase details unavailable');
         return { received: true, status: 'no_valid_subscription' };
       }
 
@@ -580,27 +578,24 @@ export class MonetisationService {
         Number.isFinite(expiryMillis) && expiryMillis > Date.now();
 
       if (!isCurrentlyEntitled) {
-        this.logger.warn(
-          `Android restore: purchase not currently entitled for token ${purchaseToken}`,
-        );
+        this.logger.warn('Android restore: purchase not currently entitled');
         return { received: true, status: 'no_valid_subscription' };
       }
 
-      // Determine which user this token belongs to
-      const existingUserId =
-        await this.googlePlayNotificationService.getUserIdByPurchaseToken(
-          purchaseToken,
-        );
-      if (!existingUserId) {
-        // Store the purchase under the calling user's id
-        await this.googlePlayNotificationService.storePurchaseToken(
+      // A provider purchase token is an account-bound credential. Never let a
+      // token already associated with one account grant entitlement to another.
+      const ownsPurchase =
+        await this.googlePlayNotificationService.claimPurchaseToken(
           userId,
           purchaseToken,
           productId,
         );
-      } else if (existingUserId !== userId) {
+      if (!ownsPurchase) {
         this.logger.warn(
-          `Purchase token ${purchaseToken} already belongs to user ${existingUserId}, but restore called for user ${userId}`,
+          'Android restore rejected: purchase belongs to a different account',
+        );
+        throw new ForbiddenException(
+          'This purchase is already linked to another account',
         );
       }
 
@@ -810,20 +805,22 @@ export class MonetisationService {
 
     const subscription = await this.findActiveStripeSubscription(userId);
     const item = subscription?.items.data[0];
-    const billing = subscription
-      ? {
-          cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          currentPeriodEnd: new Date(
-            subscription.current_period_end * 1000,
-          ).toISOString(),
-          nextBillingAmount:
-            item?.price?.unit_amount != null
-              ? item.price.unit_amount / 100
-              : null,
-          currency: item?.price?.currency ?? null,
-          interval: item?.price?.recurring?.interval ?? null,
-        }
-      : null;
+    const billing =
+      subscription && item
+        ? {
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            currentPeriodEnd: new Date(
+              (readItemPeriodEnd(item) ?? subscription.current_period_end) *
+                1000,
+            ).toISOString(),
+            nextBillingAmount:
+              item.price?.unit_amount != null
+                ? item.price.unit_amount / 100
+                : null,
+            currency: item.price?.currency ?? null,
+            interval: item.price?.recurring?.interval ?? null,
+          }
+        : null;
 
     return {
       isVip: data.is_vip ?? false,
@@ -951,4 +948,13 @@ export class MonetisationService {
 
     return { url: session.url };
   }
+}
+
+/**
+ * Newer Stripe API versions report the billing period on each subscription
+ * item; the pinned SDK types only declare it on the subscription.
+ */
+function readItemPeriodEnd(item: object): number | undefined {
+  const value: unknown = Reflect.get(item, 'current_period_end');
+  return typeof value === 'number' ? value : undefined;
 }

@@ -53,6 +53,7 @@ describe('CreateEventModalComponent', () => {
     expect(component.eventForm.value).toEqual({
       title: '',
       date_time: '',
+      venue_type: 'audio_room',
       language_pair: '',
       category: 'audio_room',
       location: '',
@@ -65,7 +66,8 @@ describe('CreateEventModalComponent', () => {
   it('requires title, date and time, location, and description', () => {
     component.eventForm.patchValue({
       title: 'Conversation meetup',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
+      venue_type: 'in_person',
       location: 'Zoom',
       description: 'Practice together',
     });
@@ -84,10 +86,35 @@ describe('CreateEventModalComponent', () => {
     expect(component.eventForm.invalid).toBe(true);
   });
 
+  it('renders labelled required controls for What, When, Where, and Description', () => {
+    const requiredControlIds = ['titleInput', 'dateTimeInput', 'locationInput', 'descriptionInput'];
+
+    for (const id of requiredControlIds) {
+      const label = document.body.querySelector(`label[for="${id}"]`) as HTMLLabelElement | null;
+      const control = document.body.querySelector(`#${id}`) as HTMLInputElement | HTMLTextAreaElement | null;
+
+      expect(label).toBeTruthy();
+      expect(control).toBeTruthy();
+      expect(control?.required).toBe(true);
+    }
+  });
+
+  it('reveals required-field errors on a submit attempt instead of creating the event', async () => {
+    // #7601 keeps Create enabled and validates on submit so the reasons are
+    // announced next to each control rather than hidden behind a disabled button.
+    await component.onSubmit();
+    fixture.detectChanges();
+
+    expect(eventsServiceSpy.createEvent).not.toHaveBeenCalled();
+    for (const id of ['titleInputError', 'dateTimeInputError', 'locationInputError', 'descriptionInputError']) {
+      expect(document.body.querySelector(`#${id}`)).toBeTruthy();
+    }
+  });
+
   it('should not call createEvent when required fields are missing', async () => {
     component.eventForm.patchValue({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
       location: '',
       description: '',
     });
@@ -107,7 +134,8 @@ describe('CreateEventModalComponent', () => {
 
     component.eventForm.setValue({
       title: '  Test Event  ',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
+      venue_type: 'in_person',
       language_pair: 'en-es',
       category: 'audio_room',
       location: '  Zoom  ',
@@ -119,7 +147,9 @@ describe('CreateEventModalComponent', () => {
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: new Date('2099-09-01T10:00').toISOString(),
+      venue_type: 'in_person',
+      timezone: expect.any(String),
       language_pair: 'en-es',
       category: 'audio_room',
       location: 'Zoom',
@@ -137,7 +167,8 @@ describe('CreateEventModalComponent', () => {
 
     component.eventForm.setValue({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
+      venue_type: 'in_person',
       language_pair: '',
       category: 'in_person_meetup',
       location: 'Community Centre',
@@ -149,7 +180,9 @@ describe('CreateEventModalComponent', () => {
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: new Date('2099-09-01T10:00').toISOString(),
+      venue_type: 'in_person',
+      timezone: expect.any(String),
       language_pair: undefined,
       category: 'in_person_meetup',
       location: 'Community Centre',
@@ -175,7 +208,8 @@ describe('CreateEventModalComponent', () => {
     eventsServiceSpy.createEvent.mockReturnValue(request);
     component.eventForm.setValue({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
+      venue_type: 'in_person',
       language_pair: '',
       category: 'audio_room',
       location: 'Zoom',
@@ -206,7 +240,8 @@ describe('CreateEventModalComponent', () => {
 
     component.eventForm.setValue({
       title: 'Fail Event',
-      date_time: '2026-09-02T11:00',
+      date_time: '2099-09-02T11:00',
+      venue_type: 'in_person',
       language_pair: 'en-fr',
       category: 'learning_seminar',
       location: 'Zoom',

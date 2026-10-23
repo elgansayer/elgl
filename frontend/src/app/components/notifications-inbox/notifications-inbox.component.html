@@ -44,7 +44,7 @@
   } @else if (loadError()) {
     <div class="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center" role="alert">
       <p class="max-w-prose text-sm text-text-secondary">{{ 'common.error_generic' | t }}</p>
-      <button hlmBtn type="button" class="min-h-11" (click)="retry()">
+      <button hlmBtn size="touch" type="button" class="min-h-11" (click)="retry()">
         {{ 'discovery.retrySearch' | t }}
       </button>
     </div>
@@ -60,7 +60,7 @@
         @for (notif of notifications(); track notif.id) {
           <li class="border-b border-surface-100">
             <button
-              hlmBtn
+              hlmBtn size="touch"
               type="button"
               class="flex h-auto min-h-16 w-full items-start gap-3 rounded-none px-4 py-3 text-start hover:bg-surface-300"
               [class.bg-primary-50]="!notif.is_read"
@@ -106,7 +106,7 @@
             <p class="text-center text-sm text-danger" role="alert">{{ 'common.error_generic' | t }}</p>
           }
           <button
-            hlmBtn
+            hlmBtn size="touch"
             type="button"
             class="min-h-11 min-w-32"
             [disabled]="isLoadingMore()"

@@ -178,7 +178,7 @@
           @if (!isVip()) {
             <a
               id="genderVipNote"
-              routerLink="/vip"
+              routerLink="/subscription"
               class="text-[10px] sm:text-xs font-bold text-vip bg-vip/10 px-1.5 sm:px-2 py-1 rounded-md whitespace-nowrap"
               [attr.aria-label]="'discovery.genderVipRequired' | t"
             >
@@ -208,7 +208,7 @@
           @if (!isVip()) {
             <a
               id="distanceVipNote"
-              routerLink="/vip"
+              routerLink="/subscription"
               class="text-[10px] sm:text-xs font-bold text-vip bg-vip/10 px-1.5 sm:px-2 py-1 rounded-md whitespace-nowrap"
               [attr.aria-label]="'discovery.vipRadiusNote' | t"
             >
@@ -230,17 +230,38 @@
             <hlm-checkbox
               inputId="seriousModeCheckbox"
               [checked]="seriousLearnerMode()"
+              [disabled]="seriousModeSaving()"
+              [attr.aria-describedby]="
+                seriousModeError() ? 'seriousModeError' : 'seriousModeDescription'
+              "
               (change)="toggleSeriousLearnerMode()"
-              class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400"
+              class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400 disabled:cursor-wait disabled:opacity-60"
             />
             <label for="seriousModeCheckbox" class="sr-only">{{
               'discovery.seriousModeToggle' | t
             }}</label>
           </div>
           <span
+            id="seriousModeDescription"
             class="text-[9px] sm:text-[10px] text-text-secondary leading-tight hidden sm:inline"
             >{{ 'discovery.seriousModeDesc' | t }}</span
           >
+          @if (seriousModeSaving()) {
+            <span
+              class="text-[9px] sm:text-[10px] text-text-secondary"
+              role="status"
+              aria-live="polite"
+              >{{ 'common.saving' | t }}</span
+            >
+          }
+          @if (seriousModeError()) {
+            <span
+              id="seriousModeError"
+              class="text-[9px] sm:text-[10px] text-error"
+              role="alert"
+              >{{ 'common.error' | t }}</span
+            >
+          }
         </div>
 
         <!-- Voice Room Active Toggle -->
@@ -307,7 +328,7 @@
             </button>
             <button
               hlmBtn
-              [routerLink]="['/vip']"
+              [routerLink]="['/subscription']"
               class="bg-white text-accent px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider hover:opacity-90 transition-colors shadow-md"
               [attr.aria-label]="'discovery.bannerView' | t"
             >
@@ -346,19 +367,20 @@
           </section>
         } @else if (nearbyLocationNeedsAction()) {
           <section aria-live="assertive" class="content-state-enter" role="alert">
-            <app-empty-state
-              icon="📍"
-              [title]="'discovery.filterNearMe' | t"
-              [description]="
-                nearbyLocationStatus() === 'offline'
-                  ? ('discovery.offlineBanner' | t)
-                  : ('common.error_generic' | t)
-              "
-              [actionLabel]="'common.retry' | t"
-              (actionClicked)="requestNearbyLocation()"
-              [customClass]="'py-16'"
-            >
-            </app-empty-state>
+            <div class="flex flex-col items-center gap-3 py-16 text-center">
+              <span aria-hidden="true" class="text-4xl">📍</span>
+              <h2 class="text-lg font-semibold text-text-primary">{{ 'discovery.filterNearMe' | t }}</h2>
+              <p class="max-w-prose text-sm text-text-secondary">
+                {{
+                  nearbyLocationStatus() === 'offline'
+                    ? ('discovery.offlineBanner' | t)
+                    : ('common.error_generic' | t)
+                }}
+              </p>
+              <button hlmBtn type="button" size="touch" (click)="requestNearbyLocation()">
+                {{ 'common.retry' | t }}
+              </button>
+            </div>
           </section>
         } @else if (isLoading()) {
           <section aria-live="polite" aria-busy="true" role="status" class="content-state-enter">
