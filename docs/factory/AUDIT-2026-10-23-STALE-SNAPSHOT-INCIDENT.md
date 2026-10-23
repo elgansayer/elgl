@@ -29,6 +29,16 @@ Status words follow the factory convention: investigated, proposed, implemented,
 | Migration replay from zero | stops at migration #148 (uuid = text) |
 | CI-repair lane | 1,529 model calls, about 78 provider-hours in 72 h, 0 code mutations |
 
+### Post-repair measurements (2026-10-23)
+
+| Metric | Before | After |
+|---|---|---|
+| main CI | red since 2026-10-20 18:58 UTC | green on `82f20b959` (17:20 UTC merge) and on `08ecf7e0d` |
+| Merged PRs | 0 in about 70 h | 6 between 17:00 and 18:24 UTC |
+| Repair calls (ci-repair plus quality-repair) | about 21 per hour, 0 mutations | +14 from 17:32 to 18:21 UTC (about 17 per hour); the window is too short to call a difference |
+| "Repair limit exceeded" events | cap never reached (counter only moved on push) | 0 so far; the cap now counts model starts |
+| Released images that start | none (API MODULE_NOT_FOUND; web served the nginx default page) | api and web at `08ecf7e0d` pass the live check |
+
 ## 3. Incident and root causes (investigated)
 
 1. **Stale-snapshot merges.**
@@ -68,30 +78,37 @@ Tools are in `/home/dev/factory-tools/`. The guard is in the repository.
    - Regenerate Supabase types from a clean replay, and check that the previous snapshot hash reproduces at the old commit before trusting the diff.
 7. **Label the repair PR `intentional-revert`**, so the guard reports it without blocking it.
 
-## 5. Release and rollback procedure (proposed; not exercised live in this session)
+## 5. Release and rollback procedure (verified 2026-10-23)
 
-- **Release** (`deploy.yml`, restored in #9560):
-  - Build, then Trivy scan of `image@digest`, then attest the digest, then `imagetools create` `:latest` from `@digest`.
-  - Every release is addressable by an immutable digest and a per-commit `:<sha>` tag.
-- **Rollback:**
-  1. Pick the previous attested digest: `gh attestation verify oci://ghcr.io/elgansayer/elgl/api@<digest> -R elgansayer/elgl`.
-  2. Re-point `:latest` with `docker buildx imagetools create --tag ghcr.io/elgansayer/elgl/api:latest ghcr.io/elgansayer/elgl/api@<previous-digest>`, and do the same for `web`.
-  3. Redeploy and confirm health.
-  4. Database migrations are append-only and additive in this window, so no schema rollback is needed. A non-additive migration needs its own down plan before release.
-- **Gap (proposed):** a rehearsed rollback drill with a recorded digest history. It is not yet automated.
+- **Release** (`deploy.yml`):
+  - Build, then Trivy scan of `image@digest`, then attest, then promote `:latest` from `@digest`.
+  - Each image also keeps an immutable `:<sha>` tag.
+- **Live check after every release.** No hosted environment consumes `:latest`, so verify the published digest itself:
+  1. API: `docker run --rm <api@digest> test -f dist/main.js`, and `docker run --rm -e NODE_ENV=production <api@digest>` must stop at "Production environment is missing required variables" (the fail-closed configuration check, which proves the module graph loads).
+  2. Web: run it, then check that `/`, `/chat` and `/settings` return `<app-root>` (not "Welcome to nginx") and that the main bundle returns 200.
+  3. Container CI enforces both checks since #9572.
+- **Finding:** every release up to `82f20b959` failed the live check.
+  - The API built to `dist/src/main.js`, so `node dist/main` threw MODULE_NOT_FOUND.
+  - The web image served nginx's default page because the SSR shell is `index.csr.html`.
+  - Fixed in #9572. First verified-working release: `08ecf7e0d`, api `sha256:6ff5a3ab4ef3557ef1c17559102d5e6a2bbc1a0558a04871d949d012f4279840`, web `sha256:81476f1573553f3ac568f3171476e3fc4121774633cd4d17473ad8e02b713039`.
+- **Rollback.** The target is the most recent digest that **passed the live check**, not simply the previous digest. The previous digest before `08ecf7e0d` (`9693b8f3b`, api `sha256:d78d5964...`) cannot start.
+  1. Confirm provenance: `gh api repos/elgansayer/elgl/attestations/<digest>`.
+  2. Rehearse without pushing: `docker buildx imagetools create --dry-run --tag ghcr.io/elgansayer/elgl/api:latest ghcr.io/elgansayer/elgl/api@<digest>`. Rehearsed 2026-10-23: a valid OCI index was returned.
+  3. Re-point for real (same command without `--dry-run`), do the same for `web`, then repeat the live check.
+  4. Migrations in this window are additive (including `serious_learner_mode`, #9573), so no schema rollback is needed.
 
 ## 6. Prioritised backlog
 
 | # | Item | Evidence | Benefit | Effort / risk | Verification | Rollback | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | Merge the baseline repair (#9560) | main red since 2026-10-20 | unblocks all merges | large diff; normal review | `CI / required` green (67/67 on `1c5e3a106`) | revert merge | submitted |
-| 2 | Run the factory from a non-editable, versioned install (#9561) | import resolves to the shared checkout | fixes actually reach the daemon | small; needs sudo | `python -I -c 'import openhands_factory'` path | previous venv | blocked (operator) |
-| 3 | Count model repairs at start (`298ef2276`) | 1,529 no-op calls in 72 h | caps a storm at 5 calls per job | small | regression tests red before, green after | revert commit | tested, submitted |
+| 1 | Merge the baseline repair (#9560) | main red since 2026-10-20 | unblocks all merges | large diff; normal review | main CI green on `82f20b959` | revert merge | merged, released |
+| 2 | Run the factory from a non-editable install (#9561) | import resolved to the shared checkout | fixes actually reach the daemon | small | `python -I -c 'import openhands_factory'` resolves to site-packages | previous venv | done by the self-update timer 17:30 UTC; operator to confirm |
+| 3 | Count model repairs at start (`298ef2276`) | 1,529 no-op calls in 72 h | caps a storm at 5 calls per job | small | regression tests red before, green after | revert commit | merged; deployed to the factory runtime 17:32 UTC |
 | 4 | Stale-snapshot guard → required check (#9562) | 19/19 detected, 0/150 false positives | prevents a repeat | small; possible false positives | monitor advisory runs for 2 weeks | remove from ruleset | proposed |
 | 5 | Owner bypass policy (#9562) | the incident used the bypass | prevents a repeat | governance | ruleset audit | restore bypass | proposed |
 | 6 | Windowed provider metrics | `metrics.json` is cumulative and undated per row | makes routing decisions attributable | medium | per-day rows | n/a | proposed |
 | 7 | Transport-failure circuit for codex lanes | see section 8 | fewer wasted calls | small (config) | failed calls per day | config revert | proposed |
-| 8 | `serious_learner_mode` migration (#9563) | column missing from the corpus | preference persists | small | clean replay plus types | additive | proposed |
+| 8 | `serious_learner_mode` migration (#9563) | column missing from the corpus | preference persists | small | clean replay (193 migrations) plus types | additive | merged (#9573) |
 | 9 | Lost behaviour (#9564) | mock clock, SCAN invalidation | restores features | medium | tests | revert | proposed |
 
 ## 7. Experiment ledger
