@@ -33,7 +33,7 @@ describe('MomentsController feed filters', () => {
       momentsFeedService as unknown as MomentsFeedService,
       usersService as unknown as UsersService,
       {} as R2Service,
-      rankingService,
+      rankingService as unknown as MomentsRankingService,
       {} as CorrectionQualityService,
     );
   });
