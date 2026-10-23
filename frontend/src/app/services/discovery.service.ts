@@ -199,7 +199,7 @@ export class DiscoveryService {
     if (!currentUser?.id) return [];
 
     try {
-      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIdsStrict(currentUser.id);
       if (blockedIds.length === 0) return users;
       const blockedSet = new Set(blockedIds);
       return users.filter((user) => !blockedSet.has(user.id));

@@ -673,7 +673,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.hasAudioIntroOnly.set(false);
     this.selectedInterests.set('');
     this.showAllInterests.set(false);
-    this.selectedFilter.set('all');
     this.nearbyCoordinates.set(null);
     this.nearbyLocationStatus.set('idle');
     void this.searchPartners();

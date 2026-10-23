@@ -11,15 +11,46 @@ import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-c
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
 import { I18nService } from '../../services/i18n.service';
+import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 
 describe('DiscoveryComponent serious learner mode', () => {
   let fixture: ComponentFixture<DiscoveryComponent>;
   let component: DiscoveryComponent;
-  let updateMyProfile: ReturnType<typeof vi.fn>;
+  let updateMyProfile: ReturnType<typeof vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>>;
   let findPartners: ReturnType<typeof vi.fn>;
+  let seriousLearnerModeFake: Pick<
+    SeriousLearnerModeService,
+    'enabled' | 'saving' | 'error' | 'toggle'
+  >;
 
   beforeEach(async () => {
-    updateMyProfile = vi.fn().mockResolvedValue(undefined);
+    updateMyProfile = vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>().mockResolvedValue(undefined);
+    const seriousEnabled = signal(false);
+    const seriousSaving = signal(false);
+    const seriousError = signal<string | null>(null);
+    // Mirrors SeriousLearnerModeService.toggle(): persist first, then commit, and
+    // refuse concurrent writes. updateMyProfile stands in for the persisted write.
+    seriousLearnerModeFake = {
+      enabled: seriousEnabled,
+      saving: seriousSaving,
+      error: seriousError,
+      async toggle(): Promise<boolean> {
+        if (seriousSaving()) return false;
+        const next = !seriousEnabled();
+        seriousSaving.set(true);
+        seriousError.set(null);
+        try {
+          await updateMyProfile({ is_serious_learner: next });
+          seriousEnabled.set(next);
+          return true;
+        } catch {
+          seriousError.set('save_failed');
+          return false;
+        } finally {
+          seriousSaving.set(false);
+        }
+      },
+    };
     findPartners = vi.fn().mockResolvedValue([]);
 
     await TestBed.configureTestingModule({
@@ -27,6 +58,7 @@ describe('DiscoveryComponent serious learner mode', () => {
       providers: [
         provideRouter([]),
         { provide: DiscoveryService, useValue: { findPartners } },
+        { provide: SeriousLearnerModeService, useValue: seriousLearnerModeFake },
         {
           provide: UserService,
           useValue: {
@@ -147,11 +179,21 @@ describe('DiscoveryComponent serious learner mode', () => {
     expect(component.selectedFilter()).toBe('serious');
   });
 
-  it('keeps persistent mode composed with another discovery pill', () => {
+  it('keeps persistent mode composed with another discovery pill', async () => {
+    // #7575: Nearby searches only after the browser grants a precise location.
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      onLine: true,
+      geolocation: {
+        getCurrentPosition: (success: PositionCallback) =>
+          success({ coords: { latitude: 51.5, longitude: -0.12 } } as GeolocationPosition),
+      },
+    });
     component.seriousLearnerMode.set(true);
     findPartners.mockClear();
 
     component.onFilterSelect('nearby');
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalled());
 
     expect(component.selectedFilter()).toBe('nearby');
     expect(component.seriousLearnerOnly()).toBe(true);
