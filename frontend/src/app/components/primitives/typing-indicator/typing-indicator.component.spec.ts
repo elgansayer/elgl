@@ -38,25 +38,37 @@ describe('TypingIndicatorComponent', () => {
     expect(status).toBeFalsy();
   });
 
-  it('should show single user typing', () => {
+  it('announces the translated visible status without a hard-coded English aria label', () => {
     host.users.set([{ userId: '1', displayName: 'Alice' }]);
     fixture.detectChanges();
+
     const status = fixture.debugElement.query(By.css('[role="status"]'));
     expect(status).toBeTruthy();
-    expect(status.attributes['aria-label']).toContain('Alice');
     expect(status.attributes['aria-live']).toBe('polite');
+    expect(status.attributes['aria-atomic']).toBe('true');
+    expect(status.attributes['aria-label']).toBeUndefined();
+    expect(status.nativeElement.textContent).toContain('[typingIndicator.single]');
   });
 
-  it('should show multiple users typing', () => {
+  it('should show multiple users typing through the translated status', () => {
     host.users.set([
       { userId: '1', displayName: 'Alice' },
       { userId: '2', displayName: 'Bob' },
     ]);
     fixture.detectChanges();
+
     const status = fixture.debugElement.query(By.css('[role="status"]'));
     expect(status).toBeTruthy();
-    expect(status.attributes['aria-label']).toContain('Alice');
-    expect(status.attributes['aria-label']).toContain('Bob');
+    expect(status.nativeElement.textContent).toContain('[typingIndicator.multiple]');
+  });
+
+  it('renders typing avatars as decorative to avoid duplicate screen-reader announcements', () => {
+    host.users.set([{ userId: '1', displayName: 'Alice', avatarUrl: '/alice.png' }]);
+    fixture.detectChanges();
+
+    const avatar = fixture.debugElement.query(By.css('img'));
+    expect(avatar.attributes['alt']).toBe('');
+    expect(avatar.parent?.attributes['aria-hidden']).toBe('true');
   });
 
   it('should show many users with avatar overflow count', () => {
@@ -73,10 +85,11 @@ describe('TypingIndicatorComponent', () => {
     expect(avatars.length).toBeLessThanOrEqual(3);
   });
 
-  it('should render three bouncing dots', () => {
+  it('should render three decorative bouncing dots', () => {
     host.users.set([{ userId: '1', displayName: 'Alice' }]);
     fixture.detectChanges();
     const dots = fixture.debugElement.queryAll(By.css('.typing-dot'));
     expect(dots.length).toBe(3);
+    expect(dots[0].parent?.attributes['aria-hidden']).toBe('true');
   });
 });

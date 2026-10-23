@@ -59,7 +59,9 @@
                   "minify": true,
                   "inlineCritical": true
                 },
-                "fonts": false
+                "fonts": {
+                  "inline": false
+                }
               },
               "budgets": [
                 {

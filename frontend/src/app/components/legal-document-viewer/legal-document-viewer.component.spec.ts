@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LegalDocumentViewerComponent } from './legal-document-viewer.component';
 import type { LegalSection } from '../../services/legal.service';
+import { I18nService } from '../../services/i18n.service';
 
 @Component({
   template: `
@@ -31,6 +32,16 @@ describe('LegalDocumentViewerComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TestHostComponent],
+      providers: [
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) =>
+              key === 'legal.documentSections' ? 'Document sections' : key,
+            currentLang: signal('en-GB'),
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

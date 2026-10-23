@@ -1,10 +1,6 @@
-import {
-  ExecutionContext,
-  ForbiddenException,
-  HttpException,
-} from '@nestjs/common';
+import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { AdminNetworkAbuseService } from '../admin-network-abuse.service';
-import { AdminRateLimitControlService } from '../admin-rate-limit-control.service';
+import { AdminNetworkProviderService } from '../admin-network-provider.service';
 import { NetworkAbuseGuard } from './network-abuse.guard';
 
 function contextFor(input: {
@@ -12,7 +8,7 @@ function contextFor(input: {
   method?: string;
   ip?: string;
   headers?: Record<string, string>;
-}): { context: ExecutionContext; setHeader: ReturnType<typeof vi.fn> } {
+}): ExecutionContext {
   const request = {
     path: input.path,
     method: input.method ?? 'GET',
@@ -20,132 +16,200 @@ function contextFor(input: {
     socket: { remoteAddress: input.ip ?? '8.8.8.8' },
     headers: input.headers ?? {},
   };
-  const setHeader = vi.fn();
   return {
-    context: {
-      switchToHttp: () => ({
-        getRequest: () => request,
-        getResponse: () => ({ setHeader }),
-        getNext: vi.fn(),
-      }),
-    } as unknown as ExecutionContext,
-    setHeader,
+    switchToHttp: () => ({ getRequest: () => request }),
+  } as unknown as ExecutionContext;
+}
+
+function createGuard(options?: {
+  ipBlocked?: boolean;
+  providerBlocked?: boolean;
+}) {
+  const network = {
+    isRequestBlocked: vi.fn().mockResolvedValue(options?.ipBlocked ?? false),
+  };
+  const provider = {
+    isRequestBlocked: vi
+      .fn()
+      .mockResolvedValue(options?.providerBlocked ?? false),
+    recordSignal: vi.fn().mockResolvedValue(undefined),
+    normalizeAsn: vi.fn((value: number) => {
+      if (!Number.isInteger(value) || value < 1 || value > 4_294_967_295) {
+        throw new Error('invalid ASN');
+      }
+      return value;
+    }),
+    normalizeProvider: vi.fn(
+      (value: string | undefined) => value?.trim() || null,
+    ),
+  };
+  return {
+    guard: new NetworkAbuseGuard(
+      network as unknown as AdminNetworkAbuseService,
+      provider as unknown as AdminNetworkProviderService,
+    ),
+    network,
+    provider,
   };
 }
 
 describe('NetworkAbuseGuard', () => {
-  let isRequestBlocked: ReturnType<typeof vi.fn>;
-  let consume: ReturnType<typeof vi.fn>;
-  let guard: NetworkAbuseGuard;
-
-  beforeEach(() => {
-    isRequestBlocked = vi.fn().mockResolvedValue(false);
-    consume = vi.fn().mockResolvedValue({ limited: false, retryAfter: 0 });
-    guard = new NetworkAbuseGuard(
-      { isRequestBlocked } as unknown as AdminNetworkAbuseService,
-      { consume } as unknown as AdminRateLimitControlService,
-    );
-  });
-
   afterEach(() => {
     delete process.env.TRUST_CLOUDFLARE_CONNECTING_IP;
+    delete process.env.TRUST_CLOUDFLARE_NETWORK_METADATA;
   });
 
   it('keeps the admin recovery surface exempt behind the global API prefix', async () => {
+    const { guard, network, provider } = createGuard();
+
     await expect(
       guard.canActivate(
-        contextFor({ path: '/api/admin/v1/security/network/blocks' }).context,
+        contextFor({ path: '/api/admin/v1/security/network/blocks' }),
       ),
     ).resolves.toBe(true);
-    expect(isRequestBlocked).not.toHaveBeenCalled();
-    expect(consume).not.toHaveBeenCalled();
+    expect(network.isRequestBlocked).not.toHaveBeenCalled();
+    expect(provider.isRequestBlocked).not.toHaveBeenCalled();
   });
 
   it('maps auth and write requests to their intended scopes', async () => {
+    const { guard, network, provider } = createGuard();
+
     await guard.canActivate(
-      contextFor({ path: '/api/auth/login', method: 'POST', ip: '1.1.1.1' })
-        .context,
+      contextFor({ path: '/api/auth/login', method: 'POST', ip: '1.1.1.1' }),
     );
     await guard.canActivate(
-      contextFor({
-        path: '/api/chat/messages',
-        method: 'POST',
-        ip: '1.1.1.1',
-      }).context,
+      contextFor({ path: '/api/chat/messages', method: 'POST', ip: '1.1.1.1' }),
     );
     await guard.canActivate(
-      contextFor({ path: '/api/discovery', method: 'GET', ip: '1.1.1.1' })
-        .context,
+      contextFor({ path: '/api/discovery', method: 'GET', ip: '1.1.1.1' }),
     );
 
-    expect(isRequestBlocked).toHaveBeenNthCalledWith(1, '1.1.1.1', 'auth');
-    expect(isRequestBlocked).toHaveBeenNthCalledWith(2, '1.1.1.1', 'write');
-    expect(isRequestBlocked).toHaveBeenNthCalledWith(3, '1.1.1.1', 'all');
-    expect(consume).toHaveBeenNthCalledWith(1, '1.1.1.1', 'auth');
-    expect(consume).toHaveBeenNthCalledWith(2, '1.1.1.1', 'write');
-    expect(consume).toHaveBeenNthCalledWith(3, '1.1.1.1', 'all');
+    expect(network.isRequestBlocked).toHaveBeenNthCalledWith(
+      1,
+      '1.1.1.1',
+      'auth',
+    );
+    expect(network.isRequestBlocked).toHaveBeenNthCalledWith(
+      2,
+      '1.1.1.1',
+      'write',
+    );
+    expect(network.isRequestBlocked).toHaveBeenNthCalledWith(
+      3,
+      '1.1.1.1',
+      'all',
+    );
+    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(
+      1,
+      undefined,
+      'auth',
+    );
+    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(
+      2,
+      undefined,
+      'write',
+    );
+    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(
+      3,
+      undefined,
+      'all',
+    );
   });
 
-  it('preserves hard blocks ahead of additive rate limits', async () => {
-    isRequestBlocked.mockResolvedValue(true);
-
+  it('rejects a request when either an IP or ASN control is active', async () => {
+    const ip = createGuard({ ipBlocked: true });
     await expect(
-      guard.canActivate(
-        contextFor({ path: '/api/moments', method: 'POST' }).context,
+      ip.guard.canActivate(
+        contextFor({ path: '/api/moments', method: 'POST' }),
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(consume).not.toHaveBeenCalled();
-  });
 
-  it('returns 429 with Retry-After when an emergency throttle is exceeded', async () => {
-    consume.mockResolvedValue({
-      limited: true,
-      retryAfter: 23,
-      controlId: 'e056c664-a1a8-4e87-aa54-75bca9ea1d14',
-    });
-    const { context, setHeader } = contextFor({
-      path: '/api/auth/login',
-      method: 'POST',
-    });
-
-    await expect(guard.canActivate(context)).rejects.toMatchObject({
-      status: 429,
-    });
-    expect(setHeader).toHaveBeenCalledWith('Retry-After', '23');
-  });
-
-  it('does not expose the internal control identifier in the 429 response', async () => {
-    consume.mockResolvedValue({
-      limited: true,
-      retryAfter: 10,
-      controlId: 'internal-control-id',
-    });
-
-    try {
-      await guard.canActivate(
-        contextFor({ path: '/api/moments', method: 'POST' }).context,
-      );
-      throw new Error('Expected rate-limit failure');
-    } catch (error) {
-      expect(error).toBeInstanceOf(HttpException);
-      expect(
-        JSON.stringify((error as HttpException).getResponse()),
-      ).not.toContain('internal-control-id');
-    }
+    const asn = createGuard({ providerBlocked: true });
+    process.env.TRUST_CLOUDFLARE_CONNECTING_IP = 'true';
+    process.env.TRUST_CLOUDFLARE_NETWORK_METADATA = 'true';
+    await expect(
+      asn.guard.canActivate(
+        contextFor({
+          path: '/api/moments',
+          method: 'POST',
+          headers: { 'x-elgl-client-asn': '13335' },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('trusts Cloudflare client IP only when explicitly enabled', async () => {
     process.env.TRUST_CLOUDFLARE_CONNECTING_IP = 'true';
+    const { guard, network } = createGuard();
 
     await guard.canActivate(
       contextFor({
         path: '/api/discovery',
         ip: '203.0.113.10',
         headers: { 'cf-connecting-ip': '8.8.4.4' },
-      }).context,
+      }),
     );
 
-    expect(isRequestBlocked).toHaveBeenCalledWith('8.8.4.4', 'all');
-    expect(consume).toHaveBeenCalledWith('8.8.4.4', 'all');
+    expect(network.isRequestBlocked).toHaveBeenCalledWith('8.8.4.4', 'all');
+  });
+
+  it('ignores forgeable ASN metadata unless both Cloudflare trust switches are enabled', async () => {
+    const { guard, provider } = createGuard();
+
+    await guard.canActivate(
+      contextFor({
+        path: '/api/chat/messages',
+        method: 'POST',
+        headers: {
+          'x-elgl-client-asn': '13335',
+          'x-elgl-client-provider': 'Cloudflare',
+          'x-elgl-client-hosting': 'true',
+        },
+      }),
+    );
+
+    expect(provider.isRequestBlocked).toHaveBeenCalledWith(undefined, 'write');
+    expect(provider.recordSignal).not.toHaveBeenCalled();
+  });
+
+  it('uses trusted ASN metadata for scoped enforcement and privacy-minimized trends', async () => {
+    process.env.TRUST_CLOUDFLARE_CONNECTING_IP = 'true';
+    process.env.TRUST_CLOUDFLARE_NETWORK_METADATA = 'true';
+    const { guard, provider } = createGuard();
+
+    await guard.canActivate(
+      contextFor({
+        path: '/api/auth/login',
+        method: 'POST',
+        headers: {
+          'x-elgl-client-asn': '13335',
+          'x-elgl-client-provider': ' Cloudflare ',
+          'x-elgl-client-hosting': 'true',
+        },
+      }),
+    );
+
+    expect(provider.recordSignal).toHaveBeenCalledWith(
+      { asn: 13335, provider: 'Cloudflare', isHostingProvider: true },
+      'auth',
+    );
+    expect(provider.isRequestBlocked).toHaveBeenCalledWith(13335, 'auth');
+  });
+
+  it('drops invalid trusted ASN metadata instead of making an enforcement decision from it', async () => {
+    process.env.TRUST_CLOUDFLARE_CONNECTING_IP = 'true';
+    process.env.TRUST_CLOUDFLARE_NETWORK_METADATA = 'true';
+    const { guard, provider } = createGuard();
+
+    await guard.canActivate(
+      contextFor({
+        path: '/api/chat/messages',
+        method: 'POST',
+        headers: { 'x-elgl-client-asn': '99999999999' },
+      }),
+    );
+
+    expect(provider.recordSignal).not.toHaveBeenCalled();
+    expect(provider.isRequestBlocked).toHaveBeenCalledWith(undefined, 'write');
   });
 });

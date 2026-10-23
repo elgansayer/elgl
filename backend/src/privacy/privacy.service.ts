@@ -20,6 +20,7 @@ const ARCHIVE_PAGE_SIZE = 500;
 const MAX_ROWS_PER_DATASET = 50_000;
 const DEFAULT_RETENTION_DAYS = 7;
 const DEFAULT_SIGNED_URL_SECONDS = 300;
+const ARCHIVE_CLEANUP_CONCURRENCY = 10;
 
 type ArchiveStatus = 'processing' | 'ready' | 'failed' | 'expired';
 
@@ -37,6 +38,17 @@ export interface ArchiveRequestResult {
   status: 'processing' | 'ready';
   download_url?: string;
   expires_at?: string;
+}
+
+export interface PrivacyStatus {
+  is_deletion_pending: boolean;
+  scheduled_for_deletion_at: string | null;
+  latest_archive: {
+    request_id: string;
+    status: ArchiveStatus;
+    download_url?: string;
+    expires_at: string | null;
+  } | null;
 }
 
 interface PageResult {
@@ -200,6 +212,68 @@ export class PrivacyService {
     }
   }
 
+  async getStatus(userId: string): Promise<PrivacyStatus> {
+    const supabase = this.supabaseService.getClient();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('is_deletion_pending, scheduled_for_deletion_at')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      this.logger.error('gdpr_status_user_lookup_failed');
+      throw new ServiceUnavailableException('Unable to load privacy status');
+    }
+
+    const { data: latestRaw, error: latestError } = await supabase
+      .from('archive_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestError) {
+      this.logger.error('gdpr_status_archive_lookup_failed');
+      throw new ServiceUnavailableException('Unable to load privacy status');
+    }
+
+    const latest = latestRaw as unknown as ArchiveRequestRow | null;
+    let latestArchive: PrivacyStatus['latest_archive'] = null;
+    if (latest) {
+      const expiresAt = latest.expires_at
+        ? new Date(latest.expires_at).getTime()
+        : Number.NaN;
+      const isExpired =
+        latest.status === 'ready' &&
+        (!Number.isFinite(expiresAt) || expiresAt <= Date.now());
+      const status: ArchiveStatus = isExpired ? 'expired' : latest.status;
+      let downloadUrl: string | undefined;
+
+      if (status === 'ready' && latest.object_key) {
+        try {
+          downloadUrl = (await this.signReadyArchive(latest)).download_url;
+        } catch {
+          // Deletion status must remain available during a transient signing
+          // outage. signReadyArchive records a redacted operational event.
+        }
+      }
+
+      latestArchive = {
+        request_id: latest.id,
+        status,
+        ...(downloadUrl ? { download_url: downloadUrl } : {}),
+        expires_at: latest.expires_at,
+      };
+    }
+
+    return {
+      is_deletion_pending: Boolean(user.is_deletion_pending),
+      scheduled_for_deletion_at: user.scheduled_for_deletion_at ?? null,
+      latest_archive: latestArchive,
+    };
+  }
+
   async purgeExpiredArchives(limit = 100): Promise<number> {
     const boundedLimit = Math.max(1, Math.min(limit, 100));
     const supabase = this.supabaseService.getClient();
@@ -218,27 +292,49 @@ export class PrivacyService {
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
     let purged = 0;
-    for (const row of rows) {
-      if (row.object_key) {
-        const { error: removeError } = await supabase.storage
-          .from(ARCHIVE_BUCKET)
-          .remove([row.object_key]);
-        if (removeError) {
-          this.logger.error('gdpr_archive_cleanup_object_failed');
-          continue;
-        }
-      }
 
-      const { error: updateError } = await supabase
-        .from('archive_requests')
-        .update({
-          status: 'expired',
-          object_key: null,
-          archive_url: null,
-          updated_at: new Date().toISOString(),
-        } as never)
-        .eq('id', row.id);
-      if (!updateError) purged += 1;
+    // Process bounded batches concurrently so cleanup latency does not grow by
+    // one storage and database round trip per archive.
+    for (let i = 0; i < rows.length; i += ARCHIVE_CLEANUP_CONCURRENCY) {
+      const chunk = rows.slice(i, i + ARCHIVE_CLEANUP_CONCURRENCY);
+
+      const results = await Promise.allSettled(
+        chunk.map(async (row) => {
+          if (row.object_key) {
+            const { error: removeError } = await supabase.storage
+              .from(ARCHIVE_BUCKET)
+              .remove([row.object_key]);
+            if (removeError) {
+              this.logger.error('gdpr_archive_cleanup_object_failed');
+              throw removeError;
+            }
+          }
+
+          const { error: updateError } = await supabase
+            .from('archive_requests')
+            .update({
+              status: 'expired',
+              object_key: null,
+              archive_url: null,
+              updated_at: new Date().toISOString(),
+            } as never)
+            .eq('id', row.id);
+
+          if (updateError) {
+            throw updateError;
+          }
+
+          purged += 1;
+        }),
+      );
+
+      const failed = results.filter(
+        (result) => result.status === 'rejected',
+      ).length;
+      if (failed > 0) {
+        // Do not include provider errors, object keys, request IDs or user IDs.
+        this.logger.error(`gdpr_archive_cleanup_items_failed count=${failed}`);
+      }
     }
 
     if (purged > 0)
@@ -493,23 +589,36 @@ export class PrivacyService {
       .map((deck) => deck.id)
       .filter((id): id is string => typeof id === 'string');
     const deckFlashcards: unknown[] = [];
-    for (let offset = 0; offset < deckIds.length; offset += 100) {
-      const ids = deckIds.slice(offset, offset + 100);
-      const chunk = await this.fetchPaged(
-        'deck_flashcards',
-        async (from, to) => {
-          const result = await supabase
-            .from('deck_flashcards')
-            .select('*')
-            .in('deck_id', ids)
-            .order('added_at', { ascending: false })
-            .range(from, to);
-          return { data: result.data as unknown[] | null, error: result.error };
-        },
-      );
-      deckFlashcards.push(...chunk);
-      if (deckFlashcards.length > MAX_ROWS_PER_DATASET) {
-        throw new Error('dataset_too_large');
+    for (
+      let batchOffset = 0;
+      batchOffset < deckIds.length;
+      batchOffset += 500
+    ) {
+      const batchPromises: Promise<unknown[]>[] = [];
+      for (let i = 0; i < 5 && batchOffset + i * 100 < deckIds.length; i++) {
+        const offset = batchOffset + i * 100;
+        const ids = deckIds.slice(offset, offset + 100);
+        batchPromises.push(
+          this.fetchPaged('deck_flashcards', async (from, to) => {
+            const result = await supabase
+              .from('deck_flashcards')
+              .select('*')
+              .in('deck_id', ids)
+              .order('added_at', { ascending: false })
+              .range(from, to);
+            return {
+              data: result.data as unknown[] | null,
+              error: result.error,
+            };
+          }),
+        );
+      }
+      const chunks = await Promise.all(batchPromises);
+      for (const chunk of chunks) {
+        deckFlashcards.push(...chunk);
+        if (deckFlashcards.length > MAX_ROWS_PER_DATASET) {
+          throw new Error('dataset_too_large');
+        }
       }
     }
 
@@ -545,7 +654,9 @@ export class PrivacyService {
       decks,
       deck_flashcards: deckFlashcards,
       favourites,
-      coin_purchases: scrubCoinPurchasesForArchive(coinPurchases),
+      coin_purchases: scrubCoinPurchasesForArchive(
+        coinPurchases as Record<string, unknown>[],
+      ),
       escrow_transactions: scrubEscrowTransactionsForArchive(
         escrowTransactions,
         userId,

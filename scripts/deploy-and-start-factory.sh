@@ -305,8 +305,8 @@ loginctl enable-linger "$FACTORY_USER"
 systemctl start "user@${factory_uid}.service"
 printf 'XDG_RUNTIME_DIR=/run/user/%s\n' "$factory_uid" > \
   /etc/hellotalk-factory/runtime.env
-chown root:"$FACTORY_USER" /etc/hellotalk-factory/runtime.env
-chmod 0640 /etc/hellotalk-factory/runtime.env
+chown root:root /etc/hellotalk-factory/runtime.env
+chmod 0600 /etc/hellotalk-factory/runtime.env
 
 if [ ! -d "$FACTORY_CHECKOUT/.git" ]; then
   echo "Missing dedicated Factory checkout: $FACTORY_CHECKOUT" >&2
