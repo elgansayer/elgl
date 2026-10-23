@@ -11,6 +11,7 @@ interface PartnerCandidate {
   scheduled_for_deletion_at: string | null;
   correction_ratio: number;
   study_streak_days: number;
+  last_active_at: string | null;
 }
 
 type CorrectorScore = {
@@ -32,6 +33,8 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
     scheduled_for_deletion_at: null,
     correction_ratio: 0.8,
     study_streak_days: 14,
+    // Serious-learner qualification also needs activity in the last 24 hours.
+    last_active_at: new Date().toISOString(),
     ...overrides,
   });
 

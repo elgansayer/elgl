@@ -471,7 +471,7 @@ export class DiscoveryService {
     const seriousLearnerOnly =
       query.serious_learner_only === true ||
       query.serious_learner_mode === true ||
-      _currentUserProfile?.is_serious_learner === true;
+      _currentUserProfile?.serious_learner_mode === true;
     if (seriousLearnerOnly) {
       query.serious_learner_only = true;
     }
@@ -516,7 +516,10 @@ export class DiscoveryService {
 
     // Serious Learner mode must be resolved before the standard Supabase query
     // is constructed so every discovery path applies the same thresholds.
-    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
+    if (
+      _currentUserProfile?.serious_learner_mode === true ||
+      query.serious_learner_mode
+    ) {
       query.serious_learner_only = true;
     }
 
@@ -845,7 +848,7 @@ export class DiscoveryService {
     const seriousLearnerOnly =
       query.serious_learner_only === true ||
       query.serious_learner_mode === true ||
-      currentUserProfile?.is_serious_learner === true;
+      currentUserProfile?.serious_learner_mode === true;
     if (seriousLearnerOnly) {
       query.serious_learner_only = true;
     }
