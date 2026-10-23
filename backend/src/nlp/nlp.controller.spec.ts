@@ -155,17 +155,15 @@ describe('NlpController', () => {
       const response: any = { corrected: 'Check me.' };
 
       (usersService.getProfile as Mock).mockResolvedValue(profile);
-      (nlpService.grammarCheck as Mock).mockResolvedValue(response);
+      (grammarCheckService.check as Mock).mockResolvedValue(response);
 
       const result = await controller.grammarCheck(
         { id: 'user-1' } as any,
         dto,
       );
-      expect(nlpService.grammarCheck).toHaveBeenCalledWith(
-        'user-1',
-        false,
-        dto,
-      );
+      // Daily allowance first, then the LLM-backed checker (docs/grammar-check-pre-send.md).
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', false);
+      expect(grammarCheckService.check).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
     });
   });
@@ -183,17 +181,14 @@ describe('NlpController', () => {
       const response: any = { overall_score: 95 };
 
       (usersService.getProfile as Mock).mockResolvedValue(profile);
-      (nlpService.pronunciationScore as Mock).mockResolvedValue(response);
+      (pronunciationScoringService.score as Mock).mockResolvedValue(response);
 
       const result = await controller.pronunciationScore(
         { id: 'user-1' } as any,
         dto,
       );
-      expect(nlpService.pronunciationScore).toHaveBeenCalledWith(
-        'user-1',
-        true,
-        dto,
-      );
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', true);
+      expect(pronunciationScoringService.score).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
     });
   });
