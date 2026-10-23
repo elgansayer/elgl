@@ -557,5 +557,6 @@
 ,
   "forcedUpdateModal.message": "يتوفر إصدار جديد من التطبيق. يرجى التحديث للمتابعة.",
   "forcedUpdateModal.title": "التحديث مطلوب",
-  "forcedUpdateModal.updateButton": "تحديث الآن"
+  "forcedUpdateModal.updateButton": "تحديث الآن",
+  "legal.documentSections": "أقسام المستند"
 }

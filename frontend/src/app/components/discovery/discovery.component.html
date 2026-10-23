@@ -367,19 +367,20 @@
           </section>
         } @else if (nearbyLocationNeedsAction()) {
           <section aria-live="assertive" class="content-state-enter" role="alert">
-            <app-empty-state
-              icon="📍"
-              [title]="'discovery.filterNearMe' | t"
-              [description]="
-                nearbyLocationStatus() === 'offline'
-                  ? ('discovery.offlineBanner' | t)
-                  : ('common.error_generic' | t)
-              "
-              [actionLabel]="'common.retry' | t"
-              (actionClicked)="requestNearbyLocation()"
-              [customClass]="'py-16'"
-            >
-            </app-empty-state>
+            <div class="flex flex-col items-center gap-3 py-16 text-center">
+              <span aria-hidden="true" class="text-4xl">📍</span>
+              <h2 class="text-lg font-semibold text-text-primary">{{ 'discovery.filterNearMe' | t }}</h2>
+              <p class="max-w-prose text-sm text-text-secondary">
+                {{
+                  nearbyLocationStatus() === 'offline'
+                    ? ('discovery.offlineBanner' | t)
+                    : ('common.error_generic' | t)
+                }}
+              </p>
+              <button hlmBtn type="button" size="touch" (click)="requestNearbyLocation()">
+                {{ 'common.retry' | t }}
+              </button>
+            </div>
           </section>
         } @else if (isLoading()) {
           <section aria-live="polite" aria-busy="true" role="status" class="content-state-enter">

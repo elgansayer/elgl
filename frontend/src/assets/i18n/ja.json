@@ -617,5 +617,6 @@
   "helpAbout.title": "ヘルプ＆アバウト",
   "helpAbout.appVersion": "アプリバージョン",
   "helpAbout.buildNumber": "ビルド番号",
-  "helpAbout.openSourceLicences": "オープンソースライセンス"
+  "helpAbout.openSourceLicences": "オープンソースライセンス",
+  "legal.documentSections": "文書のセクション"
 }

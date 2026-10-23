@@ -93,7 +93,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   {{ 'vocabulary.goodBtn' | t }}
                 </button>
                 <button
-                  hlmBtn
+                  hlmBtn size="touch"
                   type="button"
                   (click)="grade('known')"
                   class="btn-grade btn-grade-known"
