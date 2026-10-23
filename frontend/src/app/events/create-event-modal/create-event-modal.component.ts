@@ -2,6 +2,7 @@ import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { Component, inject, output, signal } from '@angular/core';
 import {
   AbstractControl,
@@ -67,217 +68,226 @@ const venueLocationValidator: ValidatorFn = (
     HlmButton,
     ReactiveFormsModule,
     TranslatePipe,
+    ...HlmDialogImports,
   ],
   template: `
-    <div class="max-h-[80vh] overflow-y-auto pe-1">
-      <h2 class="mb-1 text-start text-lg font-semibold">
-        {{ 'events.createTitle' | t }}
-      </h2>
-      <p id="event-create-timezone" class="mb-4 text-sm text-text-secondary">
-        <span class="sr-only">{{ 'events.datetime' | t }}:</span>
-        {{ localTimezone }}
-      </p>
+    <hlm-dialog [state]="dialogState" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-200 p-6 shadow-xl"
+      >
+        <div class="max-h-[80vh] overflow-y-auto pe-1">
+          <h2 class="mb-1 text-start text-lg font-semibold">
+            {{ 'events.createTitle' | t }}
+          </h2>
+          <p id="event-create-timezone" class="mb-4 text-sm text-text-secondary">
+            <span class="sr-only">{{ 'events.datetime' | t }}:</span>
+            {{ localTimezone }}
+          </p>
 
-      @if (submitError()) {
-        <p role="alert" class="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-          {{ 'common.error_generic' | t }}
-        </p>
-      }
-
-      <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" novalidate>
-        <div class="mb-3">
-          <label class="mb-1 block text-sm font-medium" for="titleInput">
-            {{ 'events.title' | t }}
-          </label>
-          <input
-            hlmInput
-            id="titleInput"
-            formControlName="title"
-            type="text"
-            maxlength="120"
-            autocomplete="off"
-            class="min-h-11 w-full"
-            [attr.aria-invalid]="showControlError('title') ? 'true' : null"
-            [attr.aria-describedby]="showControlError('title') ? 'titleInputError' : null"
-          />
-          @if (showControlError('title')) {
-            <p id="titleInputError" role="alert" class="mt-1 text-xs text-danger">
+          @if (submitError()) {
+            <p role="alert" class="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
               {{ 'common.error_generic' | t }}
             </p>
           }
-        </div>
 
-        <div class="mb-3">
-          <label class="mb-1 block text-sm font-medium" for="dateTimeInput">
-            {{ 'events.datetime' | t }}
-          </label>
-          <input
-            hlmInput
-            id="dateTimeInput"
-            formControlName="date_time"
-            type="datetime-local"
-            [min]="minimumDateTime"
-            class="min-h-11 w-full"
-            aria-describedby="event-create-timezone dateTimeInputError"
-            [attr.aria-invalid]="showControlError('date_time') ? 'true' : null"
-          />
-          @if (showControlError('date_time')) {
-            <p id="dateTimeInputError" role="alert" class="mt-1 text-xs text-danger">
-              {{ 'common.error_generic' | t }}
-            </p>
-          }
-        </div>
+          <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" novalidate>
+            <div class="mb-3">
+              <label class="mb-1 block text-sm font-medium" for="titleInput">
+                {{ 'events.title' | t }}
+              </label>
+              <input
+                hlmInput
+                id="titleInput"
+                formControlName="title"
+                type="text"
+                maxlength="120"
+                autocomplete="off"
+                class="min-h-11 w-full"
+                [attr.aria-invalid]="showControlError('title') ? 'true' : null"
+                [attr.aria-describedby]="showControlError('title') ? 'titleInputError' : null"
+              />
+              @if (showControlError('title')) {
+                <p id="titleInputError" role="alert" class="mt-1 text-xs text-danger">
+                  {{ 'common.error_generic' | t }}
+                </p>
+              }
+            </div>
 
-        <div class="mb-3">
-          <label class="mb-1 block text-sm font-medium" for="venueTypeInput">
-            {{ 'events.location' | t }}
-          </label>
-          <hlm-native-select
-            selectId="venueTypeInput"
-            formControlName="venue_type"
-            class="w-full"
-            selectClass="min-h-11 w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
-          >
-            <option value="audio_room">{{ 'events.locationAudio' | t }}</option>
-            <option value="zoom">{{ 'events.locationZoom' | t }}</option>
-            <option value="in_person">{{ 'events.locationInPerson' | t }}</option>
-          </hlm-native-select>
-        </div>
+            <div class="mb-3">
+              <label class="mb-1 block text-sm font-medium" for="dateTimeInput">
+                {{ 'events.datetime' | t }}
+              </label>
+              <input
+                hlmInput
+                id="dateTimeInput"
+                formControlName="date_time"
+                type="datetime-local"
+                [min]="minimumDateTime"
+                class="min-h-11 w-full"
+                aria-describedby="event-create-timezone dateTimeInputError"
+                [attr.aria-invalid]="showControlError('date_time') ? 'true' : null"
+              />
+              @if (showControlError('date_time')) {
+                <p id="dateTimeInputError" role="alert" class="mt-1 text-xs text-danger">
+                  {{ 'common.error_generic' | t }}
+                </p>
+              }
+            </div>
 
-        <div class="mb-3">
-          <label class="mb-1 block text-sm font-medium" for="locationInput">
-            {{ locationLabelKey() | t }}
-          </label>
-          <input
-            hlmInput
-            id="locationInput"
-            formControlName="location"
-            [type]="eventForm.controls.venue_type.value === 'zoom' ? 'url' : 'text'"
-            maxlength="500"
-            autocomplete="off"
-            class="min-h-11 w-full"
-            [placeholder]="locationLabelKey() | t"
-            [attr.aria-invalid]="showLocationError() ? 'true' : null"
-            [attr.aria-describedby]="showLocationError() ? 'locationInputError' : null"
-          />
-          @if (showLocationError()) {
-            <p id="locationInputError" role="alert" class="mt-1 text-xs text-danger">
-              {{ 'common.error_generic' | t }}
-            </p>
-          }
-        </div>
+            <div class="mb-3">
+              <label class="mb-1 block text-sm font-medium" for="venueTypeInput">
+                {{ 'events.location' | t }}
+              </label>
+              <hlm-native-select
+                selectId="venueTypeInput"
+                formControlName="venue_type"
+                class="w-full"
+                selectClass="min-h-11 w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              >
+                <option value="audio_room">{{ 'events.locationAudio' | t }}</option>
+                <option value="zoom">{{ 'events.locationZoom' | t }}</option>
+                <option value="in_person">{{ 'events.locationInPerson' | t }}</option>
+              </hlm-native-select>
+            </div>
 
-        <div class="mb-3">
-          <label class="mb-1 block text-sm font-medium" for="langPairInput">
-            {{ 'events.languagePair' | t }}
-          </label>
-          <hlm-native-select
-            selectId="langPairInput"
-            formControlName="language_pair"
-            class="w-full"
-            selectClass="min-h-11 w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
-          >
-            <option value="">{{ 'events.noLanguagePair' | t }}</option>
-            <option value="en-es">English ↔ Spanish</option>
-            <option value="en-ja">English ↔ Japanese</option>
-            <option value="en-ko">English ↔ Korean</option>
-            <option value="en-zh">English ↔ Chinese</option>
-            <option value="en-fr">English ↔ French</option>
-            <option value="en-de">English ↔ German</option>
-            <option value="en-ar">English ↔ Arabic</option>
-            <option value="en-pt">English ↔ Portuguese</option>
-            <option value="en-ru">English ↔ Russian</option>
-            <option value="en-it">English ↔ Italian</option>
-          </hlm-native-select>
-        </div>
+            <div class="mb-3">
+              <label class="mb-1 block text-sm font-medium" for="locationInput">
+                {{ locationLabelKey() | t }}
+              </label>
+              <input
+                hlmInput
+                id="locationInput"
+                formControlName="location"
+                [type]="eventForm.controls.venue_type.value === 'zoom' ? 'url' : 'text'"
+                maxlength="500"
+                autocomplete="off"
+                class="min-h-11 w-full"
+                [placeholder]="locationLabelKey() | t"
+                [attr.aria-invalid]="showLocationError() ? 'true' : null"
+                [attr.aria-describedby]="showLocationError() ? 'locationInputError' : null"
+              />
+              @if (showLocationError()) {
+                <p id="locationInputError" role="alert" class="mt-1 text-xs text-danger">
+                  {{ 'common.error_generic' | t }}
+                </p>
+              }
+            </div>
 
-        <div class="mb-3">
-          <label class="mb-1 block text-sm font-medium" for="categoryInput">
-            {{ 'events.category' | t }}
-          </label>
-          <hlm-native-select
-            selectId="categoryInput"
-            formControlName="category"
-            class="w-full"
-            selectClass="min-h-11 w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
-          >
-            <option value="audio_room">{{ 'events.categoryAudioRoom' | t }}</option>
-            <option value="learning_seminar">{{ 'events.categoryLearningSeminar' | t }}</option>
-            <option value="in_person_meetup">{{ 'events.categoryInPersonMeetup' | t }}</option>
-            <option value="cultural_exchange">{{ 'events.categoryCulturalExchange' | t }}</option>
-          </hlm-native-select>
-        </div>
+            <div class="mb-3">
+              <label class="mb-1 block text-sm font-medium" for="langPairInput">
+                {{ 'events.languagePair' | t }}
+              </label>
+              <hlm-native-select
+                selectId="langPairInput"
+                formControlName="language_pair"
+                class="w-full"
+                selectClass="min-h-11 w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              >
+                <option value="">{{ 'events.noLanguagePair' | t }}</option>
+                <option value="en-es">English ↔ Spanish</option>
+                <option value="en-ja">English ↔ Japanese</option>
+                <option value="en-ko">English ↔ Korean</option>
+                <option value="en-zh">English ↔ Chinese</option>
+                <option value="en-fr">English ↔ French</option>
+                <option value="en-de">English ↔ German</option>
+                <option value="en-ar">English ↔ Arabic</option>
+                <option value="en-pt">English ↔ Portuguese</option>
+                <option value="en-ru">English ↔ Russian</option>
+                <option value="en-it">English ↔ Italian</option>
+              </hlm-native-select>
+            </div>
 
-        <div class="mb-3">
-          <label class="mb-1 block text-sm font-medium" for="maxParticipantsInput">
-            {{ 'events.maxParticipants' | t }}
-          </label>
-          <input
-            hlmInput
-            id="maxParticipantsInput"
-            formControlName="max_participants"
-            type="number"
-            min="1"
-            max="100"
-            class="min-h-11 w-full"
-            [placeholder]="'events.maxParticipantsPlaceholder' | t"
-            [attr.aria-invalid]="showControlError('max_participants') ? 'true' : null"
-          />
-          @if (showControlError('max_participants')) {
-            <p role="alert" class="mt-1 text-xs text-danger">
-              {{ 'common.error_generic' | t }}
-            </p>
-          }
-        </div>
+            <div class="mb-3">
+              <label class="mb-1 block text-sm font-medium" for="categoryInput">
+                {{ 'events.category' | t }}
+              </label>
+              <hlm-native-select
+                selectId="categoryInput"
+                formControlName="category"
+                class="w-full"
+                selectClass="min-h-11 w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              >
+                <option value="audio_room">{{ 'events.categoryAudioRoom' | t }}</option>
+                <option value="learning_seminar">{{ 'events.categoryLearningSeminar' | t }}</option>
+                <option value="in_person_meetup">{{ 'events.categoryInPersonMeetup' | t }}</option>
+                <option value="cultural_exchange">{{ 'events.categoryCulturalExchange' | t }}</option>
+              </hlm-native-select>
+            </div>
 
-        <div class="mb-4">
-          <label class="mb-1 block text-sm font-medium" for="descriptionInput">
-            {{ 'events.description' | t }}
-          </label>
-          <textarea
-            hlmTextarea
-            id="descriptionInput"
-            formControlName="description"
-            rows="3"
-            maxlength="2000"
-            class="w-full"
-            [attr.aria-invalid]="showControlError('description') ? 'true' : null"
-            [attr.aria-describedby]="showControlError('description') ? 'descriptionInputError' : null"
-          ></textarea>
-          @if (showControlError('description')) {
-            <p id="descriptionInputError" role="alert" class="mt-1 text-xs text-danger">
-              {{ 'common.error_generic' | t }}
-            </p>
-          }
-        </div>
+            <div class="mb-3">
+              <label class="mb-1 block text-sm font-medium" for="maxParticipantsInput">
+                {{ 'events.maxParticipants' | t }}
+              </label>
+              <input
+                hlmInput
+                id="maxParticipantsInput"
+                formControlName="max_participants"
+                type="number"
+                min="1"
+                max="100"
+                class="min-h-11 w-full"
+                [placeholder]="'events.maxParticipantsPlaceholder' | t"
+                [attr.aria-invalid]="showControlError('max_participants') ? 'true' : null"
+              />
+              @if (showControlError('max_participants')) {
+                <p role="alert" class="mt-1 text-xs text-danger">
+                  {{ 'common.error_generic' | t }}
+                </p>
+              }
+            </div>
 
-        <div class="flex flex-wrap justify-end gap-3">
-          <button
-            hlmBtn
-            type="button"
-            variant="secondary"
-            size="touch"
-            [disabled]="isSubmitting()"
-            (click)="cancel()"
-          >
-            {{ 'common.cancel' | t }}
-          </button>
-          <button
-            hlmBtn
-            type="submit"
-            size="touch"
-            [disabled]="isSubmitting()"
-            [attr.aria-busy]="isSubmitting() ? 'true' : null"
-          >
-            @if (isSubmitting()) {
-              {{ 'common.saving' | t }}
-            } @else {
-              {{ 'events.createTitle' | t }}
-            }
-          </button>
+            <div class="mb-4">
+              <label class="mb-1 block text-sm font-medium" for="descriptionInput">
+                {{ 'events.description' | t }}
+              </label>
+              <textarea
+                hlmTextarea
+                id="descriptionInput"
+                formControlName="description"
+                rows="3"
+                maxlength="2000"
+                class="w-full"
+                [attr.aria-invalid]="showControlError('description') ? 'true' : null"
+                [attr.aria-describedby]="showControlError('description') ? 'descriptionInputError' : null"
+              ></textarea>
+              @if (showControlError('description')) {
+                <p id="descriptionInputError" role="alert" class="mt-1 text-xs text-danger">
+                  {{ 'common.error_generic' | t }}
+                </p>
+              }
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-3">
+              <button
+                hlmBtn
+                type="button"
+                variant="secondary"
+                size="touch"
+                [disabled]="isSubmitting()"
+                (click)="cancel()"
+              >
+                {{ 'common.cancel' | t }}
+              </button>
+              <button
+                hlmBtn
+                type="submit"
+                size="touch"
+                [disabled]="isSubmitting()"
+                [attr.aria-busy]="isSubmitting() ? 'true' : null"
+              >
+                @if (isSubmitting()) {
+                  {{ 'common.saving' | t }}
+                } @else {
+                  {{ 'events.createTitle' | t }}
+                }
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class CreateEventModalComponent {
@@ -286,6 +296,7 @@ export class CreateEventModalComponent {
 
   readonly localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   readonly minimumDateTime = this.toLocalDateTime(new Date(Date.now() + 60_000));
+  readonly dialogState: HlmDialogState = 'open';
   readonly isSubmitting = signal(false);
   readonly submitError = signal(false);
   readonly submitAttempted = signal(false);
@@ -331,6 +342,13 @@ export class CreateEventModalComponent {
         return 'events.locationInPerson';
       default:
         return 'events.locationAudio';
+    }
+  }
+
+  /** Closing from the dialog boundary dismisses, except while a submit is in flight. */
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && !this.isSubmitting()) {
+      this.dismiss.emit();
     }
   }
 

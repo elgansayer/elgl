@@ -65,7 +65,7 @@ describe('CreateEventModalComponent', () => {
   it('requires title, date and time, location, and description', () => {
     component.eventForm.patchValue({
       title: 'Conversation meetup',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
       location: 'Zoom',
       description: 'Practice together',
     });
@@ -103,7 +103,7 @@ describe('CreateEventModalComponent', () => {
 
     component.eventForm.patchValue({
       title: 'Conversation meetup',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
       category: 'audio_room',
       location: 'Zoom',
       description: 'Practice together',
@@ -116,7 +116,7 @@ describe('CreateEventModalComponent', () => {
   it('should not call createEvent when required fields are missing', async () => {
     component.eventForm.patchValue({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
       location: '',
       description: '',
     });
@@ -136,7 +136,8 @@ describe('CreateEventModalComponent', () => {
 
     component.eventForm.setValue({
       title: '  Test Event  ',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
+      venue_type: 'in_person',
       language_pair: 'en-es',
       category: 'audio_room',
       location: '  Zoom  ',
@@ -148,7 +149,7 @@ describe('CreateEventModalComponent', () => {
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
       language_pair: 'en-es',
       category: 'audio_room',
       location: 'Zoom',
@@ -166,7 +167,8 @@ describe('CreateEventModalComponent', () => {
 
     component.eventForm.setValue({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
+      venue_type: 'in_person',
       language_pair: '',
       category: 'in_person_meetup',
       location: 'Community Centre',
@@ -178,7 +180,7 @@ describe('CreateEventModalComponent', () => {
 
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
       language_pair: undefined,
       category: 'in_person_meetup',
       location: 'Community Centre',
@@ -204,7 +206,8 @@ describe('CreateEventModalComponent', () => {
     eventsServiceSpy.createEvent.mockReturnValue(request);
     component.eventForm.setValue({
       title: 'Test Event',
-      date_time: '2026-09-01T10:00',
+      date_time: '2099-09-01T10:00',
+      venue_type: 'in_person',
       language_pair: '',
       category: 'audio_room',
       location: 'Zoom',
@@ -236,6 +239,7 @@ describe('CreateEventModalComponent', () => {
     component.eventForm.setValue({
       title: 'Fail Event',
       date_time: '2026-09-02T11:00',
+      venue_type: 'in_person',
       language_pair: 'en-fr',
       category: 'learning_seminar',
       location: 'Zoom',
