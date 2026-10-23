@@ -9,15 +9,16 @@ import { AuthService } from './services/auth.service';
 import { AppLockService } from './services/app-lock.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
-import { FcmService } from './services/fcm.service';
+import { FirebaseMessagingService } from './services/firebase-messaging.service';
 import { SafetyService } from './services/safety.service';
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { UnreadCounterService } from './services/unread-counter.service';
-import { VersionCheckService } from './services/version-check.service';
+import { VersionService } from './services/version.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { NotificationService } from './services/notification.service';
 import { ChatService } from './services/chat.service';
+import { SeriousLearnerModeService } from './services/serious-learner-mode.service';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -27,10 +28,10 @@ describe('AppComponent', () => {
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
-getAccessToken: vi.fn(() => 'mock-token'),
-  unlockApp: vi.fn(),
-  appLocked: vi.fn(() => false),
-  biometricLockEnabled: vi.fn(() => false),
+    getAccessToken: vi.fn(() => 'mock-token'),
+    unlockApp: vi.fn(),
+    appLocked: vi.fn(() => false),
+    biometricLockEnabled: vi.fn(() => false),
   };
 
   const appLockServiceMock = {
@@ -59,7 +60,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
   };
 
   const fcmServiceMock = {
-    requestPermission: vi.fn(() => Promise.resolve()),
+    requestPermissionAndGetToken: vi.fn(() => Promise.resolve()),
     persistFcmToken: vi.fn(() => Promise.resolve()),
   };
 
@@ -86,9 +87,10 @@ getAccessToken: vi.fn(() => 'mock-token'),
     decrementNotificationUnread: vi.fn(),
   };
 
-  const versionCheckServiceMock = {
-    checkVersion: vi.fn(),
+  const versionServiceMock = {
+    checkVersion: vi.fn(() => Promise.resolve(false)),
     isDeprecated: vi.fn(() => false),
+    updateUrl: vi.fn(() => 'https://github.com/elgansayer/elgl/releases/latest'),
   };
 
   const fontScaleServiceMock = {
@@ -108,10 +110,13 @@ getAccessToken: vi.fn(() => 'mock-token'),
   };
 
   const chatServiceMock = {
-    getRooms: vi.fn<() => Promise<Array<{ id: string }>>>(() => Promise.resolve([])),
-    getMessages: vi.fn<
-      (roomId: string) => Promise<Array<{ is_read: boolean; sender_id: string }>>
-    >(() => Promise.resolve([])),
+    getUnreadCount: vi.fn(() => Promise.resolve(0)),
+  };
+
+  const seriousLearnerModeMock = {
+    enabled: vi.fn(() => false),
+    saving: vi.fn(() => false),
+    setEnabled: vi.fn(() => Promise.resolve(true)),
   };
 
   beforeEach(async () => {
@@ -131,15 +136,16 @@ getAccessToken: vi.fn(() => 'mock-token'),
         { provide: AppLockService, useValue: appLockServiceMock },
         { provide: EconomyStore, useValue: economyStoreMock },
         { provide: CentrifugeService, useValue: centrifugeServiceMock },
-        { provide: FcmService, useValue: fcmServiceMock },
+        { provide: FirebaseMessagingService, useValue: fcmServiceMock },
         { provide: SafetyService, useValue: safetyServiceMock },
         { provide: ReportUserModalService, useValue: reportModalServiceMock },
         { provide: UnreadCounterService, useValue: unreadCounterMock },
-        { provide: VersionCheckService, useValue: versionCheckServiceMock },
+        { provide: VersionService, useValue: versionServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
         { provide: ChatService, useValue: chatServiceMock },
+        { provide: SeriousLearnerModeService, useValue: seriousLearnerModeMock },
         { provide: DOCUMENT, useValue: document },
       ],
     })
@@ -164,62 +170,44 @@ getAccessToken: vi.fn(() => 'mock-token'),
     expect(component).toBeTruthy();
   });
 
-it('should initialise unread counter', () => {
+  it('should initialise unread counter', () => {
     expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
   it('should call core services during ngOnInit', () => {
-    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalledTimes(1);
+    expect(versionServiceMock.checkVersion).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.loadInitialData).toHaveBeenCalledTimes(1);
     expect(safetyServiceMock.loadBlockedUsers).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.claimDailyCheckIn).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
-    expect(fcmServiceMock.requestPermission).toHaveBeenCalledTimes(1);
+    expect(fcmServiceMock.requestPermissionAndGetToken).toHaveBeenCalledTimes(1);
     expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
   });
 
-  it('loads initial chat unread counts in bounded concurrent batches', async () => {
-    const resolvers: Array<() => void> = [];
-    chatServiceMock.getRooms.mockResolvedValueOnce(
-      Array.from({ length: 8 }, (_, index) => ({ id: `room-${index + 1}` })),
-    );
-    chatServiceMock.getMessages.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolvers.push(() => resolve([]));
-        }),
-    );
-
-    const load = (
-      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
-    ).loadInitialUnreadCounts();
-
-    await vi.waitFor(() => expect(chatServiceMock.getMessages).toHaveBeenCalledTimes(6));
-    expect(resolvers).toHaveLength(6);
-
-    resolvers.splice(0).forEach((resolve) => resolve());
-    await vi.waitFor(() => expect(chatServiceMock.getMessages).toHaveBeenCalledTimes(8));
-    resolvers.splice(0).forEach((resolve) => resolve());
-    await load;
-  });
-
-  it('keeps unread counts from successful rooms when another room fails', async () => {
-    chatServiceMock.getRooms.mockResolvedValueOnce([{ id: 'ok' }, { id: 'failed' }]);
-    chatServiceMock.getMessages.mockImplementation((roomId: string) => {
-      if (roomId === 'failed') return Promise.reject(new Error('room unavailable'));
-      return Promise.resolve([
-        { is_read: false, sender_id: 'partner' },
-        { is_read: false, sender_id: 'test-user-1' },
-        { is_read: true, sender_id: 'partner' },
-      ]);
-    });
+  it('loads the initial chat unread count with one service call', async () => {
+    chatServiceMock.getUnreadCount.mockClear();
+    unreadCounterMock.setChatUnread.mockClear();
+    chatServiceMock.getUnreadCount.mockResolvedValueOnce(7);
 
     await (
       component as unknown as { loadInitialUnreadCounts(): Promise<void> }
     ).loadInitialUnreadCounts();
 
-    expect(unreadCounterMock.setChatUnread).toHaveBeenLastCalledWith(1);
+    expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
+    expect(unreadCounterMock.setChatUnread).toHaveBeenLastCalledWith(7);
+  });
+
+  it('preserves the current chat count when the initial request fails', async () => {
+    chatServiceMock.getUnreadCount.mockClear();
+    unreadCounterMock.setChatUnread.mockClear();
+    chatServiceMock.getUnreadCount.mockRejectedValueOnce(new Error('unavailable'));
+
+    await (
+      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
+    ).loadInitialUnreadCounts();
+
+    expect(unreadCounterMock.setChatUnread).not.toHaveBeenCalled();
   });
 
   it('should trigger gift animation when receiving a virtual_gift payload', () => {
@@ -303,8 +291,8 @@ it('should initialise unread counter', () => {
     expect(component.biometricBusy()).toBe(false);
   });
 
-  it('should call versionCheckService on init', () => {
-    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalled();
-    expect(component.versionCheckService.isDeprecated()).toBe(false);
+  it('should call versionService on init', () => {
+    expect(versionServiceMock.checkVersion).toHaveBeenCalled();
+    expect(component.versionService.isDeprecated()).toBe(false);
   });
 });

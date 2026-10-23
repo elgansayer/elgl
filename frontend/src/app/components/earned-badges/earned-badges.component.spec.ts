@@ -44,7 +44,7 @@ describe('EarnedBadgesComponent', () => {
   });
 
   function pillContaining(text: string): HTMLElement | undefined {
-    return Array.from(fixture.nativeElement.querySelectorAll('app-pill > span')).find((element) =>
+    return Array.from(fixture.nativeElement.querySelectorAll('[data-badge]')).find((element) =>
       (element as HTMLElement).textContent?.includes(text),
     ) as HTMLElement | undefined;
   }
@@ -116,7 +116,7 @@ describe('EarnedBadgesComponent', () => {
     fixture.detectChanges();
 
     const group = fixture.nativeElement.querySelector('div') as HTMLElement;
-    const pills = Array.from(fixture.nativeElement.querySelectorAll('app-pill > span')) as HTMLElement[];
+    const pills = Array.from(fixture.nativeElement.querySelectorAll('[data-badge]')) as HTMLElement[];
 
     expect(group.classList.contains('flex-wrap')).toBe(true);
     expect(group.classList.contains('min-w-0')).toBe(true);

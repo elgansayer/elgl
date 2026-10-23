@@ -1,15 +1,13 @@
 [Unit]
-Description=Daily timer - HelloTalk factory self-update
+Description=Check for HelloTalk Factory updates every 30 minutes
 
 [Timer]
-# Fire once per day at 03:00 UTC - chosen to land between typical overnight
-# batch work finishing and the morning European/Asian peak. Persistent=true
-# catches up if the host was offline at the scheduled time.
-OnCalendar=*-*-* 03:00:00 UTC
+# Pick up merged fixes promptly. The updater skips package refresh and restart
+# when main and provider policy are unchanged, and drains active jobs otherwise.
+OnCalendar=*-*-* *:00/30:00 UTC
 Persistent=true
-# Spread the start by up to 5 minutes to avoid thundering-herd with other
-# nightly jobs on the same host.
-RandomizedDelaySec=300
+# Spread checks across hosts while bounding rollout delay.
+RandomizedDelaySec=120
 
 [Install]
 WantedBy=timers.target

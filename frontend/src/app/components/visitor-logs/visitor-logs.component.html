@@ -52,7 +52,7 @@
         <p class="vip-banner-desc">{{ 'visitors.vipBannerDesc' | t }}</p>
         <p class="vip-banner-price">{{ 'common.vipStdLabel' | t }}</p>
       </div>
-      <a class="vip-banner-cta" routerLink="/vip" [attr.aria-label]="'vip.seePlans' | t">
+      <a class="vip-banner-cta" routerLink="/subscription" [attr.aria-label]="'vip.seePlans' | t">
         {{ 'vip.seePlans' | t }}
       </a>
     </section>
@@ -66,7 +66,7 @@
   } @else if (loadError()) {
     <div class="visitor-empty-state" role="alert">
       <p>{{ 'common.error_generic' | t }}</p>
-      <button hlmBtn type="button" (click)="reload()">
+      <button hlmBtn size="touch" type="button" (click)="reload()">
         {{ 'discovery.retrySearch' | t }}
       </button>
     </div>

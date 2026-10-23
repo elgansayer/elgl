@@ -214,27 +214,42 @@ describe('EventsService', () => {
   });
 
   describe('createEvent', () => {
-    it('should create an event successfully', async () => {
+    it('should create an event successfully without persisting request-only venue metadata', async () => {
       const mockEvent = {
         title: 'Test Event',
         description: 'Test Description',
-        date_time: new Date().toISOString(),
+        category: 'learning_seminar',
+        date_time: '2099-08-21T12:00:00.000Z',
+        venue_type: 'zoom' as const,
+        location: 'https://example.zoom.us/j/123',
+        timezone: 'Europe/London',
+        language_pair: 'en-ja',
+        max_participants: 20,
       };
       const mockUserId = 'user123';
       const mockResponse = { id: 'event123', ...mockEvent };
+      const insert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: mockResponse }),
+        }),
+      });
 
       supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({ data: mockResponse }),
-            }),
-          }),
-        }),
+        from: vi.fn().mockReturnValue({ insert }),
       });
 
       const result = await service.createEvent(mockUserId, mockEvent);
       expect(result).toEqual(mockResponse);
+      expect(insert).toHaveBeenCalledWith({
+        title: 'Test Event',
+        description: 'Test Description',
+        category: 'learning_seminar',
+        date_time: '2099-08-21T12:00:00.000Z',
+        location: 'https://example.zoom.us/j/123',
+        language_pair: 'en-ja',
+        max_participants: 20,
+        host_id: mockUserId,
+      });
       expect(supabaseService.getClient).toHaveBeenCalled();
     });
   });
@@ -281,23 +296,39 @@ describe('EventsService', () => {
         status: 'attending',
       };
 
-      supabaseService.getClient.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          delete: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null }),
-            }),
-          }),
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({ data: mockRsvp }),
-            }),
-          }),
+      const upsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: mockRsvp, error: null }),
         }),
+      });
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnValue({ upsert }),
       });
 
       const result = await service.createRsvp('user123', 'event1', 'attending');
       expect(result).toEqual(mockRsvp);
+      expect(upsert).toHaveBeenCalledWith(mockRsvp, {
+        onConflict: 'event_id,user_id',
+      });
+    });
+
+    it('propagates an atomic upsert failure instead of reporting success', async () => {
+      const error = new Error('RSVP database unavailable');
+      const upsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: null, error }),
+        }),
+      });
+      supabaseService.getClient.mockReturnValue({
+        from: vi.fn().mockReturnValue({ upsert }),
+      });
+      await expect(
+        service.createRsvp('user123', 'event1', 'interested'),
+      ).rejects.toBe(error);
+      expect(upsert).toHaveBeenCalledWith(
+        { event_id: 'event1', user_id: 'user123', status: 'interested' },
+        { onConflict: 'event_id,user_id' },
+      );
     });
   });
 
@@ -356,7 +387,7 @@ describe('EventsService', () => {
       });
 
       const result = await service.getUserRsvp('user123', 'event1');
-      expect(result).toBeNull();
+      expect(result).toEqual(null);
     });
   });
 
