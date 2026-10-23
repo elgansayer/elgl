@@ -526,7 +526,7 @@ export class MomentsFeedComponent {
     }
   }
 
-  mentionItemToString(momentId: string): (value: unknown) => string {
+  mentionItemToStringFor(momentId: string): (value: unknown) => string {
     let formatter = this.mentionItemToStringMap.get(momentId);
     if (!formatter) {
       formatter = (value: unknown): string => {

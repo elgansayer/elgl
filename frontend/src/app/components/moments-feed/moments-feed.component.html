@@ -475,7 +475,7 @@
                     <hlm-autocomplete-search
                       [search]="commentInputMap[moment.id] ?? ''"
                       (searchChange)="commentInputMap[moment.id] = $event"
-                      [itemToString]="mentionItemToString(moment.id)"
+                      [itemToString]="mentionItemToStringFor(moment.id)"
                       (valueChange)="onMentionSelected(moment.id, $event)"
                       autoHighlight
                     >
