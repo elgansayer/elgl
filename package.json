@@ -64,7 +64,14 @@
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "if [ -d .git ]; then npx husky || true; fi"
+    "prepare": "if [ -d .git ]; then npx husky || true; fi",
+    "check:touch-target-sizing": "node --test scripts/verify-touch-target-sizing.test.mjs && node scripts/verify-touch-target-sizing.mjs",
+    "check:keyboard-interaction-contract": "node --test scripts/verify-keyboard-interaction-contract.test.mjs && node scripts/verify-keyboard-interaction-contract.mjs",
+    "check:observability-stack": "node --test scripts/verify-observability-stack.test.mjs && node scripts/verify-observability-stack.mjs",
+    "check:livekit-networking": "node --test scripts/verify-livekit-turn-networking.test.mjs && node scripts/verify-livekit-turn-networking.mjs",
+    "check:moments-reference-analysis": "node --test scripts/check-moments-reference-analysis.test.mjs && node scripts/check-moments-reference-analysis.mjs",
+    "check:screen-reader-naming": "node --test scripts/verify-screen-reader-naming.test.mjs && node scripts/verify-screen-reader-naming.mjs",
+    "check:interactive-accessible-names": "node --test scripts/verify-interactive-accessible-names.test.mjs && node scripts/verify-interactive-accessible-names.mjs"
   },
   "dependencies": {
     "@ngx-translate/core": "^18.0.0",

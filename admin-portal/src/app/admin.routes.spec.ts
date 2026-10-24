@@ -2,6 +2,7 @@ import { ADMIN_ROUTES } from './admin.routes';
 import { AuditPageComponent } from './pages/audit-page.component';
 import { LogsPageComponent } from './pages/logs-page.component';
 import { ModerationPageComponent } from './pages/moderation-page.component';
+import { NetworkSecurityPageComponent } from './pages/network-security-page.component';
 import { RoleAssignmentsPageComponent } from './pages/role-assignments-page.component';
 import { RolesPageComponent } from './pages/roles-page.component';
 import { SystemHealthPageComponent } from './pages/system-health-page.component';
@@ -13,6 +14,7 @@ describe('ADMIN_ROUTES', () => {
     ['users', UsersPageComponent, 'users.read'],
     ['users/:id', UserDetailPageComponent, 'users.read'],
     ['moderation', ModerationPageComponent, 'moderation.cases.read'],
+    ['network-security', NetworkSecurityPageComponent, 'security.network.read'],
     ['roles', RolesPageComponent, 'roles.read'],
     ['roles/assignments', RoleAssignmentsPageComponent, 'roles.read'],
     ['audit', AuditPageComponent, 'audit.read'],

@@ -5,11 +5,11 @@ import { Centrifuge, Subscription } from 'centrifuge';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
-/** Maximum number of reconnection attempts before giving up */
+/** Maximum number of terminal/initial reconnection attempts before giving up. */
 const MAX_RECONNECT_ATTEMPTS = 8;
-/** Base delay in milliseconds for exponential backoff */
+/** Base delay in milliseconds for exponential backoff. */
 const BASE_RECONNECT_DELAY_MS = 500;
-/** Maximum delay cap in milliseconds */
+/** Maximum delay cap in milliseconds. */
 const MAX_RECONNECT_DELAY_MS = 30_000;
 
 type ConnectionStatus =
@@ -38,22 +38,28 @@ export interface RoomLiveMessage {
   providedIn: 'root',
 })
 export class CentrifugeService {
-  private http = inject(HttpClient);
-  private authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
-  private subscriptions = new Map<string, Subscription>();
+  private readonly subscriptions = new Map<string, Subscription>();
   private readonly subscriptionHandlers = new Map<string, (data: unknown) => void>();
+  /** Extra per-channel listeners (for example reactions) that never replace the primary owner. */
+  private readonly additiveListeners = new Map<string, Set<(data: unknown) => void>>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private intentionallyDisconnected = false;
+  private connectPromise: Promise<void> | null = null;
   private tokenRequest: TokenRequest | null = null;
+  private clientGeneration = 0;
+  private hasConnectedOnce = false;
 
   readonly events = signal<CentrifugeEvent[]>([]);
   readonly isConnected = signal<boolean>(false);
-  readonly connectionStatus = signal<string>('disconnected');
+  readonly connectionStatus = signal<ConnectionStatus>('disconnected');
 
   /**
    * Calculates exponential backoff delay with jitter.
-   * Uses the formula: min(cap, base * 2^attempt) with ±25% jitter.
+   * Uses the formula: min(cap, base * 2^attempt) with +/-25% jitter.
    */
   private calculateBackoffDelay(): number {
     const exponentialDelay = Math.min(
@@ -68,24 +74,23 @@ export class CentrifugeService {
    * Reads the `Retry-After` header from an HTTP response, falling back to our
    * exponential backoff when the header is absent or unparseable.
    */
-  private getRetryAfterMs(
-    response: HttpResponseBase,
-    fallbackMs: number,
-  ): number {
+  private getRetryAfterMs(response: HttpResponseBase, fallbackMs: number): number {
     const raw = response.headers.get('Retry-After');
     if (!raw) return fallbackMs;
-    const seconds = parseInt(raw, 10);
+    const seconds = Number.parseInt(raw, 10);
     if (Number.isFinite(seconds) && seconds > 0) {
       return Math.min(seconds * 1000, MAX_RECONNECT_DELAY_MS);
     }
     return fallbackMs;
   }
 
-  private scheduleReconnect(
-    overrideDelayMs?: number,
-  ): void {
+  private scheduleReconnect(overrideDelayMs?: number): void {
+    if (this.intentionallyDisconnected || this.reconnectTimer) {
+      return;
+    }
+
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      this.connectionStatus.set('error: max reconnection attempts reached');
+      this.connectionStatus.set('error');
       console.error('Max Centrifugo reconnection attempts reached. Giving up.');
       return;
     }
@@ -93,11 +98,7 @@ export class CentrifugeService {
     const delay = overrideDelayMs ?? this.calculateBackoffDelay();
     this.reconnectAttempts += 1;
 
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-    }
-
-    // Exception allowed by AGENTS.md Section 5.3:
+    // Exception allowed by frontend/AGENTS.md's Lifecycle Hook Bans note:
     // `setTimeout` is permitted for imperative third-party library integration
     // (Centrifugo reconnection backoff is a non-reactive real-time concern).
     this.reconnectTimer = setTimeout(() => {
@@ -113,17 +114,18 @@ export class CentrifugeService {
     this.subscriptions.clear();
   }
 
-  private createSubscription(
-    channel: string,
-    onMessage: (data: unknown) => void,
-  ): Subscription | null {
+  private createSubscription(channel: string): Subscription | null {
     if (!this.centrifuge) {
       return null;
     }
 
     const subscription = this.centrifuge.newSubscription(channel);
+    // One dispatcher per channel: the current primary handler plus additive listeners.
     subscription.on('publication', (ctx) => {
-      onMessage(ctx.data);
+      this.subscriptionHandlers.get(channel)?.(ctx.data);
+      for (const listener of this.additiveListeners.get(channel) ?? []) {
+        listener(ctx.data);
+      }
       this.events.update((prev) => [...prev, { channel, data: ctx.data }]);
     });
     subscription.subscribe();
@@ -133,8 +135,9 @@ export class CentrifugeService {
 
   private restoreSubscriptions(): void {
     this.clearActiveSubscriptions();
-    for (const [channel, onMessage] of this.subscriptionHandlers.entries()) {
-      this.createSubscription(channel, onMessage);
+    const channels = new Set([...this.subscriptionHandlers.keys(), ...this.additiveListeners.keys()]);
+    for (const channel of channels) {
+      this.createSubscription(channel);
     }
   }
 
@@ -196,6 +199,16 @@ export class CentrifugeService {
   }
 
   async connect(): Promise<void> {
+    if (!this.authService.getAccessToken()) {
+      if (this.centrifuge || this.connectPromise) {
+        this.disconnect();
+      } else {
+        this.isConnected.set(false);
+        this.connectionStatus.set('disconnected');
+      }
+      return;
+    }
+
     if (
       this.centrifuge &&
       (this.centrifuge.state === 'connected' || this.centrifuge.state === 'connecting')
@@ -203,59 +216,84 @@ export class CentrifugeService {
       return;
     }
 
-    this.connectionStatus.set('connecting');
-    try {
-      const tokenResponse = await firstValueFrom(
-        this.http.post<{ token: string }>(
-          `${environment.apiUrl}/chat/token`,
-          {},
-          {
-            headers: { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` },
-            observe: 'response',
-          },
-        ),
-      );
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
 
-      if (!tokenResponse?.body?.token) {
-        this.connectionStatus.set('error: rate limited or missing token');
-        this.scheduleReconnect();
+    this.intentionallyDisconnected = false;
+    this.connectionStatus.set(this.hasConnectedOnce ? 'reconnecting' : 'connecting');
+    const generation = ++this.clientGeneration;
+
+    const promise = this.initialiseClient(generation);
+    this.connectPromise = promise;
+    try {
+      await promise;
+    } finally {
+      if (this.connectPromise === promise) {
+        this.connectPromise = null;
+      }
+    }
+  }
+
+  private async initialiseClient(generation: number): Promise<void> {
+    try {
+      const token = await this.fetchConnectionToken();
+      if (this.intentionallyDisconnected || generation !== this.clientGeneration) {
         return;
       }
 
-      this.centrifuge = new Centrifuge(environment.centrifugoUrl, {
-        token: tokenResponse.body.token,
+      const previousClient = this.centrifuge;
+      const client = this.createClient(token);
+      this.centrifuge = client;
+
+      client.on('connecting', () => {
+        if (this.centrifuge !== client) return;
+        this.isConnected.set(false);
+        this.connectionStatus.set(this.hasConnectedOnce ? 'reconnecting' : 'connecting');
       });
 
-      this.centrifuge.on('connected', () => {
+      client.on('connected', () => {
+        if (this.centrifuge !== client) return;
         this.reconnectAttempts = 0;
+        this.hasConnectedOnce = true;
         this.isConnected.set(true);
         this.connectionStatus.set('connected');
       });
 
-      this.centrifuge.on('disconnected', (ctx) => {
+      client.on('disconnected', () => {
+        if (this.centrifuge !== client) return;
         this.isConnected.set(false);
         this.connectionStatus.set('disconnected');
-        // Automatically reconnect on unexpected disconnects
-        if (!ctx?.reason || ctx.reason === 'connect error' || ctx.reason === 'disconnect') {
+
+        // Centrifuge handles transient reconnects internally. A `disconnected`
+        // event is terminal, so create a fresh client only for that state.
+        if (!this.intentionallyDisconnected) {
           this.scheduleReconnect();
         }
       });
 
-      this.centrifuge.on('error', (ctx) => {
-        console.error('Centrifugo error:', ctx);
-        this.connectionStatus.set('error');
+      client.on('error', () => {
+        if (this.centrifuge !== client) return;
+        console.error('Centrifugo connection error.');
+        this.isConnected.set(false);
+        this.connectionStatus.set(client.state === 'connecting' ? 'reconnecting' : 'error');
       });
 
-      this.centrifuge.connect();
-    } catch (e) {
-      // Check for 429 Too Many Requests from rate-limited token endpoint
-      if (e instanceof HttpErrorResponse && e.status === 429) {
-        this.connectionStatus.set('error: rate limited');
-        // Use the Retry-After header provided by the backend
-        const retryMs = this.getRetryAfterMs(e, this.calculateBackoffDelay());
+      this.restoreSubscriptions();
+      previousClient?.disconnect();
+      client.connect();
+    } catch (error) {
+      if (this.intentionallyDisconnected || generation !== this.clientGeneration) {
+        return;
+      }
+
+      this.isConnected.set(false);
+      if (error instanceof HttpErrorResponse && error.status === 429) {
+        this.connectionStatus.set('rate-limited');
+        const retryMs = this.getRetryAfterMs(error, this.calculateBackoffDelay());
         this.scheduleReconnect(retryMs);
       } else {
-        console.error('Failed to initialize Centrifugo:', e);
+        console.error('Failed to initialise Centrifugo connection.');
         this.connectionStatus.set('error');
         this.scheduleReconnect();
       }
@@ -263,54 +301,57 @@ export class CentrifugeService {
   }
 
   subscribe(channel: string, onMessage: (data: unknown) => void): Subscription | null {
+    // The channel dispatcher reads the latest primary handler, so replacing the
+    // owner never stacks a second publication listener.
     this.subscriptionHandlers.set(channel, onMessage);
-    if (!this.centrifuge) return null;
-    let sub = this.subscriptions.get(channel);
-    if (!sub) {
-      sub = this.centrifuge.newSubscription(channel);
-      this.subscriptions.set(channel, sub);
-      sub.subscribe();
-    }
-    // Reusing an existing subscription would otherwise stack another
-    // 'publication' listener on top of any previous one, leaking closures
-    // and delivering each message to every stale handler.
-    sub.removeAllListeners('publication');
-    sub.on('publication', (ctx) => {
-      onMessage(ctx.data);
-    });
-    return sub;
+    return this.subscriptions.get(channel) ?? this.createSubscription(channel);
   }
 
+  /**
+   * Adds a listener alongside the channel's primary handler and returns a
+   * disposer. The channel stays subscribed while any handler remains.
+   */
   listen(channel: string, onMessage: (data: unknown) => void): () => void {
-    this.subscribe(channel, onMessage);
+    const listeners = this.additiveListeners.get(channel) ?? new Set<(data: unknown) => void>();
+    listeners.add(onMessage);
+    this.additiveListeners.set(channel, listeners);
+    if (!this.subscriptions.has(channel)) {
+      this.createSubscription(channel);
+    }
     return () => {
-      this.unsubscribe(channel);
+      listeners.delete(onMessage);
+      if (listeners.size === 0) this.additiveListeners.delete(channel);
+      this.releaseIfUnused(channel);
     };
   }
 
   unsubscribe(channel: string): void {
     this.subscriptionHandlers.delete(channel);
-    const sub = this.subscriptions.get(channel);
-    if (sub) {
-      sub.unsubscribe();
+    this.releaseIfUnused(channel);
+  }
+
+  private releaseIfUnused(channel: string): void {
+    if (this.subscriptionHandlers.has(channel) || this.additiveListeners.has(channel)) return;
+    const subscription = this.subscriptions.get(channel);
+    if (subscription) {
+      subscription.unsubscribe();
       this.subscriptions.delete(channel);
     }
   }
 
   async publish(channel: string, data: unknown): Promise<void> {
-    const sub = this.subscriptions.get(channel);
-    if (sub) {
+    const subscription = this.subscriptions.get(channel);
+    if (subscription) {
       try {
-        await sub.publish(data);
-      } catch (e) {
-        console.error('Centrifuge subscription publish error:', e);
+        await subscription.publish(data);
+      } catch {
+        console.error('Centrifugo subscription publish failed.');
       }
     } else if (this.centrifuge) {
       try {
-        // The Centrifuge client has a native publish method on the instance.
         await this.centrifuge.publish(channel, data);
-      } catch (e) {
-        console.error('Centrifuge publish error:', e);
+      } catch {
+        console.error('Centrifugo publish failed.');
       }
     }
   }
@@ -406,16 +447,23 @@ export class CentrifugeService {
   }
 
   disconnect(): void {
+    this.intentionallyDisconnected = true;
+    this.clientGeneration += 1;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
     this.reconnectAttempts = 0;
-    if (this.centrifuge) {
-      this.centrifuge.disconnect();
-      this.centrifuge = null;
-      this.isConnected.set(false);
-      this.connectionStatus.set('disconnected');
-    }
+    this.hasConnectedOnce = false;
+
+    const client = this.centrifuge;
+    this.centrifuge = null;
+    this.clearActiveSubscriptions();
+    this.subscriptionHandlers.clear();
+    this.additiveListeners.clear();
+    client?.disconnect();
+
+    this.isConnected.set(false);
+    this.connectionStatus.set('disconnected');
   }
 }

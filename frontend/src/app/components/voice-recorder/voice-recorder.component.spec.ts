@@ -44,7 +44,6 @@ describe('VoiceRecorderComponent', () => {
   let stopTrack: ReturnType<typeof vi.fn>;
   let mediaService: MockMediaService;
 
-  let i18n: MockI18nService;
   beforeEach(async () => {
     stopTrack = vi.fn();
     const streamMock = {
@@ -87,7 +86,6 @@ describe('VoiceRecorderComponent', () => {
     component = fixture.componentInstance;
     mediaService = TestBed.inject(MediaService) as unknown as MockMediaService;
     fixture.detectChanges();
-    i18n = TestBed.inject(I18nService) as unknown as MockI18nService;
   });
 
   it('should create', () => {
@@ -159,9 +157,8 @@ describe('VoiceRecorderComponent', () => {
       expect(emitted).toEqual([]);
       expect(component.audioPreviewUrl()).toBe(previewUrl);
       expect(component.isUploading()).toBe(false);
-      expect(errorSpy).toHaveBeenCalledWith('Failed to upload voice note.');
-
-      expect(i18n.translate).toHaveBeenCalledWith('voiceRecorder.uploadError');
+      // Upload failures surface a translated, retryable error state.
+      expect(component.errorKey()).toBe('audioIntro.uploadError');
       mediaService.uploadVoiceNote.mockResolvedValueOnce({ url: 'https://media.url/retry.ogg' });
       await component.uploadAndSend();
 

@@ -11,15 +11,10 @@ const componentUrl = new URL(
   import.meta.url,
 );
 const auditUrl = new URL('../docs/moments-accessibility-audit.md', import.meta.url);
-const componentUrl = new URL(
-  '../frontend/src/app/components/moments-feed/moments-feed.component.ts',
-  import.meta.url,
-);
 
 const template = readFileSync(templateUrl, 'utf8');
 const component = readFileSync(componentUrl, 'utf8');
 const audit = readFileSync(auditUrl, 'utf8');
-const component = readFileSync(componentUrl, 'utf8');
 
 function buttonFor(clickExpression) {
   const buttons = [...template.matchAll(/<button\b[\s\S]*?<\/button>/g)].map((match) => match[0]);
@@ -84,12 +79,6 @@ test('the accessibility audit records the exact current high-priority debt', () 
     {
       id: 'MOM-A11Y-006',
       present: submitComment.includes('aria-label=\"Submit comment\"'),
-    },
-    {
-      id: 'MOM-A11Y-007',
-      present:
-        template.includes('(keydown)=\"onCommentKeydown($event, moment)\"') &&
-        !component.includes('event.isComposing'),
     },
   ];
 

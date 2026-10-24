@@ -847,6 +847,7 @@ describe('RecommendationsService', () => {
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 100,
+          last_active_at: new Date().toISOString(),
           correction_ratio: 0.9,
         },
         {
@@ -857,6 +858,7 @@ describe('RecommendationsService', () => {
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 10,
+          last_active_at: new Date().toISOString(),
           correction_ratio: 0.9,
         },
         {
@@ -865,6 +867,7 @@ describe('RecommendationsService', () => {
           avatar_url: null,
           native_languages: ['es'],
           target_languages: ['en'],
+          // Qualification is computed (streak + recent activity), not the stored flag.
           is_serious_learner: false,
           study_streak_days: 50,
           correction_ratio: 0.9,
@@ -1273,6 +1276,7 @@ describe('RecommendationsService', () => {
           target_languages: ['en', 'pt'],
           is_serious_learner: true,
           study_streak_days: 42,
+          last_active_at: new Date().toISOString(),
           correction_ratio: 0.92,
         },
       ]);
@@ -1446,7 +1450,7 @@ describe('RecommendationsService', () => {
       );
     });
 
-    it('should handle calculateDailyRecommendations with Redis set failure gracefully', async () => {
+    it('should report a persistent Redis pipeline failure without retrying it', async () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
         { id: 'user-a', native_languages: ['en'], target_languages: ['es'] },
@@ -1466,16 +1470,93 @@ describe('RecommendationsService', () => {
         },
       ]);
 
-      // Pipeline flush on error should not throw
-      mockPipeline.exec.mockRejectedValueOnce(new Error('Redis write failed'));
+      mockPipeline.exec.mockRejectedValue(new Error('Redis write failed'));
 
       mockFrom
         .mockReturnValueOnce(usersChain)
         .mockReturnValueOnce(matchesChain);
 
-      await service.calculateDailyRecommendations();
-      // Should still have called set before flushing
+      await expect(
+        service.calculateDailyRecommendations(),
+      ).resolves.toBeUndefined();
+
       expect(mockPipeline.set).toHaveBeenCalledTimes(1);
+      expect(mockPipeline.exec).toHaveBeenCalledTimes(1);
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'calculateDailyRecommendations',
+          user_id: 'system',
+          degraded_tier: 'none',
+        }),
+      );
+    });
+
+    it('should report Redis command errors returned by a pipeline', async () => {
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        { id: 'user-a', native_languages: ['en'], target_languages: ['es'] },
+      ]);
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'partner-1',
+          display_name: 'Partner 1',
+          avatar_url: null,
+          native_languages: ['es'],
+          target_languages: ['en'],
+          is_serious_learner: false,
+          study_streak_days: 5,
+          correction_ratio: 0.7,
+        },
+      ]);
+
+      mockPipeline.exec.mockResolvedValueOnce([
+        [new Error('Redis command failed'), null],
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(usersChain)
+        .mockReturnValueOnce(matchesChain);
+
+      await expect(
+        service.calculateDailyRecommendations(),
+      ).resolves.toBeUndefined();
+
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'calculateDailyRecommendations',
+          user_id: 'system',
+          degraded_tier: 'none',
+        }),
+      );
+    });
+
+    it('should report daily match-query failures instead of treating them as empty results', async () => {
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        { id: 'user-a', native_languages: ['en'], target_languages: ['es'] },
+      ]);
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve(null, { message: 'Match query failed' });
+
+      mockFrom
+        .mockReturnValueOnce(usersChain)
+        .mockReturnValueOnce(matchesChain);
+
+      await expect(
+        service.calculateDailyRecommendations(),
+      ).resolves.toBeUndefined();
+
+      expect(mockPipeline.set).not.toHaveBeenCalled();
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'calculateDailyRecommendations',
+          user_id: 'system',
+          degraded_tier: 'none',
+        }),
+      );
     });
 
     it('should prefer interest tier over language exchange when both succeed', async () => {
