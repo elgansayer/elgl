@@ -302,3 +302,7 @@
 
 
 
+## 2026-10-21 - Secure Transfer Secrets
+**Vulnerability:** The NestJS backend allowed the use of the `test-transfer-secret` placeholder for `TRANSFER_SECRET` in the production environment.
+**Learning:** `environment.validation.ts` failed to include `test-transfer-secret` and `device-transfer-secret-dev-only` in the `PLACEHOLDER_PATTERNS` regex list, allowing test-only secrets to bypass environment validation in production.
+**Prevention:** Ensure all known test and development placeholder values (as defined in `validation.schema.ts` defaults) are explicitly mapped and actively rejected by the production environment validation layer.

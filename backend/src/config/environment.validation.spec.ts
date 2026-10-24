@@ -81,6 +81,8 @@ describe('validateEnvironment', () => {
     ['SUPABASE_URL', 'https://example.supabase.co'],
     ['CENTRIFUGO_API_KEY', 'secret-centrifugo-api-key-change-in-prod'],
     ['CENTRIFUGO_SECRET', 'secret-centrifugo-token-key-change-in-prod'],
+    ['TRANSFER_SECRET', 'device-transfer-secret-dev-only'],
+    ['TRANSFER_SECRET', 'test-transfer-secret'],
   ])('rejects production placeholder %s values', (key, value) => {
     expect(() =>
       validateEnvironment({ ...productionEnvironment(), [key]: value }),
