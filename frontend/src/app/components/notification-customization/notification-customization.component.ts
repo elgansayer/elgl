@@ -1,6 +1,6 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-notification-customization',
   imports: [HlmInput, HlmButton, TranslatePipe],
   templateUrl: './notification-customization.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotificationCustomizationComponent {
   private readonly prefsService = inject(NotificationPreferencesService);
