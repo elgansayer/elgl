@@ -472,19 +472,21 @@ export class AudioRoomArchivesService {
       chunks.push(bounded.slice(offset, offset + this.llmChunkChars));
     }
 
-    // ⚡ Bolt Optimization: Group sequential summarisation calls into a concurrent Promise.all execution to reduce latency.
-    const parts: ChunkSummary[] = (
-      await Promise.all(
-        chunks.map(async (chunk) => {
-          try {
-            return await this.summariseChunk(chunk);
-          } catch {
-            this.logger.warn('One audio-room transcript summary chunk failed');
-            return null;
-          }
-        }),
-      )
-    ).filter((part): part is ChunkSummary => part !== null);
+    const parts: ChunkSummary[] = [];
+    const chunkBatchSize = 10;
+    for (let i = 0; i < chunks.length; i += chunkBatchSize) {
+      const batch = chunks.slice(i, i + chunkBatchSize);
+      const results = await Promise.allSettled(
+        batch.map((chunk) => this.summariseChunk(chunk)),
+      );
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          parts.push(result.value);
+        } else {
+          this.logger.warn('One audio-room transcript summary chunk failed');
+        }
+      }
+    }
 
     if (parts.length === 0) {
       const fallback = await this.nlpService.generateSessionSummary(bounded);
