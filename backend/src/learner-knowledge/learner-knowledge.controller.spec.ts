@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LearnerKnowledgeController } from './learner-knowledge.controller';
 import { LearnerKnowledgeService } from './learner-knowledge.service';
-import {
-  CEFRLevel,
-  LearnerKnowledgeProfile,
-} from './learner-knowledge.service';
+import { CEFRLevel, LearnerKnowledgeProfile } from './learner-knowledge.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ExecutionContext } from '@nestjs/common';
@@ -47,13 +44,11 @@ describe('LearnerKnowledgeController', () => {
         },
       ],
     })
-      .overrideGuard(SupabaseAuthGuard)
-      .useValue(mockSupabaseAuthGuard)
-      .compile();
+    .overrideGuard(SupabaseAuthGuard)
+    .useValue(mockSupabaseAuthGuard)
+    .compile();
 
-    controller = module.get<LearnerKnowledgeController>(
-      LearnerKnowledgeController,
-    );
+    controller = module.get<LearnerKnowledgeController>(LearnerKnowledgeController);
     service = module.get<LearnerKnowledgeService>(LearnerKnowledgeService);
   });
 

@@ -78,9 +78,7 @@ export class AdminNetworkProviderV1Controller {
 
   @Post('impact')
   @RequireAdminCapabilities('security.network.read')
-  @ApiOperation({
-    summary: 'Preview observed impact before applying an ASN block',
-  })
+  @ApiOperation({ summary: 'Preview observed impact before applying an ASN block' })
   async impact(
     @Body() input: AdminNetworkProviderImpactDto,
     @Req() req: AdminAuthRequest,

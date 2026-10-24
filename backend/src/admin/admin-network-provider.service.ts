@@ -280,15 +280,12 @@ export class AdminNetworkProviderService {
     }
     const provider = this.normalizeProvider(context.provider) ?? 'unknown';
     try {
-      const { error } = await this.client().rpc(
-        'record_network_provider_signal',
-        {
-          p_asn: asn,
-          p_provider: provider,
-          p_is_hosting: context.isHostingProvider,
-          p_scope: scope,
-        },
-      );
+      const { error } = await this.client().rpc('record_network_provider_signal', {
+        p_asn: asn,
+        p_provider: provider,
+        p_is_hosting: context.isHostingProvider,
+        p_scope: scope,
+      });
       if (error) throw error;
     } catch (error) {
       this.logger.warn(
@@ -359,16 +356,13 @@ export class AdminNetworkProviderService {
   normalizeAsn(input: number): number {
     const asn = Number(input);
     if (!Number.isInteger(asn) || asn < 1 || asn > MAX_PUBLIC_ASN) {
-      throw new BadRequestException(
-        'ASN must be an integer from 1 through 4294967295',
-      );
+      throw new BadRequestException('ASN must be an integer from 1 through 4294967295');
     }
     return asn;
   }
 
   normalizeProvider(input: string | null | undefined): string | null {
     if (typeof input !== 'string') return null;
-    // eslint-disable-next-line no-control-regex -- strip control characters from provider names
     const value = input.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
     if (!value) return null;
     return value.slice(0, MAX_PROVIDER_LENGTH);
@@ -515,9 +509,7 @@ export class AdminNetworkProviderService {
       id: String(row.id),
       asn: this.safeAsn(row.asn, 0),
       providerSnapshot:
-        typeof row.provider_snapshot === 'string'
-          ? row.provider_snapshot
-          : null,
+        typeof row.provider_snapshot === 'string' ? row.provider_snapshot : null,
       scope: this.toScope(row.scope),
       reasonCode: String(row.reason_code),
       expiresAt: String(row.expires_at),
@@ -533,9 +525,7 @@ export class AdminNetworkProviderService {
       id: String(row.id),
       asn: this.safeAsn(row.asn, 0),
       providerSnapshot:
-        typeof row.provider_snapshot === 'string'
-          ? row.provider_snapshot
-          : null,
+        typeof row.provider_snapshot === 'string' ? row.provider_snapshot : null,
       reason: String(row.reason),
       expiresAt: typeof row.expires_at === 'string' ? row.expires_at : null,
       createdAt: String(row.created_at),
@@ -544,10 +534,7 @@ export class AdminNetworkProviderService {
   }
 
   private safeProvider(value: unknown): string {
-    return (
-      this.normalizeProvider(typeof value === 'string' ? value : null) ??
-      'unknown'
-    );
+    return this.normalizeProvider(typeof value === 'string' ? value : null) ?? 'unknown';
   }
 
   private safeAsn(value: unknown, fallback: number): number {

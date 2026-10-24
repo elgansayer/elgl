@@ -73,19 +73,12 @@ describe('DiscoveryService serious learner filtering', () => {
 
     await service.searchPartners(
       'current-user',
-      { serious_learner_mode: true } as never,
+      { is_serious_learner: true } as never,
       query,
     );
 
-    // Canonical predicate (docs/serious-learner-discovery.md, #7586): an
-    // inclusive 7-day streak plus activity in the last 24 hours, with no
-    // correction-ratio requirement.
-    expect(queryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
-    expect(queryBuilder.gte).toHaveBeenCalledWith(
-      'last_active_at',
-      expect.any(String),
-    );
-    expect(queryBuilder.gte).not.toHaveBeenCalledWith('correction_ratio', 0.8);
+    expect(queryBuilder.gt).toHaveBeenCalledWith('study_streak_days', 7);
+    expect(queryBuilder.gte).toHaveBeenCalledWith('correction_ratio', 0.8);
     expect(query).toMatchObject({ serious_learner_only: true });
   });
 
@@ -94,15 +87,8 @@ describe('DiscoveryService serious learner filtering', () => {
 
     await service.searchPartners('current-user', null, query);
 
-    // Canonical predicate (docs/serious-learner-discovery.md, #7586): an
-    // inclusive 7-day streak plus activity in the last 24 hours, with no
-    // correction-ratio requirement.
-    expect(queryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
-    expect(queryBuilder.gte).toHaveBeenCalledWith(
-      'last_active_at',
-      expect.any(String),
-    );
-    expect(queryBuilder.gte).not.toHaveBeenCalledWith('correction_ratio', 0.8);
+    expect(queryBuilder.gt).toHaveBeenCalledWith('study_streak_days', 7);
+    expect(queryBuilder.gte).toHaveBeenCalledWith('correction_ratio', 0.8);
     expect(query).toMatchObject({ serious_learner_only: true });
   });
 });

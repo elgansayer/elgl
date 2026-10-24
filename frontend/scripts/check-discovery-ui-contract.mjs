@@ -71,9 +71,7 @@ requireText(
 );
 requirePattern(
   component,
-  // Focused mode (#7634) may substitute the reciprocal primary pair; otherwise
-  // the user's selection is forwarded.
-  /target_language:[^,]*this\.selectedTargetLanguage\(\)\s*\|\|\s*undefined/,
+  /target_language:\s*this\.selectedTargetLanguage\(\)\s*\|\|\s*undefined/,
   'Discovery search must forward the selected target language.',
 );
 
@@ -100,22 +98,17 @@ requireText(
 );
 requirePattern(
   component,
-  /readonly seriousLearnerMode = this\.seriousLearnerModeService\.enabled;/,
-  'Serious Learner mode must come from the persisted SeriousLearnerModeService preference (#7634).',
+  /updateMyProfile\(\{\s*is_serious_learner:\s*newMode\s*\}\)/,
+  'Serious Learner mode must persist through the profile API.',
 );
-if (/is_serious_learner:\s*newMode/.test(component)) {
-  failures.push(
-    'Serious Learner mode must not be written to is_serious_learner (earned qualification), see docs/serious-learner-mode.md.',
-  );
-}
 requirePattern(
   component,
-  /serious_learner_only:[^,]*this\.seriousLearnerOnly\(\)/,
+  /serious_learner_only:\s*this\.seriousLearnerOnly\(\)/,
   'Discovery search must apply the Serious Learner result filter.',
 );
 requirePattern(
   component,
-  /serious_learner_mode:\s*(?:this\.seriousLearnerMode\(\)|seriousMode)\b/,
+  /serious_learner_mode:\s*this\.seriousLearnerMode\(\)/,
   'Discovery search must forward the persisted Serious Learner mode.',
 );
 

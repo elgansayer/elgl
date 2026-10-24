@@ -8,7 +8,6 @@ import { Reflector } from '@nestjs/core';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 export const VIP_TIER_METADATA = 'require_vip_tier';
-export type VipRequirement = 'consumer' | 'developer' | 'any';
 
 @Injectable()
 export class VipGuard implements CanActivate {
@@ -18,7 +17,7 @@ export class VipGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredTier = this.reflector.getAllAndOverride<VipRequirement>(
+    const requiredTier = this.reflector.getAllAndOverride<string>(
       VIP_TIER_METADATA,
       [context.getHandler(), context.getClass()],
     );
@@ -43,16 +42,15 @@ export class VipGuard implements CanActivate {
       .single();
 
     if (error || !data) {
-      throw new ForbiddenException('VIP subscription could not be verified');
+      throw new ForbiddenException('User not found');
     }
 
     const isVip = Boolean(data.is_vip);
     const tier = (data.vip_tier as string | null) ?? '';
     const tierMatches =
-      isVip &&
-      (requiredTier === 'any' ||
-        requiredTier === 'consumer' ||
-        (requiredTier === 'developer' && tier.startsWith('developer')));
+      requiredTier === 'any' ||
+      (requiredTier === 'consumer' && isVip) ||
+      (requiredTier === 'developer' && isVip && tier.startsWith('developer'));
 
     if (!tierMatches) {
       throw new ForbiddenException(

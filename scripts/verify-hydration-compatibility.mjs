@@ -5,8 +5,6 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const TEST_SOURCE_PATTERN = /\.(?:spec|test)\.ts$/;
-
 const root = resolve(import.meta.dirname, '..');
 
 function read(path) {
@@ -59,9 +57,6 @@ export function findHydrationRisks(diff) {
   }
 
   for (const [file, additions] of additionsByFile) {
-    // Unit tests never server-render or hydrate; scanning them only produces
-    // false positives such as `testDocument = document...` in beforeEach.
-    if (TEST_SOURCE_PATTERN.test(file)) continue;
     for (const [index, line] of additions.entries()) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('*')) continue;

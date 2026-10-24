@@ -8,7 +8,6 @@ import {
   RecommendationsService,
 } from '../../../services/recommendations.service';
 import { StudyBuddiesService } from '../../../services/study-buddies.service';
-import { I18nService } from '../../../services/i18n.service';
 import { TranslatePipe } from '../../../services/translate.pipe';
 
 type RecommendationAction = 'follow' | 'message';
@@ -22,7 +21,6 @@ type RecommendationAction = 'follow' | 'message';
 export class RecommendedForYouCarouselComponent {
   private readonly recommendationsService = inject(RecommendationsService);
   private readonly studyBuddiesService = inject(StudyBuddiesService);
-  private readonly i18n = inject(I18nService);
   public readonly router = inject(Router);
   private loadRequestId = 0;
 
@@ -142,27 +140,19 @@ export class RecommendedForYouCarouselComponent {
   reasonLabel(reason: RecommendationReason, recommendation: DiscoveryRecommendation): string {
     switch (reason) {
       case 'language_exchange':
-        return this.i18n.translate('discovery.recommendation.languageExchange');
+        return 'Language exchange match';
       case 'shared_interests':
-        return this.i18n.translate(
-          recommendation.shared_interest_count === 1
-            ? 'discovery.recommendation.sharedInterest'
-            : 'discovery.recommendation.sharedInterests',
-          { count: recommendation.shared_interest_count },
-        );
+        return recommendation.shared_interest_count === 1
+          ? '1 shared interest'
+          : `${recommendation.shared_interest_count} shared interests`;
       case 'active_recently':
-        return this.i18n.translate('discovery.recommendation.activeRecently');
+        return 'Recently active';
       case 'study_streak':
-        return this.i18n.translate('discovery.recommendation.activeLearner');
+        return 'Active learner';
       case 'proficiency_match':
-        return this.i18n.translate('discovery.recommendation.proficiencyMatch');
-      case 'availability_match':
-        return this.i18n.translate('discovery.recommendation.availabilityMatch');
+        return 'Proficiency match';
       case 'helpful_corrector':
-      case 'high_correction_ratio':
-        return this.i18n.translate('discovery.recommendation.helpfulCorrector');
-      case 'learning_goal_match':
-        return this.i18n.translate('discovery.recommendation.learningGoalMatch');
+        return 'Helpful corrector';
     }
   }
 

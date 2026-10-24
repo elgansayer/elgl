@@ -10,7 +10,6 @@ import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
-import { DiscoveryRecommendationsService } from './discovery-recommendations.service';
 import { HEADERS_METADATA } from '@nestjs/common/constants';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
@@ -24,14 +23,12 @@ describe('RecommendationsController', () => {
     getRecommendations: Mock;
     getDailyRecommendations: Mock;
   };
-  let mockDiscoveryService: { getForDiscovery: Mock };
 
   beforeEach(async () => {
     mockService = {
       getRecommendations: vi.fn(),
       getDailyRecommendations: vi.fn(),
     };
-    mockDiscoveryService = { getForDiscovery: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RecommendationsController],
@@ -39,10 +36,6 @@ describe('RecommendationsController', () => {
         {
           provide: RecommendationsService,
           useValue: mockService,
-        },
-        {
-          provide: DiscoveryRecommendationsService,
-          useValue: mockDiscoveryService,
         },
         {
           provide: MatchmakingCrashReportService,

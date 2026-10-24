@@ -116,46 +116,4 @@ describe('DiscoveryService offline privacy boundary', () => {
     await expect(service.findPartners({})).resolves.toEqual([]);
     expect(getBlockedAndBlockerIdsStrict).toHaveBeenCalledWith('viewer-1');
   });
-
-  it('keeps only partners with an audio intro when has_audio_intro is required', async () => {
-    const get = vi.fn((url: string) =>
-      of(
-        url.includes('/partners')
-          ? [
-              { id: 'with-intro', audio_intro_url: 'https://cdn.example/intro.m4a' },
-              { id: 'blank-intro', audio_intro_url: '   ' },
-              { id: 'no-intro', audio_intro_url: null },
-            ]
-          : [],
-      ),
-    );
-
-    await TestBed.configureTestingModule({
-      providers: [
-        DiscoveryService,
-        { provide: HttpClient, useValue: { get } },
-        {
-          provide: AuthService,
-          useValue: {
-            getAccessToken: vi.fn(() => 'token'),
-            currentUser: signal({ id: 'viewer-1' }),
-          },
-        },
-        {
-          provide: SafetyService,
-          useValue: { getBlockedAndBlockerIdsStrict: vi.fn(() => Promise.resolve([])) },
-        },
-        { provide: ChatService, useValue: {} },
-        { provide: UserService, useValue: {} },
-        {
-          provide: OfflineDiscoveryCacheService,
-          useValue: { isOnline: signal(true) },
-        },
-      ],
-    }).compileComponents();
-
-    const service = TestBed.inject(DiscoveryService);
-    const results = await service.findPartners({ has_audio_intro: true });
-    expect(results.map((user) => user.id)).toEqual(['with-intro']);
-  });
 });

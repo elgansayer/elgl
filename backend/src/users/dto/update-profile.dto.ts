@@ -18,13 +18,9 @@ import { Type } from 'class-transformer';
 
 export class CoordinatesDto {
   @IsNumber()
-  @Min(-90)
-  @Max(90)
   latitude!: number;
 
   @IsNumber()
-  @Min(-180)
-  @Max(180)
   longitude!: number;
 }
 
@@ -120,7 +116,7 @@ export class UpdateProfileDto {
   @IsArray()
   @IsString({ each: true })
   @ArrayMinSize(1)
-  @ArrayMaxSize(5)
+  @ArrayMaxSize(3)
   target_languages?: string[];
 
   @IsOptional()

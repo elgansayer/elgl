@@ -1,4 +1,3 @@
-import type { FavouritesService } from '../favourites/favourites.service';
 import type { Mock } from 'vitest';
 
 vi.mock('jsdom', () => ({
@@ -48,7 +47,6 @@ describe('POST /chat/token contract', () => {
 
     controller = new ChatController(
       chatService as unknown as ChatService,
-      {} as FavouritesService,
       centrifugoService as unknown as CentrifugoService,
       {} as ConversationStarterService,
       {} as TranslationService,

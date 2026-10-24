@@ -1,4 +1,3 @@
-import type { CorrectionQualityService } from './correction-quality.service';
 import { BadRequestException } from '@nestjs/common';
 import { MomentsController } from './moments.controller';
 import { MomentsFeedService } from './moments-feed.service';
@@ -34,7 +33,6 @@ describe('MomentsController feed filters', () => {
       usersService as unknown as UsersService,
       {} as R2Service,
       rankingService as unknown as MomentsRankingService,
-      {} as CorrectionQualityService,
     );
   });
 

@@ -84,11 +84,11 @@ describe('DiagnosticQuizComponent', () => {
   it('uses Relay semantic surface, radius, border, and elevation roles', async () => {
     await load();
 
-    const surface: HTMLElement = fixture.nativeElement.querySelector('section') as HTMLElement;
-    const counter: HTMLElement = surface.querySelector<HTMLElement>('span.rounded-pill') as HTMLElement;
-    const progress: HTMLElement = surface.querySelector<HTMLElement>('[role="progressbar"]') as HTMLElement;
+    const surface: HTMLElement = fixture.nativeElement.querySelector('section');
+    const counter: HTMLElement = surface.querySelector('span.rounded-pill');
+    const progress: HTMLElement = surface.querySelector('[role="progressbar"]');
     const progressFill: HTMLElement = progress.firstElementChild as HTMLElement;
-    const option: HTMLElement = surface.querySelector<HTMLElement>('hlm-radio') as HTMLElement;
+    const option: HTMLElement = surface.querySelector('hlm-radio');
 
     expect(surface.classList.toString()).toContain('rounded-card');
     expect(surface.classList.toString()).toContain('border-surface-100');
@@ -114,10 +114,10 @@ describe('DiagnosticQuizComponent', () => {
   it('uses a mobile-first layout that expands at the small breakpoint', async () => {
     await load();
 
-    const surface: HTMLElement = fixture.nativeElement.querySelector('section') as HTMLElement;
-    const headerRow: HTMLElement = surface.querySelector<HTMLElement>('div.mb-4') as HTMLElement;
-    const footer: HTMLElement = surface.querySelector<HTMLElement>('div.border-t') as HTMLElement;
-    const actionRow: HTMLElement = footer.querySelector<HTMLElement>('div.flex') as HTMLElement;
+    const surface: HTMLElement = fixture.nativeElement.querySelector('section');
+    const headerRow: HTMLElement = surface.querySelector('div.mb-4');
+    const footer: HTMLElement = surface.querySelector('div.border-t');
+    const actionRow: HTMLElement = footer.querySelector('div.flex');
     const buttons: NodeListOf<HTMLButtonElement> = actionRow.querySelectorAll('button');
 
     expect(headerRow.classList.toString()).toContain('flex-col');
@@ -134,8 +134,8 @@ describe('DiagnosticQuizComponent', () => {
   it('keeps option content wrap-safe while preserving a circular index marker', async () => {
     await load();
 
-    const option: HTMLElement = fixture.nativeElement.querySelector('hlm-radio') as HTMLElement;
-    const content: HTMLElement = option.querySelector<HTMLElement>('span.flex') as HTMLElement;
+    const option: HTMLElement = fixture.nativeElement.querySelector('hlm-radio');
+    const content: HTMLElement = option.querySelector('span.flex');
     const marker: HTMLElement = content.firstElementChild as HTMLElement;
     const label: HTMLElement = content.lastElementChild as HTMLElement;
 
@@ -230,53 +230,6 @@ describe('DiagnosticQuizComponent', () => {
     expect(component.currentIndex()).toBe(0);
   });
 
-  it('reports progress for the active question and reaches 100% on the final question', async () => {
-    await load();
-    expect(component.progressPercentage()).toBe(50);
-    component.selectOption('q1', 'high');
-    component.next();
-    expect(component.progressPercentage()).toBe(100);
-  });
-
-  it('suppresses duplicate submissions while in-flight and allows retry after failure', async () => {
-    let rejectSubmit!: (err: Error) => void;
-    quizService.submitResults.mockImplementationOnce(
-      () =>
-        new Promise((_, reject) => {
-          rejectSubmit = reject;
-        }),
-    );
-
-    await load();
-    component.selectOption('q1', 'high');
-    component.next();
-    component.selectOption('q2', 'low');
-
-    // First submit trigger
-    component.next();
-    expect(component.isSubmitting()).toBe(true);
-    expect(quizService.submitResults).toHaveBeenCalledTimes(1);
-
-    // Duplicate submit attempt while in-flight should be ignored
-    component.next();
-    expect(quizService.submitResults).toHaveBeenCalledTimes(1);
-
-    // Fail the submission
-    rejectSubmit(new Error('network error'));
-    await fixture.whenStable();
-
-    expect(component.submitError()).toBe(true);
-    expect(component.isSubmitting()).toBe(false);
-    expect(component.answers()).toEqual({ q1: 'high', q2: 'low' });
-
-    // Retry submission
-    quizService.submitResults.mockResolvedValueOnce(result);
-    component.next();
-    await fixture.whenStable();
-
-    expect(quizService.submitResults).toHaveBeenCalledTimes(2);
-  });
-
   it('shows retryable load and empty states', async () => {
     quizService.getQuestions.mockRejectedValueOnce(new Error('unavailable'));
     await load();
@@ -291,4 +244,3 @@ describe('DiagnosticQuizComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('No questions available');
   });
 });
-

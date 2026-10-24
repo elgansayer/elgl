@@ -381,7 +381,7 @@ jobs:
               exit 1
             fi
 
-            if ! grep -Eiq 'toomanyrequests|data limit exceeded|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
               echo "Non-transient Supabase startup failure detected; refusing to retry."
               exit 1
             fi
@@ -444,7 +444,7 @@ jobs:
               docker tag "$mirror_image" "$expected_image"
             fi
 
-            if ! grep -Eiq 'toomanyrequests|data limit exceeded|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
               echo "Non-transient Supabase type-generation failure detected; refusing to retry."
               exit 1
             fi

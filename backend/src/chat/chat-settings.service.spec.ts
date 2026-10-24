@@ -172,9 +172,7 @@ describe('ChatSettingsService', () => {
       };
       const updateChain = {
         update: vi.fn().mockReturnThis(),
-        eq: vi
-          .fn()
-          .mockResolvedValue({ error: new Error('sensitive DB write error') }),
+        eq: vi.fn().mockResolvedValue({ error: new Error('sensitive DB write error') }),
       };
       mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 

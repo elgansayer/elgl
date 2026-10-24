@@ -195,12 +195,8 @@
         }
         <div class="flex items-start gap-3">
           <!-- Avatar -->
-          <a
-            [routerLink]="['/profile/user', moment.author?.id]"
-            [attr.aria-label]="'moments.viewAuthorProfile' | t: { name: moment.author?.display_name ?? '' }"
-          >
+          <a [routerLink]="['/profile/user', moment.author?.id]">
             <img
-              alt=""
               [src]="moment.author?.avatar_url || 'https://i.pravatar.cc/150?u=' + moment.id"
               class="h-12 w-12 rounded-full object-cover shrink-0"
               loading="lazy"
@@ -479,9 +475,8 @@
                     <hlm-autocomplete-search
                       [search]="commentInputMap[moment.id] ?? ''"
                       (searchChange)="commentInputMap[moment.id] = $event"
-                      [itemToString]="mentionItemToStringFor(moment.id)"
+                      [itemToString]="mentionItemToString(moment.id)"
                       (valueChange)="onMentionSelected(moment.id, $event)"
-                      (closed)="closeMentionSuggestions(moment.id)"
                       autoHighlight
                     >
                       <hlm-autocomplete-input

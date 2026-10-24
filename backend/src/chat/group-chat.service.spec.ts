@@ -38,10 +38,7 @@ describe('GroupChatService', () => {
     vi.spyOn(service, 'get').mockResolvedValue(room);
 
     await expect(
-      service.create(creatorId, {
-        name: '  Study group  ',
-        memberIds: [memberId],
-      }),
+      service.create(creatorId, { name: '  Study group  ', memberIds: [memberId] }),
     ).resolves.toEqual(room);
 
     expect(rpc).toHaveBeenCalledWith('create_group_chat', {
@@ -77,19 +74,14 @@ describe('GroupChatService', () => {
 
   it('requires at least one other participant', async () => {
     await expect(
-      service.create(creatorId, {
-        name: 'Study group',
-        memberIds: [creatorId],
-      }),
+      service.create(creatorId, { name: 'Study group', memberIds: [creatorId] }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('does not publish to a deleted room when the final member leaves', async () => {
     rpc.mockResolvedValue({ data: true, error: null });
 
-    await expect(service.leave(creatorId, room.id)).resolves.toEqual({
-      deleted: true,
-    });
+    await expect(service.leave(creatorId, room.id)).resolves.toEqual({ deleted: true });
     expect(publishToRoom).not.toHaveBeenCalled();
   });
 });

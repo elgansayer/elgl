@@ -62,14 +62,13 @@ describe('ImageCompressionService', () => {
   it('returns non-image files unchanged', async () => {
     const file = createMockFile('video/mp4', 'video.mp4');
     await expect(service.compressImage(file)).resolves.toBe(file);
-    // Scope to this file: other specs' late async work may share the global URL API.
-    expect(URL.createObjectURL).not.toHaveBeenCalledWith(file);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
   it('rejects unsupported image formats before decoding', async () => {
     const file = createMockFile('image/svg+xml', 'vector.svg');
     await expect(service.compressImage(file)).rejects.toThrow('Unsupported image format');
-    expect(URL.createObjectURL).not.toHaveBeenCalledWith(file);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
   it('enforces a 1920x1080 landscape ceiling even when callers request larger output', async () => {

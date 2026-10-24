@@ -1,17 +1,15 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const template = readFileSync(
-  resolve(process.cwd(), 'src/app/components/moments-feed/moments-feed.component.html'),
+  fileURLToPath(new URL('./moments-feed.component.html', import.meta.url)),
   'utf8',
 );
 
 describe('Moments correction quality controls', () => {
   it('renders rating controls only inside correction comments', () => {
     const correctionStart = template.indexOf('@if (comment.correction_payload)');
-    // The same translated label is used by the compose button, so search for the
-    // rating group (role="group") after the correction comment branch starts.
-    const ratingGroup = template.indexOf('role="group"', correctionStart);
+    const ratingGroup = template.indexOf('aria-label="Correction quality"');
 
     expect(correctionStart).toBeGreaterThanOrEqual(0);
     expect(ratingGroup).toBeGreaterThan(correctionStart);
@@ -28,9 +26,8 @@ describe('Moments correction quality controls', () => {
   it('exposes pressed state and touch-sized accessible actions', () => {
     expect(template).toContain("[attr.aria-pressed]=\"comment.userVote === 'up'\"");
     expect(template).toContain("[attr.aria-pressed]=\"comment.userVote === 'down'\"");
-    // 7e69864f4 made the labels translation-safe.
-    expect(template).toContain(`[attr.aria-label]="('moments.correctBtn' | t) + ' 👍'"`);
-    expect(template).toContain(`[attr.aria-label]="('moments.correctBtn' | t) + ' 👎'"`);
+    expect(template).toContain('aria-label="Mark correction helpful"');
+    expect(template).toContain('aria-label="Mark correction not helpful"');
     expect(template.match(/min-h-11 min-w-11/g)?.length).toBe(2);
   });
 });

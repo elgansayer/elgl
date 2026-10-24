@@ -7,6 +7,8 @@ import { vi } from 'vitest';
 import { ChatPageComponent } from './chat-page.component';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { CentrifugoService } from '../../services/centrifugo.service';
+import { AiConversationService, Scenario } from './ai-conversation.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -249,7 +251,7 @@ describe('ChatPageComponent', () => {
       component.aiInput.set('Hello AI');
       component.aiSelectedScenario.set(scenarios[0]);
 
-      aiConversationServiceMock.sendMessage.mockResolvedValue({ reply: 'Hello back' });
+      aiConversationServiceMock.sendMessage.mockResolvedValue('Hello back');
 
       await component.sendAiMessage();
 

@@ -189,7 +189,6 @@ export class MomentsFeedComponent {
   private mentionRangeStartMap: Record<string, number> = {};
   private mentionRangeEndMap: Record<string, number> = {};
   private readonly mentionItemToStringMap = new Map<string, (value: unknown) => string>();
-  private mentionRequestVersionMap: Record<string, number> = {};
 
   // New Comment / Correction form states per momentId
   commentInputMap: Record<string, string> = {};
@@ -293,8 +292,7 @@ export class MomentsFeedComponent {
   }
 
   async submitMoment(): Promise<void> {
-    const text = this.newText().trim();
-    if (!text && this.newMediaUrls().length === 0) return;
+    if (!this.newText().trim() && this.newMediaUrls().length === 0) return;
     if (
       this.newMediaType() === 'audio' &&
       this.newVoiceDurationSec !== null &&
@@ -307,22 +305,10 @@ export class MomentsFeedComponent {
       );
       return;
     }
-
     this.isCreating.set(true);
     try {
-      if (text) {
-        const grammar = await this.vocabStore.checkGrammar(text, this.newTargetLanguage());
-        const corrected = grammar.corrected.trim();
-        if (grammar.errors_found > 0 && corrected && corrected !== text) {
-          this.newText.set(corrected);
-          this.saveMomentDraft();
-          showToast(grammar.explanation);
-          return;
-        }
-      }
-
       await this.momentsStore.createMoment({
-        text_content: text || undefined,
+        text_content: this.newText().trim() || undefined,
         media_urls: this.newMediaUrls(),
         media_type: this.newMediaType(),
         target_language: this.newTargetLanguage(),
@@ -515,7 +501,7 @@ export class MomentsFeedComponent {
       this.mentionQueryMap.update((m) => ({ ...m, [momentId]: match[1] }));
       void this.loadMentionSuggestions(momentId);
     } else {
-      this.closeMentionSuggestions(momentId);
+      this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
     }
   }
 
@@ -527,7 +513,7 @@ export class MomentsFeedComponent {
     }
   }
 
-  mentionItemToStringFor(momentId: string): (value: unknown) => string {
+  mentionItemToString(momentId: string): (value: unknown) => string {
     let formatter = this.mentionItemToStringMap.get(momentId);
     if (!formatter) {
       formatter = (value: unknown): string => {
@@ -554,39 +540,16 @@ export class MomentsFeedComponent {
 
   private async loadMentionSuggestions(momentId: string): Promise<void> {
     const query = this.mentionQueryMap()[momentId];
-    const requestVersion = (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
-    this.mentionRequestVersionMap[momentId] = requestVersion;
-
     if (!query) {
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
       return;
     }
-
     try {
       const results = await this.userService.searchUsers(query, 5);
-      if (
-        this.mentionRequestVersionMap[momentId] !== requestVersion ||
-        this.mentionQueryMap()[momentId] !== query
-      ) {
-        return;
-      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: results }));
     } catch {
-      if (
-        this.mentionRequestVersionMap[momentId] !== requestVersion ||
-        this.mentionQueryMap()[momentId] !== query
-      ) {
-        return;
-      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
     }
-  }
-
-  protected closeMentionSuggestions(momentId: string): void {
-    this.mentionRequestVersionMap[momentId] =
-      (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
-    this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
-    this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
   }
 
   selectMention(momentId: string, member: MentionSuggestion | undefined): void {
@@ -598,7 +561,7 @@ export class MomentsFeedComponent {
       this.mentionRangeEndMap[momentId],
       displayName,
     );
-    this.closeMentionSuggestions(momentId);
+    this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
   }
 
   openGhostCorrection(moment: MomentRecord, textToCorrect?: string): void {

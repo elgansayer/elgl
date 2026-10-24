@@ -2,6 +2,51 @@
 
 *Organized by complete user outcomes rather than individual technical chores.*
 
+## Real-Time Communication & Messaging
+
+- settings toggle to auto-play sequential voice notes
+- Disappearing messages
+- Edit sent messages
+- Automated PII scrubbing
+- Forwarding messages
+- Instant video messages
+- Pin priority chats
+- swipe-to-reply gesture
+- WebSocket connection rate limiting
+
+## Social Feed & Community Engagement
+
+- Mute Word client-side filter
+- Correction Quality rating system
+- Recommended for You carousel
+- Has Audio Intro required filter
+- Chart.js integration for visual data representation
+- Implement x-algorithm for content recommendations
+
+## Real-Time Communication & Messaging
+
+- settings toggle to auto-play sequential voice notes
+- Disappearing messages
+- Edit sent messages
+- Automated PII scrubbing
+- Forwarding messages
+- Instant video messages
+- Pin priority chats
+- swipe-to-reply gesture
+- WebSocket connection rate limiting
+
+## Social Feed & Community Engagement
+
+- Mute Word client-side filter
+- Correction Quality rating system
+- Recommended for You carousel
+- Has Audio Intro required filter
+- Chart.js integration for visual data representation
+- Implement x-algorithm for content recommendations
+
+## Live Audio & Video Events
+
+
 ## 💬 1-on-1 Chat & Messaging
 - **Stabilization:** Complete technical foundation, security audits (GDPR, RLS), performance optimization (Caching, Rate Limiting), error handling, testing (Vitest, Cypress), and monitoring (Datadog/Prometheus) for Chat systems.
 - Complete emoji message reactions, disappearing messages (set to expire after 24 hours, 7 days, or 90 days), per-user archive and hidden chat folders, and per-user priority inbox pins.
@@ -198,7 +243,78 @@
 
 - Harden Centrifugo connection token endpoint and lock connection-token contract.
 
-## 📰 Moments & Social Feed
+
+## Live Audio & Video Events
+
+
+- AI-generated Session Summary
+- Categorise active Voicerooms
+- HLS/DASH on-the-fly video transcoding
+- Fix WebRTC edge cases (Bluetooth headset interrupts)
+- Fix inviteCoHost race conditions (Centrifugo events arriving out of order)
+
+## Interactive Learning & AI Tools
+
+- unlock premium one-off AI services
+- 50/50 language exchange timers
+- verb conjugation trainer
+- partial credit scoring
+- daily AI usage rate limiting
+- strict LLM prompt injection protection
+- Architectural Enhancements for Language Learning Synergy (integrate Pronunciation/AI with Flashcards and Reading Engine)
+- Enhance and Stabilize Visual Diff Correction Tool (incorporates Myers Diff algorithm, segmented token mapping optimization, accessibility focus states, and Flashcard translation context fix)
+
+## Monetisation & Premium Features
+
+- App Store receipt validation
+
+## Trust, Safety & User Privacy
+
+- Hide Online Status
+- Who can see my profile toggle
+
+## Platform Stability & Core Architecture
+
+- Implement missing E2E test flows for Authentication, Chat Messaging, and Moment Creation
+- Exempt non-user-authored body fields from sanitization
+- Configure Angular Universal (SSR)
+- Audit RxJS subscriptions and migrate to Angular Signals where possible
+- Implement TimelineWorker backend job for fan-out processing
+- Agent workflow to check for security issues and vulnerabilities
+- Automated push notification reminders
+- Achievements service in NestJS
+
+
+## Interactive Learning & AI Tools
+
+- unlock premium one-off AI services
+- 50/50 language exchange timers
+- verb conjugation trainer
+- partial credit scoring
+- daily AI usage rate limiting
+- strict LLM prompt injection protection
+- Architectural Enhancements for Language Learning Synergy (integrate Pronunciation/AI with Flashcards and Reading Engine)
+- Enhance and Stabilize Visual Diff Correction Tool (incorporates Myers Diff algorithm, segmented token mapping optimization, accessibility focus states, and Flashcard translation context fix)
+
+## Monetisation & Premium Features
+
+- App Store receipt validation
+
+## Trust, Safety & User Privacy
+
+- Hide Online Status
+- Who can see my profile toggle
+
+## Platform Stability & Core Architecture
+
+- Implement missing E2E test flows for Authentication, Chat Messaging, and Moment Creation
+- Exempt non-user-authored body fields from sanitization
+- Configure Angular Universal (SSR)
+- Audit RxJS subscriptions and migrate to Angular Signals where possible
+- Implement TimelineWorker backend job for fan-out processing
+- Agent workflow to check for security issues and vulnerabilities
+- Automated push notification reminders
+- Achievements service in NestJS
 
 
 - Harden Centrifugo connection token endpoint and lock connection-token contract.
@@ -328,6 +444,7 @@
 - Build a Pro subscription tier (Tandem Pro clone) offering unlimited translations, advanced visitor logs, nearby members visibility, and ad-free browsing.
 - Make Nearby use explicit GPS location.
 - Complete persisted Serious Learner mode and standardise active Serious Learner filtering.
+- Audit and propose advanced partner discovery ranking signals.
 - Converge discovery error actions on Spartan.
 
 ## 🧠 Learning & AI Tools
@@ -378,7 +495,10 @@
 - **VIP Perks:** Location spoofing, incognito profile views, and unlimited AI.
 
 
-## 🛡️ Trust & Safety (Moderation)
+
+## Communities UI Improvements
+
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, Error Handling UI, Empty State loading fix, Client-side form validation, and Relay presentation primitives)
 
 - **Moderation Tools:** Complete production Block Management and lock ban/warn moderation endpoints.
 - **Content Safety:** Enforce typed user-content sanitisation boundaries (exempting non-user-authored fields) and add ASN hosting risk controls.
@@ -455,7 +575,10 @@
 - Deliver Pro subscription tier offering unlimited translations, advanced visitor logs, nearby members visibility, and ad-free browsing.
 - Support robust purchasing mechanisms, Restore Purchases workflow, server-side App Store receipt validation, and coin balance auto-deduction.
 
-## 🛡️ Trust & Safety (Moderation)
+
+## Communities UI Improvements
+
+- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, Error Handling UI, Empty State loading fix, Client-side form validation, and Relay presentation primitives)
 
 - Ensure platform safety with automated PII scrubbing and content sanitisation boundaries.
 - Implement strict moderation tools: ban and warn endpoints, block management, and ASN hosting risk controls.

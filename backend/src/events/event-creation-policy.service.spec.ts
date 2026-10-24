@@ -8,7 +8,8 @@ describe('EventCreationPolicyService', () => {
   let service: EventCreationPolicyService;
   let getClient: Mock;
 
-  const futureDate = () => new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const futureDate = () =>
+    new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
   const dto = (overrides: Partial<CreateEventDto> = {}): CreateEventDto => ({
     title: 'Language exchange',

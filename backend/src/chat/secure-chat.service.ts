@@ -71,10 +71,7 @@ export class SecureChatService extends ChatService {
     );
   }
 
-  private async requireMembership(
-    userId: string,
-    roomId: string,
-  ): Promise<void> {
+  private async requireMembership(userId: string, roomId: string): Promise<void> {
     const { data, error } = await this.secureSupabase
       .getClient()
       .from('chat_room_members')
@@ -96,9 +93,7 @@ export class SecureChatService extends ChatService {
       .eq('user_id', currentUserId);
 
     if (error || !memberships || memberships.length === 0) return [];
-    const allowed = new Set(
-      memberships.map((row: { room_id: string }) => row.room_id),
-    );
+    const allowed = new Set(memberships.map((row: { room_id: string }) => row.room_id));
     const rooms = await super.getRooms(currentUserId);
     return rooms.filter((room) => allowed.has(room.id));
   }
@@ -115,18 +110,12 @@ export class SecureChatService extends ChatService {
     return super.getMessages(roomId, search, currentUserId);
   }
 
-  async getGroupMembers(
-    roomId: string,
-    currentUserId?: string,
-  ): Promise<any[]> {
+  async getGroupMembers(roomId: string, currentUserId?: string): Promise<any[]> {
     if (currentUserId) await this.requireMembership(currentUserId, roomId);
     return super.getGroupMembers(roomId, currentUserId);
   }
 
-  async sendMessage(
-    senderId: string,
-    dto: SendMessageDto,
-  ): Promise<ChatMessage> {
+  async sendMessage(senderId: string, dto: SendMessageDto): Promise<ChatMessage> {
     await this.requireMembership(senderId, dto.room_id);
 
     const supabase = this.secureSupabase.getClient();
@@ -194,7 +183,7 @@ export class SecureChatService extends ChatService {
       );
     }
 
-    let message: ChatMessage = insertResponse.data;
+    let message: ChatMessage = insertResponse.data as ChatMessage;
     if (dto.message_type === 'text' && dto.text_content) {
       try {
         const url = dto.text_content.match(/https?:\/\/[^\s]+/)?.[0];
@@ -236,9 +225,7 @@ export class SecureChatService extends ChatService {
         ...dto.text_content.matchAll(/@([\wÀ-ɏ؀-ۿ]+)/g),
       ].map((match) => match[1]);
       if (mentionedNames.length > 0) {
-        const groupMembers = (await super.getGroupMembers(
-          dto.room_id,
-        )) as Array<{
+        const groupMembers = (await super.getGroupMembers(dto.room_id)) as Array<{
           user_id: string;
           user?: { display_name?: string };
         }>;

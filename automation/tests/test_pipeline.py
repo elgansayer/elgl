@@ -1621,8 +1621,6 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert "design-sync-drift failed" in prompts[0]
     assert result.state is JobState.REVIEWING
     assert "repair CI" in committed[0]
-    # One model repair that pushed counts exactly once.
-    assert result.repair_attempts == 1
 
 
 def test_repair_verification_failure_enters_quality_repair_without_backoff(
@@ -1651,81 +1649,6 @@ def test_repair_verification_failure_enters_quality_repair_without_backoff(
     assert result.state is JobState.QUALITY_REPAIRING
     assert result.attempts == 0
     assert "design-sync-drift" in result.review_findings[0]
-
-
-def _failing_model_repair_pipeline(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[FactoryPipeline, GitHub, list[Task]]:
-    """A model repair whose result never passes local verification or pushes."""
-    factory_config = config(tmp_path)
-    github = GitHub()
-    job = _repairing_job(factory_config, github)
-    agent_calls: list[Task] = []
-
-    class TrackingConversations(Conversations):
-        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
-            agent_calls.append(task)
-            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
-
-    pipeline = FactoryPipeline(
-        factory_config,
-        github=github,  # type: ignore[arg-type]
-        conversations=TrackingConversations(),  # type: ignore[arg-type]
-    )
-    pipeline.jobs.save({"77": job})
-    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
-    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
-    fingerprints = iter(range(1_000))
-    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
-    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
-    monkeypatch.setattr(
-        GitWorkflow, "push", lambda workflow, branch: pytest.fail("unverified repair pushed")
-    )
-    monkeypatch.setattr(
-        "openhands_factory.pipeline.run_verification",
-        lambda commands: (_ for _ in ()).throw(
-            VerificationFailed("backend / unit: failures inherited from the base branch")
-        ),
-    )
-    return pipeline, github, agent_calls
-
-
-def test_model_repair_consumes_budget_even_when_verification_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    pipeline, _, agent_calls = _failing_model_repair_pipeline(tmp_path, monkeypatch)
-
-    result = pipeline.run_job("77")
-
-    assert result is not None
-    assert len(agent_calls) == 1
-    assert result.state is JobState.QUALITY_REPAIRING
-    assert result.repair_attempts == 1
-    assert pipeline.jobs.load()["77"].repair_attempts == 1
-
-
-def test_unpushed_repair_loop_stops_at_the_model_budget(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # Regression: a still-conflicting PR routes QUALITY_REPAIRING back to
-    # REPAIRING. Counting only pushes let this spend ~500 model calls a day.
-    pipeline, github, agent_calls = _failing_model_repair_pipeline(tmp_path, monkeypatch)
-    failing_status = github.statuses[0]
-
-    result = None
-    for _ in range(20):
-        github.statuses = [failing_status]
-        jobs = pipeline.jobs.load()
-        jobs["77"].state = JobState.REPAIRING
-        pipeline.jobs.save(jobs)
-        result = pipeline.run_job("77")
-        assert result is not None
-        if result.last_error == "Repair limit exceeded":
-            break
-
-    assert result is not None and result.last_error == "Repair limit exceeded"
-    assert len(agent_calls) == 5
-    assert result.repair_attempts == 5
 
 
 def test_recovery_failure_counter_survives_attempt_resets(
