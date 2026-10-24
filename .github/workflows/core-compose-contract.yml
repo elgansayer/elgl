@@ -5,11 +5,12 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
-    paths:
-      - 'docker-compose*.yml'
-      - '.env.example'
-      - 'scripts/verify-compose-orchestration.test.mjs'
-      - '.github/workflows/core-compose-contract.yml'
+    paths-ignore:
+      - 'automation/**'
+      - 'docs/**'
+      - 'config/factory/**'
+      - 'config/systemd/**'
+      - '.github/dependabot.yml'
   merge_group:
     types: [checks_requested]
 
@@ -45,7 +46,7 @@ jobs:
             while IFS= read -r path; do
               [ -z "$path" ] && continue
               case "$path" in
-                automation/*|factory-dashboard/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
                   ;;
                 *)
                   run_compose=true
@@ -58,8 +59,6 @@ jobs:
 
   compose-contract:
     name: infrastructure / core-compose
-    needs: impact
-    if: needs.impact.outputs.run_compose == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

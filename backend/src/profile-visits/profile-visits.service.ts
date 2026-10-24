@@ -341,18 +341,14 @@ export class ProfileVisitsService {
       [viewedId, visitorId],
     ] as const;
 
-    const results = await Promise.all(
-      directions.map(([blockerId, blockedId]) =>
-        supabase
-          .from('blocks')
-          .select('id')
-          .eq('blocker_id', blockerId)
-          .eq('blocked_id', blockedId)
-          .limit(1),
-      ),
-    );
+    for (const [blockerId, blockedId] of directions) {
+      const { data, error } = await supabase
+        .from('blocks')
+        .select('id')
+        .eq('blocker_id', blockerId)
+        .eq('blocked_id', blockedId)
+        .limit(1);
 
-    for (const { data, error } of results) {
       if (error) {
         this.logger.warn(
           'Profile visit rejected because block state could not be verified',

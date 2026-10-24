@@ -46,7 +46,6 @@ export class DeveloperDashboardComponent {
   readonly centrifugeService = inject(CentrifugeService);
 
   readonly activeTab = signal<DeveloperDashboardTab>('overview');
-  readonly isGeneratingApiKey = signal(false);
 
   // PostGIS Matchmaking Sandbox Signals
   readonly searchLatitude = signal<number>(51.5074); // London center
@@ -89,18 +88,8 @@ export class DeveloperDashboardComponent {
   }
 
   async generateKey(): Promise<void> {
-    // Ignore repeat clicks so one action never issues several production keys.
-    if (this.isGeneratingApiKey()) return;
-    this.isGeneratingApiKey.set(true);
-    try {
-      const issuedKey = await this.store.generateApiKey();
-      // Never log the raw key; diagnostics only record that one was issued.
-      if (issuedKey) {
-        await this.addLog('REDIS', 'Generated new production API key (600 RPM).', 'success');
-      }
-    } finally {
-      this.isGeneratingApiKey.set(false);
-    }
+    await this.store.generateApiKey();
+    await this.addLog('REDIS', 'Generated new production API key (600 RPM).', 'success');
   }
 
   async runPostGisSearch(): Promise<void> {

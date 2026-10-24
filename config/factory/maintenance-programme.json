@@ -1,10 +1,9 @@
 [
   {
     "id": "verified-runtime-rollback",
-    "tracking_issue": "elgansayer/elgl#6943",
-    "objective": "Make a failed runtime deployment recover to the previous verified package, provider policy, prompt bundle and worker image, rather than only restarting services.",
-    "evidence_required": "Inspect the deployed updater and installed package origin. An editable package or moving-checkout prompt path is not immutable release evidence. Extend the existing rollback issue and prove the failure path in an isolated harness before changing it.",
-    "acceptance": "Inject install, image and startup failures; restore the exact prior verified runtime without losing jobs or exposing credentials. Advancing the source checkout must not change installed code or trusted prompts. No live destructive failure injection."
+    "objective": "Make a failed runtime deployment recover to the previous verified package, provider policy and worker image, rather than only restarting services.",
+    "evidence_required": "Inspect the deployed updater and prove the failure path in an isolated harness before changing it.",
+    "acceptance": "Inject install, image and startup failures; restore the exact prior verified runtime without losing jobs or exposing credentials. No live destructive failure injection."
   },
   {
     "id": "provider-generation-canaries",

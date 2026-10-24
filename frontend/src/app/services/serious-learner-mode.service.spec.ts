@@ -36,8 +36,6 @@ describe('SeriousLearnerModeService', () => {
   it('loads the persisted preference for the authenticated account', async () => {
     http.get.mockReturnValue(of({ serious_learner_mode: true }));
     const service = TestBed.inject(SeriousLearnerModeService);
-    // Root-service effects run on application ticks in zoneless TestBed.
-    TestBed.tick();
 
     await vi.waitFor(() => expect(service.loading()).toBe(false));
 
@@ -47,8 +45,6 @@ describe('SeriousLearnerModeService', () => {
 
   it('persists and independently verifies a mode change', async () => {
     const service = TestBed.inject(SeriousLearnerModeService);
-    // Root-service effects run on application ticks in zoneless TestBed.
-    TestBed.tick();
     await vi.waitFor(() => expect(service.loading()).toBe(false));
     http.get.mockClear();
     http.get.mockReturnValue(of({ serious_learner_mode: true }));
@@ -67,8 +63,6 @@ describe('SeriousLearnerModeService', () => {
 
   it('rolls back when persistence verification does not match the requested value', async () => {
     const service = TestBed.inject(SeriousLearnerModeService);
-    // Root-service effects run on application ticks in zoneless TestBed.
-    TestBed.tick();
     await vi.waitFor(() => expect(service.loading()).toBe(false));
     http.get.mockClear();
     http.get.mockReturnValue(of({ serious_learner_mode: false }));
@@ -83,12 +77,8 @@ describe('SeriousLearnerModeService', () => {
     const stale = new Subject<{ serious_learner_mode: boolean }>();
     http.get.mockReturnValueOnce(stale).mockReturnValueOnce(of({ serious_learner_mode: false }));
     const service = TestBed.inject(SeriousLearnerModeService);
-    // Root-service effects run on application ticks in zoneless TestBed.
-    TestBed.tick();
 
     currentUser.set({ id: 'user-b' });
-
-    TestBed.tick();
     TestBed.flushEffects();
     await vi.waitFor(() => expect(service.loading()).toBe(false));
 
@@ -102,8 +92,6 @@ describe('SeriousLearnerModeService', () => {
   it('does not write without an authenticated token', async () => {
     auth.getAccessToken.mockReturnValue(null as unknown as string);
     const service = TestBed.inject(SeriousLearnerModeService);
-    // Root-service effects run on application ticks in zoneless TestBed.
-    TestBed.tick();
 
     await expect(service.setEnabled(true)).resolves.toBe(false);
     expect(http.patch).not.toHaveBeenCalled();

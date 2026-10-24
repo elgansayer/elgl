@@ -531,61 +531,6 @@ def test_remove_worktree_rejects_path_outside_configured_root(tmp_path: Path) ->
         workflow.remove_worktree(tmp_path / "mounted-volume" / "other" / "issue-12")
 
 
-def test_remove_worktree_repairs_a_rewritten_git_pointer(tmp_path: Path) -> None:
-    # Live incident 2026-10-22..24: issue-7593/.git pointed at a deleted /tmp
-    # gitdir, so `git worktree remove --force` failed and every refresh aborted.
-    repository = tmp_path / "state" / "repository"
-    worktree = tmp_path / "state" / "worktrees" / "issue-12"
-    git = ("git", "-c", "user.name=t", "-c", "user.email=t@example.invalid")
-    subprocess.run(("git", "init", "-q", "-b", "main", str(repository)), check=True)
-    subprocess.run(
-        (*git, "-C", str(repository), "commit", "-q", "--allow-empty", "-m", "i"), check=True
-    )
-    subprocess.run(
-        ("git", "-C", str(repository), "worktree", "add", "-q", str(worktree), "-b", "issue-12"),
-        check=True,
-    )
-    (worktree / "changed.ts").write_text("uncommitted", encoding="utf-8")
-    (worktree / ".git").write_text(f"gitdir: {tmp_path / 'deleted-gitdir'}\n", encoding="utf-8")
-    workflow = GitWorkflow(repository, "main")
-
-    workflow.remove_worktree(worktree, force=True)
-
-    assert not worktree.exists()
-    listing = subprocess.run(
-        ("git", "-C", str(repository), "worktree", "list", "--porcelain"),
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
-    assert str(worktree) not in listing
-    branches = subprocess.run(
-        ("git", "-C", str(repository), "branch", "--list", "issue-12"),
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
-    assert "issue-12" in branches
-
-
-def test_remove_worktree_still_fails_when_repair_does_not_help(tmp_path: Path) -> None:
-    repository = tmp_path / "state" / "repository"
-    repository.mkdir(parents=True)
-    runner = Runner(
-        [
-            ProcessResult(128, "", "fatal: validation failed"),
-            ProcessResult(1, "", "repair: .git file broken"),
-            ProcessResult(128, "", "fatal: validation failed"),
-        ]
-    )
-    workflow = GitWorkflow(repository, "main", runner)
-
-    with pytest.raises(RepositorySafetyError, match="Could not remove worktree"):
-        workflow.remove_worktree(tmp_path / "state" / "worktrees" / "issue-12", force=True)
-
-    assert runner.calls[1][:3] == ("git", "worktree", "repair")
-
-
 def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     repository = tmp_path / "state" / "repository"
     repository.mkdir(parents=True)

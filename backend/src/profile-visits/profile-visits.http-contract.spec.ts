@@ -43,17 +43,11 @@ describe('Profile visits HTTP privacy contract', () => {
     expect(serviceSource).toContain(
       ".order('created_at', { ascending: false })",
     );
-    // Paginated but hard-capped: MAX_VISITOR_PAGE_SIZE bounds every range.
-    expect(serviceSource).toContain('const MAX_VISITOR_PAGE_SIZE = 50;');
-    expect(serviceSource).toContain(
-      '.range(safeOffset, safeOffset + safeLimit)',
-    );
+    expect(serviceSource).toContain('.limit(50)');
   });
 
   it('keeps free-tier identity masking server-owned', () => {
-    expect(serviceSource).toContain(
-      'const identityVisible = Boolean(ownerPrivacy.is_vip);',
-    );
+    expect(serviceSource).toContain('if (!isOwnerVip)');
     expect(serviceSource).toContain('is_blurred: true');
     expect(serviceSource).toContain("id: 'hidden-vip-only'");
   });

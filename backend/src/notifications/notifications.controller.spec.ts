@@ -127,16 +127,13 @@ describe('NotificationsController', () => {
         direct_messages: { push: false },
       });
 
-      expect(notificationsService.updatePreferences).toHaveBeenCalledWith(
-        user.id,
-        {
-          direct_messages: { push: false, badge: false },
-          groups: current.groups,
-          likes: current.likes,
-          voice_rooms: current.voice_rooms,
-          do_not_disturb: true,
-        },
-      );
+      expect(notificationsService.updatePreferences).toHaveBeenCalledWith(user.id, {
+        direct_messages: { push: false, badge: false },
+        groups: current.groups,
+        likes: current.likes,
+        voice_rooms: current.voice_rooms,
+        do_not_disturb: true,
+      });
       expect(result).toEqual({ success: true, preferences: updated });
     });
 
@@ -166,9 +163,7 @@ describe('NotificationsController', () => {
     });
 
     it('does not write when the authoritative preference read fails', async () => {
-      notificationsService.getPreferences.mockRejectedValue(
-        new Error('database unavailable'),
-      );
+      notificationsService.getPreferences.mockRejectedValue(new Error('database unavailable'));
 
       await expect(
         controller.updatePreferences(user, {

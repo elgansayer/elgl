@@ -155,21 +155,6 @@ export class MatchmakingAlgorithmService {
     if (filters.availability_morning && !partner.availability_morning) return false;
     if (filters.availability_afternoon && !partner.availability_afternoon) return false;
     if (filters.availability_evening && !partner.availability_evening) return false;
-    if (filters.has_audio_intro && !partner.audio_intro_url?.trim()) return false;
-
-    const requestedInterests = (filters.interests ?? '')
-      .split(',')
-      .map((interest) => interest.trim().toLowerCase())
-      .filter((interest) => interest.length > 0);
-    if (requestedInterests.length > 0) {
-      // Cached profiles may still carry the legacy hobbies field.
-      const partnerInterests = new Set(
-        [...(partner.interests ?? []), ...(partner.hobbies ?? [])].map((interest) =>
-          interest.trim().toLowerCase(),
-        ),
-      );
-      if (!requestedInterests.some((interest) => partnerInterests.has(interest))) return false;
-    }
 
     if (filters.age_min !== undefined || filters.age_max !== undefined) {
       const age = partner.age;

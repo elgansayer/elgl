@@ -29,32 +29,26 @@ const ALLOWED_METADATA_KEYS = new Set([
   'operation',
   'page',
   'pageSize',
-  'total',
 ]);
 const MAX_CORRELATION_ID_LENGTH = 128;
 const MAX_METADATA_STRING_LENGTH = 128;
-const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]+$/;
-const SAFE_TARGET_ID = /^[A-Za-z0-9_-]{1,200}$/;
-const RETENTION_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AdminAuditService {
   private readonly logger = new Logger(AdminAuditService.name);
-  private nextRetentionSweepAt = 0;
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async record(input: AdminAuditEventInput): Promise<void> {
-    const correlationId = this.normalizeCorrelationId(input.correlationId);
+    const suppliedCorrelationId = input.correlationId?.trim();
+    const correlationId = suppliedCorrelationId
+      ? suppliedCorrelationId.slice(0, MAX_CORRELATION_ID_LENGTH)
+      : randomUUID();
     const metadata = this.sanitizeMetadata(input.metadata ?? {});
     const operatorNote = normalizeAdminOperatorNote(input.operatorNote);
-    const targetId =
-      input.targetId && SAFE_TARGET_ID.test(input.targetId)
-        ? input.targetId
-        : null;
 
     // The handwritten Database type currently lags newly-added admin tables.
-    // Keep this escape hatch local to audit persistence until generated Supabase
+    // Keep this escape hatch local to the audit insert until generated Supabase
     // database types replace the manual schema definition.
     const client =
       this.supabaseService.getClient() as unknown as SupabaseClient;
@@ -63,7 +57,7 @@ export class AdminAuditService {
       action: input.action,
       capability_key: input.capabilityKey ?? null,
       target_type: input.targetType ?? null,
-      target_id: targetId,
+      target_id: input.targetId ?? null,
       reason_code: input.reasonCode ?? null,
       operator_note: operatorNote,
       outcome: input.outcome,
@@ -85,47 +79,6 @@ export class AdminAuditService {
       );
       throw error;
     }
-
-    await this.maybeApplyRetention(client);
-  }
-
-  private normalizeCorrelationId(value: string | undefined): string {
-    const candidate = value?.trim().slice(0, MAX_CORRELATION_ID_LENGTH);
-    if (candidate && SAFE_CORRELATION_ID.test(candidate)) {
-      return candidate;
-    }
-    return randomUUID();
-  }
-
-  private async maybeApplyRetention(client: SupabaseClient): Promise<void> {
-    const now = Date.now();
-    if (now < this.nextRetentionSweepAt) return;
-    this.nextRetentionSweepAt = now + RETENTION_SWEEP_INTERVAL_MS;
-
-    const rpcClient = client as unknown as {
-      rpc?: (
-        functionName: string,
-      ) => Promise<{ data: unknown; error?: unknown }>;
-    };
-    if (typeof rpcClient.rpc !== 'function') return;
-
-    try {
-      const { error } = await rpcClient.rpc('prune_admin_audit_events');
-      if (error) {
-        this.logRetentionFailure(error);
-      }
-    } catch (error) {
-      this.logRetentionFailure(error);
-    }
-  }
-
-  private logRetentionFailure(error: unknown): void {
-    this.logger.error(
-      JSON.stringify({
-        event: 'admin_audit_retention_failed',
-        errorType: error instanceof Error ? error.name : 'AuditRetentionError',
-      }),
-    );
   }
 
   private sanitizeMetadata(

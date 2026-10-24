@@ -1,5 +1,6 @@
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ErrorHandler, Injectable, inject } from '@angular/core';
+import { ErrorHandler, Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { ApiService } from './api.service';
 
 interface ClientErrorStackFrame {
@@ -14,236 +15,181 @@ interface ClientErrorPayload {
   message: string;
   name: string;
   stack?: string;
+  componentStack?: string;
   url: string;
   userAgent: string;
   timestamp: string;
-  metadata?: Record<string, string | number | boolean>;
+  metadata?: Record<string, unknown>;
   stackFrames?: ClientErrorStackFrame[];
 }
 
 const MAX_MESSAGE_LENGTH = 1000;
-const MAX_NAME_LENGTH = 100;
+const MAX_NAME_LENGTH = 120;
 const MAX_STACK_LENGTH = 12000;
 const MAX_URL_LENGTH = 2048;
 const MAX_USER_AGENT_LENGTH = 512;
-const MAX_STACK_FRAMES = 20;
-const MAX_FRAME_VALUE_LENGTH = 512;
-const REPORT_WINDOW_MS = 60_000;
-const MAX_REPORTS_PER_WINDOW = 10;
-const DUPLICATE_WINDOW_MS = 10_000;
-
+const MAX_STACK_FRAMES = 30;
+const MAX_FRAME_TEXT_LENGTH = 512;
 const STACK_FRAME_RE =
   /^\s*at\s+(?:(?<functionName>[^\s(]+)\s*\(?\s*(?<source>[^)]+)?\)?|(?<sourceOnly>[^\s(]+))$/;
-const BEARER_TOKEN_RE = /\bBearer\s+[^\s,;]+/gi;
-const JWT_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
-const SECRET_PARAM_RE =
-  /\b(authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|password)=([^\s&#]+)/gi;
-// Query strings and fragments routinely carry tokens and personal data, and
-// HTTP error messages embed the full request URL, so drop them from any URL.
-const URL_QUERY_RE = /\b(https?:\/\/[^\s?#'"]+)[?#][^\s'"]*/gi;
 
-function truncate(value: string, maxLength: number): string {
-  return value.length <= maxLength ? value : value.slice(0, maxLength);
+function bounded(value: unknown, limit: number, fallback = ''): string {
+  if (typeof value !== 'string') return fallback;
+  return value.slice(0, limit);
 }
 
-function redactSecrets(value: string): string {
-  return value
-    .replace(URL_QUERY_RE, '$1')
-    .replace(BEARER_TOKEN_RE, 'Bearer [redacted]')
-    .replace(JWT_RE, '[redacted-jwt]')
-    .replace(SECRET_PARAM_RE, '$1=[redacted]');
-}
-
-function sanitiseText(value: string, maxLength: number): string {
-  return truncate(redactSecrets(value), maxLength);
-}
-
-function sanitiseUrl(value: string): string {
-  if (!value) return '';
-
+function privacySafeUrl(rawUrl: string): string {
+  if (!rawUrl) return '';
   try {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://localhost';
-    const parsed = new URL(value, base);
+    const parsed = new URL(rawUrl);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
-    return truncate(`${parsed.origin}${parsed.pathname}`, MAX_URL_LENGTH);
+    return bounded(`${parsed.origin}${parsed.pathname}`, MAX_URL_LENGTH);
   } catch {
     return '';
   }
 }
 
-function currentUrl(): string {
-  return typeof window === 'undefined' ? '' : sanitiseUrl(window.location.href);
-}
-
-function currentUserAgent(): string {
-  return typeof navigator === 'undefined'
-    ? ''
-    : sanitiseText(navigator.userAgent, MAX_USER_AGENT_LENGTH);
-}
-
 function parseStackFrames(stack: string): ClientErrorStackFrame[] {
   return stack
     .split('\n')
-    .slice(1)
+    .slice(1, MAX_STACK_FRAMES + 1)
     .map((line): ClientErrorStackFrame | null => {
       const match = STACK_FRAME_RE.exec(line);
       if (!match) return null;
 
-      const functionName = match.groups?.['functionName'];
+      const functionName = bounded(match.groups?.['functionName'], MAX_FRAME_TEXT_LENGTH) || undefined;
       const rawSource = match.groups?.['source'] ?? match.groups?.['sourceOnly'];
-      if (!rawSource) {
-        return functionName
-          ? { functionName: sanitiseText(functionName, MAX_FRAME_VALUE_LENGTH) }
-          : null;
-      }
+      if (!rawSource) return functionName ? { functionName } : null;
 
-      const cleanSource = sanitiseText(rawSource, MAX_FRAME_VALUE_LENGTH);
-      const sourceMatch = /^(.*?)(?::(\d+))?(?::(\d+))?$/.exec(cleanSource);
+      const source = bounded(rawSource, MAX_FRAME_TEXT_LENGTH);
+      const sourceMatch = /^(.*?)(?::(\d+))?(?::(\d+))?$/.exec(source);
       return {
-        functionName: sanitiseText(functionName ?? '<anonymous>', MAX_FRAME_VALUE_LENGTH),
-        fileName: sanitiseText(sourceMatch?.[1] || cleanSource, MAX_FRAME_VALUE_LENGTH),
+        functionName: functionName ?? '<anonymous>',
+        fileName: bounded(sourceMatch?.[1] || source, MAX_FRAME_TEXT_LENGTH),
         lineNumber: sourceMatch?.[2] ? Number(sourceMatch[2]) : undefined,
         columnNumber: sourceMatch?.[3] ? Number(sourceMatch[3]) : undefined,
-        source: cleanSource,
+        source,
       };
     })
-    .filter((frame): frame is ClientErrorStackFrame => frame !== null)
-    .slice(0, MAX_STACK_FRAMES);
-}
-
-function unwrapError(value: unknown): Error | null {
-  if (value instanceof Error) return value;
-  if (!value || typeof value !== 'object') return null;
-
-  for (const key of ['rejection', 'ngOriginalError', 'originalError']) {
-    try {
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (descriptor?.value instanceof Error) return descriptor.value;
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
+    .filter((frame): frame is ClientErrorStackFrame => frame !== null);
 }
 
 @Injectable({ providedIn: 'root' })
 export class GlobalErrorHandler implements ErrorHandler {
   private readonly apiService = inject(ApiService);
-  private windowStartedAt = 0;
-  private reportsInWindow = 0;
-  private readonly recentFingerprints = new Map<string, number>();
+  private readonly document = inject(DOCUMENT);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly inFlightFingerprints = new Set<string>();
 
   handleError(err: unknown): void {
     try {
       if (err instanceof HttpErrorResponse) {
         this.reportHttpError(err);
-        return;
-      }
-
-      const unwrapped = unwrapError(err);
-      if (unwrapped) {
-        this.reportError(unwrapped);
+      } else if (err instanceof Error) {
+        this.reportError(err);
       } else if (typeof err === 'string') {
         this.reportStringError(err);
       } else {
         this.reportUnknown(err);
       }
     } catch {
-      // The global handler must never create a second application failure.
+      // Error reporting must never turn one application failure into another.
     }
+
+    if (err instanceof HttpErrorResponse) throw err;
+    if (!(err instanceof Error) && typeof err === 'object' && err !== null) throw err;
   }
 
   private reportError(error: Error): void {
-    const stack = error.stack
-      ? sanitiseText(error.stack, MAX_STACK_LENGTH)
-      : undefined;
-
-    this.sendPayload({
-      message: sanitiseText(error.message || 'Client runtime error', MAX_MESSAGE_LENGTH),
-      name: sanitiseText(error.name || 'Error', MAX_NAME_LENGTH),
+    const stack = bounded(error.stack, MAX_STACK_LENGTH) || undefined;
+    this.sendPayload(
+      {
+        message: bounded(error.message, MAX_MESSAGE_LENGTH, 'Unknown client error'),
+        name: bounded(error.name, MAX_NAME_LENGTH, 'Error'),
+        stack,
+        url: this.currentUrl(),
+        userAgent: this.userAgent(),
+        timestamp: new Date().toISOString(),
+      },
       stack,
-      url: currentUrl(),
-      userAgent: currentUserAgent(),
-      timestamp: new Date().toISOString(),
-      stackFrames: stack ? parseStackFrames(stack) : undefined,
-    });
+    );
   }
 
   private reportStringError(message: string): void {
     this.sendPayload({
-      message: sanitiseText(message || 'Client runtime error', MAX_MESSAGE_LENGTH),
+      message: bounded(message, MAX_MESSAGE_LENGTH, 'Unknown client error'),
       name: 'UncaughtString',
-      url: currentUrl(),
-      userAgent: currentUserAgent(),
+      url: this.currentUrl(),
+      userAgent: this.userAgent(),
       timestamp: new Date().toISOString(),
     });
   }
 
   private reportHttpError(error: HttpErrorResponse): void {
     this.sendPayload({
-      message: sanitiseText(`HTTP ${error.status}: ${error.message}`, MAX_MESSAGE_LENGTH),
+      message: bounded(`HTTP ${error.status}: ${error.message}`, MAX_MESSAGE_LENGTH),
       name: 'HttpError',
-      url: sanitiseUrl(error.url ?? currentUrl()),
-      userAgent: currentUserAgent(),
+      url: privacySafeUrl(error.url ?? '') || this.currentUrl(),
+      userAgent: this.userAgent(),
       timestamp: new Date().toISOString(),
       metadata: {
-        status: error.status,
-        statusText: sanitiseText(error.statusText || 'Unknown', 200),
+        status: Number.isFinite(error.status) ? error.status : 0,
+        statusText: bounded(error.statusText, MAX_NAME_LENGTH),
       },
     });
   }
 
   private reportUnknown(err: unknown): void {
-    const primitiveMessage =
-      typeof err === 'number' || typeof err === 'boolean' || typeof err === 'bigint'
-        ? String(err)
-        : 'Unknown client throwable';
+    let message = 'Unknown client error';
+    let rawType: string = typeof err;
+
+    if (typeof err === 'object' && err !== null) {
+      try {
+        const record = err as Record<string, unknown>;
+        if (typeof record['message'] === 'string') message = record['message'];
+        const constructor = record['constructor'];
+        if (typeof constructor === 'function' && constructor.name) rawType = constructor.name;
+      } catch {
+        // A thrown Proxy/getter must not break global error reporting.
+      }
+    } else if (err !== undefined && err !== null) {
+      message = String(err);
+    }
 
     this.sendPayload({
-      message: sanitiseText(primitiveMessage, MAX_MESSAGE_LENGTH),
+      message: bounded(message, MAX_MESSAGE_LENGTH, 'Unknown client error'),
       name: 'UnknownThrowable',
-      url: currentUrl(),
-      userAgent: currentUserAgent(),
+      url: this.currentUrl(),
+      userAgent: this.userAgent(),
       timestamp: new Date().toISOString(),
-      metadata: { rawType: typeof err },
+      metadata: { rawType: bounded(rawType, MAX_NAME_LENGTH, 'unknown') },
     });
   }
 
-  private canReport(payload: ClientErrorPayload): boolean {
-    if (typeof window === 'undefined') return false;
-
-    const now = Date.now();
-    if (now - this.windowStartedAt >= REPORT_WINDOW_MS) {
-      this.windowStartedAt = now;
-      this.reportsInWindow = 0;
-      this.recentFingerprints.clear();
-    }
-
-    if (this.reportsInWindow >= MAX_REPORTS_PER_WINDOW) return false;
-
-    const fingerprint = `${payload.name}\u0000${payload.message}\u0000${payload.stackFrames?.[0]?.source ?? ''}`;
-    const lastReportedAt = this.recentFingerprints.get(fingerprint);
-    if (lastReportedAt !== undefined && now - lastReportedAt < DUPLICATE_WINDOW_MS) {
-      return false;
-    }
-
-    for (const [key, timestamp] of this.recentFingerprints) {
-      if (now - timestamp >= DUPLICATE_WINDOW_MS) this.recentFingerprints.delete(key);
-    }
-
-    this.recentFingerprints.set(fingerprint, now);
-    this.reportsInWindow += 1;
-    return true;
+  private currentUrl(): string {
+    if (!isPlatformBrowser(this.platformId)) return '';
+    return privacySafeUrl(this.document.defaultView?.location?.href ?? '');
   }
 
-  private sendPayload(payload: ClientErrorPayload): void {
-    if (!this.canReport(payload)) return;
+  private userAgent(): string {
+    if (!isPlatformBrowser(this.platformId)) return '';
+    return bounded(this.document.defaultView?.navigator?.userAgent ?? '', MAX_USER_AGENT_LENGTH);
+  }
 
-    this.apiService
-      .post('/api/analytics/client-error', payload, { requireAuth: false })
-      .catch(() => {
-        // Reporting is deliberately best-effort to prevent recursive failures.
-      });
+  private sendPayload(payload: Omit<ClientErrorPayload, 'stackFrames'>, rawStack?: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const fullPayload: ClientErrorPayload = {
+      ...payload,
+      stackFrames: rawStack ? parseStackFrames(rawStack) : undefined,
+    };
+    const fingerprint = `${fullPayload.name}\u0000${fullPayload.message}\u0000${fullPayload.url}`;
+    if (this.inFlightFingerprints.has(fingerprint)) return;
+    this.inFlightFingerprints.add(fingerprint);
+
+    void this.apiService
+      .post('/api/analytics/client-error', fullPayload, { requireAuth: false })
+      .catch(() => undefined)
+      .finally(() => this.inFlightFingerprints.delete(fingerprint));
   }
 }

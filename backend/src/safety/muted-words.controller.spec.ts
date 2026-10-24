@@ -18,14 +18,16 @@ describe('MutedWordsController', () => {
     await expect(controller.list(user)).resolves.toEqual({
       words: ['spoiler'],
     });
-    await expect(controller.add(user, { word: 'politics' })).resolves.toEqual({
+    await expect(
+      controller.add(user, { word: 'politics' }),
+    ).resolves.toEqual({
       words: ['spoiler', 'politics'],
     });
-    await expect(controller.remove(user, { word: 'spoiler' })).resolves.toEqual(
-      {
-        words: ['politics'],
-      },
-    );
+    await expect(
+      controller.remove(user, { word: 'spoiler' }),
+    ).resolves.toEqual({
+      words: ['politics'],
+    });
 
     expect(service.list).toHaveBeenCalledWith('user-1');
     expect(service.add).toHaveBeenCalledWith('user-1', 'politics');
