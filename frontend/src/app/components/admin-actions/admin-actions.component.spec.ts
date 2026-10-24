@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminService } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { AdminActionsComponent } from './admin-actions.component';
-import { showErrorToast, showToast } from '../../services/toast.service';
+import { toastsSignal } from '../../services/toast.service';
 
-vi.mock('../../services/toast.service', () => ({
-  showToast: vi.fn(),
-  showErrorToast: vi.fn(),
-}));
+// Angular's unit-test builder cannot vi.mock relative modules; assert the shared toast state instead.
+function lastToast(): { message: string; type: string } | undefined {
+  return toastsSignal().at(-1);
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -34,6 +34,7 @@ describe('AdminActionsComponent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    toastsSignal.set([]);
     adminService.listUsers.mockResolvedValue({ users: [], total: 0, page: 1, pageSize: 10 });
 
     TestBed.configureTestingModule({
@@ -66,7 +67,7 @@ describe('AdminActionsComponent', () => {
     expect(component.isFailure('user-1')).toBe(false);
     expect(component.isActionDisabled('user-1', 'ban')).toBe(true);
     expect(component.isActionDisabled('user-1', 'warn')).toBe(false);
-    expect(showToast).toHaveBeenCalledWith('admin.userBanned', 'success');
+    expect(lastToast()).toMatchObject({ message: 'admin.userBanned', type: 'success' });
   });
 
   it('keeps a failed ban retryable and reports the failure without provider details', async () => {
@@ -78,7 +79,7 @@ describe('AdminActionsComponent', () => {
     expect(component.statusKey('user-2')).toBe('admin.banFailed');
     expect(component.isFailure('user-2')).toBe(true);
     expect(component.isActionDisabled('user-2', 'ban')).toBe(false);
-    expect(showErrorToast).toHaveBeenCalledWith('admin.banFailed');
+    expect(lastToast()).toMatchObject({ message: 'admin.banFailed', type: 'error' });
   });
 
   it('serializes ban and warning mutations for the same user', async () => {
@@ -105,7 +106,7 @@ describe('AdminActionsComponent', () => {
     expect(component.statusKey('user-4')).toBe('admin.warningIssued');
     expect(component.isActionDisabled('user-4', 'warn')).toBe(true);
     expect(component.isActionDisabled('user-4', 'ban')).toBe(false);
-    expect(showToast).toHaveBeenCalledWith('admin.warningIssued', 'success');
+    expect(lastToast()).toMatchObject({ message: 'admin.warningIssued', type: 'success' });
   });
 
   it('does not send a moderation request for an empty user id', async () => {

@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nService } from '../../services/i18n.service';
@@ -6,7 +7,16 @@ import { EventRsvpControlsComponent } from './event-rsvp-controls.component';
 
 describe('EventRsvpControlsComponent', () => {
   let fixture: ComponentFixture<EventRsvpControlsComponent>;
-  let state: EventRsvpState;
+  // Signal-backed like the real store so OnPush views refresh on state changes.
+  const stateSignal = signal<EventRsvpState>({
+    status: null,
+    attendingCount: 0,
+    interestedCount: 0,
+    loaded: false,
+    loading: false,
+    pending: false,
+    error: null,
+  });
   let store: {
     state: ReturnType<typeof vi.fn>;
     ensureLoaded: ReturnType<typeof vi.fn>;
@@ -15,7 +25,7 @@ describe('EventRsvpControlsComponent', () => {
   };
 
   beforeEach(async () => {
-    state = {
+    stateSignal.set({
       status: 'interested',
       attendingCount: 4,
       interestedCount: 2,
@@ -23,9 +33,9 @@ describe('EventRsvpControlsComponent', () => {
       loading: false,
       pending: false,
       error: null,
-    };
+    });
     store = {
-      state: vi.fn(() => state),
+      state: vi.fn(() => stateSignal()),
       ensureLoaded: vi.fn(),
       setStatus: vi.fn().mockResolvedValue(undefined),
       clear: vi.fn().mockResolvedValue(undefined),
@@ -67,7 +77,7 @@ describe('EventRsvpControlsComponent', () => {
   });
 
   it('blocks attending when capacity is full but still allows Interested', () => {
-    state = { ...state, attendingCount: 5, status: 'interested' };
+    stateSignal.update((current) => ({ ...current, attendingCount: 5, status: 'interested' }));
     fixture.detectChanges();
 
     const buttons = Array.from(
@@ -86,7 +96,7 @@ describe('EventRsvpControlsComponent', () => {
   });
 
   it('prevents duplicate user input while a mutation is pending', () => {
-    state = { ...state, pending: true };
+    stateSignal.update((current) => ({ ...current, pending: true }));
     fixture.detectChanges();
 
     const buttons = Array.from(
@@ -113,12 +123,12 @@ describe('EventRsvpControlsComponent', () => {
   });
 
   it('shows a retryable translated error when the summary cannot load', () => {
-    state = {
-      ...state,
+    stateSignal.update((current) => ({
+      ...current,
       loaded: false,
       loading: false,
       error: 'unavailable',
-    };
+    }));
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();

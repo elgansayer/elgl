@@ -31,9 +31,8 @@ export class PrivacyController {
   async getStatus(@CurrentUser() user: User | null) {
     if (!user) throw new UnauthorizedException();
     const status = await this.privacyService.getStatus(user.id);
-    const deletion = await this.privacyLifecycleService.getAccountDeletionStatus(
-      user.id,
-    );
+    const deletion =
+      await this.privacyLifecycleService.getAccountDeletionStatus(user.id);
     return {
       ...status,
       deletion,

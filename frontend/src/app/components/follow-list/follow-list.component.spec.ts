@@ -9,7 +9,6 @@ import { DirectConversationService } from '../../services/direct-conversation.se
 import { UserQuickActionsService } from '../../services/user-quick-actions.service';
 
 describe('FollowListComponent', () => {
-  let component: FollowListComponent;
   let fixture: ComponentFixture<FollowListComponent>;
   let mockUserService: {
     getFollowers: ReturnType<typeof vi.fn>;
@@ -74,7 +73,6 @@ describe('FollowListComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(FollowListComponent);
-    component = fixture.componentInstance;
     fixture.componentRef.setInput('userId', 'target-user');
   });
 
@@ -196,7 +194,8 @@ describe('FollowListComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(followButton.textContent).toContain('Unfollow');
-    expect(fixture.nativeElement.textContent).toContain('Failed');
+    // The rollback is announced with translated copy, never the raw error text.
+    expect(fixture.nativeElement.textContent).toContain('followList.followError');
   });
 
   it('renders empty and load-error states', async () => {
@@ -205,9 +204,8 @@ describe('FollowListComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No followers yet.');
 
-    mockUserService.getFollowers.mockRejectedValue(
-      new Error('Failed to fetch followers'),
-    );
+    // Following mode loads through getFollowing.
+    mockUserService.getFollowing.mockRejectedValue(new Error('Failed to fetch following'));
     fixture.componentRef.setInput('mode', 'following');
     fixture.detectChanges();
     await fixture.whenStable();
