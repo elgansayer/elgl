@@ -101,22 +101,15 @@ describe('admin one-click moderation actions contract', () => {
     expect(banMutation).toContain("from('blocks').insert({");
     expect(banMutation).toContain('blocker_id: adminUserId');
     expect(banMutation).toContain('blocked_id: targetUserId');
-    // Invalidations must be awaited; #9308 runs them concurrently via Promise.all.
-    for (const invalidation of ['invalidateUserListCaches', 'invalidateBlocksListCaches']) {
-      expect(banMutation).toMatch(
-        new RegExp(`await (?:Promise\\.all\\(\\[[^\\]]*)?this\\.${invalidation}\\(\\)`),
-      );
-    }
+    expect(banMutation).toContain('await this.invalidateUserListCaches();');
+    expect(banMutation).toContain('await this.invalidateBlocksListCaches();');
 
     expect(warnMutation).toContain("from('reports').insert({");
     expect(warnMutation).toContain('reporter_id: adminUserId');
     expect(warnMutation).toContain('reported_user_id: targetUserId');
     expect(warnMutation).toContain("reason_category: 'admin_warning'");
     expect(warnMutation).toContain("status: 'open'");
-    for (const invalidation of ['invalidateUserListCaches', 'invalidateReportsListCaches']) {
-      expect(warnMutation).toMatch(
-        new RegExp(`await (?:Promise\\.all\\(\\[[^\\]]*)?this\\.${invalidation}\\(\\)`),
-      );
-    }
+    expect(warnMutation).toContain('await this.invalidateUserListCaches();');
+    expect(warnMutation).toContain('await this.invalidateReportsListCaches();');
   });
 });

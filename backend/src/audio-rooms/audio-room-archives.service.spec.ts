@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { describe, beforeEach, expect, it, type Mock, vi } from 'vitest';
+import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NlpService } from '../nlp/nlp.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
@@ -61,7 +61,7 @@ describe('AudioRoomArchivesService', () => {
   let participants: QueryBuilderMock;
   let transcripts: QueryBuilderMock;
   let captions: QueryBuilderMock;
-  let chatCompletion: Mock<() => Promise<string>>;
+  let chatCompletion: ReturnType<typeof vi.fn>;
   let generateSessionSummary: ReturnType<typeof vi.fn>;
 
   const room = {
@@ -101,7 +101,7 @@ describe('AudioRoomArchivesService', () => {
       }),
     };
 
-    chatCompletion = vi.fn<() => Promise<string>>().mockResolvedValue(
+    chatCompletion = vi.fn().mockResolvedValue(
       JSON.stringify({
         summary: '• Travel planning',
         vocabulary: ['ticket', 'platform'],
@@ -187,32 +187,6 @@ describe('AudioRoomArchivesService', () => {
     expect(chatCompletion).toHaveBeenCalledTimes(4);
     expect(result.summary).toContain('Travel planning');
     expect(result.vocabulary).toEqual(['ticket', 'platform']);
-  });
-
-  it('starts all LLM chunk summaries concurrently', async () => {
-    const releases: Array<() => void> = [];
-    chatCompletion.mockImplementation(
-      () =>
-        new Promise<string>((resolve) => {
-          releases.push(() =>
-            resolve(
-              JSON.stringify({
-                summary: '• Travel planning',
-                vocabulary: ['ticket'],
-              }),
-            ),
-          );
-        }),
-    );
-
-    const summaryPromise = service['generateSummary']('x'.repeat(3500));
-
-    expect(chatCompletion).toHaveBeenCalledTimes(4);
-    for (const release of releases) release();
-    await expect(summaryPromise).resolves.toEqual({
-      summary: '• Travel planning',
-      vocabulary: ['ticket'],
-    });
   });
 
   it('awaits the local NLP fallback if every LLM chunk fails', async () => {

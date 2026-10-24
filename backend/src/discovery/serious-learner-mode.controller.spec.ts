@@ -83,9 +83,7 @@ describe('DiscoveryController Serious Learner mode', () => {
   });
 
   it('applies the persisted mode to audio-intro discovery as well', async () => {
-    const { controller, discoveryService } = setup(
-      profile({ serious_learner_mode: true }),
-    );
+    const { controller, discoveryService } = setup(profile({ serious_learner_mode: true }));
     const query = new SearchQueryDto();
 
     await controller.getAudioIntros({ id: 'user-1' } as never, query);

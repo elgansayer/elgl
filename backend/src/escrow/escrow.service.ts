@@ -904,24 +904,22 @@ export class EscrowService {
         await redis.del(`${ESCROW_DETAIL_PREFIX}${transactionId}`);
 
         // Scan and delete user list keys for payer and payee
-        await Promise.all(
-          [payerId, payeeId].map(async (userId) => {
-            let cursor = '0';
-            do {
-              const [nextCursor, scannedKeys] = await redis.scan(
-                cursor,
-                'MATCH',
-                `${ESCROW_USER_LIST_PREFIX}${userId}:*`,
-                'COUNT',
-                100,
-              );
-              cursor = nextCursor;
-              if (scannedKeys.length > 0) {
-                await redis.del(...scannedKeys);
-              }
-            } while (cursor !== '0');
-          }),
-        );
+        for (const userId of [payerId, payeeId]) {
+          let cursor = '0';
+          do {
+            const [nextCursor, scannedKeys] = await redis.scan(
+              cursor,
+              'MATCH',
+              `${ESCROW_USER_LIST_PREFIX}${userId}:*`,
+              'COUNT',
+              100,
+            );
+            cursor = nextCursor;
+            if (scannedKeys.length > 0) {
+              await redis.del(...scannedKeys);
+            }
+          } while (cursor !== '0');
+        }
       } catch (err: unknown) {
         this.logger.warn(
           `Failed to invalidate escrow caches for ${transactionId}: ${(err as Error)?.message ?? 'unknown'}`,

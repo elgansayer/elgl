@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { validateEnvironment } from './config/environment.validation';
+import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SharedLoggerModule } from './common/logger/logger.module';
@@ -69,11 +69,13 @@ import { WordOfTheDayModule } from './word-of-the-day/word-of-the-day.module';
 import { SpamDetectionModule } from './spam-detection/spam-detection.module';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
 import { LanguageIslandsModule } from './language-islands/language-islands.module';
+import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
+import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
@@ -87,7 +89,8 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: validateEnvironment,
+      validationSchema,
+      validationOptions: { allowUnknown: true, abortEarly: false },
     }),
     ScheduleModule.forRoot(),
 
@@ -163,6 +166,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     LessonsModule,
     LinkPreviewModule,
     ResourceLibraryModule,
+    NotificationPreferencesModule,
     ModerationModule,
     WordOfTheDayModule,
     SpamDetectionModule,
@@ -171,6 +175,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     EmailModule,
     PasswordResetModule,
     LinkedAccountsModule,
+    AssessmentsModule,
     AnalyticsModule,
     MetricsModule,
     ReadingEngineModule,
@@ -179,7 +184,7 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
     MockScenariosModule,
     UserInterestsModule,
   ],
-  controllers: [AppController, OpenApiFixtureFactoryController],
+  controllers: [AppController],
   providers: [
     AppService,
     {
@@ -188,7 +193,6 @@ import { UserInterestsModule } from './modules/user-interests/user-interests.mod
       useClass: ThrottlerGuard,
     },
     AnkiiIntegrationService,
-    OpenApiFixtureFactoryRegistry,
   ],
 })
 export class AppModule {}

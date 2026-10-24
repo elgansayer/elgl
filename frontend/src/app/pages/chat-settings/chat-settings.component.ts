@@ -2,7 +2,10 @@ import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/chat-settings.service';
+import {
+  ChatSettingsService,
+  DisappearingMessagesTtl,
+} from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-chat-settings',
@@ -16,23 +19,14 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
       } @else {
         @if (settingsLoadError()) {
           <div class="bg-surface-100 rounded-xl p-4 space-y-3" role="alert">
-            <p class="text-text-primary">{{ 'chat_settings.load_unavailable' | t }}</p>
+            <p class="text-text-primary">Chat settings are temporarily unavailable.</p>
             <p class="text-text-secondary text-sm">
-              {{ 'chat_settings.load_unavailable_desc' | t }}
+              Your saved settings remain active. Retention controls are disabled until they can be loaded.
             </p>
             <button hlmBtn class="min-h-11" (click)="retryLoadSettings()">
               {{ 'common.retry' | t }}
             </button>
           </div>
-        }
-
-        @if (settingSaveError()) {
-          <p
-            class="rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-text-primary"
-            role="alert"
-          >
-            {{ 'chat_settings.save_failed' | t }}
-          </p>
         }
 
         <!-- Disappearing messages -->
@@ -45,8 +39,7 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
               Disappearing messages
             </h3>
             <p id="disappearing-messages-description" class="text-text-secondary text-sm">
-              Choose how long newly sent messages remain available. Existing messages keep their
-              current lifetime.
+              Choose how long newly sent messages remain available. Existing messages keep their current lifetime.
             </p>
           </div>
 
@@ -96,7 +89,7 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
           <button
             hlmBtn
             role="switch"
-            [disabled]="settingsLoadError() || settingSaving()"
+            [disabled]="settingsLoadError()"
             [attr.aria-checked]="autoTranslate()"
             [attr.aria-label]="'chat_settings.auto_translate' | t"
             class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
@@ -123,7 +116,7 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
           <button
             hlmBtn
             role="switch"
-            [disabled]="settingsLoadError() || settingSaving()"
+            [disabled]="settingsLoadError()"
             [attr.aria-checked]="readReceipts()"
             [attr.aria-label]="'chat_settings.read_receipts' | t"
             class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
@@ -150,7 +143,7 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
           <button
             hlmBtn
             role="switch"
-            [disabled]="settingsLoadError() || settingSaving()"
+            [disabled]="settingsLoadError()"
             [attr.aria-checked]="enterToSend()"
             [attr.aria-label]="'chat_settings.enter_to_send' | t"
             class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
@@ -170,7 +163,7 @@ import { ChatSettingsService, DisappearingMessagesTtl } from '../../services/cha
         <div class="mt-8 text-center">
           <button
             hlmBtn
-            [disabled]="settingsLoadError() || settingSaving()"
+            [disabled]="settingsLoadError()"
             class="text-primary text-sm underline decoration-primary min-h-11"
             (click)="resetToDefaults()"
           >
@@ -191,8 +184,6 @@ export class ChatSettingsComponent {
   readonly disappearingMessagesSaving = this.settingsService.disappearingMessagesSaving;
   readonly disappearingMessagesError = this.settingsService.disappearingMessagesError;
   readonly settingsLoadError = this.settingsService.settingsLoadError;
-  readonly settingSaving = this.settingsService.settingSaving;
-  readonly settingSaveError = this.settingsService.settingSaveError;
   readonly loaded = this.settingsService.loaded;
 
   constructor() {

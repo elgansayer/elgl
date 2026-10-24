@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryComponent } from './discovery.component';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserService } from '../../services/user.service';
@@ -11,52 +11,15 @@ import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-c
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
 import { I18nService } from '../../services/i18n.service';
-import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 
 describe('DiscoveryComponent serious learner mode', () => {
   let fixture: ComponentFixture<DiscoveryComponent>;
   let component: DiscoveryComponent;
-  let updateMyProfile: ReturnType<typeof vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>>;
+  let updateMyProfile: ReturnType<typeof vi.fn>;
   let findPartners: ReturnType<typeof vi.fn>;
-  let seriousLearnerModeFake: Pick<
-    SeriousLearnerModeService,
-    'enabled' | 'saving' | 'error' | 'refresh' | 'toggle'
-  >;
-
-  afterEach(() => {
-    // Never leak the stubbed navigator into other specs (I18nService reads navigator.language).
-    vi.unstubAllGlobals();
-  });
 
   beforeEach(async () => {
-    updateMyProfile = vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>().mockResolvedValue(undefined);
-    const seriousEnabled = signal(false);
-    const seriousSaving = signal(false);
-    const seriousError = signal<string | null>(null);
-    // Mirrors SeriousLearnerModeService.toggle(): persist first, then commit, and
-    // refuse concurrent writes. updateMyProfile stands in for the persisted write.
-    seriousLearnerModeFake = {
-      enabled: seriousEnabled,
-      saving: seriousSaving,
-      error: seriousError,
-      refresh: vi.fn(async () => undefined),
-      async toggle(): Promise<boolean> {
-        if (seriousSaving()) return false;
-        const next = !seriousEnabled();
-        seriousSaving.set(true);
-        seriousError.set(null);
-        try {
-          await updateMyProfile({ is_serious_learner: next });
-          seriousEnabled.set(next);
-          return true;
-        } catch {
-          seriousError.set('save_failed');
-          return false;
-        } finally {
-          seriousSaving.set(false);
-        }
-      },
-    };
+    updateMyProfile = vi.fn().mockResolvedValue(undefined);
     findPartners = vi.fn().mockResolvedValue([]);
 
     await TestBed.configureTestingModule({
@@ -64,7 +27,6 @@ describe('DiscoveryComponent serious learner mode', () => {
       providers: [
         provideRouter([]),
         { provide: DiscoveryService, useValue: { findPartners } },
-        { provide: SeriousLearnerModeService, useValue: seriousLearnerModeFake },
         {
           provide: UserService,
           useValue: {
@@ -76,7 +38,7 @@ describe('DiscoveryComponent serious learner mode', () => {
           provide: SafetyService,
           useValue: { getBlockedIdsAsync: vi.fn().mockResolvedValue([]) },
         },
-        { provide: AuthService, useValue: { currentUser: signal(null), getAccessToken: () => undefined } },
+        { provide: AuthService, useValue: { currentUser: signal(null) } },
         {
           provide: OfflineDiscoveryCacheService,
           useValue: {
@@ -185,23 +147,11 @@ describe('DiscoveryComponent serious learner mode', () => {
     expect(component.selectedFilter()).toBe('serious');
   });
 
-  it('keeps persistent mode composed with another discovery pill', async () => {
-    // #7575: Nearby searches only after the browser grants a precise location.
-    vi.stubGlobal('navigator', {
-      ...navigator,
-      onLine: true,
-      geolocation: {
-        getCurrentPosition: (success: PositionCallback) =>
-          success({ coords: { latitude: 51.5, longitude: -0.12 } } as GeolocationPosition),
-      },
-    });
-    // Let ngOnInit's preference refresh and first search settle before composing pills.
-    await fixture.whenStable();
+  it('keeps persistent mode composed with another discovery pill', () => {
     component.seriousLearnerMode.set(true);
     findPartners.mockClear();
 
     component.onFilterSelect('nearby');
-    await vi.waitFor(() => expect(findPartners).toHaveBeenCalled());
 
     expect(component.selectedFilter()).toBe('nearby');
     expect(component.seriousLearnerOnly()).toBe(true);

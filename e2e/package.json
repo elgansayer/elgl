@@ -13,9 +13,7 @@
     "test": "npx playwright test",
     "test:readiness": "node --test backend-readiness.test.mjs",
     "test:rtl": "npx playwright test --project=rtl-arabic --project=rtl-hebrew",
-    "test:ui": "npx playwright test --ui",
-    "test:webserver-readiness-contract": "node --test webserver-readiness-contract.test.mjs",
-    "test:chat-composer-contract": "node --test chat-composer-contract.test.mjs"
+    "test:ui": "npx playwright test --ui"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

@@ -59,7 +59,6 @@ describe('ChatRoomComponent doodle sharing contract', () => {
       isConnected: signal(false),
       connect: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-      listen: vi.fn().mockReturnValue(() => undefined),
       unsubscribe: vi.fn(),
     };
     const safetyService = {

@@ -1,4 +1,3 @@
-import { TranslatePipe } from '../../services/translate.pipe';
 import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
@@ -23,7 +22,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
 
 @Component({
   selector: 'app-voip-call',
-  imports: [HlmButton, FormsModule, TranslatePipe],
+  imports: [HlmButton, FormsModule],
   template: `
     @if (showCallUI()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -55,10 +54,9 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               <button
                 hlmBtn
                 (click)="acceptCall()"
-                [attr.aria-label]="'call.accept' | t"
                 class="w-16 h-16 rounded-full bg-success hover:bg-success/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
-                <svg aria-hidden="true" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -70,10 +68,9 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               <button
                 hlmBtn
                 (click)="rejectCall()"
-                [attr.aria-label]="'call.decline' | t"
                 class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
-                <svg aria-hidden="true" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -93,8 +90,6 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               <button
                 hlmBtn
                 (click)="toggleMute()"
-                [attr.aria-label]="(isMuted() ? 'call.unmute' : 'call.mute') | t"
-                [attr.aria-pressed]="isMuted()"
                 [class]="
                   isMuted()
                     ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-warning hover:bg-warning/90'
@@ -118,8 +113,6 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               <button
                 hlmBtn
                 (click)="toggleVideo()"
-                [attr.aria-label]="(isVideoEnabled() ? 'call.videoOff' : 'call.videoOn') | t"
-                [attr.aria-pressed]="isVideoEnabled()"
                 [class]="
                   isVideoEnabled()
                     ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-white/20 hover:bg-white/30'
@@ -143,10 +136,9 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               <button
                 hlmBtn
                 (click)="endCall()"
-                [attr.aria-label]="'call.hang_up' | t"
                 class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
-                <svg aria-hidden="true" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"

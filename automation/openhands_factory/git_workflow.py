@@ -555,14 +555,6 @@ class GitWorkflow:
         arguments.append(str(resolved_worktree))
         result = _run_with_lock_retry(self.runner, tuple(arguments), self.repository)
         if result.returncode != 0:
-            # An agent can rewrite a worktree's .git pointer (issue-7593 pointed at a
-            # deleted /tmp gitdir), after which `git worktree remove` fails with
-            # "is not a .git file" on every refresh, forever. `git worktree repair`
-            # restores the pointer from this repository's own registration; it exits
-            # non-zero even when it fixed the file, so the retry is the real check.
-            self.runner(("git", "worktree", "repair", str(resolved_worktree)), self.repository)
-            result = _run_with_lock_retry(self.runner, tuple(arguments), self.repository)
-        if result.returncode != 0:
             raise RepositorySafetyError(f"Could not remove worktree: {result.stderr}")
 
     def archive_worktree(self, worktree: Path, recovery_root: Path) -> Path:

@@ -12,9 +12,7 @@ describe('disappearing messages migration contract', () => {
   );
 
   it('adds an indexed absolute expiry without rewriting historical rows', () => {
-    expect(migration).toMatch(
-      /ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ/i,
-    );
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ/i);
     expect(migration).toMatch(/chat_messages_expires_at_idx/i);
     expect(migration).toMatch(/WHERE expires_at IS NOT NULL/i);
   });
@@ -24,7 +22,9 @@ describe('disappearing messages migration contract', () => {
     expect(migration).toMatch(
       /WHEN '24h' THEN base_time \+ INTERVAL '24 hours'/,
     );
-    expect(migration).toMatch(/WHEN '7d' THEN base_time \+ INTERVAL '7 days'/);
+    expect(migration).toMatch(
+      /WHEN '7d' THEN base_time \+ INTERVAL '7 days'/,
+    );
     expect(migration).toMatch(
       /WHEN '90d' THEN base_time \+ INTERVAL '90 days'/,
     );

@@ -49,9 +49,10 @@ describe('UsersController member visibility', () => {
     const persisted = makeProfile();
     (getProfile as Mock).mockResolvedValue(persisted);
 
-    const result = await controller.getUserProfile('target-user', {
-      id: 'viewer-user',
-    } as User);
+    const result = await controller.getUserProfile(
+      'target-user',
+      { id: 'viewer-user' } as User,
+    );
 
     expect(result.is_vip).toBe(false);
     expect(result.vip_tier).toBe('');
@@ -65,9 +66,10 @@ describe('UsersController member visibility', () => {
     const persisted = makeProfile();
     (getProfile as Mock).mockResolvedValue(persisted);
 
-    const result = await controller.getUserProfile('target-user', {
-      id: 'target-user',
-    } as User);
+    const result = await controller.getUserProfile(
+      'target-user',
+      { id: 'target-user' } as User,
+    );
 
     expect(result.is_vip).toBe(true);
     expect(result.vip_tier).toBe('consumer');
@@ -81,9 +83,10 @@ describe('UsersController member visibility', () => {
     });
     (getProfile as Mock).mockResolvedValue(persisted);
 
-    const result = await controller.getUserProfile('target-user', {
-      id: 'viewer-user',
-    } as User);
+    const result = await controller.getUserProfile(
+      'target-user',
+      { id: 'viewer-user' } as User,
+    );
 
     expect(result.is_vip).toBe(true);
     expect(result.vip_tier).toBe('consumer');
@@ -98,9 +101,10 @@ describe('UsersController member visibility', () => {
       }),
     );
 
-    const result = await controller.getUserStats('target-user', {
-      id: 'viewer-user',
-    } as User);
+    const result = await controller.getUserStats(
+      'target-user',
+      { id: 'viewer-user' } as User,
+    );
 
     expect(result.is_vip).toBe(false);
     expect(result.vip_tier).toBe('');

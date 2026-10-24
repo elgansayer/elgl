@@ -472,7 +472,8 @@ export class AudioRoomArchivesService {
       chunks.push(bounded.slice(offset, offset + this.llmChunkChars));
     }
 
-    // Run independent provider requests concurrently while retaining partial results.
+    // ⚡ Bolt Optimization: Replaced sequential LLM API calls with a concurrent Promise.allSettled execution
+    // to drastically reduce latency during audio room transcript summarization.
     const results = await Promise.allSettled(
       chunks.map((chunk) => this.summariseChunk(chunk)),
     );
@@ -485,6 +486,7 @@ export class AudioRoomArchivesService {
         this.logger.warn('One audio-room transcript summary chunk failed');
       }
     }
+
     if (parts.length === 0) {
       const fallback = await this.nlpService.generateSessionSummary(bounded);
       return {

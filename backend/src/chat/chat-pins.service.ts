@@ -121,7 +121,8 @@ export class ChatPinsService {
     // This table is introduced by this issue's additive migration. Keep the
     // local schema explicit until the repository-wide generated type snapshot
     // is refreshed after deployment.
-    return this.supabaseService.getClient() as unknown as SupabaseClient<ChatPinsDatabase>;
+    return this.supabaseService
+      .getClient() as unknown as SupabaseClient<ChatPinsDatabase>;
   }
 
   private logStoreFailure(operation: string, providerCode?: string): void {

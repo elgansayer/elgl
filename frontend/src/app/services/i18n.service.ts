@@ -1,4 +1,3 @@
-import { DOCUMENT } from '@angular/common';
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -1049,7 +1048,6 @@ export class I18nService {
     'vocabulary.chipGrammar': '✏️ Grammar AI',
     'vocabulary.chipPronunciation': '🎙️ Pronunciation AI',
     'vocabulary.noDue': 'No review cards are due right now.',
-    'vocabulary.practiceAiConversation': 'Practise in AI conversation',
     'vocabulary.restart': 'Restart review',
     'vocabulary.cardCounter': 'Card {{current}} of {{total}}',
     'vocabulary.levelBadge': 'Level {{level}}/4',
@@ -1238,6 +1236,7 @@ export class I18nService {
     'review.completeTitle': 'Review Complete!',
     'review.completeDesc': 'Great job! Come back regularly to keep your vocabulary fresh.',
     'review.restart': 'Start Again',
+    'review.practiceInAiConversationBtn': 'Practice in AI Conversation',
 
     // SRS Tour (ngx-joyride onboarding tooltips)
     'srsTour.startBtn': '🎓 Take the tour',
@@ -1565,6 +1564,10 @@ export class I18nService {
     'wordModal.saveLearningBtn': '🟡 Save to learning',
     'wordModal.markKnownBtn': '⚪ Mark known',
     'wordModal.resetBtn': 'Reset to new (Level 0 / Blue)',
+    'wordModal.srsLabel': 'Spaced Repetition',
+    'wordModal.learningBtn': 'Learning',
+    'wordModal.knownBtn': 'Known',
+    'wordModal.reviewFlashcardsBtn': 'Review Flashcards',
 
     // Voice Recorder
     'voiceRecorder.title': '🎙️ Voice Note Recorder',
@@ -2516,16 +2519,14 @@ export class I18nService {
     }
   }
 
-  private readonly authService = inject(AuthService);
-  private readonly document = inject(DOCUMENT);
+  private authService = inject(AuthService);
 
   private applyDocumentRtlAndLocale(lang: string): void {
-    const document = this.document;
-    if (!document?.documentElement) return;
-
-    document.documentElement.lang = lang;
-    const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
-    document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.lang = lang;
+      const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
+      document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
+    }
   }
 
   async setLanguage(langCode: string): Promise<void> {

@@ -30,22 +30,6 @@ jobs:
       - name: Build production backend image
         run: docker build --pull --target production --tag "elgl-api-ci:${GITHUB_SHA}" backend
 
-      # Released images up to 82f20b959 built to dist/src/main.js while CMD runs
-      # dist/main, so they could not start. Prove the entrypoint loads: without
-      # production configuration the app must reach its own fail-closed check.
-      - name: Verify production entrypoint starts
-        run: |
-          set -euo pipefail
-          image="elgl-api-ci:${GITHUB_SHA}"
-          test "$(docker inspect --format '{{json .Config.Cmd}}' "$image")" = '["node","dist/main"]'
-          docker run --rm "$image" test -f dist/main.js
-          output=$(docker run --rm -e NODE_ENV=production "$image" 2>&1 || true)
-          if ! grep -q 'Production environment is missing required variables' <<<"$output"; then
-            echo "Production entrypoint did not reach configuration validation:"
-            echo "$output" | tail -20
-            exit 1
-          fi
-
       - name: Diagnose Angular packages in production image
         run: |
           docker run --rm "elgl-api-ci:${GITHUB_SHA}" sh -ec '

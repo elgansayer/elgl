@@ -2278,15 +2278,6 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      get_host_dashboard_earnings: {
-        Args: {
-          p_room_id: string;
-          p_host_id: string;
-        };
-        Returns: {
-          earned_coins: number;
-        }[];
-      };
       claim_daily_checkin_reward: {
         Args: {
           p_user_id: string;
@@ -2411,20 +2402,10 @@ export class SupabaseService implements OnModuleDestroy {
     const supabaseKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
     );
-    const env = this.configService.get<string>('NODE_ENV') || 'development';
-
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
-    }
-
-    if (env === 'production') {
-      if (supabaseKey === 'test-service-role-key') {
-        throw new Error(
-          'SUPABASE_SERVICE_ROLE_KEY must be securely configured in production',
-        );
-      }
     }
     this.client = createClient<Database>(supabaseUrl, supabaseKey);
 
