@@ -4,7 +4,7 @@ name: Stale snapshot guard
 # base branch (whole-tree snapshots of stale sandboxes). See
 # scripts/check-stale-snapshot.py. Measured on history: flags all 19 snapshot
 # merges of 2026-10-20 and none of 150 ordinary merges (2026-08-26..09-28).
-# Advisory until an operator adds it to the required checks.
+# Required on main (2026-10-24).
 
 on:
   pull_request:
@@ -18,10 +18,9 @@ permissions:
 
 jobs:
   stale-snapshot:
-    # Label events only matter for the intentional-revert acknowledgement.
-    if: >-
-      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
-      || github.event.label.name == 'intentional-revert'
+    # Every event runs the full check (no skips): this is a required check, and
+    # a SKIPPED run from a label event would otherwise count as passing and
+    # could hide a real failure on the same head.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
