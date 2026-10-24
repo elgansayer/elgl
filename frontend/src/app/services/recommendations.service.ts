@@ -10,7 +10,10 @@ export type RecommendationReason =
   | 'active_recently'
   | 'study_streak'
   | 'proficiency_match'
-  | 'helpful_corrector';
+  | 'helpful_corrector'
+  | 'availability_match'
+  | 'high_correction_ratio'
+  | 'learning_goal_match';
 
 export interface DiscoveryRecommendation {
   id: string;
@@ -33,6 +36,11 @@ const ALLOWED_REASONS = new Set<RecommendationReason>([
   'shared_interests',
   'active_recently',
   'study_streak',
+  'proficiency_match',
+  'helpful_corrector',
+  'availability_match',
+  'high_correction_ratio',
+  'learning_goal_match',
 ]);
 
 function invalidResponse(): never {
@@ -48,6 +56,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseBoundedText(value: unknown, maxLength: number): string {
   if (typeof value !== 'string') invalidResponse();
   const trimmed = value.trim();
+  // eslint-disable-next-line no-control-regex -- reject control characters in API text
   if (!trimmed || trimmed.length > maxLength || /[\u0000-\u001f\u007f]/u.test(trimmed)) {
     invalidResponse();
   }

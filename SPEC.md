@@ -81,7 +81,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `id` (UUID, Primary Key)
 - `channel_id` (Text, indexed, e.g., `'chat_userA_userB'` or `'group_123'`)
 - `sender_id` (UUID, Foreign Key referencing `users.id`)
-- `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`)
+- `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`, `'system'`)
 - `content_json` (JSONB, structure varies depending on `payload_type`)
 - `is_read` (Boolean, default `false`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
@@ -166,6 +166,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
+- **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
 
 ---
 

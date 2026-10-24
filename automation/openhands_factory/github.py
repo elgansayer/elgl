@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import logging
 import os
 import re
 import time
@@ -27,7 +28,11 @@ from openhands_factory.repository_guard import ProcessResult, run_process
 
 REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
 _PENDING_CHECK_STATES = frozenset({"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "EXPECTED"})
+LOGGER = logging.getLogger(__name__)
+
 _ALLOWED_TERMINAL_CONCLUSIONS = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
+# Dependency majors staged by .github/workflows/dependency-compatibility-lanes.yml.
+COMPATIBILITY_LANE_LABELS = frozenset({"compat:queued", "compat:active"})
 _CLOSING_REFERENCE = re.compile(
     r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+"
     r"(?:https://github\.com/[^\s/]+/[^\s/]+/issues/)?#?(\d+)\b"
@@ -328,6 +333,10 @@ class GitHubClient:
                 label.get("name", "") for label in item.get("labels", []) if isinstance(label, dict)
             }
             if "factory-skip" in labels:
+                continue
+            if labels.intersection(COMPATIBILITY_LANE_LABELS):
+                # Major dependency upgrades are staged by the dependency
+                # compatibility lanes; the review lane takes routine updates.
                 continue
             if not architect_pull_request and not self._intake_is_trusted(item, labels):
                 continue
@@ -1065,21 +1074,52 @@ class GitHubClient:
         state: Literal["failure", "pending", "success"],
         detail: str,
     ) -> None:
-        self._run(
-            (
-                "gh",
-                "api",
-                "--method",
-                "POST",
-                f"repos/{self.repository}/statuses/{head_sha}",
-                "-f",
-                f"state={state}",
-                "-f",
-                "context=factory/independent-review",
-                "-f",
-                f"description={detail[:140]}",
+        description = detail[:140]
+        # GitHub keeps at most 1,000 statuses per SHA and context. Re-posting an
+        # identical status adds nothing, and once the cap is hit every later
+        # post fails and blocks the job (seen on #9542).
+        if self._current_review_status(head_sha) == (state, description):
+            return
+        try:
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "--method",
+                    "POST",
+                    f"repos/{self.repository}/statuses/{head_sha}",
+                    "-f",
+                    f"state={state}",
+                    "-f",
+                    "context=factory/independent-review",
+                    "-f",
+                    f"description={description}",
+                )
             )
-        )
+        except FactoryError as error:
+            if "maximum number of statuses" not in str(error).lower():
+                raise
+            LOGGER.warning("factory.github.status_limit_reached head=%s state=%s", head_sha, state)
+
+    def _current_review_status(self, head_sha: str) -> tuple[str, str] | None:
+        try:
+            output = self._run(
+                (
+                    "gh",
+                    "api",
+                    f"repos/{self.repository}/commits/{head_sha}/status",
+                    "--jq",
+                    '[.statuses[] | select(.context == "factory/independent-review")][0]'
+                    ' | if . == null then "" else "\\(.state)\\t\\(.description // "")" end',
+                )
+            )
+        except FactoryError:
+            return None
+        line = output.strip()
+        if "\t" not in line:
+            return None
+        current_state, current_description = line.split("\t", 1)
+        return current_state, current_description
 
     def close_issue(self, issue: int) -> None:
         self._run(

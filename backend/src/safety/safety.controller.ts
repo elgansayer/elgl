@@ -66,7 +66,7 @@ export class SafetyController {
     @Param('userId') userId: string,
   ): Promise<string[]> {
     if (req.user.id !== userId) {
-      throw new ForbiddenException('Cannot view block lists of other users');
+      throw new ForbiddenException('You can only view your own blocked users');
     }
     return this.safetyService.getBlockedUserIds(userId);
   }
@@ -77,7 +77,7 @@ export class SafetyController {
     @Param('userId') userId: string,
   ): Promise<string[]> {
     if (req.user.id !== userId) {
-      throw new ForbiddenException('Cannot view block lists of other users');
+      throw new ForbiddenException('You can only view your own blockers');
     }
     return this.safetyService.getBlockerUserIds(userId);
   }
@@ -113,7 +113,7 @@ export class SafetyController {
     @Param('userId') userId: string,
   ): Promise<string[]> {
     if (req.user.id !== userId) {
-      throw new ForbiddenException('Cannot view block lists of other users');
+      throw new ForbiddenException('You can only view your own block lists');
     }
     return this.safetyService.getBlockedAndBlockerIds(userId);
   }
