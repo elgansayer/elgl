@@ -5,7 +5,8 @@ import { ChatFoldersService } from './chat-folders.service';
 
 function thenable(result: unknown) {
   return {
-    then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve(result)),
+    then: (resolve: (value: unknown) => unknown) =>
+      Promise.resolve(resolve(result)),
   };
 }
 

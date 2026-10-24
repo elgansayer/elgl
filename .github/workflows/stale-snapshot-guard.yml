@@ -1,0 +1,44 @@
+name: Stale snapshot guard
+
+# Blocks pull requests whose branches roll files back to older versions of the
+# base branch (whole-tree snapshots of stale sandboxes). See
+# scripts/check-stale-snapshot.py. Measured on history: flags all 19 snapshot
+# merges of 2026-10-20 and none of 150 ordinary merges (2026-08-26..09-28).
+# Required on main (2026-10-24).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# No cancel-in-progress: the Factory adds and removes review labels, and a
+# cancelled run is reported as a failed check that sends PRs to repair.
+
+permissions:
+  contents: read
+
+jobs:
+  stale-snapshot:
+    # Every event runs the full check (no skips): this is a required check, and
+    # a SKIPPED run from a label event would otherwise count as passing and
+    # could hide a real failure on the same head.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify guard regression suite
+        run: bash scripts/check-stale-snapshot.test.sh
+
+      - name: Detect rollbacks to older base versions
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          INTENTIONAL_REVERT: ${{ contains(github.event.pull_request.labels.*.name, 'intentional-revert') }}
+        run: |
+          set -euo pipefail
+          allow=()
+          if [ "$INTENTIONAL_REVERT" = "true" ]; then allow=(--allow); fi
+          python3 scripts/check-stale-snapshot.py --base "origin/$BASE_REF" --head HEAD "${allow[@]}"

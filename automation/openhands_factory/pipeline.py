@@ -1415,6 +1415,7 @@ class FactoryPipeline:
             else:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
             mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
+            model_repair_started = False
             if has_unmerged_paths or (
                 not (base_conflict or stale_base) and not mechanically_repaired
             ):
@@ -1423,6 +1424,12 @@ class FactoryPipeline:
                 # changed/merged head or block a clean current-base integration.
                 if job.repair_attempts >= 5:
                     raise FactoryError("Repair limit exceeded")
+                # Spend the budget when the model starts, not when a push lands.
+                # A repair that fails local verification never pushes, and a
+                # still-conflicting PR then routes QUALITY_REPAIRING back to
+                # REPAIRING, so counting only pushes left this loop unbounded.
+                job.repair_attempts += 1
+                model_repair_started = True
                 self._run_agent(
                     job,
                     worktree,
@@ -1463,7 +1470,8 @@ class FactoryPipeline:
                 job.changed_path_fingerprint,
             )
             self._copy_claim_metadata(job, bound)
-            job.repair_attempts += 1
+            if not model_repair_started:
+                job.repair_attempts += 1
             if job.pull_request is not None:
                 self.github.add_comment(
                     job.pull_request,

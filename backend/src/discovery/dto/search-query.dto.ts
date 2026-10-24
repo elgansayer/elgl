@@ -8,8 +8,16 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+const transformOptionalBoolean = ({ value }: { value: unknown }): unknown => {
+  if (value === true || value === false) return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+};
 
 export class SearchQueryDto {
   @ApiPropertyOptional({
@@ -19,7 +27,10 @@ export class SearchQueryDto {
     maximum: 90,
     example: 51.5074,
   })
-  @IsOptional()
+  @ValidateIf(
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
+  )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -35,7 +46,10 @@ export class SearchQueryDto {
     maximum: 180,
     example: -0.1278,
   })
-  @IsOptional()
+  @ValidateIf(
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
+  )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -161,13 +175,12 @@ export class SearchQueryDto {
   age_max?: number;
 
   @ApiPropertyOptional({
-    description: 'Only return partners currently hosting a LiveKit audio room.',
+    description:
+      'Only return partners currently hosting a public active LiveKit audio room.',
     example: true,
   })
-  @IsOptional()
-  @Transform(
-    ({ value }: { value: unknown }) => value === 'true' || value === true,
-  )
+  @ValidateIf((_query: SearchQueryDto, value: unknown) => value !== undefined)
+  @Transform(transformOptionalBoolean)
   @IsBoolean()
   voice_room_active?: boolean;
 

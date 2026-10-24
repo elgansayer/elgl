@@ -32,11 +32,7 @@ describe('ChatPinsService', () => {
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue({
-        data: [
-          { room_id: roomId },
-          { room_id: 'room-2' },
-          { room_id: null },
-        ],
+        data: [{ room_id: roomId }, { room_id: 'room-2' }, { room_id: null }],
         error: null,
       }),
     };

@@ -20,6 +20,14 @@ Use balanced reasoning for bounded phases whose scope is already constrained by 
 
 For Codex on GPT-5.6 Sol, the current policy keeps `max` reasoning for the quality-critical phases and uses `medium` for bounded review/repair/action phases. This preserves the same frontier model while avoiding maximum reasoning-token consumption on every narrow Factory iteration.
 
+## Route fairness
+
+The global agent-route budget protects total subscription allowance, but it must also prevent one pathological task from consuming the whole window. In conservative production mode, a single durable task may use at most four agent routes per configured route interval, while the global budget remains six routes per interval.
+
+Four routes are enough for the normal implementation, security-review, independent-review path plus one bounded repair. If a task needs more work in the same window, it is deferred until its oldest task route expires rather than skipping any quality gate or consuming the remaining global allowance. Other issues and pull requests can continue using the capacity that remains.
+
+This fairness check runs before SHA-scoped review admission, so a task that has already consumed its route share cannot waste an independent-review slot without starting a provider.
+
 ## Quality floor
 
 Efficiency changes must not bypass or weaken:

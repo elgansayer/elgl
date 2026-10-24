@@ -15,12 +15,14 @@ type QueryBuilderMock = {
   ilike: Mock;
   lte: Mock;
   limit: Mock;
+  is: Mock;
 };
 
 function createQueryBuilder(data: unknown[]): QueryBuilderMock {
   const builder = {} as QueryBuilderMock;
   const chainMethods = [
     'select',
+    'is',
     'neq',
     'eq',
     'not',

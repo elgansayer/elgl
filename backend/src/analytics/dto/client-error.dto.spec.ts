@@ -40,7 +40,9 @@ describe('ClientErrorDto', () => {
   it('rejects invalid stack-frame coordinates', async () => {
     const errors = await errorsFor({
       message: 'boom',
-      stackFrames: [{ fileName: 'app.ts', lineNumber: -1, columnNumber: 100001 }],
+      stackFrames: [
+        { fileName: 'app.ts', lineNumber: -1, columnNumber: 100001 },
+      ],
     });
 
     expect(errors.some((error) => error.property === 'stackFrames')).toBe(true);

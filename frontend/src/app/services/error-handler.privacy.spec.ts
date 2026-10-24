@@ -30,7 +30,9 @@ describe('GlobalErrorHandler privacy contract', () => {
       url: 'https://api.example.com/private/path?token=secret#message',
     });
 
-    expect(() => handler.handleError(error)).toThrow();
+    // The global handler reports and never rethrows (see error-handler.service.spec.ts):
+    // rethrowing would turn a reported HTTP failure into a second application failure.
+    expect(() => handler.handleError(error)).not.toThrow();
 
     const req = httpTesting.expectOne('/api/analytics/client-error');
     expect(req.request.body.url).toBe('https://api.example.com/private/path');

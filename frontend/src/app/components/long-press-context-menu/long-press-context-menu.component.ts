@@ -22,6 +22,13 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
+/** Reads the first touch from a TouchList or a plain list of touches. */
+function firstTouch(list: TouchList | ArrayLike<Touch> | undefined): Touch | null {
+  if (!list) return null;
+  if ('item' in list && typeof list.item === 'function') return list.item(0) ?? list[0] ?? null;
+  return list[0] ?? null;
+}
+
 @Component({
   selector: 'app-long-press-context-menu',
   imports: [
@@ -435,7 +442,7 @@ export class LongPressContextMenuComponent {
     this.resetTouchGesture();
     if (event.touches.length !== 1) return;
 
-    const touch = event.touches.item(0);
+    const touch = firstTouch(event.touches);
     if (!touch) return;
 
     this.touchStartX = touch.clientX;
@@ -451,12 +458,13 @@ export class LongPressContextMenuComponent {
     // should never have the context menu appear underneath that gesture.
     this.cancelTimer();
 
-    if (event.touches.length !== 1) {
+    // Synthetic or malformed events may omit the TouchList; treat them as non-swipes.
+    if ((event.touches?.length ?? 0) !== 1) {
       this.touchSwipeCancelled = true;
       return;
     }
 
-    const touch = event.touches.item(0);
+    const touch = firstTouch(event.touches);
     if (!touch) return;
 
     const deltaX = touch.clientX - this.touchStartX;
@@ -477,7 +485,7 @@ export class LongPressContextMenuComponent {
 
     const startX = this.touchStartX;
     const startY = this.touchStartY;
-    const touch = event?.changedTouches.item(0) ?? null;
+    const touch = event ? firstTouch(event.changedTouches) : null;
     const cancelled = this.touchSwipeCancelled;
     this.resetTouchGesture();
 

@@ -9,7 +9,7 @@ export const chatRoutes: Routes = [
   {
     path: 'chat/:id',
     loadComponent: () =>
-      import('../components/chat-room/chat-room.component').then((m) => m.ChatRoomComponent),
+      import('../pages/chat/chat-room-page.component').then((m) => m.ChatRoomPageComponent),
   },
   {
     path: 'groups',
@@ -39,14 +39,8 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'groups/create',
-    redirectTo: 'chat/groups/create',
+    redirectTo: 'community/groups/create',
     pathMatch: 'full',
-  },
-  {
-    path: 'community/groups/create',
-    loadComponent: () =>
-      import('../components/create-group/create-group.component').then((m) => m.CreateGroupComponent),
-    title: 'Create Group - HelloTalk',
   },
   {
     path: 'communities',
@@ -56,16 +50,6 @@ export const chatRoutes: Routes = [
   {
     path: 'community',
     redirectTo: 'chat/groups',
-    pathMatch: 'full',
-  },
-  {
-    path: 'community/language-parties',
-    redirectTo: 'chat/groups/language-parties',
-    pathMatch: 'full',
-  },
-  {
-    path: 'community/language-islands',
-    redirectTo: 'chat/groups/language-islands',
     pathMatch: 'full',
   },
   {

@@ -7,8 +7,11 @@ import {
   IsString,
   Matches,
   MaxLength,
+  registerDecorator,
   ValidateIf,
   ValidateNested,
+  ValidationArguments,
+  ValidationOptions,
 } from 'class-validator';
 
 const MEDIA_MESSAGE_TYPES = [
@@ -17,6 +20,31 @@ const MEDIA_MESSAGE_TYPES = [
   'sticker',
   'view_once_media',
 ] as const;
+
+const DOODLE_PNG_DATA_URL_PATTERN =
+  /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/;
+
+function IsDoodlePngDataUrl(validationOptions?: ValidationOptions) {
+  return (object: object, propertyName: string): void => {
+    registerDecorator({
+      name: 'isDoodlePngDataUrl',
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown, args: ValidationArguments): boolean {
+          const messageType = (args.object as { message_type?: unknown })
+            .message_type;
+          if (messageType !== 'doodle') return true;
+
+          return (
+            typeof value === 'string' && DOODLE_PNG_DATA_URL_PATTERN.test(value)
+          );
+        },
+      },
+    });
+  };
+}
 
 export class CorrectionPayloadDto {
   @IsString()
@@ -67,6 +95,7 @@ export class StatusReplyPayloadDto {
 export class SendMessageDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(128)
   room_id!: string;
 
   @IsString()
@@ -82,8 +111,13 @@ export class SendMessageDto {
   ])
   message_type!: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'text' || dto.text_content !== undefined,
+  )
   @IsString()
+  @Matches(/\S/, { message: 'text_content must not be blank' })
+  @MaxLength(10000)
   text_content?: string;
 
   @ValidateIf(
@@ -95,6 +129,9 @@ export class SendMessageDto {
   @IsString()
   @Matches(/\S/, { message: 'media_url must not be blank' })
   @MaxLength(3000000)
+  @IsDoodlePngDataUrl({
+    message: 'doodle media_url must be a PNG data URL produced by the canvas',
+  })
   media_url?: string;
 
   @ValidateIf(
@@ -108,21 +145,29 @@ export class SendMessageDto {
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
   reply_to_id?: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'correction_request' ||
+      dto.correction_request_payload !== undefined,
+  )
   @IsObject()
-  correction_request_payload?: {
-    original_text: string;
-    target_language?: string;
-  };
+  @ValidateNested()
+  @Type(() => CorrectionRequestPayloadDto)
+  correction_request_payload?: CorrectionRequestPayloadDto;
 
-  @IsOptional()
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.message_type === 'status_reply' ||
+      dto.status_reply_payload !== undefined,
+  )
   @IsObject()
-  status_reply_payload?: {
-    status_update_id: string;
-    status_text: string;
-  };
+  @ValidateNested()
+  @Type(() => StatusReplyPayloadDto)
+  status_reply_payload?: StatusReplyPayloadDto;
 }
 
 export class AiGenerateReplyDto {

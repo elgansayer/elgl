@@ -69,6 +69,7 @@ jobs:
           context: backend
           file: backend/Dockerfile
           target: production
+          pull: true
           push: true
           tags: ghcr.io/${{ github.repository }}/api:${{ github.event.workflow_run.head_sha }}
           provenance: mode=max
@@ -84,6 +85,7 @@ jobs:
           context: frontend
           file: frontend/Dockerfile
           target: production
+          pull: true
           push: true
           tags: ghcr.io/${{ github.repository }}/web:${{ github.event.workflow_run.head_sha }}
           provenance: mode=max
@@ -91,12 +93,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Scan the exact content digest emitted by BuildKit rather than resolving
+      # a registry tag again. This keeps the security decision tied to the
+      # artifact that will be attested and promoted below.
       - name: Scan immutable API image
         if: steps.deployment-target.outputs.deploy == 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
-          image-ref: ghcr.io/${{ github.repository }}/api:${{ github.event.workflow_run.head_sha }}
+          image-ref: ghcr.io/${{ github.repository }}/api@${{ steps.build-api.outputs.digest }}
           format: table
           exit-code: '1'
           ignore-unfixed: true
@@ -109,7 +114,7 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
-          image-ref: ghcr.io/${{ github.repository }}/web:${{ github.event.workflow_run.head_sha }}
+          image-ref: ghcr.io/${{ github.repository }}/web@${{ steps.build-web.outputs.digest }}
           format: table
           exit-code: '1'
           ignore-unfixed: true

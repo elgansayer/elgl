@@ -8,6 +8,7 @@ import { ProfileComponent } from './profile.component';
 import { UserService, UserProfile } from '../../services/user.service';
 import { I18nService } from '../../services/i18n.service';
 import { SafetyService } from '../../services/safety.service';
+import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
 
 describe('ProfileComponent', () => {
   let fixture: ComponentFixture<ProfileComponent>;
