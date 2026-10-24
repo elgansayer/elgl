@@ -1,6 +1,6 @@
 # Event push reminder delivery
 
-Issue #1329 is implemented by the existing Events and Notifications modules. The reminder worker runs inside `EventsService`; Firebase delivery remains owned by `NotificationsService` so event reminders use the same push tokens and notification preferences as the rest of the product.
+Issues #1329 and #1513 are implemented by the existing Events and Notifications modules. The reminder worker runs inside `EventsService`; Firebase delivery remains owned by `NotificationsService` so event reminders use the same push tokens and notification preferences as the rest of the product.
 
 ## Product behavior
 
@@ -45,7 +45,7 @@ No new user-facing permission is introduced. The existing `groups` push preferen
 
 ## Verification
 
-Run the backend Events unit suite and the normal repository verification pipeline. The focused tests cover atomic claim invocation, event deep-link payloads, countdown text, failure retry release, malformed claim rejection, sanitized/bounded titles, and database-unavailable behavior. CI database reset/replay validates the migration and function syntax.
+Run the backend Events unit suite and the normal repository verification pipeline. `backend/src/events/event-reminder-delivery.contract.spec.ts` locks the 15-minute eligibility window, one-minute scheduler cadence, replica-safe leasing, service-role-only claim boundary, deep-link push payload, and retry/finalization behavior. Existing focused tests cover atomic claim invocation, event deep-link payloads, countdown text, failure retry release, malformed claim rejection, sanitized/bounded titles, and database-unavailable behavior. CI database reset/replay validates the migration and function syntax.
 
 Useful production signals are the existing NestJS logs:
 

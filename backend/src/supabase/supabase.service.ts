@@ -42,8 +42,14 @@ export type UsersRow = {
   bio_text?: string | null;
   status_text?: string | null;
   proficiency_level?: string | null;
+  availability_morning?: boolean | null;
+  availability_afternoon?: boolean | null;
+  availability_evening?: boolean | null;
+  available_time_start?: string | null;
+  available_time_end?: string | null;
   email?: string | null;
   created_at?: string | null;
+  country?: string | null;
   mock_country?: string | null;
   mock_city?: string | null;
   privacy_hide_age?: boolean | null;
@@ -134,7 +140,20 @@ type AudioRoomTranscriptRow = {
   transcript_text: string | null;
   session_summary: string | null;
   vocabulary_list: string[] | null;
+  summary_status?: 'pending' | 'processing' | 'ready' | 'failed';
+  summary_attempts?: number;
+  summary_last_attempt_at?: string | null;
+  summary_next_retry_at?: string | null;
+  summary_ready_at?: string | null;
+  summary_error_code?: string | null;
+  updated_at?: string;
   created_at: string;
+};
+
+type AudioRoomParticipantRow = {
+  room_id: string;
+  user_id: string;
+  joined_at?: string;
 };
 
 type AudioRoomTipRow = {
@@ -830,6 +849,12 @@ export interface Database {
         Update: Partial<AudioRoomTranscriptRow>;
         Relationships: [];
       };
+      audio_room_participants: {
+        Row: AudioRoomParticipantRow;
+        Insert: Partial<AudioRoomParticipantRow>;
+        Update: Partial<AudioRoomParticipantRow>;
+        Relationships: [];
+      };
       audio_room_tips: {
         Row: AudioRoomTipRow;
         Insert: Partial<AudioRoomTipRow>;
@@ -1257,6 +1282,7 @@ export interface Database {
           };
           quiet_hours_start: string | null;
           quiet_hours_end: string | null;
+          quiet_hours_timezone: string | null;
           do_not_disturb: boolean;
           custom_tone_url: string | null;
           vibration_pattern: string | null;
@@ -1332,6 +1358,7 @@ export interface Database {
           };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
+          quiet_hours_timezone?: string | null;
           do_not_disturb?: boolean;
           custom_tone_url?: string | null;
           vibration_pattern?: string | null;
@@ -1406,6 +1433,7 @@ export interface Database {
           };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
+          quiet_hours_timezone?: string | null;
           do_not_disturb?: boolean;
           custom_tone_url?: string | null;
           vibration_pattern?: string | null;
@@ -1416,6 +1444,12 @@ export interface Database {
       chat_rooms: {
         Row: {
           id: string;
+          type?: string | null;
+          is_deleted?: boolean | null;
+          topic?: string | null;
+          avatar_url?: string | null;
+          name?: string | null;
+          updated_at?: string | null;
           title: string | null;
           subtitle?: string | null;
           avatar?: string | null;
@@ -1432,6 +1466,12 @@ export interface Database {
         };
         Insert: Partial<{
           id?: string;
+          type?: string | null;
+          is_deleted?: boolean | null;
+          topic?: string | null;
+          avatar_url?: string | null;
+          name?: string | null;
+          updated_at?: string | null;
           title?: string | null;
           subtitle?: string | null;
           avatar?: string | null;
@@ -1448,6 +1488,12 @@ export interface Database {
         }>;
         Update: Partial<{
           id?: string;
+          type?: string | null;
+          is_deleted?: boolean | null;
+          topic?: string | null;
+          avatar_url?: string | null;
+          name?: string | null;
+          updated_at?: string | null;
           title?: string | null;
           subtitle?: string | null;
           avatar?: string | null;
@@ -1464,23 +1510,71 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      message_reactions: {
+        Row: {
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Insert: Partial<{
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        }>;
+        Update: Partial<{
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'message_reactions_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_reactions_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       chat_room_members: {
         Row: {
           user_id: string;
           room_id: string;
           is_locked: boolean;
+          is_archived?: boolean | null;
+          archived_at?: string | null;
+          role?: string | null;
+          joined_at?: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
+          is_archived?: boolean | null;
+          archived_at?: string | null;
+          role?: string | null;
+          joined_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
+          is_archived?: boolean | null;
+          archived_at?: string | null;
+          role?: string | null;
+          joined_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [
@@ -2184,6 +2278,26 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_host_dashboard_earnings: {
+        Args: {
+          p_room_id: string;
+          p_host_id: string;
+        };
+        Returns: {
+          earned_coins: number;
+        }[];
+      };
+      claim_daily_checkin_reward: {
+        Args: {
+          p_user_id: string;
+          p_reward: number;
+        };
+        Returns: {
+          claimed: boolean;
+          coins_rewarded: number;
+          new_balance: number;
+        }[];
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;
@@ -2230,6 +2344,51 @@ export interface Database {
           p_duration_seconds: number;
         };
         Returns: void;
+      };
+      create_group_chat: {
+        Args: {
+          p_creator_id: string;
+          p_title: string;
+          p_member_ids: string[];
+        };
+        Returns: string;
+      };
+      add_group_chat_members: {
+        Args: {
+          p_requester_id: string;
+          p_room_id: string;
+          p_member_ids: string[];
+        };
+        Returns: number;
+      };
+      remove_group_chat_member: {
+        Args: {
+          p_requester_id: string;
+          p_room_id: string;
+          p_member_id: string;
+        };
+        Returns: void;
+      };
+      transfer_group_chat_admin: {
+        Args: {
+          p_requester_id: string;
+          p_room_id: string;
+          p_new_admin_id: string;
+        };
+        Returns: void;
+      };
+      leave_group_chat: {
+        Args: {
+          p_user_id: string;
+          p_room_id: string;
+        };
+        Returns: boolean;
+      };
+      count_chat_unread: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number | string;
       };
     };
     location_shares: {

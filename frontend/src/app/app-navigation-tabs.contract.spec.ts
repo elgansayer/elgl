@@ -24,6 +24,16 @@ function mobileNavigationTemplate(): string {
   return template.slice(start, end);
 }
 
+function topBarTemplate(): string {
+  const start = template.indexOf('<!-- Top Bar with Theme Selector -->');
+  const end = template.indexOf('<app-toast />');
+
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+
+  return template.slice(start, end);
+}
+
 describe('primary navigation unread contract', () => {
   it('renders the five primary mobile destinations in order', () => {
     const navigation = mobileNavigationTemplate();
@@ -41,6 +51,54 @@ describe('primary navigation unread contract', () => {
       expect(navigation).toContain(`unreadCounter.tabCount('${tab}')`);
       expect(navigation).toContain(`unreadCounter.badgeText('${tab}')`);
     }
+  });
+
+  it('suppresses zero-count badges while keeping compact badge text visual-only', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`@if (unreadCounter.tabCount('${tab}') > 0) {`);
+      expect(navigation).toContain(`{{ unreadCounter.badgeText('${tab}') }}`);
+    }
+
+    expect(navigation.match(/aria-hidden="true"/g)?.length ?? 0).toBeGreaterThanOrEqual(
+      PRIMARY_TABS.length * 2,
+    );
+    expect(desktopTemplate).toContain('@if (unreadCounter.tabCount(item.tab) > 0) {');
+    expect(desktopTemplate).toContain('{{ unreadCounter.badgeText(item.tab) }}');
+    expect(desktopTemplate).toContain('aria-hidden="true"');
+  });
+
+  it('announces the full unread count instead of the visually capped badge value', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`unreadCounter.tabCount('${tab}') + ' ' +`);
+    }
+
+    expect(desktopTemplate).toContain('{{ unreadCounter.tabCount(item.tab) }}');
+    expect(desktopTemplate).toContain("{{ 'chatList.filterUnread' | t }}");
+  });
+
+  it('renders a top-level notification badge from totalUnread()', () => {
+    const topBar = topBarTemplate();
+
+    expect(topBar).toContain('routerLink="/notifications"');
+    expect(topBar).toContain('@if (unreadCounter.totalUnread() > 0)');
+    expect(topBar).toContain(
+      "unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread()",
+    );
+  });
+
+  it('omits the visual total-unread badge when there is no unread activity', () => {
+    const topBar = topBarTemplate();
+    const totalUnreadCondition = '@if (unreadCounter.totalUnread() > 0)';
+    const totalUnreadBadge = topBar.slice(topBar.indexOf(totalUnreadCondition));
+
+    expect(topBar.indexOf(totalUnreadCondition)).toBeGreaterThanOrEqual(0);
+    expect(totalUnreadBadge).toContain('bg-danger');
+    expect(totalUnreadBadge).toContain('text-on-fill');
+    expect(totalUnreadBadge).toContain('min-w-[18px]');
   });
 
   it('binds desktop navigation badges to the same shared service', () => {
