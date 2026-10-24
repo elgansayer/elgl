@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, computed, signal, resource } from '@angular/core';
+import { Component, inject, computed, signal, resource, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -176,6 +176,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
       }
     </div>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EscrowComponent {
   private readonly location = inject(Location);
