@@ -3,7 +3,9 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
+import { FcmService } from './fcm.service';
 import { FirebaseMessagingService } from './firebase-messaging.service';
+import { MOCK_CURRENT_USER } from './mock-data';
 
 export interface AppUser extends User {
   is_vip?: boolean;

@@ -1,6 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, input, signal, viewChild, inject, ErrorHandler } from '@angular/core';
-import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -37,14 +36,9 @@ type ReviewGrade = 'again' | 'good' | 'known';
         @if (isComplete()) {
           <div class="mt-12 rounded-2xl border border-surface-100 bg-surface-800 p-8 text-center">
             <p class="text-lg font-medium text-text-primary">📚 {{ 'vocabulary.noDue' | t }}</p>
-            <div class="mt-6 flex flex-col gap-3">
-              <button hlmBtn type="button" (click)="practiceInAiConversation()" class="w-full">
-                {{ 'vocabulary.practiceAiConversation' | t }}
-              </button>
-              <button hlmBtn type="button" (click)="restart()" class="btn-secondary w-full">
-                {{ 'vocabulary.restart' | t }}
-              </button>
-            </div>
+            <button hlmBtn type="button" (click)="restart()" class="mt-4 btn-secondary">
+              {{ 'vocabulary.restart' | t }}
+            </button>
           </div>
         } @else {
           @if (currentCard(); as card) {
@@ -93,7 +87,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   {{ 'vocabulary.goodBtn' | t }}
                 </button>
                 <button
-                  hlmBtn size="touch"
+                  hlmBtn
                   type="button"
                   (click)="grade('known')"
                   class="btn-grade btn-grade-known"
@@ -189,7 +183,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
 export class VocabularyDashboardComponent {
   private errorHandler = inject(ErrorHandler);
   private vocabStore = inject(VocabularyStore);
-  private router = inject(Router);
 
   readonly deckInput = input<VocabCard[]>([]);
 
@@ -259,10 +252,6 @@ export class VocabularyDashboardComponent {
     this.currentIndex.set(0);
     this.isFlipped.set(false);
     this.grades.set({ again: 0, good: 0, known: 0 });
-  }
-
-  practiceInAiConversation(): void {
-    void this.router.navigate(['/ai-conversation']);
   }
 
   private handleComponentError(err: unknown, operation: string): void {

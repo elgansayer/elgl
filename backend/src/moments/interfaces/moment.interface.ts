@@ -38,12 +38,11 @@ export interface MomentRecord {
   created_at: string;
   is_ephemeral?: boolean;
   expires_at?: string;
-  /** Normalized, lower-case hashtags derived from text_content for discovery. */
-  hashtags?: string[];
   author?: {
     id: string;
     display_name?: string;
     avatar_url?: string | null;
   };
+  hashtags?: string[];
   is_liked_by_me?: boolean;
 }

@@ -15,11 +15,6 @@ describe('CoinEconomyOnboardingService', () => {
     });
   });
 
-  // The partial storage stub must not leak into later spec files (it lacks length/key()).
-  afterAll(() => {
-    vi.unstubAllGlobals();
-  });
-
 
   beforeEach(() => {
     window.localStorage.removeItem('hellotalk_coin_economy_onboarding_done');

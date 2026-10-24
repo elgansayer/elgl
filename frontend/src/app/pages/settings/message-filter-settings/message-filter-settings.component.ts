@@ -4,7 +4,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { MessageFilterService, MessageFilters } from '../../../services/message-filter.service';
+import { UserService } from '../../../services/user.service';
 
 interface LanguageOption {
   code: string;
@@ -54,11 +54,10 @@ const GENDER_OPTIONS: LanguageOption[] = [
   imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
 })
 export class MessageFilterSettingsComponent implements OnInit {
-  private readonly messageFilterService = inject(MessageFilterService);
+  private readonly userService = inject(UserService);
   private readonly location = inject(Location);
 
   readonly isLoading = signal(true);
-  readonly loadFailed = signal(false);
   readonly isSaving = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
@@ -67,13 +66,6 @@ export class MessageFilterSettingsComponent implements OnInit {
   readonly ageMax = signal<number | null>(null);
   readonly selectedLanguages = signal<string[]>([]);
   readonly selectedGenders = signal<string[]>([]);
-  // Settings this page does not edit yet are round-tripped so saving never resets them.
-  private readonly matchPreferences = signal<
-    Pick<
-      MessageFilters,
-      'same_native_language' | 'same_target_language' | 'same_gender' | 'same_age'
-    >
-  >({});
 
   readonly languages = COMMON_LANGUAGES;
   readonly genderOptions = GENDER_OPTIONS;
@@ -88,28 +80,20 @@ export class MessageFilterSettingsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    await this.loadFilters();
-  }
-
-  async loadFilters(): Promise<void> {
-    this.isLoading.set(true);
-    this.loadFailed.set(false);
-    this.errorMessage.set('');
-
     try {
-      const filters = await this.messageFilterService.load();
-      this.ageMin.set(filters.age_min ?? null);
-      this.ageMax.set(filters.age_max ?? null);
-      this.selectedLanguages.set(filters.allowed_native_languages ?? []);
-      this.selectedGenders.set(filters.allowed_genders ?? []);
-      this.matchPreferences.set({
-        same_native_language: filters.same_native_language,
-        same_target_language: filters.same_target_language,
-        same_gender: filters.same_gender,
-        same_age: filters.same_age,
-      });
+      const filters = await this.userService.getMessageFilters();
+      if (filters) {
+        if (filters.age_min !== undefined) this.ageMin.set(filters.age_min);
+        if (filters.age_max !== undefined) this.ageMax.set(filters.age_max);
+        if (filters.allowed_native_languages) {
+          this.selectedLanguages.set(filters.allowed_native_languages);
+        }
+        if (filters.allowed_genders) {
+          this.selectedGenders.set(filters.allowed_genders);
+        }
+      }
     } catch {
-      this.loadFailed.set(true);
+      // Keep defaults
     } finally {
       this.isLoading.set(false);
     }
@@ -128,27 +112,17 @@ export class MessageFilterSettingsComponent implements OnInit {
   }
 
   async saveFilters(): Promise<void> {
-    if (this.loadFailed() || this.isSaving()) return;
-
     this.errorMessage.set('');
     this.successMessage.set('');
     this.isSaving.set(true);
 
     try {
-      const match = this.matchPreferences();
-      await this.messageFilterService.save({
-        enabled: true,
-        allow_everyone: false,
+      await this.userService.setMessageFilters({
         age_min: this.ageMin() ?? undefined,
         age_max: this.ageMax() ?? undefined,
         allowed_native_languages:
           this.selectedLanguages().length > 0 ? this.selectedLanguages() : undefined,
-        // An empty list clears a previously saved gender restriction.
-        allowed_genders: this.selectedGenders(),
-        same_native_language: match.same_native_language ?? false,
-        same_target_language: match.same_target_language ?? false,
-        same_gender: match.same_gender ?? false,
-        same_age: match.same_age ?? false,
+        allowed_genders: this.selectedGenders().length > 0 ? this.selectedGenders() : undefined,
       });
       this.successMessage.set('settings.messageFilters.saved');
     } catch {

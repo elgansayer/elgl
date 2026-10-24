@@ -11,16 +11,9 @@ from filelock import FileLock
 from openhands_factory.models import ProviderName, ProviderUsage
 from openhands_factory.state import atomic_write_json, read_json
 
-DAILY_RETENTION_DAYS = 30
-_DAILY_COUNTERS = ("calls", "successes", "failures", "fallbacks", "timeouts")
-
 
 def _is_metrics_payload(value: object) -> bool:
     return isinstance(value, dict) and isinstance(value.get("providers"), list)
-
-
-def _is_daily_payload(value: object) -> bool:
-    return isinstance(value, dict) and isinstance(value.get("days"), dict)
 
 
 def _restore_failure_counts(value: object) -> dict[str, int]:
@@ -39,9 +32,6 @@ def _restore_failure_counts(value: object) -> dict[str, int]:
 class MetricsStore:
     def __init__(self, path: Path) -> None:
         self.path = path
-        # Cumulative totals cannot attribute a change to a time window, so a
-        # bounded per-UTC-day rollup sits beside them for routing evaluation.
-        self.daily_path = path.with_name(f"{path.stem}-daily.json")
         self.lock = FileLock(str(path) + ".lock")
 
     @staticmethod
@@ -193,81 +183,6 @@ class MetricsStore:
                 self._snapshot(usage_by_key),
                 validator=_is_metrics_payload,
             )
-            self._record_daily(
-                key,
-                successful=successful,
-                fallback=fallback,
-                timed_out=timed_out,
-                duration_seconds=duration_seconds,
-                failure_kind=None if successful else failure_kind,
-            )
-
-    def _record_daily(
-        self,
-        key: str,
-        *,
-        successful: bool,
-        fallback: bool,
-        timed_out: bool,
-        duration_seconds: float,
-        failure_kind: str | None,
-        now: datetime | None = None,
-    ) -> None:
-        """Add one call to today's bucket and drop buckets past retention."""
-        current = now or datetime.now(UTC)
-        today = current.date()
-        payload = self._read_daily()
-        days = payload.get("days", {})
-        if not isinstance(days, dict):
-            days = {}
-        kept: dict[str, object] = {}
-        for day, entries in days.items():
-            try:
-                age = (today - datetime.fromisoformat(str(day)).date()).days
-            except ValueError:
-                continue
-            if 0 <= age < DAILY_RETENTION_DAYS and isinstance(entries, dict):
-                kept[str(day)] = entries
-        bucket = kept.get(today.isoformat())
-        if not isinstance(bucket, dict):
-            bucket = {}
-            kept[today.isoformat()] = bucket
-        entry = bucket.get(key)
-        if not isinstance(entry, dict):
-            entry = {name: 0 for name in _DAILY_COUNTERS}
-            entry["duration_seconds"] = 0.0
-            entry["failure_counts"] = {}
-        entry["calls"] = int(entry.get("calls", 0)) + 1
-        entry["successes"] = int(entry.get("successes", 0)) + int(successful)
-        entry["failures"] = int(entry.get("failures", 0)) + int(not successful)
-        entry["fallbacks"] = int(entry.get("fallbacks", 0)) + int(fallback)
-        entry["timeouts"] = int(entry.get("timeouts", 0)) + int(timed_out)
-        entry["duration_seconds"] = float(entry.get("duration_seconds", 0)) + max(
-            duration_seconds, 0
-        )
-        failures = _restore_failure_counts(entry.get("failure_counts"))
-        if failure_kind:
-            failures[failure_kind] = failures.get(failure_kind, 0) + 1
-        entry["failure_counts"] = failures
-        bucket[key] = entry
-        atomic_write_json(
-            self.daily_path,
-            {"recorded_at": current.isoformat(), "days": kept},
-            validator=_is_daily_payload,
-        )
-
-    def _read_daily(self) -> dict[str, object]:
-        # The rollup is auxiliary: a damaged file restarts it instead of failing
-        # the call that is being recorded in the cumulative totals.
-        try:
-            payload = read_json(self.daily_path, {"days": {}}, validator=_is_daily_payload)
-        except (ValueError, UnicodeDecodeError):
-            return {"days": {}}
-        return payload if isinstance(payload, dict) else {"days": {}}
-
-    def daily(self) -> dict[str, object]:
-        with self.lock:
-            return self._read_daily()
 
     def snapshot(self) -> dict[str, object]:
         with self.lock:

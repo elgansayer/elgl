@@ -159,12 +159,10 @@ describe('NotificationSettingsComponent', () => {
     expect(component.loadError()).toBe('common.error_generic');
 
     getLegacyPrefsSpy.mockResolvedValue(mockLegacyPrefs);
-    const loadsBeforeRetry = getLegacyPrefsSpy.mock.calls.length;
     component.reload();
     await fixture.whenStable();
 
-    // Retry performs exactly one fresh load (beforeEach may already have created a component).
-    expect(getLegacyPrefsSpy).toHaveBeenCalledTimes(loadsBeforeRetry + 1);
+    expect(getLegacyPrefsSpy).toHaveBeenCalledTimes(2);
     expect(component.prefs()).toEqual(mockLegacyPrefs);
     expect(component.loadError()).toBeNull();
   });

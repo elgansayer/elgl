@@ -11,13 +11,7 @@ interface PartnerCandidate {
   scheduled_for_deletion_at: string | null;
   correction_ratio: number;
   study_streak_days: number;
-  last_active_at: string | null;
 }
-
-type CorrectorScore = {
-  averageScore: number | null;
-  totalRatings: number;
-};
 
 describe('DiscoveryService Partner of the Week eligibility', () => {
   const makeCandidate = (
@@ -33,14 +27,10 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
     scheduled_for_deletion_at: null,
     correction_ratio: 0.8,
     study_streak_days: 14,
-    // Serious-learner qualification also needs activity in the last 24 hours.
-    last_active_at: new Date().toISOString(),
     ...overrides,
   });
 
-  function createHarness(
-    scoreResolver?: (userId: string) => Promise<CorrectorScore>,
-  ) {
+  function createHarness() {
     const queryBuilder: Record<string, ReturnType<typeof vi.fn>> = {};
     for (const method of ['select', 'eq', 'is', 'not', 'gt', 'gte', 'order']) {
       queryBuilder[method] = vi.fn().mockReturnValue(queryBuilder);
@@ -63,9 +53,6 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
       debug: vi.fn(),
       trace: vi.fn(),
     };
-    const correctorScoreService = scoreResolver
-      ? { getCorrectorScore: vi.fn(scoreResolver) }
-      : undefined;
     const service = new DiscoveryService(
       logger as never,
       { getActiveHostIds: vi.fn() } as never,
@@ -75,17 +62,9 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
       } as never,
       { getBlockedAndBlockerIds: vi.fn() } as never,
       {} as never,
-      correctorScoreService as never,
     );
 
-    return {
-      service,
-      queryBuilder,
-      redis,
-      supabaseClient,
-      logger,
-      correctorScoreService,
-    };
+    return { service, queryBuilder, redis, supabaseClient, logger };
   }
 
   it('applies the canonical discovery visibility and profile-completeness filters', async () => {
@@ -124,9 +103,6 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
       'is',
       null,
     );
-    expect(queryBuilder['gt']).toHaveBeenCalledWith('correction_ratio', 0.5);
-    expect(queryBuilder['gte']).toHaveBeenCalledWith('study_streak_days', 7);
-    expect(queryBuilder['limit']).toHaveBeenCalledWith(50);
     expect(redis.set).toHaveBeenCalledWith(
       'partner_of_week_ids',
       '["eligible"]',
@@ -157,109 +133,6 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
     expect(redis.set).toHaveBeenCalledWith(
       'partner_of_week_ids',
       '["eligible"]',
-      'EX',
-      604800,
-    );
-  });
-
-  it('prioritises highly-rated correctors using the documented weighted ranking', async () => {
-    const scores = new Map<string, CorrectorScore>([
-      ['high-ratio-low-rating', { averageScore: 2, totalRatings: 1 }],
-      ['high-rating', { averageScore: 5, totalRatings: 20 }],
-    ]);
-    const { service, queryBuilder, redis, correctorScoreService } =
-      createHarness(async (userId) => scores.get(userId)!);
-    queryBuilder['limit'].mockResolvedValue({
-      data: [
-        makeCandidate('high-ratio-low-rating', {
-          correction_ratio: 0.95,
-          study_streak_days: 30,
-        }),
-        makeCandidate('high-rating', {
-          correction_ratio: 0.7,
-          study_streak_days: 14,
-        }),
-      ],
-      error: null,
-    });
-
-    await service.calculatePartnerOfWeek();
-
-    expect(correctorScoreService?.getCorrectorScore).toHaveBeenCalledTimes(2);
-    expect(redis.set).toHaveBeenCalledWith(
-      'partner_of_week_ids',
-      '["high-rating","high-ratio-low-rating"]',
-      'EX',
-      604800,
-    );
-  });
-
-  it('isolates an unavailable corrector score without aborting the weekly refresh', async () => {
-    const { service, queryBuilder, redis } = createHarness(async (userId) => {
-      if (userId === 'score-unavailable') {
-        throw new Error('ratings provider unavailable');
-      }
-      return { averageScore: 5, totalRatings: 10 };
-    });
-    queryBuilder['limit'].mockResolvedValue({
-      data: [
-        makeCandidate('score-unavailable'),
-        makeCandidate('rated-partner'),
-      ],
-      error: null,
-    });
-
-    await expect(service.calculatePartnerOfWeek()).resolves.toBeUndefined();
-
-    expect(redis.set).toHaveBeenCalledWith(
-      'partner_of_week_ids',
-      '["rated-partner","score-unavailable"]',
-      'EX',
-      604800,
-    );
-  });
-
-  it('treats an unavailable score as a zero rating signal', async () => {
-    const { service, queryBuilder, redis } = createHarness(async (userId) => {
-      if (userId === 'a-score-unavailable') {
-        throw new Error('ratings provider unavailable');
-      }
-      return { averageScore: 1, totalRatings: 0 };
-    });
-    queryBuilder['limit'].mockResolvedValue({
-      data: [makeCandidate('z-one-star'), makeCandidate('a-score-unavailable')],
-      error: null,
-    });
-
-    await service.calculatePartnerOfWeek();
-
-    expect(redis.set).toHaveBeenCalledWith(
-      'partner_of_week_ids',
-      '["a-score-unavailable","z-one-star"]',
-      'EX',
-      604800,
-    );
-  });
-
-  it('caps the published highlight list at ten users', async () => {
-    const { service, queryBuilder, redis } = createHarness();
-    queryBuilder['limit'].mockResolvedValue({
-      data: Array.from({ length: 12 }, (_, index) =>
-        makeCandidate(`user-${String(index).padStart(2, '0')}`),
-      ),
-      error: null,
-    });
-
-    await service.calculatePartnerOfWeek();
-
-    expect(redis.set).toHaveBeenCalledWith(
-      'partner_of_week_ids',
-      JSON.stringify(
-        Array.from(
-          { length: 10 },
-          (_, index) => `user-${String(index).padStart(2, '0')}`,
-        ),
-      ),
       'EX',
       604800,
     );

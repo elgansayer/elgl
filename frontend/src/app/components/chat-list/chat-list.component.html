@@ -203,7 +203,7 @@
               @if (preview.isOnline) {
                 <span
                   class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-success border-2 border-surface-500 rounded-full"
-                  aria-hidden="true"
+                  [attr.aria-label]="'chatList.online' | t"
                 ></span>
               }
             </div>
@@ -212,10 +212,6 @@
               <div class="flex justify-between items-baseline mb-0.5">
                 <div class="flex items-center gap-2 truncate">
                   <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
-                  @if (preview.isOnline) {
-                    <!-- Visible text so online status is not conveyed by colour alone. -->
-                    <span class="shrink-0 text-xs font-medium text-success">{{ 'chatList.online' | t }}</span>
-                  }
                   @if (preview.isVip) {
                     <span
                       class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"

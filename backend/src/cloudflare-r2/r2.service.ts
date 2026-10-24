@@ -76,10 +76,8 @@ export class R2Service {
     const env = this.configService.get<string>('NODE_ENV') || 'development';
     if (env === 'production') {
       if (
-        this.signingSecret ===
-          'test-r2-signing-secret-with-at-least-32-characters' ||
-        this.serviceToken ===
-          'test-r2-service-token-with-at-least-32-characters'
+        this.signingSecret === 'test-r2-signing-secret-with-at-least-32-characters' ||
+        this.serviceToken === 'test-r2-service-token-with-at-least-32-characters'
       ) {
         throw new Error(
           'CLOUDFLARE_R2_SIGNING_SECRET and CLOUDFLARE_R2_SERVICE_TOKEN must be securely configured in production',

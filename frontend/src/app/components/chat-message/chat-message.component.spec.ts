@@ -8,7 +8,6 @@ import { FavouriteService } from '../../services/favourite.service';
 import { I18nService } from '../../services/i18n.service';
 import { NlpService } from '../../services/nlp.service';
 import { SafetyService } from '../../services/safety.service';
-import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { ChatMessageComponent } from './chat-message.component';
 
@@ -126,13 +125,11 @@ describe('ChatMessageComponent', () => {
     const component = fixture.componentInstance;
 
     expect(component.isOwnMessage()).toBe(false);
-    // Child components may also read the session; memoisation means repeated
-    // ownership reads add no further currentUser() calls.
-    const callsAfterRender = currentUser.mock.calls.length;
+    expect(currentUser).toHaveBeenCalledOnce();
 
     component.isOwnMessage();
     component.isOwnMessage();
-    expect(currentUser).toHaveBeenCalledTimes(callsAfterRender);
+    expect(currentUser).toHaveBeenCalledOnce();
 
     fixture.componentRef.setInput('currentUserId', 'sender-id');
     fixture.detectChanges();

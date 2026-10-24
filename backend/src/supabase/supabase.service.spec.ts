@@ -82,6 +82,7 @@ describe('SupabaseService', () => {
       expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
+        protocol: 2,
       });
       expect(mockRedisInstance.on).toHaveBeenCalledWith(
         'error',
@@ -97,6 +98,7 @@ describe('SupabaseService', () => {
       expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
+        protocol: 2,
       });
     });
 
