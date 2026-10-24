@@ -5,6 +5,11 @@ import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
+import {
+  ProfileVisibility,
+  ProfileVisibilityService,
+} from '../../../services/profile-visibility.service';
+import { MutedWordsApiService } from '../../../services/muted-words-api.service';
 import { SafetyService } from '../../../services/safety.service';
 import { PrivacySettingsComponent } from './privacy-settings.component';
 
@@ -16,6 +21,8 @@ describe('PrivacySettingsComponent', () => {
   const addMutedWord = vi.fn<(word: string) => void>();
   const removeMutedWord = vi.fn<(word: string) => void>();
   const goBack = vi.fn();
+  const getProfileVisibility = vi.fn<() => Promise<ProfileVisibility>>();
+  const updateProfileVisibility = vi.fn<(value: ProfileVisibility) => Promise<void>>();
 
   beforeEach(async () => {
     mutedWords.set([]);
@@ -23,6 +30,10 @@ describe('PrivacySettingsComponent', () => {
     addMutedWord.mockReset();
     removeMutedWord.mockReset();
     goBack.mockReset();
+    getProfileVisibility.mockReset();
+    updateProfileVisibility.mockReset();
+    getProfileVisibility.mockResolvedValue('everyone');
+    updateProfileVisibility.mockResolvedValue(undefined);
 
     addMutedWord.mockImplementation((word) => {
       mutedWords.update((previous) => (previous.includes(word) ? previous : [...previous, word]));
@@ -37,7 +48,21 @@ describe('PrivacySettingsComponent', () => {
         provideRouter([]),
         {
           provide: SafetyService,
-          useValue: { mutedWords, addMutedWord, removeMutedWord },
+          useValue: {
+            mutedWords,
+            addMutedWord,
+            removeMutedWord,
+            clearMutedWords: () => mutedWords.set([]),
+          },
+        },
+        {
+          // #7730 persists muted words server-side and mirrors them into SafetyService.
+          provide: MutedWordsApiService,
+          useValue: {
+            list: vi.fn(async () => [...mutedWords()]),
+            add: vi.fn(async (word: string) => [...mutedWords(), word]),
+            remove: vi.fn(async (word: string) => mutedWords().filter((w) => w !== word)),
+          },
         },
         {
           provide: BlockedUsersService,
@@ -45,6 +70,10 @@ describe('PrivacySettingsComponent', () => {
             blockedUsers,
             loadBlockedUsers: vi.fn().mockResolvedValue(undefined),
           },
+        },
+        {
+          provide: ProfileVisibilityService,
+          useValue: { getProfileVisibility, updateProfileVisibility },
         },
         {
           provide: I18nService,
@@ -171,19 +200,20 @@ describe('PrivacySettingsComponent', () => {
     expect(addButton).not.toBeNull();
   });
 
-  it('adds a muted word when Enter is pressed in the input', () => {
+  it('adds a muted word when Enter is pressed in the input', async () => {
     component.mutedWordInput.set('  Spoiler  ');
     fixture.detectChanges();
 
     const input = fixture.nativeElement.querySelector('input[type="text"]') as HTMLInputElement;
     input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(addMutedWord).toHaveBeenCalledWith('spoiler');
     expect(component.mutedWordInput()).toBe('');
   });
 
-  it('adds a muted word from the native button action', () => {
+  it('adds a muted word from the native button action', async () => {
     component.mutedWordInput.set('spoiler');
     fixture.detectChanges();
 
@@ -191,6 +221,7 @@ describe('PrivacySettingsComponent', () => {
       'button[aria-label="privacy.hub.addMutedWord"]',
     ) as HTMLButtonElement;
     addButton.click();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(addMutedWord).toHaveBeenCalledWith('spoiler');
@@ -208,7 +239,7 @@ describe('PrivacySettingsComponent', () => {
     expect(removeButton).not.toBeNull();
   });
 
-  it('removes a muted word from the native button action', () => {
+  it('removes a muted word from the native button action', async () => {
     mutedWords.set(['spoiler']);
     fixture.detectChanges();
 
@@ -216,9 +247,11 @@ describe('PrivacySettingsComponent', () => {
       'button[aria-label="privacy.hub.removeMutedWordAria:spoiler"]',
     ) as HTMLButtonElement;
     removeButton.click();
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(removeMutedWord).toHaveBeenCalledWith('spoiler');
+    // The server list is authoritative; SafetyService is re-synced from it.
+    expect(TestBed.inject(MutedWordsApiService).remove).toHaveBeenCalledWith('spoiler');
     expect(mutedWords()).toEqual([]);
   });
 

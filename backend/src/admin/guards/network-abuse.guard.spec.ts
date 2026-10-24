@@ -39,7 +39,9 @@ function createGuard(options?: {
       }
       return value;
     }),
-    normalizeProvider: vi.fn((value: string | undefined) => value?.trim() || null),
+    normalizeProvider: vi.fn(
+      (value: string | undefined) => value?.trim() || null,
+    ),
   };
   return {
     guard: new NetworkAbuseGuard(
@@ -97,15 +99,29 @@ describe('NetworkAbuseGuard', () => {
       '1.1.1.1',
       'all',
     );
-    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(1, undefined, 'auth');
-    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(2, undefined, 'write');
-    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(3, undefined, 'all');
+    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(
+      1,
+      undefined,
+      'auth',
+    );
+    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(
+      2,
+      undefined,
+      'write',
+    );
+    expect(provider.isRequestBlocked).toHaveBeenNthCalledWith(
+      3,
+      undefined,
+      'all',
+    );
   });
 
   it('rejects a request when either an IP or ASN control is active', async () => {
     const ip = createGuard({ ipBlocked: true });
     await expect(
-      ip.guard.canActivate(contextFor({ path: '/api/moments', method: 'POST' })),
+      ip.guard.canActivate(
+        contextFor({ path: '/api/moments', method: 'POST' }),
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     const asn = createGuard({ providerBlocked: true });

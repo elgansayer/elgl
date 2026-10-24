@@ -1,13 +1,6 @@
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-FACTORY_ONLY_PR_PATHS = (
-    "      - 'automation/**'",
-    "      - 'docs/**'",
-    "      - 'config/factory/**'",
-    "      - 'config/systemd/**'",
-    "      - '.github/dependabot.yml'",
-)
 
 
 def _workflow(name: str) -> str:

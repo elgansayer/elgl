@@ -1041,27 +1041,59 @@ def test_pull_request_status_never_merges_over_requested_human_changes(
 
 
 def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:
-    runner = Runner([ProcessResult(0, "", "")])
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     client.publish_review_status("abc123", approved=True, detail="Review passed")
 
-    call = runner.calls[0]
+    call = runner.calls[1]
     assert "repos/owner/repo/statuses/abc123" in call
     assert "context=factory/independent-review" in call
     assert "state=success" in call
 
 
 def test_pending_review_status_invalidates_same_head_approval(tmp_path: Path) -> None:
-    runner = Runner([ProcessResult(0, "", "")])
+    runner = Runner([ProcessResult(0, "success\tReview passed\n", ""), ProcessResult(0, "", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     client.publish_review_pending("abc123", detail="Review in progress")
 
-    call = runner.calls[0]
+    call = runner.calls[1]
     assert "repos/owner/repo/statuses/abc123" in call
     assert "context=factory/independent-review" in call
     assert "state=pending" in call
+
+
+def test_identical_review_status_is_not_reposted(tmp_path: Path) -> None:
+    # GitHub keeps at most 1,000 statuses per SHA and context (#9542).
+    runner = Runner([ProcessResult(0, "pending\tReview in progress\n", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.publish_review_pending("abc123", detail="Review in progress")
+
+    assert len(runner.calls) == 1
+    assert "repos/owner/repo/commits/abc123/status" in runner.calls[0]
+
+
+def test_status_limit_does_not_fail_the_job(tmp_path: Path) -> None:
+    limit = (
+        "HTTP 422: Validation failed: "
+        "This SHA and context has reached the maximum number of statuses."
+    )
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(1, "", limit)])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.publish_review_pending("abc123", detail="Review in progress")
+
+    assert len(runner.calls) == 2
+
+
+def test_other_status_failures_still_raise(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(1, "", "HTTP 404: Not Found")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    with pytest.raises(FactoryError):
+        client.publish_review_pending("abc123", detail="Review in progress")
 
 
 def test_transient_github_failure_is_retried(
@@ -1233,3 +1265,50 @@ def test_pull_request_update_reopen_and_supersession_use_fixed_argv(tmp_path: Pa
         "owner/repo",
         "--delete-branch",
     )
+
+
+def test_trusted_dependabot_routine_updates_enter_review_but_compat_majors_do_not(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 71,
+            "title": "build(deps): bump the security-updates group",
+            "body": "Body",
+            "headRefName": "dependabot/npm_and_yarn/security-updates-abc",
+            "isDraft": False,
+            "labels": [{"name": "dependencies"}],
+            "author": {"login": "app/dependabot", "is_bot": True},
+        },
+        {
+            "number": 72,
+            "title": "build(deps): bump @nestjs/core from 11 to 12",
+            "body": "Body",
+            "headRefName": "dependabot/npm_and_yarn/backend/nestjs/core-12",
+            "isDraft": False,
+            "labels": [{"name": "dependencies"}, {"name": "compat:queued"}],
+            "author": {"login": "app/dependabot", "is_bot": True},
+        },
+        {
+            "number": 73,
+            "title": "Untrusted bot",
+            "body": "Body",
+            "headRefName": "renovate/thing",
+            "isDraft": False,
+            "labels": [],
+            "author": {"login": "app/renovate", "is_bot": True},
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_trusted_intake=True,
+        trusted_github_actors=("elgansayer", "app/dependabot"),
+    )
+
+    tasks = client.collect_open_pull_requests()
+
+    assert [task.identifier for task in tasks] == ["71"]

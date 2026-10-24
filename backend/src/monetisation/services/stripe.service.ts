@@ -23,10 +23,21 @@ export class StripeService {
     @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {
-    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    if (!secretKey) {
-      throw new Error('STRIPE_SECRET_KEY is required');
+    let secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
+    if (env === 'production') {
+      if (!secretKey || /^sk_test(?:_|$)/i.test(secretKey.trim())) {
+        throw new Error(
+          'STRIPE_SECRET_KEY must be configured securely in production',
+        );
+      }
+    } else {
+      if (!secretKey) {
+        secretKey = 'sk_test_123';
+      }
     }
+
     this.stripe = new Stripe(secretKey, {
       apiVersion: '2023-10-16',
     });
@@ -240,8 +251,24 @@ export class StripeService {
   }
 
   private getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+    // Newer Stripe API versions nest the subscription under invoice.parent,
+    // which the pinned SDK types do not declare yet.
+    const parent: unknown = Reflect.get(invoice, 'parent');
+    const details: unknown =
+      typeof parent === 'object' && parent !== null
+        ? Reflect.get(parent, 'subscription_details')
+        : undefined;
+    const nested: unknown =
+      typeof details === 'object' && details !== null
+        ? Reflect.get(details, 'subscription')
+        : undefined;
     const currentSubscription =
-      (invoice as any).parent?.subscription_details?.subscription;
+      typeof nested === 'string' ||
+      (typeof nested === 'object' &&
+        nested !== null &&
+        typeof Reflect.get(nested, 'id') === 'string')
+        ? (nested as string | { id: string })
+        : undefined;
     const legacySubscription = (
       invoice as Stripe.Invoice & {
         subscription?: string | { id: string } | null;

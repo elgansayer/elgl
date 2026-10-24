@@ -117,7 +117,9 @@ describe('daily recommendations contract', () => {
 
     expect(users.limit).toHaveBeenCalledWith(5000);
     expect(matches.limit).toHaveBeenCalledWith(10);
-    expect(matches.order).toHaveBeenCalledWith('is_serious_learner', {
+    // Serious-learner status is computed (streak + recent activity, #7586), so
+    // the bounded pre-fetch orders by streak rather than the stale stored flag.
+    expect(matches.order).toHaveBeenCalledWith('study_streak_days', {
       ascending: false,
     });
     expect(pipeline.set).toHaveBeenCalledTimes(1);

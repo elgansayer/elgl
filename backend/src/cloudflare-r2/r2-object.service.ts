@@ -31,7 +31,10 @@ export class R2ObjectService {
 
     const env = this.configService.get<string>('NODE_ENV') || 'development';
     if (env === 'production') {
-      if (this.serviceToken === 'test-r2-service-token-with-at-least-32-characters') {
+      if (
+        this.serviceToken ===
+        'test-r2-service-token-with-at-least-32-characters'
+      ) {
         throw new Error(
           'CLOUDFLARE_R2_SERVICE_TOKEN must be securely configured in production',
         );

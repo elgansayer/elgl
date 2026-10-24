@@ -473,12 +473,9 @@ export class AudioRoomArchivesService {
     }
 
     const parts: ChunkSummary[] = [];
-    // ⚡ Bolt: Batching chunks using Promise.allSettled instead of sequential awaits
-    // reduces O(N) network roundtrips to O(N/10) concurrent blocks, significantly
-    // lowering total LLM summary execution latency while adhering to concurrency limits.
-    const CHUNK_BATCH_SIZE = 10;
-    for (let i = 0; i < chunks.length; i += CHUNK_BATCH_SIZE) {
-      const batch = chunks.slice(i, i + CHUNK_BATCH_SIZE);
+    const chunkBatchSize = 10;
+    for (let i = 0; i < chunks.length; i += chunkBatchSize) {
+      const batch = chunks.slice(i, i + chunkBatchSize);
       const results = await Promise.allSettled(
         batch.map((chunk) => this.summariseChunk(chunk)),
       );

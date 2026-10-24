@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LearnerKnowledgeService } from './learner-knowledge.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
-import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
 import { UsersService } from '../users/users.service';
@@ -13,7 +12,6 @@ describe('LearnerKnowledgeService', () => {
   let service: LearnerKnowledgeService;
   let flashcardsService: { getFlashcards: ReturnType<typeof vi.fn> };
   let hobbyTagsService: { getUserVocabulary: ReturnType<typeof vi.fn> };
-  let assessmentsService: { getQuestions: ReturnType<typeof vi.fn> };
   let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
   let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
   let usersService: { getProfile: ReturnType<typeof vi.fn> };
@@ -25,9 +23,6 @@ describe('LearnerKnowledgeService', () => {
     };
     hobbyTagsService = {
       getUserVocabulary: vi.fn(),
-    };
-    assessmentsService = {
-      getQuestions: vi.fn(),
     };
     lessonsService = {
       listLessons: vi.fn(),
@@ -54,7 +49,6 @@ describe('LearnerKnowledgeService', () => {
         LearnerKnowledgeService,
         { provide: FlashcardsService, useValue: flashcardsService },
         { provide: HobbyTagsService, useValue: hobbyTagsService },
-        { provide: AssessmentsService, useValue: assessmentsService },
         { provide: LessonsService, useValue: lessonsService },
         { provide: MomentsService, useValue: momentsService },
         { provide: UsersService, useValue: usersService },
@@ -131,7 +125,6 @@ describe('LearnerKnowledgeService', () => {
       lessonsService.listLessons.mockResolvedValue(mockLessons);
 
       hobbyTagsService.getUserVocabulary.mockResolvedValue([]);
-      assessmentsService.getQuestions.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 10,
         corrections: 2,
@@ -191,9 +184,6 @@ describe('LearnerKnowledgeService', () => {
       );
       hobbyTagsService.getUserVocabulary.mockRejectedValue(
         new Error('Tags failed'),
-      );
-      assessmentsService.getQuestions.mockRejectedValue(
-        new Error('Assessments failed'),
       );
       lessonsService.listLessons.mockRejectedValue(new Error('Lessons failed'));
       momentsService.getLifetimeCounts.mockRejectedValue(
