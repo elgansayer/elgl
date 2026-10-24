@@ -4,8 +4,8 @@ import { GrammarCheckService } from './grammar-check.service';
 import { GrammarExplanationService } from './grammar-explanation.service';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
-import { PronunciationScoringService } from './pronunciation-scoring.service';
 import { TranslationRouterService } from './translation-router.service';
+import { PronunciationScoringService } from './pronunciation-scoring.service';
 
 describe('NlpController explainGrammar', () => {
   let checkRateLimit: ReturnType<typeof vi.fn>;

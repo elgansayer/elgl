@@ -120,6 +120,10 @@ describe('FavouritesComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });

@@ -49,8 +49,8 @@ export class ThemeService {
       this.applyAccentColour(this.primaryAccentColor());
     });
 
-    if (typeof window !== 'undefined') {
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
         if (this.currentTheme() === 'system') {
           this.applyTheme(this.currentTheme());
         }
@@ -59,32 +59,47 @@ export class ThemeService {
   }
 
   private initTheme(): void {
-    if (typeof localStorage === 'undefined') return;
+    try {
+      if (typeof localStorage === 'undefined') return;
 
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    if (isTheme(savedTheme)) {
-      this.currentTheme.set(savedTheme);
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      if (isTheme(savedTheme)) {
+        this.currentTheme.set(savedTheme);
+      } else if (savedTheme !== null) {
+        localStorage.removeItem(THEME_STORAGE_KEY);
+      }
+    } catch {
+      // Keep the system default when storage is disabled by browser privacy settings.
     }
   }
 
   private initAccent(): void {
-    if (typeof localStorage === 'undefined') return;
+    try {
+      if (typeof localStorage === 'undefined') return;
 
-    const savedAccent = localStorage.getItem(ACCENT_STORAGE_KEY);
-    if (isAccentColour(savedAccent)) {
-      this.primaryAccentColor.set(savedAccent);
-      return;
-    }
+      const savedAccent = localStorage.getItem(ACCENT_STORAGE_KEY);
+      if (isAccentColour(savedAccent)) {
+        this.primaryAccentColor.set(savedAccent);
+        return;
+      }
 
-    if (savedAccent !== null) {
-      localStorage.removeItem(ACCENT_STORAGE_KEY);
+      if (savedAccent !== null) {
+        localStorage.removeItem(ACCENT_STORAGE_KEY);
+      }
+    } catch {
+      // Keep the theme-aware Relay default when storage is unavailable.
     }
   }
 
   setTheme(theme: Theme): void {
+    if (!isTheme(theme)) return;
     this.currentTheme.set(theme);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+      }
+    } catch {
+      // The in-memory theme remains usable when storage is blocked or full.
     }
   }
 
@@ -95,15 +110,23 @@ export class ThemeService {
     }
 
     this.primaryAccentColor.set(colour);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(ACCENT_STORAGE_KEY, colour);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(ACCENT_STORAGE_KEY, colour);
+      }
+    } catch {
+      // The in-memory accent remains usable when storage is blocked or full.
     }
   }
 
   resetPrimaryAccentColor(): void {
     this.primaryAccentColor.set(null);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(ACCENT_STORAGE_KEY);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(ACCENT_STORAGE_KEY);
+      }
+    } catch {
+      // Clearing the active CSS variables is authoritative even if storage cannot be updated.
     }
   }
 
@@ -138,7 +161,9 @@ export class ThemeService {
 
     const isDark =
       theme === 'dark' ||
-      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      (theme === 'system' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     this.document.documentElement.classList.toggle('dark', isDark);
   }

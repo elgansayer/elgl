@@ -28,7 +28,7 @@ export class GdprService {
 
   async getStatus(): Promise<GdprStatusResponse> {
     const response = await lastValueFrom(
-      this.http.get<unknown>('/api/privacy/status'),
+      this.http.get<unknown>(`${this.apiBase}/privacy/status`),
     );
     return this.parseStatusResponse(response);
   }

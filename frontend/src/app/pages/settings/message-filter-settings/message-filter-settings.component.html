@@ -1,7 +1,7 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl">←</span>
+    <button hlmBtn type="button" (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+      <span class="text-xl" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.messageFilters.title' | t }}</h1>
     <div class="w-10"></div>
@@ -9,15 +9,22 @@
 
   <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
     @if (isLoading()) {
-      <div class="app-empty-state">{{ 'common.loading' | t }}</div>
+      <div class="app-empty-state" role="status" aria-live="polite">{{ 'common.loading' | t }}</div>
+    } @else if (loadFailed()) {
+      <section class="space-y-3 rounded-card border border-danger/30 bg-danger/10 p-4" role="alert">
+        <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+        <button hlmBtn type="button" variant="secondary" size="touch" (click)="loadFilters()">
+          {{ 'common.retry' | t }}
+        </button>
+      </section>
     } @else {
       @if (errorMessage()) {
-        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger" role="alert">
           {{ errorMessage() | t }}
         </div>
       }
       @if (successMessage()) {
-        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
+        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success" role="status">
           {{ successMessage() | t }}
         </div>
       }
@@ -145,8 +152,10 @@
       <div class="pt-4">
         <button
           hlmBtn
+          type="button"
           (click)="saveFilters()"
           [disabled]="isSaving()"
+          [attr.aria-busy]="isSaving() || null"
           class="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-fill transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           @if (isSaving()) {

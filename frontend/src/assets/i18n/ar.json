@@ -84,6 +84,7 @@
   "chatList.filterUnread": "\u063a\u064a\u0631 \u0645\u0642\u0631\u0648\u0621",
   "chatList.loading": "\u062c\u0627\u0631\u064d \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0627\u062a...",
   "chatList.noMessages": "\u0644\u0627 \u062a\u0648\u062c\u062f \u0631\u0633\u0627\u0626\u0644 \u0628\u0639\u062f. \u0627\u0628\u062f\u0623 \u0645\u062d\u0627\u062f\u062b\u0629.",
+  "chatList.online": "\u0645\u062a\u0635\u0644",
   "chatList.openFirstBtn": "+ \u0627\u0641\u062a\u062d \u0623\u0648\u0644 \u063a\u0631\u0641\u0629",
   "chatList.pinnedSection": "\u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0627\u062a \u0627\u0644\u0645\u062b\u0628\u062a\u0629",
   "chatList.quickAiTrans": "\u062a\u0631\u062c\u0645\u0629 AI",
@@ -556,5 +557,17 @@
 ,
   "forcedUpdateModal.message": "يتوفر إصدار جديد من التطبيق. يرجى التحديث للمتابعة.",
   "forcedUpdateModal.title": "التحديث مطلوب",
-  "forcedUpdateModal.updateButton": "تحديث الآن"
+  "forcedUpdateModal.updateButton": "تحديث الآن",
+  "legal.documentSections": "أقسام المستند",
+  "call.accept": "قبول المكالمة",
+  "call.decline": "رفض المكالمة",
+  "call.videoOn": "تشغيل الكاميرا",
+  "call.videoOff": "إيقاف الكاميرا",
+  "call.mute": "كتم الصوت",
+  "call.unmute": "إلغاء كتم الصوت",
+  "call.hang_up": "إنهاء المكالمة",
+  "moments.viewAuthorProfile": "عرض الملف الشخصي لـ {{name}}",
+  "chat_settings.load_unavailable": "إعدادات الدردشة غير متاحة مؤقتًا.",
+  "chat_settings.load_unavailable_desc": "تظل إعداداتك المحفوظة سارية. عناصر التحكم في الاحتفاظ معطلة حتى يتم تحميلها.",
+  "chat_settings.save_failed": "تعذّر حفظ هذا التغيير. تمت استعادة إعدادك السابق."
 }

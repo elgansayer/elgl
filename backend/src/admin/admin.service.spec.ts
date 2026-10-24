@@ -25,6 +25,7 @@ describe('AdminService', () => {
       set: vi.fn().mockResolvedValue('OK'),
       del: vi.fn().mockResolvedValue(1),
       keys: vi.fn().mockResolvedValue([]),
+      scan: vi.fn().mockResolvedValue(['0', []]),
     };
 
     mockQueryBuilder = {
@@ -228,9 +229,9 @@ describe('AdminService', () => {
     it('updates is_vip and vip_tier, invalidates user list and login history caches', async () => {
       const updated = { id: 'user-1', is_vip: true, vip_tier: 'consumer' };
       mockQueryBuilder.single.mockResolvedValue({ data: updated, error: null });
-      mockRedisClient.keys.mockResolvedValue([
-        'admin:users:list:1:20:',
-        'admin:users:list:2:10:search',
+      mockRedisClient.scan.mockResolvedValueOnce([
+        '0',
+        ['admin:users:list:1:20:', 'admin:users:list:2:10:search'],
       ]);
 
       const result = await service.setVipStatus('user-1', {
@@ -243,7 +244,13 @@ describe('AdminService', () => {
         vip_tier: 'consumer',
       });
       expect(result).toEqual(updated);
-      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:users:list:1:20:',
         'admin:users:list:2:10:search',
@@ -272,22 +279,28 @@ describe('AdminService', () => {
         data: { id: 'user-1', is_vip: true, vip_tier: 'consumer' },
         error: null,
       });
-      let resolveUserKeys!: (keys: string[]) => void;
-      mockRedisClient.keys.mockReturnValue(
-        new Promise<string[]>((resolve) => {
-          resolveUserKeys = resolve;
+      let resolveUserScan!: (page: [string, string[]]) => void;
+      mockRedisClient.scan.mockReturnValue(
+        new Promise<[string, string[]]>((resolve) => {
+          resolveUserScan = resolve;
         }),
       );
 
       const update = service.setVipStatus('user-1', { is_vip: true });
 
       await vi.waitFor(() => {
-        expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
+        expect(mockRedisClient.scan).toHaveBeenCalledWith(
+          '0',
+          'MATCH',
+          'admin:users:list:*',
+          'COUNT',
+          500,
+        );
         expect(mockRedisClient.del).toHaveBeenCalledWith(
           'admin:login-history:user-1',
         );
       });
-      resolveUserKeys([]);
+      resolveUserScan(['0', []]);
       await update;
     });
 
@@ -354,15 +367,27 @@ describe('AdminService', () => {
     it('inserts a block and invalidates user list, blocks list, and login history caches', async () => {
       mockQueryBuilder.insert.mockImplementation(() => mockQueryBuilder);
       mockQueryBuilder.select = vi.fn().mockResolvedValue({ error: null });
-      mockRedisClient.keys
-        .mockResolvedValueOnce(['admin:users:list:1:20:'])
-        .mockResolvedValueOnce(['admin:blocks:list:1:20:']);
+      mockRedisClient.scan
+        .mockResolvedValueOnce(['0', ['admin:users:list:1:20:']])
+        .mockResolvedValueOnce(['0', ['admin:blocks:list:1:20:']]);
 
       await service.banUser('bad-user', 'admin-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
-      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
-      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:blocks:list:*');
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:blocks:list:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:bad-user',
       );
@@ -378,24 +403,26 @@ describe('AdminService', () => {
 
     it('starts all independent cache invalidations concurrently', async () => {
       mockQueryBuilder.insert.mockReturnValue({ error: null });
-      const keyResolvers: Array<(keys: string[]) => void> = [];
-      mockRedisClient.keys.mockImplementation(
+      const scanResolvers: Array<(page: [string, string[]]) => void> = [];
+      mockRedisClient.scan.mockImplementation(
         () =>
-          new Promise<string[]>((resolve) => {
-            keyResolvers.push(resolve);
+          new Promise<[string, string[]]>((resolve) => {
+            scanResolvers.push(resolve);
           }),
       );
 
       const ban = service.banUser('bad-user', 'admin-1');
 
       await vi.waitFor(() => {
-        expect(mockRedisClient.keys).toHaveBeenCalledTimes(2);
+        expect(mockRedisClient.scan).toHaveBeenCalledTimes(2);
         expect(mockRedisClient.del).toHaveBeenCalledWith(
           'admin:login-history:bad-user',
         );
       });
-      keyResolvers.forEach((resolve) => resolve([]));
+      scanResolvers.forEach((resolve) => resolve(['0', []]));
       await ban;
+      // Blocking KEYS must never return (Redis DoS, #8937).
+      expect(mockRedisClient.keys).not.toHaveBeenCalled();
     });
   });
 
@@ -403,15 +430,27 @@ describe('AdminService', () => {
     it('inserts a report and invalidates user list, reports list, and login history caches', async () => {
       mockQueryBuilder.insert.mockImplementation(() => mockQueryBuilder);
       mockQueryBuilder.select = vi.fn().mockResolvedValue({ error: null });
-      mockRedisClient.keys
-        .mockResolvedValueOnce(['admin:users:list:1:20:'])
-        .mockResolvedValueOnce(['admin:reports:list:1:20:']);
+      mockRedisClient.scan
+        .mockResolvedValueOnce(['0', ['admin:users:list:1:20:']])
+        .mockResolvedValueOnce(['0', ['admin:reports:list:1:20:']]);
 
       await service.warnUser('bad-user', 'admin-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
-      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
-      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:reports:list:*');
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:users:list:*',
+        'COUNT',
+        500,
+      );
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:reports:list:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:login-history:bad-user',
       );
@@ -427,23 +466,23 @@ describe('AdminService', () => {
 
     it('starts all independent cache invalidations concurrently', async () => {
       mockQueryBuilder.insert.mockReturnValue({ error: null });
-      const keyResolvers: Array<(keys: string[]) => void> = [];
-      mockRedisClient.keys.mockImplementation(
+      const scanResolvers: Array<(page: [string, string[]]) => void> = [];
+      mockRedisClient.scan.mockImplementation(
         () =>
-          new Promise<string[]>((resolve) => {
-            keyResolvers.push(resolve);
+          new Promise<[string, string[]]>((resolve) => {
+            scanResolvers.push(resolve);
           }),
       );
 
       const warning = service.warnUser('bad-user', 'admin-1');
 
       await vi.waitFor(() => {
-        expect(mockRedisClient.keys).toHaveBeenCalledTimes(2);
+        expect(mockRedisClient.scan).toHaveBeenCalledTimes(2);
         expect(mockRedisClient.del).toHaveBeenCalledWith(
           'admin:login-history:bad-user',
         );
       });
-      keyResolvers.forEach((resolve) => resolve([]));
+      scanResolvers.forEach((resolve) => resolve(['0', []]));
       await warning;
     });
   });
@@ -665,13 +704,22 @@ describe('AdminService', () => {
       mockQueryBuilder.delete = vi
         .fn()
         .mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) });
-      mockRedisClient.keys.mockResolvedValue(['admin:blocks:list:1:20']);
+      mockRedisClient.scan.mockResolvedValueOnce([
+        '0',
+        ['admin:blocks:list:1:20'],
+      ]);
 
       const result = await service.removeBlock('block-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(result).toEqual({ success: true });
-      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:blocks:list:*');
+      expect(mockRedisClient.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:blocks:list:*',
+        'COUNT',
+        500,
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'admin:blocks:list:1:20',
       );

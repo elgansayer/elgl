@@ -8,6 +8,7 @@ import { socialRoutes } from './routes/social.routes';
 import { settingsRoutes } from './routes/settings.routes';
 import { chatRoutes } from './routes/chat.routes';
 import { adminRoutes } from './routes/admin.routes';
+import { eventDetailRoutes } from './routes/events.routes';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'learn/ai-chat', pathMatch: 'full' },
@@ -29,5 +30,7 @@ export const routes: Routes = [
   ...settingsRoutes,
   ...chatRoutes,
   ...adminRoutes,
+  // Event detail must be composed before the wildcard redirect.
+  ...eventDetailRoutes,
   { path: '**', redirectTo: 'learn/ai-chat' },
 ];
