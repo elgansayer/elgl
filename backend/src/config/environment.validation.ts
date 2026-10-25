@@ -69,6 +69,8 @@ const PLACEHOLDER_PATTERNS = [
   /-change-in-prod$/i,
   /example\.supabase\.co/i,
   /\.example\.(?:com|org|net)$/i,
+  /^device-transfer-secret-dev-only$/i,
+  /^test-transfer-secret$/i,
 ] as const;
 
 function isBlank(value: unknown): boolean {
