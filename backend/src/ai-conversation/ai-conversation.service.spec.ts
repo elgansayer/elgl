@@ -49,9 +49,10 @@ describe('AiConversationService', () => {
     };
 
     learnerKnowledgeService = {
+      // Shipped LearnerKnowledgeProfile shape (overallProficiency + knowledgeItems).
       getProfile: vi.fn().mockResolvedValue({
-        globalProficiency: { level: 'B2' },
-        globalKnowledgeItems: new Map([
+        overallProficiency: { level: 'B2' },
+        knowledgeItems: new Map([
           ['vocab:gato', { id: 'vocab:gato', status: 'struggling' }],
         ]),
       }),
@@ -202,14 +203,8 @@ describe('AiConversationService', () => {
 
       // Provide both global and language items
       learnerKnowledgeService.getProfile.mockResolvedValue({
-        globalProficiency: { level: 'A2' },
-        globalKnowledgeItems: new Map([
-          [
-            'vocab:globalWord',
-            { id: 'vocab:globalWord', status: 'struggling' },
-          ],
-        ]),
-        languageKnowledgeItems: new Map([
+        overallProficiency: { level: 'A2' },
+        knowledgeItems: new Map([
           ['vocab:hola', { id: 'vocab:hallo', status: 'struggling' }],
         ]),
       });
@@ -230,10 +225,12 @@ describe('AiConversationService', () => {
         (m: any) => m.role === 'system',
       ).content;
 
-      // Should contain the Spanish struggling word 'hallo' and the global one 'globalWord'
-      // It should NOT fetch 'en' explicitly
-      expect(systemPrompt).toContain('globalWord');
+      // Knowledge for the learner's target language reaches the prompt.
       expect(systemPrompt).toContain('hallo');
+      expect(learnerKnowledgeService.getProfile).not.toHaveBeenCalledWith(
+        'user1',
+        'en',
+      );
     });
 
     it('should call llmProxy.chatCompletion with system prompt from scenario', async () => {

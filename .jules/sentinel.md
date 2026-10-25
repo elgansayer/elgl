@@ -306,3 +306,8 @@
 **Vulnerability:** The NestJS backend allowed the use of the `test-transfer-secret` placeholder for `TRANSFER_SECRET` in the production environment.
 **Learning:** `environment.validation.ts` failed to include `test-transfer-secret` and `device-transfer-secret-dev-only` in the `PLACEHOLDER_PATTERNS` regex list, allowing test-only secrets to bypass environment validation in production.
 **Prevention:** Ensure all known test and development placeholder values (as defined in `validation.schema.ts` defaults) are explicitly mapped and actively rejected by the production environment validation layer.
+
+## 2024-10-21 - [Fix IDOR in Safety Controller Block Lists]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) on `getBlockedUserIds`, `getBlockerUserIds`, and `getBlockedAndBlockerIds` allowed any authenticated user to view the block lists of any other user.
+**Learning:** Endpoints that accept a `userId` parameter in route paths must explicitly verify that the requesting user's identity matches the requested `userId` when exposing sensitive relationships.
+**Prevention:** Always compare the `userId` parameter against the authenticated user's ID (`req.user.id`) and throw a `ForbiddenException` if they differ on endpoints dealing with personal data.

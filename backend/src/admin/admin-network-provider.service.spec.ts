@@ -12,11 +12,13 @@ function createService(options?: {
     error: options?.rpcError ?? null,
   });
   const redis = {
-    get: vi.fn().mockImplementation((key: string) =>
-      Promise.resolve(
-        key === 'network-abuse:v1:epoch' ? '4' : (options?.cached ?? null),
+    get: vi
+      .fn()
+      .mockImplementation((key: string) =>
+        Promise.resolve(
+          key === 'network-abuse:v1:epoch' ? '4' : (options?.cached ?? null),
+        ),
       ),
-    ),
     set: vi.fn().mockResolvedValue('OK'),
     incr: vi.fn().mockResolvedValue(5),
   };
@@ -72,7 +74,9 @@ describe('AdminNetworkProviderService', () => {
   });
 
   it('fails open when provider enforcement storage is unavailable', async () => {
-    const { service } = createService({ rpcError: new Error('db unavailable') });
+    const { service } = createService({
+      rpcError: new Error('db unavailable'),
+    });
 
     await expect(service.isRequestBlocked(13335, 'auth')).resolves.toBe(false);
   });

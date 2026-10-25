@@ -4,7 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 const repositoryRoot = resolve(process.cwd(), '..');
 const migration = readFileSync(
-  resolve(repositoryRoot, 'supabase/migrations/20260822110000_learning_goals_free_text.sql'),
+  resolve(
+    repositoryRoot,
+    'supabase/migrations/20260822110000_learning_goals_free_text.sql',
+  ),
   'utf8',
 );
 

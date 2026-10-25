@@ -19,6 +19,14 @@ interface VisualMatrix {
   contracts: VisualContract[];
 }
 
+const mobileStates = {
+  'mobile-390-light': { mode: 'light' },
+  'mobile-390-dark': { mode: 'dark' },
+  'mobile-390-rtl': { mode: 'rtl' },
+  'mobile-390-text-200': { mode: 'text-200' },
+  'mobile-390-text-400': { mode: 'text-400' },
+} as const;
+
 const tabletStates = {
   'tablet-768-light': { viewport: 'md', mode: 'light' },
   'tablet-768-dark': { viewport: 'md', mode: 'dark' },
@@ -37,6 +45,8 @@ const desktopStates = {
   'desktop-1280-dark': { viewport: 'wide', mode: 'dark' },
 } as const;
 
+type VisualMode = 'light' | 'dark' | 'rtl' | 'text-200' | 'text-400';
+type MobileState = keyof typeof mobileStates;
 type TabletState = keyof typeof tabletStates;
 type DesktopState = keyof typeof desktopStates;
 
@@ -46,9 +56,14 @@ const automatedStates = new Set([
   '390px',
   'wide',
   'rtl',
+  ...Object.keys(mobileStates),
   ...Object.keys(tabletStates),
   ...Object.keys(desktopStates),
 ]);
+
+function isMobileState(state: string): state is MobileState {
+  return state in mobileStates;
+}
 
 function isTabletState(state: string): state is TabletState {
   return state in tabletStates;
@@ -60,9 +75,12 @@ function isDesktopState(state: string): state is DesktopState {
 
 function applyState(state: string, rendering: VisualMatrix['rendering']): void {
   let viewport: ViewportContract | undefined;
-  let mode: 'light' | 'dark' | 'rtl' | 'text-200' = 'light';
+  let mode: VisualMode = 'light';
 
-  if (state === '390px') {
+  if (isMobileState(state)) {
+    viewport = rendering.viewportMobile;
+    mode = mobileStates[state].mode;
+  } else if (state === '390px') {
     viewport = rendering.viewportMobile;
   } else if (state === 'wide') {
     viewport = rendering.viewportWide;
@@ -113,6 +131,59 @@ function applyState(state: string, rendering: VisualMatrix['rendering']): void {
     if (mode === 'dark') document.documentElement.classList.add('dark');
     if (mode === 'rtl') document.documentElement.dir = 'rtl';
     if (mode === 'text-200') document.documentElement.style.fontSize = '200%';
+    if (mode === 'text-400') document.documentElement.style.fontSize = '400%';
+  });
+}
+
+function assertNoHorizontalDocumentOverflow(state: string, context: string): void {
+  cy.window().then((window) => {
+    const root = window.document.documentElement;
+    expect(
+      root.scrollWidth,
+      `${state}: ${context} must not create horizontal document overflow`,
+    ).to.be.at.most(window.innerWidth + 1);
+  });
+}
+
+function assertTextScale(state: string, root: HTMLElement, mode: VisualMode): void {
+  const rootFontSize = Number.parseFloat(getComputedStyle(root).fontSize);
+  if (mode === 'text-200') {
+    expect(rootFontSize, `${state}: 200% text-scale state must enlarge root text`).to.be.greaterThan(
+      16,
+    );
+  }
+  if (mode === 'text-400') {
+    expect(
+      rootFontSize,
+      `${state}: 400% text-scale state must substantially enlarge root text`,
+    ).to.be.greaterThan(32);
+  }
+}
+
+function assertMobileResponsiveContract(state: string): void {
+  if (!isMobileState(state)) return;
+
+  cy.window().its('innerWidth').should('eq', 390);
+  assertNoHorizontalDocumentOverflow(state, '390px mobile layout');
+
+  cy.document().then((document) => {
+    const root = document.documentElement;
+    const mode = mobileStates[state].mode;
+    if (mode === 'dark') {
+      expect(root.classList.contains('dark'), `${state}: dark state must apply dark theme`).to.equal(
+        true,
+      );
+    }
+    if (mode === 'light') {
+      expect(
+        root.classList.contains('dark'),
+        `${state}: light state must not retain dark theme`,
+      ).to.equal(false);
+    }
+    if (mode === 'rtl') {
+      expect(root.dir, `${state}: RTL state must preserve document direction`).to.equal('rtl');
+    }
+    assertTextScale(state, root, mode);
   });
 }
 
@@ -124,23 +195,18 @@ function assertResponsiveContract(state: string): void {
       : undefined;
   if (!responsiveState) return;
 
+  if (responsiveState.family === 'tablet') {
+    assertNoHorizontalDocumentOverflow(state, 'tablet layout');
+  } else {
+    assertNoHorizontalDocumentOverflow(state, 'desktop layout');
+  }
+
   cy.document().then((document) => {
     const root = document.documentElement;
-    expect(
-      root.scrollWidth,
-      `${state}: ${responsiveState.family} layout must not create horizontal document overflow`,
-    ).to.be.at.most(root.clientWidth + 1);
-
     if (responsiveState.mode === 'rtl') {
       expect(root.dir, `${state}: RTL state must preserve document direction`).to.equal('rtl');
     }
-
-    if (responsiveState.mode === 'text-200') {
-      expect(
-        Number.parseFloat(getComputedStyle(root).fontSize),
-        `${state}: text-scale state must enlarge root text`,
-      ).to.be.greaterThan(16);
-    }
+    assertTextScale(state, root, responsiveState.mode);
   });
 }
 
@@ -164,6 +230,7 @@ describe('Relay + Spartan visual contracts', () => {
           cy.get('body').should('be.visible');
           applyState(state, matrix.rendering);
           cy.document().its('fonts.status').should('eq', 'loaded');
+          assertMobileResponsiveContract(state);
           assertResponsiveContract(state);
           cy.screenshot(`${contract.designSyncId}/${state}`, { capture: 'fullPage' });
         }
