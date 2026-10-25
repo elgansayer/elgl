@@ -13,35 +13,13 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 - Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
 - Dedicated Groups & Scheduled Events System.
-- **Complete Responsive Communities Experience:**
+- **Complete Responsive Communities Experience (Ref: PR #8448):**
   - Refactor to a denser, highly readable responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view for clear spatial navigation.
   - Implement intuitive active state styling (Angular signals, Tailwind classes) for selected communities/groups.
   - Add engaging micro-interactions (hover effects) and unread notification badges.
   - Stabilise UI structure by extracting Communities list and creation form into scalable separate components.
   - Implement robust error handling (`try...catch`) and user feedback for community creation and deletion.
-
-## 👥 Communities & Group Chat
-
-- Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
-- Dedicated Groups & Scheduled Events System.
-- Complete Responsive Communities Experience:
-
-## 👥 Communities & Groups
-
-- Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
-- Dedicated Groups & Scheduled Events System.
-- Complete Responsive Communities Experience (Ref: PR #8448).
-
-- Complete Responsive Communities Experience (incorporates Three-Pane Layout, Active States, Mobile Drawer, Unread Badges, and Error Handling) (Ref: PR #8448):
-
-  - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
-  - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
-  - Add micro-interactions (hover effects) and unread notification badges.
-  - Extract Communities list and creation form into separate components for scalability.
-  - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
 - Harden Centrifugo connection token endpoint and lock connection-token contract.
-
-
 
 ## 📰 Moments & Social Feed
 
@@ -92,35 +70,22 @@ _Organized by complete user outcomes rather than individual technical chores._
 
 ## ⚙️ Platform, UI Architecture & Automation
 
-
 - Integrate diagnostic tools: Dynamic diagnostic quiz component for new sign-ups and custom Angular `ErrorHandler` logging client crashes to backend analytics.
 - Optimize app infrastructure and UX: Web Vitals audits (e.g., `loading=lazy`), offline support via IndexedDB, client-side image compression, and WebSocket connection rate limiting.
 - Develop universal connectivity features: In-App Sharing, External Deep Linking Engine, and End-to-end encrypted voice calls.
-- **Optimize performance for data-heavy views by implementing virtual scrolling (Angular CDK) in Chat and Reading screens:**
-  - Import and integrate `ScrollingModule` into standalone components to prevent DOM bloat and UI lag.
-
-- Optimize performance for data-heavy views by implementing virtual scrolling (Angular CDK) in Chat and Reading screens.
-
-
-- Align UI contracts with Spartan UI and Relay themes (desktop sidebars, confirm dialogs, developer dashboards).
-- Define 400 percent zoom reflow standard, enforce touch target sizing, and lock screen-reader naming contracts.
-- Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
-- Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
-- Reduce automation churn and Codex reasoning burn without lowering quality.
-- Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag (Ref: PR #8448).
-  - Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into the relevant Angular standalone components (e.g., `chat-page.component.ts`, `reading-engine.component.ts`).
-
+- **Optimize performance for data-heavy views by implementing virtual scrolling (Angular CDK) in Chat and Reading screens (Ref: PR #8448):**
+  - Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into standalone components to prevent DOM bloat and UI lag.
   - Replace standard loops rendering chat messages with `<cdk-virtual-scroll-viewport>`.
   - Implement virtualised rendering or windowing in the reading components for extensive texts.
   - Ensure dynamic height recalculation works correctly for varying content lengths.
   - Verify scrolling backwards in chat accurately triggers pagination/loading without breaking the viewport position.
   - Write or update unit tests to verify DOM nodes are correctly limited to the visible viewport slice.
+- Align UI contracts with Spartan UI and Relay themes (desktop sidebars, confirm dialogs, developer dashboards).
+- Define 400 percent zoom reflow standard, enforce touch target sizing, and lock screen-reader naming contracts.
+- Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
+- Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
+- Reduce automation churn and Codex reasoning burn without lowering quality.
 
 ## Consolidation provenance
 
 The Communities and virtual-scroll requirements consolidated here originated in the issue drafts associated with PR #8448. Preserve the detailed acceptance criteria above when removing duplicate generated reports.
-
-  - Write or update unit tests to verify that the virtual scroller correctly limits the rendered DOM nodes to the visible viewport slice.
-
-
-
