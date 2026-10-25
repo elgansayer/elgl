@@ -90,11 +90,12 @@ export class ResourceLibraryService {
     return (data ?? []).map((row) => this.toResource(row));
   }
 
-  async findOne(id: string): Promise<Resource> {
+  async findOne(id: string, userId: string): Promise<Resource> {
     const { data, error } = await this.client
       .from('resource_library')
       .select()
       .eq('id', id)
+      .eq('created_by', userId)
       .single();
 
     if (error) throw error;
