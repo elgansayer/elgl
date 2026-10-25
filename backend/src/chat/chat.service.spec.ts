@@ -163,6 +163,44 @@ describe('ChatService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('pedagogical AI prompts', () => {
+    const principles = [
+      'Comprehensible Input',
+      'Active Production',
+      'Spaced Repetition',
+      'Retrieval Practice',
+      'Meaningful Feedback',
+    ];
+
+    it('includes the applicable learning principles in suggested replies', async () => {
+      (chatLlmService.generateText as Mock).mockResolvedValue(
+        'How was your day?\nWhat are you learning?\nWhat would you like to practise?',
+      );
+
+      await service.getSuggestedReplies('user-1', {
+        room_id: 'room-1',
+        recent_messages: [],
+      });
+
+      const options = (chatLlmService.generateText as Mock).mock.calls[0][1];
+      expect(options.system).toContain('Comprehensible Input');
+      expect(options.system).toContain('Active Production');
+    });
+
+    it('includes all five learning principles in AI replies', async () => {
+      (chatLlmService.proxyMessage as Mock).mockResolvedValue({
+        response: 'What would you like to discuss?',
+      });
+
+      await service.generateAiReply('user-1', 'Hello');
+
+      const prompt = (chatLlmService.proxyMessage as Mock).mock.calls[0][0];
+      for (const principle of principles) {
+        expect(prompt).toContain(principle);
+      }
+    });
+  });
+
   describe('generateCentrifugoToken', () => {
     it('should generate token via CentrifugoService', async () => {
       const result = await service.generateConnectionToken('user-1');
