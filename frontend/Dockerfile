@@ -17,6 +17,9 @@ CMD ["npm", "run", "start"]
 
 # Stage 3: Production Nginx serve
 FROM nginx:alpine AS production
+# Apply every Alpine security fix available at build time (CVE-2026-111497
+# brotli-libs, CVE-2026-92392 curl and others blocked releases on 2026-10-26).
+RUN apk upgrade --no-cache
 # Keep security-sensitive Alpine runtime libraries above Trivy-blocked fixed-version floors.
 RUN apk add --no-cache \
     'libcrypto3>=3.5.8-r0' \

@@ -18,7 +18,9 @@ CMD ["npm", "run", "start:dev"]
 # Stage 3: Production
 FROM node:22-alpine AS production
 WORKDIR /app
-RUN apk upgrade --no-cache libcrypto3 libssl3
+# Apply every Alpine security fix available at build time, so new base-image
+# advisories do not block releases until someone adds another version floor.
+RUN apk upgrade --no-cache
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps --omit=dev \
     && npm cache clean --force \
