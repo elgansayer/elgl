@@ -15,6 +15,7 @@ import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { User } from '@supabase/supabase-js';
 import {
   CacheControlInterceptor,
   CACHE_PRIVATE_MEDIUM,
@@ -36,14 +37,14 @@ export class ResourceLibraryController {
 
   @Post()
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
-  create(@CurrentUser() user: any, @Body() dto: CreateResourceDto) {
+  create(@CurrentUser() user: User, @Body() dto: CreateResourceDto) {
     return this.resourceService.create(user.id, dto);
   }
 
   @Get()
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
     @Query('topic') topic?: string,
     @Query('difficulty') difficulty?: string,
   ) {
@@ -52,14 +53,14 @@ export class ResourceLibraryController {
 
   @Get(':id')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
-  findOne(@Param('id') id: string) {
-    return this.resourceService.findOne(id);
+  findOne(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.resourceService.findOne(id, user.id);
   }
 
   @Patch(':id')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   update(
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
     @Param('id') id: string,
     @Body() dto: UpdateResourceDto,
   ) {
@@ -68,7 +69,7 @@ export class ResourceLibraryController {
 
   @Delete(':id')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
-  remove(@CurrentUser() user: any, @Param('id') id: string) {
+  remove(@CurrentUser() user: User, @Param('id') id: string) {
     return this.resourceService.remove(id, user.id);
   }
 }

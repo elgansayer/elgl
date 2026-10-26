@@ -941,6 +941,8 @@ export class I18nService {
     'wordDef.spacedRepetition': 'Spaced repetition status',
     'wordDef.newBlue': 'New (Blue)',
     'correction.ghostTextLabel': 'Ghost Text',
+    'correction.createFlashcard': 'Create Flashcard',
+    'correction.flashcardCreatedAlert': 'Flashcard created!',
     'typingIndicator.single': '{{name}} is typing...',
     'typingIndicator.multiple': '{{names}} are typing...',
     'typingIndicator.many': '{{names}} and {{count}} others are typing...',
