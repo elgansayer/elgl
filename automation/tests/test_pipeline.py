@@ -3394,3 +3394,74 @@ def test_pull_request_convergence_never_closes_a_contributor_pull_request(
     assert github.superseded_pull_requests == []
     assert github.created_pull_requests == []
     assert [number for number, _title, _body in github.updated_pull_requests] == [99]
+
+
+def _capped_conflicting_issue_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, predecessor: int | None
+) -> tuple[FactoryPipeline, GitHub]:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    _repairing_job(factory_config, github)  # seeds prompts and the worktree
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "CONFLICTING",
+            "",
+            "reviewed-head",
+            False,
+            True,
+            merge_state_status="DIRTY",
+        )
+    ]
+    job = Job(
+        task=Task("77", "Build the feature", "Body", "github-issue", 10),
+        state=JobState.REPAIRING,
+        branch="factory/77-build-the-feature",
+        pull_request=77,
+        head_sha="reviewed-head",
+        repair_attempts=5,
+        predecessor_pull_request=predecessor,
+    )
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "merge_base_for_repair", lambda workflow: True)
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("no model call at the cap")
+    )
+    return pipeline, github
+
+
+def test_capped_conflict_on_issue_work_is_rebuilt_once_on_the_current_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline, github = _capped_conflicting_issue_job(tmp_path, monkeypatch, predecessor=None)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert result.state is JobState.DISCOVERED
+    assert [pr for pr, _, _ in github.superseded_pull_requests] == [77]
+    assert result.pull_request is None and result.branch is None
+    assert result.predecessor_pull_request == 77
+    assert result.repair_attempts == 0
+    claim = pipeline.tasks.claims()[result.task.logical_key]
+    assert claim.canonical_branch is None and claim.canonical_pull_request is None
+    assert claim.predecessor_pull_request == 77
+
+
+def test_a_rebuilt_job_is_not_rebuilt_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline, github = _capped_conflicting_issue_job(tmp_path, monkeypatch, predecessor=60)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.last_error == "Repair limit exceeded"
+    assert github.superseded_pull_requests == []

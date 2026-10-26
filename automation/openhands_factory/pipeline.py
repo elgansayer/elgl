@@ -1423,6 +1423,8 @@ class FactoryPipeline:
                 # deterministic fixes. A spent model budget must not hide a
                 # changed/merged head or block a clean current-base integration.
                 if job.repair_attempts >= 5:
+                    if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
+                        return
                     raise FactoryError("Repair limit exceeded")
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
@@ -1900,6 +1902,45 @@ class FactoryPipeline:
             return False
 
         self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
+        return True
+
+    def _rebuild_capped_conflict(self, job: Job, lease_owner: str, conflicting: bool) -> bool:
+        """Re-implement once from the issue when repairs cannot reconcile a stale base.
+
+        Conflict repair of a branch built on a long-superseded base can spend the
+        whole budget without converging while the issue itself is still valid.
+        Supersede the PR once and start again on the current base. A job that is
+        already a rebuild (it has a predecessor) is never rebuilt again.
+        """
+        if (
+            not conflicting
+            or job.task.source == "github-pull-request"
+            or job.pull_request is None
+            or job.predecessor_pull_request is not None
+        ):
+            return False
+        stale = job.pull_request
+        self.github.supersede_pull_request(
+            stale,
+            canonical=None,
+            reason=(
+                "its repair budget was exhausted reconciling a stale base; the factory is "
+                "re-implementing the issue on the current base"
+            ),
+        )
+        self.tasks.restart_from_predecessor(job.task.identifier, lease_owner, stale)
+        job.pull_request = None
+        job.branch = None
+        job.head_sha = None
+        job.initial_base_sha = None
+        job.latest_verified_sha = None
+        job.changed_path_fingerprint = None
+        job.predecessor_pull_request = stale
+        job.successor_pull_request = None
+        job.repair_attempts = 0
+        job.quality_repairs = 0
+        job.review_findings.clear()
+        job.state = JobState.DISCOVERED
         return True
 
     def _recover_closed_pull_request(self, job: Job, status: PullRequestStatus) -> bool:
