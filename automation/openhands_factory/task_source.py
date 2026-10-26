@@ -381,6 +381,28 @@ class TaskStore:
             bind,
         )
 
+    def restart_from_predecessor(
+        self,
+        task_id: str,
+        owner: str,
+        predecessor_pull_request: int,
+    ) -> Lease:
+        """Unbind a superseded PR so the task is re-implemented on the current base."""
+
+        def restart(claim: Lease) -> Lease:
+            return replace(
+                claim,
+                canonical_branch=None,
+                canonical_pull_request=None,
+                initial_base_sha=None,
+                latest_verified_sha=None,
+                changed_path_fingerprint=None,
+                predecessor_pull_request=predecessor_pull_request,
+                successor_pull_request=None,
+            )
+
+        return self._update_owned_claim(task_id, owner, restart)
+
     def bind_pull_request(
         self,
         task_id: str,
