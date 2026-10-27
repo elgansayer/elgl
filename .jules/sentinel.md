@@ -320,3 +320,7 @@
 **Vulnerability:** A hardcoded dev API key pattern (`dev_livekit_key_test_value_123`) is not rejected by `backend/src/config/environment.validation.ts` config checks.
 **Learning:** Development API key patterns need to explicitly include specific hardcoded dev strings present in the application code, not just generic prefixes.
 **Prevention:** Add hardcoded fallback defaults or test-value patterns like `/^dev_livekit_key_test_value/i` to the environment validation regex list to ensure they are strictly rejected in production environments.
+## 2026-10-27 - [CRITICAL] Fix placeholder values missing validation in production
+**Vulnerability:** Placeholder values like 'localhost' for production configurations were not validated correctly in `environment.validation.ts`, causing possible misconfigurations allowing local endpoints or test identifiers to be used.
+**Learning:** `environment.validation.ts` parses a list of expected placeholders using regex. In addition to standard placeholder conventions (`change-me`), default test values like `com.hellotalk.app` or localhost environments need explicit exclusion for prod keys.
+**Prevention:** Always ensure that default testing values across all system layers and dependencies are included in prod-blocking validators.
