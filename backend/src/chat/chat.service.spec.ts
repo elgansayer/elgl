@@ -172,7 +172,7 @@ describe('ChatService', () => {
       'Meaningful Feedback',
     ];
 
-    it('includes the applicable learning principles in suggested replies', async () => {
+    it('includes all five learning principles in suggested replies', async () => {
       (chatLlmService.generateText as Mock).mockResolvedValue(
         'How was your day?\nWhat are you learning?\nWhat would you like to practise?',
       );
@@ -183,8 +183,9 @@ describe('ChatService', () => {
       });
 
       const options = (chatLlmService.generateText as Mock).mock.calls[0][1];
-      expect(options.system).toContain('Comprehensible Input');
-      expect(options.system).toContain('Active Production');
+      for (const principle of principles) {
+        expect(options.system).toContain(principle);
+      }
     });
 
     it('includes all five learning principles in AI replies', async () => {

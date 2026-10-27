@@ -844,7 +844,7 @@ export class ChatService {
     try {
       const response = await this.chatLlmService.generateText(prompt, {
         system:
-          "You are a helpful language learning conversation assistant. Provide concise, natural suggestions that fit the given context. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1). Encourage Active Production by asking engaging questions.",
+          "You are a helpful language learning conversation assistant. Provide concise, natural suggestions that fit the given context. Ensure Comprehensible Input by using vocabulary slightly above the user's level (i+1). Encourage Active Production by asking engaging questions. Use Retrieval Practice by referencing past conversation points. Facilitate Spaced Repetition by deliberately reusing recently learned vocabulary. Provide Meaningful Feedback by naturally modelling correct grammar.",
         temperature: 0.8,
         maxTokens: 150,
       });
