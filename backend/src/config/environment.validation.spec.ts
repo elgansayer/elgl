@@ -95,7 +95,10 @@ describe('validateEnvironment', () => {
     ['STRIPE_MONTHLY_PRICE_ID', 'price_monthly_test'],
     ['STRIPE_YEARLY_PRICE_ID', 'price_yearly_test'],
     ['APPLE_BUNDLE_ID', 'com.hellotalk.app'],
-    ['APPLE_VERIFICATION_URL', 'https://sandbox.itunes.apple.com/verifyReceipt'],
+    [
+      'APPLE_VERIFICATION_URL',
+      'https://sandbox.itunes.apple.com/verifyReceipt',
+    ],
     ['GOOGLE_PLAY_PACKAGE_NAME', 'com.hellotalk.app'],
     ['GOOGLE_PUBSUB_AUDIENCE', 'https://pubsub.googleapis.com/test'],
     ['GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL', 'test@example.com'],
