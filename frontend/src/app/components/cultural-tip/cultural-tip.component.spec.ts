@@ -1,12 +1,26 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { environment } from '../../../environments/environment';
 import { CulturalTipComponent } from './cultural-tip.component';
 
 describe('CulturalTipComponent', () => {
   let component: CulturalTipComponent;
   let fixture: ComponentFixture<CulturalTipComponent>;
   let httpTesting: HttpTestingController;
+
+  const flushGuide = async (
+    guide = 'Bowing is the customary greeting in Japan.',
+  ): Promise<HTMLElement> => {
+    fixture.detectChanges();
+    httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`).flush({
+      language: 'ja',
+      guide,
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector('[role="region"]') as HTMLElement;
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -27,23 +41,18 @@ describe('CulturalTipComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
     fixture.detectChanges();
-    httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`).flush({
       language: 'ja',
       guide: 'Bowing is the customary greeting in Japan.',
     });
   });
 
   it('should render the guide text once the API responds', async () => {
-    fixture.detectChanges();
-    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja');
-    req.flush({ language: 'ja', guide: 'Bowing is the customary greeting in Japan.' });
-    await fixture.whenStable();
-    fixture.detectChanges();
+    const region = await flushGuide();
 
     expect(fixture.nativeElement.textContent).toContain(
       'Bowing is the customary greeting in Japan.',
     );
-    const region = fixture.nativeElement.querySelector('[role="region"]');
     expect(region).toBeTruthy();
     expect(region.getAttribute('aria-label')).toBeTruthy();
     expect(region.hasAttribute('aria-labelledby')).toBe(false);
@@ -51,15 +60,7 @@ describe('CulturalTipComponent', () => {
   });
 
   it('should use Relay theme tokens and mobile-first responsive spacing', async () => {
-    fixture.detectChanges();
-    httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja').flush({
-      language: 'ja',
-      guide: 'Bowing is the customary greeting in Japan.',
-    });
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const region: HTMLElement = fixture.nativeElement.querySelector('[role="region"]');
+    const region = await flushGuide();
     const heading: HTMLElement = fixture.nativeElement.querySelector('h3');
 
     expect(region.classList).toContain('rounded-card');
@@ -75,9 +76,58 @@ describe('CulturalTipComponent', () => {
     expect(heading.classList).toContain('text-text-primary');
   });
 
+  it('should remain a named, non-interactive region with no tab stops', async () => {
+    const region = await flushGuide();
+
+    expect(region.getAttribute('role')).toBe('region');
+    expect(region.getAttribute('aria-label')).toBeTruthy();
+    expect(region.hasAttribute('tabindex')).toBe(false);
+    expect(
+      region.querySelectorAll('a, button, input, select, textarea, [tabindex], [role="button"]')
+        .length,
+    ).toBe(0);
+  });
+
+  it('should keep directional layout logical so the accent edge follows RTL', async () => {
+    const region = await flushGuide();
+    const classes = [...region.classList];
+
+    expect(classes).toContain('border-s-4');
+    expect(classes.some((name) => /^(?:(?:border|rounded)-(?:l|r)(?:-|$)|(?:m|p)[lr]-)/.test(name))).toBe(false);
+    expect(region.getAttribute('dir')).toBeNull();
+  });
+
+  it('should preserve long text without fixed dimensions or truncation classes', async () => {
+    const region = await flushGuide('A'.repeat(512));
+    const classes = [...region.classList];
+    const paragraph: HTMLElement = region.querySelector('p')!;
+
+    expect(region.getAttribute('style')).toBeNull();
+    expect(paragraph.getAttribute('style')).toBeNull();
+    expect(classes).not.toContain('overflow-hidden');
+    expect(classes).not.toContain('truncate');
+    expect(classes).not.toContain('whitespace-nowrap');
+    expect(classes.some((name) => /^(?:h|w|min-h|min-w|max-h|max-w)-/.test(name))).toBe(false);
+    expect(paragraph.classList).not.toContain('whitespace-nowrap');
+    expect(paragraph.classList).not.toContain('truncate');
+    expect(paragraph.textContent).toHaveLength(512);
+  });
+
+  it('should not add pointer-only behavior, text-selection blocking, or motion', async () => {
+    const region = await flushGuide();
+    const renderedClasses = [region, ...Array.from(region.querySelectorAll<HTMLElement>('*'))]
+      .flatMap((element) => [...element.classList])
+      .join(' ');
+
+    expect(region.onclick).toBeNull();
+    expect(renderedClasses).not.toMatch(/(?:^|\s)cursor-pointer(?:\s|$)/);
+    expect(renderedClasses).not.toMatch(/(?:^|\s)select-none(?:\s|$)/);
+    expect(renderedClasses).not.toMatch(/(?:^|\s)(?:animate-|transition-)/);
+  });
+
   it('should render nothing when no guide is found for the language', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`);
     req.flush('Not Found', { status: 404, statusText: 'Not Found' });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -87,7 +137,7 @@ describe('CulturalTipComponent', () => {
 
   it('should refetch when the language input changes', async () => {
     fixture.detectChanges();
-    httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/ja').flush({
+    httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/ja`).flush({
       language: 'ja',
       guide: 'Bowing is the customary greeting in Japan.',
     });
@@ -95,7 +145,7 @@ describe('CulturalTipComponent', () => {
 
     fixture.componentRef.setInput('language', 'fr');
     fixture.detectChanges();
-    const req = httpTesting.expectOne('http://127.0.0.1:3000/api/cultural-guides/fr');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/cultural-guides/fr`);
     req.flush({ language: 'fr', guide: 'Bonjour is the customary greeting in France.' });
     await fixture.whenStable();
     fixture.detectChanges();

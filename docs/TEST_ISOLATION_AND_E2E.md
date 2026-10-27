@@ -51,6 +51,22 @@ Current Playwright coverage includes authentication/onboarding pages, chat/messa
 
 Playwright is the better home for cross-browser, RTL, device-profile, and full-stack/infrastructure-sensitive flows. Cypress remains appropriate for existing Angular-centric feature flows.
 
+## Runner context contract
+
+Test files must be executed by the package and runner that owns them. A Playwright spec imports `test`, `expect`, and suite helpers from `@playwright/test`; running that file directly through Node, `tsx`, `ts-node`, Bun, Vitest, or Jest bypasses Playwright's runner bootstrap and fails during initialisation or collection. Conversely, launching Playwright from the repository root or frontend can discover Angular/Vitest specs and produce misleading errors such as `ReferenceError: describe is not defined`.
+
+Use these package-owned entry points:
+
+- Angular/frontend unit tests: `cd frontend && npm test`
+- NestJS/backend unit tests: `cd backend && npm test`
+- Admin portal unit tests: `cd admin-portal && npm test`
+- Standalone Playwright E2E: `cd e2e && npm test`
+- Playwright discovery without starting browsers: `cd e2e && npm test -- --list`
+
+Do not execute `e2e/tests/*.spec.ts` directly with a generic JavaScript/TypeScript runtime, and do not pass `e2e/tests` to Vitest or Jest. CI and automation commands that run the standalone Playwright suite must either enter the `e2e` package context or pass the explicit root config `--config e2e/playwright.config.ts`.
+
+`npm run check:playwright-test-boundary` is the repository guard for this ownership contract. It validates package and configuration ownership, rejects known wrong-runner command forms in workflows, scripts, package manifests, and automation instructions, and verifies that Playwright invocations use the `e2e` package context or its explicit configuration.
+
 ## Playwright web-server readiness contract
 
 Playwright starts the NestJS and Angular web servers as separate `webServer` entries. Playwright may launch entries in that array concurrently, so the Angular development/SSR server must not assume that NestJS is already accepting connections merely because the backend process has been spawned.
@@ -73,7 +89,9 @@ A readiness timeout is an infrastructure/startup failure, not an application ass
 
 ## Current Playwright CI blocker
 
-Playwright is not currently wired into the canonical GitHub Actions workflows. Its config starts the real backend and frontend servers. Backend startup validates configuration for Supabase, database, Redis, Centrifugo, LiveKit, R2, translation services, and Stripe. A nightly Playwright job therefore needs a reproducible test harness/service stack or explicit test doubles before it can be added without becoming permanently red.
+Full Playwright browser execution is not currently wired into the canonical GitHub Actions workflows. The lightweight `E2E Runner Context` workflow performs test discovery only, which proves the correct runner can collect the suite without starting application servers or browsers.
+
+The Playwright config starts the real backend and frontend servers. Backend startup validates configuration for Supabase, database, Redis, Centrifugo, LiveKit, R2, translation services, and Stripe. A full or nightly Playwright job therefore needs a reproducible test harness/service stack or explicit test doubles before it can be added without becoming permanently red.
 
 Do not solve this by injecting production credentials into untrusted PR jobs. Build an isolated CI environment first.
 

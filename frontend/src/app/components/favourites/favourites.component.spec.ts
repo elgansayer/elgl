@@ -1,12 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FavouritesComponent } from './favourites.component';
 import { I18nService } from '../../services/i18n.service';
-import { ChatService, FavouriteRecord } from '../../services/chat.service';
+import { FavouriteRecord } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 
 describe('FavouritesComponent', () => {
   let component: FavouritesComponent;
   let fixture: ComponentFixture<FavouritesComponent>;
-  let mockChatService: Partial<ChatService>;
+  let mockFavouriteService: {
+    getStarredMessages: ReturnType<typeof vi.fn>;
+    removeFavourite: ReturnType<typeof vi.fn>;
+  };
 
   const mockFavourites: FavouriteRecord[] = [
     {
@@ -81,9 +85,13 @@ describe('FavouritesComponent', () => {
   ];
 
   beforeEach(async () => {
-    mockChatService = {
-      getFavourites: vi.fn().mockResolvedValue(mockFavourites),
-      removeFavourite: vi.fn().mockResolvedValue(undefined),
+    mockFavouriteService = {
+      getStarredMessages: vi.fn().mockResolvedValue({
+        items: mockFavourites,
+        has_more: false,
+        next_offset: null,
+      }),
+      removeFavourite: vi.fn().mockResolvedValue({ success: true }),
     };
 
     await TestBed.configureTestingModule({
@@ -103,7 +111,7 @@ describe('FavouritesComponent', () => {
             },
           },
         },
-        { provide: ChatService, useValue: mockChatService },
+        { provide: FavouriteService, useValue: mockFavouriteService },
       ],
     }).compileComponents();
 
@@ -120,10 +128,68 @@ describe('FavouritesComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load favourites on init', async () => {
+  it('should load starred messages on init', async () => {
     await fixture.whenStable();
-    expect(mockChatService.getFavourites).toHaveBeenCalled();
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenCalledWith(100, 0);
     expect(component.favourites().length).toBe(3);
+  });
+
+  it('continues through bounded pages until the server reports completion', async () => {
+    mockFavouriteService.getStarredMessages
+      .mockResolvedValueOnce({
+        items: [mockFavourites[0]],
+        has_more: true,
+        next_offset: 100,
+      })
+      .mockResolvedValueOnce({
+        items: [mockFavourites[1]],
+        has_more: false,
+        next_offset: null,
+      });
+
+    await component.loadFavourites();
+
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenNthCalledWith(2, 100, 0);
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(100, 100);
+    expect(component.favourites().map((favourite) => favourite.id)).toEqual([
+      'fav-1',
+      'fav-2',
+    ]);
+  });
+
+  it('bounds sparse page scans by inspected offsets', async () => {
+    await fixture.whenStable();
+    mockFavouriteService.getStarredMessages.mockClear();
+    mockFavouriteService.getStarredMessages.mockImplementation(
+      (_limit: number, offset: number) =>
+        Promise.resolve({
+          items: [],
+          has_more: true,
+          next_offset: offset + 100,
+        }),
+    );
+
+    await component.loadFavourites();
+
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenCalledTimes(5);
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(
+      100,
+      400,
+    );
+    expect(component.loadError()).toBe(false);
+    expect(component.favourites()).toEqual([]);
+  });
+
+  it('fails safely if pagination does not advance', async () => {
+    mockFavouriteService.getStarredMessages.mockResolvedValue({
+      items: [mockFavourites[0]],
+      has_more: true,
+      next_offset: 0,
+    });
+
+    await component.loadFavourites();
+
+    expect(component.loadError()).toBe(true);
   });
 
   it('should default to "all" tab', () => {
@@ -184,23 +250,23 @@ describe('FavouritesComponent', () => {
     expect(component.favourites().length).toBe(3);
 
     await component.deleteFavourite(mockFavourites[0]);
-    expect(mockChatService.removeFavourite).toHaveBeenCalledWith('fav-1');
+    expect(mockFavouriteService.removeFavourite).toHaveBeenCalledWith('fav-1');
     expect(component.favourites().length).toBe(2);
   });
 
   it('should prevent duplicate delete requests while a favourite is pending', async () => {
     await fixture.whenStable();
     let resolveDelete: (() => void) | undefined;
-    const deletePromise = new Promise<void>((resolve) => {
-      resolveDelete = resolve;
+    const deletePromise = new Promise<{ success: true }>((resolve) => {
+      resolveDelete = () => resolve({ success: true });
     });
-    vi.mocked(mockChatService.removeFavourite!).mockReturnValue(deletePromise);
+    mockFavouriteService.removeFavourite.mockReturnValue(deletePromise);
 
     const firstDelete = component.deleteFavourite(mockFavourites[0]);
     const duplicateDelete = component.deleteFavourite(mockFavourites[0]);
 
     expect(component.isDeletingFavourite('fav-1')).toBe(true);
-    expect(mockChatService.removeFavourite).toHaveBeenCalledTimes(1);
+    expect(mockFavouriteService.removeFavourite).toHaveBeenCalledTimes(1);
 
     resolveDelete?.();
     await Promise.all([firstDelete, duplicateDelete]);
@@ -229,9 +295,6 @@ describe('FavouritesComponent', () => {
       currentTime: 0,
       onended: null as (() => void) | null,
     };
-    // Audio is constructed with `new` in the component - an arrow-function
-    // mock implementation has no [[Construct]] and throws "not a
-    // constructor", so this needs a real function.
     vi.stubGlobal(
       'Audio',
       vi.fn(function () {

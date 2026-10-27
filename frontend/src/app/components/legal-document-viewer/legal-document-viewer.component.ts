@@ -1,11 +1,12 @@
 import { Component, computed, input } from '@angular/core';
 import type { LegalSection } from '../../services/legal.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 @Component({
   selector: 'app-legal-document-viewer',
-  imports: [],
+  imports: [TranslatePipe],
   host: {
     class: 'block min-h-screen bg-surface-500 text-text-secondary',
   },
@@ -28,7 +29,7 @@ const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
       @if (sections().length > 0) {
         <nav
           class="mb-8 rounded-2xl border border-surface-200 bg-surface-100 p-5"
-          aria-label="Document sections"
+          [attr.aria-label]="'legal.documentSections' | t"
         >
           <p class="text-sm font-bold text-text-primary">On this page</p>
           <ol class="mt-3 space-y-2">

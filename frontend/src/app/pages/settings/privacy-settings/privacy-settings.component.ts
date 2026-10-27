@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 import { SafetyService } from '../../../services/safety.service';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
+import { MutedWordsApiService } from '../../../services/muted-words-api.service';
 import {
   isProfileVisibility,
   ProfileVisibility,
@@ -52,6 +53,7 @@ type PresencePrivacyKey = keyof PresencePrivacySettings;
 })
 export class PrivacySettingsComponent {
   private safetyService = inject(SafetyService);
+  private mutedWordsApi = inject(MutedWordsApiService);
   private blockedUsersService = inject(BlockedUsersService);
   private profileVisibilityService = inject(ProfileVisibilityService);
   private presencePrivacyService = inject(PresencePrivacyService);
@@ -65,6 +67,9 @@ export class PrivacySettingsComponent {
   readonly isVisibilitySaving = signal(false);
   readonly visibilitySaveError = signal(false);
   readonly visibilitySaveSuccess = signal(false);
+  readonly mutedWordsLoading = signal(true);
+  readonly mutedWordsSaving = signal(false);
+  readonly mutedWordsError = signal(false);
   readonly presencePrivacySaving = signal<PresencePrivacyKey | null>(null);
   readonly presencePrivacySaveError = signal(false);
   readonly presencePrivacySaveSuccess = signal(false);
@@ -112,19 +117,19 @@ export class PrivacySettingsComponent {
       icon: '\uD83D\uDEAB',
       titleKey: 'privacy.hub.blockedUsers',
       descriptionKey: 'privacy.hub.blockedUsersDesc',
-      route: '/blocks',
+      route: '/settings/blocks',
     },
     {
       icon: '\uD83D\uDCE5',
       titleKey: 'privacy.hub.downloadData',
       descriptionKey: 'privacy.hub.downloadDataDesc',
-      route: '/gdpr',
+      route: '/settings/gdpr',
     },
     {
       icon: '\uD83D\uDDD1\uFE0F',
       titleKey: 'privacy.hub.accountDeletion',
       descriptionKey: 'privacy.hub.accountDeletionDesc',
-      route: '/account/deletion',
+      route: '/settings/account/deletion',
     },
     {
       icon: '\uD83D\uDCCB',
@@ -136,12 +141,34 @@ export class PrivacySettingsComponent {
 
   constructor() {
     this.loadCounts();
+    void this.loadMutedWords();
   }
 
   private loadCounts(): void {
     this.blockedUsersService.loadBlockedUsers().then(() => {
       this.blockedCount.set(this.blockedUsers().length);
     });
+  }
+
+  private syncMutedWords(words: readonly string[]): void {
+    this.safetyService.clearMutedWords();
+    for (const word of words) {
+      this.safetyService.addMutedWord(word);
+    }
+  }
+
+  async loadMutedWords(): Promise<void> {
+    this.mutedWordsLoading.set(true);
+    this.mutedWordsError.set(false);
+    try {
+      this.syncMutedWords(await this.mutedWordsApi.list());
+    } catch {
+      // Keep the account-scoped local cache active while offline. It is a fallback,
+      // not the source of truth, so a visible retry state remains on screen.
+      this.mutedWordsError.set(true);
+    } finally {
+      this.mutedWordsLoading.set(false);
+    }
   }
 
   async updateProfileVisibility(value: string): Promise<void> {
@@ -174,6 +201,32 @@ export class PrivacySettingsComponent {
     this.visibilitySaveError.set(false);
     this.visibilitySaveSuccess.set(false);
     this.profileVisibilityResource.reload();
+  }
+
+  retryMutedWordsLoad(): void {
+    void this.loadMutedWords();
+  }
+
+  async addMutedWord(): Promise<void> {
+    if (this.mutedWordsSaving()) return;
+    const word = this.mutedWordInput().normalize('NFKC').trim().toLowerCase();
+    if (!word || word.length > 64) return;
+    if (this.mutedWords().includes(word)) {
+      this.mutedWordInput.set('');
+      return;
+    }
+
+    this.mutedWordsSaving.set(true);
+    this.mutedWordsError.set(false);
+    try {
+      const words = await this.mutedWordsApi.add(word);
+      this.syncMutedWords(words);
+      this.mutedWordInput.set('');
+    } catch {
+      this.mutedWordsError.set(true);
+    } finally {
+      this.mutedWordsSaving.set(false);
+    }
   }
 
   async updatePresencePrivacy(key: PresencePrivacyKey, value: boolean): Promise<void> {
@@ -215,15 +268,17 @@ export class PrivacySettingsComponent {
     this.presencePrivacyResource.reload();
   }
 
-  addMutedWord(): void {
-    const word = this.mutedWordInput().trim().toLowerCase();
-    if (!word) return;
-    this.safetyService.addMutedWord(word);
-    this.mutedWordInput.set('');
-  }
-
-  removeMutedWord(word: string): void {
-    this.safetyService.removeMutedWord(word);
+  async removeMutedWord(word: string): Promise<void> {
+    if (this.mutedWordsSaving()) return;
+    this.mutedWordsSaving.set(true);
+    this.mutedWordsError.set(false);
+    try {
+      this.syncMutedWords(await this.mutedWordsApi.remove(word));
+    } catch {
+      this.mutedWordsError.set(true);
+    } finally {
+      this.mutedWordsSaving.set(false);
+    }
   }
 
   goBack(): void {
