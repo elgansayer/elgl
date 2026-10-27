@@ -316,3 +316,7 @@
 **Vulnerability:** Insecure Direct Object Reference (IDOR) in `ResourceLibraryController`. The `findOne` endpoint accepted an `id` parameter from the path and performed database query without verifying if the authenticated user owned the resource.
 **Learning:** Endpoints mapped by `id` or accessing user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only access their own data.
 **Prevention:** Always extract the authenticated user ID via `@CurrentUser() user: User` and pass it to the service layer to assert it matches the target resource owner ID with an `.eq('created_by', userId)` condition in the database query.
+## 2026-10-27 - Reject dev_livekit_key_test_value_123 in Production
+**Vulnerability:** A hardcoded dev API key pattern (`dev_livekit_key_test_value_123`) is not rejected by `backend/src/config/environment.validation.ts` config checks.
+**Learning:** Development API key patterns need to explicitly include specific hardcoded dev strings present in the application code, not just generic prefixes.
+**Prevention:** Add hardcoded fallback defaults or test-value patterns like `/^dev_livekit_key_test_value/i` to the environment validation regex list to ensure they are strictly rejected in production environments.
