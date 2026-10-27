@@ -83,6 +83,8 @@ describe('validateEnvironment', () => {
     ['CENTRIFUGO_SECRET', 'secret-centrifugo-token-key-change-in-prod'],
     ['TRANSFER_SECRET', 'device-transfer-secret-dev-only'],
     ['TRANSFER_SECRET', 'test-transfer-secret'],
+    ['LIVEKIT_API_KEY', 'dev_livekit_key_test_value_123'],
+    ['LIVEKIT_SECRET', 'dev_livekit_secret_test_value_123'],
   ])('rejects production placeholder %s values', (key, value) => {
     expect(() =>
       validateEnvironment({ ...productionEnvironment(), [key]: value }),

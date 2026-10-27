@@ -71,7 +71,7 @@ const PLACEHOLDER_PATTERNS = [
   /\.example\.(?:com|org|net)$/i,
   /^device-transfer-secret-dev-only$/i,
   /^test-transfer-secret$/i,
-  /^dev_livekit_key_test_value/i,
+  /^dev_livekit_(?:key|secret)_test_value/i,
 ] as const;
 
 function isBlank(value: unknown): boolean {
