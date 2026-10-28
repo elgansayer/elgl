@@ -1,0 +1,36 @@
+.island-map {
+  border-radius: 16px;
+  aspect-ratio: 16 / 10;
+  background:
+    radial-gradient(circle at 30% 40%, rgb(var(--primary) / 0.35) 0 14%, transparent 15%),
+    radial-gradient(circle at 70% 55%, rgb(var(--secondary) / 0.4) 0 18%, transparent 19%),
+    radial-gradient(circle at 50% 80%, rgb(var(--neon-violet) / 0.3) 0 9%, transparent 10%),
+    rgb(var(--neon-blue) / 0.15);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(var(--surface-100));
+}
+
+.map-pin {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgb(var(--surface-200));
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--surface-100));
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    transform: scale(1.08);
+    box-shadow: 0 2px 8px rgb(var(--shadow) / 0.2);
+  }
+
+  &.map-pin-active {
+    background: rgb(var(--primary));
+    color: rgb(var(--on-fill));
+    border-color: rgb(var(--primary));
+  }
+}

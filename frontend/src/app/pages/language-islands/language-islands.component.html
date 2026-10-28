@@ -1,0 +1,214 @@
+<main
+  class="mx-auto max-w-4xl space-y-6 p-4 sm:p-6"
+  role="main"
+  [attr.aria-label]="'languageIslands.title' | t"
+>
+  <!-- Page Header -->
+  <header class="space-y-1">
+    <h1 class="text-2xl font-black text-text-primary">
+      {{ 'languageIslands.title' | t }}
+    </h1>
+    <p class="text-sm text-text-secondary">
+      {{ 'languageIslands.subtitle' | t }}
+    </p>
+  </header>
+
+  <!-- Interactive Island Map -->
+  <section
+    class="island-map"
+    [attr.aria-label]="'languageIslands.mapAriaLabel' | t"
+    role="region"
+  >
+    <button
+      hlmBtn
+      type="button"
+      class="map-pin"
+      style="inset-block-start: 30%; inset-inline-start: 20%"
+      (click)="selectLanguage('ja')"
+      [class.map-pin-active]="selectedLanguage() === 'ja'"
+      aria-label="Japanese Island: 128 practising now"
+    >
+      🇯🇵 128
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      class="map-pin"
+      style="inset-block-start: 48%; inset-inline-start: 62%"
+      (click)="selectLanguage('es')"
+      [class.map-pin-active]="selectedLanguage() === 'es'"
+      aria-label="Spanish Island: 204 practising now"
+    >
+      🇪🇸 204
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      class="map-pin"
+      style="inset-block-start: 74%; inset-inline-start: 42%"
+      (click)="selectLanguage('ar')"
+      [class.map-pin-active]="selectedLanguage() === 'ar'"
+      aria-label="Arabic Island: 57 practising now"
+    >
+      🇸🇦 57
+    </button>
+  </section>
+
+  <!-- Filter Pills -->
+  <div class="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Language filters">
+    <button
+      hlmBtn
+      type="button"
+      (click)="selectLanguage('all')"
+      class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
+      [class.bg-primary]="selectedLanguage() === 'all'"
+      [class.text-on-fill]="selectedLanguage() === 'all'"
+      [class.bg-surface-200]="selectedLanguage() !== 'all'"
+      [class.text-text-secondary]="selectedLanguage() !== 'all'"
+      [class.border]="selectedLanguage() !== 'all'"
+      [class.border-surface-100]="selectedLanguage() !== 'all'"
+    >
+      {{ 'languageIslands.filterAll' | t }}
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      (click)="selectLanguage('ja')"
+      class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
+      [class.bg-primary]="selectedLanguage() === 'ja'"
+      [class.text-on-fill]="selectedLanguage() === 'ja'"
+      [class.bg-surface-200]="selectedLanguage() !== 'ja'"
+      [class.text-text-secondary]="selectedLanguage() !== 'ja'"
+      [class.border]="selectedLanguage() !== 'ja'"
+      [class.border-surface-100]="selectedLanguage() !== 'ja'"
+    >
+      🇯🇵 Japanese
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      (click)="selectLanguage('es')"
+      class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
+      [class.bg-primary]="selectedLanguage() === 'es'"
+      [class.text-on-fill]="selectedLanguage() === 'es'"
+      [class.bg-surface-200]="selectedLanguage() !== 'es'"
+      [class.text-text-secondary]="selectedLanguage() !== 'es'"
+      [class.border]="selectedLanguage() !== 'es'"
+      [class.border-surface-100]="selectedLanguage() !== 'es'"
+    >
+      🇪🇸 Spanish
+    </button>
+    <button
+      hlmBtn
+      type="button"
+      (click)="selectLanguage('ar')"
+      class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
+      [class.bg-primary]="selectedLanguage() === 'ar'"
+      [class.text-on-fill]="selectedLanguage() === 'ar'"
+      [class.bg-surface-200]="selectedLanguage() !== 'ar'"
+      [class.text-text-secondary]="selectedLanguage() !== 'ar'"
+      [class.border]="selectedLanguage() !== 'ar'"
+      [class.border-surface-100]="selectedLanguage() !== 'ar'"
+    >
+      🇸🇦 Arabic
+    </button>
+  </div>
+
+  <!-- Status Notification -->
+  @if (statusMessage()) {
+    <div
+      class="rounded-card border border-success/30 bg-success/10 p-3 text-xs font-bold text-success"
+      role="status"
+    >
+      {{ 'languageIslands.joinSuccess' | t: { name: statusMessage() } }}
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (islandsResource.isLoading()) {
+    <div class="py-12 text-center text-sm text-text-muted" role="status">
+      {{ 'languageIslands.loading' | t }}
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (islandsResource.error()) {
+    <div
+      class="rounded-card border border-danger/30 bg-danger/10 p-4 text-center"
+      role="alert"
+    >
+      <p class="text-sm font-bold text-danger">
+        {{ 'languageIslands.error' | t }}
+      </p>
+      <button
+        hlmBtn
+        type="button"
+        (click)="retry()"
+        class="mt-2 rounded-app bg-surface-200 px-3 py-1.5 text-xs font-bold text-text-primary hover:bg-surface-300"
+      >
+        {{ 'languageIslands.retry' | t }}
+      </button>
+    </div>
+  }
+
+  <!-- Islands List -->
+  @if (!islandsResource.isLoading()) {
+    <div class="space-y-3" role="list" [attr.aria-label]="'languageIslands.title' | t">
+      @for (island of filteredIslands(); track island.id) {
+        <article
+          class="flex items-center justify-between gap-3 rounded-card border border-surface-100 bg-surface-200 p-4 transition-all hover:bg-surface-300"
+          role="listitem"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-100 text-xl"
+              aria-hidden="true"
+            >
+              {{ getFlag(island.language_pair) }}
+            </div>
+
+            <div class="space-y-0.5">
+              <h2 class="text-sm font-bold text-text-primary">
+                {{ island.name }}
+              </h2>
+              <p class="text-xs text-text-muted">
+                {{ 'languageIslands.practisingNow' | t: { count: island.member_count ?? 0 } }}
+                @if (island.description) {
+                  · {{ island.description }}
+                }
+              </p>
+            </div>
+          </div>
+
+          <div>
+            @if (enteredIslandId() === island.id) {
+              <button
+                hlmBtn
+                type="button"
+                (click)="leaveIsland(island)"
+                class="rounded-app bg-secondary px-3.5 py-1.5 text-xs font-bold text-on-fill transition-all hover:opacity-90 focus-visible:outline-2 focus-visible:outline-primary"
+                [attr.aria-label]="'languageIslands.leave' | t"
+              >
+                {{ 'languageIslands.joined' | t }}
+              </button>
+            } @else {
+              <button
+                hlmBtn
+                type="button"
+                (click)="enterIsland(island)"
+                class="rounded-app bg-secondary px-3.5 py-1.5 text-xs font-bold text-on-fill transition-all hover:opacity-90 focus-visible:outline-2 focus-visible:outline-primary"
+                [attr.aria-label]="'languageIslands.enter' | t"
+              >
+                {{ 'languageIslands.enter' | t }}
+              </button>
+            }
+          </div>
+        </article>
+      } @empty {
+        <div class="rounded-card bg-surface-200 p-8 text-center text-sm text-text-muted" role="status">
+          {{ 'languageIslands.empty' | t }}
+        </div>
+      }
+    </div>
+  }
+</main>

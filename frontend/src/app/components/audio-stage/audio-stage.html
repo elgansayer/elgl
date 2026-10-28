@@ -1,1 +1,200 @@
-<p>audio-stage works!</p>
+<section
+  class="rounded-card border border-surface-100 bg-surface-200 p-4 transition-all"
+  role="region"
+  [attr.aria-label]="'audioStage.title' | t"
+>
+  <div class="mb-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <h3 class="text-sm font-bold text-text-primary">
+        {{ 'audioStage.title' | t }}
+      </h3>
+      <span class="rounded-full bg-surface-300 px-2 py-0.5 text-xs font-semibold text-text-secondary">
+        {{ 'audioStage.speakerCount' | t: { count: participants().length } }}
+      </span>
+    </div>
+
+    @if (openSeatsCount() > 0) {
+      <span class="text-xs text-text-muted">
+        {{ 'audioStage.openSeatsAvailable' | t: { count: openSeatsCount() } }}
+      </span>
+    }
+  </div>
+
+  <!-- Speaker & Open Seats Grid -->
+  <div
+    class="grid grid-cols-2 gap-3 sm:grid-cols-4"
+    role="list"
+    [attr.aria-label]="'audioStage.speakers' | t"
+  >
+    @for (participant of participants(); track participant.user_id) {
+      <div
+        class="flex flex-col items-center justify-between rounded-card border border-surface-100 bg-surface-300 p-3 text-center transition-all hover:bg-surface-400"
+        role="listitem"
+      >
+        <div class="relative mx-auto mb-2 inline-block">
+          @if (participant.avatar_url) {
+            <img
+              loading="lazy"
+              [src]="participant.avatar_url"
+              [alt]="participant.display_name"
+              class="h-12 w-12 rounded-full object-cover border-2 transition-all"
+              [class.border-primary]="participant.isHost"
+              [class.border-secondary]="participant.isCoHost && !participant.isHost"
+              [class.border-surface-100]="!participant.isHost && !participant.isCoHost"
+              [class.ring-2]="participant.isSpeaking"
+              [class.ring-success]="participant.isSpeaking"
+            />
+          } @else {
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-full border-2 text-sm font-bold transition-all"
+              [class.bg-primary]="participant.isHost"
+              [class.text-on-fill]="participant.isHost || participant.isCoHost"
+              [class.border-primary]="participant.isHost"
+              [class.bg-secondary]="participant.isCoHost && !participant.isHost"
+              [class.border-secondary]="participant.isCoHost && !participant.isHost"
+              [class.bg-surface-100]="!participant.isHost && !participant.isCoHost"
+              [class.text-text-primary]="!participant.isHost && !participant.isCoHost"
+              [class.border-surface-100]="!participant.isHost && !participant.isCoHost"
+              [class.ring-2]="participant.isSpeaking"
+              [class.ring-success]="participant.isSpeaking"
+              aria-hidden="true"
+            >
+              {{ participant.display_name.slice(0, 1).toUpperCase() }}
+            </div>
+          }
+
+          @if (participant.isSpeaking) {
+            <span
+              class="absolute bottom-0 end-0 h-3.5 w-3.5 rounded-full bg-success border-2 border-surface-200"
+              [attr.title]="'audioStage.speaking' | t"
+              aria-hidden="true"
+            ></span>
+          }
+          @if (participant.isMuted) {
+            <span
+              class="absolute bottom-0 end-0 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-surface-400 border-2 border-surface-200 text-[9px]"
+              [attr.title]="'audioStage.muted' | t"
+              aria-hidden="true"
+            >
+              🔇
+            </span>
+          }
+        </div>
+
+        <p class="w-full truncate text-xs font-bold text-text-primary" [title]="participant.display_name">
+          {{ participant.display_name }}
+          @if (participant.isHost) {
+            <span class="text-text-muted"> · {{ 'audioStage.host' | t }}</span>
+          } @else if (participant.isCoHost) {
+            <span class="text-text-muted"> · {{ 'audioStage.coHost' | t }}</span>
+          }
+        </p>
+
+        @if (isHost() && participant.user_id !== currentUserId()) {
+          <div class="mt-2 flex w-full flex-col gap-1">
+            <button
+              hlmBtn
+              type="button"
+              (click)="onMuteParticipant(participant.user_id)"
+              class="rounded-app bg-surface-100 px-2 py-1 text-[10px] font-bold text-text-primary hover:bg-warning/20 focus-visible:outline-2 focus-visible:outline-primary"
+              [attr.aria-label]="'audioStage.muteSpeaker' | t"
+            >
+              {{ 'audioStage.muteSpeaker' | t }}
+            </button>
+            <button
+              hlmBtn
+              type="button"
+              (click)="onDemoteParticipant(participant.user_id)"
+              class="rounded-app bg-surface-100 px-2 py-1 text-[10px] font-bold text-text-primary hover:bg-danger/20 focus-visible:outline-2 focus-visible:outline-primary"
+              [attr.aria-label]="'audioStage.demoteSpeaker' | t"
+            >
+              {{ 'audioStage.demoteSpeaker' | t }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Open seats -->
+    @for (seatIndex of openSeatsArray(); track seatIndex) {
+      <button
+        hlmBtn
+        type="button"
+        (click)="onOpenSeatClick()"
+        [disabled]="isCurrentUserOnStage() || !canRaiseHand()"
+        class="flex flex-col items-center justify-center rounded-card border border-dashed border-surface-600 bg-surface-300/60 p-3 text-center transition-all hover:bg-surface-400 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
+        [attr.aria-label]="isHandRaised() ? ('audioStage.handRaised' | t) : ('audioStage.openSeat' | t)"
+      >
+        <div
+          class="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-surface-700 text-lg"
+          aria-hidden="true"
+        >
+          ✋
+        </div>
+        <p class="text-xs font-semibold text-text-secondary">
+          @if (isHandRaised() && !isCurrentUserOnStage()) {
+            {{ 'audioStage.handRaised' | t }}
+          } @else {
+            {{ 'audioStage.openSeat' | t }}
+          }
+        </p>
+      </button>
+    }
+  </div>
+
+  @if (participants().length === 0 && openSeatsCount() === 0) {
+    <p class="py-4 text-center text-xs text-text-muted">
+      {{ 'audioStage.empty' | t }}
+    </p>
+  }
+
+  <!-- Stage Control Toolbar -->
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-surface-100 pt-3">
+    @if (isCurrentUserOnStage()) {
+      <div class="flex items-center gap-2">
+        <button
+          hlmBtn
+          type="button"
+          (click)="onToggleMute()"
+          class="rounded-app bg-surface-300 px-3 py-1.5 text-xs font-bold text-text-primary hover:bg-surface-400 focus-visible:outline-2 focus-visible:outline-primary"
+          [attr.aria-label]="(currentUserParticipant()?.isMuted ? 'audioStage.unmute' : 'audioStage.mute') | t"
+        >
+          {{ (currentUserParticipant()?.isMuted ? 'audioStage.unmute' : 'audioStage.mute') | t }}
+        </button>
+        <button
+          hlmBtn
+          type="button"
+          (click)="onDemoteParticipant(currentUserId()!)"
+          class="rounded-app bg-surface-300 px-3 py-1.5 text-xs font-bold text-danger hover:bg-danger/20 focus-visible:outline-2 focus-visible:outline-primary"
+          [attr.aria-label]="'audioStage.leaveStage' | t"
+        >
+          {{ 'audioStage.leaveStage' | t }}
+        </button>
+      </div>
+    } @else if (canRaiseHand()) {
+      <div class="flex items-center gap-2">
+        @if (!isHandRaised()) {
+          <button
+            hlmBtn
+            type="button"
+            (click)="onOpenSeatClick()"
+            class="rounded-app bg-warning px-3 py-1.5 text-xs font-bold text-on-fill hover:opacity-90 focus-visible:outline-2 focus-visible:outline-primary"
+            [attr.aria-label]="'audioStage.raiseHand' | t"
+          >
+            ✋ {{ 'audioStage.raiseHand' | t }}
+          </button>
+        } @else {
+          <button
+            hlmBtn
+            type="button"
+            (click)="onOpenSeatClick()"
+            class="rounded-app bg-surface-300 px-3 py-1.5 text-xs font-bold text-text-secondary hover:bg-surface-400 focus-visible:outline-2 focus-visible:outline-primary"
+            [attr.aria-label]="'audioStage.lowerHand' | t"
+          >
+            {{ 'audioStage.lowerHand' | t }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+</section>

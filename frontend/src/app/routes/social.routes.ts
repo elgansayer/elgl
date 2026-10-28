@@ -148,16 +148,8 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'language-islands',
-    redirectTo: 'live/events',
+    redirectTo: 'community/language-islands',
     pathMatch: 'full',
-  },
-  {
-    path: 'community/language-islands',
-    loadComponent: () =>
-      import('../pages/language-islands/language-islands.component').then(
-        (m) => m.LanguageIslandsComponent,
-      ),
-    title: 'Language Islands - HelloTalk',
   },
   {
     path: 'business-profile',
