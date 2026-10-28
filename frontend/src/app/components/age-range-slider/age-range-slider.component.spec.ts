@@ -60,7 +60,7 @@ describe('AgeRangeSliderComponent', () => {
     // Inset-inline-start should be present on fill style, not physical left
     const styleAttr = fill?.getAttribute('style') || '';
     expect(styleAttr).toContain('inset-inline-start');
-    expect(styleAttr).not.toContain('left:');
+    expect(styleAttr).not.toMatch(/\bleft\s*:/); // rtl-physical-ok: asserts absence
   });
 
   it('does not reference non-Relay token --color-surface in component styles', () => {
