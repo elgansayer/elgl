@@ -9,6 +9,12 @@ const frontendEnvironmentSource = readFileSync(
   'utf8',
 );
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const backendPackageJson = JSON.parse(
+  readFileSync(new URL('../backend/package.json', import.meta.url), 'utf8'),
+);
+const backendBuildConfig = JSON.parse(
+  readFileSync(new URL('../backend/tsconfig.build.json', import.meta.url), 'utf8'),
+);
 
 function extractSingleQuotedValue(source, property) {
   const escapedProperty = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -31,6 +37,31 @@ test('gates the Angular web server on backend readiness', () => {
     configSource,
     /node \.\/backend-readiness\.mjs && cd \.\.\/frontend && npm run start/,
     'the frontend webServer command must fail closed when readiness fails',
+  );
+});
+
+test('starts the compiled Nest application through its production script', () => {
+  assert.match(
+    configSource,
+    /cd \.\.\/backend && npm run build && npm run start:prod/,
+    'Playwright must use the same backend entrypoint as production',
+  );
+  assert.equal(backendPackageJson.scripts['start:prod'], 'node dist/main');
+  assert.match(configSource, /NODE_ENV: 'test'/);
+  assert.match(
+    configSource,
+    /FRONTEND_URL: frontendUrl/,
+    'the backend must receive the same frontend origin that Playwright serves',
+  );
+  assert.doesNotMatch(
+    configSource,
+    /TRANSFER_SECRET/,
+    'the launcher must rely on test-mode validation defaults instead of embedding credentials',
+  );
+  assert.deepEqual(
+    backendBuildConfig.include,
+    ['src/**/*.ts'],
+    'the Nest build must infer src as rootDir so it emits dist/main',
   );
 });
 
