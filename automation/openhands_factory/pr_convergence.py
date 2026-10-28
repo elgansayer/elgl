@@ -596,6 +596,12 @@ def _duplicate_excess(records: Sequence[PullRequestRecord], attribute: str) -> i
     return sum(count - 1 for count in counts.values() if count > 1)
 
 
+# A major dependency queued behind its lane's single active candidate waits by
+# design (scripts/dependency-compatibility-lanes.mjs) and consumes no factory
+# work, so it must not hold lane or component WIP and stall all new dispatch.
+PARKED_LABELS = frozenset({"compat:queued"})
+
+
 def calculate_capacity(
     records: Sequence[PullRequestRecord],
     *,
@@ -605,8 +611,9 @@ def calculate_capacity(
     component_limits: Mapping[str, int],
 ) -> PullRequestCapacity:
     open_records = [record for record in records if record.is_open]
-    lanes = Counter(record.lane for record in open_records)
-    components = Counter(record.component for record in open_records)
+    working = [record for record in open_records if not record.labels & PARKED_LABELS]
+    lanes = Counter(record.lane for record in working)
+    components = Counter(record.component for record in working)
     queued = sum(record.checks_pending for record in open_records)
     open_numbers = {record.number for record in open_records}
     stacked_deferred = sum(
