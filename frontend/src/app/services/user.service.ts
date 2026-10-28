@@ -4,6 +4,7 @@ import { firstValueFrom, catchError, of } from 'rxjs';
 import { MOCK_USER_PROFILE, MOCK_VISITORS, MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import type { ProficiencyLevel } from './proficiency.service';
 
 export interface UserProfile {
   id: string;
@@ -55,7 +56,7 @@ export interface UserProfile {
   distance_metres?: number;
   is_admin?: boolean;
   profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
-  proficiency_level?: string;
+  proficiency_level?: ProficiencyLevel | null;
   learning_goals?: string;
   xp_total?: number;
   availability_morning?: boolean;

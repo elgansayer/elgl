@@ -109,6 +109,21 @@ describe('ProfileComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('C1');
   });
 
+  it('should preserve an unset proficiency level during unrelated profile updates', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ proficiency_level: null }));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.proficiencyLevel()).toBe('');
+
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ proficiency_level: undefined }),
+    );
+  });
+
   it('should persist the selected CEFR proficiency level with profile updates', async () => {
     mockUserService.getMyProfile.mockResolvedValue(makeProfile({ proficiency_level: 'A2' }));
 
@@ -121,6 +136,14 @@ describe('ProfileComponent', () => {
     expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
       expect.objectContaining({ proficiency_level: 'B2' }),
     );
+  });
+
+  it('should ignore unsupported proficiency values from the select control', () => {
+    fixture.componentInstance.proficiencyLevel.set('A1');
+
+    fixture.componentInstance.onProficiencyLevelChange('B3');
+
+    expect(fixture.componentInstance.proficiencyLevel()).toBe('A1');
   });
 
   it('should bind the saved audio intro to the profile audio player', async () => {

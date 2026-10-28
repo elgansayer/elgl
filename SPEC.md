@@ -21,6 +21,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `study_streak_days` (Integer, default `1`)
 - `correction_ratio` (Float, ratio of corrections given vs received, default `1.0`)
 - `is_serious_learner` (Boolean, calculated boolean based on streak > 7 and correction_ratio >= 0.8)
+- `proficiency_level` (String, CEFR level `'A1'`, `'A2'`, `'B1'`, `'B2'`, `'C1'` or `'C2'`, nullable until set via the profile editor or the proficiency assessment)
 - `privacy_hide_age` (Boolean, default `false`)
 - `privacy_hide_location` (Boolean, default `false`)
 - `privacy_hide_from_search` (Boolean, default `false`)

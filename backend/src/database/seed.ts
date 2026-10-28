@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -12,7 +12,7 @@ const supabaseKey =
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function seedUsersAndProfiles(supabase: any) {
+async function seedUsersAndProfiles(supabase: SupabaseClient) {
   const seedUsers = [
     {
       email: 'oliver.smith@hellotalk.uk',
@@ -29,6 +29,7 @@ async function seedUsersAndProfiles(supabase: any) {
         native_languages: ['en'],
         target_languages: ['ja', 'es'],
         location: `POINT(-0.1278 51.5074)`,
+        proficiency_level: 'B1',
       },
     },
     {
@@ -45,6 +46,7 @@ async function seedUsersAndProfiles(supabase: any) {
         native_languages: ['es'],
         target_languages: ['en'],
         location: `POINT(-3.7038 40.4168)`,
+        proficiency_level: 'B2',
       },
     },
     {
@@ -60,6 +62,7 @@ async function seedUsersAndProfiles(supabase: any) {
         native_languages: ['ja'],
         target_languages: ['en', 'fr'],
         location: `POINT(139.6503 35.6762)`,
+        proficiency_level: 'A2',
       },
     },
     {
@@ -76,6 +79,7 @@ async function seedUsersAndProfiles(supabase: any) {
         native_languages: ['fr'],
         target_languages: ['ar', 'en'],
         location: `POINT(2.3522 48.8566)`,
+        proficiency_level: 'C1',
       },
     },
     {
@@ -93,6 +97,7 @@ async function seedUsersAndProfiles(supabase: any) {
         native_languages: ['ar'],
         target_languages: ['de', 'en'],
         location: `POINT(46.6753 24.7136)`,
+        proficiency_level: 'C2',
       },
     },
   ];
@@ -129,16 +134,15 @@ async function seedUsersAndProfiles(supabase: any) {
           avatar_url: u.profile.avatar_url,
           native_languages: u.profile.native_languages?.[0],
           target_languages: u.profile.target_languages,
-          location: supabase.rpc('st_geomfromtext' as any, {
-            text: u.profile.location,
-          }),
+          proficiency_level: u.profile.proficiency_level,
+          location: u.profile.location,
         })
         .eq('id', userId);
     }
   }
 }
 
-async function seedMomentsAndAudioRooms(supabase: any) {
+async function seedMomentsAndAudioRooms(supabase: SupabaseClient) {
   const { data: usersList } = await supabase
     .from('users')
     .select('id, email')
@@ -199,7 +203,7 @@ async function seedMomentsAndAudioRooms(supabase: any) {
   }
 }
 
-async function seedSubscriptions(supabase: any) {
+async function seedSubscriptions(supabase: SupabaseClient) {
   const { data: vipUsersRaw } = await supabase
     .from('users')
     .select('id, email')
@@ -240,7 +244,7 @@ async function seedSubscriptions(supabase: any) {
   }
 }
 
-async function seedSubscriptionEvents(supabase: any) {
+async function seedSubscriptionEvents(supabase: SupabaseClient) {
   type UserIdRow = { id: string };
 
   const { data: firstVipRaw } = await supabase
@@ -279,7 +283,7 @@ async function seedSubscriptionEvents(supabase: any) {
   }
 }
 
-async function seedAchievements(supabase: any) {
+async function seedAchievements(supabase: SupabaseClient) {
   const achievementsData = [
     {
       code: 'first_moment',
@@ -325,7 +329,7 @@ async function seedAchievements(supabase: any) {
   }
 }
 
-async function seedCuratedContent(supabase: any) {
+async function seedCuratedContent(supabase: SupabaseClient) {
   const articlesToSeed = [
     {
       title: 'A Day in London',
