@@ -1,0 +1,55 @@
+name: Factory review (merge queue)
+
+# The required factory/independent-review status is published by the Factory on
+# the reviewed PR head. A merge-queue commit is a new SHA (that PR applied to the
+# latest main), so the status is mirrored onto it here, and only when the group
+# holds exactly one PR whose current head the Factory approved. Anything else
+# reports failure and the queue rejects the group.
+on:
+  merge_group:
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  mirror-approval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout queue commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Mirror the Factory approval of the single queued PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.merge_group.head_ref }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+        run: |
+          set -euo pipefail
+          post() {
+            gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+              -f state="$1" -f context=factory/independent-review -f description="$2" >/dev/null
+            echo "$1: $2"
+            [ "$1" = success ]
+          }
+          if [[ ! "$HEAD_REF" =~ /pr-([0-9]+)-[0-9a-f]+$ ]]; then
+            post failure "Unrecognised merge queue ref"
+          fi
+          pr="${BASH_REMATCH[1]}"
+          count=$(git rev-list --count "$BASE_SHA..$HEAD_SHA")
+          if [ "$count" != 1 ]; then
+            post failure "Queue group holds $count commits; only single-PR groups are approved"
+          fi
+          pr_head=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr" --jq .head.sha)
+          review=$(gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/status" \
+            --jq '[.statuses[] | select(.context == "factory/independent-review")][0].state // "missing"')
+          if [ "$review" != success ]; then
+            post failure "Factory review of #$pr head ${pr_head:0:12} is $review"
+          fi
+          post success "Factory approved #$pr head ${pr_head:0:12}"
