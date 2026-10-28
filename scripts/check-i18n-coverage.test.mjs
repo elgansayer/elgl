@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   extractKeysFromSource,
-  isPlaceholderValue,
+  isStubOrKeyCopy,
   REQUIRED_PASSWORD_KEYS,
   stripComments,
   validateI18nCoverage,
@@ -60,18 +60,18 @@ test('extractKeysFromSource ignores dynamic concatenation suffixes starting with
   assert.equal(keys.has('.desc'), false);
 });
 
-test('isPlaceholderValue flags generic and invalid placeholder copy', () => {
-  assert.equal(isPlaceholderValue('any.key', 'Title'), true);
-  assert.equal(isPlaceholderValue('any.key', 'Description'), true);
-  assert.equal(isPlaceholderValue('any.key', 'Delete Button'), true);
-  assert.equal(isPlaceholderValue('any.key', 'Export Description'), true);
-  assert.equal(isPlaceholderValue('auth.login_google', 'Login google'), true);
-  assert.equal(isPlaceholderValue('events.title', 'Event Title'), true);
+test('isStubOrKeyCopy flags generic and invalid unlocalised copy', () => {
+  assert.equal(isStubOrKeyCopy('any.key', 'Title'), true);
+  assert.equal(isStubOrKeyCopy('any.key', 'Description'), true);
+  assert.equal(isStubOrKeyCopy('any.key', 'Delete Button'), true);
+  assert.equal(isStubOrKeyCopy('any.key', 'Export Description'), true);
+  assert.equal(isStubOrKeyCopy('auth.login_google', 'Login google'), true);
+  assert.equal(isStubOrKeyCopy('events.title', 'Event Title'), true);
 
   // Valid English copy
-  assert.equal(isPlaceholderValue('events.title', 'Events'), false);
-  assert.equal(isPlaceholderValue('account_deletion.delete_button', 'Schedule Account Deletion'), false);
-  assert.equal(isPlaceholderValue('common.close', 'Close'), false);
+  assert.equal(isStubOrKeyCopy('events.title', 'Events'), false);
+  assert.equal(isStubOrKeyCopy('account_deletion.delete_button', 'Schedule Account Deletion'), false);
+  assert.equal(isStubOrKeyCopy('common.close', 'Close'), false);
 });
 
 test('validateI18nCoverage fails when a used key is missing', () => {
@@ -84,14 +84,14 @@ test('validateI18nCoverage fails when a used key is missing', () => {
   assert.ok(errors.some((e) => e.includes('Missing key in baseDictionary: "missing.key"')));
 });
 
-test('validateI18nCoverage fails when a key has a placeholder value', () => {
+test('validateI18nCoverage fails when a key has an unlocalised value', () => {
   const usedKeys = new Map([['some.title', new Set(['test.html'])]]);
   const baseDictionary = { 'some.title': 'Title' };
   const errors = validateI18nCoverage({
     baseDictionary,
     usedKeys,
   });
-  assert.ok(errors.some((e) => e.includes('placeholder value: "Title"')));
+  assert.ok(errors.some((e) => e.includes('raw unlocalised key value: "Title"')));
 });
 
 test('validateI18nCoverage fails when English copy contains banned em or en dashes', () => {

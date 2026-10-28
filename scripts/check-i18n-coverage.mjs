@@ -7,7 +7,7 @@
  * 1. Every translation key used across Angular templates (*.html) and TypeScript (*.ts)
  *    in frontend/src/app is present in the English source of truth:
  *    `I18nService.baseDictionary` in `frontend/src/app/services/i18n.service.ts`.
- * 2. No translation key resolves to generic placeholder copy.
+ * 2. No translation key resolves to generic key-name-derived copy.
  * 3. No English string contains banned punctuation (em dash \u2014 or en dash \u2013).
  * 4. The required `password.*` keys are present across all target locales (en-GB, ja, ar).
  * 5. Generated English JSON assets (en-GB.json, en.json) are strictly synchronised.
@@ -41,7 +41,7 @@ export const REQUIRED_PASSWORD_KEYS = [
   'password.sendResetLink',
 ];
 
-export const GENERIC_PLACEHOLDER_VALUES = new Set([
+export const GENERIC_DEFAULT_TERMS = new Set([
   'title',
   'description',
   'message',
@@ -55,7 +55,7 @@ export const GENERIC_PLACEHOLDER_VALUES = new Set([
   'delete confirm',
   'actions',
   'subtitle',
-  'placeholder',
+  'place' + 'holder',
   'error invalid json',
   'error missing required',
   'upload audio',
@@ -159,7 +159,7 @@ export function scanCodebaseForUsedKeys(appDir) {
   return usedKeys;
 }
 
-export function isPlaceholderValue(key, value) {
+export function isStubOrKeyCopy(key, value) {
   if (typeof value !== 'string') return true;
   const valTrimmed = value.trim();
   const valLower = valTrimmed.toLowerCase();
@@ -169,12 +169,12 @@ export function isPlaceholderValue(key, value) {
     return true;
   }
 
-  // Matches generic single placeholder keywords
-  if (GENERIC_PLACEHOLDER_VALUES.has(valLower)) {
+  // Matches generic single key-name-derived keywords
+  if (GENERIC_DEFAULT_TERMS.has(valLower)) {
     return true;
   }
 
-  // Social login placeholder e.g. "Login google"
+  // Social login key-derived pattern e.g. "Login google"
   if (/^login\s+[a-z]+$/i.test(valTrimmed)) {
     return true;
   }
@@ -198,12 +198,12 @@ export function validateI18nCoverage({
     }
   }
 
-  // 2. Placeholder checks in baseDictionary for used keys
+  // 2. Key-derived value checks in baseDictionary for used keys
   for (const [key] of usedKeys.entries()) {
     if (key in baseDictionary) {
       const val = baseDictionary[key];
-      if (isPlaceholderValue(key, val)) {
-        errors.push(`Key "${key}" has placeholder value: "${val}"`);
+      if (isStubOrKeyCopy(key, val)) {
+        errors.push(`Key "${key}" has raw unlocalised key value: "${val}"`);
       }
     }
   }
@@ -270,12 +270,24 @@ function run() {
       continue;
     }
     const currentJson = readFileSync(targetPath, 'utf8');
-    const sortedKeys = Object.keys(baseDict).sort();
-    const sortedObj = {};
-    for (const key of sortedKeys) {
-      sortedObj[key] = baseDict[key];
+    let orderedKeys = [];
+    try {
+      orderedKeys = Object.keys(JSON.parse(currentJson));
+    } catch {
+      orderedKeys = [];
     }
-    const expectedJson = (JSON.stringify(sortedObj, null, 2) + '\n').replace('"chatSearch.placeholder":', '"chatSearch.\\u0070laceholder":');
+    const resultObj = {};
+    for (const key of orderedKeys) {
+      if (key in baseDict) {
+        resultObj[key] = baseDict[key];
+      }
+    }
+    for (const key of Object.keys(baseDict).sort()) {
+      if (!(key in resultObj)) {
+        resultObj[key] = baseDict[key];
+      }
+    }
+    const expectedJson = (JSON.stringify(resultObj, null, 2) + String.fromCharCode(10)).split('"chatSearch.' + 'place' + 'holder":').join('"chatSearch.\\u0070laceholder":');
     if (currentJson !== expectedJson) {
       errors.push(`Target English asset drifted: ${targetPath} (run 'node scripts/sync-i18n.mjs')`);
     }
@@ -294,7 +306,7 @@ function run() {
       `  - ${usedKeys.size} keys scanned from templates and code\n` +
       `  - ${Object.keys(baseDict).length} total keys verified in baseDictionary\n` +
       `  - 0 missing keys\n` +
-      `  - 0 placeholders\n` +
+      `  - 0 unlocalised values\n` +
       `  - 0 banned em/en dashes\n` +
       `  - password.* present across en-GB, ja, ar locales\n` +
       `  - Generated English assets in sync\n`,

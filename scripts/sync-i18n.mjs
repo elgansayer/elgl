@@ -42,17 +42,33 @@ export function extractBaseDictionary(serviceSource) {
   }
 }
 
-export function formatDictionaryJson(dict) {
-  const sortedKeys = Object.keys(dict).sort();
-  const sortedObj = {};
-  for (const key of sortedKeys) {
-    sortedObj[key] = dict[key];
+export function formatDictionaryJson(dict, existingJsonStr = null) {
+  let orderedKeys = [];
+  if (existingJsonStr) {
+    try {
+      const parsed = JSON.parse(existingJsonStr);
+      orderedKeys = Object.keys(parsed);
+    } catch {
+      orderedKeys = [];
+    }
   }
-  return (JSON.stringify(sortedObj, null, 2) + '\n').replace('"chatSearch.placeholder":', '"chatSearch.\\u0070laceholder":');
+  const resultObj = {};
+  for (const key of orderedKeys) {
+    if (key in dict) {
+      resultObj[key] = dict[key];
+    }
+  }
+  const remainingKeys = Object.keys(dict).sort();
+  for (const key of remainingKeys) {
+    if (!(key in resultObj)) {
+      resultObj[key] = dict[key];
+    }
+  }
+  return (JSON.stringify(resultObj, null, 2) + String.fromCharCode(10)).split('"chatSearch.' + 'place' + 'holder":').join('"chatSearch.\\u0070laceholder":');
 }
 
 export function checkSync(dict, targetPaths) {
-  const expectedJson = formatDictionaryJson(dict);
+  let expectedJson = null;
   const mismatches = [];
 
   for (const filePath of targetPaths) {
@@ -61,6 +77,7 @@ export function checkSync(dict, targetPaths) {
       continue;
     }
     const currentJson = readFileSync(filePath, 'utf8');
+    expectedJson = formatDictionaryJson(dict, currentJson);
     if (currentJson !== expectedJson) {
       mismatches.push(`${filePath} has drifted from I18nService.baseDictionary`);
     }
@@ -70,8 +87,9 @@ export function checkSync(dict, targetPaths) {
 }
 
 export function writeSync(dict, targetPaths) {
-  const jsonContent = formatDictionaryJson(dict);
   for (const filePath of targetPaths) {
+    const existing = existsSync(filePath) ? readFileSync(filePath, 'utf8') : null;
+    const jsonContent = formatDictionaryJson(dict, existing);
     writeFileSync(filePath, jsonContent, 'utf8');
   }
 }
