@@ -21,6 +21,7 @@ from openhands_factory.github import IssueComment, PullRequestMatch, PullRequest
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
 from openhands_factory.pr_convergence import PullRequestRecord
+from openhands_factory.quality_gate import QualityFinding
 from openhands_factory.repository_guard import ensure_push_target
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -2878,6 +2879,7 @@ def test_quality_repair_that_changes_nothing_still_spends_the_budget(
     )
     pipeline.jobs.save({"42": job})
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
     monkeypatch.setattr(
         "openhands_factory.pipeline.check_quality_gate",
         lambda workflow, base_branch: [],
@@ -2897,6 +2899,64 @@ def test_quality_repair_that_changes_nothing_still_spends_the_budget(
     assert capped is not None
     assert "Quality repair limit exceeded" in (capped.last_error or "")
     assert len(capped.provider_history) == calls
+
+
+@pytest.mark.parametrize(
+    ("state", "pull_request", "age_days", "rebuilt"),
+    [
+        (JobState.QUALITY_REPAIRING, None, 40, True),
+        (JobState.VERIFYING, None, 40, True),
+        (JobState.QUALITY_REPAIRING, None, 2, False),
+        (JobState.QUALITY_REPAIRING, 77, 40, False),
+    ],
+)
+def test_spent_quality_budget_rebuilds_only_unpublished_work_on_a_stale_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    state: JobState,
+    pull_request: int | None,
+    age_days: int,
+    rebuilt: bool,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Rebuild stale work", "Body", "github-issue", 0),
+        state=state,
+        branch="factory/42-rebuild-stale-work",
+        pull_request=pull_request,
+        quality_repairs=5,
+        review_findings=["frontend-build failed with exit 1"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=age_days))
+    monkeypatch.setattr(FactoryPipeline, "_verify", lambda pipeline, workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [
+            QualityFinding("credential-artifact", Path(".claude/x"), None, "summary", "evidence")
+        ],
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.provider_history == []
+    if rebuilt:
+        assert result.state is JobState.DISCOVERED
+        assert result.quality_repairs == 0
+        assert result.review_findings == []
+        assert result.last_error is None
+    else:
+        assert result.state is state
+        assert result.quality_repairs == 5
+        assert result.last_error is not None
 
 
 @pytest.mark.parametrize(
