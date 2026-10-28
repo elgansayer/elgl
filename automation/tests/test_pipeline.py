@@ -2856,6 +2856,49 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert verified.quality_repairs == 0
 
 
+def test_quality_repair_that_changes_nothing_still_spends_the_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    conversations = Conversations()
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=conversations,  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=4,
+        review_findings=["backend-test failed with exit 1"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [],
+    )
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.quality_repairs == 5
+    assert "produced no changes" in (failed.last_error or "")
+    calls = len(failed.provider_history)
+
+    failed.next_attempt_at = None
+    pipeline.jobs.save({"42": failed})
+    capped = pipeline.run_job("42")
+
+    assert capped is not None
+    assert "Quality repair limit exceeded" in (capped.last_error or "")
+    assert len(capped.provider_history) == calls
+
+
 @pytest.mark.parametrize(
     "failure",
     [
