@@ -381,7 +381,7 @@ jobs:
               exit 1
             fi
 
-            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+            if ! grep -Eiq 'toomanyrequests|data limit exceeded|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
               echo "Non-transient Supabase startup failure detected; refusing to retry."
               exit 1
             fi
@@ -444,7 +444,7 @@ jobs:
               docker tag "$mirror_image" "$expected_image"
             fi
 
-            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+            if ! grep -Eiq 'toomanyrequests|data limit exceeded|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
               echo "Non-transient Supabase type-generation failure detected; refusing to retry."
               exit 1
             fi
@@ -498,7 +498,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Setup uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: '0.12.5'
           enable-cache: true

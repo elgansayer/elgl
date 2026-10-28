@@ -302,3 +302,25 @@
 
 
 
+## 2026-10-21 - Secure Transfer Secrets
+**Vulnerability:** The NestJS backend allowed the use of the `test-transfer-secret` placeholder for `TRANSFER_SECRET` in the production environment.
+**Learning:** `environment.validation.ts` failed to include `test-transfer-secret` and `device-transfer-secret-dev-only` in the `PLACEHOLDER_PATTERNS` regex list, allowing test-only secrets to bypass environment validation in production.
+**Prevention:** Ensure all known test and development placeholder values (as defined in `validation.schema.ts` defaults) are explicitly mapped and actively rejected by the production environment validation layer.
+
+## 2024-10-21 - [Fix IDOR in Safety Controller Block Lists]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) on `getBlockedUserIds`, `getBlockerUserIds`, and `getBlockedAndBlockerIds` allowed any authenticated user to view the block lists of any other user.
+**Learning:** Endpoints that accept a `userId` parameter in route paths must explicitly verify that the requesting user's identity matches the requested `userId` when exposing sensitive relationships.
+**Prevention:** Always compare the `userId` parameter against the authenticated user's ID (`req.user.id`) and throw a `ForbiddenException` if they differ on endpoints dealing with personal data.
+
+## 2026-10-21 - [Fix IDOR in Resource Library findOne]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) in `ResourceLibraryController`. The `findOne` endpoint accepted an `id` parameter from the path and performed database query without verifying if the authenticated user owned the resource.
+**Learning:** Endpoints mapped by `id` or accessing user-specific resources need explicit authorization checks beyond just authentication (`SupabaseAuthGuard`) to ensure users can only access their own data.
+**Prevention:** Always extract the authenticated user ID via `@CurrentUser() user: User` and pass it to the service layer to assert it matches the target resource owner ID with an `.eq('created_by', userId)` condition in the database query.
+## 2026-10-27 - Reject dev_livekit_key_test_value_123 in Production
+**Vulnerability:** A hardcoded dev API key pattern (`dev_livekit_key_test_value_123`) is not rejected by `backend/src/config/environment.validation.ts` config checks.
+**Learning:** Development API key patterns need to explicitly include specific hardcoded dev strings present in the application code, not just generic prefixes.
+**Prevention:** Add hardcoded fallback defaults or test-value patterns like `/^dev_livekit_key_test_value/i` to the environment validation regex list to ensure they are strictly rejected in production environments.
+## 2026-10-27 - [CRITICAL] Validate production configuration against test endpoints and IDs
+**Vulnerability:** Default values like 'localhost' for production configurations were not validated in `environment.validation.ts`, risking misconfigurations that permit local endpoints or test identifiers.
+**Learning:** `environment.validation.ts` parses a list of expected dev patterns using regex. In addition to standard conventions (`change-me`), default test values like `com.hellotalk.app` or localhost environments need explicit exclusion for prod keys.
+**Prevention:** Ensure that default testing values across all system layers and dependencies are included in prod-blocking validators.

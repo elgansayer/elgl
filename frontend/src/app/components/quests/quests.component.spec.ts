@@ -20,18 +20,21 @@ class MockI18nService {
 
 interface Quest {
   id: string;
-  quest_type: string;
-  quest_key: string;
+  quest_type: 'daily' | 'weekly';
+  quest_key: 'correct_moments' | 'post_moment';
   target: number;
   progress: number;
   reward_coins: number;
   completed: boolean;
+  period_start: string;
+  reward_claimed_at: string | null;
 }
 
 class MockQuestStore {
   quests = signal<Quest[]>([]);
   loading = signal(false);
-  fetchQuests = vi.fn();
+  error = signal(false);
+  fetchQuests = vi.fn().mockResolvedValue(undefined);
 }
 
 describe('QuestsComponent', () => {
@@ -69,40 +72,118 @@ describe('QuestsComponent', () => {
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 
-  it('should display loading state', () => {
+  it('should display loading state and expose the region as busy', () => {
     mockStore.loading.set(true);
     fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('quests.loading');
+
+    expect(fixture.nativeElement.textContent).toContain('quests.loading');
+    const region = fixture.nativeElement.querySelector('[role="region"]');
+    expect(region.getAttribute('aria-busy')).toBe('true');
   });
 
   it('should display empty state when no quests', () => {
     mockStore.loading.set(false);
     mockStore.quests.set([]);
     fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('quests.empty');
+    expect(fixture.nativeElement.textContent).toContain('quests.empty');
   });
 
-  it('should display quests when available', () => {
-    const mockQuests: Quest[] = [
+  it('should display daily and weekly quest progress and reward', () => {
+    mockStore.quests.set([
       {
         id: 'q1',
         quest_type: 'daily',
-        quest_key: 'send_messages',
-        target: 10,
-        progress: 5,
-        reward_coins: 50,
+        quest_key: 'correct_moments',
+        target: 3,
+        progress: 2,
+        reward_coins: 5,
         completed: false,
+        period_start: '2026-08-22',
+        reward_claimed_at: null,
       },
-    ];
-    mockStore.quests.set(mockQuests);
-    mockStore.loading.set(false);
+      {
+        id: 'q2',
+        quest_type: 'weekly',
+        quest_key: 'correct_moments',
+        target: 10,
+        progress: 10,
+        reward_coins: 20,
+        completed: true,
+        period_start: '2026-08-17',
+        reward_claimed_at: '2026-08-22T10:00:00Z',
+      },
+    ]);
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('50');
-    expect(text).toContain('5');
-    expect(text).toContain('10');
+    expect(text).toContain('quests.daily_correct_moments');
+    expect(text).toContain('quests.weekly_correct_moments');
+    expect(text).toContain('20');
+  });
+
+  it('shows a retryable error instead of misreporting a failed load as empty', () => {
+    mockStore.error.set(true);
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('common.error');
+    expect(text).toContain('common.retry');
+    expect(text).not.toContain('quests.empty');
+
+    const retry = fixture.nativeElement.querySelector('button');
+    retry.click();
+    expect(mockStore.fetchQuests).toHaveBeenCalled();
+  });
+
+  it('prevents duplicate retry requests while a quest request is already running', () => {
+    mockStore.fetchQuests.mockClear();
+    mockStore.error.set(true);
+    mockStore.loading.set(true);
+    component.retry();
+    expect(mockStore.fetchQuests).not.toHaveBeenCalled();
+
+    mockStore.loading.set(false);
+    component.retry();
+    expect(mockStore.fetchQuests).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the Spartan retry action while the store is busy', () => {
+    mockStore.error.set(true);
+    mockStore.quests.set([
+      {
+        id: 'q1',
+        quest_type: 'daily',
+        quest_key: 'post_moment',
+        target: 1,
+        progress: 0,
+        reward_coins: 5,
+        completed: false,
+        period_start: '2026-08-22',
+        reward_claimed_at: null,
+      },
+    ]);
+    mockStore.loading.set(true);
+    fixture.detectChanges();
+
+    const retry = fixture.nativeElement.querySelector('button');
+    expect(retry.disabled).toBe(true);
+  });
+
+  it('clamps invalid progress values before rendering a percentage', () => {
+    const quest = {
+      id: 'q1',
+      quest_type: 'daily' as const,
+      quest_key: 'post_moment' as const,
+      target: 1,
+      progress: 99,
+      reward_coins: 5,
+      completed: true,
+      period_start: '2026-08-22',
+      reward_claimed_at: null,
+    };
+
+    expect(component.clampedProgress(quest)).toBe(1);
+    expect(component.progressPercent(quest)).toBe(100);
+    expect(component.progressPercent({ ...quest, target: 0 })).toBe(0);
   });
 });

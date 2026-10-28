@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
+import { LinkPreviewModule } from './link-preview/link-preview.module';
 
 type ProviderToken = unknown;
 
@@ -57,7 +58,6 @@ const EXPECTED_MODULE_NAMES = [
   'LessonsModule',
   'LinkPreviewModule',
   'ResourceLibraryModule',
-  'NotificationPreferencesModule',
   'ModerationModule',
   'WordOfTheDayModule',
   'SpamDetectionModule',
@@ -115,6 +115,13 @@ describe('AppModule', () => {
     expect(importsMetadata).toContain(UserStatisticsModule);
   });
 
+  it('should register LinkPreviewModule in its imports metadata', () => {
+    const importsMetadata =
+      (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
+
+    expect(importsMetadata).toContain(LinkPreviewModule);
+  });
+
   it('should import all required feature modules', () => {
     const imports =
       (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
@@ -127,6 +134,16 @@ describe('AppModule', () => {
     for (const name of EXPECTED_MODULE_NAMES) {
       expect(importedNames).toContain(name);
     }
+  });
+
+  it('should not import the legacy NotificationPreferencesModule wrapper', () => {
+    const imports =
+      (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
+    const importedNames = imports.map(
+      (mod) => (mod as { name?: string })?.name ?? '',
+    );
+
+    expect(importedNames).not.toContain('NotificationPreferencesModule');
   });
 
   it('should not contain duplicate feature module imports', () => {

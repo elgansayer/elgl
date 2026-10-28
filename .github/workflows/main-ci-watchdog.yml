@@ -1,0 +1,46 @@
+name: Main CI watchdog
+
+# On 2026-10-23 GitHub created no CI push run for main head 48ea55ce6, so the
+# newest main was neither tested nor released until CI was dispatched by hand.
+# This checks that main's head has a CI run and dispatches one through the
+# supported workflow_dispatch trigger when none exists after a grace period.
+# It never pushes, merges or edits statuses.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: main-ci-watchdog
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ensure-main-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      GRACE_SECONDS: '600'
+    steps:
+      - name: Dispatch CI when main head has no CI run
+        run: |
+          set -euo pipefail
+          head=$(gh api "repos/${REPOSITORY}/commits/main" --jq '.sha')
+          committed=$(gh api "repos/${REPOSITORY}/commits/${head}" --jq '.commit.committer.date')
+          age=$(( $(date -u +%s) - $(date -u -d "$committed" +%s) ))
+          runs=$(gh api "repos/${REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${head}&per_page=1" --jq '.total_count')
+          echo "main=${head} age=${age}s ci_runs=${runs}"
+          if [ "$runs" -gt 0 ] || [ "$age" -lt "$GRACE_SECONDS" ]; then
+            echo "Nothing to do."
+            exit 0
+          fi
+          echo "::warning::main ${head} has no CI run after ${age}s; dispatching CI."
+          gh workflow run ci.yml --repo "$REPOSITORY" --ref main

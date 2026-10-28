@@ -16,6 +16,14 @@ export interface ChatSettings {
 
 type ChatSettingValue = boolean | 'small' | 'medium' | 'large' | DisappearingMessagesTtl;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isTextSize(value: unknown): value is ChatSettings['textSize'] {
+  return value === 'small' || value === 'medium' || value === 'large';
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChatSettingsService {
   private http = inject(HttpClient);
@@ -30,39 +38,63 @@ export class ChatSettingsService {
   readonly disappearingMessagesSaving = signal<boolean>(false);
   readonly disappearingMessagesError = signal<boolean>(false);
   readonly settingsLoadError = signal<boolean>(false);
+  readonly settingSaving = signal<boolean>(false);
+  readonly settingSaveError = signal<boolean>(false);
   readonly loaded = signal<boolean>(false);
 
-  async loadSettings(): Promise<void> {
+  /** Loads the authoritative chat settings; resolves false when they could not be read. */
+  async loadSettings(): Promise<boolean> {
     this.loaded.set(false);
     this.settingsLoadError.set(false);
     try {
       const headers = this.auth.getBearerHeaders();
-      const result = await firstValueFrom(this.http.get<ChatSettings>(this.baseUrl, { headers }));
-      this.autoTranslate.set(result.autoTranslate);
-      this.readReceipts.set(result.readReceipts);
-      this.enterToSend.set(result.enterToSend);
-      this.textSize.set(result.textSize ?? 'medium');
+      const result = await firstValueFrom(this.http.get<unknown>(this.baseUrl, { headers }));
+      // A malformed payload is treated as unreadable, never as authoritative state.
+      if (!isRecord(result)) {
+        throw new Error('Invalid chat settings response');
+      }
+      this.autoTranslate.set(result['autoTranslate'] === true);
+      this.readReceipts.set(result['readReceipts'] === true);
+      this.enterToSend.set(result['enterToSend'] === true);
+      this.textSize.set(isTextSize(result['textSize']) ? result['textSize'] : 'medium');
       this.disappearingMessagesTtl.set(
-        this.normalizeDisappearingMessagesTtl(result.disappearingMessagesTtl),
+        this.normalizeDisappearingMessagesTtl(result['disappearingMessagesTtl']),
       );
+      return true;
     } catch {
       // Do not claim a destructive setting is off when the authoritative value
       // could not be read. The UI disables retention editing until a retry works.
       this.settingsLoadError.set(true);
+      return false;
     } finally {
       this.loaded.set(true);
     }
   }
 
-  async updateSetting(key: keyof ChatSettings, value: ChatSettingValue): Promise<void> {
+  /**
+   * Persists one setting optimistically. Rejects invalid values, overlapping
+   * saves and edits while the authoritative state is unreadable; a failed save
+   * is reverted and surfaced through settingSaveError.
+   */
+  async updateSetting(key: keyof ChatSettings, value: ChatSettingValue): Promise<boolean> {
+    if (this.settingSaving() || this.settingsLoadError() || !this.isValidSettingValue(key, value)) {
+      return false;
+    }
+
     const previous = this.getLocal(key);
+    this.settingSaving.set(true);
+    this.settingSaveError.set(false);
     this.setLocal(key, value);
     try {
       const headers = this.auth.getBearerHeaders();
       await firstValueFrom(this.http.put(this.baseUrl, { [key]: value }, { headers }));
+      return true;
     } catch {
-      // revert on failure
       this.setLocal(key, previous);
+      this.settingSaveError.set(true);
+      return false;
+    } finally {
+      this.settingSaving.set(false);
     }
   }
 
@@ -133,6 +165,19 @@ export class ChatSettingsService {
 
   private normalizeDisappearingMessagesTtl(value: unknown): DisappearingMessagesTtl {
     return value === '24h' || value === '7d' || value === '90d' ? value : 'off';
+  }
+
+  private isValidSettingValue(key: keyof ChatSettings, value: ChatSettingValue): boolean {
+    switch (key) {
+      case 'autoTranslate':
+      case 'readReceipts':
+      case 'enterToSend':
+        return typeof value === 'boolean';
+      case 'textSize':
+        return isTextSize(value);
+      case 'disappearingMessagesTtl':
+        return this.normalizeDisappearingMessagesTtl(value) === value;
+    }
   }
 
   private getLocal(key: keyof ChatSettings): ChatSettingValue {

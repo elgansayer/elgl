@@ -33,7 +33,12 @@ def is_test_path(path: Path) -> bool:
 
 
 def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityFinding]:
-    result = workflow.runner(("git", "diff", f"origin/{base_branch}", "-U0"), workflow.repository)
+    # Diff the working tree against the merge base, not the current base tip:
+    # on a stale branch a two-dot diff attributes every later base change (for
+    # example a tracked .claude file) to the branch and blocks it forever.
+    result = workflow.runner(
+        ("git", "diff", "--merge-base", f"origin/{base_branch}", "-U0"), workflow.repository
+    )
     returncode = getattr(result, "returncode", 0)
     if isinstance(returncode, int) and returncode != 0:
         raise FactoryError(f"Could not inspect quality diff: {result.stderr[-2000:]}")

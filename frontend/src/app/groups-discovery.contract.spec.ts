@@ -32,7 +32,8 @@ describe('groups discovery product contract', () => {
 
   it('loads authenticated discoverable groups and topic metadata', () => {
     expect(discoverySource).toContain('`${this.apiUrl}/groups/discoverable`');
-    expect(discoverySource).toContain('`${this.apiUrl}/interests?language=${lang}`');
+    // Later topic metadata also requests empty interests; the language-scoped endpoint is the contract.
+    expect(discoverySource).toContain('`${this.apiUrl}/interests?language=${lang}');
     expect(discoverySource).toContain('return groups.filter((g) => g.interest_id === interestId);');
   });
 

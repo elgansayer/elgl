@@ -988,12 +988,21 @@ class FactoryPipeline:
                     job.task.title,
                 )
             else:
+                canonical_branch = claim.canonical_branch
+                base_sha = claim.initial_base_sha
+                if claim.canonical_pull_request is None and claim.latest_verified_sha is None:
+                    # Nothing from this claim was verified or pushed and the worktree
+                    # is rebuilt from scratch, so its original base only makes new
+                    # work verify against months-old code (2026-10-28: claims from
+                    # August and September failed on long-fixed main defects).
+                    claim = self.tasks.forget_unpublished_base(job.task.identifier, lease_owner)
+                    base_sha = None
                 workflow.prepare_claimed_worktree(
                     worktree,
-                    claim.canonical_branch,
-                    claim.initial_base_sha,
+                    canonical_branch,
+                    base_sha,
                 )
-                job.branch = claim.canonical_branch
+                job.branch = canonical_branch
             job.initial_base_sha = self._workflow(worktree).head_sha()
             bound = self.tasks.bind_branch(
                 job.task.identifier,
@@ -1068,7 +1077,8 @@ class FactoryPipeline:
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
                 if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
-                    raise FactoryError(f"Quality gate blocked: {findings[0].code}")
+                    finding = findings[0]
+                    raise FactoryError(f"Quality gate blocked: {finding.code} in {finding.path}")
                 job.state = JobState.QUALITY_REPAIRING
                 return
             job.quality_repairs = 0
@@ -1123,6 +1133,10 @@ class FactoryPipeline:
                 sections.append(f"Repair evidence:\n\n{review_finding_text}")
             extra = "\n\n".join(sections)
 
+            # Spend the budget when the model starts: a repair that "produced no
+            # changes" raises before any later increment, which let job 1423 make
+            # 23 quality-repair calls under a cap of 5 (2026-10-28).
+            job.quality_repairs += 1
             self._run_agent(
                 job,
                 worktree,
@@ -1133,7 +1147,6 @@ class FactoryPipeline:
             )
 
             job.review_findings.clear()
-            job.quality_repairs += 1
             job.state = JobState.VERIFYING
             return
 
@@ -1415,6 +1428,7 @@ class FactoryPipeline:
             else:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
             mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
+            model_repair_started = False
             if has_unmerged_paths or (
                 not (base_conflict or stale_base) and not mechanically_repaired
             ):
@@ -1422,7 +1436,15 @@ class FactoryPipeline:
                 # deterministic fixes. A spent model budget must not hide a
                 # changed/merged head or block a clean current-base integration.
                 if job.repair_attempts >= 5:
+                    if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
+                        return
                     raise FactoryError("Repair limit exceeded")
+                # Spend the budget when the model starts, not when a push lands.
+                # A repair that fails local verification never pushes, and a
+                # still-conflicting PR then routes QUALITY_REPAIRING back to
+                # REPAIRING, so counting only pushes left this loop unbounded.
+                job.repair_attempts += 1
+                model_repair_started = True
                 self._run_agent(
                     job,
                     worktree,
@@ -1463,7 +1485,8 @@ class FactoryPipeline:
                 job.changed_path_fingerprint,
             )
             self._copy_claim_metadata(job, bound)
-            job.repair_attempts += 1
+            if not model_repair_started:
+                job.repair_attempts += 1
             if job.pull_request is not None:
                 self.github.add_comment(
                     job.pull_request,
@@ -1892,6 +1915,45 @@ class FactoryPipeline:
             return False
 
         self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
+        return True
+
+    def _rebuild_capped_conflict(self, job: Job, lease_owner: str, conflicting: bool) -> bool:
+        """Re-implement once from the issue when repairs cannot reconcile a stale base.
+
+        Conflict repair of a branch built on a long-superseded base can spend the
+        whole budget without converging while the issue itself is still valid.
+        Supersede the PR once and start again on the current base. A job that is
+        already a rebuild (it has a predecessor) is never rebuilt again.
+        """
+        if (
+            not conflicting
+            or job.task.source == "github-pull-request"
+            or job.pull_request is None
+            or job.predecessor_pull_request is not None
+        ):
+            return False
+        stale = job.pull_request
+        self.github.supersede_pull_request(
+            stale,
+            canonical=None,
+            reason=(
+                "its repair budget was exhausted reconciling a stale base; the factory is "
+                "re-implementing the issue on the current base"
+            ),
+        )
+        self.tasks.restart_from_predecessor(job.task.identifier, lease_owner, stale)
+        job.pull_request = None
+        job.branch = None
+        job.head_sha = None
+        job.initial_base_sha = None
+        job.latest_verified_sha = None
+        job.changed_path_fingerprint = None
+        job.predecessor_pull_request = stale
+        job.successor_pull_request = None
+        job.repair_attempts = 0
+        job.quality_repairs = 0
+        job.review_findings.clear()
+        job.state = JobState.DISCOVERED
         return True
 
     def _recover_closed_pull_request(self, job: Job, status: PullRequestStatus) -> bool:

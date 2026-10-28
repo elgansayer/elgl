@@ -9,7 +9,9 @@ export class AnalyticsController {
 
   @Post('client-error')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  async logClientError(@Body() dto: ClientErrorDto): Promise<{ status: string }> {
+  async logClientError(
+    @Body() dto: ClientErrorDto,
+  ): Promise<{ status: string }> {
     await this.analyticsService.recordClientError(dto);
     return { status: 'logged' };
   }

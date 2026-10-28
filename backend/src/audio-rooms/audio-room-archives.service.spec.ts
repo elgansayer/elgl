@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Mock } from 'vitest';
 import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { SupabaseService } from '../supabase/supabase.service';
 import { NlpService } from '../nlp/nlp.service';
@@ -61,7 +62,7 @@ describe('AudioRoomArchivesService', () => {
   let participants: QueryBuilderMock;
   let transcripts: QueryBuilderMock;
   let captions: QueryBuilderMock;
-  let chatCompletion: ReturnType<typeof vi.fn>;
+  let chatCompletion: Mock<() => Promise<string>>;
   let generateSessionSummary: ReturnType<typeof vi.fn>;
 
   const room = {
@@ -101,7 +102,7 @@ describe('AudioRoomArchivesService', () => {
       }),
     };
 
-    chatCompletion = vi.fn().mockResolvedValue(
+    chatCompletion = vi.fn<() => Promise<string>>().mockResolvedValue(
       JSON.stringify({
         summary: '• Travel planning',
         vocabulary: ['ticket', 'platform'],
@@ -121,7 +122,7 @@ describe('AudioRoomArchivesService', () => {
             get: vi.fn((key: string) => {
               if (key === 'AUDIO_ROOM_SUMMARY_MAX_ATTEMPTS') return '4';
               if (key === 'AUDIO_ROOM_SUMMARY_MAX_TRANSCRIPT_CHARS')
-                return '8000';
+                return '20000';
               if (key === 'AUDIO_ROOM_SUMMARY_CHUNK_CHARS') return '1000';
               return undefined;
             }),
@@ -187,6 +188,35 @@ describe('AudioRoomArchivesService', () => {
     expect(chatCompletion).toHaveBeenCalledTimes(4);
     expect(result.summary).toContain('Travel planning');
     expect(result.vocabulary).toEqual(['ticket', 'platform']);
+  });
+
+  it('limits concurrent LLM summary requests to ten chunks', async () => {
+    const pending: Array<() => void> = [];
+    const deferredCompletion = (): Promise<string> =>
+      new Promise<string>((resolve) => {
+        pending.push(() =>
+          resolve(
+            JSON.stringify({
+              summary: '• Travel planning',
+              vocabulary: ['ticket'],
+            }),
+          ),
+        );
+      });
+    chatCompletion.mockImplementation(deferredCompletion);
+
+    const summaryPromise = service['generateSummary']('x'.repeat(12_000));
+    await vi.waitFor(() => expect(chatCompletion).toHaveBeenCalledTimes(10));
+    expect(pending).toHaveLength(10);
+
+    pending.splice(0).forEach((resolve) => resolve());
+    await vi.waitFor(() => expect(chatCompletion).toHaveBeenCalledTimes(12));
+    pending.splice(0).forEach((resolve) => resolve());
+
+    await expect(summaryPromise).resolves.toEqual({
+      summary: '• Travel planning',
+      vocabulary: ['ticket'],
+    });
   });
 
   it('awaits the local NLP fallback if every LLM chunk fails', async () => {

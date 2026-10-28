@@ -473,11 +473,18 @@ export class AudioRoomArchivesService {
     }
 
     const parts: ChunkSummary[] = [];
-    for (const chunk of chunks) {
-      try {
-        parts.push(await this.summariseChunk(chunk));
-      } catch {
-        this.logger.warn('One audio-room transcript summary chunk failed');
+    const chunkBatchSize = 10;
+    for (let i = 0; i < chunks.length; i += chunkBatchSize) {
+      const batch = chunks.slice(i, i + chunkBatchSize);
+      const results = await Promise.allSettled(
+        batch.map((chunk) => this.summariseChunk(chunk)),
+      );
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          parts.push(result.value);
+        } else {
+          this.logger.warn('One audio-room transcript summary chunk failed');
+        }
       }
     }
 

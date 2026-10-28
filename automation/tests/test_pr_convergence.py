@@ -25,6 +25,7 @@ def record(
     merged_at: str | None = None,
     pending: bool = False,
     is_cross_repository: bool = False,
+    labels: frozenset[str] = frozenset(),
 ) -> PullRequestRecord:
     return PullRequestRecord(
         number=number,
@@ -35,6 +36,7 @@ def record(
         head_ref=branch or f"factory/{number}-bound-pr-churn",
         head_sha=f"head-{number}",
         base_ref="main",
+        labels=labels,
         files=files,
         created_at=created_at,
         merged_at=merged_at,
@@ -299,6 +301,32 @@ def test_capacity_pauses_new_dispatch_at_global_lane_component_or_ci_limit() -> 
         "lane factory 2/2",
         "component automation 2/2",
     )
+
+
+def test_capacity_ignores_major_dependency_parked_in_compatibility_queue() -> None:
+    queued = [
+        record(
+            n,
+            branch=f"dependabot/npm_and_yarn/backend/pkg-{n}",
+            labels=frozenset({"compat:queued"}),
+        )
+        for n in range(80, 83)
+    ]
+    active = record(
+        83, branch="dependabot/npm_and_yarn/backend/pkg-83", labels=frozenset({"compat:active"})
+    )
+
+    capacity = calculate_capacity(
+        [*queued, active],
+        max_open_pull_requests=10,
+        max_queued_ci=10,
+        lane_limits={"dependency": 2},
+        component_limits={"automation": 2},
+    )
+
+    assert capacity.open_count == 4
+    assert capacity.active_by_lane == {"dependency": 1}
+    assert not capacity.pause_new_dispatch
 
 
 def test_capacity_counts_explicit_downstream_stack_as_deferred() -> None:

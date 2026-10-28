@@ -271,11 +271,16 @@ The user's role: Someone practising casual English.
     conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<string> {
     const scenario = this.scenarios.find((s) => s.id === scenarioId);
+    const profile = await this.usersService
+      .getProfile(userId)
+      .catch(() => null);
+    // Knowledge is tracked per language: use the learner's primary target language.
+    const knowledgeLanguage = profile?.target_languages?.[0] ?? 'en';
     let learnerKnowledge: LearnerKnowledgeProfile | null = null;
     try {
       learnerKnowledge = await this.learnerKnowledgeService.getProfile(
         userId,
-        'en',
+        knowledgeLanguage,
       );
     } catch (e) {
       this.logger.warn(
@@ -287,8 +292,7 @@ The user's role: Someone practising casual English.
     let systemPrompt = scenario?.systemPrompt;
 
     if (!systemPrompt) {
-      const [profile, flashcards, streak] = await Promise.all([
-        this.usersService.getProfile(userId).catch(() => null),
+      const [flashcards, streak] = await Promise.all([
         this.flashcardsService
           .getFlashcards(userId, undefined, 10)
           .catch(() => []),

@@ -69,6 +69,15 @@ const PLACEHOLDER_PATTERNS = [
   /-change-in-prod$/i,
   /example\.supabase\.co/i,
   /\.example\.(?:com|org|net)$/i,
+  /^device-transfer-secret-dev-only$/i,
+  /^test-transfer-secret$/i,
+  /^dev_livekit_(?:key|secret)_test_value/i,
+  /localhost/i,
+  /^https?:\/\/pubsub\.googleapis\.com\/test/i,
+  /^test@example\.com/i,
+  /^price_.*_test$/i,
+  /^com\.hellotalk\.app$/i,
+  /sandbox\.itunes\.apple\.com/i,
 ] as const;
 
 function isBlank(value: unknown): boolean {

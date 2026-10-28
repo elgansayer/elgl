@@ -93,7 +93,10 @@ describe('DeveloperDashboardComponent', () => {
     const postgis = tabs[1];
 
     overview?.focus();
-    overview?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    // CDK's ListKeyManager reads the legacy keyCode, which real browsers always populate.
+    overview?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }),
+    );
     fixture.detectChanges();
 
     expect(document.activeElement).toBe(postgis);

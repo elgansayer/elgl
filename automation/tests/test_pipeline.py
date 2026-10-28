@@ -1621,6 +1621,8 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert "design-sync-drift failed" in prompts[0]
     assert result.state is JobState.REVIEWING
     assert "repair CI" in committed[0]
+    # One model repair that pushed counts exactly once.
+    assert result.repair_attempts == 1
 
 
 def test_repair_verification_failure_enters_quality_repair_without_backoff(
@@ -1649,6 +1651,81 @@ def test_repair_verification_failure_enters_quality_repair_without_backoff(
     assert result.state is JobState.QUALITY_REPAIRING
     assert result.attempts == 0
     assert "design-sync-drift" in result.review_findings[0]
+
+
+def _failing_model_repair_pipeline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[FactoryPipeline, GitHub, list[Task]]:
+    """A model repair whose result never passes local verification or pushes."""
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    agent_calls: list[Task] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            agent_calls.append(task)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    fingerprints = iter(range(1_000))
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        GitWorkflow, "push", lambda workflow, branch: pytest.fail("unverified repair pushed")
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed("backend / unit: failures inherited from the base branch")
+        ),
+    )
+    return pipeline, github, agent_calls
+
+
+def test_model_repair_consumes_budget_even_when_verification_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline, _, agent_calls = _failing_model_repair_pipeline(tmp_path, monkeypatch)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert len(agent_calls) == 1
+    assert result.state is JobState.QUALITY_REPAIRING
+    assert result.repair_attempts == 1
+    assert pipeline.jobs.load()["77"].repair_attempts == 1
+
+
+def test_unpushed_repair_loop_stops_at_the_model_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Regression: a still-conflicting PR routes QUALITY_REPAIRING back to
+    # REPAIRING. Counting only pushes let this spend ~500 model calls a day.
+    pipeline, github, agent_calls = _failing_model_repair_pipeline(tmp_path, monkeypatch)
+    failing_status = github.statuses[0]
+
+    result = None
+    for _ in range(20):
+        github.statuses = [failing_status]
+        jobs = pipeline.jobs.load()
+        jobs["77"].state = JobState.REPAIRING
+        pipeline.jobs.save(jobs)
+        result = pipeline.run_job("77")
+        assert result is not None
+        if result.last_error == "Repair limit exceeded":
+            break
+
+    assert result is not None and result.last_error == "Repair limit exceeded"
+    assert len(agent_calls) == 5
+    assert result.repair_attempts == 5
 
 
 def test_recovery_failure_counter_survives_attempt_resets(
@@ -2251,6 +2328,9 @@ def test_discovery_recovery_reuses_durable_branch_and_initial_base(
         "factory/42-original",
         "initial-base-sha",
     )
+    pipeline.tasks.record_verification(
+        job.task.identifier, "crashed-worker", "verified-head", path_fingerprint=None
+    )
     pipeline.tasks.release(job.task.identifier, owner="crashed-worker")
     worktree = pipeline.config.worktree_dir / "issue-42"
     worktree.mkdir(parents=True)
@@ -2286,6 +2366,41 @@ def test_discovery_recovery_reuses_durable_branch_and_initial_base(
     claim = pipeline.tasks.claims()[job.task.logical_key]
     assert claim.canonical_branch == "factory/42-original"
     assert claim.initial_base_sha == "initial-base-sha"
+
+
+def test_discovery_recovery_rebuilds_unverified_claim_on_current_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    pipeline.tasks.acquire(job.task, "crashed-worker")
+    pipeline.tasks.bind_branch(
+        job.task.identifier, "crashed-worker", "factory/42-original", "months-old-base"
+    )
+    pipeline.tasks.release(job.task.identifier, owner="crashed-worker")
+    prepared: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_claimed_worktree",
+        lambda workflow, path, branch, initial_base_sha: prepared.append(
+            (branch, initial_base_sha)
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "current-base")
+
+    advanced = pipeline.run_job(job.task.identifier)
+
+    assert advanced is not None
+    assert advanced.state is JobState.IMPLEMENTING
+    assert prepared == [("factory/42-original", None)]
+    claim = pipeline.tasks.claims()[job.task.logical_key]
+    assert claim.canonical_branch == "factory/42-original"
+    assert claim.initial_base_sha == "current-base"
 
 
 def test_run_job_advances_only_the_selected_durable_job(
@@ -2739,6 +2854,49 @@ def test_local_verification_failure_routes_into_quality_repair(
     assert verified is not None
     assert verified.state is JobState.PR_DRAFT
     assert verified.quality_repairs == 0
+
+
+def test_quality_repair_that_changes_nothing_still_spends_the_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    conversations = Conversations()
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=conversations,  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=4,
+        review_findings=["backend-test failed with exit 1"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [],
+    )
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.quality_repairs == 5
+    assert "produced no changes" in (failed.last_error or "")
+    calls = len(failed.provider_history)
+
+    failed.next_attempt_at = None
+    pipeline.jobs.save({"42": failed})
+    capped = pipeline.run_job("42")
+
+    assert capped is not None
+    assert "Quality repair limit exceeded" in (capped.last_error or "")
+    assert len(capped.provider_history) == calls
 
 
 @pytest.mark.parametrize(
@@ -3317,3 +3475,74 @@ def test_pull_request_convergence_never_closes_a_contributor_pull_request(
     assert github.superseded_pull_requests == []
     assert github.created_pull_requests == []
     assert [number for number, _title, _body in github.updated_pull_requests] == [99]
+
+
+def _capped_conflicting_issue_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, predecessor: int | None
+) -> tuple[FactoryPipeline, GitHub]:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    _repairing_job(factory_config, github)  # seeds prompts and the worktree
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "CONFLICTING",
+            "",
+            "reviewed-head",
+            False,
+            True,
+            merge_state_status="DIRTY",
+        )
+    ]
+    job = Job(
+        task=Task("77", "Build the feature", "Body", "github-issue", 10),
+        state=JobState.REPAIRING,
+        branch="factory/77-build-the-feature",
+        pull_request=77,
+        head_sha="reviewed-head",
+        repair_attempts=5,
+        predecessor_pull_request=predecessor,
+    )
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "merge_base_for_repair", lambda workflow: True)
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("no model call at the cap")
+    )
+    return pipeline, github
+
+
+def test_capped_conflict_on_issue_work_is_rebuilt_once_on_the_current_base(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline, github = _capped_conflicting_issue_job(tmp_path, monkeypatch, predecessor=None)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert result.state is JobState.DISCOVERED
+    assert [pr for pr, _, _ in github.superseded_pull_requests] == [77]
+    assert result.pull_request is None and result.branch is None
+    assert result.predecessor_pull_request == 77
+    assert result.repair_attempts == 0
+    claim = pipeline.tasks.claims()[result.task.logical_key]
+    assert claim.canonical_branch is None and claim.canonical_pull_request is None
+    assert claim.predecessor_pull_request == 77
+
+
+def test_a_rebuilt_job_is_not_rebuilt_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline, github = _capped_conflicting_issue_job(tmp_path, monkeypatch, predecessor=60)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.last_error == "Repair limit exceeded"
+    assert github.superseded_pull_requests == []
