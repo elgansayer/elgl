@@ -91,3 +91,14 @@ runtime. All 34 files now use space-separated tokens, matching `styles.scss`.
 - **Every PR:** the coverage gate keeps design coverage at 100%.
 
 Reports: `npm run audit:design`, `npm run audit:design-render` (screenshots in `reports/design-screens/`).
+
+## Status updates
+
+- **28 October 2026, issue #9462:** the "Icons and emoji" and "Copy leaks infrastructure" runtime defects in
+  finding 5 are fixed. `voip-active-call` draws Lucide glyphs through ng-icons, `classroomsMarketplace.title`
+  stores the emoji character, the `nav.*`, `moments.readAloud` and `moments.stopReading` labels no longer repeat
+  the icon the template already draws, and `voiceRecorder.uploadingBtn` no longer names the storage provider.
+  The matching specimens in `features/{calls-live,chat-messaging,settings-system}.html` dropped their defect
+  notes. Still open from the same findings: the missing English strings (finding 1), including
+  `nav.shop`, `nav.stickerStore`, `nav.vip`, `coinEco.sectionTitle` and the `call.*` labels, because the live
+  dictionary is `I18nService.baseDictionary`, not `assets/i18n/en.json`.

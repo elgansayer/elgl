@@ -151,7 +151,7 @@ export class I18nService {
     'common.error_generic': 'Something went wrong. Please try again.',
     'common.saving': 'Saving...',
 
-    'nav.discover': '🌍 Discover',
+    'nav.discover': 'Discover',
     'nav.moments': 'Moments',
     'nav.partners': 'Partners',
     'nav.chats': 'Chats',
@@ -291,20 +291,20 @@ export class I18nService {
     'messageContextMenu.copy': 'Copy',
     'messageContextMenu.favourite': 'Favourite',
     'messageContextMenu.report': 'Report',
-    'nav.helloTalk': '💬 HelloTalk',
-    'nav.connect': '🌍 Connect',
-    'nav.liveRooms': '🎙️ Live Rooms',
-    'nav.settings': '⚙️ Settings',
+    'nav.helloTalk': 'HelloTalk',
+    'nav.connect': 'Connect',
+    'nav.liveRooms': 'Live Rooms',
+    'nav.settings': 'Settings',
     'nav.mainNav': 'Main navigation',
 
     // Accessibility
     'a11y.skipToContent': 'Skip to main content',
-    'nav.chatRoom': '💬 Chat Room',
-    'nav.lingqReader': '📚 LingQ Reader',
-    'nav.favourites': '⭐ Favourites',
-    'nav.developerApi': '⚡ Developer API',
-    'nav.leaderboard': '🏆 Top Correctors',
-    'nav.profile': '👤 Me',
+    'nav.chatRoom': 'Chat Room',
+    'nav.lingqReader': 'LingQ Reader',
+    'nav.favourites': 'Favourites',
+    'nav.developerApi': 'Developer API',
+    'nav.leaderboard': 'Top Correctors',
+    'nav.profile': 'Me',
     'common.coinsBalance': '{{coins}} Coins',
     'common.vipDevLabel': '20 UKP / $26 USD Dev VIP',
     'common.vipStdLabel': '8 UKP / $10 USD VIP',
@@ -587,8 +587,8 @@ export class I18nService {
     'moments.showLess': 'Show less',
     'moments.translate': 'Translate',
     'moments.hideTranslation': 'Hide translation',
-    'moments.readAloud': '🔊 Read aloud',
-    'moments.stopReading': '⏹️ Stop reading',
+    'moments.readAloud': 'Read aloud',
+    'moments.stopReading': 'Stop reading',
     'moments.translationError': 'Failed to translate moment.',
     'moments.translationEmpty': 'No translation available.',
     'moments.copyText': 'Copy text',
@@ -770,7 +770,7 @@ export class I18nService {
     'videoRoom.connectingToRoom': 'Connecting to room...',
 
     // Video Classrooms Marketplace
-    'classroomsMarketplace.title': '&#127979;&#65039; Video Classrooms',
+    'classroomsMarketplace.title': '🏫 Video Classrooms',
     'classroomsMarketplace.subtitle':
       'Join live video language-learning sessions hosted by the community',
     'classroomsMarketplace.hostingBadge': 'You are hosting',
@@ -1575,7 +1575,7 @@ export class I18nService {
     'voiceRecorder.startBtn': '⏺️ Start recording',
     'voiceRecorder.stopBtn': '⏹️ Stop recording',
     'voiceRecorder.sendBtn': '📤 Send voice note',
-    'voiceRecorder.uploadingBtn': '⏳ Uploading to Cloudflare R2...',
+    'voiceRecorder.uploadingBtn': '⏳ Uploading...',
     'voiceRecorder.uploadError':
       'Voice note upload failed. Your recording is still available to retry.',
 

@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
 import { DesktopSidebarComponent } from './desktop-sidebar.component';
+import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { NavTab, UnreadCounterService } from '../../services/unread-counter.service';
 import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
@@ -215,5 +216,69 @@ describe('DesktopSidebarComponent', () => {
 
     expect(shopLink.getAttribute('aria-current')).toBe('page');
     expect(chatLink.hasAttribute('aria-current')).toBe(false);
+  });
+});
+
+// The suite above echoes translation keys, which cannot reveal an emoji baked into the copy itself.
+// This suite renders the sidebar with the shipped English dictionary instead.
+describe('DesktopSidebarComponent with the shipped English dictionary', () => {
+  const EMOJI = /\p{Extended_Pictographic}/gu;
+
+  let fixture: ComponentFixture<DesktopSidebarComponent>;
+  let i18n: I18nService;
+
+  beforeEach(async () => {
+    localStorage.clear();
+
+    await TestBed.configureTestingModule({
+      imports: [DesktopSidebarComponent, JoyrideModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: { getAccessToken: () => null } },
+        { provide: UnreadCounterService, useClass: MockUnreadCounterService },
+        { provide: SeriousLearnerModeService, useValue: { enabled: signal(false) } },
+        provideRouter([{ path: '', component: EmptyRouteComponent }]),
+      ],
+    }).compileComponents();
+
+    i18n = TestBed.inject(I18nService);
+    fixture = TestBed.createComponent(DesktopSidebarComponent);
+    fixture.detectChanges();
+  });
+
+  function iconAndLabel(href: string): { icon: string; label: string } {
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector(`a[href="${href}"]`);
+    const [icon, label] = Array.from(link.children);
+    return { icon: icon.textContent.trim(), label: label.textContent.trim() };
+  }
+
+  it('draws exactly one emoji in every navigation link', () => {
+    const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
+
+    expect(links.length).toBe(9);
+    for (const link of links) {
+      expect(link.textContent.match(EMOJI), link.getAttribute('href') ?? '').toHaveLength(1);
+    }
+  });
+
+  it('pairs each primary icon with a text-only label', () => {
+    for (const item of fixture.componentInstance.navItems()) {
+      const { icon, label } = iconAndLabel(item.path);
+
+      expect(icon).toBe(item.icon);
+      expect(label).toBe(i18n.translate(item.key));
+      expect(label.match(EMOJI), item.key).toBeNull();
+    }
+
+    expect(iconAndLabel('/chat').label).toBe('HelloTalk');
+    expect(iconAndLabel('/discovery').label).toBe('Connect');
+    expect(iconAndLabel('/audio-rooms').label).toBe('Live Rooms');
+    expect(iconAndLabel('/profile').label).toBe('Me');
+  });
+
+  it('pairs the settings icon with a text-only label', () => {
+    const { icon, label } = iconAndLabel('/settings');
+
+    expect(icon.match(EMOJI)).toHaveLength(1);
+    expect(label).toBe('Settings');
   });
 });
