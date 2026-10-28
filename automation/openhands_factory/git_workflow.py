@@ -8,7 +8,7 @@ import re
 import shutil
 import time
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
 
@@ -376,6 +376,12 @@ class GitWorkflow:
         if result.returncode != 0:
             raise RepositorySafetyError(f"Could not resolve HEAD: {result.stderr}")
         return result.stdout.strip()
+
+    def head_age(self) -> timedelta:
+        result = self.runner(("git", "log", "-1", "--format=%ct", "HEAD"), self.repository)
+        if result.returncode != 0:
+            raise RepositorySafetyError(f"Could not read HEAD commit time: {result.stderr}")
+        return datetime.now(UTC) - datetime.fromtimestamp(int(result.stdout.strip()), UTC)
 
     def has_changes(self) -> bool:
         result = self.runner(("git", "status", "--porcelain"), self.repository)
