@@ -2115,6 +2115,15 @@ class FactoryPipeline:
                 if self._restart_stale_unpublished(job, workflow):
                     return None
                 raise
+            # Formatter and auto-fixable lint failures need no model (job 1195
+            # spent repairs on prettier whitespace). Re-verify on the next pass if
+            # the fixers changed anything; an unchanged tree falls through to the
+            # bounded agent repair, so this cannot loop.
+            before = workflow.change_fingerprint()
+            attempt_mechanical_repair(workflow.repository, workflow.changed_paths())
+            if workflow.change_fingerprint() != before:
+                LOGGER.info("Mechanically repaired task %s; verifying again", job.task.identifier)
+                return None
             evidence = detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
