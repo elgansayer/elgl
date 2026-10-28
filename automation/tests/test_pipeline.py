@@ -1626,9 +1626,18 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert result.repair_attempts == 1
 
 
+def _without_mechanical_repair(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda repository, changed_paths: None,
+    )
+
+
 def test_repair_verification_failure_enters_quality_repair_without_backoff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
@@ -1676,8 +1685,8 @@ def _failing_model_repair_pipeline(
     pipeline.jobs.save({"77": job})
     monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
-    fingerprints = iter(range(1_000))
-    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    # Only a model call changes the tree; the stubbed mechanical fixers never do.
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: str(len(agent_calls)))
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
     monkeypatch.setattr(
         GitWorkflow, "push", lambda workflow, branch: pytest.fail("unverified repair pushed")
@@ -2797,6 +2806,7 @@ def test_local_verification_failure_routes_into_quality_repair(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     worktree = factory_config.worktree_dir / "issue-42"
     worktree.mkdir(parents=True)
@@ -3000,10 +3010,55 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     assert failed.next_attempt_at is not None
 
 
+def test_auto_fixable_verification_failure_is_reverified_without_a_model(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Fix formatting for free", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-fix-formatting-for-free",
+        quality_repairs=1,
+    )
+    pipeline.jobs.save({"42": job})
+    fixed: list[set[Path]] = []
+    fingerprints = iter(("before-fix", "after-fix"))
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("backend/x.ts")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda repository, changed_paths: fixed.append(changed_paths),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed("backend-lint:check failed with exit 1: prettier/prettier")
+        ),
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert fixed == [{Path("backend/x.ts")}]
+    assert result.state is JobState.VERIFYING
+    assert result.quality_repairs == 1
+    assert result.review_findings == []
+    assert result.provider_history == []
+
+
 def test_external_pull_request_verification_failure_enters_repair_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
