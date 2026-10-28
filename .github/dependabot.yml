@@ -31,6 +31,23 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+      # Framework packages only work across a major at the same version, so
+      # single-package majors (e.g. 11 separate @nestjs/* 12 PRs) cannot pass
+      # CI alone. One PR per family stays within one compatibility lane.
+      nestjs-major:
+        applies-to: version-updates
+        patterns:
+          - '@nestjs/*'
+        update-types:
+          - 'major'
+      angular-major:
+        applies-to: version-updates
+        patterns:
+          - '@angular/*'
+          - '@angular-devkit/*'
+          - '@schematics/angular'
+        update-types:
+          - 'major'
 
   - package-ecosystem: 'pip'
     directory: '/automation'

@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -115,3 +116,60 @@ def test_check_quality_gate_reports_diff_failure() -> None:
 
     with pytest.raises(FactoryError, match="Could not inspect quality diff"):
         check_quality_gate(workflow, "main")
+
+
+def _git(repository: Path, *arguments: str) -> None:
+    subprocess.run(("git", *arguments), cwd=repository, check=True, capture_output=True)
+
+
+def _real_workflow(repository: Path) -> Mock:
+    workflow = Mock()
+    workflow.repository = repository
+    workflow.runner = lambda arguments, cwd: subprocess.run(
+        arguments, cwd=cwd, capture_output=True, text=True, check=False
+    )
+    return workflow
+
+
+def _stale_branch(tmp_path: Path) -> Path:
+    """A branch cut before origin/main later edited a tracked .claude file."""
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    _git(repository, "init", "-q", "-b", "main")
+    _git(repository, "config", "user.email", "factory@example.invalid")
+    _git(repository, "config", "user.name", "Factory")
+    (repository / ".claude").mkdir()
+    (repository / ".claude" / "CLAUDE.md").write_text("original\n")
+    (repository / "app.ts").write_text("export const value = 1;\n")
+    _git(repository, "add", ".")
+    _git(repository, "commit", "-q", "-m", "base")
+    _git(repository, "switch", "-q", "-c", "feature")
+    (repository / ".claude" / "CLAUDE.md").write_text("updated on main\n")
+    _git(repository, "commit", "-q", "-am", "main edits tracked .claude file")
+    _git(repository, "update-ref", "refs/remotes/origin/main", "HEAD")
+    _git(repository, "reset", "-q", "--hard", "HEAD~1")
+    (repository / "app.ts").write_text("export const value = 2;\n")
+    _git(repository, "commit", "-q", "-am", "branch changes production code only")
+    return repository
+
+
+def test_check_quality_gate_ignores_later_base_changes_on_stale_branch(tmp_path: Path) -> None:
+    repository = _stale_branch(tmp_path)
+
+    assert check_quality_gate(_real_workflow(repository), "main") == []
+
+
+def test_check_quality_gate_still_blocks_branch_own_provider_artifacts(tmp_path: Path) -> None:
+    repository = _stale_branch(tmp_path)
+    (repository / ".codex").mkdir()
+    (repository / ".codex" / "auth.json").write_text('{"token":"opaque-value"}\n')
+    _git(repository, "add", ".codex/auth.json")
+    _git(repository, "commit", "-q", "-m", "committed provider artefact")
+    (repository / ".claude" / "CLAUDE.md").write_text("uncommitted branch edit\n")
+
+    findings = check_quality_gate(_real_workflow(repository), "main")
+
+    assert sorted((finding.code, str(finding.path)) for finding in findings) == [
+        ("credential-artifact", ".claude/CLAUDE.md"),
+        ("credential-artifact", ".codex/auth.json"),
+    ]

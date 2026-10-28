@@ -42,7 +42,8 @@ export function parseDependencyBumps(title, body = '') {
     bumps.push({ name: normalised, from: String(from), to: String(to) });
   };
 
-  const bodyPattern = /Updates\s+`([^`]+)`\s+from\s+`([^`]+)`\s+to\s+`([^`]+)`/gi;
+  // Grouped Dependabot bodies leave versions unquoted: Updates `pkg` from 1.0.0 to 2.0.0
+  const bodyPattern = /Updates\s+`([^`]+)`\s+from\s+`?([^\s`]+)`?\s+to\s+`?([^\s`]+)`?/gi;
   for (const match of body.matchAll(bodyPattern)) add(match[1], match[2], match[3]);
 
   const titlePattern = /bump\s+(.+?)\s+from\s+`?([^\s`]+)`?\s+to\s+`?([^\s`]+)`?(?:\s+in\s+|$)/i;
