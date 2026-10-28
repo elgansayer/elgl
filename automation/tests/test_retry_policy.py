@@ -26,6 +26,7 @@ def test_classifies_failure_kinds_from_outer_openhands_diagnostics() -> None:
     assert classify_failure("HTTP 429 rate limit exceeded") is FailureKind.RATE_LIMIT
     assert classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
     assert classify_failure("Quality gate validation failed") is FailureKind.VALIDATION
+    assert classify_failure("Repair limit exceeded") is FailureKind.BUDGET
     infrastructure_failures = (
         "getaddrinfo EAI_AGAIN fonts.googleapis.com",
         "The Cypress binary is missing",

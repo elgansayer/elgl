@@ -91,7 +91,7 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
     if any(token in text for token in validation_tokens):
         return FailureKind.VALIDATION
 
-    if any(token in text for token in ("budget", "cost ceiling", "spend limit")):
+    if any(token in text for token in ("budget", "cost ceiling", "spend limit", "repair limit")):
         return FailureKind.BUDGET
 
     configuration_tokens = (
