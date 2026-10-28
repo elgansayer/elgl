@@ -465,9 +465,13 @@ def resolve_pull_request(
             canonical,
             reason="a closed Factory pull request can be updated and reopened",
         )
-    if closed:
+    # A maintainer-retired PR (the same labels discovery treats as a predecessor)
+    # no longer competes for the task. Issue 1403 retried 95 times against #8199,
+    # a closed wrong-diff PR, because only unlabelled closures should block.
+    blocking_closed = [record for record in closed if not record.labels & RETIRED_LABELS]
+    if blocking_closed:
         numbers = ", ".join(
-            f"#{record.number}" for record in sorted(closed, key=lambda x: x.number)
+            f"#{record.number}" for record in sorted(blocking_closed, key=lambda x: x.number)
         )
         return PullRequestResolution(
             ConvergenceAction.BLOCKED,
@@ -600,6 +604,7 @@ def _duplicate_excess(records: Sequence[PullRequestRecord], attribute: str) -> i
 # design (scripts/dependency-compatibility-lanes.mjs) and consumes no factory
 # work, so it must not hold lane or component WIP and stall all new dispatch.
 PARKED_LABELS = frozenset({"compat:queued"})
+RETIRED_LABELS = frozenset({"duplicate", "factory-skip", "superseded"})
 
 
 def calculate_capacity(
