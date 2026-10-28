@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EconomyErrorHandlerService } from '../../services/economy-error-handler.service';
+import { I18nService } from '../../services/i18n.service';
 import { ErrorBoundaryComponent } from './error-boundary.component';
 
 describe('ErrorBoundaryComponent', () => {
@@ -17,6 +18,10 @@ describe('ErrorBoundaryComponent', () => {
         {
           provide: EconomyErrorHandlerService,
           useValue: { reportEconomyCrash },
+        },
+        {
+          provide: I18nService,
+          useValue: { translate: (key: string) => key, direction: () => 'ltr' },
         },
       ],
     });

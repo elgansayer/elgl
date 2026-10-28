@@ -629,5 +629,17 @@
   "moments.viewAuthorProfile": "{{name}}さんのプロフィールを表示",
   "chat_settings.load_unavailable": "チャット設定は一時的に利用できません。",
   "chat_settings.load_unavailable_desc": "保存済みの設定は引き続き有効です。読み込みが完了するまで保存期間の設定は無効になります。",
-  "chat_settings.save_failed": "変更を保存できませんでした。以前の設定に戻しました。"
+  "chat_settings.save_failed": "変更を保存できませんでした。以前の設定に戻しました。",
+  "password.confirmPassword": "パスワードの確認",
+  "password.currentPassword": "現在のパスワード",
+  "password.hasNumber": "数字を1文字以上含める",
+  "password.hasSymbol": "記号を1文字以上含める",
+  "password.minLength": "8文字以上",
+  "password.newPassword": "新しいパスワード",
+  "password.passwordsMatch": "パスワードが一致しています",
+  "password.resetBtn": "パスワードを再設定",
+  "password.resetError": "パスワードの再設定に失敗しました。もう一度お試しください。",
+  "password.resetSuccess": "パスワードが正常に再設定されました。",
+  "password.resetTitle": "パスワードの再設定",
+  "password.sendResetLink": "再設定リンクを送信"
 }

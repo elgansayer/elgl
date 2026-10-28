@@ -569,5 +569,17 @@
   "moments.viewAuthorProfile": "عرض الملف الشخصي لـ {{name}}",
   "chat_settings.load_unavailable": "إعدادات الدردشة غير متاحة مؤقتًا.",
   "chat_settings.load_unavailable_desc": "تظل إعداداتك المحفوظة سارية. عناصر التحكم في الاحتفاظ معطلة حتى يتم تحميلها.",
-  "chat_settings.save_failed": "تعذّر حفظ هذا التغيير. تمت استعادة إعدادك السابق."
+  "chat_settings.save_failed": "تعذّر حفظ هذا التغيير. تمت استعادة إعدادك السابق.",
+  "password.confirmPassword": "تأكيد كلمة المرور",
+  "password.currentPassword": "كلمة المرور الحالية",
+  "password.hasNumber": "يحتوي على رقم",
+  "password.hasSymbol": "يحتوي على رمز",
+  "password.minLength": "8 أحرف على الأقل",
+  "password.newPassword": "كلمة المرور الجديدة",
+  "password.passwordsMatch": "كلمتا المرور متطابقتان",
+  "password.resetBtn": "إعادة تعيين كلمة المرور",
+  "password.resetError": "فشلت إعادة تعيين كلمة المرور. يرجى المحاولة مرة أخرى.",
+  "password.resetSuccess": "تمت إعادة تعيين كلمة المرور بنجاح.",
+  "password.resetTitle": "إعادة تعيين كلمة المرور",
+  "password.sendResetLink": "إرسال رابط إعادة التعيين"
 }

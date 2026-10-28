@@ -30,9 +30,9 @@ def load_en_keys(filepath):
         print(f"Error loading {filepath}: {e}")
         return set()
 
-en_keys = load_en_keys('frontend/src/assets/i18n/en.json')
-en_keys_app = load_en_keys('frontend/src/app/i18n/en.json')
-en_keys.update(en_keys_app)
+en_keys = load_en_keys('frontend/public/assets/i18n/en-GB.json')
+if not en_keys:
+    en_keys = load_en_keys('frontend/src/assets/i18n/en.json')
 
 files = find_files('frontend/src/app', ['.html', '.ts'])
 

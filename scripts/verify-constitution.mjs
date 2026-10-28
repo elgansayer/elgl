@@ -174,7 +174,7 @@ function main() {
   const filesToCheck =
     targetFiles.length > 0
       ? targetFiles.map((f) => path.resolve(ROOT_DIR, f)).filter((f) => fs.existsSync(f))
-      : getTrackedFiles();
+      : getTrackedFiles().filter((f) => fs.existsSync(f));
 
   for (const filePath of filesToCheck) {
     checkFile(filePath);
