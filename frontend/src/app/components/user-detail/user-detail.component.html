@@ -17,11 +17,11 @@
 
   @if (isLoading()) {
     <div class="flex items-center justify-center flex-1">
-      <div class="animate-spin text-4xl text-neon-blue">↻</div>
+      <div class="animate-spin text-4xl text-secondary">↻</div>
     </div>
   } @else if (errorMessage()) {
     <div class="flex items-center justify-center flex-1 text-center p-8">
-      <p class="text-neon-pink">{{ errorMessage() }}</p>
+      <p class="text-danger">{{ errorMessage() }}</p>
     </div>
   } @else if (profile()) {
     <div class="relative w-full h-48 bg-surface-300">
@@ -56,8 +56,8 @@
               type="button"
               (click)="toggleLike()"
               class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
-              [class.text-neon-pink]="isLiked()"
-              [class.border-neon-pink]="isLiked()"
+              [class.text-primary]="isLiked()"
+              [class.border-primary]="isLiked()"
               aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
             >
               {{ isLiked() ? '❤️' : '🤍' }}
@@ -68,8 +68,8 @@
               type="button"
               (click)="toggleFollow()"
               class="h-10 px-6 rounded-full font-bold transition-colors"
-              [class.bg-neon-blue]="!isFollowing()"
-              [class.text-white]="!isFollowing()"
+              [class.bg-primary]="!isFollowing()"
+              [class.text-on-fill]="!isFollowing()"
               [class.bg-surface-300]="isFollowing()"
               [class.text-text-primary]="isFollowing()"
               [class.border]="isFollowing()"
@@ -176,10 +176,10 @@
               hlmBtn
               type="button"
               (click)="playAudioIntro(profile()?.audio_intro_url)"
-              class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
+              class="flex items-center gap-2 text-secondary text-sm font-bold hover:opacity-80 transition-opacity"
               [attr.aria-label]="'profile.playAudioIntro' | t"
             >
-              <span class="bg-neon-blue/20 p-2 rounded-full">▶️</span>
+              <span class="bg-secondary/20 p-2 rounded-full">▶️</span>
               {{ 'profile.playAudioIntro' | t }}
             </button>
           </div>
@@ -198,7 +198,7 @@
             hlmBtn size="touch"
             type="button"
             (click)="openConversation()"
-            class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+            class="w-full h-12 rounded-full bg-gradient-to-r from-primary to-secondary text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
             [disabled]="isOpeningChat()"
             [attr.aria-busy]="isOpeningChat() ? 'true' : null"
             [attr.aria-describedby]="chatErrorKey() ? chatStatusId() : null"

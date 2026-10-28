@@ -141,7 +141,7 @@ const CALENDAR_EVENT_LIMIT = 100;
                         <h3 class="font-semibold text-text-primary" dir="auto">{{ ev.title }}</h3>
                         @if (ev.category) {
                           <span class="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                            {{ ev.category }}
+                            {{ categoryKey(ev.category) | t }}
                           </span>
                         }
                       </div>
@@ -341,5 +341,19 @@ export class EventsCalendarComponent {
   nextMonth(): void {
     this.selectedDay.set(null);
     this.monthOffset.update((o) => o + 1);
+  }
+
+  categoryKey(category: string): string {
+    const labels: Record<string, string> = {
+      audio_room: 'events.categoryAudioRoom',
+      learning_seminar: 'events.categoryLearningSeminar',
+      in_person_meetup: 'events.categoryInPersonMeetup',
+      cultural_exchange: 'events.categoryCulturalExchange',
+      'Audio Rooms': 'events.categoryAudioRoom',
+      'Learning Seminars': 'events.categoryLearningSeminar',
+      'In-person Meetups': 'events.categoryInPersonMeetup',
+      'Cultural Exchanges': 'events.categoryCulturalExchange',
+    };
+    return labels[category] ?? category;
   }
 }
