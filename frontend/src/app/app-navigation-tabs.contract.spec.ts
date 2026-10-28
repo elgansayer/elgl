@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
+import { AuthService } from './services/auth.service';
+import { I18nService } from './services/i18n.service';
 
 const template = readFileSync(resolve(process.cwd(), 'src/app/app.component.html'), 'utf8');
 const desktopTemplate = readFileSync(
@@ -128,6 +131,40 @@ describe('primary navigation unread contract', () => {
     }
     expect(desktopTemplate).toContain('unreadCounter.tabCount(item.tab)');
     expect(desktopTemplate).toContain('class="sr-only"');
+  });
+
+  it('keeps mobile tab labels as plain text because every tab draws its own icon', () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: AuthService, useValue: { getAccessToken: () => null } }],
+    });
+    const i18n = TestBed.inject(I18nService);
+    const navigation = mobileNavigationTemplate();
+    const tabIcons = [
+      ...navigation.matchAll(
+        /<span class="text-2xl leading-none" aria-hidden="true">([^<]+)<\/span>/g,
+      ),
+    ];
+    const labelKeys = [
+      ...navigation.matchAll(
+        /<span class="text-\[10px\] font-bold">\{\{ '([^']+)' \| t \}\}<\/span>/g,
+      ),
+    ].map((match) => match[1]);
+    const navKeys = new Set(
+      [...navigation.matchAll(/'(nav\.[A-Za-z]+)' \| t/g)].map((match) => match[1]),
+    );
+
+    expect(tabIcons).toHaveLength(PRIMARY_TABS.length);
+    expect(labelKeys).toEqual([
+      'nav.helloTalk',
+      'nav.moments',
+      'nav.connect',
+      'nav.liveRooms',
+      'nav.profile',
+    ]);
+    // The same keys also feed each tab's accessible name, so none may carry an emoji.
+    for (const key of navKeys) {
+      expect(i18n.translate(key), key).not.toMatch(/\p{Extended_Pictographic}/u);
+    }
   });
 
   it('does not regress to unrelated audio-room co-host controls', () => {

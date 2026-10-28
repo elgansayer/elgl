@@ -727,10 +727,10 @@
         </div>
         <footer>
           States shown: active route (<code>aria-current="page"</code>) · unread badges incl. 99+ ·
-          coin-economy group · settings pinned to bottom. Runtime issue: <code>nav.*</code> strings
-          already contain emoji (e.g. "💬 HelloTalk") and the template prepends
-          <code>item.icon</code>, so icons render twice; <code>nav.shop</code>,
-          <code>nav.stickerStore</code>, <code>nav.vip</code>,
+          coin-economy group · settings pinned to bottom. Each icon is drawn once by the template
+          (<code>item.icon</code>); the <code>nav.*</code> labels are plain text with no emoji, so
+          the mobile bottom bar and screen-reader names stay clean too. Runtime issue:
+          <code>nav.shop</code>, <code>nav.stickerStore</code>, <code>nav.vip</code>,
           <code>coinEco.sectionTitle</code> have no English string.
         </footer>
       </section>

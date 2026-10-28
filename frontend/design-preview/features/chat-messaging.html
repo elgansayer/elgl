@@ -1989,12 +1989,12 @@
             <div class="state-label">Preview → uploading</div>
             <div class="native-audio">▶ 0:00 / 0:14</div>
             <button class="btn" type="button">📤 Send voice note</button>
-            <button class="btn secondary-btn" type="button" disabled>⏳ Uploading…</button>
+            <button class="btn secondary-btn" type="button" disabled>⏳ Uploading...</button>
           </div>
         </div>
         <footer>
-          States: idle · recording · preview/send · uploading (disabled). Copy note: the "Uploading
-          to Cloudflare R2..." string exposes infrastructure - recommend "Uploading…"
+          States: idle · recording · preview/send · uploading (disabled). Copy rule: the uploading
+          label never names the storage provider.
         </footer>
       </section>
 
@@ -2112,8 +2112,8 @@
           </div>
         </div>
         <footer>
-          States: idle · speaking (aria-pressed). Note: translation strings already contain the
-          emoji, so the template's own icon span duplicates it - drop one
+          States: idle · speaking (aria-pressed). The button draws its icon once in an
+          <code>aria-hidden</code> span; the translated labels are plain text with no emoji.
         </footer>
       </section>
 
