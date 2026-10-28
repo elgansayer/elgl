@@ -30,11 +30,9 @@ export class PrivacyController {
   @Throttle({ default: { limit: 30, ttl: 60 * 1000 } })
   async getStatus(@CurrentUser() user: User | null) {
     if (!user) throw new UnauthorizedException();
-    // ⚡ Bolt Optimization: Group independent database queries with concurrent Promise.all execution to reduce latency.
-    const [status, deletion] = await Promise.all([
-      this.privacyService.getStatus(user.id),
-      this.privacyLifecycleService.getAccountDeletionStatus(user.id),
-    ]);
+    const status = await this.privacyService.getStatus(user.id);
+    const deletion =
+      await this.privacyLifecycleService.getAccountDeletionStatus(user.id);
     return {
       ...status,
       deletion,
