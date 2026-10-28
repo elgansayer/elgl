@@ -1,6 +1,6 @@
 # Product Roadmap
 
-Last reviewed: 22 September 2026
+Last reviewed: 28 October 2026
 
 This roadmap records the implementation state visible in the repository. It is intentionally narrower than
 `FEATURES_SPEC.md`: the issue backlog remains the detailed delivery queue.
