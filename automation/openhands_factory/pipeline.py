@@ -988,10 +988,18 @@ class FactoryPipeline:
                     job.task.title,
                 )
             else:
+                base_sha = claim.initial_base_sha
+                if claim.canonical_pull_request is None and claim.latest_verified_sha is None:
+                    # Nothing from this claim was verified or pushed and the worktree
+                    # is rebuilt from scratch, so its original base only makes new
+                    # work verify against months-old code (2026-10-28: claims from
+                    # August and September failed on long-fixed main defects).
+                    claim = self.tasks.forget_unpublished_base(job.task.identifier, lease_owner)
+                    base_sha = None
                 workflow.prepare_claimed_worktree(
                     worktree,
                     claim.canonical_branch,
-                    claim.initial_base_sha,
+                    base_sha,
                 )
                 job.branch = claim.canonical_branch
             job.initial_base_sha = self._workflow(worktree).head_sha()
