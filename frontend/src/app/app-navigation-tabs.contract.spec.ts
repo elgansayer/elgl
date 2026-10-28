@@ -14,6 +14,10 @@ const desktopComponent = readFileSync(
   resolve(process.cwd(), 'src/app/components/desktop-sidebar/desktop-sidebar.component.ts'),
   'utf8',
 );
+const appComponent = readFileSync(
+  resolve(process.cwd(), 'src/app/app.component.ts'),
+  'utf8',
+);
 
 const PRIMARY_TABS = ['chat', 'moments', 'discovery', 'audioRooms', 'profile'] as const;
 
@@ -99,6 +103,7 @@ describe('primary navigation unread contract', () => {
     const totalUnreadBadge = topBar.slice(topBar.indexOf(totalUnreadCondition));
 
     expect(topBar.indexOf(totalUnreadCondition)).toBeGreaterThanOrEqual(0);
+    expect(totalUnreadBadge).toContain('aria-hidden="true"');
     expect(totalUnreadBadge).toContain('bg-danger');
     expect(totalUnreadBadge).toContain('text-on-fill');
     expect(totalUnreadBadge).toContain('min-w-[18px]');
@@ -169,8 +174,12 @@ describe('primary navigation unread contract', () => {
 
   it('does not regress to unrelated audio-room co-host controls', () => {
     const navigation = mobileNavigationTemplate();
+    const topBar = topBarTemplate();
 
     expect(navigation).not.toMatch(/inviteCoHost|removeCoHost|co-?host/i);
     expect(desktopTemplate).not.toMatch(/inviteCoHost|removeCoHost|co-?host/i);
+    expect(topBar).not.toMatch(/inviteCoHost|removeCoHost|co-?host/i);
+    expect(desktopComponent).not.toMatch(/inviteCoHost|removeCoHost|co-?host/i);
+    expect(appComponent).not.toMatch(/inviteCoHost|removeCoHost/i);
   });
 });
