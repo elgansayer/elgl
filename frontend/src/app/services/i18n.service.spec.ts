@@ -128,6 +128,11 @@ describe('I18nService', () => {
       const translation = service.translate('app.title', { unused: 'value' });
       expect(translation).toBe('HelloTalk');
     });
+
+    it('should interpolate parameters for linkPreview.openLink', () => {
+      const translation = service.translate('linkPreview.openLink', { title: 'example.com' });
+      expect(translation).toBe('Open link: example.com');
+    });
   });
 
   describe('availableLanguages', () => {

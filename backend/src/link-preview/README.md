@@ -55,10 +55,13 @@ returns `null`.
 
 ## Integration
 
-`ChatService.sendMessage` calls `LinkPreviewService.getPreview` for the first
-URL found in a text message and stores the result on the published
-`ChatMessage.link_preview` field. The Angular `LinkPreviewCardComponent` then
-renders that typed metadata as ordinary text and safe link/image attributes.
+`ChatService.sendMessage` and `ChatService.editMessage` call
+`LinkPreviewService.getPreview` for the first URL found in a text message and
+attach the result to the returned and published `ChatMessage.link_preview`
+field. Editing a message therefore replaces its real-time preview instead of
+leaving recipients with metadata from the previous text. The Angular
+`LinkPreviewCardComponent` then renders that typed metadata as ordinary text
+and safe link/image attributes.
 Unsafe destination/image URLs are suppressed in the component as a final
 browser-side defence. If a remote preview image fails to load, only the image
 is removed; the text/link card remains usable and a later replacement image can

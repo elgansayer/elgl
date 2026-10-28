@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface SafePreviewUrl {
   href: string;
@@ -16,7 +17,7 @@ const LINK_PREVIEW_LIMITS = {
 
 @Component({
   selector: 'app-link-preview-card',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     @if (safeDestination(); as destination) {
       <a
@@ -24,6 +25,7 @@ const LINK_PREVIEW_LIMITS = {
         target="_blank"
         rel="noopener noreferrer"
         referrerpolicy="no-referrer"
+        [attr.aria-label]="'linkPreview.openLink' | t: { title: displayTitle() || displaySiteName() || destination.displayAddress }"
         class="mt-2 block min-w-0 overflow-hidden rounded-xl border border-surface-100 bg-surface-100 no-underline transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         @if (displayImage(); as img) {

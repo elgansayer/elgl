@@ -170,6 +170,7 @@ describe('LinkPreviewCardComponent', () => {
     expect(anchor.nativeElement.target).toBe('_blank');
     expect(anchor.nativeElement.rel).toBe('noopener noreferrer');
     expect(anchor.nativeElement.getAttribute('referrerpolicy')).toBe('no-referrer');
+    expect(anchor.nativeElement.getAttribute('aria-label')).toBe('Open link: example.com');
   });
 
   it('uses automatic direction for external metadata and LTR for the URL', () => {

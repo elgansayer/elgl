@@ -40,6 +40,7 @@ describe('ChatService', () => {
   let centrifugoService: any;
   let chatLlmService: any;
   let eventEmitter: any;
+  let linkPreviewService: { getPreview: Mock };
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -96,7 +97,7 @@ describe('ChatService', () => {
         {
           provide: LinkPreviewService,
           useValue: {
-            fetchPreview: vi.fn().mockResolvedValue({}),
+            getPreview: vi.fn().mockResolvedValue(null),
           },
         },
         {
@@ -144,6 +145,7 @@ describe('ChatService', () => {
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
     chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
     eventEmitter = module.get<EventEmitter2>(EventEmitter2) as any;
+    linkPreviewService = module.get(LinkPreviewService);
   });
 
   afterEach(() => {
@@ -208,6 +210,43 @@ describe('ChatService', () => {
         message: savedMessage,
       });
       expect(result).toEqual(savedMessage);
+    }, 15000);
+
+    it('enriches a text message with the scraped link preview', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Read https://example.com/article',
+      };
+      const savedMessage = {
+        id: 'msg-preview-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      const preview = {
+        url: 'https://example.com/article',
+        title: 'Article title',
+        description: 'Article description',
+        image: 'https://example.com/cover.jpg',
+        siteName: 'Example',
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      linkPreviewService.getPreview.mockResolvedValue(preview);
+
+      const result = await service.sendMessage('sender-1', dto);
+
+      expect(linkPreviewService.getPreview).toHaveBeenCalledWith(
+        'https://example.com/article',
+      );
+      expect(result).toEqual({ ...savedMessage, link_preview: preview });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
+        message: { ...savedMessage, link_preview: preview },
+      });
     }, 15000);
 
     it('should throw Error when insert fails with error message', async () => {
@@ -1283,6 +1322,61 @@ describe('ChatService', () => {
         `chat:${roomId}`,
         expect.objectContaining({ message: expect.anything() }),
       );
+    });
+
+    it('replaces the link preview when a message is edited with a URL', async () => {
+      const createdAt = new Date().toISOString();
+      const editedDto = {
+        text_content: 'Updated https://example.com/new-article',
+      };
+      const updatedMessage = {
+        id: messageId,
+        room_id: roomId,
+        sender_id: senderId,
+        message_type: 'text',
+        text_content: editedDto.text_content,
+        is_edited: true,
+        edited_at: new Date().toISOString(),
+        created_at: createdAt,
+      };
+      const preview = {
+        url: 'https://example.com/new-article',
+        title: 'Updated article',
+        description: '',
+        image: '',
+        siteName: 'Example',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: {
+              id: messageId,
+              sender_id: senderId,
+              message_type: 'text',
+              room_id: roomId,
+              created_at: createdAt,
+              text_content: 'original text',
+            },
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: senderId }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: updatedMessage, error: null }),
+        );
+      linkPreviewService.getPreview.mockResolvedValue(preview);
+
+      const result = await service.editMessage(senderId, messageId, editedDto);
+
+      expect(linkPreviewService.getPreview).toHaveBeenCalledWith(
+        'https://example.com/new-article',
+      );
+      expect(result).toEqual({ ...updatedMessage, link_preview: preview });
+      expect(centrifugoService.publish).toHaveBeenCalledWith(`chat:${roomId}`, {
+        message: { ...updatedMessage, link_preview: preview },
+      });
     });
 
     it('should throw NotFoundException when message is not found', async () => {

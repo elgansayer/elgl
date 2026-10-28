@@ -2407,7 +2407,7 @@ export class I18nService {
     'home.dailyTip.fallback': 'Keep practising every day!',
 
     // Link Preview
-    'linkPreview.openLink': 'Open link: {title}',
+    'linkPreview.openLink': 'Open link: {{title}}',
 
     // Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',

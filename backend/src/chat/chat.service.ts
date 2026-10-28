@@ -87,7 +87,8 @@ export class ChatService {
       const token = await this.centrifugoService.signJwt(payload);
       return token;
     } catch (error) {
-      throw new Error(`Failed to generate Centrifugo token: ${error.message}`, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to generate Centrifugo token: ${message}`, {
         cause: error,
       });
     }
@@ -1592,11 +1593,28 @@ export class ChatService {
       );
     }
 
+    // ---------- Link preview scraping for edited message ----------
+    let linkPreview: LinkPreview | null = null;
+    try {
+      if (dto.text_content) {
+        const urlMatch = dto.text_content.match(/https?:\/\/[^\s]+/);
+        if (urlMatch) {
+          linkPreview = await this.linkPreviewService.getPreview(urlMatch[0]);
+        }
+      }
+    } catch {
+      // ignore any error; just continue without preview
+    }
+
+    const messageForPublish: ChatMessage = linkPreview
+      ? { ...updatedMsg, link_preview: linkPreview }
+      : updatedMsg;
+
     await this.centrifugoService.publish(`chat:${roomId}`, {
-      message: updatedMsg,
+      message: messageForPublish,
     });
 
-    return updatedMsg;
+    return messageForPublish;
   }
 
   async deleteMessage(
