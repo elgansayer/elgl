@@ -576,3 +576,7 @@
 ## 2026-10-23 - [Optimize sequential awaits inside for loops with Promise.all]
 **Learning:** Found sequential `await` operations inside `for...of` loops (e.g., `areUsersBlocked` in `ProfileVisitsService` and `invalidateEscrowCaches` in `EscrowService`). This blocks the execution loop and causes additive latency for external API calls, database queries, and Redis operations.
 **Action:** Replace `for...of` loops containing sequential `await` calls with `Promise.all` mapping to process independent operations concurrently. This significantly reduces total execution time from O(N) database/network roundtrips to an O(1) concurrent batch block.
+
+## 2024-10-24 - [Optimize main thread via OnPush change detection]
+**Learning:** Found an Angular component (`NotificationCustomizationComponent`) rendering primarily signal-driven data without `changeDetection: ChangeDetectionStrategy.OnPush`. This causes the main thread to constantly evaluate and re-render the component on every DOM event globally across the Angular change detection tree, incurring high unnecessary overhead.
+**Action:** When creating or maintaining structural and UI rendering components in Angular that consume static inputs or Signals exclusively, proactively set `changeDetection: ChangeDetectionStrategy.OnPush` within the `@Component` decorator to isolate them from default global change detection.
