@@ -421,4 +421,46 @@ describe('UserDetailComponent bio translation', () => {
     expect(follow).not.toHaveBeenCalled();
     expect(unfollow).not.toHaveBeenCalled();
   });
+
+  it('uses Relay tokens instead of decorative neon classes for interactive elements and text', async () => {
+    // Check follow button and like button classes
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const followBtn = buttons.find((b) => b.getAttribute('aria-label')?.includes('userProfile.follow'));
+    expect(followBtn).toBeTruthy();
+    expect(followBtn?.classList.contains('bg-primary')).toBe(true);
+    expect(followBtn?.classList.contains('text-on-fill')).toBe(true);
+    expect(followBtn?.classList.contains('bg-neon-blue')).toBe(false);
+
+    // Toggle liked and check like button classes
+    component.isLiked.set(true);
+    fixture.detectChanges();
+    const likeBtn = buttons.find((b) => b.getAttribute('aria-label') === 'Unlike profile');
+    expect(likeBtn).toBeTruthy();
+    expect(likeBtn?.classList.contains('text-primary')).toBe(true);
+    expect(likeBtn?.classList.contains('border-primary')).toBe(true);
+    expect(likeBtn?.classList.contains('text-neon-pink')).toBe(false);
+    expect(likeBtn?.classList.contains('border-neon-pink')).toBe(false);
+
+    // Check tap to chat duet button
+    const chatBtn = buttons.find((b) => b.textContent?.includes('chatList.tapToChat'));
+    expect(chatBtn).toBeTruthy();
+    expect(chatBtn?.classList.contains('from-primary')).toBe(true);
+    expect(chatBtn?.classList.contains('to-secondary')).toBe(true);
+    expect(chatBtn?.classList.contains('from-neon-blue')).toBe(false);
+
+    // Check loading spinner token
+    component.isLoading.set(true);
+    fixture.detectChanges();
+    const spinner = fixture.nativeElement.querySelector('.animate-spin');
+    expect(spinner?.classList.contains('text-secondary')).toBe(true);
+    expect(spinner?.classList.contains('text-neon-blue')).toBe(false);
+
+    // Check error token
+    component.isLoading.set(false);
+    component.errorMessage.set('Test error');
+    fixture.detectChanges();
+    const errorP = fixture.nativeElement.querySelector('p.text-danger');
+    expect(errorP).toBeTruthy();
+    expect(errorP?.classList.contains('text-neon-pink')).toBe(false);
+  });
 });

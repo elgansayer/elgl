@@ -273,4 +273,35 @@ describe('EventsCalendarComponent', () => {
     expect(component.formatEventTime('2026-08-15T14:30:00Z')).not.toBe('');
     expect(component.formatEventTime('not-a-date')).toBe('');
   });
+
+  it('localizes event category chip rather than displaying raw enum value', async () => {
+    const month = component.monthStart();
+    const eventDate = new Date(month.getFullYear(), month.getMonth(), 20, 14);
+    mockEventsService.getMyCalendarEvents.mockReturnValue(
+      of([
+        {
+          id: 'event-with-category',
+          title: 'Tokyo Language Cafe',
+          category: 'in_person_meetup',
+          date_time: eventDate.toISOString(),
+          host_id: 'host-1',
+          is_cancelled: false,
+          created_at: eventDate.toISOString(),
+          updated_at: eventDate.toISOString(),
+        },
+      ]),
+    );
+
+    component.retryEvents();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.selectDate(20);
+    fixture.detectChanges();
+
+    const categoryChip = fixture.nativeElement.querySelector('span.rounded-full');
+    expect(categoryChip).toBeTruthy();
+    expect(categoryChip?.textContent?.trim()).toBe('events.categoryInPersonMeetup');
+    expect(categoryChip?.textContent).not.toContain('in_person_meetup');
+  });
 });

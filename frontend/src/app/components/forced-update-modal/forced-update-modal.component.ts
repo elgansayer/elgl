@@ -1,5 +1,6 @@
 import { Component, input, OnInit, OnDestroy, inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 /**
@@ -15,7 +16,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
  */
 @Component({
   selector: 'app-forced-update-modal',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, HlmButton],
   template: `
     <div
       class="fixed inset-0 z-[11000] flex items-center justify-center
@@ -43,13 +44,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ 'forcedUpdateModal.message' | t }}
         </p>
         <a
+          hlmBtn
+          size="touch"
           [href]="storeUrl()"
           target="_blank"
           rel="noopener"
           (click)="allowUpdateNavigation($event)"
-          class="inline-flex items-center justify-center px-6 py-3
-                 font-bold text-white bg-primary rounded-full
-                 hover:bg-primary-dark transition-colors shadow-lg"
+          class="rounded-full font-bold text-on-fill shadow-lg"
         >
           {{ 'forcedUpdateModal.updateButton' | t }}
         </a>
@@ -113,8 +114,7 @@ export class ForcedUpdateModalComponent implements OnInit, OnDestroy {
    * Only allows Tab within the modal for accessibility.
    */
   onKeydown(event: Event): void {
-    const keyboardEvent = event as KeyboardEvent;
-    if (keyboardEvent.key === 'Escape' || keyboardEvent.key === 'Esc') {
+    if (event instanceof KeyboardEvent && (event.key === 'Escape' || event.key === 'Esc')) {
       event.preventDefault();
       event.stopPropagation();
       return;
