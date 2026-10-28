@@ -1,6 +1,7 @@
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { ForcedUpdateModalComponent } from './forced-update-modal.component';
 
 @Pipe({ name: 't' })
@@ -21,7 +22,7 @@ describe('ForcedUpdateModalComponent', () => {
       imports: [ForcedUpdateModalComponent],
     })
       .overrideComponent(ForcedUpdateModalComponent, {
-        set: { imports: [MockTranslatePipe] },
+        set: { imports: [MockTranslatePipe, HlmButton] },
       })
       .compileComponents();
 
@@ -42,17 +43,29 @@ describe('ForcedUpdateModalComponent', () => {
     expect(component.storeUrl()).toBe('https://yourapp.com/update');
   });
 
-  it('should render the update link', () => {
+  it('should render the update link with Spartan Helm button and text-on-fill', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const anchor = compiled.querySelector('a');
     expect(anchor).toBeTruthy();
     expect(anchor?.getAttribute('target')).toBe('_blank');
+    expect(anchor?.classList.contains('text-on-fill')).toBe(true);
+    expect(anchor?.classList.contains('text-white')).toBe(false);
+    expect(anchor?.classList.contains('hover:bg-primary-dark')).toBe(false);
   });
 
   it('should render link with default storeUrl', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const anchor = compiled.querySelector('a');
     expect(anchor?.getAttribute('href')).toBe('https://yourapp.com/update');
+  });
+
+  it('should allow the rendered update link to navigate', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const anchor = compiled.querySelector('a');
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    expect(anchor?.dispatchEvent(event)).toBe(true);
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it('should render title text', () => {

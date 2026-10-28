@@ -157,12 +157,12 @@ export class UnreadCounterService {
   private hasSetAppBadge(
     nav: Navigator,
   ): nav is Navigator & { setAppBadge: (count: number) => Promise<void> } {
-    return typeof (nav as Navigator & { setAppBadge?: unknown }).setAppBadge === 'function';
+    return 'setAppBadge' in nav && typeof nav.setAppBadge === 'function';
   }
 
   private hasClearAppBadge(
     nav: Navigator,
   ): nav is Navigator & { clearAppBadge: () => Promise<void> } {
-    return typeof (nav as Navigator & { clearAppBadge?: unknown }).clearAppBadge === 'function';
+    return 'clearAppBadge' in nav && typeof nav.clearAppBadge === 'function';
   }
 }

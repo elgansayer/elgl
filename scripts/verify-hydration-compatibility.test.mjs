@@ -89,6 +89,17 @@ test('flags unmodified class fields and additional native DOM tree mutations', (
   assert.equal(failures.filter((failure) => failure.includes('DOM mutation')).length, 2);
 });
 
+test('ignores unit-test sources, which never render on the server', () => {
+  const failures = findHydrationRisks(`+++ b/frontend/src/app/services/example.service.spec.ts
++    testDocument = document.implementation.createHTMLDocument();
++  storedTheme = localStorage.getItem('theme');
++++ b/frontend/src/app/services/example.service.ts
++  storedTheme = localStorage.getItem('theme');`);
+
+  assert.equal(failures.length, 1);
+  assert.ok(failures[0].startsWith('frontend/src/app/services/example.service.ts:'));
+});
+
 test('binds the server-render policy to the wildcard route object', () => {
   assert.equal(
     defaultServerRouteIsServerRendered(`[

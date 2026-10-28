@@ -65,6 +65,23 @@ test('starts the compiled Nest application through its production script', () =>
   );
 });
 
+test('preflights the Angular production build only in CI', () => {
+  assert.equal(
+    configSource.includes(
+      "? 'node ./backend-readiness.mjs && cd ../frontend && npm run build && npm run start -- --host 127.0.0.1'",
+    ),
+    true,
+    'CI must build Angular before starting its development server',
+  );
+  assert.equal(
+    configSource.includes(
+      ": 'node ./backend-readiness.mjs && cd ../frontend && npm run start -- --host 127.0.0.1'",
+    ),
+    true,
+    'local E2E runs must retain the direct development-server path',
+  );
+});
+
 test('uses one configurable backend health target for Playwright and the readiness helper', () => {
   assert.match(configSource, /process\.env\.E2E_BACKEND_HEALTH_URL/);
   assert.match(configSource, /url: backendHealthUrl/);

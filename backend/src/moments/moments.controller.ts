@@ -22,25 +22,28 @@ import { AnswerLanguageQuestionDto } from './dto/answer-language-question.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
+import { MomentsFeedService, MomentFeedFilter } from './moments-feed.service';
 import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService, MomentLikeUser } from './moments.service';
+import { CorrectionQualityService } from './correction-quality.service';
 
-const MOMENT_FEED_FILTERS = [
+const MOMENT_FEED_FILTERS: readonly MomentFeedFilter[] = [
   'All',
   'Classmates',
   'Following',
   'For You',
-] as const;
-type MomentFeedFilter = (typeof MOMENT_FEED_FILTERS)[number];
+];
 
 @Controller('moments')
 @UseGuards(SupabaseAuthGuard)
 export class MomentsController {
   constructor(
     private readonly momentsService: MomentsService,
+    private readonly momentsFeedService: MomentsFeedService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
     private readonly momentsRankingService: MomentsRankingService,
+    private readonly correctionQualityService: CorrectionQualityService,
   ) {}
 
   @Post()
@@ -70,26 +73,17 @@ export class MomentsController {
       return [];
     }
 
-    const feed = await this.momentsService.getFeed(
+    const feed = await this.momentsFeedService.getFeed(
       user.id,
       activeFilter,
       targetLanguage ?? undefined,
     );
 
-    const productionFeed = feed.filter(
-      (moment) =>
-        !moment.id.startsWith('mock-moment-') &&
-        (activeFilter !== 'Following' || moment.user_id !== user.id),
-    );
-
     if (activeFilter === 'For You') {
-      return await this.momentsRankingService.rankForYou(
-        user.id,
-        productionFeed,
-      );
+      return await this.momentsRankingService.rankForYou(user.id, feed);
     }
 
-    return productionFeed;
+    return feed;
   }
 
   private parseFeedFilter(filter?: string): MomentFeedFilter {
@@ -250,8 +244,9 @@ export class MomentsController {
     userVote: string | null;
   } | null> {
     if (!user) return null;
-    return await this.momentsService.voteOnCorrection(
+    return await this.correctionQualityService.vote(
       user.id,
+      momentId,
       commentId,
       dto.vote,
     );

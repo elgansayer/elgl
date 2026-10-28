@@ -81,7 +81,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `id` (UUID, Primary Key)
 - `channel_id` (Text, indexed, e.g., `'chat_userA_userB'` or `'group_123'`)
 - `sender_id` (UUID, Foreign Key referencing `users.id`)
-- `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`)
+- `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`, `'system'`)
 - `content_json` (JSONB, structure varies depending on `payload_type`)
 - `is_read` (Boolean, default `false`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
@@ -166,6 +166,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
+- **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
 
 ---
 
@@ -185,44 +186,63 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 ### TokenisedTextComponent Design
 
 ```typescript
+export interface TokenSegment {
+  segment: string;
+  isWordLike: boolean;
+  index: number;
+}
+
 @Component({
   selector: 'app-tokenised-text',
   template: `
-    <span class="inline-block" *ngFor="let segment of segments()">
-      <span
-        *ngIf="segment.isWordLike; else punctuation"
-        [ngClass]="getWordClass(segment.segment)"
-        (click)="onWordClick(segment.segment)"
-        class="cursor-pointer transition-colors duration-150 rounded px-0.5 py-0.2"
-      >
-        {{ segment.segment }}
-      </span>
-      <ng-template #punctuation>
-        <span>{{ segment.segment }}</span>
-      </ng-template>
-    </span>
+    <div
+      appFlashcardContextMenu
+      [sourceLanguage]="language()"
+      [selectionContext]="text()"
+      (flashcardSelection)="openFlashcardSelection($event)"
+      class="inline leading-relaxed select-text font-medium text-base"
+      dir="auto"
+    >
+      @for (token of tokens(); track token.index) {
+        <span
+          (click)="onTokenClick(token)"
+          (keydown.enter)="onTokenClick(token)"
+          (keydown.space)="onTokenClick(token); $event.preventDefault()"
+          [attr.tabindex]="token.isWordLike ? 0 : null"
+          [attr.role]="token.isWordLike ? 'button' : null"
+          [class]="
+            'transition-colours rounded px-0.5 ' +
+            (token.isWordLike ? vocabStore.getWordStatus(token.segment).colourClass : '')
+          "
+        >
+          {{ token.segment }}
+        </span>
+      }
+      @if (transliteration()) {
+        <div class="transliteration mt-1 text-xs leading-snug text-text-muted" dir="ltr">
+          {{ transliteration() }}
+        </div>
+      }
+    </div>
   `,
 })
 export class TokenisedTextComponent {
-  text = input.required<string>();
-  locale = input.required<string>();
-  vocabularyMap = input.required<Map<string, number>>(); // word -> srs_level
+  readonly vocabStore = inject(VocabularyStore);
 
-  segments = computed(() => {
-    const segmenter = new Intl.Segmenter(this.locale(), { granularity: 'word' });
-    return Array.from(segmenter.segment(this.text()));
-  });
+  text = input<string>('');
+  language = input('en');
+  wordClicked = output<{ token: string; context: string }>();
 
-  getWordClass(word: string): string {
-    const cleanToken = word.toLowerCase().trim();
-    if (!this.vocabularyMap().has(cleanToken)) {
-      return 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400'; // Level 0: Blue (New)
-    }
-    const level = this.vocabularyMap().get(cleanToken);
-    if (level === 4) {
-      return 'text-slate-200 hover:bg-slate-700/30'; // Level 4: White (Known)
-    }
-    return 'bg-yellow-500/30 text-yellow-200 hover:bg-yellow-500/50 border-b border-yellow-400'; // Level 1-3: Yellow (Learning)
+  // Tokens calculation using tokeniseText and Intl.Segmenter
+  readonly tokens = computed(() => this.parsed().tokens);
+  readonly transliteration = computed(() => this.parsed().transliteration);
+
+  onTokenClick(token: TokenSegment): void {
+    if (!token.isWordLike) return;
+    this.wordClicked.emit({
+      token: token.segment,
+      context: this.text(),
+    });
   }
 }
 ```

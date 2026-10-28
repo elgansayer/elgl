@@ -27,8 +27,6 @@ const mobileStates = {
   'mobile-390-text-400': { mode: 'text-400' },
 } as const;
 
-type MobileState = keyof typeof mobileStates;
-
 const tabletStates = {
   'tablet-768-light': { viewport: 'md', mode: 'light' },
   'tablet-768-dark': { viewport: 'md', mode: 'dark' },
@@ -38,8 +36,19 @@ const tabletStates = {
   'tablet-1024-dark': { viewport: 'lg', mode: 'dark' },
 } as const;
 
-type TabletState = keyof typeof tabletStates;
+const desktopStates = {
+  'desktop-1024-light': { viewport: 'lg', mode: 'light' },
+  'desktop-1024-dark': { viewport: 'lg', mode: 'dark' },
+  'desktop-1024-rtl': { viewport: 'lg', mode: 'rtl' },
+  'desktop-1024-text-200': { viewport: 'lg', mode: 'text-200' },
+  'desktop-1280-light': { viewport: 'wide', mode: 'light' },
+  'desktop-1280-dark': { viewport: 'wide', mode: 'dark' },
+} as const;
+
 type VisualMode = 'light' | 'dark' | 'rtl' | 'text-200' | 'text-400';
+type MobileState = keyof typeof mobileStates;
+type TabletState = keyof typeof tabletStates;
+type DesktopState = keyof typeof desktopStates;
 
 const automatedStates = new Set([
   'light',
@@ -49,6 +58,7 @@ const automatedStates = new Set([
   'rtl',
   ...Object.keys(mobileStates),
   ...Object.keys(tabletStates),
+  ...Object.keys(desktopStates),
 ]);
 
 function isMobileState(state: string): state is MobileState {
@@ -57,6 +67,10 @@ function isMobileState(state: string): state is MobileState {
 
 function isTabletState(state: string): state is TabletState {
   return state in tabletStates;
+}
+
+function isDesktopState(state: string): state is DesktopState {
+  return state in desktopStates;
 }
 
 function applyState(state: string, rendering: VisualMatrix['rendering']): void {
@@ -77,6 +91,13 @@ function applyState(state: string, rendering: VisualMatrix['rendering']): void {
         ? rendering.viewportTabletMd
         : rendering.viewportTabletLgBoundary;
     mode = tabletState.mode;
+  } else if (isDesktopState(state)) {
+    const desktopState = desktopStates[state];
+    viewport =
+      desktopState.viewport === 'lg'
+        ? rendering.viewportTabletLgBoundary
+        : rendering.viewportWide;
+    mode = desktopState.mode;
   } else if (state === 'dark') {
     mode = 'dark';
   } else if (state === 'rtl') {
@@ -93,9 +114,7 @@ function applyState(state: string, rendering: VisualMatrix['rendering']): void {
     document.documentElement.style.scrollBehavior = 'auto';
     document.documentElement.style.fontSize = '';
 
-    document
-      .querySelectorAll('style[data-visual-contract="true"]')
-      .forEach((style) => style.remove());
+    document.querySelectorAll('style[data-visual-contract="true"]').forEach((style) => style.remove());
 
     const style = document.createElement('style');
     style.dataset['visualContract'] = 'true';
@@ -126,6 +145,21 @@ function assertNoHorizontalDocumentOverflow(state: string, context: string): voi
   });
 }
 
+function assertTextScale(state: string, root: HTMLElement, mode: VisualMode): void {
+  const rootFontSize = Number.parseFloat(getComputedStyle(root).fontSize);
+  if (mode === 'text-200') {
+    expect(rootFontSize, `${state}: 200% text-scale state must enlarge root text`).to.be.greaterThan(
+      16,
+    );
+  }
+  if (mode === 'text-400') {
+    expect(
+      rootFontSize,
+      `${state}: 400% text-scale state must substantially enlarge root text`,
+    ).to.be.greaterThan(32);
+  }
+}
+
 function assertMobileResponsiveContract(state: string): void {
   if (!isMobileState(state)) return;
 
@@ -135,57 +169,44 @@ function assertMobileResponsiveContract(state: string): void {
   cy.document().then((document) => {
     const root = document.documentElement;
     const mode = mobileStates[state].mode;
-
     if (mode === 'dark') {
       expect(root.classList.contains('dark'), `${state}: dark state must apply dark theme`).to.equal(
         true,
       );
     }
-
     if (mode === 'light') {
       expect(
         root.classList.contains('dark'),
         `${state}: light state must not retain dark theme`,
       ).to.equal(false);
     }
-
     if (mode === 'rtl') {
       expect(root.dir, `${state}: RTL state must preserve document direction`).to.equal('rtl');
     }
-
-    if (mode === 'text-200') {
-      expect(
-        Number.parseFloat(getComputedStyle(root).fontSize),
-        `${state}: 200% text-scale state must enlarge root text`,
-      ).to.be.greaterThan(16);
-    }
-
-    if (mode === 'text-400') {
-      expect(
-        Number.parseFloat(getComputedStyle(root).fontSize),
-        `${state}: 400% text-scale state must substantially enlarge root text`,
-      ).to.be.greaterThan(32);
-    }
+    assertTextScale(state, root, mode);
   });
 }
 
-function assertTabletResponsiveContract(state: string): void {
-  if (!isTabletState(state)) return;
+function assertResponsiveContract(state: string): void {
+  const responsiveState = isTabletState(state)
+    ? { family: 'tablet', ...tabletStates[state] }
+    : isDesktopState(state)
+      ? { family: 'desktop', ...desktopStates[state] }
+      : undefined;
+  if (!responsiveState) return;
 
-  assertNoHorizontalDocumentOverflow(state, 'tablet layout');
+  if (responsiveState.family === 'tablet') {
+    assertNoHorizontalDocumentOverflow(state, 'tablet layout');
+  } else {
+    assertNoHorizontalDocumentOverflow(state, 'desktop layout');
+  }
 
   cy.document().then((document) => {
     const root = document.documentElement;
-    if (tabletStates[state].mode === 'rtl') {
+    if (responsiveState.mode === 'rtl') {
       expect(root.dir, `${state}: RTL state must preserve document direction`).to.equal('rtl');
     }
-
-    if (tabletStates[state].mode === 'text-200') {
-      expect(
-        Number.parseFloat(getComputedStyle(root).fontSize),
-        `${state}: text-scale state must enlarge root text`,
-      ).to.be.greaterThan(16);
-    }
+    assertTextScale(state, root, responsiveState.mode);
   });
 }
 
@@ -210,7 +231,7 @@ describe('Relay + Spartan visual contracts', () => {
           applyState(state, matrix.rendering);
           cy.document().its('fonts.status').should('eq', 'loaded');
           assertMobileResponsiveContract(state);
-          assertTabletResponsiveContract(state);
+          assertResponsiveContract(state);
           cy.screenshot(`${contract.designSyncId}/${state}`, { capture: 'fullPage' });
         }
       }

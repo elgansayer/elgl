@@ -61,6 +61,8 @@ describe('Chat Flow (Mocked)', () => {
 
     cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
     cy.intercept('GET', '**/api/chat/archived-rooms', { body: [] }).as('getArchivedRooms');
+    // Private per-user folders (#7741) back the archived/locked chat views.
+    cy.intercept('GET', '**/api/chat/folders/*', { body: [] }).as('getChatFolder');
     cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
 
     cy.intercept('GET', `**/api/chat/messages/${roomId}*`, {
@@ -105,7 +107,7 @@ describe('Chat Flow (Mocked)', () => {
   });
 
   it('displays the chat list and navigates to the selected room', () => {
-    cy.visit('/chat');
+    cy.visitWithSession('/chat');
 
     // The room and message may come from IndexedDB on a Cypress retry.
     cy.contains('Language Exchange with Maria').should('be.visible').click();
@@ -118,7 +120,7 @@ describe('Chat Flow (Mocked)', () => {
 
   it('sends a text message with the canonical room and message payload', () => {
     let initialMessageCount = 0;
-    cy.visit(`/chat/${roomId}`);
+    cy.visitWithSession(`/chat/${roomId}`);
     cy.get('[data-testid="chat-message"]').then(($messages) => {
       initialMessageCount = $messages.length;
       expect(initialMessageCount).to.be.greaterThan(0);
@@ -145,7 +147,7 @@ describe('Chat Flow (Mocked)', () => {
 
   it('does not submit whitespace-only messages', () => {
     let initialMessageCount = 0;
-    cy.visit(`/chat/${roomId}`);
+    cy.visitWithSession(`/chat/${roomId}`);
     cy.get('[data-testid="chat-message"]').then(($messages) => {
       initialMessageCount = $messages.length;
       expect(initialMessageCount).to.be.greaterThan(0);
@@ -166,7 +168,7 @@ describe('Chat Flow (Mocked)', () => {
     const retryMessage = 'Please keep this draft if sending fails.';
     let initialMessageCount = 0;
 
-    cy.visit(`/chat/${roomId}`);
+    cy.visitWithSession(`/chat/${roomId}`);
     cy.get('[data-testid="chat-message"]').then(($messages) => {
       initialMessageCount = $messages.length;
       expect(initialMessageCount).to.be.greaterThan(0);
