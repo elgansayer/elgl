@@ -1925,13 +1925,14 @@ class FactoryPipeline:
         return True
 
     def _restart_stale_unpublished(self, job: Job, workflow: GitWorkflow) -> bool:
-        """Rebuild unpublished work on the current base once its repairs run out.
+        """Rebuild unpublished work on the current base when it cannot progress.
 
         Nothing is committed before verification passes, so an unpublished job's
         HEAD is still its original base. Jobs claimed in August and September kept
         failing on defects main had long since fixed (2026-10-28). Back in
         DISCOVERED the worktree is archived and recreated on the current base; the
-        age threshold allows at most one rebuild per week and job.
+        age threshold allows at most one rebuild per week and job. Callers use it
+        only once repairs are spent or verification infrastructure failed.
         """
         if (
             job.task.source == "github-pull-request"
@@ -2104,6 +2105,11 @@ class FactoryPipeline:
                 # pull request. Preserve the current pipeline state so the durable
                 # retry policy backs off and retries the same verification without
                 # spending an agent call or introducing unrelated code churn.
+                # Unpublished work on a weeks-old base is the exception: main may
+                # have removed the cause (network font inlining, 2026-10-28), so
+                # rebuild it rather than retry the same failure forever.
+                if self._restart_stale_unpublished(job, workflow):
+                    return None
                 raise
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):

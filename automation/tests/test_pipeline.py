@@ -2996,6 +2996,7 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     )
     pipeline.jobs.save({"42": job})
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
     monkeypatch.setattr(
         "openhands_factory.pipeline.run_verification",
         lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
@@ -3008,6 +3009,44 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     assert failed.attempts == 1
     assert failed.review_findings == []
     assert failed.next_attempt_at is not None
+
+
+def test_infrastructure_failure_on_stale_unpublished_base_rebuilds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Rebuild on current fonts", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-rebuild-on-current-fonts",
+        quality_repairs=2,
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=40))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed(
+                "frontend-build failed with exit 1: getaddrinfo EAI_AGAIN fonts.googleapis.com"
+            )
+        ),
+    )
+
+    rebuilt = pipeline.run_job("42")
+
+    assert rebuilt is not None
+    assert rebuilt.state is JobState.DISCOVERED
+    assert rebuilt.quality_repairs == 0
+    assert rebuilt.provider_history == []
 
 
 def test_auto_fixable_verification_failure_is_reverified_without_a_model(
