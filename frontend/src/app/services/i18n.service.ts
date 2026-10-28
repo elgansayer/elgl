@@ -1875,6 +1875,35 @@ export class I18nService {
       'An error occurred while loading blocked users. Please try again.',
     'admin.blocks.unblock': 'Unblock',
 
+    // Lessons Management
+    'admin.lessons.title': 'Lessons',
+    'admin.lessons.create': 'Create Lesson',
+    'admin.lessons.language': 'Language',
+    'admin.lessons.difficulty': 'Difficulty',
+    'admin.lessons.actions': 'Actions',
+    'admin.lessons.edit': 'Edit',
+    'admin.lessons.delete': 'Delete',
+    'admin.lessons.delete_confirm': 'Are you sure you want to delete this lesson?',
+    'admin.lessons.create_lesson': 'Create Lesson',
+    'admin.lessons.edit_lesson': 'Edit Lesson',
+    'admin.lessons.description': 'Description',
+    'admin.lessons.cover_image': 'Cover Image',
+    'admin.lessons.upload_cover': 'Upload Cover',
+    'admin.lessons.audio': 'Audio',
+    'admin.lessons.upload_audio': 'Upload Audio',
+    'admin.lessons.content': 'Content',
+    'admin.lessons.save': 'Save',
+    'admin.lessons.cancel': 'Cancel',
+    'admin.lessons.error_missing_required': 'Please fill in all required fields.',
+    'admin.lessons.error_invalid_json': 'Invalid JSON format in content.',
+
+    // Share Modal
+    'share.title': 'Share',
+    'share.dm': 'Direct message',
+    'share.moments': 'Moments',
+    'share.copy': 'Copy link',
+    'share.copied': 'Copied!',
+
     // Sticker Store
     'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',
     'sticker.notEnoughCoins': 'Not enough coins!',

@@ -1,9 +1,9 @@
-import { HlmInput } from '@spartan-ng/helm/input';
-import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input, output, signal, computed } from '@angular/core';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 export interface ShareEntity {
   id: string;
@@ -16,10 +16,8 @@ export interface ShareEntity {
 
 @Component({
   selector: 'app-share-modal',
-  standalone: true,
-  imports: [HlmInput, HlmButton, TranslatePipe, A11yClickableDirective],
+  imports: [HlmInput, ...HlmButtonImports, ...HlmDialogImports, TranslatePipe],
   templateUrl: './share-modal.html',
-  styleUrls: ['./share-modal.scss'],
 })
 export class ShareModalComponent {
   readonly i18n = inject(I18nService);
@@ -36,22 +34,30 @@ export class ShareModalComponent {
   readonly isCopying = signal(false);
   readonly shareUrl = computed(() => `${this.entity().externalLink}?ref=user_token_123`);
 
-  async copyLink() {
+  readonly dialogState = computed<HlmDialogState>(() =>
+    this.isOpen() ? 'open' : 'closed',
+  );
+
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.isOpen()) {
+      this.closed.emit();
+    }
+  }
+
+  async copyLink(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.shareUrl());
       this.isCopying.set(true);
-      setTimeout(() => this.isCopying.set(false), 2000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to copy', err);
     }
   }
 
-  shareToFeed() {
-    // Logic to repost to Moments feed
+  shareToFeed(): void {
     this.closed.emit();
   }
 
-  shareToDirectMessage() {
+  shareToDirectMessage(): void {
     this.sharedToChat.emit('dm');
     this.closed.emit();
   }

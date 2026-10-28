@@ -116,4 +116,41 @@ describe('AdminActionsComponent', () => {
     expect(adminService.banUser).not.toHaveBeenCalled();
     expect(adminService.warnUser).not.toHaveBeenCalled();
   });
+
+  it('prompts confirmation via Helm dialog before executing a ban', async () => {
+    adminService.banUser.mockResolvedValue({ message: 'User banned' });
+    const targetUser = { id: 'user-5', display_name: 'Alex' };
+
+    expect(component.banDialogState()).toBe('closed');
+    expect(component.pendingBanUser()).toBeNull();
+
+    component.promptBan(targetUser);
+
+    expect(component.banDialogState()).toBe('open');
+    expect(component.pendingBanUser()).toEqual(targetUser);
+
+    // Cancel dismisses without ban
+    component.cancelBan();
+    expect(component.banDialogState()).toBe('closed');
+    expect(component.pendingBanUser()).toBeNull();
+    expect(adminService.banUser).not.toHaveBeenCalled();
+
+    // Re-open and confirm
+    component.promptBan(targetUser);
+    expect(component.banDialogState()).toBe('open');
+
+    await component.confirmBan();
+    expect(component.banDialogState()).toBe('closed');
+    expect(component.pendingBanUser()).toBeNull();
+    expect(adminService.banUser).toHaveBeenCalledWith('user-5');
+  });
+
+  it('handles dialog closed state transitions safely', () => {
+    component.promptBan({ id: 'user-6', display_name: 'Taylor' });
+    expect(component.banDialogState()).toBe('open');
+
+    component.onBanDialogStateChanged('closed');
+    expect(component.banDialogState()).toBe('closed');
+    expect(component.pendingBanUser()).toBeNull();
+  });
 });

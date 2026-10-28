@@ -40,9 +40,11 @@
             <button
               hlmBtn
               type="button"
+              role="option"
+              [attr.aria-selected]="lang.code === currentLang()"
               (click)="selectLanguage(lang.code)"
               class="w-full flex items-center justify-between gap-2 text-start px-4 py-2.5 text-sm hover:bg-surface-200 transition-colors cursor-pointer"
-              [attr.aria-label]="'common.selected' | t"
+              [attr.aria-label]="getLanguageAriaLabel(lang)"
             >
               <span class="flex items-center gap-2">
                 <span class="text-base leading-none">{{ lang.flag }}</span>

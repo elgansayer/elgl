@@ -59,7 +59,7 @@
   "admin.lessons.cover_image": "Cover Image",
   "admin.lessons.create": "Create",
   "admin.lessons.delete": "Delete",
-  "admin.lessons.delete_confirm": "Delete Confirm",
+  "admin.lessons.delete_confirm": "Are you sure you want to delete this lesson?",
   "admin.lessons.description": "Description",
   "admin.lessons.difficulty": "Difficulty",
   "admin.lessons.edit": "Edit",
@@ -926,5 +926,10 @@
   "moments.viewAuthorProfile": "View {{name}}'s profile",
   "chat_settings.load_unavailable": "Chat settings are temporarily unavailable.",
   "chat_settings.load_unavailable_desc": "Your saved settings remain active. Retention controls are disabled until they can be loaded.",
-  "chat_settings.save_failed": "That change could not be saved. Your previous setting has been restored."
+  "chat_settings.save_failed": "That change could not be saved. Your previous setting has been restored.",
+  "share.title": "Share",
+  "share.dm": "Direct message",
+  "share.moments": "Moments",
+  "share.copy": "Copy link",
+  "share.copied": "Copied!"
 }

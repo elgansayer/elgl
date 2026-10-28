@@ -353,6 +353,7 @@ describe('AudioIntroFeedComponent', () => {
     expect(playButton?.getAttribute('aria-describedby')).toBe('audio-intro-user-u1');
     expect(playButton?.getAttribute('aria-pressed')).toBeNull();
     expect(playButton?.getAttribute('size')).toBe('icon-touch');
+    expect(playButton?.classList.contains('text-on-fill')).toBe(true);
 
     await component.togglePlay('u1', 'https://example.com/intro.mp3');
     expect(component.playingId()).toBeNull();

@@ -1,5 +1,6 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
@@ -15,7 +16,7 @@ interface ModerationActionState {
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [TranslatePipe, ...HlmButtonImports],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   template: `
     <div class="m-4" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
       <h2>{{ 'admin.quickModeration' | t }}</h2>
@@ -32,7 +33,7 @@ interface ModerationActionState {
               [disabled]="isActionDisabled(user.id, 'ban')"
               [attr.aria-busy]="isPending(user.id, 'ban') ? 'true' : null"
               [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
-              (click)="ban(user.id)"
+              (click)="promptBan(user)"
             >
               {{ 'admin.banBtn' | t }}
             </button>
@@ -62,12 +63,82 @@ interface ModerationActionState {
         }
       </ul>
     </div>
+
+    <hlm-dialog [state]="banDialogState()" (stateChanged)="onBanDialogStateChanged($event)">
+      @if (pendingBanUser(); as targetUser) {
+        <hlm-dialog-content
+          *hlmDialogPortal
+          [showCloseButton]="false"
+          class="max-h-[calc(100dvh-2rem)] w-full max-w-sm space-y-5 overflow-y-auto rounded-sheet border border-surface-100 bg-surface-200 p-6 shadow-lift motion-reduce:animate-none"
+        >
+          <hlm-dialog-header>
+            <h2
+              hlmDialogTitle
+              class="min-w-0 break-words text-sm font-medium leading-relaxed text-text-primary"
+            >
+              {{ 'admin.banConfirm' | t: { name: targetUser.display_name ?? targetUser.id } }}
+            </h2>
+          </hlm-dialog-header>
+          <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="touch"
+              class="w-full min-w-0 whitespace-normal break-words sm:w-auto"
+              (click)="cancelBan()"
+            >
+              {{ 'common.cancel' | t }}
+            </button>
+            <button
+              hlmBtn
+              type="button"
+              variant="destructive"
+              size="touch"
+              class="w-full min-w-0 whitespace-normal break-words sm:w-auto"
+              (click)="confirmBan()"
+            >
+              {{ 'admin.banBtn' | t }}
+            </button>
+          </div>
+        </hlm-dialog-content>
+      }
+    </hlm-dialog>
   `,
 })
 export class AdminActionsComponent {
   private readonly adminService = inject(AdminService);
   private readonly i18n = inject(I18nService);
   private readonly actionStates = signal<Record<string, ModerationActionState>>({});
+
+  readonly pendingBanUser = signal<{ id: string; display_name?: string | null } | null>(null);
+  readonly banDialogState = computed<HlmDialogState>(() =>
+    this.pendingBanUser() ? 'open' : 'closed',
+  );
+
+  promptBan(user: { id: string; display_name?: string | null }): void {
+    if (!user.id || this.isPending(user.id) || this.isActionDisabled(user.id, 'ban')) {
+      return;
+    }
+    this.pendingBanUser.set(user);
+  }
+
+  cancelBan(): void {
+    this.pendingBanUser.set(null);
+  }
+
+  onBanDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed') {
+      this.cancelBan();
+    }
+  }
+
+  async confirmBan(): Promise<void> {
+    const user = this.pendingBanUser();
+    if (!user) return;
+    this.cancelBan();
+    await this.ban(user.id);
+  }
 
   private readonly usersResource = resource({
     params: () => ({ page: 1, pageSize: 10, search: '' }),

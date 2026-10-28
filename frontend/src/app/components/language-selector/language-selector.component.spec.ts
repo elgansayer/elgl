@@ -54,4 +54,23 @@ describe('LanguageSelectorComponent', () => {
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
     expect(component.isOpen()).toBe(false);
   });
+
+  it('should expose the language name and selection state on options with role and aria-selected', async () => {
+    component.isOpen.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const options = fixture.nativeElement.querySelectorAll('button[role="option"]');
+    expect(options.length).toBe(2);
+
+    const firstOption = options[0] as HTMLButtonElement;
+    expect(firstOption.getAttribute('role')).toBe('option');
+    expect(firstOption.getAttribute('aria-selected')).toBe('true');
+    expect(firstOption.getAttribute('aria-label')).toBe('British English, common.selected');
+
+    const secondOption = options[1] as HTMLButtonElement;
+    expect(secondOption.getAttribute('role')).toBe('option');
+    expect(secondOption.getAttribute('aria-selected')).toBe('false');
+    expect(secondOption.getAttribute('aria-label')).toBe('Spanish');
+  });
 });

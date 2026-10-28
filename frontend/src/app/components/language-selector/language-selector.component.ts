@@ -43,6 +43,14 @@ export class LanguageSelectorComponent {
     this.searchQuery.set('');
   }
 
+  getLanguageAriaLabel(lang: LanguageInfo): string {
+    const isSelected = lang.code === this.currentLang();
+    if (isSelected) {
+      return `${lang.name}, ${this.i18n.translate('common.selected')}`;
+    }
+    return lang.name;
+  }
+
   onSearch(event: Event): void {
     const input = event.target;
     if (input instanceof HTMLInputElement) {
