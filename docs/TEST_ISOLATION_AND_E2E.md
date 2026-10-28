@@ -51,6 +51,8 @@ Current Playwright coverage includes authentication/onboarding pages, chat/messa
 
 Playwright is the better home for cross-browser, RTL, device-profile, and full-stack/infrastructure-sensitive flows. Cypress remains appropriate for existing Angular-centric feature flows.
 
+Playwright specs must use Playwright's own runner API (`test`, `test.describe`, `expect`) and be launched from `e2e/`. Vitest or Jest style globals abort the whole run with `ReferenceError: describe is not defined`; see [Playwright test-runner boundary](./playwright-test-boundary.md) for the enforced contract and triage steps.
+
 ## Runner context contract
 
 Test files must be executed by the package and runner that owns them. A Playwright spec imports `test`, `expect`, and suite helpers from `@playwright/test`; running that file directly through Node, `tsx`, `ts-node`, Bun, Vitest, or Jest bypasses Playwright's runner bootstrap and fails during initialisation or collection. Conversely, launching Playwright from the repository root or frontend can discover Angular/Vitest specs and produce misleading errors such as `ReferenceError: describe is not defined`.
