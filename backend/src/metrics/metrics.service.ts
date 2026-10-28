@@ -96,6 +96,10 @@ export class MetricsService {
   readonly adminActiveBlocks: Gauge<string>;
   readonly adminLoginHistoryRequests: Counter<string>;
 
+  // Link preview (OpenGraph scraper) metrics
+  readonly linkPreviewRequests: Counter<string>;
+  readonly linkPreviewFetchDuration: Histogram<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -600,6 +604,23 @@ export class MetricsService {
       labelNames: ['result'],
       registers: [this.register],
     });
+
+    // --- Link preview (OpenGraph scraper) Metrics ---
+
+    this.linkPreviewRequests = new Counter({
+      name: 'hellotalk_link_preview_requests_total',
+      help: 'Link preview requests by outcome (cache_hit, fetched, empty, rejected, failed) and a bounded failure reason',
+      labelNames: ['outcome', 'reason'],
+      registers: [this.register],
+    });
+
+    this.linkPreviewFetchDuration = new Histogram({
+      name: 'hellotalk_link_preview_fetch_duration_seconds',
+      help: 'Duration of origin scrapes performed for link previews (cache hits excluded)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
+    });
   }
 
   recordHttpRequest(
@@ -962,6 +983,20 @@ export class MetricsService {
 
   recordAdminLoginHistoryRequest(result: 'success' | 'failure'): void {
     this.adminLoginHistoryRequests.inc({ result });
+  }
+
+  recordLinkPreviewRequest(
+    outcome: 'cache_hit' | 'fetched' | 'empty' | 'rejected' | 'failed',
+    reason = 'none',
+  ): void {
+    this.linkPreviewRequests.inc({ outcome, reason });
+  }
+
+  observeLinkPreviewFetch(
+    outcome: 'fetched' | 'empty' | 'failed',
+    durationSeconds: number,
+  ): void {
+    this.linkPreviewFetchDuration.observe({ outcome }, durationSeconds);
   }
 
   setModerationQueueSize(count: number): void {

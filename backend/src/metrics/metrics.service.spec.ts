@@ -451,4 +451,46 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
     });
   });
+
+  describe('Link preview metrics', () => {
+    it('exposes request outcomes with a bounded reason label', async () => {
+      service.recordLinkPreviewRequest('cache_hit');
+      service.recordLinkPreviewRequest('fetched');
+      service.recordLinkPreviewRequest('failed', 'timeout');
+      service.recordLinkPreviewRequest('failed', 'timeout');
+      service.recordLinkPreviewRequest('rejected', 'private_network');
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="cache_hit",reason="none"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="fetched",reason="none"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="failed",reason="timeout"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="rejected",reason="private_network"} 1',
+      );
+    });
+
+    it('exposes origin scrape latency per outcome', async () => {
+      service.observeLinkPreviewFetch('fetched', 0.3);
+      service.observeLinkPreviewFetch('failed', 7.5);
+
+      const metrics = await service.getMetrics();
+
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_count{outcome="fetched"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_count{outcome="failed"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_bucket{le="8",outcome="failed"} 1',
+      );
+    });
+  });
 });

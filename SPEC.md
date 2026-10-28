@@ -162,6 +162,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 ### JSON Message Payloads
 
 - **Text:** `{ "type": "text", "content": "Hello world", "replyToId": null }`
+- **Text link preview:** a text publication may carry `"link_preview": { "url", "title", "description", "image", "siteName" }`, the bounded OpenGraph metadata of the first URL in the text. An edit always includes the field and publishes `null` when the new text has no previewable link, because clients merge edit events over their local copy of the message. Previews are realtime-only (not stored with the message); see `docs/rich-link-previews.md`.
 - **Correction:** `{ "type": "correction", "original": "I goes to school", "fixed": "I go to school", "notes": "Subject-verb agreement" }`
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`

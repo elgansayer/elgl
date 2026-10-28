@@ -890,6 +890,14 @@
         gap: 2px;
         font-size: 13px;
       }
+      .link-card .sr-only {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
       .tokens {
         font-size: 18px;
         line-height: 1.9;
@@ -1867,7 +1875,8 @@
                 ><strong dir="auto">やさしい日本語で読むニュース</strong
                 ><span class="secondary" dir="auto"
                   >Short news stories written in simple Japanese for learners.</span
-                ><span class="muted" dir="ltr">www3.nhk.or.jp</span>
+                ><span class="muted" dir="ltr">www3.nhk.or.jp</span
+                ><span class="sr-only">Opens in a new tab</span>
               </div>
             </div>
           </div>
@@ -1875,12 +1884,14 @@
           <div class="link-card">
             <div class="txt">
               <strong dir="auto">Duolingo vs. tandem learning</strong
-              ><span class="muted" dir="ltr">example.com</span>
+              ><span class="muted" dir="ltr">example.com</span
+              ><span class="sr-only">Opens in a new tab</span>
             </div>
           </div>
         </div>
         <footer>
-          States: with image · image error fallback · unsafe URL → hidden · no-referrer
+          States: with image · image error fallback · unsafe URL → hidden · no-referrer · screen
+          readers hear "Opens in a new tab" inside the link name
         </footer>
       </section>
 

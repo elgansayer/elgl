@@ -76,7 +76,12 @@ function isPrivateIpv4(ip: string): boolean {
   if (!isIpv4(ip)) {
     return false;
   }
-  const [first, second] = ip.split('.').map(Number);
+  const [first, second, third] = ip.split('.').map(Number);
+  if (first >= 224) {
+    // 224.0.0.0/4 multicast and 240.0.0.0/4 reserved (including the
+    // 255.255.255.255 limited broadcast address)
+    return true;
+  }
   if (first === 0) {
     // 0.0.0.0/8: "this network" and the unspecified address
     return true;
@@ -105,15 +110,34 @@ function isPrivateIpv4(ip: string): boolean {
     // 192.168.0.0/16: private network
     return true;
   }
-  if (first === 192 && second === 0) {
-    // 192.0.0.0/24: IETF protocol assignments
+  if (first === 192 && second === 0 && (third === 0 || third === 2)) {
+    // 192.0.0.0/24: IETF protocol assignments; 192.0.2.0/24: TEST-NET-1.
+    // The rest of 192.0.0.0/16 is ordinary public space (for example
+    // WordPress.com in 192.0.64.0/18) and must stay reachable.
     return true;
   }
   if (first === 198 && (second === 18 || second === 19)) {
     // 198.18.0.0/15: network benchmarking
     return true;
   }
+  if (first === 198 && second === 51 && third === 100) {
+    // 198.51.100.0/24: TEST-NET-2
+    return true;
+  }
+  if (first === 203 && second === 0 && third === 113) {
+    // 203.0.113.0/24: TEST-NET-3
+    return true;
+  }
   return false;
+}
+
+/**
+ * Checks an IPv4 address that an IPv6 prefix embeds as two 16-bit words, so
+ * address-translation prefixes cannot smuggle a private IPv4 destination past
+ * the guard.
+ */
+function isEmbeddedIpv4Private(high: number, low: number): boolean {
+  return isPrivateIpv4(`${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`);
 }
 
 function isPrivateIpv6(ip: string): boolean {
@@ -125,15 +149,17 @@ function isPrivateIpv6(ip: string): boolean {
   const isIpv4Mapped =
     words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff;
   const isIpv4Compatible = words.slice(0, 6).every((word) => word === 0);
-  if (isIpv4Mapped || isIpv4Compatible) {
-    const high = words[6] ?? 0;
-    const low = words[7] ?? 0;
-    return isPrivateIpv4(
-      `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`,
-    );
+  // ::ffff:0:0/96 (SIIT): IPv4-translated addresses, e.g. ::ffff:0:7f00:1
+  const isIpv4Translated =
+    words.slice(0, 4).every((word) => word === 0) &&
+    words[4] === 0xffff &&
+    words[5] === 0;
+  if (isIpv4Mapped || isIpv4Compatible || isIpv4Translated) {
+    return isEmbeddedIpv4Private(words[6] ?? 0, words[7] ?? 0);
   }
 
   const first = words[0] ?? 0;
+  const second = words[1] ?? 0;
   if ((first & 0xfe00) === 0xfc00) {
     // fc00::/7: unique local addresses
     return true;
@@ -144,6 +170,33 @@ function isPrivateIpv6(ip: string): boolean {
   }
   if ((first & 0xffc0) === 0xfec0) {
     // fec0::/10: deprecated site-local addresses, never publicly routable
+    return true;
+  }
+  if ((first & 0xff00) === 0xff00) {
+    // ff00::/8: multicast
+    return true;
+  }
+  if (first === 0x64 && second === 0xff9b) {
+    // 64:ff9b:1::/48 is local-use NAT64; the well-known 64:ff9b::/96 prefix
+    // translates to the IPv4 address in its last 32 bits, so a private IPv4
+    // destination stays private when reached through a NAT64 gateway.
+    if (words[2] === 1) {
+      return true;
+    }
+    if (words.slice(2, 6).every((word) => word === 0)) {
+      return isEmbeddedIpv4Private(words[6] ?? 0, words[7] ?? 0);
+    }
+  }
+  if (first === 0x2002) {
+    // 2002::/16: 6to4 embeds the IPv4 address in the next 32 bits
+    return isEmbeddedIpv4Private(second, words[2] ?? 0);
+  }
+  if (first === 0x2001 && second === 0) {
+    // 2001::/32: Teredo tunnelling, whose embedded addresses are obfuscated
+    return true;
+  }
+  if (first === 0x100 && words.slice(1, 4).every((word) => word === 0)) {
+    // 100::/64: discard-only prefix
     return true;
   }
   return false;

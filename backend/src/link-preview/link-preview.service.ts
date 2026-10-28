@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -15,6 +16,7 @@ import * as https from 'https';
 import { createHash } from 'crypto';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import { isPrivateIp } from './ip-guard';
+import { MetricsService } from '../metrics/metrics.service';
 import type Redis from 'ioredis';
 
 /**
@@ -29,6 +31,53 @@ const MAX_SITE_NAME_LENGTH = 200;
 const MAX_CACHE_ENTRY_BYTES = 16_384;
 const CACHE_TTL_SECONDS = 3_600;
 const CACHE_PREFIX = 'link_preview:v2';
+
+/**
+ * Per request leg: the socket must show activity at least this often. Axios
+ * implements `timeout` as an idle timer, so on its own it does not bound a
+ * response that keeps trickling bytes.
+ */
+const FETCH_IDLE_TIMEOUT_MS = 5_000;
+/**
+ * Budget for the whole scrape: DNS, every redirect leg and the body download.
+ * Chat sends wait for this, so a slow or hostile origin must not be able to
+ * hold a send open until the response-size cap is reached.
+ */
+const FETCH_TOTAL_TIMEOUT_MS = 8_000;
+
+const PRIVATE_NETWORK_MESSAGE = 'Private network URLs are not allowed';
+/** `code` set on the error raised when DNS resolves to a non-public address. */
+const SSRF_BLOCKED_CODE = 'ESSRFBLOCKED';
+
+type FailureReason =
+  | 'timeout'
+  | 'blocked_network'
+  | 'non_html'
+  | 'too_large'
+  | 'redirect'
+  | 'upstream_status'
+  | 'network'
+  | 'other';
+
+function ssrfBlockedError(): NodeJS.ErrnoException {
+  const error: NodeJS.ErrnoException = new Error(
+    'SSRF blocked: resolved address is not publicly routable',
+  );
+  error.code = SSRF_BLOCKED_CODE;
+  return error;
+}
+
+function errorCode(error: unknown): string | undefined {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string'
+  ) {
+    return error.code;
+  }
+  return undefined;
+}
 
 const safeLookup = (
   hostname: string,
@@ -53,11 +102,7 @@ const safeLookup = (
         ? [address]
         : address.map((candidate) => candidate.address);
     if (candidates.some((candidate) => isPrivateIp(candidate))) {
-      callback(
-        new Error('SSRF blocked: resolved address is not publicly routable'),
-        address,
-        family,
-      );
+      callback(ssrfBlockedError(), address, family);
       return;
     }
     callback(null, address, family);
@@ -74,7 +119,11 @@ export class LinkPreviewService {
   private readonly httpService: HttpService;
   private readonly redis: Redis;
 
-  constructor(httpService: HttpService, @Inject('REDIS_CLIENT') redis: Redis) {
+  constructor(
+    httpService: HttpService,
+    @Inject('REDIS_CLIENT') redis: Redis,
+    @Optional() private readonly metrics?: MetricsService,
+  ) {
     this.httpService = httpService;
     this.redis = redis;
     const window = new JSDOM('').window;
@@ -88,7 +137,20 @@ export class LinkPreviewService {
   }
 
   async getPreview(url: string): Promise<LinkPreview | null> {
-    const parsed = this.validateUrl(url);
+    let parsed: URL;
+    try {
+      parsed = this.validateUrl(url);
+    } catch (error: unknown) {
+      this.metrics?.recordLinkPreviewRequest(
+        'rejected',
+        error instanceof BadRequestException &&
+          error.message === PRIVATE_NETWORK_MESSAGE
+          ? 'private_network'
+          : 'invalid_url',
+      );
+      throw error;
+    }
+
     const normalizedUrl = parsed.href;
     const cacheKey = this.cacheKey(normalizedUrl);
     const descriptor = this.urlDescriptor(parsed);
@@ -98,6 +160,7 @@ export class LinkPreviewService {
       if (cached) {
         const cachedPreview = this.parseCachedPreview(cached, normalizedUrl);
         if (cachedPreview) {
+          this.metrics?.recordLinkPreviewRequest('cache_hit');
           return cachedPreview;
         }
         this.logger.warn(`Invalid link-preview cache entry (${descriptor})`);
@@ -107,33 +170,49 @@ export class LinkPreviewService {
       this.logger.warn(`Link-preview cache read unavailable (${descriptor})`);
     }
 
+    const startedAt = performance.now();
+    let preview: LinkPreview | null;
     try {
-      const preview = await this.fetchPreview(normalizedUrl);
-      if (preview) {
-        try {
-          await this.redis.set(
-            cacheKey,
-            JSON.stringify(preview),
-            'EX',
-            CACHE_TTL_SECONDS,
-          );
-        } catch {
-          // The preview is still valid when Redis is unavailable.
-          this.logger.warn(
-            `Link-preview cache write unavailable (${descriptor})`,
-          );
-        }
-      }
-      return preview;
+      preview = await this.fetchPreview(normalizedUrl);
     } catch (error: unknown) {
+      const reason = this.failureReason(error);
+      this.metrics?.recordLinkPreviewRequest('failed', reason);
+      this.metrics?.observeLinkPreviewFetch(
+        'failed',
+        (performance.now() - startedAt) / 1_000,
+      );
       this.logger.error(
-        `Link-preview fetch failed (${descriptor}; ${this.errorKind(error)})`,
+        `Link-preview fetch failed (${descriptor}; ${this.errorKind(error)}; reason=${reason})`,
       );
       if (error instanceof BadRequestException) {
         throw error;
       }
       throw new BadRequestException('Unable to fetch preview for this URL');
     }
+
+    const outcome = preview ? 'fetched' : 'empty';
+    this.metrics?.recordLinkPreviewRequest(outcome);
+    this.metrics?.observeLinkPreviewFetch(
+      outcome,
+      (performance.now() - startedAt) / 1_000,
+    );
+
+    if (preview) {
+      try {
+        await this.redis.set(
+          cacheKey,
+          JSON.stringify(preview),
+          'EX',
+          CACHE_TTL_SECONDS,
+        );
+      } catch {
+        // The preview is still valid when Redis is unavailable.
+        this.logger.warn(
+          `Link-preview cache write unavailable (${descriptor})`,
+        );
+      }
+    }
+    return preview;
   }
 
   private validateUrl(raw: string): URL {
@@ -174,7 +253,7 @@ export class LinkPreviewService {
     }
 
     if (this.isUnsafeLiteralHost(parsed.hostname)) {
-      throw new BadRequestException('Private network URLs are not allowed');
+      throw new BadRequestException(PRIVATE_NETWORK_MESSAGE);
     }
   }
 
@@ -236,7 +315,8 @@ export class LinkPreviewService {
   private async fetchPreview(url: string): Promise<LinkPreview | null> {
     const response = await firstValueFrom(
       this.httpService.get<string>(url, {
-        timeout: 5000,
+        timeout: FETCH_IDLE_TIMEOUT_MS,
+        signal: AbortSignal.timeout(FETCH_TOTAL_TIMEOUT_MS),
         maxRedirects: 3,
         beforeRedirect: (options) => this.validateRedirectTarget(options),
         httpAgent,
@@ -413,5 +493,45 @@ export class LinkPreviewService {
 
   private errorKind(error: unknown): string {
     return error instanceof Error ? error.name : 'UnknownError';
+  }
+
+  /**
+   * Buckets a scrape failure into a small, fixed vocabulary that is safe to use
+   * as a metric label and in logs (it never contains provider error text).
+   */
+  private failureReason(error: unknown): FailureReason {
+    if (error instanceof BadRequestException) {
+      // Raised by fetchPreview itself: the response was not an HTML document.
+      return 'non_html';
+    }
+
+    const code = errorCode(error);
+    if (code === SSRF_BLOCKED_CODE) {
+      return 'blocked_network';
+    }
+    // follow-redirects surfaces a rejected redirect target as the cause.
+    if (error instanceof Error && error.cause instanceof BadRequestException) {
+      return 'blocked_network';
+    }
+    if (
+      code === 'ERR_CANCELED' ||
+      code === 'ECONNABORTED' ||
+      code === 'ETIMEDOUT'
+    ) {
+      return 'timeout';
+    }
+    if (
+      code === 'ERR_FR_MAX_BODY_LENGTH_EXCEEDED' ||
+      (error instanceof Error && error.message.includes('maxContentLength'))
+    ) {
+      return 'too_large';
+    }
+    if (code === 'ERR_FR_TOO_MANY_REDIRECTS') {
+      return 'redirect';
+    }
+    if (code === 'ERR_BAD_RESPONSE' || code === 'ERR_BAD_REQUEST') {
+      return 'upstream_status';
+    }
+    return code === undefined ? 'other' : 'network';
   }
 }
