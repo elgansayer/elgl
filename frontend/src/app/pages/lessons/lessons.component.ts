@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, linkedSignal, resource, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -237,6 +237,7 @@ import {
       </a>
     </ng-template>
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LessonsComponent {
   readonly activeWordToken = signal<string | null>(null);

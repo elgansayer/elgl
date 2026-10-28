@@ -576,3 +576,7 @@
 ## 2026-10-23 - [Optimize sequential awaits inside for loops with Promise.all]
 **Learning:** Found sequential `await` operations inside `for...of` loops (e.g., `areUsersBlocked` in `ProfileVisitsService` and `invalidateEscrowCaches` in `EscrowService`). This blocks the execution loop and causes additive latency for external API calls, database queries, and Redis operations.
 **Action:** Replace `for...of` loops containing sequential `await` calls with `Promise.all` mapping to process independent operations concurrently. This significantly reduces total execution time from O(N) database/network roundtrips to an O(1) concurrent batch block.
+
+## 2024-10-24 - Default Angular Components to OnPush
+**Learning:** In the Angular codebase, numerous components were missing `ChangeDetectionStrategy.OnPush`, leading to default change detection checks triggering across the entire component tree unnecessarily during application state changes. This is a crucial architectural performance pattern.
+**Action:** Always proactively enforce `ChangeDetectionStrategy.OnPush` on all components unless they strictly rely on mutable object state that mutates outside of signals or immutability.

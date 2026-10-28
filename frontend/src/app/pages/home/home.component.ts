@@ -1,4 +1,4 @@
-import { Component, effect, inject, resource, signal } from '@angular/core';
+import { Component, effect, inject, resource, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
@@ -54,6 +54,7 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
       }
     `,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomeComponent {
   readonly authService = inject(AuthService);
