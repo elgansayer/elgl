@@ -133,6 +133,34 @@ def issue_priority(labels: set[str]) -> int:
     return 10
 
 
+_MERGE_QUEUE_STATE_QUERY = """
+query($owner: String!, $name: String!, $number: Int!, $branch: String!) {
+  repository(owner: $owner, name: $name) {
+    mergeQueue(branch: $branch) { id }
+    ref(qualifiedName: $branch) { target { ... on Commit { committedDate } } }
+    pullRequest(number: $number) {
+      id
+      isInMergeQueue
+      timelineItems(itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT], last: 1) {
+        nodes { ... on RemovedFromMergeQueueEvent { createdAt reason beforeCommit { oid } } }
+      }
+    }
+  }
+}
+"""
+_ENQUEUE_PULL_REQUEST_MUTATION = """
+mutation($id: ID!, $head: GitObjectID!) {
+  enqueuePullRequest(input: {pullRequestId: $id, expectedHeadOid: $head}) {
+    mergeQueueEntry { id }
+  }
+}
+"""
+
+
+def _parse_github_time(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 class GitHubClient:
     def __init__(
         self,
@@ -1035,8 +1063,64 @@ class GitHubClient:
         )
 
     def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
-        """Squash-merge only the exact reviewed head without bypassing GitHub rules."""
+        """Squash-merge only the exact reviewed head without bypassing GitHub rules.
 
+        With a merge queue on the base branch, enqueue the exact head instead;
+        GitHub merges it once CI passes on top of the latest main. The pipeline
+        keeps polling MERGE_QUEUED, so an already-queued PR is left alone. A head
+        the queue removed is re-queued only after main has moved, so a group that
+        fails deterministically costs one CI run per main change, not a loop.
+        """
+
+        owner, name = self.repository.split("/", 1)
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "graphql",
+                "-f",
+                f"query={_MERGE_QUEUE_STATE_QUERY}",
+                "-f",
+                f"owner={owner}",
+                "-f",
+                f"name={name}",
+                "-F",
+                f"number={pull_request}",
+                "-f",
+                f"branch={self.base_branch}",
+            )
+        )
+        repository = json.loads(output)["data"]["repository"]
+        if repository.get("mergeQueue") is not None:
+            item = repository["pullRequest"]
+            if item["isInMergeQueue"]:
+                return
+            removals = item["timelineItems"]["nodes"]
+            removal = removals[-1] if removals else None
+            base_moved_at = repository["ref"]["target"]["committedDate"]
+            if (
+                removal is not None
+                and (removal.get("beforeCommit") or {}).get("oid") == expected_head_sha
+                and _parse_github_time(base_moved_at) <= _parse_github_time(removal["createdAt"])
+            ):
+                raise FactoryError(
+                    f"Merge queue removed #{pull_request} at {expected_head_sha[:12]} "
+                    f"({removal.get('reason') or 'no reason given'}); waiting for main to move"
+                )
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "graphql",
+                    "-f",
+                    f"query={_ENQUEUE_PULL_REQUEST_MUTATION}",
+                    "-f",
+                    f"id={item['id']}",
+                    "-f",
+                    f"head={expected_head_sha}",
+                )
+            )
+            return
         self._run(
             (
                 "gh",

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.models import Task
 from openhands_factory.pr_convergence import (
     ConvergenceAction,
@@ -187,6 +189,22 @@ def test_closed_factory_pr_is_reopened_but_external_closed_pr_blocks() -> None:
     assert reusable.action is ConvergenceAction.REOPEN
     assert reusable.canonical == closed_factory
     assert blocked.action is ConvergenceAction.BLOCKED
+
+
+@pytest.mark.parametrize("label", ["superseded", "duplicate", "factory-skip"])
+def test_retired_external_closed_pr_no_longer_blocks_a_new_pr(label: str) -> None:
+    current = identity()
+    retired = record(
+        81,
+        state="CLOSED",
+        branch="contributor/churn",
+        body=f"Fixes #42\n{marked_body()}",
+        labels=frozenset({label}),
+    )
+
+    resolution = resolve_pull_request(current, [retired])
+
+    assert resolution.action is ConvergenceAction.CREATE
 
 
 def test_reconciliation_closes_factory_duplicate_and_already_merged_replay() -> None:

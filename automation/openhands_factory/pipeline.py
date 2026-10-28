@@ -62,6 +62,9 @@ TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 CI_POLL_INTERVAL = timedelta(minutes=1)
 CONFLICTING_MERGE_STATES = {"DIRTY"}
 MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
+# An unpublished job whose repairs ran out on a base this old is rebuilt once on
+# the current base instead of retrying old-main failures forever.
+STALE_UNPUBLISHED_BASE_AGE = timedelta(days=7)
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -1077,6 +1080,8 @@ class FactoryPipeline:
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
                 if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
+                    if self._restart_stale_unpublished(job, workflow):
+                        return
                     finding = findings[0]
                     raise FactoryError(f"Quality gate blocked: {finding.code} in {finding.path}")
                 job.state = JobState.QUALITY_REPAIRING
@@ -1120,6 +1125,8 @@ class FactoryPipeline:
                 job.state = JobState.VERIFYING
                 return
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
+                if self._restart_stale_unpublished(job, workflow):
+                    return
                 raise FactoryError("Quality repair limit exceeded")
 
             quality_finding_text = "\n".join(
@@ -1917,6 +1924,30 @@ class FactoryPipeline:
         self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
         return True
 
+    def _restart_stale_unpublished(self, job: Job, workflow: GitWorkflow) -> bool:
+        """Rebuild unpublished work on the current base when it cannot progress.
+
+        Nothing is committed before verification passes, so an unpublished job's
+        HEAD is still its original base. Jobs claimed in August and September kept
+        failing on defects main had long since fixed (2026-10-28). Back in
+        DISCOVERED the worktree is archived and recreated on the current base; the
+        age threshold allows at most one rebuild per week and job. Callers use it
+        only once repairs are spent or verification infrastructure failed.
+        """
+        if (
+            job.task.source == "github-pull-request"
+            or job.pull_request is not None
+            or job.latest_verified_sha is not None
+            or workflow.head_age() < STALE_UNPUBLISHED_BASE_AGE
+        ):
+            return False
+        LOGGER.info("Rebuilding unpublished task %s on the current base", job.task.identifier)
+        job.initial_base_sha = None
+        job.quality_repairs = 0
+        job.review_findings.clear()
+        job.state = JobState.DISCOVERED
+        return True
+
     def _rebuild_capped_conflict(self, job: Job, lease_owner: str, conflicting: bool) -> bool:
         """Re-implement once from the issue when repairs cannot reconcile a stale base.
 
@@ -2074,9 +2105,25 @@ class FactoryPipeline:
                 # pull request. Preserve the current pipeline state so the durable
                 # retry policy backs off and retries the same verification without
                 # spending an agent call or introducing unrelated code churn.
+                # Unpublished work on a weeks-old base is the exception: main may
+                # have removed the cause (network font inlining, 2026-10-28), so
+                # rebuild it rather than retry the same failure forever.
+                if self._restart_stale_unpublished(job, workflow):
+                    return None
                 raise
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
+                if self._restart_stale_unpublished(job, workflow):
+                    return None
                 raise
+            # Formatter and auto-fixable lint failures need no model (job 1195
+            # spent repairs on prettier whitespace). Re-verify on the next pass if
+            # the fixers changed anything; an unchanged tree falls through to the
+            # bounded agent repair, so this cannot loop.
+            before = workflow.change_fingerprint()
+            attempt_mechanical_repair(workflow.repository, workflow.changed_paths())
+            if workflow.change_fingerprint() != before:
+                LOGGER.info("Mechanically repaired task %s; verifying again", job.task.identifier)
+                return None
             evidence = detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
