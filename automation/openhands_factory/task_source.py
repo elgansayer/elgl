@@ -381,6 +381,15 @@ class TaskStore:
             bind,
         )
 
+    def forget_unpublished_base(self, task_id: str, owner: str) -> Lease:
+        """Let a never-verified claim rebuild its branch on the current base."""
+
+        return self._update_owned_claim(
+            task_id,
+            owner,
+            lambda claim: replace(claim, initial_base_sha=None),
+        )
+
     def restart_from_predecessor(
         self,
         task_id: str,

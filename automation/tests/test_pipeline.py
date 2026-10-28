@@ -2328,6 +2328,9 @@ def test_discovery_recovery_reuses_durable_branch_and_initial_base(
         "factory/42-original",
         "initial-base-sha",
     )
+    pipeline.tasks.record_verification(
+        job.task.identifier, "crashed-worker", "verified-head", path_fingerprint=None
+    )
     pipeline.tasks.release(job.task.identifier, owner="crashed-worker")
     worktree = pipeline.config.worktree_dir / "issue-42"
     worktree.mkdir(parents=True)
@@ -2363,6 +2366,41 @@ def test_discovery_recovery_reuses_durable_branch_and_initial_base(
     claim = pipeline.tasks.claims()[job.task.logical_key]
     assert claim.canonical_branch == "factory/42-original"
     assert claim.initial_base_sha == "initial-base-sha"
+
+
+def test_discovery_recovery_rebuilds_unverified_claim_on_current_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    pipeline.tasks.acquire(job.task, "crashed-worker")
+    pipeline.tasks.bind_branch(
+        job.task.identifier, "crashed-worker", "factory/42-original", "months-old-base"
+    )
+    pipeline.tasks.release(job.task.identifier, owner="crashed-worker")
+    prepared: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_claimed_worktree",
+        lambda workflow, path, branch, initial_base_sha: prepared.append(
+            (branch, initial_base_sha)
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "current-base")
+
+    advanced = pipeline.run_job(job.task.identifier)
+
+    assert advanced is not None
+    assert advanced.state is JobState.IMPLEMENTING
+    assert prepared == [("factory/42-original", None)]
+    claim = pipeline.tasks.claims()[job.task.logical_key]
+    assert claim.canonical_branch == "factory/42-original"
+    assert claim.initial_base_sha == "current-base"
 
 
 def test_run_job_advances_only_the_selected_durable_job(
