@@ -61,18 +61,21 @@ import { BadRequestException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
 import { LinkPreviewService } from './link-preview.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LinkPreviewService', () => {
   let service: LinkPreviewService;
   let httpService: { get: Mock };
   let redis: { get: Mock; set: Mock };
+  let metrics: { recordLinkPreview: Mock };
 
   beforeEach(async () => {
     redis = {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
     };
+    metrics = { recordLinkPreview: vi.fn() };
 
     httpService = {
       get: vi.fn(),
@@ -87,6 +90,7 @@ describe('LinkPreviewService', () => {
           useValue: { getRedisClient: vi.fn().mockReturnValue(redis) },
         },
         { provide: 'REDIS_CLIENT', useValue: redis },
+        { provide: MetricsService, useValue: metrics },
       ],
     }).compile();
 
