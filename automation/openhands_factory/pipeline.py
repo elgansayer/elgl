@@ -988,6 +988,7 @@ class FactoryPipeline:
                     job.task.title,
                 )
             else:
+                canonical_branch = claim.canonical_branch
                 base_sha = claim.initial_base_sha
                 if claim.canonical_pull_request is None and claim.latest_verified_sha is None:
                     # Nothing from this claim was verified or pushed and the worktree
@@ -998,10 +999,10 @@ class FactoryPipeline:
                     base_sha = None
                 workflow.prepare_claimed_worktree(
                     worktree,
-                    claim.canonical_branch,
+                    canonical_branch,
                     base_sha,
                 )
-                job.branch = claim.canonical_branch
+                job.branch = canonical_branch
             job.initial_base_sha = self._workflow(worktree).head_sha()
             bound = self.tasks.bind_branch(
                 job.task.identifier,
