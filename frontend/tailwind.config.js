@@ -44,6 +44,10 @@ module.exports = {
         danger: {
           DEFAULT: 'rgb(var(--color-danger-rgb) / <alpha-value>)',
         },
+        // AA-safe text roles for Ember, Tide, and danger on light surfaces.
+        'primary-ink': 'rgb(var(--color-primary-text-rgb) / <alpha-value>)',
+        'secondary-ink': 'rgb(var(--color-secondary-text-rgb) / <alpha-value>)',
+        'danger-ink': 'rgb(var(--color-danger-text-rgb) / <alpha-value>)',
         success: {
           DEFAULT: 'rgb(var(--color-success-rgb) / <alpha-value>)',
         },

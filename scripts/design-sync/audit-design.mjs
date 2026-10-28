@@ -40,9 +40,9 @@ const textPairs = [
   ['text-secondary', 'surface-300'],
   ['text-muted', 'surface-300'],
   ['text-muted', 'surface-200'],
-  ['primary', 'surface-500'],
-  ['secondary', 'surface-500'],
-  ['danger', 'surface-500'],
+  ['primary-text', 'surface-500'],
+  ['secondary-text', 'surface-500'],
+  ['danger-text', 'surface-500'],
 ];
 const fillPairs = ['primary', 'secondary', 'danger', 'success', 'warning', 'vip', 'accent'].map(
   (fill) => ['on-fill', fill],

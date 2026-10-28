@@ -42,12 +42,12 @@
             }
             <div class="text-center pt-4">
               <h3 class="text-xl font-bold mb-2">{{ plan.nameKey | t }}</h3>
-              <p class="text-3xl font-extrabold text-primary mb-4">{{ plan.priceKey | t }}</p>
+              <p class="text-3xl font-extrabold text-primary-ink mb-4">{{ plan.priceKey | t }}</p>
               <p class="text-xs text-text-secondary mb-6">{{ 'vip.billedMonthly' | t }}</p>
               <ul class="text-start space-y-2 mb-6">
                 @for (feature of plan.features; track feature) {
                   <li class="flex items-start gap-2">
-                    <span class="text-primary mt-0.5" aria-hidden="true">✓</span>
+                    <span class="text-primary-ink mt-0.5" aria-hidden="true">✓</span>
                     <span>{{ feature | t }}</span>
                   </li>
                 }
@@ -93,7 +93,7 @@
                 <th scope="row" class="ps-4 pe-4 pt-2 pb-2 font-normal">{{ row.labelKey | t }}</th>
                 <td class="ps-4 pe-4 pt-2 pb-2 text-center">
                   @if (row.free) {
-                    <span class="text-primary text-lg" aria-hidden="true">✓</span>
+                    <span class="text-primary-ink text-lg" aria-hidden="true">✓</span>
                     <span class="sr-only">{{ 'vip.included' | t }}</span>
                   } @else {
                     <span class="text-text-muted" aria-hidden="true">-</span>
@@ -102,7 +102,7 @@
                 </td>
                 <td class="ps-4 pe-4 pt-2 pb-2 text-center">
                   @if (row.consumer) {
-                    <span class="text-primary text-lg" aria-hidden="true">✓</span>
+                    <span class="text-primary-ink text-lg" aria-hidden="true">✓</span>
                     <span class="sr-only">{{ 'vip.included' | t }}</span>
                   } @else {
                     <span class="text-text-muted" aria-hidden="true">-</span>
@@ -111,7 +111,7 @@
                 </td>
                 <td class="ps-4 pe-4 pt-2 pb-2 text-center">
                   @if (row.pro) {
-                    <span class="text-primary text-lg" aria-hidden="true">✓</span>
+                    <span class="text-primary-ink text-lg" aria-hidden="true">✓</span>
                     <span class="sr-only">{{ 'vip.included' | t }}</span>
                   } @else {
                     <span class="text-text-muted" aria-hidden="true">-</span>
@@ -120,7 +120,7 @@
                 </td>
                 <td class="ps-4 pe-4 pt-2 pb-2 text-center">
                   @if (row.developer) {
-                    <span class="text-primary text-lg" aria-hidden="true">✓</span>
+                    <span class="text-primary-ink text-lg" aria-hidden="true">✓</span>
                     <span class="sr-only">{{ 'vip.included' | t }}</span>
                   } @else {
                     <span class="text-text-muted" aria-hidden="true">-</span>
@@ -152,7 +152,7 @@
             >
               <span class="font-medium">{{ faq.questionKey | t }}</span>
               <span
-                class="text-primary transition-transform duration-200"
+                class="text-primary-ink transition-transform duration-200"
                 [class.rotate-180]="openFaqIndex() === idx"
                 aria-hidden="true"
               >

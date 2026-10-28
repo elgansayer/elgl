@@ -22,8 +22,9 @@ The service must:
 1. validate persisted and profile-sourced values before converting them to RGB;
 2. remove invalid persisted values instead of emitting malformed CSS variables;
 3. clear the previous accent when a profile is absent or has no valid custom accent;
-4. remove both `--colour-primary` and `--colour-primary-rgb` when resetting so Relay defaults become authoritative again;
-5. never let one user's profile accent leak into the next user's session.
+4. remove `--colour-primary`, `--colour-primary-rgb`, and `--colour-primary-text-rgb` when resetting so Relay defaults become authoritative again;
+5. derive the light text role (`--colour-primary-text-rgb`) dynamically by lowering lightness until it clears 4.5:1 contrast against surface-500;
+6. never let one user's profile accent leak into the next user's session.
 
 ## Prohibited patterns
 

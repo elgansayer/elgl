@@ -18,4 +18,16 @@ describe('HlmButton product variants', () => {
     expect(classes).toContain('bg-destructive');
     expect(classes).toContain('text-primary-foreground');
   });
+
+  it('provides an AA-safe primary text link button variant', () => {
+    const classes = buttonVariants({ variant: 'link' });
+
+    expect(classes).toContain('text-primary-ink');
+  });
+
+  it('provides an AA-safe danger text destructive button variant', () => {
+    const classes = buttonVariants({ variant: 'destructive' });
+
+    expect(classes).toContain('text-danger-ink');
+  });
 });

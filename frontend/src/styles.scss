@@ -61,8 +61,11 @@ legacy comma-separated value (silently drops the whole declaration). */
 
     --color-primary-rgb: 198 82 48; /* Ember - darkened from initial pass so on-fill(paper) text clears 4.5:1 */
     --color-primary: #c65230;
+    --color-primary-text-rgb: 178 74 43; /* #b24a2b, 5.02:1 on surface-500, >=4.51 on surface-200..500 */
     --color-secondary-rgb: 26 132 120; /* Tide, same reasoning */
+    --color-secondary-text-rgb: 23 119 108; /* #17776c */
     --color-danger-rgb: 217 58 58;
+    --color-danger-text-rgb: 204 39 39; /* #cc2727 */
     --color-success-rgb: 25 134 84;
     --color-warning-rgb: 161 108 9;
     --color-vip-rgb: 153 111 16;
@@ -90,8 +93,11 @@ legacy comma-separated value (silently drops the whole declaration). */
 
     --color-primary-rgb: 255 122 82; /* Ember, brighter for dark bg */
     --color-primary: #ff7a52;
+    --color-primary-text-rgb: 255 122 82;
     --color-secondary-rgb: 53 214 192; /* Tide, brighter for dark bg */
+    --color-secondary-text-rgb: 53 214 192;
     --color-danger-rgb: 255 107 107;
+    --color-danger-text-rgb: 255 107 107;
     --color-success-rgb: 52 211 153;
     --color-warning-rgb: 242 179 61;
     --color-vip-rgb: 232 184 75;
@@ -294,7 +300,7 @@ legacy comma-separated value (silently drops the whole declaration). */
   }
 
   .app-chip-active {
-    @apply bg-primary/20 text-primary hover:bg-primary/30;
+    @apply bg-primary/20 text-primary-ink hover:bg-primary/30;
   }
 
   .app-pill {

@@ -86,7 +86,7 @@
       </div>
 
       @if (followErrorKey()) {
-        <p [id]="followStatusId()" class="mb-4 text-sm text-danger" role="status" aria-live="polite">
+        <p [id]="followStatusId()" class="mb-4 text-sm text-danger-ink" role="status" aria-live="polite">
           {{ followErrorKey() | t }}
         </p>
       }
@@ -161,7 +161,7 @@
           @if (translationErrorKey()) {
             <p
               [id]="translationStatusId()"
-              class="mt-2 text-xs text-danger"
+              class="mt-2 text-xs text-danger-ink"
               role="status"
               aria-live="polite"
             >
@@ -206,7 +206,7 @@
             {{ 'chatList.tapToChat' | t }}
           </button>
           @if (chatErrorKey()) {
-            <p [id]="chatStatusId()" class="text-sm text-danger" role="status" aria-live="polite">
+            <p [id]="chatStatusId()" class="text-sm text-danger-ink" role="status" aria-live="polite">
               {{ chatErrorKey() | t }}
             </p>
           }

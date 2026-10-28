@@ -45,12 +45,18 @@ only what they resolve to changed - so no template touch was needed for this pha
 | `text-primary`        | `#12151C`                                                                              | `#F3F4F7`             |                                                                                                                                                                                                                                                                                                                                          |
 | `text-secondary`      | `#4A5163`                                                                              | `#B4BAC9`             |                                                                                                                                                                                                                                                                                                                                          |
 | `text-muted`          | `#656A7A`                                                                              | `#898F9D`             |                                                                                                                                                                                                                                                                                                                                          |
+| `primary-text` (`primary-ink`) | `#B24A2B` | `#FF7A52` | AA-safe text role for Ember (`primary`) on light surfaces (5.02:1 on `surface-500`, ≥4.51:1 on `surface-200`..`500`). For user accents, derived dynamically in `ThemeService` by lowering lightness until it clears 4.5:1 against `surface-500`. Dark theme matches `primary`. |
+| `secondary-text` (`secondary-ink`) | `#17776C` | `#35D6C0` | AA-safe text role for Tide (`secondary`) text on light surfaces (5.04:1 on `surface-500`). Dark theme matches `secondary`. |
+| `danger-text` (`danger-ink`) | `#CC2727` | `#FF6B6B` | AA-safe text role for error copy and destructive ghost/link buttons on light surfaces (5.04:1 on `surface-500`). Dark theme matches `danger`. |
 
 Every pairing above was contrast-audited: all text/surface and on-fill/fill combinations clear
-4.5:1 (WCAG AA) in both themes. `neon` is intentionally left as a static (non-branched) scale -
-decorative/tint use, not paired with `on-fill` as a solid fill. `accent`'s `DEFAULT`/`500` became
-theme-aware during Phase 4 (see below) once a real usage needed `on-fill` pairing at small text
-sizes; its `50-700` tint scale stays static.
+4.5:1 (WCAG AA) in both themes. Ember (`primary`), Tide (`secondary`), and `danger` fills are
+reserved for background fills, badges, and solid controls with `on-fill` text, whilst their
+paired ink tokens (`primary-ink`, `secondary-ink`, `danger-ink`) provide AA-safe contrast when
+rendered directly as text, inline errors, or ghost/link button labels on light surfaces. `neon`
+is intentionally left as a static (non-branched) scale: decorative/tint use, not paired with
+`on-fill` as a solid fill. `accent`'s `DEFAULT`/`500` became theme-aware during Phase 4 (see below)
+once a real usage needed `on-fill` pairing at small text sizes; its `50-700` tint scale stays static.
 
 ## Typography
 

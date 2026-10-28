@@ -32,14 +32,14 @@ import { UserProfile } from '../../services/user.service';
             aria-live="polite"
           >
             <span
-              class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary motion-reduce:animate-none"
+              class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary-ink motion-reduce:animate-none"
               aria-hidden="true"
             ></span>
             <span class="sr-only">{{ 'common.loading' | t }}</span>
           </div>
         } @else if (loadError()) {
           <div class="flex flex-col items-center gap-3 px-4 py-10 text-center" role="alert">
-            <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
             <button hlmBtn type="button" variant="secondary" size="touch" (click)="retryLoad()">
               {{ 'common.retry' | t }}
             </button>
@@ -130,7 +130,7 @@ import { UserProfile } from '../../services/user.service';
         }
 
         @if (playbackError()) {
-          <p class="border-t border-surface-100 px-4 py-3 text-sm text-danger" role="alert">
+          <p class="border-t border-surface-100 px-4 py-3 text-sm text-danger-ink" role="alert">
             {{ 'audioPlayer.error' | t }}
           </p>
         }

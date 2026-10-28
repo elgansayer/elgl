@@ -45,7 +45,7 @@ const LINK_PREVIEW_LIMITS = {
           @if (displaySiteName()) {
             <p
               dir="auto"
-              class="mb-1 break-words text-[10px] font-semibold uppercase tracking-wide text-primary/60"
+              class="mb-1 break-words text-[10px] font-semibold uppercase tracking-wide text-primary-ink/60"
             >
               {{ displaySiteName() }}
             </p>

@@ -25,7 +25,7 @@ interface FullAchievementDto {
         @if (achievementsResource.isLoading()) {
           <p class="app-muted">{{ 'achievements.loading' | t }}</p>
         } @else if (achievementsResource.error()) {
-          <p class="text-sm text-danger" role="alert">{{ 'achievements.loadError' | t }}</p>
+          <p class="text-sm text-danger-ink" role="alert">{{ 'achievements.loadError' | t }}</p>
         } @else if (achievementsResource.value().length === 0) {
           <p class="app-muted">{{ 'achievements.empty' | t }}</p>
         } @else {

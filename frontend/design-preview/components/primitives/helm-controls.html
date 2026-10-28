@@ -472,6 +472,8 @@
         --h-accent: var(--accent);
         --h-accent-fg: var(--on-fill);
         --h-destructive: var(--danger);
+        --h-primary-text: 178 74 43;
+        --h-destructive-text: 204 39 39;
         --h-border: var(--surface-100);
         --h-input: var(--surface-100);
         --h-ring: var(--primary);
@@ -574,10 +576,11 @@
       }
       .hb.v-destructive {
         background: rgb(var(--h-destructive) / 0.1);
-        color: rgb(var(--h-destructive));
+        color: rgb(var(--h-destructive-text));
       }
       html.dark .hb.v-destructive {
         background: rgb(var(--h-destructive) / 0.2);
+        color: rgb(var(--h-destructive));
       }
       .hb.v-destructive.hover {
         background: rgb(var(--h-destructive) / 0.2);
@@ -591,8 +594,11 @@
       }
       .hb.v-link {
         background: transparent;
-        color: rgb(var(--h-primary));
+        color: rgb(var(--h-primary-text));
         text-underline-offset: 4px;
+      }
+      html.dark .hb.v-link {
+        color: rgb(var(--h-primary));
       }
       .hb.v-link.hover {
         text-decoration: underline;

@@ -33,6 +33,7 @@ describe('ThemeService', () => {
     vi.spyOn(document.documentElement.classList, 'toggle');
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
+    document.documentElement.style.removeProperty('--color-primary-text-rgb');
 
     TestBed.configureTestingModule({});
   });
@@ -40,6 +41,7 @@ describe('ThemeService', () => {
   afterEach(() => {
     document.documentElement.style.removeProperty('--color-primary');
     document.documentElement.style.removeProperty('--color-primary-rgb');
+    document.documentElement.style.removeProperty('--color-primary-text-rgb');
     vi.restoreAllMocks();
     document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
@@ -117,6 +119,35 @@ describe('ThemeService', () => {
     expect(document.documentElement.style.getPropertyValue('--color-primary-rgb')).toBe(
       '51 102 204',
     );
+    expect(document.documentElement.style.getPropertyValue('--color-primary-text-rgb')).toBe(
+      '51 102 204',
+    );
+  });
+
+  it('should derive an AA-safe text role by lowering lightness against surface-500', () => {
+    service = TestBed.inject(ThemeService);
+    // #ff9900 is bright orange which has ~1.6:1 contrast on surface-500
+    service.setPrimaryAccentColor('#ff9900');
+    TestBed.flushEffects();
+
+    expect(service.primaryAccentColor()).toBe('#ff9900');
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#ff9900');
+    expect(document.documentElement.style.getPropertyValue('--color-primary-rgb')).toBe('255 153 0');
+
+    const textRgb = document.documentElement.style.getPropertyValue('--color-primary-text-rgb');
+    expect(textRgb).toBeTruthy();
+    expect(textRgb).not.toBe('255 153 0');
+    const [r, g, b] = textRgb.split(' ').map(Number);
+    const ch = (c: number) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    const lum = (rgb: [number, number, number]) =>
+      0.2126 * ch(rgb[0]) + 0.7152 * ch(rgb[1]) + 0.0722 * ch(rgb[2]);
+    const l1 = lum([r, g, b]);
+    const l2 = lum([246, 247, 250]);
+    const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
   it('should discard an invalid stored primary accent', () => {
@@ -142,6 +173,7 @@ describe('ThemeService', () => {
     expect(window.localStorage.removeItem).toHaveBeenCalledWith('app_primary_accent_color');
     expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
     expect(document.documentElement.style.getPropertyValue('--color-primary-rgb')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--color-primary-text-rgb')).toBe('');
   });
 
   it('should reset accent when a profile colour is invalid', () => {
