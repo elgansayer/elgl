@@ -1,7 +1,24 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+
+export type EventCategory = 'Audio Rooms' | 'Learning Seminars' | 'In-person Meetups' | 'Cultural Exchanges' | string;
+export type EventRsvpStatus = 'attending' | 'interested';
+
+export interface EventRsvp {
+  id?: string;
+  event_id: string;
+  user_id: string;
+  status: EventRsvpStatus;
+}
+
+export interface EventRsvpSummary {
+  event_id: string;
+  attending_count: number;
+  interested_count: number;
+  viewer_status: EventRsvpStatus | null;
+}
 
 export interface Event {
   id: string;
@@ -19,6 +36,22 @@ export interface Event {
   host_name?: string;
   host_avatar_url?: string;
   participants_count?: number;
+  attendees_count?: number;
+  interested_count?: number;
+}
+
+export type EventVenueType = 'audio_room' | 'zoom' | 'in_person';
+
+export interface CreateEventRequest {
+  title: string;
+  description: string;
+  category?: string;
+  date_time: string;
+  venue_type: EventVenueType;
+  location: string;
+  timezone: string;
+  language_pair?: string;
+  max_participants?: number;
 }
 
 export interface EventsQuery {
@@ -30,6 +63,12 @@ export interface EventsQuery {
   page?: number;
   limit?: number;
   proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
+}
+
+export interface CalendarEventsQuery {
+  from_date: string;
+  to_date: string;
+  limit?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -79,16 +118,7 @@ export class EventsService {
     return this.http.get<Event>(`${environment.apiUrl}/events/${eventId}`);
   }
 
-  createEvent(dto: {
-    title: string;
-    description?: string;
-    category?: string;
-    date_time: string;
-    location?: string;
-    language_pair?: string;
-    max_participants?: number;
-    mentions?: string[];
-  }) {
+  createEvent(dto: CreateEventRequest) {
     return this.http.post<Event>(`${environment.apiUrl}/events`, dto);
   }
 
@@ -115,20 +145,38 @@ export class EventsService {
     return this.http.get<Event[]>(`${environment.apiUrl}/events/my`, { params });
   }
 
-  getRsvp(eventId: string) {
-    return this.http.get<{ id?: string; event_id: string; user_id: string; status: string } | null>(
+  getMyCalendarEvents(query: CalendarEventsQuery) {
+    const params: Record<string, string | number> = {
+      from_date: query.from_date,
+      to_date: query.to_date,
+    };
+    if (query.limit) params['limit'] = query.limit;
+    return this.http.get<Event[]>(`${environment.apiUrl}/events/my/calendar`, { params });
+  }
+
+  getRsvp(eventId: string): Observable<EventRsvp | null> {
+    return this.http.get<EventRsvp | null>(
       `${environment.apiUrl}/events/${eventId}/rsvp`,
     );
   }
 
-  rsvp(eventId: string, status: 'attending' | 'interested') {
-    return this.http.post<{ id: string; event_id: string; user_id: string; status: string }>(
+  getRsvpSummaries(eventIds: string[]): Observable<EventRsvpSummary[]> {
+    const ids = [...new Set(eventIds)].slice(0, 50);
+    if (ids.length === 0) return of([]);
+
+    return this.http.get<EventRsvpSummary[]>(`${environment.apiUrl}/events/rsvp-summaries`, {
+      params: { event_ids: ids.join(',') },
+    });
+  }
+
+  rsvp(eventId: string, status: EventRsvpStatus): Observable<EventRsvp> {
+    return this.http.post<EventRsvp>(
       `${environment.apiUrl}/events/${eventId}/rsvp`,
       { status },
     );
   }
 
-  removeRsvp(eventId: string) {
+  removeRsvp(eventId: string): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/events/${eventId}/rsvp`);
   }
 }

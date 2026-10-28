@@ -79,10 +79,44 @@ describe('validateEnvironment', () => {
     ['CLOUDFLARE_R2_SIGNING_SECRET', 'replace-with-a-real-secret'],
     ['STRIPE_SECRET_KEY', 'sk_test_123'],
     ['SUPABASE_URL', 'https://example.supabase.co'],
+    ['CENTRIFUGO_API_KEY', 'secret-centrifugo-api-key-change-in-prod'],
+    ['CENTRIFUGO_SECRET', 'secret-centrifugo-token-key-change-in-prod'],
+    ['TRANSFER_SECRET', 'device-transfer-secret-dev-only'],
+    ['TRANSFER_SECRET', 'test-transfer-secret'],
+    ['LIVEKIT_API_KEY', 'dev_livekit_key_test_value_123'],
+    ['LIVEKIT_SECRET', 'dev_livekit_secret_test_value_123'],
+    ['FRONTEND_URL', 'http://localhost:4200'],
+    ['FRONTEND_URL', 'https://localhost:4200'],
+    ['DATABASE_URL', 'postgres://user:pass@localhost:5432/db'],
+    ['REDIS_URL', 'redis://localhost:6379'],
+    ['CENTRIFUGO_URL', 'http://localhost:8000'],
+    ['LIVEKIT_URL', 'ws://localhost:7880'],
+    ['CLOUDFLARE_R2_GATEWAY_URL', 'http://localhost:8787'],
+    ['STRIPE_MONTHLY_PRICE_ID', 'price_monthly_test'],
+    ['STRIPE_YEARLY_PRICE_ID', 'price_yearly_test'],
+    ['APPLE_BUNDLE_ID', 'com.hellotalk.app'],
+    [
+      'APPLE_VERIFICATION_URL',
+      'https://sandbox.itunes.apple.com/verifyReceipt',
+    ],
+    ['GOOGLE_PLAY_PACKAGE_NAME', 'com.hellotalk.app'],
+    ['GOOGLE_PUBSUB_AUDIENCE', 'https://pubsub.googleapis.com/test'],
+    ['GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL', 'test@example.com'],
   ])('rejects production placeholder %s values', (key, value) => {
     expect(() =>
       validateEnvironment({ ...productionEnvironment(), [key]: value }),
     ).toThrow('Production environment contains placeholder values for:');
+  });
+
+  it.each([
+    ['CENTRIFUGO_API_KEY', ' prod-centrifugo-api-key'],
+    ['CENTRIFUGO_SECRET', 'prod-centrifugo-secret '],
+  ])('rejects whitespace-padded production %s values', (key, value) => {
+    expect(() =>
+      validateEnvironment({ ...productionEnvironment(), [key]: value }),
+    ).toThrow(
+      `Production environment contains surrounding whitespace for: ${key}`,
+    );
   });
 
   it.each([

@@ -36,6 +36,10 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+The production build deliberately leaves external font CSS uninlined. This keeps builds deterministic when
+the Google Fonts endpoint is unavailable; browsers retain the platform-font fallback declared in
+`tailwind.config.js` if the optional display font cannot be loaded at runtime.
+
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:

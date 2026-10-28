@@ -44,6 +44,21 @@ test('distinguishes major dependency work from routine grouped maintenance', () 
   );
 });
 
+test('treats a grouped framework major with unquoted versions as major work', () => {
+  const pr = {
+    title: 'build(deps): bump the nestjs-major group across 1 directory with 2 updates',
+    body: [
+      'Updates `@nestjs/core` from 11.1.6 to 12.1.3',
+      'Updates `@nestjs/common` from 11.1.6 to 12.1.3'
+    ].join('\n')
+  };
+  assert.deepEqual(parseDependencyBumps(pr.title, pr.body), [
+    { name: '@nestjs/core', from: '11.1.6', to: '12.1.3' },
+    { name: '@nestjs/common', from: '11.1.6', to: '12.1.3' }
+  ]);
+  assert.equal(isMajorDependencyPullRequest(pr), true);
+});
+
 test('classifies runtime and compiler upgrades before directory-specific lanes', () => {
   assert.equal(
     classifyCompatibilityLane(

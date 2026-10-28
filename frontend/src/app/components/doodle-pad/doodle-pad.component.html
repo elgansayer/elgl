@@ -35,7 +35,7 @@
       (pointerup)="stopDrawing($event)"
       (pointercancel)="stopDrawing($event)"
       (pointerleave)="stopDrawing($event)"
-      class="h-auto max-w-full cursor-crosshair rounded-app bg-surface-50"
+      class="h-auto max-w-full touch-none cursor-crosshair rounded-app bg-surface-50"
     ></canvas>
   </div>
 
@@ -90,7 +90,7 @@
         @for (width of brushWidths; track width) {
           <label
             [class]="
-              'inline-flex min-h-11 cursor-pointer items-center rounded-app border px-3 py-2 text-xs font-bold focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-surface-200 ' +
+              'inline-flex min-h-11 min-w-11 cursor-pointer items-center rounded-app border px-3 py-2 text-xs font-bold focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-surface-200 ' +
               (brushWidth === width
                 ? 'border-primary bg-primary text-on-fill'
                 : 'border-surface-100 bg-surface-300 text-text-primary hover:bg-surface-100')

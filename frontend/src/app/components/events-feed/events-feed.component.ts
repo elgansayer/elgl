@@ -4,10 +4,11 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AppSelectComponent } from '../primitives/select/select.component';
+import { EventRsvpControlsComponent } from '../event-rsvp-controls/event-rsvp-controls.component';
+import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 import { EventsService, Event } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 
 const PAGE_SIZE = 20;
 
@@ -21,6 +22,7 @@ const PAGE_SIZE = 20;
     TranslatePipe,
     DatePipe,
     AppSelectComponent,
+    EventRsvpControlsComponent,
     CreateEventModalComponent,
   ],
   template: `
@@ -95,6 +97,12 @@ const PAGE_SIZE = 20;
                 {{ 'events.hosted_by' | t: { name: event.host_name } }}
               </p>
             }
+            <app-event-rsvp-controls
+              [eventId]="event.id"
+              [eventTitle]="event.title"
+              [maxParticipants]="event.max_participants"
+              [mutable]="canRsvp(event)"
+            />
           </div>
         }
       </div>
@@ -130,7 +138,7 @@ const PAGE_SIZE = 20;
 
     @if (isCreateModalOpen()) {
       <app-create-event-modal
-        (created)="onEventCreated()"
+        (created)="onEventCreated($event)"
         (dismiss)="closeCreateModal()"
       />
     }
@@ -170,6 +178,10 @@ export class EventsFeedComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadEvents(true);
+  }
+
+  canRsvp(event: Event): boolean {
+    return !event.is_cancelled && Date.parse(event.date_time) > Date.now();
   }
 
   private languageDisplayName(code: string, displayNames: Intl.DisplayNames | undefined): string {
@@ -241,19 +253,6 @@ export class EventsFeedComponent implements OnInit {
     void this.loadEvents(true);
   }
 
-  openCreateModal(): void {
-    this.isCreateModalOpen.set(true);
-  }
-
-  closeCreateModal(): void {
-    this.isCreateModalOpen.set(false);
-  }
-
-  onEventCreated(): void {
-    this.closeCreateModal();
-    void this.loadEvents(true);
-  }
-
   retry(): void {
     if (this.isLoading()) return;
     void this.loadEvents(this.events().length === 0);
@@ -262,5 +261,30 @@ export class EventsFeedComponent implements OnInit {
   loadMore(): void {
     if (this.isLoading() || !this.hasMore()) return;
     void this.loadEvents();
+  }
+
+  openCreateModal(): void {
+    this.isCreateModalOpen.set(true);
+  }
+
+  closeCreateModal(): void {
+    this.isCreateModalOpen.set(false);
+  }
+
+  /**
+   * Shows a newly created event immediately when it belongs in the current
+   * view, instead of reloading the whole feed.
+   */
+  onEventCreated(created: Event): void {
+    this.closeCreateModal();
+    if (this.status() !== 'upcoming') return;
+    const languagePair = this.languagePair();
+    if (languagePair && created.language_pair !== languagePair) return;
+
+    this.events.update((current) =>
+      [...current.filter((item) => item.id !== created.id), created].sort(
+        (a, b) => Date.parse(a.date_time) - Date.parse(b.date_time),
+      ),
+    );
   }
 }
