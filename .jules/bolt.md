@@ -576,3 +576,7 @@
 ## 2026-10-23 - [Optimize sequential awaits inside for loops with Promise.all]
 **Learning:** Found sequential `await` operations inside `for...of` loops (e.g., `areUsersBlocked` in `ProfileVisitsService` and `invalidateEscrowCaches` in `EscrowService`). This blocks the execution loop and causes additive latency for external API calls, database queries, and Redis operations.
 **Action:** Replace `for...of` loops containing sequential `await` calls with `Promise.all` mapping to process independent operations concurrently. This significantly reduces total execution time from O(N) database/network roundtrips to an O(1) concurrent batch block.
+
+## 2024-10-28 - Backend: Use Promise.all to fetch privacy status and account deletion status
+**Learning:** Found independent backend operations in controllers fetching different information sequentially where they could be batched. In `PrivacyController.getStatus`, `privacyService.getStatus` and `privacyLifecycleService.getAccountDeletionStatus` run back to back without dependencies.
+**Action:** When finding multiple `await` calls that don't depend on each other, especially across different services targeting different domain segments, group them with `Promise.all` to reduce database/network roundtrips and improve endpoint latency.
