@@ -75,6 +75,18 @@ describe('BlocksService', () => {
       expect(result).toEqual([]);
     });
 
+    it('should return empty array when blocks response data is null', async () => {
+      mockQueryBuilder._response = {
+        data: null,
+        error: null,
+      };
+
+      const result = await service.getBlockedUsers('user-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([]);
+    });
+
     it('should return blocked user details when blocks exist', async () => {
       const mockBlocksBuilder = {
         select: vi.fn().mockReturnThis(),

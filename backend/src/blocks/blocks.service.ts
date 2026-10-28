@@ -21,7 +21,9 @@ export class BlocksService {
       throw new Error(`Failed to fetch blocked users: ${blockError.message}`);
     }
 
-    const blockedIds: string[] = blockedRows.map((row: any) => row.blocked_id);
+    const blockedIds: string[] = (blockedRows ?? []).map(
+      (row: { blocked_id: string }) => row.blocked_id,
+    );
 
     if (blockedIds.length === 0) {
       return [];

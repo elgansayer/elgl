@@ -9,6 +9,12 @@ const frontendEnvironmentSource = readFileSync(
   'utf8',
 );
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const backendPackageJson = JSON.parse(
+  readFileSync(new URL('../backend/package.json', import.meta.url), 'utf8'),
+);
+const backendBuildConfig = JSON.parse(
+  readFileSync(new URL('../backend/tsconfig.build.json', import.meta.url), 'utf8'),
+);
 
 function extractSingleQuotedValue(source, property) {
   const escapedProperty = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -34,6 +40,31 @@ test('gates the Angular web server on backend readiness', () => {
   );
 });
 
+test('starts the compiled Nest application through its production script', () => {
+  assert.match(
+    configSource,
+    /cd \.\.\/backend && npm run build && npm run start:prod/,
+    'Playwright must use the same backend entrypoint as production',
+  );
+  assert.equal(backendPackageJson.scripts['start:prod'], 'node dist/main');
+  assert.match(configSource, /NODE_ENV: 'test'/);
+  assert.match(
+    configSource,
+    /FRONTEND_URL: frontendUrl/,
+    'the backend must receive the same frontend origin that Playwright serves',
+  );
+  assert.doesNotMatch(
+    configSource,
+    /TRANSFER_SECRET/,
+    'the launcher must rely on test-mode validation defaults instead of embedding credentials',
+  );
+  assert.deepEqual(
+    backendBuildConfig.include,
+    ['src/**/*.ts'],
+    'the Nest build must infer src as rootDir so it emits dist/main',
+  );
+});
+
 test('uses one configurable backend health target for Playwright and the readiness helper', () => {
   assert.match(configSource, /process\.env\.E2E_BACKEND_HEALTH_URL/);
   assert.match(configSource, /url: backendHealthUrl/);
@@ -45,7 +76,11 @@ test('keeps Angular SSR and the default readiness probe on the same IPv4 loopbac
   const apiUrl = new URL(extractSingleQuotedValue(frontendEnvironmentSource, 'apiUrl'));
   const healthUrl = new URL(extractSingleQuotedValue(readinessSource, 'DEFAULT_HEALTH_URL'));
 
-  assert.equal(apiUrl.origin, healthUrl.origin, 'Angular and readiness must target one backend origin');
+  assert.equal(
+    apiUrl.origin,
+    healthUrl.origin,
+    'Angular and readiness must target one backend origin',
+  );
   assert.equal(apiUrl.hostname, '127.0.0.1');
   assert.equal(healthUrl.hostname, '127.0.0.1');
   assert.equal(
