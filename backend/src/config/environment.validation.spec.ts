@@ -85,6 +85,23 @@ describe('validateEnvironment', () => {
     ['TRANSFER_SECRET', 'test-transfer-secret'],
     ['LIVEKIT_API_KEY', 'dev_livekit_key_test_value_123'],
     ['LIVEKIT_SECRET', 'dev_livekit_secret_test_value_123'],
+    ['FRONTEND_URL', 'http://localhost:4200'],
+    ['FRONTEND_URL', 'https://localhost:4200'],
+    ['DATABASE_URL', 'postgres://user:pass@localhost:5432/db'],
+    ['REDIS_URL', 'redis://localhost:6379'],
+    ['CENTRIFUGO_URL', 'http://localhost:8000'],
+    ['LIVEKIT_URL', 'ws://localhost:7880'],
+    ['CLOUDFLARE_R2_GATEWAY_URL', 'http://localhost:8787'],
+    ['STRIPE_MONTHLY_PRICE_ID', 'price_monthly_test'],
+    ['STRIPE_YEARLY_PRICE_ID', 'price_yearly_test'],
+    ['APPLE_BUNDLE_ID', 'com.hellotalk.app'],
+    [
+      'APPLE_VERIFICATION_URL',
+      'https://sandbox.itunes.apple.com/verifyReceipt',
+    ],
+    ['GOOGLE_PLAY_PACKAGE_NAME', 'com.hellotalk.app'],
+    ['GOOGLE_PUBSUB_AUDIENCE', 'https://pubsub.googleapis.com/test'],
+    ['GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL', 'test@example.com'],
   ])('rejects production placeholder %s values', (key, value) => {
     expect(() =>
       validateEnvironment({ ...productionEnvironment(), [key]: value }),
