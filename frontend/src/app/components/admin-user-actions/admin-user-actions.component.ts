@@ -18,7 +18,7 @@ export interface ActionFeedback {
       <div class="flex gap-2">
         <button
           hlmBtn
-          size="sm"
+          size="touch"
           type="button"
           [disabled]="isBusy()"
           [attr.aria-busy]="isBanning() ? 'true' : null"
@@ -29,7 +29,7 @@ export interface ActionFeedback {
         </button>
         <button
           hlmBtn
-          size="sm"
+          size="touch"
           type="button"
           [disabled]="isBusy()"
           [attr.aria-busy]="isWarning() ? 'true' : null"

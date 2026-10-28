@@ -75,6 +75,9 @@ describe('AdminUserActionsComponent', () => {
     expect(warnBtn.classList.contains('bg-warning')).toBe(true);
     expect(warnBtn.classList.contains('text-on-fill')).toBe(true);
     expect(warnBtn.classList.contains('btn-warning')).toBe(false);
+
+    expect(banBtn.classList.contains('min-h-11')).toBe(true);
+    expect(warnBtn.classList.contains('min-h-11')).toBe(true);
   });
 
   it('handles ban successfully and updates feedback state', async () => {
