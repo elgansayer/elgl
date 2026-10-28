@@ -1077,7 +1077,8 @@ class FactoryPipeline:
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
                 if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
-                    raise FactoryError(f"Quality gate blocked: {findings[0].code}")
+                    finding = findings[0]
+                    raise FactoryError(f"Quality gate blocked: {finding.code} in {finding.path}")
                 job.state = JobState.QUALITY_REPAIRING
                 return
             job.quality_repairs = 0
@@ -1132,6 +1133,10 @@ class FactoryPipeline:
                 sections.append(f"Repair evidence:\n\n{review_finding_text}")
             extra = "\n\n".join(sections)
 
+            # Spend the budget when the model starts: a repair that "produced no
+            # changes" raises before any later increment, which let job 1423 make
+            # 23 quality-repair calls under a cap of 5 (2026-10-28).
+            job.quality_repairs += 1
             self._run_agent(
                 job,
                 worktree,
@@ -1142,7 +1147,6 @@ class FactoryPipeline:
             )
 
             job.review_findings.clear()
-            job.quality_repairs += 1
             job.state = JobState.VERIFYING
             return
 
