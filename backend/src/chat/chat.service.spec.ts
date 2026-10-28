@@ -49,6 +49,7 @@ describe('ChatService', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       neq: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),

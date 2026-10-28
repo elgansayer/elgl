@@ -634,7 +634,7 @@ type LoginHistoryRow = {
 export type ChatMessageRow = {
   id: string;
   room_id: string;
-  sender_id: string;
+  sender_id?: string | null;
   message_type: string;
   text_content?: string | null;
   media_url?: string | null;
@@ -659,6 +659,10 @@ export type ChatMessageRow = {
     coin_value: number;
     animation_type?: string;
     animation_url?: string | null;
+  } | null;
+  system_event?: {
+    type: string;
+    [key: string]: unknown;
   } | null;
   reply_to_id?: string | null;
   is_view_once?: boolean;

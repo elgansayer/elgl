@@ -16,7 +16,7 @@ const baseMessage: ChatMessage = {
 const systemMessage: ChatMessage = {
   id: 'sys-message-1',
   room_id: 'room-1',
-  sender_id: '',
+  sender_id: null,
   message_type: 'system',
   system_event: {
     type: 'profileUpdated',
@@ -242,9 +242,7 @@ describe('applyChatRoomRealtimeEvent', () => {
   it('ignores malformed realtime payloads without mutating state', () => {
     const messages = [baseMessage];
 
-    expect(applyChatRoomRealtimeEvent(messages, null, 'room-1', 'user-1').messages).toBe(
-      messages,
-    );
+    expect(applyChatRoomRealtimeEvent(messages, null, 'room-1', 'user-1').messages).toBe(messages);
     expect(
       applyChatRoomRealtimeEvent(messages, { message: { id: 'partial' } }, 'room-1', 'user-1')
         .messages,

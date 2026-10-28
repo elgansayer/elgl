@@ -63,9 +63,9 @@ export class SystemMessageService {
     const normalizedParams = this.normalizeParams(params);
 
     return {
-      id: `sys_${Date.now()}_${randomUUID()}`,
+      id: randomUUID(),
       room_id: roomId,
-      sender_id: '',
+      sender_id: null,
       message_type: 'system',
       // Keep the trusted event type last so params can never replace it.
       system_event: { ...normalizedParams, type: normalizedEventType },
@@ -84,7 +84,33 @@ export class SystemMessageService {
     }
 
     const message = this.buildMessage(roomId, eventType, params);
-    await this.centrifugoService.publish(`chat:${roomId}`, { message });
+
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('chat_messages').insert({
+      id: message.id,
+      room_id: message.room_id,
+      sender_id: null,
+      message_type: message.message_type,
+      system_event: message.system_event,
+      is_read: message.is_read,
+      delivery_status: 'sent',
+      created_at: message.created_at,
+    });
+
+    if (error) {
+      this.logger.error('Failed to persist system event');
+      throw new Error('Failed to persist system event');
+    }
+
+    const published = await this.centrifugoService.publish(`chat:${roomId}`, {
+      message,
+    });
+    if (!published) {
+      this.logger.warn(
+        'System event persisted but realtime publication failed',
+      );
+      throw new Error('Failed to publish persisted system event');
+    }
   }
 
   /**

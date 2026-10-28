@@ -1,4 +1,12 @@
-import type { Mock } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SystemMessageService } from './system-message.service';
 import { CentrifugoService } from '../centrifugo.service';
@@ -14,6 +22,8 @@ describe('SystemMessageService', () => {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: {}, error: null }),
   });
 
   beforeEach(async () => {
@@ -56,14 +66,64 @@ describe('SystemMessageService', () => {
       expect(channel).toBe('chat:room-1');
       expect(payload.message).toMatchObject({
         room_id: 'room-1',
-        sender_id: '',
+        sender_id: null,
         message_type: 'system',
         is_read: false,
         system_event: { type: 'groupRenamed', name: 'Language Buddies' },
       });
       expect(typeof payload.message.id).toBe('string');
-      expect(payload.message.id).toMatch(/^sys_/);
       expect(typeof payload.message.created_at).toBe('string');
+    });
+
+    it('persists the canonical message before publishing it', async () => {
+      const client = supabaseService.getClient();
+
+      await service.publishToRoom('room-1', 'memberAdded', { count: 2 });
+
+      expect(client.from).toHaveBeenCalledWith('chat_messages');
+      expect(client.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          room_id: 'room-1',
+          sender_id: null,
+          message_type: 'system',
+          system_event: { type: 'memberAdded', count: 2 },
+          is_read: false,
+          delivery_status: 'sent',
+          created_at: expect.any(String),
+        }),
+      );
+      const inserted = client.insert.mock.calls[0]?.[0] as { id: string };
+      const published = centrifugoService.publish.mock.calls[0]?.[1] as {
+        message: { id: string };
+      };
+      expect(published.message.id).toBe(inserted.id);
+    });
+
+    it('does not publish a transient bubble when persistence fails', async () => {
+      const client = mockSupabaseClient();
+      client.insert.mockResolvedValue({
+        data: null,
+        error: { message: 'private database detail' },
+      });
+      supabaseService.getClient.mockReturnValue(client);
+
+      await expect(
+        service.publishToRoom('room-1', 'memberRemoved'),
+      ).rejects.toThrow('Failed to persist system event');
+
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('reports realtime failure after preserving the persisted event', async () => {
+      const client = supabaseService.getClient();
+      centrifugoService.publish.mockResolvedValue(false);
+
+      await expect(
+        service.publishToRoom('room-1', 'memberRemoved'),
+      ).rejects.toThrow('Failed to publish persisted system event');
+
+      expect(client.insert).toHaveBeenCalledOnce();
+      expect(centrifugoService.publish).toHaveBeenCalledOnce();
     });
 
     it('defaults params to an empty object when none are provided', async () => {

@@ -8,13 +8,13 @@ export interface CorrectionPayload {
 
 export interface SystemEventPayload {
   type: string; // e.g., 'user_joined', 'correction_given', 'call_ended', 'language_exchange'
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ChatMessage {
   id: string;
   room_id: string;
-  sender_id: string;
+  sender_id?: string | null;
   message_type: string;
   text_content?: string | null;
   media_url?: string | null;

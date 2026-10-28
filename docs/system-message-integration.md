@@ -4,9 +4,9 @@ Issues: #1085, #1087
 
 ## Architecture
 
-System messages are transient product events delivered over Centrifugo on the existing `chat:<roomId>` channel. They are not persisted in `chat_messages`, do not participate in read receipts, and introduce no schema or retention changes. The browser receives the same outer `{ message }` envelope used for normal realtime chat updates, with `message_type: "system"`, an empty `sender_id`, and a typed `system_event` payload.
+System messages are durable product events persisted in `chat_messages` and delivered over Centrifugo on the existing `chat:<roomId>` channel. They do not participate in read receipts. The browser receives the same outer `{ message }` envelope used for normal realtime chat updates, with `message_type: "system"`, a null `sender_id`, and a typed `system_event` payload.
 
-This keeps operational events such as profile updates, missed calls, group renames, membership changes, and announcements out of the durable conversation history while allowing an open room to render them immediately.
+Persistence happens before publication and the same generated ID is used for the database row and realtime envelope. This lets an open room render the event immediately, suppress duplicate deliveries, and recover the same bubble from bounded message history after reload.
 
 ## Event contract
 
@@ -14,14 +14,14 @@ The backend owns the event type. Callers may provide interpolation parameters, b
 
 System event types:
 
-| Event | Required interpolation data | Producer |
-| --- | --- | --- |
-| `profileUpdated` | `name` | `profile.updated` application event |
-| `missedCall` | `name` | `call.missed` application event |
-| `groupRenamed` | `name` | group admin rename mutation |
-| `memberAdded` | `count` | group membership mutation |
-| `memberRemoved` | none | group membership mutation |
-| `announcement` | `message` | system announcement producer |
+| Event            | Required interpolation data | Producer                            |
+| ---------------- | --------------------------- | ----------------------------------- |
+| `profileUpdated` | `name`                      | `profile.updated` application event |
+| `missedCall`     | `name`                      | `call.missed` application event     |
+| `groupRenamed`   | `name`                      | group admin rename mutation         |
+| `memberAdded`    | `count`                     | group membership mutation           |
+| `memberRemoved`  | none                        | group membership mutation           |
+| `announcement`   | `message`                   | system announcement producer        |
 
 The wire contract is intentionally bounded:
 
@@ -42,7 +42,7 @@ Known-event lookup uses an explicit `Map`, not a JavaScript object property look
 
 If a display-name lookup is unavailable, publication can still continue without private provider/database details. The frontend then renders the generic localised `notifications.systemAlert` label instead of exposing a translation key or interpolation placeholder. Unknown but syntactically valid future event types receive this same generic fallback, which makes mixed-version deployments safe.
 
-Room fan-out uses `Promise.allSettled`: one Centrifugo publish failure does not prevent delivery to other rooms, and the service records only an aggregate failure count. Membership-query failures fail closed and do not publish to guessed rooms. Direct-message events are published only to a mutually shared room with exactly two members.
+Room fan-out uses `Promise.allSettled`: one room failure does not prevent delivery to other rooms, and the service records only an aggregate failure count. A persistence failure is logged without database details and prevents a transient realtime-only bubble. If Centrifugo publication fails after persistence, the event remains available through message-history recovery. Membership-query failures fail closed and do not publish to guessed rooms. Direct-message events are published only to a mutually shared room with exactly two members.
 
 ## Security and privacy
 
@@ -60,16 +60,18 @@ System bubbles are exposed as an atomic polite status region (`role="status"`, `
 
 Relevant automated coverage:
 
+- `backend/src/database/migrations/20260920000000_add_system_event_to_chat_messages.spec.ts`
 - `backend/src/chat/services/system-message.service.spec.ts`
 - `backend/src/chat/services/system-message.hardening.spec.ts`
 - `backend/src/chat/listeners/chat-system-event.listener.spec.ts`
 - `frontend/src/app/components/chat-room/chat-room-realtime.spec.ts`
 - `frontend/src/app/components/chat-system-bubble/chat-system-bubble.component.spec.ts`
+- `frontend/src/app/components/chat-message/chat-message.component.spec.ts`
 
-The coverage verifies event-type ownership, bounded payloads, partial fan-out failures, database failure behaviour, producer enrichment, malformed realtime rejection, generic localisation fallback, accessibility semantics, prototype-like unknown event names, and null-prototype interpolation storage.
+The coverage verifies event-type ownership, bounded payloads, partial fan-out failures, database failure behaviour, producer enrichment, malformed realtime rejection, dedicated rendering across chat surfaces, removal of user-message actions from system events, generic localisation fallback, accessibility semantics, prototype-like unknown event names, and null-prototype interpolation storage.
 
 ## Rollout and rollback
 
-No migration, feature flag, new environment variable, or background backfill is required. Backend and frontend can be rolled out independently: older clients already understand the established event envelope, while the hardened frontend safely renders unknown valid events as a generic system alert.
+The additive migration adds `system_event`, permits a null sender only for valid system rows, and validates the invariant without rewriting existing messages. Deploy the migration before the backend persistence writer. Existing frontend clients remain compatible with the event envelope.
 
-The #1087 follow-up is frontend-only and can be rolled out as a normal web deployment after #1085. Roll it back by reverting the #1087 pull request; no data cleanup or database recovery is required. Reverting #1087 restores the previous event-registry implementation but does not alter the Centrifugo wire contract or persisted state.
+Rollback the application first. Persisted system rows follow the existing chat-message retention policy and may remain safely in history. Dropping the constraint or column is a separate destructive contraction and is not part of routine rollback.

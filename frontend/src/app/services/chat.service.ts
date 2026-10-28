@@ -37,7 +37,7 @@ export interface GiftPayload {
 export interface ChatMessage {
   id: string;
   room_id: string;
-  sender_id: string;
+  sender_id: string | null;
   message_type:
     | 'text'
     | 'voice'
@@ -216,7 +216,9 @@ export class ChatService {
 
   async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
     return firstValueFrom(
-      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
+      this.http.get<MessageReceiptStatus>(
+        `${environment.apiUrl}/chat/messages/${messageId}/receipts`,
+      ),
     );
   }
 
@@ -389,7 +391,9 @@ export class ChatService {
         if (currentUser?.id) {
           const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
           if (blockedIds.length > 0) {
-            return cached.filter((msg) => !blockedIds.includes(msg.sender_id));
+            return cached.filter((msg) =>
+              msg.sender_id ? !blockedIds.includes(msg.sender_id) : true,
+            );
           }
         }
         return cached;
@@ -418,7 +422,9 @@ export class ChatService {
     if (currentUser?.id) {
       const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
       if (blockedIds.length > 0) {
-        return messages.filter((msg) => !blockedIds.includes(msg.sender_id));
+        return messages.filter((msg) =>
+          msg.sender_id ? !blockedIds.includes(msg.sender_id) : true,
+        );
       }
     }
 

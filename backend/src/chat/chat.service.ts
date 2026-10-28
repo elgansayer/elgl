@@ -87,7 +87,8 @@ export class ChatService {
       const token = await this.centrifugoService.signJwt(payload);
       return token;
     } catch (error) {
-      throw new Error(`Failed to generate Centrifugo token: ${error.message}`, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to generate Centrifugo token: ${message}`, {
         cause: error,
       });
     }
@@ -584,7 +585,9 @@ export class ChatService {
 
     // Exclude messages from blocked users
     if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', blockedIds);
+      query = query.or(
+        'sender_id.is.null,sender_id.not.in.(' + blockedIds.join(',') + ')',
+      );
     }
 
     if (search && search.trim().length > 0) {
@@ -626,8 +629,8 @@ export class ChatService {
 
       // Filter out blocked users from mock data
       if (blockedIds.length > 0) {
-        return mockMessages.filter(
-          (msg) => !blockedIds.includes(msg.sender_id),
+        return mockMessages.filter((msg) =>
+          msg.sender_id ? !blockedIds.includes(msg.sender_id) : true,
         );
       }
       return mockMessages;
@@ -736,7 +739,9 @@ export class ChatService {
       .limit(limit);
 
     if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', blockedIds);
+      query = query.or(
+        'sender_id.is.null,sender_id.not.in.(' + blockedIds.join(',') + ')',
+      );
     }
 
     const response = await query;

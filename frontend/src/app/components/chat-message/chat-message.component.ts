@@ -13,6 +13,7 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
@@ -26,220 +27,230 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     CulturalTipComponent,
     LinkPreviewCardComponent,
     VisualDiffComponent,
+    ChatSystemBubbleComponent,
   ],
   template: `
     @if (!isBlocked()) {
-      @if (isFirstMessage() && partnerLanguage(); as lang) {
-        <app-cultural-tip [language]="lang" />
-      }
-      <app-long-press-context-menu
-        [messageId]="message().id"
-        [messageContent]="message().text_content ?? ''"
-        [messageType]="message().message_type"
-        [correctionOriginal]="message().correction_payload?.original ?? null"
-        [correctionCorrected]="message().correction_payload?.corrected ?? null"
-        [senderId]="message().sender_id"
-        [roomId]="message().room_id"
-        [isBlocked]="isBlocked()"
-        (copyMessage)="onCopy($event)"
-        (favourite)="onFavourite($event)"
-        (report)="onReport($event)"
-        (block)="onBlockToggle($event)"
-      >
-        <div
-          class="flex"
-          [class.justify-end]="isOwnMessage()"
-          [class.justify-start]="!isOwnMessage()"
+      @if (message().message_type === 'system') {
+        <app-chat-system-bubble
+          [eventType]="message().system_event?.type ?? ''"
+          [params]="message().system_event ?? {}"
+        />
+      } @else {
+        @if (isFirstMessage() && partnerLanguage(); as lang) {
+          <app-cultural-tip [language]="lang" />
+        }
+        <app-long-press-context-menu
+          [messageId]="message().id"
+          [messageContent]="message().text_content ?? ''"
+          [messageType]="message().message_type"
+          [correctionOriginal]="message().correction_payload?.original ?? null"
+          [correctionCorrected]="message().correction_payload?.corrected ?? null"
+          [senderId]="message().sender_id || ''"
+          [roomId]="message().room_id"
+          [isBlocked]="isBlocked()"
+          (copyMessage)="onCopy($event)"
+          (favourite)="onFavourite($event)"
+          (report)="onReport($event)"
+          (block)="onBlockToggle($event)"
         >
           <div
-            class="relative max-w-[70%] p-3 rounded-ss-lg rounded-se-lg"
-            [class.rounded-es-lg]="isOwnMessage()"
-            [class.rounded-ee-none]="isOwnMessage()"
-            [class.rounded-ee-lg]="!isOwnMessage()"
-            [class.rounded-es-none]="!isOwnMessage()"
-            [class.bg-primary]="isOwnMessage()"
-            [class.text-on-fill]="isOwnMessage()"
-            [class.bg-surface-300]="!isOwnMessage()"
+            class="flex"
+            [class.justify-end]="isOwnMessage()"
+            [class.justify-start]="!isOwnMessage()"
           >
-            <span
-              class="chat-bubble-tail"
-              [class.chat-bubble-tail--sent]="isOwnMessage()"
-              [class.chat-bubble-tail--received]="!isOwnMessage()"
-              aria-hidden="true"
-            ></span>
-            @if (message().is_forwarded) {
-              <p class="text-xs mb-1 text-text-muted italic font-medium">
-                {{ 'chatRoom.forwarded' | t }}
-              </p>
-            }
-            @if (message().message_type === 'text') {
-              <p class="text-sm">
-                @for (segment of textSegments(); track $index) {
-                  @if (segment.isMention) {
-                    <span class="font-bold text-secondary cursor-pointer">{{ segment.value }}</span>
-                  } @else {
-                    {{ segment.value }}
-                  }
-                }
-              </p>
-              @if (message().link_preview; as lp) {
-                <app-link-preview-card
-                  [url]="lp.url"
-                  [title]="lp.title"
-                  [description]="lp.description"
-                  [image]="lp.image"
-                  [siteName]="lp.siteName"
-                ></app-link-preview-card>
+            <div
+              class="relative max-w-[70%] p-3 rounded-ss-lg rounded-se-lg"
+              [class.rounded-es-lg]="isOwnMessage()"
+              [class.rounded-ee-none]="isOwnMessage()"
+              [class.rounded-ee-lg]="!isOwnMessage()"
+              [class.rounded-es-none]="!isOwnMessage()"
+              [class.bg-primary]="isOwnMessage()"
+              [class.text-on-fill]="isOwnMessage()"
+              [class.bg-surface-300]="!isOwnMessage()"
+            >
+              <span
+                class="chat-bubble-tail"
+                [class.chat-bubble-tail--sent]="isOwnMessage()"
+                [class.chat-bubble-tail--received]="!isOwnMessage()"
+                aria-hidden="true"
+              ></span>
+              @if (message().is_forwarded) {
+                <p class="text-xs mb-1 text-text-muted italic font-medium">
+                  {{ 'chatRoom.forwarded' | t }}
+                </p>
               }
-            }
-
-            @if (message().message_type === 'voice') {
-              <div class="flex flex-wrap items-center gap-2">
-                <button
-                  hlmBtn
-                  type="button"
-                  size="touch"
-                  variant="ghost"
-                  [attr.aria-label]="'chatRoom.playVoiceMessage' | t"
-                  (click)="playVoice()"
-                >
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                    <path
-                      d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
-                    />
-                  </svg>
-                </button>
-                <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
-                <button
-                  hlmBtn
-                  type="button"
-                  size="touch"
-                  variant="ghost"
-                  class="min-w-11 px-2 tabular-nums"
-                  [attr.aria-label]="('chatRoom.voiceMessage' | t) + ' ' + playbackSpeed() + '×'"
-                  (click)="cycleVoicePlaybackSpeed()"
-                >
-                  {{ playbackSpeed() }}×
-                </button>
-              </div>
-              @if (message().media_url) {
-                <div class="mt-2 text-xs opacity-80 italic border-s-2 border-secondary ps-2">
-                  @if (voiceTranscribing()) {
-                    <span>{{ 'chatRoom.transcribing' | t }}</span>
-                  } @else if (voiceTranscription()) {
-                    <span>{{ voiceTranscription() }}</span>
+              @if (message().message_type === 'text') {
+                <p class="text-sm">
+                  @for (segment of textSegments(); track $index) {
+                    @if (segment.isMention) {
+                      <span class="font-bold text-secondary cursor-pointer">{{
+                        segment.value
+                      }}</span>
+                    } @else {
+                      {{ segment.value }}
+                    }
                   }
+                </p>
+                @if (message().link_preview; as lp) {
+                  <app-link-preview-card
+                    [url]="lp.url"
+                    [title]="lp.title"
+                    [description]="lp.description"
+                    [image]="lp.image"
+                    [siteName]="lp.siteName"
+                  ></app-link-preview-card>
+                }
+              }
+
+              @if (message().message_type === 'voice') {
+                <div class="flex flex-wrap items-center gap-2">
+                  <button
+                    hlmBtn
+                    type="button"
+                    size="touch"
+                    variant="ghost"
+                    [attr.aria-label]="'chatRoom.playVoiceMessage' | t"
+                    (click)="playVoice()"
+                  >
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                      <path
+                        d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
+                      />
+                    </svg>
+                  </button>
+                  <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
+                  <button
+                    hlmBtn
+                    type="button"
+                    size="touch"
+                    variant="ghost"
+                    class="min-w-11 px-2 tabular-nums"
+                    [attr.aria-label]="('chatRoom.voiceMessage' | t) + ' ' + playbackSpeed() + '×'"
+                    (click)="cycleVoicePlaybackSpeed()"
+                  >
+                    {{ playbackSpeed() }}×
+                  </button>
+                </div>
+                @if (message().media_url) {
+                  <div class="mt-2 text-xs opacity-80 italic border-s-2 border-secondary ps-2">
+                    @if (voiceTranscribing()) {
+                      <span>{{ 'chatRoom.transcribing' | t }}</span>
+                    } @else if (voiceTranscription()) {
+                      <span>{{ voiceTranscription() }}</span>
+                    }
+                  </div>
+                }
+              }
+
+              @if (message().message_type === 'correction' && message().correction_payload) {
+                <div class="space-y-1">
+                  <app-visual-diff
+                    [original]="message().correction_payload!.original"
+                    [corrected]="message().correction_payload!.corrected"
+                    [explanation]="message().correction_payload!.explanation"
+                    [showActions]="true"
+                  ></app-visual-diff>
                 </div>
               }
-            }
 
-            @if (message().message_type === 'correction' && message().correction_payload) {
-              <div class="space-y-1">
-                <app-visual-diff
-                  [original]="message().correction_payload!.original"
-                  [corrected]="message().correction_payload!.corrected"
-                  [explanation]="message().correction_payload!.explanation"
-                  [showActions]="true"
-                ></app-visual-diff>
-              </div>
-            }
-
-            @if (message().message_type === 'doodle' && message().media_url) {
-              <img
-                [src]="message().media_url"
-                class="max-w-full rounded"
-                alt="Doodle"
-                loading="lazy"
-              />
-            }
-
-            <p class="text-xs mt-1 opacity-60 text-end flex items-center justify-end gap-1">
-              {{ message().created_at | date: 'shortTime' }}
-              @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
-                <span class="inline-flex items-center">
-                  @if (
-                    message().delivery_status === 'sent' ||
-                    (!message().delivery_status && message().is_read)
-                  ) {
-                    <!-- Single check: sent -->
-                    <svg
-                      class="w-3.5 h-3.5 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  }
-                  @if (message().delivery_status === 'delivered') {
-                    <!-- Double check: delivered (gray) -->
-                    <svg
-                      class="w-3.5 h-3.5 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <svg
-                      class="w-3.5 h-3.5 -ms-2 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  }
-                  @if (message().delivery_status === 'read') {
-                    <!-- Double check: read (blue) -->
-                    <svg
-                      class="w-3.5 h-3.5 text-secondary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <svg
-                      class="w-3.5 h-3.5 -ms-2 text-secondary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  }
-                </span>
+              @if (message().message_type === 'doodle' && message().media_url) {
+                <img
+                  [src]="message().media_url"
+                  class="max-w-full rounded"
+                  alt="Doodle"
+                  loading="lazy"
+                />
               }
-            </p>
+
+              <p class="text-xs mt-1 opacity-60 text-end flex items-center justify-end gap-1">
+                {{ message().created_at | date: 'shortTime' }}
+                @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
+                  <span class="inline-flex items-center">
+                    @if (
+                      message().delivery_status === 'sent' ||
+                      (!message().delivery_status && message().is_read)
+                    ) {
+                      <!-- Single check: sent -->
+                      <svg
+                        class="w-3.5 h-3.5 text-text-muted"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    }
+                    @if (message().delivery_status === 'delivered') {
+                      <!-- Double check: delivered (gray) -->
+                      <svg
+                        class="w-3.5 h-3.5 text-text-muted"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <svg
+                        class="w-3.5 h-3.5 -ms-2 text-text-muted"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    }
+                    @if (message().delivery_status === 'read') {
+                      <!-- Double check: read (blue) -->
+                      <svg
+                        class="w-3.5 h-3.5 text-secondary"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <svg
+                        class="w-3.5 h-3.5 -ms-2 text-secondary"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    }
+                  </span>
+                }
+              </p>
+            </div>
           </div>
-        </div>
-      </app-long-press-context-menu>
+        </app-long-press-context-menu>
+      }
     }
   `,
   styles: [
@@ -316,9 +327,9 @@ export class ChatMessageComponent {
     effect(() => {
       const senderId = this.message().sender_id;
       const blockedIds = this.safetyService.blockedUserIdsSignal();
-      const currentlyBlocked = blockedIds.has(senderId);
+      const currentlyBlocked = senderId ? blockedIds.has(senderId) : false;
       this.isBlocked.set(currentlyBlocked);
-      if (currentlyBlocked) {
+      if (currentlyBlocked && senderId) {
         this.messageBlocked.emit(senderId);
       }
     });

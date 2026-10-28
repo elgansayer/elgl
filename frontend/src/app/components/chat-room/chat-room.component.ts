@@ -127,7 +127,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
-    return this.messages().filter((m) => !blocked.includes(m.sender_id));
+    return this.messages().filter((m) => (m.sender_id ? !blocked.includes(m.sender_id) : true));
   });
 
   readonly replyingTo = signal<ChatMessage | null>(null);
@@ -373,12 +373,7 @@ export class ChatRoomComponent implements OnDestroy {
 
     const currentUserId = this.authService.currentUser()?.id;
     const currentMessages = this.messages();
-    const result = applyChatRoomRealtimeEvent(
-      currentMessages,
-      data,
-      eventRoomId,
-      currentUserId,
-    );
+    const result = applyChatRoomRealtimeEvent(currentMessages, data, eventRoomId, currentUserId);
 
     if (result.messages !== currentMessages) {
       this.messages.set(result.messages);
@@ -474,10 +469,7 @@ export class ChatRoomComponent implements OnDestroy {
 
     this.isCheckingGrammar.set(true);
     try {
-      const grammar = await this.vocabStore.checkGrammar(
-        text,
-        this.partnerLanguage() ?? undefined,
-      );
+      const grammar = await this.vocabStore.checkGrammar(text, this.partnerLanguage() ?? undefined);
       const corrected = grammar.corrected.trim();
       if (grammar.errors_found > 0 && corrected && corrected !== text) {
         this.textInput = corrected;

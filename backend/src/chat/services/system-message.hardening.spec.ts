@@ -15,8 +15,17 @@ describe('SystemMessageService hardening', () => {
       data: memberships,
       error: membershipError,
     });
-    const select = vi.fn().mockReturnValue({ eq });
-    const from = vi.fn().mockReturnValue({ select });
+    const membershipSelect = vi.fn().mockReturnValue({ eq });
+    const single = vi
+      .fn()
+      .mockResolvedValue({ data: { id: 'system-id' }, error: null });
+    const insertSelect = vi.fn().mockReturnValue({ single });
+    const insert = vi.fn().mockReturnValue({ select: insertSelect });
+    const from = vi
+      .fn()
+      .mockImplementation((table: string) =>
+        table === 'chat_messages' ? { insert } : { select: membershipSelect },
+      );
     const supabaseService = {
       getClient: vi.fn().mockReturnValue({ from }),
     };
@@ -66,7 +75,7 @@ describe('SystemMessageService hardening', () => {
   it('deduplicates room fan-out and isolates individual publish failures', async () => {
     const publish = vi.fn().mockImplementation((channel: string) => {
       if (channel === 'chat:room-b') {
-        return Promise.reject(new Error('centrifugo unavailable'));
+        return Promise.resolve(false);
       }
       return Promise.resolve(true);
     });

@@ -110,7 +110,7 @@ export class ChatSystemBubbleComponent {
   readonly displayParams = computed<Record<string, string | number | boolean | null>>(() => {
     // A null-prototype dictionary ensures untrusted interpolation keys cannot
     // inherit or shadow Object prototype members such as `constructor`.
-    const result = Object.create(null) as Record<string, string | number | boolean | null>;
+    const result: Record<string, string | number | boolean | null> = Object.create(null);
 
     for (const [key, value] of Object.entries(this.params()).slice(0, MAX_SYSTEM_EVENT_PARAMS)) {
       if (key === 'type') continue;
