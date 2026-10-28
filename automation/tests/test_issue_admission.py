@@ -1,8 +1,10 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.config import FactoryConfig
-from openhands_factory.daemon import select_batch
+from openhands_factory.daemon import refund_unspent_issue_admission, select_batch
 from openhands_factory.issue_admission import IssueAdmissionGate
 from openhands_factory.models import Job, JobState, Task
 
@@ -41,6 +43,31 @@ def test_issue_admission_gate_allows_one_issue_per_interval(tmp_path: Path) -> N
     assert not gate.admit("101", started + timedelta(minutes=59))
     assert gate.available_slots(started + timedelta(hours=1)) == 1
     assert gate.admit("101", started + timedelta(hours=1))
+
+
+@pytest.mark.parametrize(
+    ("finished", "refunded"),
+    [
+        (JobState.DONE, True),
+        (None, True),
+        (JobState.IMPLEMENTING, False),
+        (JobState.QUARANTINED, False),
+    ],
+)
+def test_intake_slot_is_returned_only_when_the_issue_needed_no_work(
+    tmp_path: Path, finished: JobState | None, refunded: bool
+) -> None:
+    gate = IssueAdmissionGate(
+        tmp_path / "issue-admissions.json",
+        interval_seconds=3600,
+        max_admissions=1,
+    )
+    admitted_at = datetime.now(UTC)
+    assert gate.admit("100", admitted_at)
+    job = None if finished is None else issue_job("100", 1, finished)
+
+    assert refund_unspent_issue_admission(gate, "100", admitted_at, job) is refunded
+    assert gate.available_slots() == (1 if refunded else 0)
 
 
 def test_issue_admission_gate_survives_daemon_restart(tmp_path: Path) -> None:
