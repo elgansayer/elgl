@@ -101,6 +101,21 @@ def is_new_github_issue(job: Job) -> bool:
     )
 
 
+def refund_unspent_issue_admission(
+    gate: IssueAdmissionGate, task_id: str, admitted_at: datetime, job: Job | None
+) -> bool:
+    """Return an intake slot when the admitted issue needed no implementation.
+
+    The step out of DISCOVERED never calls a model. An issue whose first run ends
+    DONE was already merged or closed, so its slot would otherwise sit idle for a
+    whole interval while real work waits behind years of resolved backlog.
+    """
+
+    if job is not None and job.state is not JobState.DONE:
+        return False
+    return gate.revoke(task_id, admitted_at)
+
+
 def is_maintenance_job(job: Job) -> bool:
     return job.task.source == "github-issue" and MAINTENANCE_TAG in job.task.triage_tags
 
@@ -815,6 +830,7 @@ class FactoryDaemon:
     def _loop(self) -> int:
         active: dict[Future[Job | None], str] = {}
         active_started_at: dict[str, str] = {}
+        issue_admissions: dict[str, datetime] = {}
         next_refresh_at = 0.0
         next_prune_at = 0.0
         architect_future: Future[None] | None = None
@@ -838,6 +854,7 @@ class FactoryDaemon:
                         continue
                     del active[future]
                     active_started_at.pop(task_id, None)
+                    admitted_at = issue_admissions.pop(task_id, None)
                     try:
                         job = future.result()
                     except Exception:
@@ -845,6 +862,10 @@ class FactoryDaemon:
                         continue
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
+                    if admitted_at is not None and refund_unspent_issue_admission(
+                        self.issue_admission, task_id, admitted_at, job
+                    ):
+                        LOGGER.info("Task %s needed no work; returned its intake slot", task_id)
                 active_task_ids = set(active.values())
                 wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                 review_lane_busy = review_lane_is_busy(self.pipeline.jobs.load(), active_task_ids)
@@ -1053,7 +1074,8 @@ class FactoryDaemon:
                     )
                     for job in selected_jobs:
                         self._assert_owner()
-                        if is_new_github_issue(job) and not self.issue_admission.admit(
+                        new_issue = is_new_github_issue(job)
+                        if new_issue and not self.issue_admission.admit(
                             job.task.identifier, scheduler_time
                         ):
                             LOGGER.info(
@@ -1089,6 +1111,8 @@ class FactoryDaemon:
                             )
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
+                        if new_issue and self.issue_admission.enabled:
+                            issue_admissions[job.task.identifier] = scheduler_time
                         LOGGER.info("Scheduled task %s", job.task.identifier)
                 if not paused and storage_ready:
                     architect_future, architect_error = consume_completed_architect_future(
