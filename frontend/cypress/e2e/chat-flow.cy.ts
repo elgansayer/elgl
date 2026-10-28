@@ -1,12 +1,70 @@
+interface HistoryReply {
+  statusCode: number;
+  headers?: Record<string, string>;
+  body: unknown;
+}
+
+interface InterceptedRequest {
+  request: { url: string };
+}
+
+type ExpectedErrorWindow = Window & { __cypressExpectedConsoleError?: string };
+
 describe('Chat Flow (Mocked)', () => {
   const roomId = 'room-123';
   const fixedTimestamp = '2026-08-28T12:00:00.000Z';
+  const currentUserId = 'mock-user-123';
   let failNextSend = false;
   let sendAttempts = 0;
+  let historyReply: (url: string) => HistoryReply;
+
+  function messageAt(minute: number): string {
+    return new Date(Date.parse(fixedTimestamp) + minute * 60_000).toISOString();
+  }
+
+  function partnerMessage(id: string, minute: number, unread = false) {
+    return {
+      id,
+      room_id: roomId,
+      sender_id: 'partner-2',
+      message_type: 'text',
+      text_content: `Message ${id}`,
+      created_at: messageAt(minute),
+      is_read: !unread,
+      ...(unread ? { delivery_status: 'delivered' } : {}),
+    };
+  }
+
+  function ownMessage(id: string, minute: number, deliveryStatus: 'sent' | 'delivered' | 'read') {
+    return {
+      id,
+      room_id: roomId,
+      sender_id: currentUserId,
+      message_type: 'text',
+      text_content: `Message ${id}`,
+      created_at: messageAt(minute),
+      is_read: false,
+      delivery_status: deliveryStatus,
+    };
+  }
 
   beforeEach(() => {
     failNextSend = false;
     sendAttempts = 0;
+    historyReply = () => ({
+      statusCode: 200,
+      body: [
+        {
+          id: 'msg-1',
+          room_id: roomId,
+          sender_id: 'partner-2',
+          message_type: 'text',
+          text_content: 'Hola, how are you?',
+          created_at: fixedTimestamp,
+          is_read: true,
+        },
+      ],
+    });
 
     // Keep the chat flow deterministic and isolated from external services.
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
@@ -31,6 +89,13 @@ describe('Chat Flow (Mocked)', () => {
     cy.intercept('PATCH', '**/api/chat/messages/*/status', { statusCode: 204, body: {} }).as(
       'markMessageStatus',
     );
+    cy.intercept('POST', `**/api/chat/rooms/${roomId}/read`, {
+      statusCode: 200,
+      body: { success: true, marked: 0 },
+    }).as('markRoomRead');
+    cy.intercept('POST', '**/api/chat/typing', { statusCode: 200, body: { success: true } }).as(
+      'sendTyping',
+    );
 
     cy.intercept('POST', '**/api/nlp/grammar-check', (req) => {
       const text = typeof req.body?.text === 'string' ? req.body.text : '';
@@ -45,7 +110,9 @@ describe('Chat Flow (Mocked)', () => {
       });
     }).as('checkGrammar');
 
-    cy.intercept('GET', '**/api/chat/rooms', {
+    // The inbox requests `/chat/rooms` and the routed room requests
+    // `/chat/rooms?include_locked=true`, so the pattern must tolerate a query string.
+    cy.intercept('GET', '**/api/chat/rooms*', {
       body: [
         {
           id: roomId,
@@ -63,18 +130,8 @@ describe('Chat Flow (Mocked)', () => {
     cy.intercept('GET', '**/api/chat/archived-rooms', { body: [] }).as('getArchivedRooms');
     cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
 
-    cy.intercept('GET', `**/api/chat/messages/${roomId}*`, {
-      body: [
-        {
-          id: 'msg-1',
-          room_id: roomId,
-          sender_id: 'partner-2',
-          message_type: 'text',
-          text_content: 'Hola, how are you?',
-          created_at: fixedTimestamp,
-          is_read: true,
-        },
-      ],
+    cy.intercept('GET', `**/api/chat/messages/${roomId}*`, (req) => {
+      req.reply(historyReply(req.url));
     }).as('getMessages');
 
     cy.intercept('POST', '**/api/chat/messages', (req) => {
@@ -113,6 +170,11 @@ describe('Chat Flow (Mocked)', () => {
     cy.url().should('include', `/chat/${roomId}`);
     cy.get('[data-testid="chat-message"]').should(($messages) => {
       expect($messages.length).to.be.greaterThan(0);
+    });
+    // The routed room asks the API for its own lock state instead of trusting the inbox list.
+    cy.get<InterceptedRequest[]>('@getRooms.all').should((interceptions) => {
+      const requestedUrls = interceptions.map((interception) => interception.request.url);
+      expect(requestedUrls.some((url) => url.includes('include_locked=true'))).to.eq(true);
     });
   });
 
@@ -197,5 +259,102 @@ describe('Chat Flow (Mocked)', () => {
     cy.then(() => {
       expect(sendAttempts).to.eq(2);
     });
+  });
+
+  it('shows delivery and read receipts on the reader own messages with accessible names', () => {
+    historyReply = () => ({
+      statusCode: 200,
+      body: [
+        partnerMessage('in-1', 1),
+        ownMessage('own-1', 2, 'delivered'),
+        ownMessage('own-2', 3, 'read'),
+      ],
+    });
+
+    cy.visit(`/chat/${roomId}`);
+
+    cy.get('[role="log"]').should('have.attr', 'aria-label', 'Conversation messages');
+    cy.get('app-read-receipt').should('have.length', 2);
+    cy.get('app-read-receipt')
+      .first()
+      .find('[role="img"]')
+      .should('have.attr', 'aria-label', 'Delivered');
+    // Only the newest own message repeats its state as visible text.
+    cy.get('app-read-receipt').first().should('not.contain.text', 'Delivered');
+    cy.get('app-read-receipt')
+      .last()
+      .find('[role="img"]')
+      .should('have.attr', 'aria-label', 'Read');
+    cy.get('app-read-receipt').last().should('contain.text', 'Read');
+  });
+
+  it('acknowledges unread partner messages with a single bulk request', () => {
+    historyReply = () => ({
+      statusCode: 200,
+      body: [partnerMessage('in-1', 1, true), partnerMessage('in-2', 2, true)],
+    });
+
+    cy.visit(`/chat/${roomId}`);
+
+    cy.wait('@markRoomRead')
+      .its('request.body')
+      .should('deep.equal', { message_ids: ['in-1', 'in-2'] });
+    cy.get('@markRoomRead.all').should('have.length', 1);
+  });
+
+  it('pages earlier history using the oldest loaded timestamp as the cursor', () => {
+    const newestPage = Array.from({ length: 100 }, (_, index) =>
+      partnerMessage(`page-${index}`, 100 + index),
+    );
+    const earlier = [partnerMessage('old-1', 1), partnerMessage('old-2', 2)];
+    historyReply = (url) => ({
+      statusCode: 200,
+      body: url.includes('before=') ? earlier : newestPage,
+    });
+
+    cy.visit(`/chat/${roomId}`);
+    cy.get('[data-testid="chat-message"]').should('have.length', 100);
+    cy.contains('button', 'Load earlier messages').click();
+
+    cy.get('@getMessages.all').should('have.length.at.least', 2);
+    cy.get('@getMessages.all').then((interceptions) => {
+      const last = new URL(String(interceptions[interceptions.length - 1].request.url));
+      expect(last.searchParams.get('before')).to.eq(newestPage[0].created_at);
+      expect(last.searchParams.get('limit')).to.eq('100');
+    });
+    cy.get('[data-testid="chat-message"]').should('have.length', 102);
+    // A short page means the beginning of the conversation was reached.
+    cy.contains('button', 'Load earlier messages').should('not.exist');
+  });
+
+  it('explains an unavailable history and recovers when the reader retries', () => {
+    let attempts = 0;
+    historyReply = () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return {
+          statusCode: 503,
+          headers: { 'x-cypress-expected-error': 'true' },
+          body: { message: 'Chat service temporarily unavailable' },
+        };
+      }
+      return { statusCode: 200, body: [partnerMessage('after-retry', 1)] };
+    };
+
+    cy.visit(`/chat/${roomId}`, {
+      onBeforeLoad(win) {
+        // Start from a cold cache so the API failure is what the reader sees.
+        win.indexedDB.deleteDatabase('hellotalk_cache');
+        const expectedWindow: ExpectedErrorWindow = win;
+        expectedWindow.__cypressExpectedConsoleError = 'Failed to load chat history:';
+      },
+    });
+
+    cy.contains('[role="alert"]', 'Messages could not be loaded').should('be.visible');
+    cy.get('[data-testid="chat-message"]').should('not.exist');
+    cy.contains('[role="alert"] button', 'Retry').click();
+
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+    cy.contains('[role="alert"]', 'Messages could not be loaded').should('not.exist');
   });
 });

@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -108,9 +108,18 @@ export interface ReadReceiptUser {
 }
 
 export interface MessageReceiptStatus {
+  messageId?: string;
+  deliveryStatus?: 'sent' | 'delivered' | 'read';
+  /** Members who read the message and had read receipts enabled when they did. */
   readBy: ReadReceiptUser[];
+  /** Number of recipients: every room member except the sender. */
   totalMembers: number;
 }
+
+/** Page size the API uses when history is requested without an explicit limit. */
+export const CHAT_HISTORY_PAGE_SIZE = 100;
+/** Most messages the API accepts in one read acknowledgement. */
+const MAX_READ_ACK_BATCH = 100;
 
 export interface FavouriteRecord {
   id: string;
@@ -134,6 +143,10 @@ export interface ChatRoom {
   created_at: string;
   admin_id?: string;
   wallpaper_url?: string | null;
+}
+
+export interface GetRoomsOptions {
+  includeLocked?: boolean;
 }
 
 export interface GroupMember {
@@ -214,9 +227,13 @@ export class ChatService {
   /** Exposed for UI: count of messages queued offline waiting for sync. */
   readonly queuedCount = this.offlineQueue.queueSize;
 
+  /** Who has read one of the caller's own messages. Only the sender may ask. */
   async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
     return firstValueFrom(
-      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
+      this.http.get<MessageReceiptStatus>(
+        `${this.baseUrl}/messages/${encodeURIComponent(messageId)}/receipts`,
+        { headers: this.getHeaders() },
+      ),
     );
   }
 
@@ -283,27 +300,6 @@ export class ChatService {
   }): Promise<ChatMessage> {
     const currentUser = this.authService.currentUser();
 
-    // Offline: queue the message in IndexedDB and return immediately.
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      const queuedMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        room_id: payload.room_id,
-        sender_id: currentUser?.id || '',
-        message_type: payload.message_type,
-        text_content: payload.text_content,
-        media_url: payload.media_url,
-        correction_payload: payload.correction_payload,
-        correction_request_payload: payload.correction_request_payload,
-        reply_to_id: payload.reply_to_id,
-        status_reply_payload: payload.status_reply_payload,
-        is_read: false,
-        created_at: new Date().toISOString(),
-      };
-      await this.offlineQueue.enqueueMessage(queuedMsg);
-      this.hapticFeedback.tap();
-      return queuedMsg;
-    }
-
     // Check if the receiver is blocked before sending
     if (currentUser?.id) {
       // Get room members to find the receiver
@@ -323,11 +319,34 @@ export class ChatService {
       }
     }
 
-    const message = await firstValueFrom(
-      this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
-        headers: this.getHeaders(),
-      }),
-    );
+    let message: ChatMessage;
+    try {
+      message = await firstValueFrom(
+        this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+          headers: this.getHeaders(),
+        }),
+      );
+    } catch (error) {
+      if (!(error instanceof HttpErrorResponse) || error.status !== 0) throw error;
+
+      const queuedMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        room_id: payload.room_id,
+        sender_id: currentUser?.id ?? '',
+        message_type: payload.message_type,
+        text_content: payload.text_content,
+        media_url: payload.media_url,
+        correction_payload: payload.correction_payload,
+        correction_request_payload: payload.correction_request_payload,
+        reply_to_id: payload.reply_to_id,
+        status_reply_payload: payload.status_reply_payload,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      };
+      await this.offlineQueue.enqueueMessage(queuedMessage);
+      this.hapticFeedback.tap();
+      return queuedMessage;
+    }
     this.hapticFeedback.tap();
     // Append the new message to the room's cached messages so the cache stays warm
     void this.chatCache.appendCachedMessage(payload.room_id, message);
@@ -425,23 +444,32 @@ export class ChatService {
     return messages;
   }
 
-  async getRooms(): Promise<ChatRoom[]> {
+  async getRooms(options: GetRoomsOptions = {}): Promise<ChatRoom[]> {
     if (!this.authService.getAccessToken()) {
       return [];
     }
 
-    // Try cache first
-    const cached = await this.chatCache.getCachedRooms();
-    if (cached) {
-      return cached;
+    const includeLocked = options.includeLocked === true;
+    if (!includeLocked) {
+      const cached = await this.chatCache.getCachedRooms();
+      if (cached) {
+        return cached;
+      }
     }
 
+    const params = includeLocked
+      ? new HttpParams().set('include_locked', 'true')
+      : new HttpParams();
     const rooms = await firstValueFrom(
-      this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() }),
+      this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, {
+        headers: this.getHeaders(),
+        params,
+      }),
     );
 
-    // Cache the result
-    void this.chatCache.cacheRooms(rooms);
+    if (!includeLocked) {
+      void this.chatCache.cacheRooms(rooms);
+    }
 
     // Filter out rooms where the other participant is blocked
     const currentUser = this.authService.currentUser();
@@ -842,7 +870,7 @@ export class ChatService {
           `${this.baseUrl}/typing`,
           {
             room_id: roomId,
-            is_typing: isTyping ? 'true' : 'false',
+            is_typing: isTyping,
           },
           { headers: this.getHeaders() },
         ),
@@ -891,4 +919,79 @@ export class ChatService {
       ),
     );
   }
+
+  /**
+   * Acknowledges messages the current user has read with as few requests as
+   * possible, so opening a busy room does not create a request per message.
+   * The API only records the read for people who enabled read receipts.
+   */
+  async markRoomRead(roomId: string, messageIds: readonly string[]): Promise<void> {
+    for (let start = 0; start < messageIds.length; start += MAX_READ_ACK_BATCH) {
+      await firstValueFrom(
+        this.http.post(
+          `${this.baseUrl}/rooms/${encodeURIComponent(roomId)}/read`,
+          { message_ids: messageIds.slice(start, start + MAX_READ_ACK_BATCH) },
+          { headers: this.getHeaders() },
+        ),
+      );
+    }
+  }
+
+  /**
+   * History for an open chat room. `getMessages` is cache-first, which suits
+   * list previews, but an open room must show the newest server state: this is
+   * network-first and warms the room cache on success. When the network or
+   * server is unavailable the cached snapshot keeps the room readable, while
+   * an authorisation failure (for example after being removed from a group)
+   * never falls back to old local content.
+   *
+   * `before` pages older history (the oldest loaded `created_at`) and is never
+   * cached, because it is a partial view of the conversation.
+   */
+  async getLatestMessages(
+    roomId: string,
+    options: { before?: string; limit?: number } = {},
+  ): Promise<ChatMessage[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
+
+    let params = new HttpParams();
+    if (options.before) params = params.set('before', options.before);
+    if (options.limit !== undefined) params = params.set('limit', String(options.limit));
+
+    let messages: ChatMessage[];
+    try {
+      messages = await firstValueFrom(
+        this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${encodeURIComponent(roomId)}`, {
+          headers: this.getHeaders(),
+          params,
+        }),
+      );
+    } catch (error) {
+      if (options.before || !isTransportFailure(error)) throw error;
+      const cached = await this.chatCache.getCachedMessages(roomId);
+      if (!cached) throw error;
+      return this.withoutBlockedSenders(cached);
+    }
+
+    if (!options.before) {
+      void this.chatCache.cacheMessages(roomId, messages);
+    }
+    return this.withoutBlockedSenders(messages);
+  }
+
+  private async withoutBlockedSenders(messages: ChatMessage[]): Promise<ChatMessage[]> {
+    const currentUser = this.authService.currentUser();
+    if (!currentUser?.id) return messages;
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+    return blockedIds.length > 0
+      ? messages.filter((message) => !blockedIds.includes(message.sender_id))
+      : messages;
+  }
+}
+
+/** Network loss or a server-side fault, as opposed to an authorisation or validation refusal. */
+function isTransportFailure(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500);
 }

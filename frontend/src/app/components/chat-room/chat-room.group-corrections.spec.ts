@@ -56,17 +56,18 @@ describe('ChatRoomComponent group corrections', () => {
         { user_id: 'user-2', user: { id: 'user-2', display_name: 'Camille' } },
         { user_id: 'user-3', user: { id: 'user-3', display_name: 'Akira' } },
       ]),
-      getMessages: vi.fn().mockResolvedValue([]),
+      getLatestMessages: vi.fn().mockResolvedValue([]),
       sendMessage,
       addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
-      markMessageStatus: vi.fn().mockResolvedValue(undefined),
+      markRoomRead: vi.fn().mockResolvedValue(undefined),
     };
 
     const centrifugeService = {
       isConnected: signal(true),
+      connectionStatus: signal('connected'),
       connect: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
       unsubscribe: vi.fn(),

@@ -84,7 +84,18 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`)
 - `content_json` (JSONB, structure varies depending on `payload_type`)
 - `is_read` (Boolean, default `false`)
+- `delivery_status` (String: `'sent'`, `'delivered'`, `'read'`, default `'sent'`; only ever moves forward, and becomes `'read'` once every other room member has read the message with read receipts enabled)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
+
+### Table: `message_receipts` (Per-Reader Read Receipts)
+
+- `id` (UUID, Primary Key)
+- `message_id` (UUID, Foreign Key referencing `chat_messages.id`, `ON DELETE CASCADE`)
+- `user_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`; the reader)
+- `status` (String: `'delivered'`, `'read'`)
+- `read_at` (Timestamp with time zone; required whenever `status = 'read'`)
+- `created_at` (Timestamp with time zone, default `now()`)
+- Unique on `(message_id, user_id)`. Row level security is enabled with no policy, so only the API's service role can read or write receipts. Rows exist only for readers who turned on `chat_preferences.readReceipts`.
 
 ### Table: `favourites` (Bookmarked Messages, Corrections & Audio)
 
@@ -154,10 +165,24 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 
 ### Channels & Routing
 
-- **1-on-1 Chats:** Private channel `chat_{min(userA, userB)}_{max(userA, userB)}`.
-- **Group Chats:** Channel `group_{room_uuid}`.
+- **1-on-1 and Group Chats:** Private room channel `chat:{room_uuid}`.
+- **Typing:** Private ephemeral channel `chat:{room_uuid}:typing`.
 - **Audio Room Chat Overlay:** Channel `room_{audio_room_id}`.
 - **Global Notifications & Gift Broadcasts:** User personal channel `user_{user_id}` and global broadcast channel `global_announcements`.
+
+### Chat Room Channels and Events (implemented, issue #1691)
+
+The routed Angular `ChatRoomComponent` uses one channel per room, not per user pair. Only the NestJS API publishes; clients may not publish to the `chat` namespace and may only subscribe with an API-minted subscription token.
+
+| Channel                 | Purpose                                          | Events                                                                                                                                                                                              |
+| ----------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `chat:{room_id}`        | Messages and receipts for a 1-on-1 or group room | `{ "message": ChatMessage }`, `{ "status_update": { "message_id", "delivery_status": "sent" \| "delivered" \| "read" } }`, `{ "type": "message_deleted", "deleted_for": "everyone", "message_id" }` |
+| `chat:{room_id}:typing` | Ephemeral typing state                           | `{ "userId", "typing": boolean, "timestamp": number }`                                                                                                                                              |
+
+- `POST /chat/subscriptions/token` with `{ room_id, stream: "messages" \| "typing" }` verifies room membership and returns a five-minute JWT (`sub`, `channel`, `exp`) bound to one channel.
+- `POST /chat/typing` publishes typing state for the authenticated member. `POST /chat/rooms/:roomId/read` acknowledges up to 100 messages; `GET /chat/messages/:messageId/receipts` lets the sender see who has read a message.
+- `GET /chat/messages/:roomId?before=&limit=` returns the newest page (at most 100) in ascending order; older history is fetched with the oldest loaded `created_at` as `before`.
+- Persisted rows are authoritative. A client that reconnects, or whose subscription only became active after its history request, reconciles from the API. See `docs/chat-room-realtime.md`.
 
 ### JSON Message Payloads
 

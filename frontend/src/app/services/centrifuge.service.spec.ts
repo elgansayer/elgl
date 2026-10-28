@@ -1,9 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { UnauthorizedError } from 'centrifuge';
 import { CentrifugeService } from './centrifuge.service';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
+
+interface MockSubscriptionOptions {
+  getToken?: () => Promise<string>;
+}
 
 class MockSubscription {
   private listeners = new Map<string, Array<(...args: unknown[]) => void>>();
@@ -49,6 +54,7 @@ class MockCentrifuge {
   });
   publish = vi.fn().mockResolvedValue(undefined);
   private readonly subs = new Map<string, MockSubscription>();
+  private readonly subscriptionOptions = new Map<string, MockSubscriptionOptions | undefined>();
   private readonly listeners = new Map<string, Array<(...args: unknown[]) => void>>();
 
   on(event: string, cb: (...args: unknown[]) => void): this {
@@ -64,14 +70,19 @@ class MockCentrifuge {
     }
   }
 
-  newSubscription(channel: string): MockSubscription {
+  newSubscription(channel: string, options?: MockSubscriptionOptions): MockSubscription {
     const sub = new MockSubscription();
     this.subs.set(channel, sub);
+    this.subscriptionOptions.set(channel, options);
     return sub;
   }
 
   getSubscription(channel: string): MockSubscription | undefined {
     return this.subs.get(channel);
+  }
+
+  getSubscriptionOptions(channel: string): MockSubscriptionOptions | undefined {
+    return this.subscriptionOptions.get(channel);
   }
 }
 
@@ -80,18 +91,25 @@ class MockAuthService {
 }
 
 describe('CentrifugeService', () => {
+  const ROOM_ID = '11111111-1111-4111-8111-111111111111';
+
   let service: CentrifugeService;
   let httpMock: HttpTestingController;
   let mockCentrifuge: MockCentrifuge;
   let authService: MockAuthService;
 
+  function subscriptionTokenFetcher(channel: string): () => Promise<string> {
+    const getToken = mockCentrifuge.getSubscriptionOptions(channel)?.getToken;
+    if (!getToken) {
+      throw new Error(`Expected ${channel} to use a subscription token`);
+    }
+    return getToken;
+  }
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [
-        CentrifugeService,
-        { provide: AuthService, useClass: MockAuthService },
-      ],
+      providers: [CentrifugeService, { provide: AuthService, useClass: MockAuthService }],
     }).compileComponents();
 
     service = TestBed.inject(CentrifugeService);
@@ -125,7 +143,7 @@ describe('CentrifugeService', () => {
     sub.emit('publication', { data: { hello: 'world' } });
 
     expect(first).not.toHaveBeenCalled();
-    expect(second).toHaveBeenCalledWith({ hello: 'world' });
+    expect(second).toHaveBeenCalledWith({ hello: 'world' }, {});
   });
 
   it('only calls the message handler once per publication', () => {
@@ -136,7 +154,52 @@ describe('CentrifugeService', () => {
     sub.emit('publication', { data: 'second' });
 
     expect(handler).toHaveBeenCalledTimes(2);
-    expect(handler.mock.calls).toEqual([['first'], ['second']]);
+    expect(handler.mock.calls).toEqual([
+      ['first', {}],
+      ['second', {}],
+    ]);
+  });
+
+  describe('publisher identity', () => {
+    it('reports the authenticated publisher of a client-published message', () => {
+      const handler = vi.fn();
+      const sub = service.subscribe('chat:room-1:typing', handler) as unknown as MockSubscription;
+
+      sub.emit('publication', {
+        data: { typing: true },
+        info: { client: 'client-1', user: 'user-2' },
+      });
+
+      expect(handler).toHaveBeenCalledWith({ typing: true }, { publisherId: 'user-2' });
+    });
+
+    it('reports no publisher for server-API publications and anonymous connections', () => {
+      const handler = vi.fn();
+      const sub = service.subscribe('chat:room-1', handler) as unknown as MockSubscription;
+
+      sub.emit('publication', { data: 'server' });
+      sub.emit('publication', { data: 'anonymous', info: { client: 'client-9', user: '' } });
+
+      expect(handler.mock.calls).toEqual([
+        ['server', {}],
+        ['anonymous', {}],
+      ]);
+    });
+
+    it('keeps reporting the publisher after the client is replaced and subscriptions are restored', () => {
+      const handler = vi.fn();
+      service.subscribe('chat:room-1:typing', handler);
+
+      const replacement = new MockCentrifuge();
+      (service as unknown as { centrifuge: MockCentrifuge | null }).centrifuge = replacement;
+      (service as unknown as { restoreSubscriptions: () => void }).restoreSubscriptions();
+
+      replacement
+        .getSubscription('chat:room-1:typing')
+        ?.emit('publication', { data: 'again', info: { client: 'c', user: 'user-3' } });
+
+      expect(handler).toHaveBeenCalledWith('again', { publisherId: 'user-3' });
+    });
   });
 
   it('keeps desired subscriptions while no client exists and restores them on a new client', () => {
@@ -154,7 +217,7 @@ describe('CentrifugeService', () => {
     expect(restored?.subscribe).toHaveBeenCalledOnce();
 
     restored?.emit('publication', { data: 'restored' });
-    expect(handler).toHaveBeenCalledWith('restored');
+    expect(handler).toHaveBeenCalledWith('restored', {});
   });
 
   it('rebuilds active subscriptions with the latest handler when the client is replaced', () => {
@@ -175,7 +238,7 @@ describe('CentrifugeService', () => {
     restored?.emit('publication', { data: 'after-reconnect' });
 
     expect(first).not.toHaveBeenCalled();
-    expect(latest).toHaveBeenCalledWith('after-reconnect');
+    expect(latest).toHaveBeenCalledWith('after-reconnect', {});
   });
 
   it('does not restore a channel after it has been unsubscribed', () => {
@@ -187,6 +250,74 @@ describe('CentrifugeService', () => {
     (service as unknown as { restoreSubscriptions: () => void }).restoreSubscriptions();
 
     expect(replacement.getSubscription('chat:room-1')).toBeUndefined();
+  });
+
+  describe('chat subscription authorisation', () => {
+    it('mints a message-stream token with the current authenticated session', async () => {
+      const channel = `chat:${ROOM_ID}`;
+      service.subscribe(channel, vi.fn());
+
+      const tokenPromise = subscriptionTokenFetcher(channel)();
+      const request = httpMock.expectOne(`${environment.apiUrl}/chat/subscriptions/token`);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({ room_id: ROOM_ID, stream: 'messages' });
+      expect(request.request.headers.get('Authorization')).toBe('Bearer token');
+      request.flush({ token: '  message-subscription-token  ' });
+
+      await expect(tokenPromise).resolves.toBe('message-subscription-token');
+    });
+
+    it('requests a separate token contract for the typing stream', async () => {
+      const channel = `chat:${ROOM_ID}:typing`;
+      service.subscribe(channel, vi.fn());
+
+      const tokenPromise = subscriptionTokenFetcher(channel)();
+      const request = httpMock.expectOne(`${environment.apiUrl}/chat/subscriptions/token`);
+      expect(request.request.body).toEqual({ room_id: ROOM_ID, stream: 'typing' });
+      request.flush({ token: 'typing-subscription-token' });
+
+      await expect(tokenPromise).resolves.toBe('typing-subscription-token');
+    });
+
+    it('does not attach the private chat token flow to unrelated channels', () => {
+      service.subscribe('notifications:user-1', vi.fn());
+
+      expect(mockCentrifuge.getSubscriptionOptions('notifications:user-1')).toBeUndefined();
+      httpMock.expectNone(`${environment.apiUrl}/chat/subscriptions/token`);
+    });
+
+    it('rejects token refresh without an authenticated session before making a request', async () => {
+      const channel = `chat:${ROOM_ID}`;
+      authService.getAccessToken.mockReturnValue(null);
+      service.subscribe(channel, vi.fn());
+
+      await expect(subscriptionTokenFetcher(channel)()).rejects.toBeInstanceOf(UnauthorizedError);
+      httpMock.expectNone(`${environment.apiUrl}/chat/subscriptions/token`);
+    });
+
+    it('turns a forbidden room response into a terminal subscription error', async () => {
+      const channel = `chat:${ROOM_ID}`;
+      service.subscribe(channel, vi.fn());
+
+      const tokenPromise = subscriptionTokenFetcher(channel)();
+      httpMock
+        .expectOne(`${environment.apiUrl}/chat/subscriptions/token`)
+        .flush({ message: 'forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+      await expect(tokenPromise).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it('preserves transient server failures so Centrifuge can retry them', async () => {
+      const channel = `chat:${ROOM_ID}`;
+      service.subscribe(channel, vi.fn());
+
+      const tokenPromise = subscriptionTokenFetcher(channel)();
+      httpMock
+        .expectOne(`${environment.apiUrl}/chat/subscriptions/token`)
+        .flush({ message: 'unavailable' }, { status: 503, statusText: 'Service Unavailable' });
+
+      await expect(tokenPromise).rejects.toMatchObject({ status: 503 });
+    });
   });
 
   it('does not request a Centrifugo token without an authenticated access token', async () => {

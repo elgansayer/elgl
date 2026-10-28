@@ -33,6 +33,16 @@ import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto'
 import { FixMessageDto } from './dto/fix-message.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { LlmProxyDto } from './dto/llm-proxy.dto';
+import { GetMessagesQueryDto } from './dto/get-messages-query.dto';
+import { MarkRoomReadDto } from './dto/mark-room-read.dto';
+import { ChatSubscriptionTokenDto } from './dto/chat-subscription-token.dto';
+import { SendTypingDto } from './dto/send-typing.dto';
+import { HttpStatus, RequestMethod } from '@nestjs/common';
+import {
+  PATH_METADATA,
+  METHOD_METADATA,
+  HTTP_CODE_METADATA,
+} from '@nestjs/common/constants';
 
 describe('ChatController', () => {
   let controller: ChatController;
@@ -49,6 +59,8 @@ describe('ChatController', () => {
           provide: ChatService,
           useValue: {
             generateConnectionToken: vi.fn(),
+            generateSubscriptionToken: vi.fn(),
+            sendTyping: vi.fn(),
             sendMessage: vi.fn(),
             getRooms: vi.fn(),
             getMessages: vi.fn(),
@@ -62,6 +74,8 @@ describe('ChatController', () => {
             correctMessage: vi.fn(),
             fixMessage: vi.fn(),
             updateMessageStatus: vi.fn(),
+            markRoomRead: vi.fn(),
+            getMessageReceipts: vi.fn(),
             viewMessageMedia: vi.fn(),
             getGroupMembers: vi.fn(),
             lockChat: vi.fn(),
@@ -185,6 +199,85 @@ describe('ChatController', () => {
     });
   });
 
+  describe('room-scoped realtime', () => {
+    it('returns no subscription token without an authenticated user', async () => {
+      const dto = Object.assign(new ChatSubscriptionTokenDto(), {
+        room_id: '11111111-1111-4111-8111-111111111111',
+        stream: 'messages' as const,
+      });
+
+      await expect(
+        controller.getSubscriptionToken(null, dto),
+      ).resolves.toBeNull();
+      expect(chatService.generateSubscriptionToken).not.toHaveBeenCalled();
+    });
+
+    it('mints a membership-scoped subscription token for the authenticated user', async () => {
+      const dto = Object.assign(new ChatSubscriptionTokenDto(), {
+        room_id: '11111111-1111-4111-8111-111111111111',
+        stream: 'typing' as const,
+      });
+      (chatService.generateSubscriptionToken as Mock).mockResolvedValue(
+        'subscription-token',
+      );
+
+      await expect(
+        controller.getSubscriptionToken(mockUser(), dto),
+      ).resolves.toEqual({ token: 'subscription-token' });
+      expect(chatService.generateSubscriptionToken).toHaveBeenCalledWith(
+        'user-1',
+        dto.room_id,
+        'typing',
+      );
+    });
+
+    it('maps the subscription-token endpoint', () => {
+      const handler = ChatController.prototype.getSubscriptionToken;
+
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(
+        'subscriptions/token',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+        RequestMethod.POST,
+      );
+    });
+
+    it('returns no typing result without an authenticated user', async () => {
+      const dto = Object.assign(new SendTypingDto(), {
+        room_id: '11111111-1111-4111-8111-111111111111',
+        is_typing: true,
+      });
+
+      await expect(controller.sendTyping(null, dto)).resolves.toBeNull();
+      expect(chatService.sendTyping).not.toHaveBeenCalled();
+    });
+
+    it('publishes typing through the API as the authenticated user', async () => {
+      const dto = Object.assign(new SendTypingDto(), {
+        room_id: '11111111-1111-4111-8111-111111111111',
+        is_typing: false,
+      });
+      (chatService.sendTyping as Mock).mockResolvedValue(undefined);
+
+      await expect(controller.sendTyping(mockUser(), dto)).resolves.toEqual({
+        success: true,
+      });
+      expect(chatService.sendTyping).toHaveBeenCalledWith('user-1', dto);
+    });
+
+    it('maps typing to an idempotent 200 response', () => {
+      const handler = ChatController.prototype.sendTyping;
+
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe('typing');
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+        RequestMethod.POST,
+      );
+      expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(
+        HttpStatus.OK,
+      );
+    });
+  });
+
   describe('sendMessage', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.sendMessage(
@@ -221,33 +314,67 @@ describe('ChatController', () => {
       (chatService.getRooms as Mock).mockResolvedValue(rooms);
 
       const result = await controller.getRooms(mockUser());
-      expect(chatService.getRooms).toHaveBeenCalledWith('user-1');
+      expect(chatService.getRooms).toHaveBeenCalledWith('user-1', false);
       expect(result).toEqual(rooms);
+    });
+
+    it('should explicitly request locked metadata for the routed room view', async () => {
+      (chatService.getRooms as Mock).mockResolvedValue([]);
+
+      await controller.getRooms(mockUser(), { include_locked: true });
+
+      expect(chatService.getRooms).toHaveBeenCalledWith('user-1', true);
     });
   });
 
   describe('getMessages', () => {
-    it('should call chatService.getMessages without user when omitted', async () => {
-      const messages = [{ id: 'msg-1' }];
-      (chatService.getMessages as Mock).mockResolvedValue(messages);
+    function query(
+      overrides: Partial<GetMessagesQueryDto> = {},
+    ): GetMessagesQueryDto {
+      return Object.assign(new GetMessagesQueryDto(), overrides);
+    }
 
-      const result = await controller.getMessages('room-1', 'search-term');
-      expect(chatService.getMessages).toHaveBeenCalledWith(
+    it('reads nothing without an authenticated user instead of skipping the membership check', async () => {
+      const result = await controller.getMessages(
         'room-1',
-        'search-term',
+        query({ search: 'search-term' }),
       );
-      expect(result).toEqual(messages);
+
+      expect(result).toEqual([]);
+      expect(chatService.getMessages).not.toHaveBeenCalled();
     });
 
     it('should pass user id when user is provided', async () => {
       (chatService.getMessages as Mock).mockResolvedValue([]);
-      const result = await controller.getMessages('room-1', '', mockUser());
+      const result = await controller.getMessages(
+        'room-1',
+        query({ search: '' }),
+        mockUser(),
+      );
       expect(chatService.getMessages).toHaveBeenCalledWith(
         'room-1',
         '',
         'user-1',
+        { before: undefined, limit: 100 },
       );
       expect(result).toEqual([]);
+    });
+
+    it('should forward the pagination cursor and page size', async () => {
+      (chatService.getMessages as Mock).mockResolvedValue([]);
+
+      await controller.getMessages(
+        'room-1',
+        query({ before: '2026-08-25T12:00:00.000Z', limit: 50 }),
+        mockUser(),
+      );
+
+      expect(chatService.getMessages).toHaveBeenCalledWith(
+        'room-1',
+        undefined,
+        'user-1',
+        { before: '2026-08-25T12:00:00.000Z', limit: 50 },
+      );
     });
   });
 
@@ -585,6 +712,85 @@ describe('ChatController', () => {
         'read',
       );
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('markRoomRead', () => {
+    it('should return null if user is not provided', async () => {
+      const dto = Object.assign(new MarkRoomReadDto(), { message_ids: ['m1'] });
+
+      await expect(
+        controller.markRoomRead(null, 'room-1', dto),
+      ).resolves.toBeNull();
+      expect(chatService.markRoomRead).not.toHaveBeenCalled();
+    });
+
+    it('should acknowledge the batch for the authenticated user only', async () => {
+      const dto = Object.assign(new MarkRoomReadDto(), {
+        message_ids: ['m1', 'm2'],
+      });
+      (chatService.markRoomRead as Mock).mockResolvedValue({ marked: 2 });
+
+      await expect(
+        controller.markRoomRead(mockUser(), 'room-1', dto),
+      ).resolves.toEqual({ success: true, marked: 2 });
+      expect(chatService.markRoomRead).toHaveBeenCalledWith(
+        'user-1',
+        'room-1',
+        ['m1', 'm2'],
+      );
+    });
+
+    it('should be an idempotent POST that answers 200 rather than 201', () => {
+      const handler = ChatController.prototype.markRoomRead;
+
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(
+        'rooms/:roomId/read',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+        RequestMethod.POST,
+      );
+      expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(
+        HttpStatus.OK,
+      );
+    });
+  });
+
+  describe('getMessageReceipts', () => {
+    it('should return null if user is not provided', async () => {
+      await expect(
+        controller.getMessageReceipts(null, 'msg-1'),
+      ).resolves.toBeNull();
+      expect(chatService.getMessageReceipts).not.toHaveBeenCalled();
+    });
+
+    it('should return receipt details for the authenticated user', async () => {
+      const receipts = {
+        messageId: 'msg-1',
+        deliveryStatus: 'read',
+        readBy: [],
+        totalMembers: 1,
+      };
+      (chatService.getMessageReceipts as Mock).mockResolvedValue(receipts);
+
+      await expect(
+        controller.getMessageReceipts(mockUser(), 'msg-1'),
+      ).resolves.toBe(receipts);
+      expect(chatService.getMessageReceipts).toHaveBeenCalledWith(
+        'user-1',
+        'msg-1',
+      );
+    });
+
+    it('should map the messages/:messageId/receipts route', () => {
+      const handler = ChatController.prototype.getMessageReceipts;
+
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe(
+        'messages/:messageId/receipts',
+      );
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+        RequestMethod.GET,
+      );
     });
   });
 

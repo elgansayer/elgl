@@ -49,7 +49,17 @@ describe('ChatRoomComponent translation and correction contract', () => {
         {
           provide: ChatService,
           useValue: {
-            getRooms: vi.fn().mockResolvedValue([]),
+            getRooms: vi.fn().mockResolvedValue([
+              {
+                id: 'room-1',
+                title: 'Practice chat',
+                subtitle: '',
+                avatar: '',
+                is_online: true,
+                is_pinned: false,
+                created_at: new Date().toISOString(),
+              },
+            ]),
             getGroupMembers: vi.fn().mockResolvedValue([
               {
                 user_id: 'user-2',
@@ -60,7 +70,8 @@ describe('ChatRoomComponent translation and correction contract', () => {
                 },
               },
             ]),
-            getMessages: vi.fn().mockResolvedValue([]),
+            getLatestMessages: vi.fn().mockResolvedValue([]),
+            markRoomRead: vi.fn().mockResolvedValue(undefined),
             sendMessage,
             translateText,
           },
@@ -68,6 +79,7 @@ describe('ChatRoomComponent translation and correction contract', () => {
         {
           provide: CentrifugeService,
           useValue: {
+            connectionStatus: signal('connected'),
             connect: vi.fn().mockResolvedValue(undefined),
             subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
             unsubscribe: vi.fn(),
@@ -95,6 +107,7 @@ describe('ChatRoomComponent translation and correction contract', () => {
         {
           provide: TypingService,
           useValue: {
+            typingUsers: signal([]),
             connect: vi.fn(),
             disconnect: vi.fn(),
             sendTyping: vi.fn(),

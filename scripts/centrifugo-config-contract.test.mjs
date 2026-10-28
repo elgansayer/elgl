@@ -28,6 +28,16 @@ test('Centrifugo uses the shared Redis service with bounded realtime namespaces'
   }
 });
 
+test('chat channels require API-authorised subscriptions and server publication', () => {
+  const chat = config.namespaces.find((namespace) => namespace.name === 'chat');
+  assert.ok(chat, 'missing chat namespace');
+  assert.equal(chat.allow_subscribe_for_client, false);
+  assert.equal(chat.allow_publish_for_client, false);
+  assert.equal(chat.allow_publish_for_subscriber, false);
+  assert.equal(Object.hasOwn(chat, 'publish'), false);
+  assert.equal(Object.hasOwn(chat, 'subscribe_to_publish'), false);
+});
+
 test('tracked Centrifugo config contains no signing or API secret values', () => {
   assert.equal(Object.hasOwn(config, 'token_hmac_secret_key'), false);
   assert.equal(Object.hasOwn(config, 'api_key'), false);

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   HttpException,
   HttpStatus,
   Param,
@@ -29,12 +30,18 @@ import { FixMessageDto } from './dto/fix-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
 import { UpdateMessageStatusDto } from './dto/update-message-status.dto';
+import { GetMessagesQueryDto } from './dto/get-messages-query.dto';
+import { GetRoomsQueryDto } from './dto/get-rooms-query.dto';
+import { MarkRoomReadDto } from './dto/mark-room-read.dto';
+import { ChatSubscriptionTokenDto } from './dto/chat-subscription-token.dto';
+import { SendTypingDto } from './dto/send-typing.dto';
 import {
   ChatMessage,
   ChatRoomRecord,
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
+import { MessageReceiptStatus } from './read-receipts.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
@@ -93,6 +100,33 @@ export class ChatController {
     return result;
   }
 
+  @Post('subscriptions/token')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async getSubscriptionToken(
+    @CurrentUser() user: User | null,
+    @Body() dto: ChatSubscriptionTokenDto,
+  ): Promise<{ token: string } | null> {
+    if (!user) return null;
+    const token = await this.chatService.generateSubscriptionToken(
+      user.id,
+      dto.room_id,
+      dto.stream,
+    );
+    return { token };
+  }
+
+  @Post('typing')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async sendTyping(
+    @CurrentUser() user: User | null,
+    @Body() dto: SendTypingDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.sendTyping(user.id, dto);
+    return { success: true };
+  }
+
   @Post('messages')
   async sendMessage(
     @CurrentUser() user: User | null,
@@ -113,21 +147,30 @@ export class ChatController {
   }
 
   @Get('rooms')
-  async getRooms(@CurrentUser() user: User | null): Promise<ChatRoomRecord[]> {
+  async getRooms(
+    @CurrentUser() user: User | null,
+    @Query() query: GetRoomsQueryDto = new GetRoomsQueryDto(),
+  ): Promise<ChatRoomRecord[]> {
     if (!user) return [];
-    return await this.chatService.getRooms(user.id);
+    return await this.chatService.getRooms(
+      user.id,
+      query.include_locked ?? false,
+    );
   }
 
   @Get('messages/:roomId')
   async getMessages(
     @Param('roomId') roomId: string,
-    @Query('search') search?: string,
+    @Query() query: GetMessagesQueryDto,
     @CurrentUser() user?: User | null,
   ): Promise<ChatMessage[]> {
-    if (!user) {
-      return await this.chatService.getMessages(roomId, search);
-    }
-    return await this.chatService.getMessages(roomId, search, user.id);
+    // Room contents are only ever read on behalf of a verified member, so an
+    // unauthenticated call reads nothing rather than skipping the membership check.
+    if (!user) return [];
+    return await this.chatService.getMessages(roomId, query.search, user.id, {
+      before: query.before,
+      limit: query.limit,
+    });
   }
 
   @Post('favourites')
@@ -281,7 +324,10 @@ export class ChatController {
     );
   }
 
+  // Chat clients acknowledge messages as they arrive, so this needs more
+  // headroom than the app-wide default while still bounding abuse.
   @Patch('messages/:messageId/status')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   async updateMessageStatus(
     @CurrentUser() user: User | null,
     @Param('messageId') messageId: string,
@@ -290,6 +336,38 @@ export class ChatController {
     if (!user) return null;
     await this.chatService.updateMessageStatus(user.id, messageId, dto.status);
     return { success: true };
+  }
+
+  /**
+   * Acknowledges up to 100 messages with one request, so opening a busy room
+   * does not create a request per message.
+   */
+  @Post('rooms/:roomId/read')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async markRoomRead(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+    @Body() dto: MarkRoomReadDto,
+  ): Promise<{ success: boolean; marked: number } | null> {
+    if (!user) return null;
+    const result = await this.chatService.markRoomRead(
+      user.id,
+      roomId,
+      dto.message_ids,
+    );
+    return { success: true, marked: result.marked };
+  }
+
+  /** Who has read a message. Visible to the message sender only. */
+  @Get('messages/:messageId/receipts')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async getMessageReceipts(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+  ): Promise<MessageReceiptStatus | null> {
+    if (!user) return null;
+    return await this.chatService.getMessageReceipts(user.id, messageId);
   }
 
   @Post('messages/:messageId/view')
@@ -433,7 +511,7 @@ export class ChatController {
     @Param('roomId') roomId: string,
   ): Promise<{ wallpaperUrl: string | null } | null> {
     if (!user) return null;
-    const wallpaperUrl = await this.chatService.getWallpaper(roomId);
+    const wallpaperUrl = await this.chatService.getWallpaper(roomId, user.id);
     return { wallpaperUrl };
   }
 }

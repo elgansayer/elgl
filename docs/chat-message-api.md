@@ -46,6 +46,7 @@ A database insert failure aborts the request before Centrifugo publication. Cent
 - Privacy filter, block, or spam rejection: no message row is created and nothing is published.
 - Supabase insert failure: request fails and nothing is published.
 - Centrifugo transport failure after persistence: the row remains authoritative and is recoverable through history/reconnect; the realtime transport failure is logged without message content.
+- The Angular client attempts `POST /chat/messages` even when the browser connectivity hint reports offline, because that hint can be stale. Only a confirmed transport failure (`status = 0`) places the message in the IndexedDB offline queue. HTTP refusals, including 4xx and 5xx responses, remain visible failures so the composer retains the draft and a retry cannot be mistaken for a successful send.
 
 ## Verification
 
@@ -53,8 +54,31 @@ The DTO regression suite covers the valid text path, required per-message-type f
 
 Before deployment, the backend verification gate should pass (`npm run lint`, `npm test`, and `npm run build` from `backend/`).
 
+## Conversation routes (issue #1691)
+
+All routes below are authenticated with `SupabaseAuthGuard`; the caller is always the session user. Every route that touches a room verifies membership first: an unknown room is a 404, a non-member a 403, and a failure to verify a 503.
+
+| Route | Purpose | Request | Response |
+| --- | --- | --- | --- |
+| `GET /chat/rooms` | Caller room metadata | Optional query `include_locked=true`; false by default | Membership-scoped `ChatRoom[]`. The default omits locked rooms; the explicit view includes `is_locked` for the routed room guard. Empty membership returns `[]`; query failures are errors, never fixtures. |
+| `GET /chat/messages/:roomId` | One page of history | Query: `before` (ISO 8601, exclusive), `limit` (1 to 100, default 100), `search` (at most 200 characters) | `ChatMessage[]`, newest page in ascending order. Empty rooms return `[]`; failures are returned as errors and never replaced with synthetic messages. |
+| `POST /chat/rooms/:roomId/read` | Acknowledge messages as read | `{ message_ids: string[] }`, 1 to 100 non-empty strings of at most 128 characters | `{ success: true, marked: number }`. Unknown, foreign, own and non-UUID ids are ignored. Rate limit 60 per minute. |
+| `GET /chat/messages/:messageId/receipts` | Who has read a message | none | `{ messageId, deliveryStatus, readBy: [{ userId, displayName, avatarUrl, readAt }], totalMembers }`. Sender only (403 otherwise); at most 100 readers. |
+| `PATCH /chat/messages/:messageId/status` | Legacy status acknowledgement | `{ status: 'delivered' \| 'read' }` | `{ success: true }`. Routed through the same receipt rules. |
+| `POST /chat/typing` | Ephemeral typing state | `{ room_id: uuid, is_typing: boolean }` | `{ success: true }`. Publishes to `chat:<roomId>:typing`. Rate limit 60 per minute. |
+| `POST /chat/subscriptions/token` | Centrifugo subscription token | `{ room_id: uuid, stream: 'messages' \| 'typing' }` | `{ token }`, valid for five minutes. Rate limit 60 per minute. |
+| `POST /chat/groups` | Create a group | `{ name (at most 100), memberIds (1 to 50 unique uuids) }` | The room record. |
+| `GET /chat/groups/:roomId/members` | Participants | none | Members with display name, avatar, languages and VIP flag. Members only. |
+| `PATCH /chat/groups/:roomId/rename` | Rename | `{ name }` | `{ success: true }`. Admin only. |
+| `POST /chat/groups/:roomId/members` | Add members | `{ memberIds (1 to 49 uuids) }` | `{ success: true }`. Admin only, idempotent, group capped at 51 members. |
+| `DELETE /chat/groups/:roomId/members/:memberId` | Remove a member | none | `{ success: true }`. Admin only; the admin cannot be removed. |
+
+`GET /chat/messages/:roomId` pages backwards: pass the `created_at` of the oldest message already loaded as `before` to fetch the next older page. This keeps every response bounded and avoids offset scans (the query is ordered by `created_at` and limited).
+
+Read receipts follow the reader's `chat_preferences.readReceipts` setting (off by default). See `docs/chat-room-realtime.md` for the receipt semantics, catch-up behaviour and privacy rules.
+
 ## Rollout and rollback
 
-There is no database migration and no response-shape change. Deploy the backend normally. Clients that previously sent structurally invalid messages will begin receiving validation errors and should correct their payload rather than relying on partially populated rows.
+There is no database migration and no response-shape change for `POST /chat/messages`. Issue #1691 adds the routes above and a receipts hardening migration (`20260926120000_harden_message_receipts.sql`), described in `docs/chat-room-realtime.md`. Deploy the backend normally. Clients that previously sent structurally invalid messages will begin receiving validation errors and should correct their payload rather than relying on partially populated rows.
 
 Rollback is a normal application revert of the DTO validation changes. Persisted messages require no data rollback, and Centrifugo or Supabase configuration is unchanged.

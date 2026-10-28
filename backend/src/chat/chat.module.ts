@@ -11,6 +11,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatGroupsController } from './chat-groups.controller';
 import { ChatArchiveController } from './chat-archive.controller';
 import { ChatEditController } from './chat-edit.controller';
 import { ChatMediaSendController } from './chat-media-send.controller';
@@ -45,6 +46,7 @@ import { DirectConversationService } from './direct-conversations/direct-convers
   ],
   controllers: [
     ChatController,
+    ChatGroupsController,
     ChatArchiveController,
     ChatEditController,
     ChatMediaSendController,

@@ -1,12 +1,31 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast, showErrorToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
-import { ChatService, ChatMessage, ChatRoom, GroupMember } from '../../services/chat.service';
+import {
+  CHAT_HISTORY_PAGE_SIZE,
+  ChatService,
+  ChatMessage,
+  ChatRoom,
+  GroupMember,
+} from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
@@ -38,7 +57,47 @@ import { AppCardComponent } from '../primitives/card/card.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
+import { ReadReceiptComponent } from '../read-receipt/read-receipt.component';
+import {
+  applyChatRoomRealtimeEvent,
+  effectiveDeliveryStatus,
+  prependOlderMessages,
+  reconcileLatestWindow,
+} from './chat-room-realtime';
+
+type HistoryError = 'forbidden' | 'unavailable';
+type DeliveryStatus = 'sent' | 'delivered' | 'read';
+
+/**
+ * How close to the newest message (in CSS pixels) the reader must be for the
+ * list to keep following the conversation. Further away, incoming messages are
+ * announced with a "new messages" control instead of moving the reading position.
+ */
+const FOLLOW_LATEST_THRESHOLD_PX = 80;
+
+/** Longest incoming message read out in full; longer ones are cut so a long paste cannot monopolise a screen reader. */
+const MAX_ANNOUNCED_CHARACTERS = 200;
+
+function isGroupMember(value: unknown): value is GroupMember {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'user_id' in value &&
+    typeof value.user_id === 'string'
+  );
+}
+
+function errorStatus(value: unknown): number | null {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'status' in value &&
+    typeof value.status === 'number'
+  ) {
+    return value.status;
+  }
+  return null;
+}
 
 @Component({
   selector: 'app-chat-room',
@@ -67,11 +126,13 @@ import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
     AppInputComponent,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
+    ReadReceiptComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
+  host: { '(document:visibilitychange)': 'onVisibilityChange()' },
 })
-export class ChatRoomComponent implements OnDestroy {
+export class ChatRoomComponent {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
   readonly authService = inject(AuthService);
@@ -83,23 +144,99 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
   id = input.required<string>();
+  private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
 
   constructor() {
     effect(() => {
       const roomId = this.id();
-      if (this.roomId && this.roomId !== roomId) {
-        this.saveChatDrafts();
-      }
-      this.roomId = roomId;
-      void this.initializeRoom();
+      // Only the room id may re-run this. Saving drafts reads other signals, and
+      // tracking them would reload the whole room whenever, for example, the
+      // reader chose a message to reply to after switching rooms.
+      untracked(() => {
+        if (this.roomId && this.roomId !== roomId) {
+          // A locked destination returns before setupRealTime(), so tear down
+          // the previous room here rather than relying on the next setup pass.
+          this.releaseRealtimeResources();
+          this.messages.set([]);
+          this.participants.set([]);
+          this.roomDetails.set(null);
+          this.roomDetailsUnavailable.set(false);
+          this.historyError.set(null);
+          this.isLoading.set(true);
+          this.isLocked.set(false);
+          this.pendingUnlock.set(false);
+          this.hasEarlierMessages.set(false);
+          this.loadEarlierError.set(false);
+          this.replyingTo.set(null);
+          this.incomingAnnouncement.set('');
+          this.followingLatest = true;
+          this.pendingReadReceipts.clear();
+          this.acknowledgedReadIds.clear();
+        }
+        this.roomId = roomId;
+        void this.initializeRoom();
+      });
     });
+
+    // Whenever the transport reports a live connection while this room is
+    // subscribed, publications may have been missed (a reconnect, or a
+    // connection that only became active after the history request). The API
+    // is the source of truth, so catch up from it.
+    effect(() => {
+      const status = this.centrifugeService.connectionStatus();
+      const roomId = this.id();
+      if (status !== 'connected') return;
+      untracked(() => {
+        if (this.subscribedRoomId === roomId) void this.reconcileAfterReconnect(roomId);
+      });
+    });
+
+    // Scrolling is a side effect on a DOM node Angular does not own, so it is
+    // driven from the rendered message list rather than from each code path
+    // that adds a message (history, realtime, own sends, reconnect).
+    effect(() => {
+      const shown = this.filteredMessages();
+      untracked(() => this.followMessageStream(shown));
+    });
+
+    effect(() => {
+      if (this.visibleTypingUsers().length === 0) return;
+      untracked(() => {
+        if (this.followingLatest) this.scrollToLatestAfterRender();
+      });
+    });
+
+    // Centrifugo subscriptions are imperative third-party resources, so they are
+    // released explicitly when the component is destroyed.
+    this.destroyRef.onDestroy(() => this.releaseRealtimeResources());
   }
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly isCheckingGrammar = signal<boolean>(false);
+  readonly historyError = signal<HistoryError | null>(null);
+  readonly isLoadingEarlier = signal(false);
+  readonly loadEarlierError = signal(false);
+  readonly hasEarlierMessages = signal(false);
+  /** Messages from other people that arrived while the reader was scrolled away from the latest. */
+  readonly unseenMessageCount = signal(0);
+  /**
+   * Spoken to assistive technology when someone else's message arrives. The
+   * message list itself is not a live region, so opening a long conversation or
+   * loading earlier history is never read out message by message.
+   */
+  readonly incomingAnnouncement = signal('');
+  readonly unseenMessagesLabel = computed(() =>
+    this.i18n.translate(
+      this.unseenMessageCount() === 1 ? 'chatRoom.newMessage' : 'chatRoom.newMessages',
+      { count: this.unseenMessageCount() },
+    ),
+  );
   readonly isTyping = signal<boolean>(false);
   readonly showDoodleModal = signal<boolean>(false);
   readonly showVoiceModal = signal<boolean>(false);
@@ -111,17 +248,42 @@ export class ChatRoomComponent implements OnDestroy {
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
   readonly autoPlayVoiceNotes = signal(false);
+  readonly roomDetails = signal<ChatRoom | null>(null);
+  readonly roomDetailsUnavailable = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
   readonly groupParticipants = computed<GroupParticipant[]>(() =>
     this.participants().map((m) => ({
       id: m.user_id,
-      display_name: m.user?.display_name ?? `User ${m.user_id.slice(0, 6)}`,
+      display_name: m.user?.display_name ?? this.i18n.translate('chatRoom.participantFallback'),
       avatar_url: m.user?.avatar_url ?? undefined,
       native_language: m.user?.native_language ?? '',
       target_languages: m.user?.target_languages ?? [],
       is_vip: m.user?.is_vip ?? false,
     })),
+  );
+  readonly isGroupChat = computed(() => Boolean(this.roomDetails()?.admin_id));
+  readonly latestOwnMessageId = computed(() => {
+    const currentUserId = this.authService.currentUser()?.id;
+    for (let index = this.messages().length - 1; index >= 0; index--) {
+      const message = this.messages()[index];
+      if (message.sender_id === currentUserId) return message.id;
+    }
+    return null;
+  });
+  readonly visibleTypingUsers = computed(() =>
+    this.typingService.typingUsers().map((user) => {
+      const member = this.participants().find((candidate) => candidate.user_id === user.userId);
+      return {
+        ...user,
+        displayName:
+          member?.user?.display_name ||
+          user.displayName ||
+          this.i18n.translate('typingIndicator.someone'),
+        // Avatars come only from the room roster, never from the typing payload.
+        avatarUrl: member?.user?.avatar_url ?? undefined,
+      };
+    }),
   );
   readonly blockedUserIds = signal<string[]>([]);
   readonly partnerLanguage = signal<string | null>(null);
@@ -158,9 +320,8 @@ export class ChatRoomComponent implements OnDestroy {
   private mentionRangeEnd = 0;
 
   readonly mentionItemToString = (value: unknown): string => {
-    if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
-    const member = value as GroupMember;
-    const displayName = member.user?.display_name;
+    if (!isGroupMember(value)) return this.textInput;
+    const displayName = value.user?.display_name;
     if (!displayName) return this.textInput;
     return (
       this.textInput.slice(0, this.mentionRangeStart) +
@@ -170,7 +331,6 @@ export class ChatRoomComponent implements OnDestroy {
   };
 
   roomId = '';
-  roomDetails: ChatRoom | null = null;
   searchQuery = '';
   showSearchPanel = signal(false);
   textInput = '';
@@ -186,9 +346,21 @@ export class ChatRoomComponent implements OnDestroy {
   private subscription: { unsubscribe: () => void } | null = null;
   private subscribedRoomId: string | null = null;
   private readonly pendingReadReceipts = new Set<string>();
+  /** Messages already acknowledged as read in this room, so scrolling and reconnects never resend them. */
+  private readonly acknowledgedReadIds = new Set<string>();
+  private followingLatest = true;
+  private jumpToLatestOnNextLoad = false;
+  private shownMessageIds = new Set<string>();
+  private latestShownAt = Number.NEGATIVE_INFINITY;
 
   private async initializeRoom(): Promise<void> {
-    await this.loadRoomDetails();
+    this.isLoading.set(true);
+    this.historyError.set(null);
+    this.roomDetailsUnavailable.set(false);
+    this.pendingUnlock.set(false);
+    const roomDetailsLoaded = await this.loadRoomDetails();
+    if (!roomDetailsLoaded) return;
+
     if (this.isLocked()) {
       this.pendingUnlock.set(true);
       return;
@@ -229,12 +401,12 @@ export class ChatRoomComponent implements OnDestroy {
       if (this.isLocked()) {
         await this.chatService.unlockChat(this.roomId);
         this.isLocked.set(false);
-        if (this.roomDetails) this.roomDetails.is_locked = false;
+        this.roomDetails.update((room) => (room ? { ...room, is_locked: false } : null));
         showToast(this.i18n.translate('chatList.chatUnlocked'), 'success');
       } else {
         await this.chatService.lockChat(this.roomId);
         this.isLocked.set(true);
-        if (this.roomDetails) this.roomDetails.is_locked = true;
+        this.roomDetails.update((room) => (room ? { ...room, is_locked: true } : null));
         showToast(this.i18n.translate('chatList.chatLocked'), 'success');
       }
     } catch (e) {
@@ -256,23 +428,52 @@ export class ChatRoomComponent implements OnDestroy {
     }
   }
 
-  async loadRoomDetails(): Promise<void> {
+  async loadRoomDetails(): Promise<boolean> {
+    const roomId = this.roomId;
     try {
-      const rooms = await this.chatService.getRooms();
-      this.roomDetails = rooms.find((r) => r.id === this.roomId) || null;
-      this.isLocked.set(this.roomDetails?.is_locked ?? false);
+      const rooms = await this.chatService.getRooms({ includeLocked: true });
+      if (this.roomId !== roomId) return false;
+
+      const details = rooms.find((room) => room.id === roomId) ?? null;
+      if (!details) {
+        // The room list is membership-scoped. An absent room is therefore not
+        // authorised for this account (or no longer exists), so do not expose
+        // history, composer controls, or realtime channel intent for it.
+        this.roomDetails.set(null);
+        this.roomDetailsUnavailable.set(true);
+        this.isLoading.set(false);
+        return false;
+      }
+
+      this.roomDetails.set(details);
+      this.isLocked.set(details.is_locked ?? false);
+      return true;
     } catch (e) {
+      if (this.roomId !== roomId) return false;
       console.error('Failed to load room details:', e);
+      this.roomDetails.set(null);
+      this.roomDetailsUnavailable.set(true);
+      this.isLoading.set(false);
+      return false;
     }
+  }
+
+  async retryRoomDetails(): Promise<void> {
+    await this.initializeRoom();
   }
 
   isOwnMessage(msg: ChatMessage): boolean {
     return msg.sender_id === this.authService.currentUser()?.id;
   }
 
+  deliveryStatusFor(message: ChatMessage): DeliveryStatus | undefined {
+    return effectiveDeliveryStatus(message);
+  }
+
   get isAdmin(): boolean {
     const currentUser = this.authService.currentUser();
-    return !!(currentUser && this.roomDetails && this.roomDetails.admin_id === currentUser.id);
+    const details = this.roomDetails();
+    return Boolean(currentUser && details?.admin_id === currentUser.id);
   }
 
   async loadBlockedUsers(): Promise<void> {
@@ -284,7 +485,7 @@ export class ChatRoomComponent implements OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
+  private releaseRealtimeResources(): void {
     if (this.subscribedRoomId) {
       this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
       this.subscribedRoomId = null;
@@ -328,20 +529,81 @@ export class ChatRoomComponent implements OnDestroy {
   private _restoredReplyToId: string | null = null;
 
   async loadMessages(): Promise<void> {
+    const roomId = this.roomId;
     this.isLoading.set(true);
+    this.historyError.set(null);
+    this.loadEarlierError.set(false);
     try {
-      const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
+      const search = this.searchQuery.trim();
+      const data = search
+        ? await this.chatService.getMessages(roomId, search)
+        : await this.chatService.getLatestMessages(roomId, {
+            limit: CHAT_HISTORY_PAGE_SIZE,
+          });
+      if (this.roomId !== roomId) return;
+      this.jumpToLatestOnNextLoad = true;
       this.messages.set(data);
-      void this.markUnreadMessagesRead(data);
+      this.hasEarlierMessages.set(!search && data.length === CHAT_HISTORY_PAGE_SIZE);
+      void this.acknowledgeUnreadMessages(data);
       if (this._restoredReplyToId) {
         const target = data.find((m) => m.id === this._restoredReplyToId);
         if (target) this.replyingTo.set(target);
         this._restoredReplyToId = null;
       }
-    } catch (e) {
-      console.error('Failed to load chat history:', e);
+    } catch (error) {
+      if (this.roomId !== roomId) return;
+      console.error('Failed to load chat history:', error);
+      const status = errorStatus(error);
+      this.historyError.set(status === 401 || status === 403 ? 'forbidden' : 'unavailable');
     } finally {
-      this.isLoading.set(false);
+      if (this.roomId === roomId) this.isLoading.set(false);
+    }
+  }
+
+  async loadEarlierMessages(): Promise<void> {
+    if (this.isLoadingEarlier()) return;
+    const oldest = this.messages().find((message) => message.message_type !== 'system');
+    if (!oldest) {
+      this.hasEarlierMessages.set(false);
+      return;
+    }
+
+    const roomId = this.roomId;
+    this.isLoadingEarlier.set(true);
+    this.loadEarlierError.set(false);
+    try {
+      const older = await this.chatService.getLatestMessages(roomId, {
+        before: oldest.created_at,
+        limit: CHAT_HISTORY_PAGE_SIZE,
+      });
+      if (this.roomId !== roomId) return;
+      this.keepReadingPositionAfterRender();
+      this.messages.update((current) => prependOlderMessages(current, older));
+      this.hasEarlierMessages.set(older.length === CHAT_HISTORY_PAGE_SIZE);
+      void this.acknowledgeUnreadMessages(older);
+    } catch (error) {
+      console.error('Failed to load earlier chat history:', error);
+      this.loadEarlierError.set(true);
+    } finally {
+      if (this.roomId === roomId) this.isLoadingEarlier.set(false);
+    }
+  }
+
+  private async reconcileAfterReconnect(roomId: string): Promise<void> {
+    try {
+      const latest = await this.chatService.getLatestMessages(roomId, {
+        limit: CHAT_HISTORY_PAGE_SIZE,
+      });
+      if (this.roomId !== roomId) return;
+      this.messages.update((current) =>
+        reconcileLatestWindow(current, latest, CHAT_HISTORY_PAGE_SIZE),
+      );
+      void this.acknowledgeUnreadMessages(latest);
+    } catch (error) {
+      const status = errorStatus(error);
+      if (status === 401 || status === 403) {
+        this.historyError.set('forbidden');
+      }
     }
   }
 
@@ -364,6 +626,13 @@ export class ChatRoomComponent implements OnDestroy {
     }
 
     this.typingService.connect(this.roomId);
+
+    // Already connected: the subscription becomes active within a round trip, so
+    // close the gap since the history request now. A connection that is still
+    // being established triggers the same catch-up from the effect above.
+    if (this.centrifugeService.connectionStatus() === 'connected') {
+      void this.reconcileAfterReconnect(this.roomId);
+    }
   }
 
   private handleRealtimeEvent(data: unknown, eventRoomId: string): void {
@@ -373,61 +642,68 @@ export class ChatRoomComponent implements OnDestroy {
 
     const currentUserId = this.authService.currentUser()?.id;
     const currentMessages = this.messages();
-    const result = applyChatRoomRealtimeEvent(
-      currentMessages,
-      data,
-      eventRoomId,
-      currentUserId,
-    );
+    const result = applyChatRoomRealtimeEvent(currentMessages, data, eventRoomId, currentUserId);
 
     if (result.messages !== currentMessages) {
       this.messages.set(result.messages);
     }
 
     if (result.incomingMessageToMarkRead) {
-      void this.markMessageRead(result.incomingMessageToMarkRead);
+      void this.acknowledgeUnreadMessages([result.incomingMessageToMarkRead]);
     }
   }
 
-  private async markUnreadMessagesRead(messages: ChatMessage[]): Promise<void> {
+  /**
+   * A message counts as read once the reader can actually see it: the page is
+   * visible and the list is at (or following) the newest message. Anything that
+   * arrives while the reader is scrolled away or the tab is hidden is
+   * acknowledged later, when they return to it.
+   */
+  private async acknowledgeUnreadMessages(messages: ChatMessage[]): Promise<void> {
+    if (!this.followingLatest || this.document.visibilityState === 'hidden') return;
+
     const currentUserId = this.authService.currentUser()?.id;
     if (!currentUserId) return;
 
-    const unreadIncoming = messages.filter(
-      (message) =>
-        message.sender_id !== currentUserId &&
-        message.delivery_status !== 'read' &&
-        !this.pendingReadReceipts.has(message.id),
-    );
+    const roomId = this.roomId;
+    const messageIds = messages
+      .filter(
+        (message) =>
+          message.message_type !== 'system' &&
+          message.sender_id !== currentUserId &&
+          message.delivery_status !== 'read' &&
+          !message.is_read &&
+          !this.pendingReadReceipts.has(message.id) &&
+          !this.acknowledgedReadIds.has(message.id),
+      )
+      .map((message) => message.id);
 
-    await Promise.allSettled(unreadIncoming.map((message) => this.markMessageRead(message)));
-  }
+    if (messageIds.length === 0) return;
 
-  private async markMessageRead(message: ChatMessage): Promise<void> {
-    const currentUserId = this.authService.currentUser()?.id;
-    if (
-      !currentUserId ||
-      message.sender_id === currentUserId ||
-      message.delivery_status === 'read' ||
-      this.pendingReadReceipts.has(message.id)
-    ) {
-      return;
+    for (const messageId of messageIds) {
+      this.pendingReadReceipts.add(messageId);
     }
 
-    this.pendingReadReceipts.add(message.id);
     try {
-      await this.chatService.markMessageStatus(message.id, 'read');
-      this.messages.update((messages) =>
-        messages.map((candidate) =>
-          candidate.id === message.id ? { ...candidate, delivery_status: 'read' } : candidate,
-        ),
-      );
+      await this.chatService.markRoomRead(roomId, messageIds);
+      if (this.roomId === roomId) {
+        for (const messageId of messageIds) {
+          this.acknowledgedReadIds.add(messageId);
+        }
+      }
     } catch {
       // Receipt delivery is best-effort. Persisted message history remains usable
       // and a later room load or realtime event can retry the idempotent update.
     } finally {
-      this.pendingReadReceipts.delete(message.id);
+      for (const messageId of messageIds) {
+        this.pendingReadReceipts.delete(messageId);
+      }
     }
+  }
+
+  onVisibilityChange(): void {
+    if (this.document.visibilityState === 'hidden') return;
+    void this.acknowledgeUnreadMessages(this.messages());
   }
 
   onWordClicked(event: { token: string; context: string }): void {
@@ -438,6 +714,7 @@ export class ChatRoomComponent implements OnDestroy {
   onComposerInput(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
+    this.textInput = target.value;
     const cursor = target.selectionStart ?? target.value.length;
     const textBeforeCursor = target.value.slice(0, cursor);
     const match = /@([\wÀ-ɏ؀-ۿ]*)$/.exec(textBeforeCursor);
@@ -474,10 +751,7 @@ export class ChatRoomComponent implements OnDestroy {
 
     this.isCheckingGrammar.set(true);
     try {
-      const grammar = await this.vocabStore.checkGrammar(
-        text,
-        this.partnerLanguage() ?? undefined,
-      );
+      const grammar = await this.vocabStore.checkGrammar(text, this.partnerLanguage() ?? undefined);
       const corrected = grammar.corrected.trim();
       if (grammar.errors_found > 0 && corrected && corrected !== text) {
         this.textInput = corrected;
@@ -503,6 +777,7 @@ export class ChatRoomComponent implements OnDestroy {
     } catch (e) {
       console.error('Failed to send text message:', e);
       this.draftService.saveChatDraft(this.roomId, text);
+      showErrorToast(this.i18n.translate('chatRoom.sendFailed'));
     }
   }
 
@@ -566,7 +841,7 @@ export class ChatRoomComponent implements OnDestroy {
         room_id: this.roomId,
         message_type: 'voice',
         media_url: mediaUrl,
-        text_content: this.i18n.translate('chatRoom.voiceNoteCaption'),
+        text_content: this.i18n.translate('chatRoom.voiceMessage'),
       });
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
@@ -581,7 +856,7 @@ export class ChatRoomComponent implements OnDestroy {
         room_id: this.roomId,
         message_type: 'sticker',
         media_url: stickerUrl,
-        text_content: this.i18n.translate('chatRoom.stickerCaption') || 'Sticker',
+        text_content: this.i18n.translate('chatRoom.stickerCaption'),
       });
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
@@ -591,11 +866,11 @@ export class ChatRoomComponent implements OnDestroy {
 
   async bookmark(msg: ChatMessage): Promise<void> {
     try {
-      await this.chatService.addFavourite(msg.id, `Saved from room ${this.roomId}`);
-      showToast(this.i18n.translate('chatRoom.bookmarkedAlert'));
+      await this.chatService.addFavourite(msg.id, this.i18n.translate('chatRoom.favouriteNote'));
+      showToast(this.i18n.translate('chatRoom.bookmarkSuccess'));
     } catch (e) {
       console.error('Failed to bookmark message:', e);
-      showToast(this.i18n.translate('chatRoom.bookmarkErrorAlert'));
+      showToast(this.i18n.translate('chatRoom.bookmarkError'));
     }
   }
 
@@ -610,10 +885,10 @@ export class ChatRoomComponent implements OnDestroy {
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {
     if (event.blocked) {
       this.blockedUserIds.update((ids) => [...ids, event.senderId]);
-      showToast(this.i18n.translate('safety.blockedAlert') || 'User blocked');
+      showToast(this.i18n.translate('safety.blockedAlert'));
     } else {
       this.blockedUserIds.update((ids) => ids.filter((id) => id !== event.senderId));
-      showToast(this.i18n.translate('safety.unblockedAlert') || 'User unblocked');
+      showToast(this.i18n.translate('safety.unblockedAlert'));
     }
   }
 
@@ -623,15 +898,19 @@ export class ChatRoomComponent implements OnDestroy {
       const trans = await this.vocabStore.translateWordOrSentence(msg.text_content, 'en');
       const created = await this.vocabStore.saveWord({
         word_token: msg.text_content,
-        translation: trans?.translated_text || `Sentence: ${msg.text_content}`,
-        original_context: `Chat room: ${this.roomId}`,
-        definition: 'Saved full chat sentence to LingQ Spaced Repetition deck.',
+        translation:
+          trans?.translated_text ||
+          this.i18n.translate('chatRoom.sentenceTranslationFallback', {
+            text: msg.text_content,
+          }),
+        original_context: this.i18n.translate('chatRoom.lingqContext'),
+        definition: this.i18n.translate('chatRoom.lingqDefinition'),
       });
       await this.vocabStore.updateSrsLevel(created.id, 1);
       showToast(this.i18n.translate('chatRoom.savedLingqAlert', { text: msg.text_content }));
     } catch (e) {
       console.error('Failed to save sentence to LingQ deck:', e);
-      showToast(this.i18n.translate('chatRoom.saveErrorAlert'));
+      showToast(this.i18n.translate('chatRoom.saveLingqError'));
     }
   }
 
@@ -645,7 +924,7 @@ export class ChatRoomComponent implements OnDestroy {
       }));
     } catch (e) {
       console.error('Failed to transliterate message:', e);
-      showToast(this.i18n.translate('moments.transError') || 'Transliteration failed');
+      showToast(this.i18n.translate('moments.transError'));
     }
   }
 
@@ -683,7 +962,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.showTranslation.update((prev) => ({ ...prev, [msg.id]: true }));
     } catch (e) {
       console.error('Failed to translate message:', e);
-      showToast(this.i18n.translate('moments.transError') || 'Translation failed');
+      showToast(this.i18n.translate('moments.transError'));
     }
   }
 
@@ -738,22 +1017,6 @@ export class ChatRoomComponent implements OnDestroy {
     }
   }
 
-  handleHeaderAction(actionId: string): void {
-    switch (actionId) {
-      case 'view_profile':
-        break;
-      case 'view_participants':
-        void this.toggleParticipantDrawer();
-        break;
-      case 'clear_chat':
-        break;
-      case 'block_user':
-        break;
-      case 'report_user':
-        break;
-    }
-  }
-
   sendCorrectionFromInput(correction: {
     original: string;
     corrected: string;
@@ -763,6 +1026,147 @@ export class ChatRoomComponent implements OnDestroy {
     this.correctedText = correction.corrected;
     this.explanationText = correction.explanation || '';
     this.sendCorrection();
+  }
+
+  onMessageListScroll(): void {
+    const list = this.messageList()?.nativeElement;
+    if (!list) return;
+    const distanceFromLatest = list.scrollHeight - list.scrollTop - list.clientHeight;
+    const wasFollowing = this.followingLatest;
+    this.followingLatest = distanceFromLatest <= FOLLOW_LATEST_THRESHOLD_PX;
+    if (!this.followingLatest) return;
+    if (this.unseenMessageCount() > 0) this.unseenMessageCount.set(0);
+    if (!wasFollowing) void this.acknowledgeUnreadMessages(this.messages());
+  }
+
+  jumpToLatest(): void {
+    this.unseenMessageCount.set(0);
+    this.scrollToLatestAfterRender();
+    void this.acknowledgeUnreadMessages(this.messages());
+  }
+
+  /**
+   * Keeps the reader oriented as the stream changes:
+   * - the first page of a room, a retry or a search result starts at the newest message;
+   * - new messages scroll into view while the reader is following the conversation
+   *   or when they are the reader's own;
+   * - otherwise the reading position is left alone and the unseen count grows.
+   * Older history, receipt updates and edits add nothing newer than what was
+   * already shown, so they never move the list.
+   */
+  private followMessageStream(shown: ChatMessage[]): void {
+    const previousIds = this.shownMessageIds;
+    const previousLatestAt = this.latestShownAt;
+    this.shownMessageIds = new Set(shown.map((message) => message.id));
+    this.latestShownAt = shown.reduce((latest, message) => {
+      const createdAt = Date.parse(message.created_at);
+      return Number.isNaN(createdAt) ? latest : Math.max(latest, createdAt);
+    }, Number.NEGATIVE_INFINITY);
+
+    if (shown.length === 0) {
+      this.followingLatest = true;
+      this.jumpToLatestOnNextLoad = false;
+      this.unseenMessageCount.set(0);
+      this.incomingAnnouncement.set('');
+      return;
+    }
+
+    if (this.jumpToLatestOnNextLoad) {
+      this.jumpToLatestOnNextLoad = false;
+      this.unseenMessageCount.set(0);
+      this.scrollToLatestAfterRender();
+      return;
+    }
+
+    const arrivals = shown.filter(
+      (message) =>
+        !previousIds.has(message.id) && !(Date.parse(message.created_at) < previousLatestAt),
+    );
+    if (arrivals.length === 0) return;
+
+    const currentUserId = this.authService.currentUser()?.id;
+    this.announceIncoming(
+      arrivals.filter(
+        (message) => message.message_type !== 'system' && message.sender_id !== currentUserId,
+      ),
+    );
+    if (this.followingLatest || arrivals.some((message) => message.sender_id === currentUserId)) {
+      this.unseenMessageCount.set(0);
+      this.scrollToLatestAfterRender();
+      return;
+    }
+
+    const unseen = arrivals.filter((message) => message.message_type !== 'system').length;
+    if (unseen > 0) this.unseenMessageCount.update((count) => count + unseen);
+  }
+
+  private announceIncoming(incoming: ChatMessage[]): void {
+    if (incoming.length === 0) return;
+    if (incoming.length > 1) {
+      this.incomingAnnouncement.set(
+        this.i18n.translate('chatRoom.newMessages', { count: incoming.length }),
+      );
+      return;
+    }
+
+    const [message] = incoming;
+    const name = message.sender?.display_name || this.i18n.translate('chatRoom.partnerFallback');
+    const text = message.message_type === 'text' ? (message.text_content ?? '').trim() : '';
+    if (!text) {
+      this.incomingAnnouncement.set(this.i18n.translate('chatRoom.incomingOtherMessage', { name }));
+      return;
+    }
+    this.incomingAnnouncement.set(
+      this.i18n.translate('chatRoom.incomingMessage', { name, text: this.cutForSpeech(text) }),
+    );
+  }
+
+  /**
+   * Cuts at a user-perceived character, not a UTF-16 unit or code point, so an
+   * emoji sequence or a letter with combining marks is never split in half.
+   */
+  private cutForSpeech(text: string): string {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    let kept = '';
+    let count = 0;
+    for (const { segment } of segmenter.segment(text)) {
+      if (count === MAX_ANNOUNCED_CHARACTERS) return `${kept}...`;
+      kept += segment;
+      count += 1;
+    }
+    return text;
+  }
+
+  private scrollToLatestAfterRender(): void {
+    this.followingLatest = true;
+    afterNextRender(
+      {
+        write: () => {
+          const list = this.messageList()?.nativeElement;
+          if (list) list.scrollTop = list.scrollHeight;
+        },
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /**
+   * Older history is inserted above the viewport. Restoring the offset from the
+   * height gained keeps the same message under the reader's eyes in every browser.
+   */
+  private keepReadingPositionAfterRender(): void {
+    const list = this.messageList()?.nativeElement;
+    if (!list) return;
+    const heightBefore = list.scrollHeight;
+    const offsetBefore = list.scrollTop;
+    afterNextRender(
+      {
+        write: () => {
+          list.scrollTop = offsetBefore + (list.scrollHeight - heightBefore);
+        },
+      },
+      { injector: this.injector },
+    );
   }
 
   scrollToMessage(messageId: string): void {
@@ -776,6 +1180,28 @@ export class ChatRoomComponent implements OnDestroy {
   parentMessageFor(msg: ChatMessage): ChatMessage | undefined {
     if (!msg.reply_to_id) return undefined;
     return this.messages().find((m) => m.id === msg.reply_to_id);
+  }
+
+  /**
+   * What a reply points at. The parent may not be loaded (older history), so this
+   * uses the preview sent by the API, then a localised unavailable-message label.
+   * `label` is the accessible name of the control that jumps to the parent: it
+   * carries the visible sender and text, so speech input can address it by what
+   * is on screen.
+   */
+  replyReference(msg: ChatMessage): { name: string; text: string; label: string } {
+    const parent = this.parentMessageFor(msg);
+    const name =
+      (parent?.sender?.display_name ?? msg.reply_preview?.display_name) ||
+      this.i18n.translate('chat.unknown_user');
+    const text =
+      (parent?.text_content ?? msg.reply_preview?.text_content) ||
+      this.i18n.translate('chatRoom.replyPreviewFallback');
+    return {
+      name,
+      text,
+      label: this.i18n.translate('chatRoom.jumpToReplied', { name, text: this.cutForSpeech(text) }),
+    };
   }
 
   startReply(messageId: string): void {
@@ -795,12 +1221,14 @@ export class ChatRoomComponent implements OnDestroy {
     if (!this.newGroupName.trim()) return;
     try {
       await this.chatService.renameGroup(this.roomId, this.newGroupName.trim());
-      if (this.roomDetails) this.roomDetails.title = this.newGroupName.trim();
+      this.roomDetails.update((room) =>
+        room ? { ...room, title: this.newGroupName.trim() } : null,
+      );
       this.newGroupName = '';
-      showToast('Group renamed successfully');
+      showToast(this.i18n.translate('chatRoom.renameSuccess'));
     } catch (e) {
       console.error('Failed to rename group:', e);
-      showToast('Failed to rename group');
+      showErrorToast(this.i18n.translate('chatRoom.renameFailed'));
     }
   }
 
@@ -809,11 +1237,11 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       await this.chatService.addGroupMembers(this.roomId, [this.newMemberId.trim()]);
       this.newMemberId = '';
-      showToast('Member added successfully');
+      showToast(this.i18n.translate('chatRoom.memberAddedSuccess'));
       if (this.showParticipantDrawer()) await this.loadParticipants();
     } catch (e) {
       console.error('Failed to add member:', e);
-      showToast('Failed to add member');
+      showErrorToast(this.i18n.translate('chatRoom.memberAddedFailed'));
     }
   }
 
@@ -822,11 +1250,11 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       await this.chatService.removeGroupMember(this.roomId, this.memberToRemoveId.trim());
       this.memberToRemoveId = '';
-      showToast('Member removed successfully');
+      showToast(this.i18n.translate('chatRoom.memberRemovedSuccess'));
       if (this.showParticipantDrawer()) await this.loadParticipants();
     } catch (e) {
       console.error('Failed to remove member:', e);
-      showToast('Failed to remove member');
+      showErrorToast(this.i18n.translate('chatRoom.memberRemovedFailed'));
     }
   }
 

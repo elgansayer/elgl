@@ -17,6 +17,10 @@ The page distinguishes four states:
 
 Individual setting changes are applied locally only after the server confirms the `PUT`. Reset sends all three message-behaviour defaults in one request so a network interruption cannot leave a partially reset UI. The existing text-size value is preserved.
 
+## Effect of Read Receipts
+
+The Read Receipts switch is enforced by the chat API (issue #1691), not only stored. When it is off, which is the default, reading a message stores nothing about the reader and the sender is never told; a message in a room with such a member stays at "Delivered". When it is on, the API records a receipt for each message the account reads, the sender sees the message move to "Read" once every other member has read it, and the sender can open a list of who has read it. Only people with the setting on ever appear in that list. See `docs/chat-room-realtime.md` for the receipt rules.
+
 ## Security and privacy
 
 Settings requests use the current Supabase bearer session through `AuthService.getBearerHeaders()`. The browser never accepts a caller-supplied user identifier for this page. No chat content, credentials, tokens, or preference payloads are logged or stored in an additional browser cache by this feature.

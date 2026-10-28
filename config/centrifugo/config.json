@@ -1,8 +1,6 @@
 {
   "v3_use_offset": true,
-  "allowed_origins": [
-    "*"
-  ],
+  "allowed_origins": ["*"],
   "engine": "redis",
   "redis_address": "redis://cache:6379",
   "prometheus": true,
@@ -19,8 +17,9 @@
   "namespaces": [
     {
       "name": "chat",
-      "publish": true,
-      "subscribe_to_publish": true,
+      "allow_subscribe_for_client": false,
+      "allow_publish_for_client": false,
+      "allow_publish_for_subscriber": false,
       "presence": true,
       "history_size": 100,
       "history_ttl": "30d",

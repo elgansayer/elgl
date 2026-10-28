@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatListComponent } from './chat-list.component';
 import { ChatService } from '../../services/chat.service';
 import { GroupsService } from '../../services/groups.service';
+import { I18nService } from '../../services/i18n.service';
 import * as toast from '../../services/toast.service';
 import { provideRouter } from '@angular/router';
 
@@ -102,6 +103,50 @@ describe('ChatListComponent', () => {
   it('notImplemented should show toast', () => {
     component.notImplemented();
     expect(toast.toastsSignal().length).toBeGreaterThan(0);
+  });
+
+  describe('room list failures', () => {
+    const errorPanel = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="chat-list-error"]');
+
+    beforeEach(() => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('explains an unavailable inbox instead of presenting it as empty, and recovers on retry', async () => {
+      const i18n = TestBed.inject(I18nService);
+      mockChatService.getRooms.mockRejectedValueOnce(new Error('Chat rooms could not be loaded'));
+
+      await component.loadPreviews();
+      fixture.detectChanges();
+
+      expect(component.loadError()).toBe(true);
+      expect(errorPanel()?.getAttribute('role')).toBe('alert');
+      expect(errorPanel()?.textContent).toContain(i18n.translate('chatList.loadError'));
+      // A failure must not read as "you have no chats".
+      expect(fixture.nativeElement.textContent).not.toContain(i18n.translate('chatList.noMessagesFound'));
+
+      mockChatService.getRooms.mockResolvedValueOnce([]);
+      errorPanel()?.querySelector('button')?.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.loadError()).toBe(false);
+      expect(errorPanel()).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain(i18n.translate('chatList.noMessagesFound'));
+    });
+
+    it('shows the empty inbox, not an error, when the account simply has no conversations', async () => {
+      await component.loadPreviews();
+      fixture.detectChanges();
+
+      expect(component.loadError()).toBe(false);
+      expect(errorPanel()).toBeNull();
+    });
   });
 
   describe('toggleRoomLock', () => {

@@ -1,9 +1,18 @@
-import { IsArray, IsString, ArrayMaxSize, IsOptional } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
+/** Body for `POST /chat/groups/:roomId/members`. */
 export class AddMemberDto {
   @IsArray()
-  @IsString({ each: true })
+  @ArrayMinSize(1)
   @ArrayMaxSize(49)
+  @IsUUID('all', { each: true })
   memberIds!: string[];
   @IsOptional()
   @IsString()

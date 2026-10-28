@@ -1,15 +1,23 @@
 import {
+  Inject,
   Injectable,
   ForbiddenException,
   BadRequestException,
+  Logger,
   NotFoundException,
   Optional,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
-import { ReadReceiptsService } from './read-receipts.service';
+import {
+  MarkReadResult,
+  MessageReceiptStatus,
+  ReadReceiptsService,
+} from './read-receipts.service';
+import { MESSAGE_PAGE_SIZE_MAX } from './dto/get-messages-query.dto';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
@@ -17,6 +25,7 @@ import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendTypingDto } from './dto/send-typing.dto';
+import { ChatSubscriptionStream } from './dto/chat-subscription-token.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
@@ -46,25 +55,58 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+/** 50 selected members plus the creator; mirrors createGroup(). */
+const MAX_GROUP_MEMBERS = 51;
+
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
   deleted_for_user_ids?: string[] | null;
 }
 
-interface GroupMember {
+export interface GroupMember {
   user_id: string;
   user?: {
+    id?: string;
     display_name?: string | null;
     avatar_url?: string | null;
+    native_language?: string | null;
+    target_languages?: string[];
+    is_vip?: boolean;
   } | null;
+}
+
+interface GroupMemberRow {
+  user_id: string;
+  user?: {
+    id?: string;
+    display_name?: string | null;
+    avatar_url?: string | null;
+    native_languages?: string[] | null;
+    target_languages?: string[] | null;
+    is_vip?: boolean | null;
+    privacy_hide_vip_status?: boolean | null;
+  } | null;
+}
+
+export interface GetMessagesOptions {
+  /** Only messages created strictly before this ISO 8601 timestamp. */
+  before?: string;
+  /** Page size, clamped to 1..MESSAGE_PAGE_SIZE_MAX. */
+  limit?: number;
 }
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
+    // A union type erases to `Object` in the emitted decorator metadata, so Nest
+    // cannot resolve this by type and would silently inject `undefined`. The
+    // explicit token keeps receipts wired while the parameter stays optional.
     @Optional()
+    @Inject(ReadReceiptsService)
     private readonly readReceiptsService: ReadReceiptsService | undefined,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
@@ -87,16 +129,46 @@ export class ChatService {
       const token = await this.centrifugoService.signJwt(payload);
       return token;
     } catch (error) {
-      throw new Error(`Failed to generate Centrifugo token: ${error.message}`, {
+      const detail =
+        error instanceof Error ? error.message : 'unknown signing error';
+      throw new Error(`Failed to generate Centrifugo token: ${detail}`, {
         cause: error,
       });
     }
   }
 
+  async generateSubscriptionToken(
+    userId: string,
+    roomId: string,
+    stream: ChatSubscriptionStream,
+  ): Promise<string> {
+    await this.assertRoomAccess(roomId, userId);
+    const channel =
+      stream === 'typing' ? `chat:${roomId}:typing` : `chat:${roomId}`;
+    const payload = {
+      sub: userId,
+      channel,
+      exp: Math.floor(Date.now() / 1000) + 300,
+    };
+
+    try {
+      return await this.centrifugoService.signJwt(payload);
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : 'unknown signing error';
+      throw new Error(
+        `Failed to generate Centrifugo subscription token: ${detail}`,
+        { cause: error },
+      );
+    }
+  }
+
   async sendTyping(userId: string, dto: SendTypingDto): Promise<void> {
-    await this.centrifugoService.publish(`chat:${dto.room_id}`, {
-      typing: dto.is_typing === 'true',
-      sender_id: userId,
+    await this.assertRoomAccess(dto.room_id, userId);
+    await this.centrifugoService.publish(`chat:${dto.room_id}:typing`, {
+      userId,
+      typing: dto.is_typing,
+      timestamp: Date.now(),
     });
   }
 
@@ -245,91 +317,90 @@ export class ChatService {
     }
   }
 
-  async getRooms(currentUserId: string): Promise<ChatRoomRecord[]> {
+  async getRooms(
+    currentUserId: string,
+    includeLocked = false,
+  ): Promise<ChatRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
 
-    // Get blocked user IDs to exclude from rooms
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
+    // The service-role client bypasses row level security. Start from the
+    // caller's memberships so the room query can never expose unrelated rooms.
+    const membershipResponse = await supabase
+      .from('chat_room_members')
+      .select('room_id, is_locked')
+      .eq('user_id', currentUserId);
+
+    if (membershipResponse.error) {
+      throw new ServiceUnavailableException('Chat rooms could not be loaded');
+    }
+
+    const memberships: { room_id: string; is_locked: boolean | null }[] =
+      membershipResponse.data ?? [];
+    if (memberships.length === 0) return [];
+
+    const roomIds = memberships.map((membership) => membership.room_id);
+    const lockedByRoom = new Map(
+      memberships.map((membership) => [
+        membership.room_id,
+        membership.is_locked === true,
+      ]),
+    );
 
     const response = await supabase
       .from('chat_rooms')
       .select(
         'id, title, subtitle, avatar, is_online, is_pinned, created_at, admin_id, wallpaper_url, labels',
       )
+      .in('id', roomIds)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: true });
 
-    if (response.error || !response.data || response.data.length === 0) {
-      const mockRooms = [
-        {
-          id: 'mock-room-1',
-          title: 'Spanish Practice',
-          subtitle: 'Emma: "¡Hola! ¿Cómo estás hoy?"',
-          avatar: 'https://i.pravatar.cc/150?u=emma',
-          is_online: true,
-          is_pinned: true,
-          created_at: new Date().toISOString(),
-          wallpaper_url: null,
-          labels: [],
-        },
-        {
-          id: 'mock-room-2',
-          title: 'Language Exchange - JP/EN',
-          subtitle: 'Kenji: "Thanks for the help!"',
-          avatar: 'https://i.pravatar.cc/150?u=kenji',
-          is_online: false,
-          is_pinned: false,
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          wallpaper_url: null,
-          labels: [],
-        },
-      ] as ChatRoomRecord[];
-
-      return mockRooms;
+    if (response.error) {
+      throw new ServiceUnavailableException('Chat rooms could not be loaded');
     }
 
-    let rooms: ChatRoomRecord[] = response.data;
-
-    // Fetch locked chat room ids for the current user
-    const lockedRowsResponse = await supabase
-      .from('chat_room_members')
-      .select('room_id')
-      .eq('user_id', currentUserId)
-      .eq('is_locked', true);
-
-    const lockedSet = new Set<string>(
-      (lockedRowsResponse.data ?? []).map(
-        (r: { room_id: string }) => r.room_id,
-      ),
+    let rooms: ChatRoomRecord[] = (response.data ?? []).map(
+      (room: ChatRoomRecord) => ({
+        ...room,
+        is_locked: lockedByRoom.get(room.id) ?? false,
+      }),
     );
 
-    // Hide rooms that have been locked by the current user
-    rooms = rooms
-      .filter((room) => !lockedSet.has(room.id))
-      .map((room) => ({ ...room, is_locked: false }));
+    if (!includeLocked) {
+      rooms = rooms.filter((room) => room.is_locked !== true);
+    }
 
     // Filter out rooms where the other participant is blocked
-    if (blockedIds.length > 0) {
-      // Get room members for all rooms
-      const roomIds = rooms.map((r) => r.id);
-      const { data: members } = await supabase
+    if (blockedIds.length > 0 && rooms.length > 0) {
+      const { data: members, error: membersError } = await supabase
         .from('chat_room_members')
         .select('room_id, user_id')
-        .in('room_id', roomIds)
+        .in(
+          'room_id',
+          rooms.map((room) => room.id),
+        )
         .neq('user_id', currentUserId);
 
-      if (members) {
-        const memberMap = new Map<string, string>();
-        (members as { room_id: string; user_id: string }[]).forEach((m) => {
-          memberMap.set(m.room_id, m.user_id);
-        });
-
-        return rooms.filter((room) => {
-          const otherUserId = memberMap.get(room.id);
-          return otherUserId ? !blockedIds.includes(otherUserId) : true;
-        });
+      if (membersError) {
+        throw new ServiceUnavailableException(
+          'Chat room membership could not be loaded',
+        );
       }
+
+      const blockedSet = new Set(blockedIds);
+      const roomsWithBlockedMembers = new Set(
+        (members ?? [])
+          .filter((member: { room_id: string; user_id: string }) =>
+            blockedSet.has(member.user_id),
+          )
+          .map(
+            (member: { room_id: string; user_id: string }) => member.room_id,
+          ),
+      );
+      rooms = rooms.filter((room) => !roomsWithBlockedMembers.has(room.id));
     }
 
     return rooms;
@@ -340,6 +411,7 @@ export class ChatService {
     dto: SendMessageDto,
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
+    await this.assertRoomAccess(dto.room_id, senderId);
 
     // Get room members to check if any are blocked
     const { data: roomMembers } = await supabase
@@ -536,25 +608,48 @@ export class ChatService {
       await this.sendAwayReplyIfNeeded(senderId, dto.room_id, receiverId);
     }
 
-    // Set initial delivery status to 'sent' and mark as delivered for receiver
-    void this.readReceiptsService?.setInitialSent(savedMessage.id);
+    // The insert already persisted `sent`. Never reset it asynchronously, as a
+    // fast read acknowledgement may already have promoted the message.
     if (receiverId) {
-      void this.readReceiptsService?.markAsDelivered(
-        savedMessage.id,
-        dto.room_id,
-        receiverId,
-      );
+      void this.readReceiptsService
+        ?.markAsDelivered(savedMessage.id, dto.room_id, receiverId)
+        .catch((error: unknown) => {
+          // The message is already stored and published, so this only delays the
+          // delivered tick. Log identifiers and the error text, never content.
+          this.logger.warn(
+            `Delivery receipt failed room=${dto.room_id} message=${savedMessage.id}: ${
+              error instanceof Error ? error.message : 'unknown error'
+            }`,
+          );
+        });
     }
 
     return messageForPublish;
   }
 
+  /**
+   * Returns one page of a room's history in ascending order.
+   *
+   * The page is the newest `limit` messages (optionally only those older than
+   * `options.before`), so an active room always shows its latest messages and
+   * older history is reachable by passing the oldest loaded `created_at` back
+   * as the cursor. Every response is bounded by MESSAGE_PAGE_SIZE_MAX.
+   */
   async getMessages(
     roomId: string,
     search?: string,
     currentUserId?: string,
+    options: GetMessagesOptions = {},
   ): Promise<ChatMessage[]> {
     const supabase = this.supabaseService.getClient();
+    const before = options.before;
+    const limit = this.clampPageSize(options.limit);
+
+    // Verify access before anything else touches the room, including the
+    // greeting seed below.
+    if (currentUserId) {
+      await this.assertRoomAccess(roomId, currentUserId);
+    }
 
     // Get blocked user IDs to exclude from messages
     const blockedIds = currentUserId
@@ -562,7 +657,7 @@ export class ChatService {
       : [];
 
     // Automatically seed a greeting message when the room is first opened
-    if (currentUserId && currentUserId.length > 0 && !search) {
+    if (currentUserId && currentUserId.length > 0 && !search && !before) {
       await this.ensureGreetingMessage(currentUserId, roomId);
     }
 
@@ -579,8 +674,8 @@ export class ChatService {
       `,
       )
       .eq('room_id', roomId)
-      .order('created_at', { ascending: true })
-      .limit(100);
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     // Exclude messages from blocked users
     if (blockedIds.length > 0) {
@@ -591,48 +686,22 @@ export class ChatService {
       query = query.ilike('text_content', `%${search.trim()}%`);
     }
 
-    const response = await query;
-    if (response.error || !response.data || response.data.length === 0) {
-      const mockMessages: ChatMessage[] = [
-        {
-          id: 'mock-msg-1',
-          room_id: roomId,
-          sender_id: 'mock-user-1',
-          message_type: 'text',
-          text_content: 'Hey! I would love to practice languages with you.',
-          media_url: undefined,
-          correction_payload: undefined,
-          is_read: true,
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          sender: {
-            id: 'mock-user-1',
-            display_name: 'Emma',
-            avatar_url: 'https://i.pravatar.cc/150?u=emma',
-          },
-        },
-        {
-          id: 'mock-msg-2',
-          room_id: roomId,
-          sender_id: 'me',
-          message_type: 'text',
-          text_content: 'Hi Emma! That sounds great.',
-          media_url: undefined,
-          correction_payload: undefined,
-          is_read: true,
-          created_at: new Date().toISOString(),
-          sender: { id: 'me', display_name: 'Me', avatar_url: null },
-        },
-      ];
-
-      // Filter out blocked users from mock data
-      if (blockedIds.length > 0) {
-        return mockMessages.filter(
-          (msg) => !blockedIds.includes(msg.sender_id),
-        );
-      }
-      return mockMessages;
+    if (before) {
+      query = query.lt('created_at', before);
     }
-    const messages: DeletedAwareMessage[] = response.data;
+
+    const response = await query;
+
+    if (response.error) {
+      const action = before ? 'load earlier messages' : 'load messages';
+      throw new Error(`Failed to ${action}: ${response.error.message}`);
+    }
+
+    // The window is fetched newest-first so the latest messages are never cut
+    // off by the page size; clients receive it oldest-first.
+    const messages: DeletedAwareMessage[] = [
+      ...(response.data ?? []),
+    ].reverse();
 
     // Exclude media_url for view-once media that has already been viewed
     for (const msg of messages) {
@@ -653,6 +722,53 @@ export class ChatService {
     }
 
     return messages;
+  }
+
+  private clampPageSize(requested: number | undefined): number {
+    if (requested === undefined || !Number.isFinite(requested)) {
+      return MESSAGE_PAGE_SIZE_MAX;
+    }
+    return Math.min(Math.max(Math.trunc(requested), 1), MESSAGE_PAGE_SIZE_MAX);
+  }
+
+  /**
+   * The service-role Supabase client bypasses row level security, so room
+   * membership has to be enforced in the API. Missing rooms are never treated
+   * as local fixtures because that can conceal stale links and configuration
+   * errors from authenticated clients.
+   */
+  private async assertRoomAccess(
+    roomId: string,
+    userId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data: membership, error: membershipError } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (membershipError) {
+      throw new ServiceUnavailableException(
+        'Room access could not be verified',
+      );
+    }
+    if (membership) return;
+
+    const { data: room, error: roomError } = await supabase
+      .from('chat_rooms')
+      .select('id')
+      .eq('id', roomId)
+      .maybeSingle();
+
+    if (roomError) {
+      throw new ServiceUnavailableException(
+        'Room access could not be verified',
+      );
+    }
+    if (!room) throw new NotFoundException('Chat room not found');
+    throw new ForbiddenException('Not a member of this room');
   }
 
   async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
@@ -816,16 +932,11 @@ export class ChatService {
       }
       return suggestions;
     } catch (error) {
-      console.error(
-        'Failed to generate suggestions, using fallback:',
-        (error as Error).message,
+      this.logger.warn(
+        'Suggested reply generation failed',
+        error instanceof Error ? error.message : 'Unknown provider error',
       );
-      // fallback to static suggestions
-      return [
-        'Sure, let’s talk about travel.',
-        'Could you help me with my pronunciation?',
-        'I enjoyed that conversation.',
-      ];
+      throw new ServiceUnavailableException();
     }
   }
 
@@ -858,8 +969,21 @@ export class ChatService {
     name: string,
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
-    if (memberIds.length > 50) {
-      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new BadRequestException('Group name is required');
+    }
+
+    const selectedMemberIds = [...new Set(memberIds)].filter(
+      (id) => id !== creatorId,
+    );
+    if (selectedMemberIds.length === 0) {
+      throw new BadRequestException('A group needs at least one other member');
+    }
+    if (selectedMemberIds.length > 50) {
+      throw new BadRequestException(
+        'Group cannot exceed 51 members (50 selected plus creator)',
+      );
     }
 
     const supabase = this.supabaseService.getClient();
@@ -868,7 +992,7 @@ export class ChatService {
     const response = await supabase
       .from('chat_rooms')
       .insert({
-        title: name,
+        title: trimmedName,
         is_online: true,
         is_pinned: false,
         admin_id: creatorId,
@@ -881,10 +1005,10 @@ export class ChatService {
       throw new Error('Failed to create group');
     }
 
-    const room = response.data as ChatRoomRecord;
+    const room: ChatRoomRecord = response.data;
 
     // Insert members
-    const allMembers = [...new Set([creatorId, ...memberIds])];
+    const allMembers = [creatorId, ...selectedMemberIds];
     const membersData = allMembers.map((id) => ({
       room_id: room.id,
       user_id: id,
@@ -895,6 +1019,9 @@ export class ChatService {
       .insert(membersData);
 
     if (membersError) {
+      // Compensate for the room insert so a failed membership write does not
+      // leave an inaccessible orphan. Deleting a missing row is retry-safe.
+      await supabase.from('chat_rooms').delete().eq('id', room.id);
       throw new Error('Failed to add members to group');
     }
 
@@ -933,6 +1060,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * Adds members to a group the caller administers. Retries are safe: ids that
+   * are already members are skipped, duplicate ids collapse, and concurrent
+   * adds are resolved by the (room_id, user_id) unique constraint.
+   */
   async addGroupMembers(
     userId: string,
     roomId: string,
@@ -941,44 +1073,84 @@ export class ChatService {
     await this.verifyAdmin(userId, roomId);
     const supabase = this.supabaseService.getClient();
 
-    const membersData = memberIds.map((id) => ({
-      room_id: roomId,
-      user_id: id,
-    }));
-
-    const { error } = await supabase
+    const { data: current, error: currentError } = await supabase
       .from('chat_room_members')
-      .insert(membersData);
+      .select('user_id')
+      .eq('room_id', roomId);
+
+    if (currentError) throw new Error('Failed to add members');
+
+    const existingIds = new Set(
+      (current ?? []).map((row: { user_id: string }) => row.user_id),
+    );
+    const newIds = [...new Set(memberIds)].filter((id) => !existingIds.has(id));
+    if (newIds.length === 0) return;
+
+    if (existingIds.size + newIds.length > MAX_GROUP_MEMBERS) {
+      throw new BadRequestException(
+        `A group can have at most ${MAX_GROUP_MEMBERS} members`,
+      );
+    }
+
+    const { error } = await supabase.from('chat_room_members').upsert(
+      newIds.map((id) => ({ room_id: roomId, user_id: id })),
+      { onConflict: 'room_id,user_id', ignoreDuplicates: true },
+    );
 
     if (error) throw new Error('Failed to add members');
 
     await this.systemMessageService.publishToRoom(roomId, 'memberAdded', {
-      count: memberIds.length,
+      count: newIds.length,
     });
   }
 
+  /**
+   * Removes a member from a group the caller administers. The admin cannot be
+   * removed (that would orphan the group) and removing someone who is already
+   * gone is a successful no-op, so retries are safe.
+   */
   async removeGroupMember(
     userId: string,
     roomId: string,
     memberId: string,
   ): Promise<void> {
     await this.verifyAdmin(userId, roomId);
-    const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase
+    if (memberId === userId) {
+      throw new BadRequestException('The group admin cannot be removed');
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { data: removed, error } = await supabase
       .from('chat_room_members')
       .delete()
-      .match({ room_id: roomId, user_id: memberId });
+      .match({ room_id: roomId, user_id: memberId })
+      .select('user_id');
 
     if (error) throw new Error('Failed to remove member');
 
-    await this.systemMessageService.publishToRoom(roomId, 'memberRemoved', {});
+    if ((removed ?? []).length > 0) {
+      await this.systemMessageService.publishToRoom(
+        roomId,
+        'memberRemoved',
+        {},
+      );
+    }
   }
 
+  /**
+   * Lists a room's members. Pass `currentUserId` for caller-facing requests so
+   * only members can see who else is in the room; internal callers such as
+   * mention notification omit it.
+   */
   async getGroupMembers(
     roomId: string,
-    _currentUserId?: string,
+    currentUserId?: string,
   ): Promise<GroupMember[]> {
+    if (currentUserId) {
+      await this.assertRoomAccess(roomId, currentUserId);
+    }
+
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
@@ -988,14 +1160,35 @@ export class ChatService {
         user:users!chat_room_members_user_id_fkey (
           id,
           display_name,
-          avatar_url
+          avatar_url,
+          native_languages,
+          target_languages,
+          is_vip,
+          privacy_hide_vip_status
         )
       `,
       )
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
-    return data ?? [];
+
+    const rows: GroupMemberRow[] = data ?? [];
+    return rows.map((row) => ({
+      user_id: row.user_id,
+      user: row.user
+        ? {
+            id: row.user.id,
+            display_name: row.user.display_name,
+            avatar_url: row.user.avatar_url,
+            native_language: row.user.native_languages?.[0] ?? null,
+            target_languages: row.user.target_languages ?? [],
+            // Respect the member's choice to hide their VIP status.
+            is_vip:
+              row.user.is_vip === true &&
+              row.user.privacy_hide_vip_status !== true,
+          }
+        : null,
+    }));
   }
 
   // ---- Chat Lock methods ----
@@ -1195,7 +1388,8 @@ export class ChatService {
     }
   }
 
-  async getWallpaper(roomId: string): Promise<string | null> {
+  async getWallpaper(roomId: string, userId: string): Promise<string | null> {
+    await this.assertRoomAccess(roomId, userId);
     const supabase = this.supabaseService.getClient();
 
     const { data, error } = await supabase
@@ -1692,60 +1886,38 @@ export class ChatService {
     });
   }
 
+  /**
+   * Receipt semantics (membership, self-read, privacy opt-in, group aggregate)
+   * live in ReadReceiptsService; ChatService only exposes them to the controller.
+   */
   async updateMessageStatus(
     userId: string,
     messageId: string,
     status: 'delivered' | 'read',
   ): Promise<void> {
-    const supabase = this.supabaseService.getClient();
+    await this.requireReadReceipts().updateStatus(userId, messageId, status);
+  }
 
-    const { data: message, error: fetchError } = await supabase
-      .from('chat_messages')
-      .select('id, room_id, delivery_status')
-      .eq('id', messageId)
-      .single();
+  async markRoomRead(
+    userId: string,
+    roomId: string,
+    messageIds: readonly string[],
+  ): Promise<MarkReadResult> {
+    return this.requireReadReceipts().markRead(userId, roomId, messageIds);
+  }
 
-    if (fetchError || !message) {
-      throw new NotFoundException('Message not found');
+  async getMessageReceipts(
+    userId: string,
+    messageId: string,
+  ): Promise<MessageReceiptStatus> {
+    return this.requireReadReceipts().getReceiptStatus(userId, messageId);
+  }
+
+  private requireReadReceipts(): ReadReceiptsService {
+    if (!this.readReceiptsService) {
+      throw new ServiceUnavailableException('Read receipts are unavailable');
     }
-
-    // Only allow upgrading status (sent -> delivered -> read)
-    const order: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
-    const current = message.delivery_status ?? 'sent';
-    if (order[status] <= order[current]) {
-      return;
-    }
-
-    // Verify user is a member of the room
-    const { data: membership } = await supabase
-      .from('chat_room_members')
-      .select('user_id')
-      .eq('room_id', message.room_id)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (!membership) {
-      throw new ForbiddenException('Not a member of this room');
-    }
-
-    const { error: updateError } = await supabase
-      .from('chat_messages')
-      .update({ delivery_status: status })
-      .eq('id', messageId);
-
-    if (updateError) {
-      throw new Error(
-        `Failed to update message status: ${updateError.message}`,
-      );
-    }
-
-    // Publish status update via Centrifugo so the sender can see it
-    await this.centrifugoService.publish(`chat:${message.room_id}`, {
-      status_update: {
-        message_id: messageId,
-        delivery_status: status,
-      },
-    });
+    return this.readReceiptsService;
   }
 
   async viewMessageMedia(userId: string, messageId: string): Promise<void> {
@@ -2171,6 +2343,7 @@ export class ChatService {
     roomId: string,
     currentUserId: string,
   ): Promise<{ greetingMessage?: string; awayMessage?: string }> {
+    await this.assertRoomAccess(roomId, currentUserId);
     const supabase = this.supabaseService.getClient();
 
     // Find the other user in this private room (skip group chats for simplicity)

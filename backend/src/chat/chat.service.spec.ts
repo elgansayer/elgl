@@ -22,6 +22,7 @@ import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
@@ -42,8 +43,21 @@ describe('ChatService', () => {
   let eventEmitter: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let safetyService: SafetyService;
+  let readReceipts: {
+    markAsDelivered: Mock;
+    updateStatus: Mock;
+    markRead: Mock;
+    getReceiptStatus: Mock;
+  };
 
   beforeEach(async () => {
+    readReceipts = {
+      markAsDelivered: vi.fn().mockResolvedValue(undefined),
+      updateStatus: vi.fn().mockResolvedValue(undefined),
+      markRead: vi.fn().mockResolvedValue({ marked: 0 }),
+      getReceiptStatus: vi.fn(),
+    };
     mockQueryBuilder = {
       insert: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
@@ -51,6 +65,7 @@ describe('ChatService', () => {
       neq: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       match: vi.fn().mockReturnThis(),
       patch: vi.fn().mockReturnThis(),
@@ -83,6 +98,7 @@ describe('ChatService', () => {
             publish: vi.fn().mockResolvedValue(true),
           },
         },
+        { provide: ReadReceiptsService, useValue: readReceipts },
         {
           provide: EventEmitter2,
           useValue: { emit: vi.fn() },
@@ -144,6 +160,7 @@ describe('ChatService', () => {
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
     chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
     eventEmitter = module.get<EventEmitter2>(EventEmitter2) as any;
+    safetyService = module.get<SafetyService>(SafetyService);
   });
 
   afterEach(() => {
@@ -165,7 +182,103 @@ describe('ChatService', () => {
     });
   });
 
+  describe('room-scoped realtime authorisation', () => {
+    beforeEach(() => {
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: { user_id: 'user-1' },
+        error: null,
+      });
+    });
+
+    it.each([
+      ['messages', 'chat:room-1'],
+      ['typing', 'chat:room-1:typing'],
+    ] as const)(
+      'mints a short-lived %s subscription token only after membership verification',
+      async (stream, channel) => {
+        await expect(
+          service.generateSubscriptionToken('user-1', 'room-1', stream),
+        ).resolves.toBe('mock-token');
+
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('room_id', 'room-1');
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+        expect(centrifugoService.signJwt).toHaveBeenCalledWith({
+          sub: 'user-1',
+          channel,
+          exp: expect.any(Number),
+        });
+      },
+    );
+
+    it('refuses a subscription token to an outsider without disclosing a missing message', async () => {
+      mockQueryBuilder.maybeSingle
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({ data: { id: 'room-1' }, error: null });
+
+      await expect(
+        service.generateSubscriptionToken('outsider', 'room-1', 'messages'),
+      ).rejects.toThrow('Not a member of this room');
+
+      expect(centrifugoService.signJwt).not.toHaveBeenCalled();
+    });
+
+    it('publishes authenticated typing state from the API without trusting a client user id', async () => {
+      await service.sendTyping('user-1', {
+        room_id: 'room-1',
+        is_typing: true,
+      });
+
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'chat:room-1:typing',
+        {
+          userId: 'user-1',
+          typing: true,
+          timestamp: expect.any(Number),
+        },
+      );
+    });
+
+    it('does not publish typing state for an outsider', async () => {
+      mockQueryBuilder.maybeSingle
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({ data: { id: 'room-1' }, error: null });
+
+      await expect(
+        service.sendTyping('outsider', {
+          room_id: 'room-1',
+          is_typing: true,
+        }),
+      ).rejects.toThrow('Not a member of this room');
+
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+  });
+
   describe('sendMessage', () => {
+    beforeEach(() => {
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: { user_id: 'sender-1' },
+        error: null,
+      });
+    });
+
+    it('rejects an outsider before persisting or publishing a message', async () => {
+      mockQueryBuilder.maybeSingle
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({ data: { id: 'room-1' }, error: null });
+
+      await expect(
+        service.sendMessage('outsider', {
+          room_id: 'room-1',
+          message_type: 'text',
+          text_content: 'Private message',
+        }),
+      ).rejects.toThrow('Not a member of this room');
+
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
     it('should save message and publish to Centrifugo channel', async () => {
       const dto: any = {
         room_id: 'room-1',
@@ -287,7 +400,9 @@ describe('ChatService', () => {
         error: null,
       });
       mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [], error: null }),
+        )
         .mockImplementationOnce((resolve: any) =>
           resolve({
             data: [
@@ -336,7 +451,9 @@ describe('ChatService', () => {
         error: null,
       });
       mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [], error: null }),
+        )
         .mockImplementationOnce((resolve: any) =>
           resolve({
             data: [
@@ -393,6 +510,10 @@ describe('ChatService', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { user_id: 'sender-1' },
+              error: null,
+            }),
             neq: vi.fn().mockResolvedValue({
               data: [{ user_id: 'receiver-1' }],
               error: null,
@@ -455,6 +576,10 @@ describe('ChatService', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { user_id: 'sender-1' },
+              error: null,
+            }),
             neq: vi.fn().mockResolvedValue({
               data: [{ user_id: 'receiver-1' }],
               error: null,
@@ -515,6 +640,10 @@ describe('ChatService', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { user_id: 'sender-1' },
+              error: null,
+            }),
             neq: vi.fn().mockResolvedValue({
               data: [{ user_id: 'receiver-1' }],
               error: null,
@@ -575,6 +704,10 @@ describe('ChatService', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { user_id: 'sender-1' },
+              error: null,
+            }),
             neq: vi.fn().mockResolvedValue({
               data: [{ user_id: 'receiver-1' }],
               error: null,
@@ -642,6 +775,10 @@ describe('ChatService', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { user_id: 'sender-1' },
+              error: null,
+            }),
             neq: vi.fn().mockResolvedValue({
               data: [{ user_id: 'receiver-1' }],
               error: null,
@@ -673,79 +810,203 @@ describe('ChatService', () => {
   });
 
   describe('getRooms', () => {
-    it('should return chat rooms ordered by pinned and creation', async () => {
+    it('should return only the caller rooms ordered by pinned and creation', async () => {
       const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
-      mockQueryBuilder.order
-        .mockReturnValueOnce(mockQueryBuilder)
-        .mockResolvedValueOnce({
-          data: rooms,
-          error: null,
-        });
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { room_id: 'global-exchange', is_locked: false },
+              { room_id: 'english-spanish', is_locked: false },
+            ],
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: rooms, error: null }),
+        );
 
       const result = await service.getRooms('user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_rooms');
+      expect(mockQueryBuilder.in).toHaveBeenCalledWith('id', [
+        'global-exchange',
+        'english-spanish',
+      ]);
       expect(result).toEqual(
         rooms.map((room) => ({ ...room, is_locked: false })),
       );
     });
 
-    it('should hide rooms the user has locked from the list', async () => {
-      const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
-      mockQueryBuilder.order
-        .mockReturnValueOnce(mockQueryBuilder)
-        .mockResolvedValueOnce({
-          data: rooms,
-          error: null,
-        });
-      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
-        resolve({ data: [{ room_id: 'english-spanish' }], error: null }),
-      );
-
-      const result = await service.getRooms('user-1');
-
-      expect(result).toEqual([{ id: 'global-exchange', is_locked: false }]);
-    });
-
-    it('should keep all rooms when retrieving locked chats fails', async () => {
-      const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
+    it('should return caller lock state when routed-room metadata requests it', async () => {
       mockQueryBuilder.then
         .mockImplementationOnce((resolve: any) =>
-          resolve({ data: rooms, error: null }),
+          resolve({
+            data: [{ room_id: 'english-spanish', is_locked: true }],
+            error: null,
+          }),
         )
         .mockImplementationOnce((resolve: any) =>
-          resolve({ data: null, error: { message: 'Locked query failed' } }),
+          resolve({ data: [{ id: 'english-spanish' }], error: null }),
+        );
+
+      const result = await service.getRooms('user-1', true);
+
+      expect(result).toEqual([{ id: 'english-spanish', is_locked: true }]);
+    });
+
+    it('should hide locked rooms from the ordinary inbox by default', async () => {
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [{ room_id: 'english-spanish', is_locked: true }],
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ id: 'english-spanish' }], error: null }),
         );
 
       const result = await service.getRooms('user-1');
 
-      expect(result).toEqual(
-        rooms.map((room) => ({ ...room, is_locked: false })),
+      expect(result).toEqual([]);
+    });
+
+    it('should hide a group when any other member is blocked', async () => {
+      vi.mocked(safetyService.getBlockedAndBlockerIds).mockResolvedValue([
+        'blocked-user',
+      ]);
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { room_id: 'room-with-block', is_locked: false },
+              { room_id: 'room-visible', is_locked: false },
+            ],
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [{ id: 'room-with-block' }, { id: 'room-visible' }],
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { room_id: 'room-with-block', user_id: 'blocked-user' },
+              { room_id: 'room-with-block', user_id: 'allowed-user' },
+              { room_id: 'room-visible', user_id: 'allowed-user' },
+            ],
+            error: null,
+          }),
+        );
+
+      const result = await service.getRooms('user-1');
+
+      expect(result).toEqual([{ id: 'room-visible', is_locked: false }]);
+    });
+
+    it('should fail closed when blocked-member filtering cannot be completed', async () => {
+      vi.mocked(safetyService.getBlockedAndBlockerIds).mockResolvedValue([
+        'blocked-user',
+      ]);
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [{ room_id: 'room-1', is_locked: false }],
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [{ id: 'room-1' }],
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: null,
+            error: { message: 'Member query failed' },
+          }),
+        );
+
+      await expect(service.getRooms('user-1')).rejects.toThrow(
+        'Chat room membership could not be loaded',
       );
     });
 
-    it('should return fallback mock rooms when rooms query fails', async () => {
-      mockQueryBuilder.order
-        .mockReturnValueOnce(mockQueryBuilder)
-        .mockResolvedValueOnce({
-          data: null,
-          error: { message: 'Query failed' },
-        });
+    it('should return an empty list when the caller has no room memberships', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: [], error: null }),
+      );
 
       const result = await service.getRooms('user-1');
-      // The service returns pre-seeded fallback rooms when the query fails
-      expect(result).toHaveLength(2);
-      expect(result[0]).toMatchObject({
-        id: 'mock-room-1',
-        title: 'Spanish Practice',
-        is_online: true,
-        is_pinned: true,
-      });
-      expect(result[1]).toMatchObject({
-        id: 'mock-room-2',
-        title: 'Language Exchange - JP/EN',
-        is_online: false,
-        is_pinned: false,
-      });
+
+      expect(result).toEqual([]);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_rooms');
+    });
+
+    it('should surface a membership failure instead of exposing or inventing rooms', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: { message: 'Membership query failed' } }),
+      );
+
+      await expect(service.getRooms('user-1')).rejects.toThrow(
+        'Chat rooms could not be loaded',
+      );
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_rooms');
+    });
+
+    it('should surface a room query failure instead of returning fixtures', async () => {
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [{ room_id: 'room-1', is_locked: false }],
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: { message: 'Room query failed' } }),
+        );
+
+      await expect(service.getRooms('user-1')).rejects.toThrow(
+        'Chat rooms could not be loaded',
+      );
+    });
+  });
+
+  describe('getSuggestedReplies', () => {
+    it('returns only parsed provider suggestions', async () => {
+      chatLlmService.generateText.mockResolvedValue(
+        '1. Hello there\n- How has your day been?\n• What are you learning?',
+      );
+
+      await expect(
+        service.getSuggestedReplies('user-1', { recent_messages: [] }),
+      ).resolves.toEqual([
+        'Hello there',
+        'How has your day been?',
+        'What are you learning?',
+      ]);
+    });
+
+    it('surfaces provider failure instead of returning fabricated replies', async () => {
+      chatLlmService.generateText.mockRejectedValue(
+        new Error('provider unavailable'),
+      );
+
+      await expect(
+        service.getSuggestedReplies('user-1', { recent_messages: [] }),
+      ).rejects.toMatchObject({ status: 503 });
+    });
+
+    it('treats an empty provider response as unavailable', async () => {
+      chatLlmService.generateText.mockResolvedValue('  \n  ');
+
+      await expect(
+        service.getSuggestedReplies('user-1', { recent_messages: [] }),
+      ).rejects.toMatchObject({ status: 503 });
     });
   });
 
@@ -762,11 +1023,22 @@ describe('ChatService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('chat_messages');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('room_id', 'room-1');
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
-        ascending: true,
+        ascending: false,
       });
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(100);
       expect(mockQueryBuilder.ilike).not.toHaveBeenCalled();
       expect(result).toEqual(messages);
+    });
+
+    it('should return the newest window oldest-first so busy rooms keep their latest messages', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: [{ id: 'm3' }, { id: 'm2' }, { id: 'm1' }],
+        error: null,
+      });
+
+      const result = await service.getMessages('room-1');
+
+      expect(result.map((message) => message.id)).toEqual(['m1', 'm2', 'm3']);
     });
 
     it('should apply search filter using ilike when search query is provided and non-empty', async () => {
@@ -785,16 +1057,362 @@ describe('ChatService', () => {
       expect(result).toEqual(messages);
     });
 
-    it('should return fallback mock messages when query returns error or null data', async () => {
+    it('should surface a history query failure instead of fabricating messages', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });
 
-      const result = await service.getMessages('room-1');
-      expect(result).toHaveLength(2);
-      expect(result[0]).toMatchObject({ id: 'mock-msg-1', room_id: 'room-1' });
-      expect(result[1]).toMatchObject({ id: 'mock-msg-2', room_id: 'room-1' });
+      await expect(service.getMessages('room-1')).rejects.toThrow(
+        'Failed to load messages: Error',
+      );
+    });
+
+    it('should return an empty history when the room has no messages', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      await expect(service.getMessages('room-1')).resolves.toEqual([]);
+    });
+
+    describe('pagination', () => {
+      beforeEach(() => {
+        mockQueryBuilder.lt = vi.fn().mockReturnThis();
+      });
+
+      it('should page older history with a strict created_at cursor', async () => {
+        mockQueryBuilder.lt.mockResolvedValue({
+          data: [{ id: 'm2' }, { id: 'm1' }],
+          error: null,
+        });
+
+        const result = await service.getMessages(
+          'room-1',
+          undefined,
+          undefined,
+          { before: '2026-08-25T12:00:00.123456+00:00', limit: 50 },
+        );
+
+        expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
+        expect(mockQueryBuilder.lt).toHaveBeenCalledWith(
+          'created_at',
+          '2026-08-25T12:00:00.123456+00:00',
+        );
+        expect(result.map((message) => message.id)).toEqual(['m1', 'm2']);
+      });
+
+      it('should treat an empty older page as the start of the conversation, never as fixtures', async () => {
+        mockQueryBuilder.lt.mockResolvedValue({ data: [], error: null });
+
+        await expect(
+          service.getMessages('room-1', undefined, undefined, {
+            before: '2026-08-25T12:00:00.000Z',
+          }),
+        ).resolves.toEqual([]);
+      });
+
+      it('should surface a failure while paging instead of looking like the start of the conversation', async () => {
+        mockQueryBuilder.lt.mockResolvedValue({
+          data: null,
+          error: { message: 'timeout' },
+        });
+
+        await expect(
+          service.getMessages('room-1', undefined, undefined, {
+            before: '2026-08-25T12:00:00.000Z',
+          }),
+        ).rejects.toThrow('Failed to load earlier messages: timeout');
+      });
+
+      it.each([
+        [500, 100],
+        [0, 1],
+        [-5, 1],
+        [25.9, 25],
+        [Number.NaN, 100],
+        [undefined, 100],
+      ])(
+        'should clamp a requested page size of %s to %s',
+        async (requested, expected) => {
+          mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+
+          await service.getMessages('room-1', undefined, undefined, {
+            limit: requested,
+          });
+
+          expect(mockQueryBuilder.limit).toHaveBeenCalledWith(expected);
+        },
+      );
+
+      it('should only seed the greeting on the first page', async () => {
+        const seed = vi
+          .spyOn(service as any, 'ensureGreetingMessage')
+          .mockResolvedValue(undefined);
+        // First page ends the chain at limit(); the paged call continues to lt().
+        mockQueryBuilder.limit.mockResolvedValueOnce({ data: [], error: null });
+        mockQueryBuilder.lt.mockResolvedValue({ data: [], error: null });
+
+        await service.getMessages('room-1', undefined, 'user-1');
+        expect(seed).toHaveBeenCalledTimes(1);
+
+        await service.getMessages('room-1', undefined, 'user-1', {
+          before: '2026-08-25T12:00:00.000Z',
+        });
+        expect(seed).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('room access', () => {
+      it('should reject a user who is not a member of an existing room before reading or seeding anything', async () => {
+        const seed = vi.spyOn(service as any, 'ensureGreetingMessage');
+        mockQueryBuilder.then
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: null, error: null }),
+          )
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: { id: 'room-1' }, error: null }),
+          );
+
+        await expect(
+          service.getMessages('room-1', undefined, 'outsider'),
+        ).rejects.toThrow('Not a member of this room');
+
+        expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+        expect(seed).not.toHaveBeenCalled();
+      });
+
+      it('should let a member read the room', async () => {
+        vi.spyOn(service as any, 'ensureGreetingMessage').mockResolvedValue(
+          undefined,
+        );
+        mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        );
+        mockQueryBuilder.limit.mockResolvedValue({
+          data: [{ id: 'm1' }],
+          error: null,
+        });
+
+        const result = await service.getMessages('room-1', undefined, 'user-1');
+
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('room_id', 'room-1');
+        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+        expect(result).toEqual([{ id: 'm1' }]);
+      });
+
+      it('should reject a room id that does not exist instead of exposing fixtures', async () => {
+        vi.spyOn(service as any, 'ensureGreetingMessage').mockResolvedValue(
+          undefined,
+        );
+        mockQueryBuilder.then
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: null, error: null }),
+          )
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: null, error: null }),
+          );
+        mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+
+        await expect(
+          service.getMessages('missing-room', undefined, 'user-1'),
+        ).rejects.toThrow('Chat room not found');
+
+        expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('getGroupMembers', () => {
+    const memberRows = [
+      {
+        user_id: 'user-1',
+        user: {
+          id: 'user-1',
+          display_name: 'Aiko',
+          avatar_url: 'https://cdn/aiko.png',
+          native_languages: ['ja', 'en'],
+          target_languages: ['en'],
+          is_vip: true,
+          privacy_hide_vip_status: false,
+        },
+      },
+      {
+        user_id: 'user-2',
+        user: {
+          id: 'user-2',
+          display_name: 'Ben',
+          avatar_url: null,
+          native_languages: null,
+          target_languages: null,
+          is_vip: true,
+          privacy_hide_vip_status: true,
+        },
+      },
+      { user_id: 'user-3', user: null },
+    ];
+
+    it('should return the profile fields the chat room needs and respect hidden VIP status', async () => {
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: memberRows, error: null }),
+        );
+
+      const result = await service.getGroupMembers('room-1', 'user-1');
+
+      expect(result).toEqual([
+        {
+          user_id: 'user-1',
+          user: {
+            id: 'user-1',
+            display_name: 'Aiko',
+            avatar_url: 'https://cdn/aiko.png',
+            native_language: 'ja',
+            target_languages: ['en'],
+            is_vip: true,
+          },
+        },
+        {
+          user_id: 'user-2',
+          user: {
+            id: 'user-2',
+            display_name: 'Ben',
+            avatar_url: null,
+            native_language: null,
+            target_languages: [],
+            is_vip: false,
+          },
+        },
+        { user_id: 'user-3', user: null },
+      ]);
+      expect(JSON.stringify(result)).not.toContain('privacy_hide_vip_status');
+    });
+
+    it('should only list members to a member of the room', async () => {
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { id: 'room-1' }, error: null }),
+        );
+
+      await expect(
+        service.getGroupMembers('room-1', 'outsider'),
+      ).rejects.toThrow('Not a member of this room');
+    });
+
+    it('should list members for internal callers that pass no user, such as mention notification', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: memberRows, error: null }),
+      );
+
+      const result = await service.getGroupMembers('room-1');
+
+      expect(result).toHaveLength(3);
+      expect(mockQueryBuilder.eq).not.toHaveBeenCalledWith(
+        'user_id',
+        expect.anything(),
+      );
+    });
+
+    it('should fail when the members query fails', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: { message: 'boom' } }),
+      );
+
+      await expect(service.getGroupMembers('room-1')).rejects.toThrow(
+        'Failed to fetch group members',
+      );
+    });
+  });
+
+  describe('createGroup', () => {
+    it('creates one room and a deduplicated membership set including the creator', async () => {
+      const room = {
+        id: 'room-1',
+        title: 'Study Group',
+        is_online: true,
+        is_pinned: false,
+        admin_id: 'creator-1',
+      };
+      const roomBuilder = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: room, error: null }),
+      };
+      const membersBuilder = {
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      };
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'chat_rooms' ? roomBuilder : membersBuilder,
+      );
+
+      await expect(
+        service.createGroup('creator-1', '  Study Group  ', [
+          'creator-1',
+          'member-1',
+          'member-1',
+          'member-2',
+        ]),
+      ).resolves.toBe(room);
+
+      expect(roomBuilder.insert).toHaveBeenCalledWith({
+        title: 'Study Group',
+        is_online: true,
+        is_pinned: false,
+        admin_id: 'creator-1',
+        labels: [],
+      });
+      expect(membersBuilder.insert).toHaveBeenCalledWith([
+        { room_id: 'room-1', user_id: 'creator-1' },
+        { room_id: 'room-1', user_id: 'member-1' },
+        { room_id: 'room-1', user_id: 'member-2' },
+      ]);
+    });
+
+    it('requires at least one member other than the creator', async () => {
+      await expect(
+        service.createGroup('creator-1', 'Study Group', ['creator-1']),
+      ).rejects.toThrow('A group needs at least one other member');
+
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('compensates a failed membership insert so no inaccessible room remains', async () => {
+      const room = {
+        id: 'room-1',
+        title: 'Study Group',
+        is_online: true,
+        is_pinned: false,
+        admin_id: 'creator-1',
+      };
+      const roomBuilder = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: room, error: null }),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      };
+      const membersBuilder = {
+        insert: vi.fn().mockResolvedValue({
+          error: { message: 'membership insert failed' },
+        }),
+      };
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'chat_rooms' ? roomBuilder : membersBuilder,
+      );
+
+      await expect(
+        service.createGroup('creator-1', 'Study Group', ['member-1']),
+      ).rejects.toThrow('Failed to add members to group');
+
+      expect(roomBuilder.delete).toHaveBeenCalledOnce();
+      expect(roomBuilder.eq).toHaveBeenCalledWith('id', 'room-1');
     });
   });
 
@@ -1007,162 +1625,306 @@ describe('ChatService', () => {
     });
   });
 
-  describe('updateMessageStatus', () => {
-    it('should update delivery_status from sent to delivered', async () => {
-      const message = {
-        id: 'msg-1',
-        room_id: 'room-1',
-        delivery_status: 'sent',
-      };
-      mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: message, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: { user_id: 'user-1' }, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
+  describe('group administration', () => {
+    const adminRoom = (resolve: any) =>
+      resolve({ data: { admin_id: 'admin-1' }, error: null });
+    let publishToRoom: Mock;
 
-      await service.updateMessageStatus('user-1', 'msg-1', 'delivered');
+    beforeEach(() => {
+      publishToRoom = (service as any).systemMessageService.publishToRoom;
+    });
 
-      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
-        1,
-        'chat_messages',
-      );
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        delivery_status: 'delivered',
+    describe('renameGroup', () => {
+      it('should let the admin rename the group and announce it in the room', async () => {
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) => resolve({ error: null }));
+
+        await service.renameGroup('admin-1', 'room-1', 'Spanish Club');
+
+        expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+          title: 'Spanish Club',
+        });
+        expect(publishToRoom).toHaveBeenCalledWith('room-1', 'groupRenamed', {
+          name: 'Spanish Club',
+        });
       });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'msg-1');
-      expect(centrifugoService.publish).toHaveBeenCalledWith(
-        'chat:room-1',
-        expect.objectContaining({
-          status_update: expect.objectContaining({
-            message_id: 'msg-1',
-            delivery_status: 'delivered',
-          }),
-        }),
-      );
-    });
 
-    it('should update delivery_status from delivered to read', async () => {
-      const message = {
-        id: 'msg-2',
-        room_id: 'room-2',
-        delivery_status: 'delivered',
-      };
-      mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: message, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: { user_id: 'user-1' }, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
+      it('should reject anyone who is not the group admin', async () => {
+        mockQueryBuilder.then.mockImplementationOnce(adminRoom);
 
-      await service.updateMessageStatus('user-1', 'msg-2', 'read');
+        await expect(
+          service.renameGroup('member-2', 'room-1', 'Hijacked'),
+        ).rejects.toThrow('Only group admins can perform this action');
 
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        delivery_status: 'read',
+        expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+        expect(publishToRoom).not.toHaveBeenCalled();
       });
-      expect(centrifugoService.publish).toHaveBeenCalledWith(
-        'chat:room-2',
-        expect.objectContaining({
-          status_update: expect.objectContaining({
-            message_id: 'msg-2',
-            delivery_status: 'read',
-          }),
-        }),
-      );
     });
 
-    it('should not downgrade status from read to delivered', async () => {
-      const message = {
-        id: 'msg-3',
-        room_id: 'room-3',
-        delivery_status: 'read',
-      };
-      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
-        resolve({ data: message, error: null }),
-      );
+    describe('addGroupMembers', () => {
+      it('should add only new, de-duplicated members and announce the real count', async () => {
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) =>
+            resolve({
+              data: [{ user_id: 'admin-1' }, { user_id: 'member-2' }],
+              error: null,
+            }),
+          )
+          .mockImplementationOnce((resolve: any) => resolve({ error: null }));
 
-      await service.updateMessageStatus('user-1', 'msg-3', 'delivered');
+        await service.addGroupMembers('admin-1', 'room-1', [
+          'member-2',
+          'member-3',
+          'member-3',
+          'member-4',
+        ]);
 
-      // The method should return early without calling update
-      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
-      expect(centrifugoService.publish).not.toHaveBeenCalled();
-    });
-
-    it('should throw NotFoundException when message does not exist', async () => {
-      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
-        resolve({ data: null, error: null }),
-      );
-
-      await expect(
-        service.updateMessageStatus('user-1', 'msg-nonexistent', 'delivered'),
-      ).rejects.toThrow('Message not found');
-    });
-
-    it('should throw ForbiddenException when user is not a room member', async () => {
-      const message = {
-        id: 'msg-4',
-        room_id: 'room-4',
-        delivery_status: 'sent',
-      };
-      mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: message, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: null, error: null }),
+        expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
+          [
+            { room_id: 'room-1', user_id: 'member-3' },
+            { room_id: 'room-1', user_id: 'member-4' },
+          ],
+          { onConflict: 'room_id,user_id', ignoreDuplicates: true },
         );
-
-      await expect(
-        service.updateMessageStatus('user-1', 'msg-4', 'delivered'),
-      ).rejects.toThrow('Not a member of this room');
-    });
-
-    it('should throw Error when update fails', async () => {
-      const message = {
-        id: 'msg-5',
-        room_id: 'room-5',
-        delivery_status: 'sent',
-      };
-      mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: message, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: { user_id: 'user-1' }, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ error: { message: 'DB error' } }),
-        );
-
-      await expect(
-        service.updateMessageStatus('user-1', 'msg-5', 'read'),
-      ).rejects.toThrow('Failed to update message status: DB error');
-    });
-
-    it('should treat missing delivery_status as sent', async () => {
-      const message = {
-        id: 'msg-6',
-        room_id: 'room-6',
-        delivery_status: null as string | null,
-      };
-      mockQueryBuilder.then
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: message, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ data: { user_id: 'user-1' }, error: null }),
-        )
-        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
-
-      await service.updateMessageStatus('user-1', 'msg-6', 'delivered');
-
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-        delivery_status: 'delivered',
+        expect(publishToRoom).toHaveBeenCalledWith('room-1', 'memberAdded', {
+          count: 2,
+        });
       });
+
+      it('should treat a retry that adds nobody new as a successful no-op', async () => {
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) =>
+            resolve({
+              data: [{ user_id: 'admin-1' }, { user_id: 'member-2' }],
+              error: null,
+            }),
+          );
+
+        await expect(
+          service.addGroupMembers('admin-1', 'room-1', ['member-2']),
+        ).resolves.toBeUndefined();
+
+        expect(mockQueryBuilder.upsert).not.toHaveBeenCalled();
+        expect(publishToRoom).not.toHaveBeenCalled();
+      });
+
+      it('should refuse to grow a group past its member cap', async () => {
+        const existing = Array.from({ length: 50 }, (_, index) => ({
+          user_id: `member-${index}`,
+        }));
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: existing, error: null }),
+          );
+
+        await expect(
+          service.addGroupMembers('admin-1', 'room-1', ['new-1', 'new-2']),
+        ).rejects.toThrow('A group can have at most 51 members');
+
+        expect(mockQueryBuilder.upsert).not.toHaveBeenCalled();
+      });
+
+      it('should reject anyone who is not the group admin', async () => {
+        mockQueryBuilder.then.mockImplementationOnce(adminRoom);
+
+        await expect(
+          service.addGroupMembers('member-2', 'room-1', ['member-3']),
+        ).rejects.toThrow('Only group admins can perform this action');
+
+        expect(mockQueryBuilder.upsert).not.toHaveBeenCalled();
+      });
+
+      it('should surface a persistence failure without announcing anything', async () => {
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: [{ user_id: 'admin-1' }], error: null }),
+          )
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ error: { message: 'fk violation' } }),
+          );
+
+        await expect(
+          service.addGroupMembers('admin-1', 'room-1', ['ghost']),
+        ).rejects.toThrow('Failed to add members');
+
+        expect(publishToRoom).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('removeGroupMember', () => {
+      it('should remove a member and announce it once', async () => {
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: [{ user_id: 'member-2' }], error: null }),
+          );
+
+        await service.removeGroupMember('admin-1', 'room-1', 'member-2');
+
+        expect(mockQueryBuilder.match).toHaveBeenCalledWith({
+          room_id: 'room-1',
+          user_id: 'member-2',
+        });
+        expect(publishToRoom).toHaveBeenCalledWith(
+          'room-1',
+          'memberRemoved',
+          {},
+        );
+      });
+
+      it('should never remove the admin, which would orphan the group', async () => {
+        mockQueryBuilder.then.mockImplementationOnce(adminRoom);
+
+        await expect(
+          service.removeGroupMember('admin-1', 'room-1', 'admin-1'),
+        ).rejects.toThrow('The group admin cannot be removed');
+
+        expect(mockQueryBuilder.delete).not.toHaveBeenCalled();
+      });
+
+      it('should treat removing someone who already left as a successful no-op', async () => {
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: [], error: null }),
+          );
+
+        await expect(
+          service.removeGroupMember('admin-1', 'room-1', 'member-9'),
+        ).resolves.toBeUndefined();
+
+        expect(publishToRoom).not.toHaveBeenCalled();
+      });
+
+      it('should reject anyone who is not the group admin', async () => {
+        mockQueryBuilder.then.mockImplementationOnce(adminRoom);
+
+        await expect(
+          service.removeGroupMember('member-2', 'room-1', 'member-3'),
+        ).rejects.toThrow('Only group admins can perform this action');
+
+        expect(mockQueryBuilder.delete).not.toHaveBeenCalled();
+      });
+
+      it('should surface a persistence failure', async () => {
+        mockQueryBuilder.then
+          .mockImplementationOnce(adminRoom)
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: null, error: { message: 'boom' } }),
+          );
+
+        await expect(
+          service.removeGroupMember('admin-1', 'room-1', 'member-2'),
+        ).rejects.toThrow('Failed to remove member');
+      });
+    });
+  });
+
+  describe('read receipts delegation', () => {
+    it('receives ReadReceiptsService through dependency injection', async () => {
+      // A union-typed constructor parameter erases to `Object` in the emitted
+      // decorator metadata, which left Nest injecting `undefined` and every
+      // receipt route answering 503. This resolves the service the way the real
+      // application does, instead of building ChatService by hand.
+      await service.markRoomRead('user-1', 'room-1', ['m1']);
+
+      expect(readReceipts.markRead).toHaveBeenCalledWith('user-1', 'room-1', [
+        'm1',
+      ]);
+    });
+
+    function buildWithReadReceipts(readReceipts: unknown): ChatService {
+      return new ChatService(
+        { getClient: () => mockSupabaseClient } as any,
+        centrifugoService,
+        readReceipts as any,
+        eventEmitter,
+        { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+    }
+
+    it('should delegate a status update to ReadReceiptsService for the authenticated user', async () => {
+      const readReceipts = {
+        updateStatus: vi.fn().mockResolvedValue(undefined),
+      };
+
+      await buildWithReadReceipts(readReceipts).updateMessageStatus(
+        'user-1',
+        'msg-1',
+        'read',
+      );
+
+      expect(readReceipts.updateStatus).toHaveBeenCalledWith(
+        'user-1',
+        'msg-1',
+        'read',
+      );
+    });
+
+    it('should delegate a bulk room acknowledgement and return the marked count', async () => {
+      const readReceipts = {
+        markRead: vi.fn().mockResolvedValue({ marked: 2 }),
+      };
+
+      await expect(
+        buildWithReadReceipts(readReceipts).markRoomRead('user-1', 'room-1', [
+          'm1',
+          'm2',
+        ]),
+      ).resolves.toEqual({ marked: 2 });
+      expect(readReceipts.markRead).toHaveBeenCalledWith('user-1', 'room-1', [
+        'm1',
+        'm2',
+      ]);
+    });
+
+    it('should delegate receipt details for the authenticated user', async () => {
+      const status = {
+        messageId: 'msg-1',
+        deliveryStatus: 'read',
+        readBy: [],
+        totalMembers: 1,
+      };
+      const readReceipts = {
+        getReceiptStatus: vi.fn().mockResolvedValue(status),
+      };
+
+      await expect(
+        buildWithReadReceipts(readReceipts).getMessageReceipts(
+          'user-1',
+          'msg-1',
+        ),
+      ).resolves.toBe(status);
+      expect(readReceipts.getReceiptStatus).toHaveBeenCalledWith(
+        'user-1',
+        'msg-1',
+      );
+    });
+
+    it('should report receipts as unavailable instead of silently succeeding when the provider is missing', async () => {
+      const unavailable = buildWithReadReceipts(undefined);
+
+      await expect(
+        unavailable.updateMessageStatus('user-1', 'msg-1', 'read'),
+      ).rejects.toThrow('Read receipts are unavailable');
+      await expect(
+        unavailable.markRoomRead('user-1', 'room-1', ['m1']),
+      ).rejects.toThrow('Read receipts are unavailable');
+      await expect(
+        unavailable.getMessageReceipts('user-1', 'msg-1'),
+      ).rejects.toThrow('Read receipts are unavailable');
     });
   });
 
@@ -1379,6 +2141,39 @@ describe('ChatService', () => {
       await expect(
         service.editMessage(senderId, messageId, dto),
       ).rejects.toThrow('You are not a member of this room');
+    });
+  });
+
+  describe('getRoomGreeting access control', () => {
+    it('should throw ForbiddenException if user is not a member', async () => {
+      // assertRoomAccess checks membership first, then room existence
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        ) // membership missing
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { id: 'room-1' }, error: null }),
+        ); // room exists
+
+      await expect(service.getRoomGreeting('room-1', 'user-1')).rejects.toThrow(
+        'Not a member of this room',
+      );
+    });
+  });
+
+  describe('getWallpaper access control', () => {
+    it('should throw ForbiddenException if user is not a member', async () => {
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { id: 'room-1' }, error: null }),
+        );
+
+      await expect(service.getWallpaper('room-1', 'user-1')).rejects.toThrow(
+        'Not a member of this room',
+      );
     });
   });
 });

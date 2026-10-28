@@ -45,15 +45,25 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
       .mockImplementation(() => Promise.resolve());
 
     const chatService = {
-      getRooms: vi.fn().mockResolvedValue([]),
+      getRooms: vi.fn().mockResolvedValue([
+        {
+          id: 'room-1',
+          title: 'Practice chat',
+          subtitle: '',
+          avatar: '',
+          is_online: true,
+          is_pinned: false,
+          created_at: new Date().toISOString(),
+        },
+      ]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
-      getMessages: vi.fn().mockResolvedValue([]),
+      getLatestMessages: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn(),
       addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
-      markMessageStatus: vi.fn().mockResolvedValue(undefined),
+      markRoomRead: vi.fn().mockResolvedValue(undefined),
     };
     const authService = {
       currentUser: signal({ id: 'user-1', display_name: 'Me' }),
@@ -63,6 +73,7 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
     };
     const centrifugeService = {
       isConnected: signal(false),
+      connectionStatus: signal('connected'),
       connect: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
       unsubscribe: vi.fn(),

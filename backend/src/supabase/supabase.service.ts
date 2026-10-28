@@ -676,6 +676,16 @@ export type ChatMessageRow = {
   deleted_for_user_ids?: string[] | null;
 };
 
+/** Per-reader receipt (supabase/migrations/013 + 20260926120000). Service-role-only. */
+export type MessageReceiptRow = {
+  id: string;
+  message_id: string;
+  user_id: string;
+  status: 'delivered' | 'read';
+  read_at: string | null;
+  created_at: string;
+};
+
 type BlockRow = {
   id: string;
   blocker_id: string;
@@ -1180,6 +1190,28 @@ export interface Database {
           {
             foreignKeyName: 'chat_messages_sender_id_fkey';
             columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      message_receipts: {
+        Row: MessageReceiptRow;
+        Insert: Partial<MessageReceiptRow> &
+          Pick<MessageReceiptRow, 'message_id' | 'user_id'>;
+        Update: Partial<MessageReceiptRow>;
+        Relationships: [
+          {
+            foreignKeyName: 'message_receipts_message_id_fkey';
+            columns: ['message_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_messages';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'message_receipts_user_id_fkey';
+            columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
             referencedColumns: ['id'];

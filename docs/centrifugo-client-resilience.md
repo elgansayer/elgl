@@ -12,6 +12,17 @@ The service owns browser-side Centrifugo connection state, token acquisition, re
 
 The browser never stores or constructs the Centrifugo signing secret. The short-lived connection JWT comes from the authenticated NestJS endpoint.
 
+## Subscription authorisation
+
+Conversation channels are private. For `chat:<roomId>` and `chat:<roomId>:typing` the service creates the Centrifugo subscription with a `getToken` callback that calls `POST /chat/subscriptions/token` with `{ room_id, stream }` (`messages` or `typing`) and the caller's Supabase access token. The API verifies room membership and returns a short-lived token bound to that channel.
+
+- The callback never runs without a Supabase access token, and channel names that are not exactly `chat:<roomId>` or `chat:<roomId>:typing` are refused locally.
+- An HTTP 401, 403 or 404 becomes centrifuge-js's `UnauthorizedError`, which ends that subscription instead of retrying. Any other failure (network, 5xx, 429) is rethrown so the library retries with its own backoff.
+- Tokens are requested again by the library before they expire, so losing room membership stops delivery within the token lifetime.
+- Other channels (`room`, `user`) are subscribed exactly as before.
+
+Publication handlers receive `(data, meta)` where `meta.publisherId` is the Centrifugo-verified user id when the publication came from a client. The chat namespace no longer accepts client publications, so consumers must not rely on it for identity; a payload that names someone other than a verified publisher is treated as an impersonation attempt (see `docs/chat-typing-presence.md`).
+
 ## Connection state
 
 The service exposes two Angular signals:
@@ -55,7 +66,10 @@ Focused regression coverage in `centrifuge.service.spec.ts` verifies:
 - the latest handler is preserved after client replacement;
 - an explicitly unsubscribed channel is not restored;
 - missing authentication does not call the token endpoint;
-- intentional disconnect cancels and blocks reconnect timers.
+- intentional disconnect cancels and blocks reconnect timers;
+- chat subscriptions request a channel-scoped subscription token and other channels do not;
+- authorisation refusals (401, 403, 404) stop the subscription while transient failures are retried by the library;
+- the verified publisher is passed to handlers separately from the payload.
 
 Repository validation should include:
 
@@ -70,6 +84,6 @@ The pull-request CI suite remains authoritative for the complete repository veri
 
 ## Rollout and rollback
 
-There is no schema, API response-shape or server configuration change. Deploy the frontend normally after required checks pass.
+The frontend depends on `POST /chat/subscriptions/token`, so deploy the backend first and apply the Centrifugo `chat` namespace configuration last (see `docs/centrifugo-server-config.md`). There is no schema change.
 
-Rollback is a normal application revert. No database or credential rollback is required. A rollback must not introduce client-side Centrifugo signing secrets or bypass the authenticated `POST /chat/token` boundary.
+Rollback is a normal application revert. No database or credential rollback is required. A rollback must not introduce client-side Centrifugo signing secrets or bypass the authenticated `POST /chat/token` and `POST /chat/subscriptions/token` boundaries.

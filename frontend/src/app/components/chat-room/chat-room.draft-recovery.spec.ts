@@ -58,9 +58,20 @@ describe('ChatRoomComponent failed-send draft recovery', () => {
         {
           provide: ChatService,
           useValue: {
-            getRooms: vi.fn().mockResolvedValue([]),
+            getRooms: vi.fn().mockResolvedValue([
+              {
+                id: 'room-1',
+                title: 'Practice chat',
+                subtitle: '',
+                avatar: '',
+                is_online: true,
+                is_pinned: false,
+                created_at: new Date().toISOString(),
+              },
+            ]),
             getGroupMembers: vi.fn().mockResolvedValue([]),
-            getMessages: vi.fn().mockResolvedValue([]),
+            getLatestMessages: vi.fn().mockResolvedValue([]),
+            markRoomRead: vi.fn().mockResolvedValue(undefined),
             sendMessage,
             addFavourite: vi.fn().mockResolvedValue(undefined),
             lockChat: vi.fn().mockResolvedValue(undefined),
@@ -72,6 +83,7 @@ describe('ChatRoomComponent failed-send draft recovery', () => {
           provide: CentrifugeService,
           useValue: {
             isConnected: signal(false),
+            connectionStatus: signal('connected'),
             connect: vi.fn().mockResolvedValue(undefined),
             subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
             unsubscribe: vi.fn(),

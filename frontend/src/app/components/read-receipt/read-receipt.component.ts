@@ -1,225 +1,185 @@
-import { Component, input, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ChatService, ReadReceiptUser, MessageReceiptStatus } from '../../services/chat.service';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { Component, computed, inject, input, resource, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideCheckCheck } from '@ng-icons/lucide';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmPopoverImports } from '@spartan-ng/helm/popover';
+import { ChatService } from '../../services/chat.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+type DeliveryStatus = 'sent' | 'delivered' | 'read';
+
+/**
+ * Delivery and read status of one of the current user's own messages.
+ *
+ * The status is announced with a translated accessible name and is never
+ * carried by colour alone: the tick count separates sent from delivered, and
+ * read is drawn heavier and can show a visible label (`showLabel`). In group
+ * chats the indicator opens a popover listing who has read the message; only
+ * the sender may fetch that list and it only contains members who enabled read
+ * receipts.
+ */
 @Component({
   selector: 'app-read-receipt',
-  imports: [CommonModule, TranslatePipe],
+  imports: [DatePipe, NgTemplateOutlet, NgIcon, TranslatePipe, HlmButton, ...HlmPopoverImports],
+  providers: [provideIcons({ lucideCheck, lucideCheckCheck })],
+  host: { class: 'inline-flex items-center' },
   template: `
-    <div
-      class="inline-flex items-center relative"
-      role="status"
-      [attr.aria-label]="ariaLabel()"
-      (mouseenter)="showDetail.set(true)"
-      (mouseleave)="showDetail.set(false)"
-      (click)="toggleDetail()"
-      (keydown.enter)="toggleDetail()"
-      (keydown.space)="toggleDetail()"
-    >
-      <!-- Sending: muted clock icon -->
-      @if (displayStatus() === 'sending') {
-        <svg class="w-3 h-3 text-text-muted animate-pulse" fill="currentColor" viewBox="0 0 16 16">
-          <path
-            d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm.5-10.75v4.19l2.97 1.72-.75 1.25L7.5 9.06V4.25h1z"
-          />
-        </svg>
-      }
+    @if (status(); as current) {
+      <ng-template #indicator>
+        <ng-icon
+          [name]="current === 'sent' ? 'lucideCheck' : 'lucideCheckCheck'"
+          size="14px"
+          [strokeWidth]="current === 'read' ? 3 : 2"
+          aria-hidden="true"
+        />
+        @if (showLabel()) {
+          <span class="text-[11px]" [class.font-semibold]="current === 'read'">{{ label() }}</span>
+        }
+      </ng-template>
 
-      <!-- Sent: single muted check -->
-      @if (displayStatus() === 'sent') {
-        <svg class="w-3 h-3 text-text-muted" fill="currentColor" viewBox="0 0 16 16">
-          <path
-            d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
-          />
-        </svg>
-      }
-
-      <!-- Delivered: double muted check -->
-      @if (displayStatus() === 'delivered') {
-        <svg class="w-3 h-3 text-text-muted" fill="currentColor" viewBox="0 0 16 16">
-          <path
-            d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
-          />
-          <path
-            d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
-          />
-        </svg>
-      }
-
-      <!-- Read: double check in the Tide secondary tone -->
-      @if (displayStatus() === 'read') {
-        <svg class="w-3 h-3 text-secondary" fill="currentColor" viewBox="0 0 16 16">
-          <path
-            d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
-          />
-          <path
-            d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
-          />
-        </svg>
-      }
-
-      <!-- Tooltip on hover / tap for detailed read info -->
-      @if (showDetail()) {
-        <div
-          class="absolute bottom-full end-0 mb-1 bg-surface-200 border border-surface-100 rounded-lg p-2 shadow-xl z-50 min-w-[180px]"
-          role="tooltip"
-        >
-          <p class="text-xs text-text-secondary font-medium mb-1">
-            {{ tooltipTitle() }}
-          </p>
-          @if (receiptData(); as data) {
-            @for (reader of displayedReaders(); track reader.userId) {
-              <div class="flex items-center gap-2 py-1">
-                @if (reader.avatarUrl) {
-                  <img
-                    [src]="reader.avatarUrl"
-                    class="w-5 h-5 rounded-full object-cover"
-                    alt=""
-                    loading="lazy"
-                  />
-                } @else {
-                  <div
-                    class="w-5 h-5 rounded-full bg-surface-400 flex items-center justify-center text-xs text-text-primary"
-                  >
-                    {{ reader.displayName.charAt(0) }}
-                  </div>
+      @if (hasDetails()) {
+        <hlm-popover (stateChanged)="onPopoverState($event)">
+          <button
+            hlmPopoverTrigger
+            hlmBtn
+            type="button"
+            variant="ghost"
+            size="xs"
+            class="relative h-auto min-h-6 min-w-6 gap-1 px-1 py-0.5 text-inherit after:absolute after:-inset-2 after:content-['']"
+            data-testid="read-receipt-details"
+            [attr.aria-label]="detailsLabel()"
+          >
+            <ng-container [ngTemplateOutlet]="indicator" />
+          </button>
+          <ng-template hlmPopoverPortal>
+            <hlm-popover-content class="w-64 text-text-primary">
+              <hlm-popover-header>
+                <h4 hlmPopoverTitle>{{ 'readReceipts.readByTitle' | t }}</h4>
+                @if (summary(); as counts) {
+                  <p class="text-xs text-text-secondary">
+                    {{
+                      'readReceipts.readByCount'
+                        | t: { read: counts.readBy.length, total: counts.totalMembers }
+                    }}
+                  </p>
                 }
-                <span class="text-xs text-text-primary truncate flex-1">
-                  {{ reader.displayName }}
-                </span>
-                <span class="text-xs text-text-muted">
-                  {{ formatTimeAgo(reader.readAt) }}
-                </span>
-              </div>
-            }
-            @if (hasGroupInfo()) {
-              <p class="text-xs text-text-muted mt-1">
-                {{
-                  'readReceipts.readByCount'
-                    | t: { read: data.readBy.length, total: data.totalMembers }
-                }}
-              </p>
-            }
-            @if (remainingCount() > 0) {
-              <p class="text-xs text-text-muted mt-1">
-                +{{ remainingCount() }} {{ 'readReceipts.more' | t }}
-              </p>
-            }
-          }
-        </div>
+              </hlm-popover-header>
+
+              @if (receipts.isLoading()) {
+                <p role="status" class="text-sm text-text-secondary">
+                  {{ 'readReceipts.loading' | t }}
+                </p>
+              } @else if (receipts.error()) {
+                <div role="alert" class="flex flex-col items-start gap-2">
+                  <p class="text-sm">{{ 'readReceipts.loadError' | t }}</p>
+                  <button
+                    hlmBtn
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    (click)="receipts.reload()"
+                  >
+                    {{ 'common.retry' | t }}
+                  </button>
+                </div>
+              } @else if (summary(); as data) {
+                <ul class="flex max-h-48 flex-col gap-2 overflow-y-auto">
+                  @for (reader of data.readBy; track reader.userId) {
+                    <li class="flex items-center gap-2">
+                      @if (reader.avatarUrl) {
+                        <img
+                          [src]="reader.avatarUrl"
+                          alt=""
+                          loading="lazy"
+                          class="size-6 shrink-0 rounded-full object-cover"
+                        />
+                      } @else {
+                        <span
+                          class="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-100 text-xs font-bold"
+                          aria-hidden="true"
+                        >
+                          {{ initial(reader.displayName) }}
+                        </span>
+                      }
+                      <span class="min-w-0 flex-1 truncate text-sm">
+                        {{ reader.displayName || ('readReceipts.unknownReader' | t) }}
+                      </span>
+                      <time
+                        class="shrink-0 text-xs text-text-muted"
+                        [attr.datetime]="reader.readAt"
+                      >
+                        {{ reader.readAt | date: 'shortTime' }}
+                      </time>
+                    </li>
+                  } @empty {
+                    <li class="text-sm text-text-secondary">{{ 'readReceipts.nobodyYet' | t }}</li>
+                  }
+                </ul>
+                <p class="text-xs text-text-muted">{{ 'readReceipts.privacyNote' | t }}</p>
+              }
+            </hlm-popover-content>
+          </ng-template>
+        </hlm-popover>
+      } @else {
+        <span role="img" class="inline-flex items-center gap-1" [attr.aria-label]="label()">
+          <ng-container [ngTemplateOutlet]="indicator" />
+        </span>
       }
-    </div>
+    }
   `,
-  styles: [
-    `
-      :host {
-        display: inline-flex;
-        cursor: default;
-      }
-    `,
-  ],
 })
 export class ReadReceiptComponent {
-  messageId = input.required<string>();
-  deliveryStatus = input<'sent' | 'delivered' | 'read'>();
-  isGroup = input(false);
+  private readonly chatService = inject(ChatService);
+  private readonly i18n = inject(I18nService);
 
-  private chatService = inject(ChatService);
-  private i18n = inject(I18nService);
+  readonly messageId = input.required<string>();
+  readonly deliveryStatus = input<DeliveryStatus | undefined>();
+  /** Group rooms show who has read a message; one-to-one rooms only show the status. */
+  readonly isGroup = input(false);
+  /** Shows the status as visible text next to the ticks, for example on the latest message. */
+  readonly showLabel = input(false);
 
-  showDetail = signal(false);
-  receiptData = signal<MessageReceiptStatus | null>(null);
+  protected readonly status = computed(() => this.deliveryStatus() ?? null);
 
-  displayStatus = signal<'sending' | 'sent' | 'delivered' | 'read' | null>(null);
-  displayedReaders = signal<ReadReceiptUser[]>([]);
-  remainingCount = signal(0);
+  protected readonly hasDetails = computed(() => this.isGroup() && this.status() !== 'sent');
 
-  constructor() {
-    effect(() => {
-      const status = this.deliveryStatus();
-      if (status) {
-        this.displayStatus.set(status);
-      }
-    });
-
-    effect(() => {
-      if (this.showDetail()) {
-        void this.loadReceipts();
-      }
-    });
-  }
-
-  hasGroupInfo(): boolean {
-    const data = this.receiptData();
-    return data !== null && data.totalMembers > 2 && data.readBy.length > 0;
-  }
-
-  ariaLabel(): string {
-    const status = this.displayStatus();
-    const data = this.receiptData();
-    switch (status) {
-      case 'sending':
-        return this.i18n.translate('readReceipts.sending');
-      case 'sent':
-        return this.i18n.translate('readReceipts.sent');
+  protected readonly label = computed(() => {
+    switch (this.status()) {
+      case 'read':
+        return this.i18n.translate(this.isGroup() ? 'readReceipts.readByAll' : 'readReceipts.read');
       case 'delivered':
         return this.i18n.translate('readReceipts.delivered');
-      case 'read':
-        if (data && data.readBy.length > 0) {
-          return this.i18n.translate('readReceipts.readByCount', {
-            read: data.readBy.length,
-            total: data.totalMembers,
-          });
-        }
-        return this.i18n.translate('readReceipts.read');
-      default:
-        return '';
-    }
-  }
-
-  tooltipTitle(): string {
-    const status = this.displayStatus();
-    switch (status) {
       case 'sent':
-        return this.i18n.translate('readReceipts.sentTitle');
-      case 'delivered':
-        return this.i18n.translate('readReceipts.deliveredTitle');
-      case 'read':
-        return this.i18n.translate('readReceipts.readTitle');
+        return this.i18n.translate('readReceipts.sent');
       default:
         return '';
     }
+  });
+
+  protected readonly detailsLabel = computed(() =>
+    this.i18n.translate('readReceipts.detailsButton', { status: this.label() }),
+  );
+
+  private readonly detailsOpen = signal(false);
+
+  /** Fetched fresh every time the popover opens, so counts are never stale. */
+  protected readonly receipts = resource({
+    params: () => (this.detailsOpen() ? this.messageId() : undefined),
+    loader: ({ params: messageId }) => this.chatService.getMessageReceipts(messageId),
+  });
+
+  /** `value()` throws while a resource is in an error state, so read it through this guard. */
+  protected readonly summary = computed(() =>
+    this.receipts.hasValue() ? this.receipts.value() : null,
+  );
+
+  protected onPopoverState(state: 'open' | 'closed'): void {
+    this.detailsOpen.set(state === 'open');
   }
 
-  toggleDetail(): void {
-    this.showDetail.update((v) => !v);
-  }
-
-  private async loadReceipts(): Promise<void> {
-    try {
-      const data = await this.chatService.getMessageReceipts(this.messageId());
-      this.receiptData.set(data);
-      this.displayedReaders.set(data.readBy.slice(0, 5));
-      const remaining = data.readBy.length - 5;
-      this.remainingCount.set(remaining > 0 ? remaining : 0);
-    } catch {
-      this.receiptData.set(null);
-    }
-  }
-
-  formatTimeAgo(isoString: string): string {
-    if (!isoString) return '';
-    const now = Date.now();
-    const readTime = new Date(isoString).getTime();
-    const seconds = Math.floor((now - readTime) / 1000);
-    if (seconds < 60) return this.i18n.translate('time.justNow');
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return this.i18n.translate('time.minutesAgo', { count: minutes });
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return this.i18n.translate('time.hoursAgo', { count: hours });
-    const days = Math.floor(hours / 24);
-    return this.i18n.translate('time.daysAgo', { count: days });
+  protected initial(name: string): string {
+    return Array.from(name.trim())[0]?.toLocaleUpperCase(this.i18n.currentLang()) ?? '';
   }
 }

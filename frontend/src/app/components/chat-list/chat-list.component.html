@@ -181,8 +181,18 @@
         </div>
       }
 
+      @if (!isLoading() && loadError()) {
+        <div class="p-6 text-center" role="alert" data-testid="chat-list-error">
+          <p class="text-sm text-text-secondary mb-3">{{ 'chatList.loadError' | t }}</p>
+          <button hlmBtn type="button" class="min-h-11 px-4" (click)="loadPreviews()">
+            {{ 'common.retry' | t }}
+          </button>
+        </div>
+      }
+
       @if (
         !isLoading() &&
+        !loadError() &&
         archiveState() === 'ready' &&
         regularAndPinnedPreviews().length === 0 &&
         archivedPreviews().length === 0

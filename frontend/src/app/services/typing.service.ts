@@ -1,7 +1,26 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { CentrifugeService } from './centrifuge.service';
+import { CentrifugeService, PublicationMeta } from './centrifuge.service';
 import { AuthService } from './auth.service';
+import { ChatService } from './chat.service';
 import type { TypingUser } from '../components/primitives/typing-indicator/typing-indicator.component';
+
+const MAX_DISPLAY_NAME_LENGTH = 60;
+/** Bounds memory when a channel is flooded; rooms are far smaller than this. */
+const MAX_TRACKED_TYPISTS = 20;
+
+/**
+ * Typing payloads come from other clients, so the name is only a display hint:
+ * control characters and bidirectional overrides are removed and the length is
+ * capped. An empty result lets the UI show its translated "someone" fallback.
+ */
+function sanitiseDisplayName(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/\s+/gu, ' ')
+    .replace(/[\p{Cc}\u202A-\u202E\u2066-\u2069]/gu, '')
+    .trim()
+    .slice(0, MAX_DISPLAY_NAME_LENGTH);
+}
 
 @Injectable({
   providedIn: 'root',
@@ -9,6 +28,7 @@ import type { TypingUser } from '../components/primitives/typing-indicator/typin
 export class TypingService {
   private centrifugeService = inject(CentrifugeService);
   private authService = inject(AuthService);
+  private chatService = inject(ChatService);
 
   readonly typingUsers = signal<TypingUser[]>([]);
 
@@ -38,9 +58,9 @@ export class TypingService {
 
         this.currentSubscription = this.centrifugeService.subscribe(
           `chat:${roomId}:typing`,
-          (data: unknown) => {
+          (data: unknown, meta?: PublicationMeta) => {
             if (generation !== this.connectionGeneration || this.currentRoomId !== roomId) return;
-            this.handleTypingEvent(data);
+            this.handleTypingEvent(data, meta?.publisherId);
           },
         );
       })
@@ -52,10 +72,12 @@ export class TypingService {
 
   disconnect(): void {
     this.connectionGeneration++;
-    if (this.currentRoomId && this.currentSubscription) {
+    if (this.currentRoomId) {
+      // subscribe() also records a desired channel while the transport client
+      // is unavailable. Remove that intent even when no live handle exists.
       this.centrifugeService.unsubscribe(`chat:${this.currentRoomId}:typing`);
-      this.currentSubscription = null;
     }
+    this.currentSubscription = null;
     this.currentRoomId = null;
     this.lastPublishTime = 0;
     this.clearAllTimers();
@@ -78,24 +100,17 @@ export class TypingService {
       this.lastPublishTime = 0;
     }
 
-    this.centrifugeService.publish(`chat:${this.currentRoomId}:typing`, {
-      userId: user.id,
-      displayName: String(user.user_metadata?.['display_name'] ?? ''),
-      avatarUrl: String(user.user_metadata?.['avatar_url'] ?? ''),
-      typing: isTyping,
-      timestamp: now,
-    });
+    // The API verifies room membership and publishes the authenticated user id.
+    void this.chatService.sendTypingIndicator(this.currentRoomId, isTyping);
   }
 
   private isTypingPayload(data: unknown): data is Record<string, unknown> {
     return typeof data === 'object' && data !== null && !Array.isArray(data);
   }
 
-  private handleTypingEvent(data: unknown): void {
+  private handleTypingEvent(data: unknown, publisherId?: string): void {
     if (!this.isTypingPayload(data)) return;
     if (
-      typeof data['userId'] !== 'string' ||
-      data['userId'].length === 0 ||
       typeof data['timestamp'] !== 'number' ||
       !Number.isFinite(data['timestamp']) ||
       typeof data['typing'] !== 'boolean'
@@ -103,10 +118,16 @@ export class TypingService {
       return;
     }
 
-    const currentUserId = this.authService.currentUser()?.id;
-    if (data['userId'] === currentUserId) return;
+    const claimedUserId = typeof data['userId'] === 'string' ? data['userId'] : '';
+    // A client-published event carries the server-verified publisher. A payload
+    // that names someone else is an impersonation attempt and is dropped.
+    if (publisherId && claimedUserId && claimedUserId !== publisherId) return;
 
-    const userId: string = data['userId'];
+    const userId = publisherId || claimedUserId;
+    if (!userId) return;
+
+    const currentUserId = this.authService.currentUser()?.id;
+    if (userId === currentUserId) return;
 
     if (this.typingTimers.has(userId)) {
       clearTimeout(this.typingTimers.get(userId));
@@ -115,19 +136,12 @@ export class TypingService {
     if (data['typing']) {
       const typingUser: TypingUser = {
         userId,
-        displayName:
-          typeof data['displayName'] === 'string' && data['displayName'].trim().length > 0
-            ? data['displayName'].trim()
-            : 'Someone',
-        avatarUrl:
-          typeof data['avatarUrl'] === 'string' && data['avatarUrl'].length > 0
-            ? data['avatarUrl']
-            : undefined,
+        displayName: sanitiseDisplayName(data['displayName']),
       };
 
       this.typingUsers.update((prev) => {
         const filtered = prev.filter((u) => u.userId !== userId);
-        return [...filtered, typingUser];
+        return [...filtered, typingUser].slice(-MAX_TRACKED_TYPISTS);
       });
 
       this.typingTimers.set(

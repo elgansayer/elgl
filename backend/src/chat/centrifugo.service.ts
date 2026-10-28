@@ -246,7 +246,22 @@ export class CentrifugoService implements OnModuleInit {
           },
         }),
       });
-      return response.ok;
+      if (!response.ok) {
+        this.logger.warn(
+          { channel, status: response.status },
+          'Centrifugo publish rejected',
+        );
+        return false;
+      }
+      const commandError = await this.readCommandError(response);
+      if (commandError) {
+        this.logger.warn(
+          { channel, status: response.status, code: commandError.code },
+          'Centrifugo publish rejected',
+        );
+        return false;
+      }
+      return true;
     } catch (e) {
       this.logger.error(
         { error: (e as Error).message, channel },
@@ -254,6 +269,38 @@ export class CentrifugoService implements OnModuleInit {
       );
       return false;
     }
+  }
+
+  /**
+   * Centrifugo reports command-level failures, such as an unknown channel or a
+   * permission error, with HTTP 200 and an `error` object in the body, so
+   * `response.ok` alone cannot show that a publication was accepted. Only the
+   * numeric code is returned so nothing the server echoes back is logged.
+   */
+  private async readCommandError(
+    response: Response,
+  ): Promise<{ code: number | null } | null> {
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      // An empty or non-JSON 2xx body has nothing to inspect.
+      return null;
+    }
+
+    if (typeof body !== 'object' || body === null || !('error' in body)) {
+      return null;
+    }
+    const { error } = body;
+    if (!error) return null;
+
+    const code =
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof error.code === 'number'
+        ? error.code
+        : null;
+    return { code };
   }
 
   /**

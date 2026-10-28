@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatRoomComponent } from './chat-room.component';
-import { ChatService, ChatMessage } from '../../services/chat.service';
+import { CHAT_HISTORY_PAGE_SIZE, ChatService, ChatMessage } from '../../services/chat.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
@@ -34,6 +34,8 @@ describe('ChatRoomComponent (threaded replies)', () => {
     getRooms: ReturnType<typeof vi.fn>;
     getGroupMembers: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
+    getLatestMessages: ReturnType<typeof vi.fn>;
+    markRoomRead: ReturnType<typeof vi.fn>;
     sendMessage: ReturnType<typeof vi.fn>;
     addFavourite: ReturnType<typeof vi.fn>;
     lockChat: ReturnType<typeof vi.fn>;
@@ -50,9 +52,21 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   beforeEach(async () => {
     mockChatService = {
-      getRooms: vi.fn().mockResolvedValue([]),
+      getRooms: vi.fn().mockResolvedValue([
+        {
+          id: 'room-1',
+          title: 'Practice chat',
+          subtitle: '',
+          avatar: '',
+          is_online: true,
+          is_pinned: false,
+          created_at: new Date().toISOString(),
+        },
+      ]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
       getMessages: vi.fn().mockResolvedValue([]),
+      getLatestMessages: vi.fn().mockResolvedValue([]),
+      markRoomRead: vi.fn().mockResolvedValue(undefined),
       sendMessage: vi.fn().mockResolvedValue(makeMessage({ id: 'm2' })),
       addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
@@ -62,6 +76,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
     const mockCentrifugeService = {
       isConnected: signal(false),
+      connectionStatus: signal('connected'),
       connect: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn().mockReturnValue({}),
       unsubscribe: vi.fn(),
@@ -138,6 +153,28 @@ describe('ChatRoomComponent (threaded replies)', () => {
     expect(component).toBeTruthy();
   });
 
+  it('gives correction fields persistent translated labels', () => {
+    component.showCorrectionForm.set(true);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const labels = Array.from(host.querySelectorAll<HTMLLabelElement>('label')).map((label) =>
+      label.textContent?.trim(),
+    );
+    expect(labels).toEqual(
+      expect.arrayContaining(['Original sentence', 'Corrected sentence', 'Explanation']),
+    );
+  });
+
+  it('renders legacy read rows as read when the newer status still says sent', () => {
+    const legacyRead = makeMessage({
+      delivery_status: 'sent',
+      is_read: true,
+    });
+
+    expect(component.deliveryStatusFor(legacyRead)).toBe('read');
+  });
+
   it('startReply sets replyingTo to the matching message', () => {
     const parent = makeMessage({ id: 'm1' });
     component.messages.set([parent]);
@@ -169,7 +206,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
     expect(component.parentMessageFor(reply)).toEqual(parent);
   });
 
-  it('sendTextMessage includes reply_to_id and clears the reply preview afterwards', async () => {
+  it('sendTextMessage includes reply_to_id, clears textInput and the reply preview afterwards', async () => {
     const parent = makeMessage({ id: 'm1' });
     component.messages.set([parent]);
     component.replyingTo.set(parent);
@@ -180,7 +217,31 @@ describe('ChatRoomComponent (threaded replies)', () => {
     expect(mockChatService.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ text_content: 'A reply', reply_to_id: 'm1' }),
     );
+    expect(component.textInput).toBe('');
     expect(component.replyingTo()).toBeNull();
+  });
+
+  it('onComposerInput updates textInput and notifies typing service', () => {
+    const target = document.createElement('input');
+    target.value = 'Typing something';
+    component.onComposerInput({ target } as unknown as Event);
+
+    expect(component.textInput).toBe('Typing something');
+  });
+
+  it('sendSticker captions the sticker with the translated label rather than a hard-coded one', async () => {
+    const i18n = TestBed.inject(I18nService);
+    mockChatService.sendMessage.mockResolvedValueOnce(makeMessage({ id: 'sticker-1' }));
+
+    await component.sendSticker('https://cdn.example/sticker.png');
+
+    expect(mockChatService.sendMessage).toHaveBeenCalledWith({
+      room_id: 'room-1',
+      message_type: 'sticker',
+      media_url: 'https://cdn.example/sticker.png',
+      text_content: i18n.translate('chatRoom.stickerCaption'),
+    });
+    expect(component.messages().some((m) => m.id === 'sticker-1')).toBe(true);
   });
 
   it('scrollToMessage scrolls to and briefly highlights the target message', () => {
@@ -404,6 +465,46 @@ describe('ChatRoomComponent (threaded replies)', () => {
   });
 
   describe('chat lock', () => {
+    it('fails closed until room metadata and lock state can be loaded', async () => {
+      mockChatService.getRooms
+        .mockReset()
+        .mockRejectedValueOnce(new Error('rooms unavailable'))
+        .mockResolvedValueOnce([
+          {
+            id: 'room-1',
+            title: 'Available room',
+            subtitle: '',
+            avatar: '',
+            is_online: false,
+            is_pinned: false,
+            is_locked: false,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      mockChatService.getLatestMessages.mockClear();
+
+      const guardedFixture = TestBed.createComponent(ChatRoomComponent);
+      const guardedComponent = guardedFixture.componentInstance;
+      guardedFixture.componentRef.setInput('id', 'room-1');
+      guardedFixture.detectChanges();
+      await guardedFixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      guardedFixture.detectChanges();
+
+      expect(guardedComponent.roomDetailsUnavailable()).toBe(true);
+      expect(mockChatService.getLatestMessages).not.toHaveBeenCalled();
+      expect(guardedFixture.nativeElement.querySelector('[data-testid="send-button"]')).toBeNull();
+
+      await guardedComponent.retryRoomDetails();
+      guardedFixture.detectChanges();
+
+      expect(guardedComponent.roomDetailsUnavailable()).toBe(false);
+      expect(mockChatService.getRooms).toHaveBeenCalledTimes(2);
+      expect(mockChatService.getLatestMessages).toHaveBeenCalledWith('room-1', {
+        limit: CHAT_HISTORY_PAGE_SIZE,
+      });
+    });
+
     it('opening a locked room hides the conversation behind pendingUnlock', async () => {
       mockChatService.getRooms.mockResolvedValue([
         {
@@ -418,7 +519,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
         },
       ]);
 
-      mockChatService.getMessages.mockClear();
+      mockChatService.getLatestMessages.mockClear();
 
       const lockedFixture = TestBed.createComponent(ChatRoomComponent);
       const lockedComponent = lockedFixture.componentInstance;
@@ -430,7 +531,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
       expect(lockedComponent.isLocked()).toBe(true);
       expect(lockedComponent.pendingUnlock()).toBe(true);
-      expect(mockChatService.getMessages).not.toHaveBeenCalled();
+      expect(mockChatService.getLatestMessages).not.toHaveBeenCalled();
     });
 
     it('unlockRoom reveals the conversation once app unlock succeeds', async () => {
@@ -445,14 +546,16 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
       expect(mockAuthService.unlockApp).toHaveBeenCalled();
       expect(component.pendingUnlock()).toBe(false);
-      expect(mockChatService.getMessages).toHaveBeenCalledWith('room-1', '');
+      expect(mockChatService.getLatestMessages).toHaveBeenCalledWith('room-1', {
+        limit: CHAT_HISTORY_PAGE_SIZE,
+      });
     });
 
     it('unlockRoom keeps the conversation hidden if app unlock fails', async () => {
       component.roomId = 'room-1';
       component.isLocked.set(true);
       component.pendingUnlock.set(true);
-      mockChatService.getMessages.mockClear();
+      mockChatService.getLatestMessages.mockClear();
       mockAuthService.unlockApp.mockImplementation(async () => {
         mockAuthService.appLocked.set(true);
       });
@@ -460,7 +563,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       await component.unlockRoom();
 
       expect(component.pendingUnlock()).toBe(true);
-      expect(mockChatService.getMessages).not.toHaveBeenCalled();
+      expect(mockChatService.getLatestMessages).not.toHaveBeenCalled();
     });
 
     it('toggleLock locks and unlocks the current room', async () => {

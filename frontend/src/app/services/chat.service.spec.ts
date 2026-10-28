@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -102,6 +102,7 @@ describe('ChatService', () => {
     TestBed.resetTestingModule();
     httpMock.verify();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('should be created', () => {
@@ -215,7 +216,11 @@ describe('ChatService', () => {
   describe('sendMessage', () => {
     it('should send a text message online', async () => {
       currentUser.set({ id: 'user-1' });
-      const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'hi',
+      });
 
       const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
       membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
@@ -243,7 +248,11 @@ describe('ChatService', () => {
       currentUser.set({ id: 'user-1' });
       getBlockedAndBlockerIdsMock.mockResolvedValue(['user-2']);
 
-      const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'hi',
+      });
 
       const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
       membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
@@ -251,20 +260,55 @@ describe('ChatService', () => {
       await expect(promise).rejects.toThrow('You cannot send messages to this user.');
     });
 
-    it('should queue the message when offline instead of calling the API', async () => {
+    it('should attempt delivery when navigator reports offline but the API is reachable', async () => {
       currentUser.set({ id: 'user-1' });
       vi.stubGlobal('navigator', { onLine: false });
 
-      const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'hi',
+      });
 
-      // Offline path short-circuits BEFORE any HTTP calls, including room members
+      httpMock.expectOne(`${baseUrl}/rooms/room-1/members`).flush([]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const sentMessage: ChatMessage = {
+        id: 'm1',
+        room_id: 'room-1',
+        sender_id: 'user-1',
+        message_type: 'text',
+        text_content: 'hi',
+        is_read: false,
+        created_at: '2026-08-01T00:00:00.000Z',
+      };
+      httpMock.expectOne(`${baseUrl}/messages`).flush(sentMessage);
+
+      await expect(promise).resolves.toEqual(sentMessage);
+      expect(enqueueMessageMock).not.toHaveBeenCalled();
+    });
+
+    it('should queue the message after a transport failure', async () => {
+      currentUser.set({ id: 'user-1' });
+
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'hi',
+      });
+
+      httpMock.expectOne(`${baseUrl}/rooms/room-1/members`).flush([]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      httpMock.expectOne(`${baseUrl}/messages`).error(new ProgressEvent('error'));
+
       const queued = await promise;
       expect(queued.room_id).toBe('room-1');
       expect(queued.text_content).toBe('hi');
-      expect(enqueueMessageMock).toHaveBeenCalledWith(expect.objectContaining({ room_id: 'room-1' }));
+      expect(enqueueMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ room_id: 'room-1' }),
+      );
       expect(hapticTapMock).toHaveBeenCalled();
 
-      vi.unstubAllGlobals();
     });
   });
 
@@ -281,8 +325,22 @@ describe('ChatService', () => {
       const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1`);
       expect(req.request.method).toBe('GET');
       req.flush([
-        { id: '1', room_id: 'room-1', sender_id: 'blocked-sender', message_type: 'text', is_read: false, created_at: 'now' },
-        { id: '2', room_id: 'room-1', sender_id: 'user-2', message_type: 'text', is_read: false, created_at: 'now' },
+        {
+          id: '1',
+          room_id: 'room-1',
+          sender_id: 'blocked-sender',
+          message_type: 'text',
+          is_read: false,
+          created_at: 'now',
+        },
+        {
+          id: '2',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          is_read: false,
+          created_at: 'now',
+        },
       ]);
 
       const messages = await promise;
@@ -296,7 +354,9 @@ describe('ChatService', () => {
       // Allow microtask to settle
       await new Promise((r) => setTimeout(r, 0));
 
-      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1` && r.params.get('search') === 'hello');
+      const req = httpMock.expectOne(
+        (r) => r.url === `${baseUrl}/messages/room-1` && r.params.get('search') === 'hello',
+      );
       req.flush([]);
 
       await expect(promise).resolves.toEqual([]);
@@ -312,9 +372,47 @@ describe('ChatService', () => {
 
       const req = httpMock.expectOne(`${baseUrl}/rooms`);
       expect(req.request.method).toBe('GET');
-      req.flush([{ id: 'room-1', title: 'Room', subtitle: '', avatar: '', is_online: true, is_pinned: false, created_at: 'now' }]);
+      req.flush([
+        {
+          id: 'room-1',
+          title: 'Room',
+          subtitle: '',
+          avatar: '',
+          is_online: true,
+          is_pinned: false,
+          created_at: 'now',
+        },
+      ]);
 
       await expect(promise).resolves.toHaveLength(1);
+    });
+
+    it('requests locked metadata explicitly without reading or polluting the inbox cache', async () => {
+      const cache = TestBed.inject(ChatCacheService);
+      const promise = service.getRooms({ includeLocked: true });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${baseUrl}/rooms` && request.params.get('include_locked') === 'true',
+      );
+      req.flush([
+        {
+          id: 'locked-room',
+          title: 'Locked',
+          subtitle: '',
+          avatar: '',
+          is_online: false,
+          is_pinned: false,
+          is_locked: true,
+          created_at: 'now',
+        },
+      ]);
+
+      await expect(promise).resolves.toHaveLength(1);
+      expect(cache.getCachedRooms).not.toHaveBeenCalled();
+      expect(cache.cacheRooms).not.toHaveBeenCalled();
     });
   });
 
@@ -353,7 +451,9 @@ describe('ChatService', () => {
       const req = httpMock.expectOne(`${baseUrl}/messages/status-reply`);
       req.flush('error', { status: 500, statusText: 'Internal Server Error' });
 
-      await expect(promise).rejects.toThrow('Could not send reply to status update. Please try again.');
+      await expect(promise).rejects.toThrow(
+        'Could not send reply to status update. Please try again.',
+      );
     });
   });
 
@@ -390,7 +490,10 @@ describe('ChatService', () => {
       const promise = service.correctMessage('msg-1', 'corrected text', 'explanation');
       const req = httpMock.expectOne(`${baseUrl}/messages/msg-1/correct`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ correctedText: 'corrected text', explanation: 'explanation' });
+      expect(req.request.body).toEqual({
+        correctedText: 'corrected text',
+        explanation: 'explanation',
+      });
       req.flush({ id: 'msg-1' });
 
       await expect(promise).resolves.toEqual({ id: 'msg-1' });
@@ -477,12 +580,23 @@ describe('ChatService', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/chat/translate-voiceroom`);
       req.flush({ translated_text: 'bonjour', detected_language: 'en' });
 
-      await expect(promise).resolves.toEqual({ translated_text: 'bonjour', detected_language: 'en' });
+      await expect(promise).resolves.toEqual({
+        translated_text: 'bonjour',
+        detected_language: 'en',
+      });
     });
 
     it('should fetch suggested replies with mapped recent messages', async () => {
       const recentMessages: ChatMessage[] = [
-        { id: '1', room_id: 'room-1', sender_id: 'user-1', message_type: 'text', text_content: 'hi', is_read: true, created_at: 'now' },
+        {
+          id: '1',
+          room_id: 'room-1',
+          sender_id: 'user-1',
+          message_type: 'text',
+          text_content: 'hi',
+          is_read: true,
+          created_at: 'now',
+        },
       ];
       const promise = service.getSuggestedReplies('room-1', recentMessages);
 
@@ -583,7 +697,185 @@ describe('ChatService', () => {
       mockFetch.mockResolvedValue({ ok: false });
       vi.stubGlobal('window', { location: { href: 'https://example.com/chat/room-1' } });
 
-      await expect(service.reportMessage('msg-1', 'spam')).rejects.toThrow('Failed to report message');
+      await expect(service.reportMessage('msg-1', 'spam')).rejects.toThrow(
+        'Failed to report message',
+      );
+    });
+  });
+
+  describe('room history (network-first)', () => {
+    let cache: {
+      getCachedMessages: ReturnType<typeof vi.fn>;
+      cacheMessages: ReturnType<typeof vi.fn>;
+    };
+
+    function message(id: string, senderId = 'partner-1'): ChatMessage {
+      return {
+        id,
+        room_id: 'room-1',
+        sender_id: senderId,
+        message_type: 'text',
+        text_content: id,
+        is_read: false,
+        created_at: '2026-09-26T10:00:00.000Z',
+      };
+    }
+
+    beforeEach(() => {
+      cache = TestBed.inject(ChatCacheService) as unknown as typeof cache;
+    });
+
+    it('always asks the server for the newest window and warms the room cache', async () => {
+      cache.getCachedMessages.mockResolvedValue([message('stale')]);
+
+      const promise = service.getLatestMessages('room-1');
+
+      const req = httpMock.expectOne(`${baseUrl}/messages/room-1`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      expect(req.request.params.keys()).toEqual([]);
+      req.flush([message('fresh')]);
+
+      await expect(promise).resolves.toEqual([message('fresh')]);
+      expect(cache.getCachedMessages).not.toHaveBeenCalled();
+      expect(cache.cacheMessages).toHaveBeenCalledWith('room-1', [message('fresh')]);
+    });
+
+    it('pages older history with the cursor and never caches the partial view', async () => {
+      const promise = service.getLatestMessages('room-1', {
+        before: '2026-09-26T09:00:00.000000+00:00',
+        limit: 50,
+      });
+
+      const req = httpMock.expectOne((request) => request.url === `${baseUrl}/messages/room-1`);
+      expect(req.request.params.get('before')).toBe('2026-09-26T09:00:00.000000+00:00');
+      expect(req.request.params.get('limit')).toBe('50');
+      req.flush([message('older')]);
+
+      await expect(promise).resolves.toEqual([message('older')]);
+      expect(cache.cacheMessages).not.toHaveBeenCalled();
+    });
+
+    it('filters blocked senders from network results', async () => {
+      getBlockedAndBlockerIdsMock.mockResolvedValue(['blocked-1']);
+
+      const promise = service.getLatestMessages('room-1');
+      httpMock
+        .expectOne(`${baseUrl}/messages/room-1`)
+        .flush([message('ok'), message('hidden', 'blocked-1')]);
+
+      await expect(promise).resolves.toEqual([message('ok')]);
+    });
+
+    it.each([
+      ['a network failure', 0],
+      ['a server fault', 503],
+    ])(
+      'falls back to the cached snapshot after %s so the room stays readable offline',
+      async (_label, status) => {
+        cache.getCachedMessages.mockResolvedValue([
+          message('cached'),
+          message('hidden', 'blocked-1'),
+        ]);
+        getBlockedAndBlockerIdsMock.mockResolvedValue(['blocked-1']);
+
+        const promise = service.getLatestMessages('room-1');
+        httpMock
+          .expectOne(`${baseUrl}/messages/room-1`)
+          .error(new ProgressEvent('error'), { status, statusText: 'unavailable' });
+
+        await expect(promise).resolves.toEqual([message('cached')]);
+      },
+    );
+
+    it('rethrows when the network fails and nothing is cached', async () => {
+      cache.getCachedMessages.mockResolvedValue(null);
+
+      const promise = service.getLatestMessages('room-1');
+      httpMock
+        .expectOne(`${baseUrl}/messages/room-1`)
+        .flush('down', { status: 503, statusText: 'Service Unavailable' });
+
+      await expect(promise).rejects.toBeInstanceOf(HttpErrorResponse);
+    });
+
+    it('never falls back to cached content after an authorisation refusal', async () => {
+      cache.getCachedMessages.mockResolvedValue([message('cached')]);
+
+      const promise = service.getLatestMessages('room-1');
+      httpMock
+        .expectOne(`${baseUrl}/messages/room-1`)
+        .flush({ message: 'Not a member of this room' }, { status: 403, statusText: 'Forbidden' });
+
+      await expect(promise).rejects.toMatchObject({ status: 403 });
+      expect(cache.getCachedMessages).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a failure while paging older history instead of falling back', async () => {
+      cache.getCachedMessages.mockResolvedValue([message('cached')]);
+
+      const promise = service.getLatestMessages('room-1', { before: '2026-09-26T09:00:00Z' });
+      httpMock
+        .expectOne((request) => request.url === `${baseUrl}/messages/room-1`)
+        .flush('down', { status: 503, statusText: 'Service Unavailable' });
+
+      await expect(promise).rejects.toBeInstanceOf(HttpErrorResponse);
+      expect(cache.getCachedMessages).not.toHaveBeenCalled();
+    });
+
+    it('returns nothing without an access token', async () => {
+      getAccessTokenMock.mockReturnValue(null);
+
+      await expect(service.getLatestMessages('room-1')).resolves.toEqual([]);
+      httpMock.expectNone(`${baseUrl}/messages/room-1`);
+    });
+  });
+
+  describe('read receipts', () => {
+    it('acknowledges messages with one bulk POST scoped to the room', async () => {
+      const promise = service.markRoomRead('room-1', ['m1', 'm2']);
+
+      const req = httpMock.expectOne(`${baseUrl}/rooms/room-1/read`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      expect(req.request.body).toEqual({ message_ids: ['m1', 'm2'] });
+      req.flush({ success: true, marked: 2 });
+
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('sends nothing when there is nothing to acknowledge', async () => {
+      await service.markRoomRead('room-1', []);
+
+      httpMock.expectNone(`${baseUrl}/rooms/room-1/read`);
+    });
+
+    it('splits very large acknowledgements into API-sized sequential batches', async () => {
+      const ids = Array.from({ length: 230 }, (_, index) => `m${index}`);
+      const promise = service.markRoomRead('room-1', ids);
+      const sizes: number[] = [];
+
+      for (let batch = 0; batch < 3; batch++) {
+        const req = await vi.waitFor(() => httpMock.expectOne(`${baseUrl}/rooms/room-1/read`));
+        const size: number = req.request.body.message_ids.length;
+        sizes.push(size);
+        req.flush({ success: true, marked: size });
+      }
+
+      await expect(promise).resolves.toBeUndefined();
+      expect(sizes).toEqual([100, 100, 30]);
+    });
+
+    it('loads who read a message with authentication and an encoded id', async () => {
+      const receipts = { readBy: [], totalMembers: 3 };
+      const promise = service.getMessageReceipts('msg/1');
+
+      const req = httpMock.expectOne(`${baseUrl}/messages/msg%2F1/receipts`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      req.flush(receipts);
+
+      await expect(promise).resolves.toEqual(receipts);
     });
   });
 

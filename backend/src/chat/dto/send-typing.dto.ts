@@ -1,9 +1,15 @@
-import { IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsUUID } from 'class-validator';
 
 export class SendTypingDto {
-  @IsString()
+  @IsUUID()
   room_id!: string;
 
-  @IsString()
-  is_typing!: string; // 'true' or 'false'
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  is_typing!: boolean;
 }

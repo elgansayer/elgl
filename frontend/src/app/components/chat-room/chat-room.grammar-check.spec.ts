@@ -40,7 +40,17 @@ describe('ChatRoomComponent pre-send grammar review', () => {
         {
           provide: ChatService,
           useValue: {
-            getRooms: vi.fn().mockResolvedValue([]),
+            getRooms: vi.fn().mockResolvedValue([
+              {
+                id: 'room-1',
+                title: 'Practice chat',
+                subtitle: '',
+                avatar: '',
+                is_online: true,
+                is_pinned: false,
+                created_at: new Date().toISOString(),
+              },
+            ]),
             getGroupMembers: vi.fn().mockResolvedValue([
               {
                 user_id: 'user-2',
@@ -51,13 +61,15 @@ describe('ChatRoomComponent pre-send grammar review', () => {
                 },
               },
             ]),
-            getMessages: vi.fn().mockResolvedValue([]),
+            getLatestMessages: vi.fn().mockResolvedValue([]),
+            markRoomRead: vi.fn().mockResolvedValue(undefined),
             sendMessage,
           },
         },
         {
           provide: CentrifugeService,
           useValue: {
+            connectionStatus: signal('connected'),
             connect: vi.fn().mockResolvedValue(undefined),
             subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
             unsubscribe: vi.fn(),
@@ -85,6 +97,7 @@ describe('ChatRoomComponent pre-send grammar review', () => {
         {
           provide: TypingService,
           useValue: {
+            typingUsers: signal([]),
             connect: vi.fn(),
             disconnect: vi.fn(),
             sendTyping: vi.fn(),

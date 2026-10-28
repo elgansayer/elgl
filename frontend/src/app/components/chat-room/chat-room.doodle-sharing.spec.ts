@@ -40,9 +40,20 @@ describe('ChatRoomComponent doodle sharing contract', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
     const chatService = {
-      getRooms: vi.fn().mockResolvedValue([]),
+      getRooms: vi.fn().mockResolvedValue([
+        {
+          id: 'room-1',
+          title: 'Practice chat',
+          subtitle: '',
+          avatar: '',
+          is_online: true,
+          is_pinned: false,
+          created_at: new Date().toISOString(),
+        },
+      ]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
-      getMessages: vi.fn().mockResolvedValue([]),
+      getLatestMessages: vi.fn().mockResolvedValue([]),
+      markRoomRead: vi.fn().mockResolvedValue(undefined),
       sendMessage,
       addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
@@ -57,6 +68,7 @@ describe('ChatRoomComponent doodle sharing contract', () => {
     };
     const centrifugeService = {
       isConnected: signal(false),
+      connectionStatus: signal('connected'),
       connect: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
       unsubscribe: vi.fn(),
@@ -173,7 +185,11 @@ describe('ChatRoomComponent doodle sharing contract', () => {
     component.messages.set([doodleMessage(dataUrl)]);
     fixture.detectChanges();
 
-    const image = fixture.nativeElement.querySelector('img[alt="doodle"]') as HTMLImageElement | null;
+    const doodleAlt = TestBed.inject(I18nService).translate('chatRoom.doodleAlt');
+    const image = fixture.nativeElement.querySelector(
+      `img[alt="${doodleAlt}"]`,
+    ) as HTMLImageElement | null;
+    expect(doodleAlt).not.toBe('chatRoom.doodleAlt');
     expect(image).toBeTruthy();
     expect(image?.getAttribute('src')).toBe(dataUrl);
   });

@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpResponseBase } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Centrifuge, Subscription } from 'centrifuge';
+import { Centrifuge, Subscription, UnauthorizedError } from 'centrifuge';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -13,16 +13,43 @@ const BASE_RECONNECT_DELAY_MS = 500;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 
 type ConnectionStatus =
-  | 'disconnected'
-  | 'connecting'
-  | 'reconnecting'
-  | 'connected'
-  | 'rate-limited'
-  | 'error';
+  'disconnected' | 'connecting' | 'reconnecting' | 'connected' | 'rate-limited' | 'error';
 
 interface TokenRequest {
   accessToken: string;
   promise: Promise<string>;
+}
+
+/** Metadata Centrifugo attaches to a publication, independent of its payload. */
+export interface PublicationMeta {
+  /**
+   * Authenticated Centrifugo user id of the publisher. Present only for
+   * publications sent through a client, where the server (not the payload)
+   * vouches for who published; absent for server-API publications.
+   */
+  publisherId?: string;
+}
+
+export type PublicationHandler = (data: unknown, meta?: PublicationMeta) => void;
+
+function publicationMeta(publisherId: string | undefined): PublicationMeta {
+  // Centrifugo reports an empty user id for anonymous connections.
+  return publisherId ? { publisherId } : {};
+}
+
+type ChatSubscriptionStream = 'messages' | 'typing';
+
+interface ChatSubscriptionRequest {
+  room_id: string;
+  stream: ChatSubscriptionStream;
+}
+
+function chatSubscriptionRequest(channel: string): ChatSubscriptionRequest | null {
+  const parts = channel.split(':');
+  if (parts[0] !== 'chat' || !parts[1] || parts.length > 3) return null;
+  const stream = parts.length === 2 ? 'messages' : parts[2] === 'typing' ? 'typing' : null;
+  if (!stream) return null;
+  return { room_id: parts[1], stream };
 }
 
 @Injectable({
@@ -33,7 +60,7 @@ export class CentrifugeService {
   private readonly authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
   private readonly subscriptions = new Map<string, Subscription>();
-  private readonly subscriptionHandlers = new Map<string, (data: unknown) => void>();
+  private readonly subscriptionHandlers = new Map<string, PublicationHandler>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private intentionallyDisconnected = false;
@@ -102,17 +129,18 @@ export class CentrifugeService {
     this.subscriptions.clear();
   }
 
-  private createSubscription(
-    channel: string,
-    onMessage: (data: unknown) => void,
-  ): Subscription | null {
+  private createSubscription(channel: string, onMessage: PublicationHandler): Subscription | null {
     if (!this.centrifuge) {
       return null;
     }
 
-    const subscription = this.centrifuge.newSubscription(channel);
+    const request = chatSubscriptionRequest(channel);
+    const subscription = this.centrifuge.newSubscription(
+      channel,
+      request ? { getToken: () => this.fetchSubscriptionToken(channel) } : undefined,
+    );
     subscription.on('publication', (ctx) => {
-      onMessage(ctx.data);
+      onMessage(ctx.data, publicationMeta(ctx.info?.user));
     });
     subscription.subscribe();
     this.subscriptions.set(channel, subscription);
@@ -167,6 +195,38 @@ export class CentrifugeService {
       if (this.tokenRequest === request) {
         this.tokenRequest = null;
       }
+    }
+  }
+
+  private async fetchSubscriptionToken(channel: string): Promise<string> {
+    const request = chatSubscriptionRequest(channel);
+    if (!request) {
+      throw new UnauthorizedError('Unsupported chat subscription channel.');
+    }
+
+    const accessToken = this.authService.getAccessToken();
+    if (!accessToken) {
+      throw new UnauthorizedError('Chat subscription is not authenticated.');
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.http.post<{ token: string }>(
+          `${environment.apiUrl}/chat/subscriptions/token`,
+          request,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        ),
+      );
+      const token = response.token?.trim();
+      if (!token) {
+        throw new Error('Chat subscription endpoint returned no token.');
+      }
+      return token;
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && [401, 403, 404].includes(error.status)) {
+        throw new UnauthorizedError('Chat subscription is not authorised.');
+      }
+      throw error;
     }
   }
 
@@ -285,14 +345,14 @@ export class CentrifugeService {
     }
   }
 
-  subscribe(channel: string, onMessage: (data: unknown) => void): Subscription | null {
+  subscribe(channel: string, onMessage: PublicationHandler): Subscription | null {
     this.subscriptionHandlers.set(channel, onMessage);
 
     const existing = this.subscriptions.get(channel);
     if (existing) {
       existing.removeAllListeners('publication');
       existing.on('publication', (ctx) => {
-        onMessage(ctx.data);
+        onMessage(ctx.data, publicationMeta(ctx.info?.user));
       });
       return existing;
     }

@@ -2,7 +2,6 @@ import type { Mock, MockInstance } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CentrifugoService } from './centrifugo.service';
-import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 
 vi.mock('jsonwebtoken', () => ({
@@ -286,10 +285,70 @@ describe('CentrifugoService', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false when fetch response is not ok', async () => {
-      fetchSpy.mockResolvedValue({ ok: false });
+    it('should log a sanitised warning and return false when the response is not ok', async () => {
+      fetchSpy.mockResolvedValue({ ok: false, status: 503 });
       const result = await service.publish('chat:room-1', { text: 'Hello' });
       expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        { channel: 'chat:room-1', status: 503 },
+        'Centrifugo publish rejected',
+      );
+    });
+
+    it('should accept a response whose body reports a result', async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ result: {} }),
+      });
+      const result = await service.publish('chat:room-1', { text: 'Hello' });
+      expect(result).toBe(true);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('should treat a 2xx response without a JSON body as accepted', async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.reject(new SyntaxError('Unexpected end of JSON')),
+      });
+      const result = await service.publish('chat:room-1', { text: 'Hello' });
+      expect(result).toBe(true);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('should return false and log only the code when a 200 response carries a command error', async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            error: { code: 102, message: 'unknown channel' },
+          }),
+      });
+      const result = await service.publish('chat:room-1', { text: 'Hello' });
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        { channel: 'chat:room-1', status: 200, code: 102 },
+        'Centrifugo publish rejected',
+      );
+      expect(JSON.stringify(mockLogger.warn.mock.calls)).not.toContain(
+        'unknown channel',
+      );
+    });
+
+    it('should still fail closed when the error object has no numeric code', async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ error: 'boom' }),
+      });
+      const result = await service.publish('chat:room-1', { text: 'Hello' });
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        { channel: 'chat:room-1', status: 200, code: null },
+        'Centrifugo publish rejected',
+      );
     });
 
     it('should catch fetch error, log error, and return false', async () => {

@@ -59,6 +59,8 @@ export class ChatListComponent implements OnInit {
   readonly labels = signal<string[]>([]);
   readonly selectedLabel = signal<string | null>(null);
   readonly previews = signal<ChatRoomPreview[]>([]);
+  /** Set when the room list could not be loaded, so an outage is never shown as an empty inbox. */
+  readonly loadError = signal<boolean>(false);
   readonly search = signal<string>('');
 
   /** Active tab: 'chats' | 'groups' */
@@ -217,6 +219,7 @@ export class ChatListComponent implements OnInit {
 
   async loadPreviews(): Promise<void> {
     this.isLoading.set(true);
+    this.loadError.set(false);
     try {
       const rooms = await this.chatService.getRooms();
 
@@ -242,6 +245,7 @@ export class ChatListComponent implements OnInit {
     } catch (error) {
       console.error('Failed to load chat rooms:', error);
       this.previews.set([]);
+      this.loadError.set(true);
     } finally {
       this.isLoading.set(false);
     }
