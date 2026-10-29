@@ -342,9 +342,13 @@ export class LinkPreviewService {
     // The document title is the first <title>. Later ones belong to inline SVG
     // icons, whose accessible names would otherwise be appended to the title.
     const rawTitle =
-      this.getMetaTag($, 'og:title') || $('title').first().text().trim() || '';
+      this.getMetaTag($, 'og:title') ||
+      this.getMetaTag($, 'twitter:title') ||
+      $('title').first().text().trim() ||
+      '';
     const rawDescription =
       this.getMetaTag($, 'og:description') ||
+      this.getMetaTag($, 'twitter:description') ||
       this.getMetaTag($, 'description') ||
       '';
 
@@ -354,11 +358,19 @@ export class LinkPreviewService {
       MAX_DESCRIPTION_LENGTH,
     );
     const image = this.sanitizeImageUrl(
-      this.getMetaTag($, 'og:image') || '',
+      this.getMetaTag($, 'og:image') ||
+        this.getMetaTag($, 'og:image:url') ||
+        this.getMetaTag($, 'og:image:secure_url') ||
+        this.getMetaTag($, 'twitter:image') ||
+        this.getMetaTag($, 'twitter:image:src') ||
+        '',
       url,
     );
     const siteName = this.sanitizeMetaContent(
-      this.getMetaTag($, 'og:site_name') || new URL(url).hostname,
+      this.getMetaTag($, 'og:site_name') ||
+        this.getMetaTag($, 'twitter:site') ||
+        this.getMetaTag($, 'application-name') ||
+        new URL(url).hostname,
       MAX_SITE_NAME_LENGTH,
     );
 
@@ -376,9 +388,17 @@ export class LinkPreviewService {
   }
 
   private getMetaTag($: cheerio.CheerioAPI, property: string): string {
+    const propLower = property.toLowerCase();
+    const propUpper = property.toUpperCase();
     return (
       $(`meta[property="${property}"]`).attr('content') ||
       $(`meta[name="${property}"]`).attr('content') ||
+      $(`meta[property="${propLower}"]`).attr('content') ||
+      $(`meta[name="${propLower}"]`).attr('content') ||
+      $(`meta[property="${propUpper}"]`).attr('content') ||
+      $(`meta[name="${propUpper}"]`).attr('content') ||
+      $(`meta[itemprop="${property}"]`).attr('content') ||
+      $(`meta[itemprop="${propLower}"]`).attr('content') ||
       ''
     ).trim();
   }
