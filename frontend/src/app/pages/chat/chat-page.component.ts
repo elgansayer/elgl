@@ -11,6 +11,7 @@ import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 
 interface AiChatMessage {
   id: string;
@@ -532,6 +533,7 @@ interface AiChatMessage {
   ],
 })
 export class ChatPageComponent implements OnInit {
+  private readonly unreadCounter = inject(UnreadCounterService);
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
@@ -614,11 +616,20 @@ export class ChatPageComponent implements OnInit {
         );
         for (const msg of messagesFromOthers) {
           void this.chatService.markMessageStatus(msg.id, 'delivered');
-          void this.chatService.markMessageStatus(msg.id, 'read');
+          void this.markMessageRead(msg.id);
         }
       }
     } catch (error) {
       console.error('Failed to load messages', error);
+    }
+  }
+
+  private async markMessageRead(messageId: string): Promise<void> {
+    try {
+      await this.chatService.markMessageStatus(messageId, 'read');
+      this.unreadCounter.decrement('chat');
+    } catch {
+      console.warn('Chat read status could not be updated');
     }
   }
 

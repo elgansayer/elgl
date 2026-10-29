@@ -14,7 +14,7 @@ Issues #1045 and #1046 are implemented by the shared `UnreadCounterService` and 
 
 Both the desktop sidebar and mobile bottom navigation read those counters through `tabCount(tab)`. A visual badge is rendered only when the corresponding count is greater than zero. `badgeText(tab)` caps visual text at `99+`, while the full integer remains in service state for totals, assistive technology, later decrements, and the application badge.
 
-Counter producers remain separate from presentation. The root user-channel subscription and unread bootstrap populate chat/notification state, while feature-specific producers may update the other tab counters through the same service. Navigation components perform no network requests and must not fabricate counts when a producer is unavailable.
+Counter producers remain separate from presentation. Persisted chat messages and notifications emit typed personal unread events through the existing `user_{id}` channel. Moment activity targets Moments, follows and profile activity target Discovery, incoming calls target Live Rooms, chat messages target Chat, and remaining notification activity targets Profile. The root unread bootstrap starts independently of unrelated application startup work. Navigation components perform no network requests and must not fabricate counts when a producer is unavailable.
 
 ## Defensive count handling
 
@@ -60,6 +60,6 @@ Frontend CI should run the normal unit, static-analysis, production-build, trans
 
 ## Rollout and rollback
 
-This is a frontend-only compatibility change. It introduces no schema, API, route, persistence, authentication, or migration changes and is safe to deploy independently of the backend.
+This is a compatible backend and frontend delivery change. It introduces no schema, API, route, authentication, or migration changes. Deploy the backend first or together with the frontend; mixed-version clients safely ignore unknown personal event types.
 
 Rollback is a normal revert of the issue #1046 commits. Existing producer APIs and persisted data require no cleanup or downgrade procedure.

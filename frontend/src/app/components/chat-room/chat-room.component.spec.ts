@@ -13,6 +13,7 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -40,6 +41,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
     lockChat: ReturnType<typeof vi.fn>;
     unlockChat: ReturnType<typeof vi.fn>;
     translateText: ReturnType<typeof vi.fn>;
+    markMessageStatus: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof signal>;
@@ -48,8 +50,10 @@ describe('ChatRoomComponent (threaded replies)', () => {
     appLocked: ReturnType<typeof signal>;
   };
   let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
+  const unreadCounterMock = { decrement: vi.fn() };
 
   beforeEach(async () => {
+    unreadCounterMock.decrement.mockReset();
     mockChatService = {
       getRooms: vi.fn().mockResolvedValue([]),
       getGroupMembers: vi.fn().mockResolvedValue([]),
@@ -59,6 +63,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
+      markMessageStatus: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockCentrifugeService = {
@@ -126,6 +131,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: NetworkStatusService, useValue: mockNetworkStatusService },
         { provide: TextToSpeechService, useValue: mockTextToSpeechService },
         I18nService,
+        { provide: UnreadCounterService, useValue: unreadCounterMock },
       ],
     }).compileComponents();
 
@@ -137,6 +143,25 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('decrements global chat unread only after a persisted read receipt', async () => {
+    const unreadMessage = makeMessage({ id: 'unread-1', delivery_status: 'sent' });
+
+    await (
+      component as unknown as { markMessageRead(message: ChatMessage): Promise<void> }
+    ).markMessageRead(unreadMessage);
+
+    expect(mockChatService.markMessageStatus).toHaveBeenCalledWith('unread-1', 'read');
+    expect(unreadCounterMock.decrement).toHaveBeenCalledWith('chat');
+
+    unreadCounterMock.decrement.mockClear();
+    mockChatService.markMessageStatus.mockRejectedValueOnce(new Error('unavailable'));
+    await (
+      component as unknown as { markMessageRead(message: ChatMessage): Promise<void> }
+    ).markMessageRead(makeMessage({ id: 'unread-2', delivery_status: 'sent' }));
+
+    expect(unreadCounterMock.decrement).not.toHaveBeenCalled();
   });
 
   it('does not expose a correction action without a source message', () => {

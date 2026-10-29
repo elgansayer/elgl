@@ -40,6 +40,7 @@ import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 
 @Component({
   selector: 'app-chat-room',
@@ -85,6 +86,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private readonly unreadCounter = inject(UnreadCounterService);
 
   id = input.required<string>();
 
@@ -419,6 +421,7 @@ export class ChatRoomComponent implements OnDestroy {
     this.pendingReadReceipts.add(message.id);
     try {
       await this.chatService.markMessageStatus(message.id, 'read');
+      this.unreadCounter.decrement('chat');
       this.messages.update((messages) =>
         messages.map((candidate) =>
           candidate.id === message.id ? { ...candidate, delivery_status: 'read' } : candidate,

@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
-import { ChatMessageEvent } from '../events/notification.events';
+import {
+  ChatMessageEvent,
+  PersonalUnreadEvent,
+} from '../events/notification.events';
 
 @Injectable()
 export class ChatNotificationListener {
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly notificationPreferencesService: NotificationPreferencesService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @OnEvent('chat.message')
@@ -16,6 +20,11 @@ export class ChatNotificationListener {
     const recipientId = payload.receiverId;
 
     if (recipientId === payload.senderId) return;
+
+    this.eventEmitter.emit(
+      'unread.created',
+      new PersonalUnreadEvent(recipientId, 'chat'),
+    );
 
     let shouldPush = true;
     try {

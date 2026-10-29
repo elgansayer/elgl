@@ -166,89 +166,97 @@ export class AppComponent implements OnInit {
     const token = this.authService.getAccessToken();
 
     if (user && token) {
-      await this.economyStore.loadInitialData();
+      const unreadBootstrap = this.loadInitialUnreadCounts();
 
-      // Load the blocked user list once the user is available
-      await this.safetyService.loadBlockedUsers();
+      await Promise.allSettled([
+        this.economyStore.loadInitialData(),
+        this.safetyService.loadBlockedUsers(),
+      ]);
 
       // Check for daily login reward
-      const checkIn = await this.economyStore.claimDailyCheckIn();
-      if (checkIn?.claimed) {
-        this.dailyRewardCoins.set(checkIn.coins_rewarded);
-        this.showDailyRewardModal.set(true);
+      try {
+        const checkIn = await this.economyStore.claimDailyCheckIn();
+        if (checkIn?.claimed) {
+          this.dailyRewardCoins.set(checkIn.coins_rewarded);
+          this.showDailyRewardModal.set(true);
+        }
+      } catch {
+        console.warn('Daily check-in was unavailable during application startup');
       }
 
-      await this.centrifugeService.connect();
-      this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
-        if (!isRecord(data)) return;
-        const eventType = typeof data['type'] === 'string' ? data['type'] : null;
+      try {
+        await this.centrifugeService.connect();
+        this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
+          if (!isRecord(data)) return;
+          const eventType = typeof data['type'] === 'string' ? data['type'] : null;
 
-        if (eventType === 'virtual_gift') {
-          const giftName = typeof data['gift_name'] === 'string' ? data['gift_name'] : 'Gift';
-          const giftIcon = typeof data['icon'] === 'string' ? data['icon'] : '🎁';
-          const giftId = typeof data['gift_id'] === 'string' ? data['gift_id'] : 'unknown';
-          const costCoins = typeof data['coin_value'] === 'number' ? data['coin_value'] : 0;
-          const animationType =
-            typeof data['animation_type'] === 'string' ? data['animation_type'] : 'float';
-          const animationUrl =
-            typeof data['animation_url'] === 'string' && data['animation_url'].length > 0
-              ? data['animation_url']
-              : undefined;
-          const senderName =
-            typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner';
+          if (eventType === 'virtual_gift') {
+            const giftName = typeof data['gift_name'] === 'string' ? data['gift_name'] : 'Gift';
+            const giftIcon = typeof data['icon'] === 'string' ? data['icon'] : '🎁';
+            const giftId = typeof data['gift_id'] === 'string' ? data['gift_id'] : 'unknown';
+            const costCoins = typeof data['coin_value'] === 'number' ? data['coin_value'] : 0;
+            const animationType =
+              typeof data['animation_type'] === 'string' ? data['animation_type'] : 'float';
+            const animationUrl =
+              typeof data['animation_url'] === 'string' && data['animation_url'].length > 0
+                ? data['animation_url']
+                : undefined;
+            const senderName =
+              typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner';
 
-          this.economyStore.triggerGiftAnimation({
-            gift: {
-              id: giftId,
-              name: giftName,
-              icon: giftIcon,
-              cost_coins: costCoins,
-              animation_type: animationType,
-              animationUrl,
-            },
-            sender_name: senderName,
-            receiver_name: 'You',
-          });
-        }
+            this.economyStore.triggerGiftAnimation({
+              gift: {
+                id: giftId,
+                name: giftName,
+                icon: giftIcon,
+                cost_coins: costCoins,
+                animation_type: animationType,
+                animationUrl,
+              },
+              sender_name: senderName,
+              receiver_name: 'You',
+            });
+          }
 
-        // Handle incoming call events
-        if (eventType === 'incoming_call') {
-          const callerId = typeof data['callerId'] === 'string' ? data['callerId'] : '';
-          const callerName = typeof data['callerName'] === 'string' ? data['callerName'] : '';
-          const callerAvatarUrl =
-            typeof data['callerAvatarUrl'] === 'string' ? data['callerAvatarUrl'] : undefined;
-          const roomName = typeof data['roomName'] === 'string' ? data['roomName'] : '';
-          const isVideoCall =
-            typeof data['isVideoCall'] === 'boolean' ? data['isVideoCall'] : false;
-          this.incomingCallData.set({
-            callerId,
-            callerName,
-            callerAvatarUrl,
-            roomName,
-            isVideoCall,
-          });
-        }
+          // Handle incoming call events
+          if (eventType === 'incoming_call') {
+            const callerId = typeof data['callerId'] === 'string' ? data['callerId'] : '';
+            const callerName = typeof data['callerName'] === 'string' ? data['callerName'] : '';
+            const callerAvatarUrl =
+              typeof data['callerAvatarUrl'] === 'string' ? data['callerAvatarUrl'] : undefined;
+            const roomName = typeof data['roomName'] === 'string' ? data['roomName'] : '';
+            const isVideoCall =
+              typeof data['isVideoCall'] === 'boolean' ? data['isVideoCall'] : false;
+            this.incomingCallData.set({
+              callerId,
+              callerName,
+              callerAvatarUrl,
+              roomName,
+              isVideoCall,
+            });
+          }
 
-        // Update unread counters for real-time chat messages
-        if (eventType === 'new_message') {
-          this.unreadCounter.incrementChatUnread();
-        }
+          // Update unread counters for real-time chat messages
+          if (eventType === 'unread_count_changed') {
+            const tab = data['tab'];
+            if (
+              tab === 'chat' ||
+              tab === 'moments' ||
+              tab === 'discovery' ||
+              tab === 'audioRooms' ||
+              tab === 'profile'
+            ) {
+              this.unreadCounter.increment(tab);
+            }
+          } else if (eventType === 'incoming_call') {
+            this.unreadCounter.increment('audioRooms');
+          }
+        });
+      } catch {
+        console.warn('Personal realtime updates were unavailable during application startup');
+      }
 
-        // Update unread counters for real-time notifications
-        if (
-          eventType === 'follow' ||
-          eventType === 'like_profile' ||
-          eventType === 'like_moment' ||
-          eventType === 'comment_moment' ||
-          eventType === 'profile_visit' ||
-          eventType === 'system'
-        ) {
-          this.unreadCounter.incrementNotificationUnread();
-        }
-      });
-
-      // Load initial unread counts from backend
-      await this.loadInitialUnreadCounts();
+      await unreadBootstrap;
 
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermissionAndGetToken();
@@ -258,17 +266,17 @@ export class AppComponent implements OnInit {
 
   private async loadInitialUnreadCounts(): Promise<void> {
     try {
-      const [notificationCount] = await Promise.all([this.notificationService.getUnreadCount()]);
+      const notificationCount = await this.notificationService.getUnreadCount();
       this.unreadCounter.setNotificationUnread(notificationCount);
     } catch {
-      // Silently ignore - real-time events will update counts
+      console.warn('Notification unread count could not be loaded');
     }
 
     try {
       const chatCount = await this.chatService.getUnreadCount();
       this.unreadCounter.setChatUnread(chatCount);
     } catch {
-      // Silently ignore - real-time events will update counts
+      console.warn('Chat unread count could not be loaded');
     }
   }
 
@@ -310,6 +318,7 @@ export class AppComponent implements OnInit {
 
   onAcceptCall(callData: IncomingCallData): void {
     this.incomingCallData.set(null);
+    this.unreadCounter.decrement('audioRooms');
 
     if (callData.isVideoCall) {
       void this.router.navigate(['/video-call'], {
@@ -334,6 +343,7 @@ export class AppComponent implements OnInit {
 
   onDeclineCall(callData: IncomingCallData): void {
     this.incomingCallData.set(null);
+    this.unreadCounter.decrement('audioRooms');
     this.centrifugeService.publish(`user_${callData.callerId}`, {
       type: 'call_rejected',
       data: {

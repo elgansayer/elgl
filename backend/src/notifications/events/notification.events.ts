@@ -61,3 +61,13 @@ export class SystemAlertEvent {
     public readonly entityId?: string,
   ) {}
 }
+
+export type PersonalUnreadTab =
+  'chat' | 'moments' | 'discovery' | 'audioRooms' | 'profile';
+
+export class PersonalUnreadEvent {
+  constructor(
+    public readonly recipientId: string,
+    public readonly tab: PersonalUnreadTab,
+  ) {}
+}

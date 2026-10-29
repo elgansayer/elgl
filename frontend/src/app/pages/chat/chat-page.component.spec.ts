@@ -11,6 +11,7 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 
 describe('ChatPageComponent', () => {
   let component: ChatPageComponent;
@@ -43,6 +44,10 @@ describe('ChatPageComponent', () => {
 
   const i18nServiceMock = {
     translate: (key: string) => key,
+  };
+
+  const unreadCounterMock = {
+    decrement: vi.fn(),
   };
 
   const room = {
@@ -81,6 +86,7 @@ describe('ChatPageComponent', () => {
     centrifugeServiceMock.unsubscribe.mockReset();
     aiConversationServiceMock.getScenarios.mockReset();
     aiConversationServiceMock.sendMessage.mockReset();
+    unreadCounterMock.decrement.mockReset();
 
     await TestBed.configureTestingModule({
       imports: [FormsModule, DatePipe, TranslatePipe, ChatPageComponent],
@@ -90,6 +96,7 @@ describe('ChatPageComponent', () => {
         { provide: CentrifugeService, useValue: centrifugeServiceMock },
         { provide: AiConversationService, useValue: aiConversationServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
+        { provide: UnreadCounterService, useValue: unreadCounterMock },
       ],
     }).compileComponents();
 
@@ -313,6 +320,9 @@ describe('ChatPageComponent', () => {
 
       expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'delivered');
       expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'read');
+      await vi.waitFor(() => {
+        expect(unreadCounterMock.decrement).toHaveBeenCalledWith('chat');
+      });
       // Own messages should not be marked
       expect(chatServiceMock.markMessageStatus).not.toHaveBeenCalledWith(
         'msg-own',

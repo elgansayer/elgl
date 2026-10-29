@@ -45,15 +45,14 @@ describe('AppComponent', () => {
 
   const economyStoreMock = {
     loadInitialData: vi.fn(() => Promise.resolve()),
-    claimDailyCheckIn: vi.fn(() =>
-      Promise.resolve({ claimed: true, coins_rewarded: 123 }),
-    ),
+    claimDailyCheckIn: vi.fn(() => Promise.resolve({ claimed: true, coins_rewarded: 123 })),
     triggerGiftAnimation: vi.fn(),
     activeGiftAnimation: vi.fn(() => null),
   };
 
   const centrifugeServiceMock = {
     connect: vi.fn(() => Promise.resolve()),
+    publish: vi.fn(),
     subscribe: vi.fn((_channel: string, cb: (data: unknown) => void) => {
       subscribeCallback = cb;
     }),
@@ -208,6 +207,52 @@ describe('AppComponent', () => {
     ).loadInitialUnreadCounts();
 
     expect(unreadCounterMock.setChatUnread).not.toHaveBeenCalled();
+  });
+
+  it('loads unread counts when unrelated startup providers fail', async () => {
+    economyStoreMock.loadInitialData.mockRejectedValueOnce(new Error('economy unavailable'));
+    safetyServiceMock.loadBlockedUsers.mockRejectedValueOnce(new Error('safety unavailable'));
+    notificationServiceMock.getUnreadCount.mockClear();
+    chatServiceMock.getUnreadCount.mockClear();
+
+    await component.ngOnInit();
+
+    expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
+    expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes personal unread events to every navigation producer', () => {
+    expect(subscribeCallback).toBeDefined();
+
+    for (const tab of ['chat', 'moments', 'discovery', 'audioRooms', 'profile'] as const) {
+      subscribeCallback?.({ type: 'unread_count_changed', tab });
+      expect(unreadCounterMock.increment).toHaveBeenCalledWith(tab);
+    }
+  });
+
+  it('counts an incoming call as live-room activity', () => {
+    subscribeCallback?.({
+      type: 'incoming_call',
+      callerId: 'caller-1',
+      callerName: 'Caller',
+      roomName: 'room-1',
+      isVideoCall: false,
+    });
+
+    expect(unreadCounterMock.increment).toHaveBeenCalledWith('audioRooms');
+  });
+
+  it('clears one live-room activity item when an incoming call is handled', () => {
+    const call = {
+      callerId: 'caller-1',
+      callerName: 'Caller',
+      roomName: 'room-1',
+      isVideoCall: false,
+    };
+
+    component.onDeclineCall(call);
+
+    expect(unreadCounterMock.decrement).toHaveBeenCalledWith('audioRooms');
   });
 
   it('should trigger gift animation when receiving a virtual_gift payload', () => {

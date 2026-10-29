@@ -2,11 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from './notifications.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  const emit = vi.fn();
 
   beforeEach(async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -30,6 +32,7 @@ describe('NotificationsService', () => {
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
+    emit.mockClear();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +49,7 @@ describe('NotificationsService', () => {
             getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
+        { provide: EventEmitter2, useValue: { emit } },
       ],
     }).compile();
 
@@ -137,6 +141,47 @@ describe('NotificationsService', () => {
           is_read: false,
         }),
       );
+      expect(emit).toHaveBeenCalledWith(
+        'unread.created',
+        expect.objectContaining({
+          recipientId: 'recipient-1',
+          tab: 'discovery',
+        }),
+      );
+    });
+
+    it.each([
+      ['like_moment', 'moments'],
+      ['comment_moment', 'moments'],
+      ['profile_visit', 'discovery'],
+      ['system', 'profile'],
+    ] as const)(
+      'routes %s unread activity to the %s tab',
+      async (type, tab) => {
+        await service.createNotification(
+          'recipient-1',
+          'actor-1',
+          type,
+          undefined,
+          undefined,
+          false,
+        );
+
+        expect(emit).toHaveBeenCalledWith(
+          'unread.created',
+          expect.objectContaining({ recipientId: 'recipient-1', tab }),
+        );
+      },
+    );
+
+    it('does not emit notification unread activity when persistence fails', async () => {
+      mockQueryBuilder.insert.mockResolvedValueOnce({
+        error: { message: 'unavailable' },
+      });
+
+      await service.createNotification('recipient-1', 'actor-1', 'follow');
+
+      expect(emit).not.toHaveBeenCalled();
     });
 
     it('should ignore when recipient is the same as actor', async () => {

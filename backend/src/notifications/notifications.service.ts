@@ -1,8 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from '../notification-preferences/dto/update-notification-preferences.dto';
 import { NotificationDto } from './dto/notification.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  PersonalUnreadEvent,
+  PersonalUnreadTab,
+} from './events/notification.events';
 
 type FirebaseAdmin = any;
 
@@ -30,9 +35,12 @@ type UpdatePreferencesInput = Partial<
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getPreferences(userId: string): Promise<LegacyNotificationPreferences> {
@@ -277,7 +285,7 @@ export class NotificationsService {
 
     try {
       const supabase = this.supabaseService.getClient();
-      await supabase.from('notifications').insert({
+      const { error } = await supabase.from('notifications').insert({
         recipient_id: recipientId,
         actor_id: actorId,
         type,
@@ -285,6 +293,17 @@ export class NotificationsService {
         message,
         is_read: false,
       });
+      if (error) {
+        this.loggerNotificationFailure(type);
+        return;
+      }
+
+      if (type !== 'mention_chat') {
+        this.eventEmitter.emit(
+          'unread.created',
+          new PersonalUnreadEvent(recipientId, this.tabForNotification(type)),
+        );
+      }
 
       // Dispatch push alert as well
       const titleMap: Record<string, string> = {
@@ -344,6 +363,36 @@ export class NotificationsService {
     } catch (err) {
       console.error(`Failed to create notification for ${recipientId}:`, err);
     }
+  }
+
+  private tabForNotification(
+    type:
+      | 'follow'
+      | 'like_profile'
+      | 'like_moment'
+      | 'comment_moment'
+      | 'reply_comment'
+      | 'profile_visit'
+      | 'mention_comment'
+      | 'system',
+  ): PersonalUnreadTab {
+    switch (type) {
+      case 'like_moment':
+      case 'comment_moment':
+      case 'reply_comment':
+      case 'mention_comment':
+        return 'moments';
+      case 'follow':
+      case 'like_profile':
+      case 'profile_visit':
+        return 'discovery';
+      default:
+        return 'profile';
+    }
+  }
+
+  private loggerNotificationFailure(type: string): void {
+    this.logger.warn({ type }, 'Notification persistence failed');
   }
 
   async getNotifications(
