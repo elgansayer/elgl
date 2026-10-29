@@ -129,7 +129,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
-    return this.messages().filter((m) => !blocked.includes(m.sender_id));
+    return this.messages().filter((m) => (m.sender_id ? !blocked.includes(m.sender_id) : true));
   });
 
   readonly replyingTo = signal<ChatMessage | null>(null);

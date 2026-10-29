@@ -42,6 +42,7 @@ describe('ChatService', () => {
   let centrifugoService: any;
   let chatLlmService: any;
   let eventEmitter: any;
+  let safetyService: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -51,6 +52,7 @@ describe('ChatService', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       neq: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
@@ -153,6 +155,7 @@ describe('ChatService', () => {
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
     chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
     eventEmitter = module.get<EventEmitter2>(EventEmitter2) as any;
+    safetyService = module.get<SafetyService>(SafetyService) as any;
   });
 
   afterEach(() => {
@@ -924,6 +927,56 @@ describe('ChatService', () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({ id: 'mock-msg-1', room_id: 'room-1' });
       expect(result[1]).toMatchObject({ id: 'mock-msg-2', room_id: 'room-1' });
+    });
+
+    it('applies query.or filter to preserve system messages while excluding blocked users', async () => {
+      safetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
+        'user-blocked-1',
+        'user-blocked-2',
+      ]);
+      mockQueryBuilder.or.mockResolvedValue({
+        data: [{ id: 'msg-1', text_content: 'Hi' }],
+        error: null,
+      });
+
+      await service.getMessages('room-1', undefined, 'current-user-1');
+
+      expect(mockQueryBuilder.or).toHaveBeenCalledWith(
+        'sender_id.is.null,sender_id.not.in.(user-blocked-1,user-blocked-2)',
+      );
+    });
+
+    it('sanitises blockedIds to prevent PostgREST filter injection', async () => {
+      safetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
+        'user-safe-1',
+        'malicious-id),room_id.neq.(other',
+        'bad;injection',
+      ]);
+      mockQueryBuilder.or.mockResolvedValue({
+        data: [{ id: 'msg-1', text_content: 'Hi' }],
+        error: null,
+      });
+
+      await service.getMessages('room-1', undefined, 'current-user-1');
+
+      expect(mockQueryBuilder.or).toHaveBeenCalledWith(
+        'sender_id.is.null,sender_id.not.in.(user-safe-1)',
+      );
+    });
+
+    it('does not invoke query.or if all blockedIds are invalid injection strings', async () => {
+      safetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
+        'bad),filter',
+        'injection.payload',
+      ]);
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: [{ id: 'msg-1', text_content: 'Hi' }],
+        error: null,
+      });
+
+      await service.getMessages('room-1', undefined, 'current-user-1');
+
+      expect(mockQueryBuilder.or).not.toHaveBeenCalled();
     });
   });
 
