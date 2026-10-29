@@ -14,48 +14,31 @@
   </header>
 
   <!-- Interactive Island Map -->
-  <section
-    class="island-map"
-    [attr.aria-label]="'languageIslands.mapAriaLabel' | t"
-    role="region"
-  >
-    <button
-      hlmBtn
-      type="button"
-      class="map-pin"
-      style="inset-block-start: 30%; inset-inline-start: 20%"
-      (click)="selectLanguage('ja')"
-      [class.map-pin-active]="selectedLanguage() === 'ja'"
-      aria-label="Japanese Island: 128 practising now"
-    >
-      🇯🇵 128
-    </button>
-    <button
-      hlmBtn
-      type="button"
-      class="map-pin"
-      style="inset-block-start: 48%; inset-inline-start: 62%"
-      (click)="selectLanguage('es')"
-      [class.map-pin-active]="selectedLanguage() === 'es'"
-      aria-label="Spanish Island: 204 practising now"
-    >
-      🇪🇸 204
-    </button>
-    <button
-      hlmBtn
-      type="button"
-      class="map-pin"
-      style="inset-block-start: 74%; inset-inline-start: 42%"
-      (click)="selectLanguage('ar')"
-      [class.map-pin-active]="selectedLanguage() === 'ar'"
-      aria-label="Arabic Island: 57 practising now"
-    >
-      🇸🇦 57
-    </button>
+  <section class="island-map" [attr.aria-label]="'languageIslands.mapAriaLabel' | t" role="region">
+    @for (island of islands(); track island.id; let index = $index) {
+      <button
+        hlmBtn
+        type="button"
+        class="map-pin"
+        [style.inset-block-start]="getPinPosition(index)"
+        [style.inset-inline-start]="getPinPosition(index + 2)"
+        (click)="selectLanguage(island.language_pair.split('-')[0] ?? 'all')"
+        [class.map-pin-active]="selectedLanguage() === (island.language_pair.split('-')[0] ?? '')"
+        [attr.aria-label]="
+          'languageIslands.mapPinLabel' | t: { name: island.name, count: island.member_count ?? 0 }
+        "
+      >
+        {{ getFlag(island.language_pair) }} {{ island.member_count ?? 0 }}
+      </button>
+    }
   </section>
 
   <!-- Filter Pills -->
-  <div class="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Language filters">
+  <div
+    class="flex flex-wrap items-center gap-2"
+    role="toolbar"
+    [attr.aria-label]="'languageIslands.filterLabel' | t"
+  >
     <button
       hlmBtn
       type="button"
@@ -70,48 +53,22 @@
     >
       {{ 'languageIslands.filterAll' | t }}
     </button>
-    <button
-      hlmBtn
-      type="button"
-      (click)="selectLanguage('ja')"
-      class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
-      [class.bg-primary]="selectedLanguage() === 'ja'"
-      [class.text-on-fill]="selectedLanguage() === 'ja'"
-      [class.bg-surface-200]="selectedLanguage() !== 'ja'"
-      [class.text-text-secondary]="selectedLanguage() !== 'ja'"
-      [class.border]="selectedLanguage() !== 'ja'"
-      [class.border-surface-100]="selectedLanguage() !== 'ja'"
-    >
-      🇯🇵 Japanese
-    </button>
-    <button
-      hlmBtn
-      type="button"
-      (click)="selectLanguage('es')"
-      class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
-      [class.bg-primary]="selectedLanguage() === 'es'"
-      [class.text-on-fill]="selectedLanguage() === 'es'"
-      [class.bg-surface-200]="selectedLanguage() !== 'es'"
-      [class.text-text-secondary]="selectedLanguage() !== 'es'"
-      [class.border]="selectedLanguage() !== 'es'"
-      [class.border-surface-100]="selectedLanguage() !== 'es'"
-    >
-      🇪🇸 Spanish
-    </button>
-    <button
-      hlmBtn
-      type="button"
-      (click)="selectLanguage('ar')"
-      class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
-      [class.bg-primary]="selectedLanguage() === 'ar'"
-      [class.text-on-fill]="selectedLanguage() === 'ar'"
-      [class.bg-surface-200]="selectedLanguage() !== 'ar'"
-      [class.text-text-secondary]="selectedLanguage() !== 'ar'"
-      [class.border]="selectedLanguage() !== 'ar'"
-      [class.border-surface-100]="selectedLanguage() !== 'ar'"
-    >
-      🇸🇦 Arabic
-    </button>
+    @for (language of languageFilters(); track language.code) {
+      <button
+        hlmBtn
+        type="button"
+        (click)="selectLanguage(language.code)"
+        class="rounded-full px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary"
+        [class.bg-primary]="selectedLanguage() === language.code"
+        [class.text-on-fill]="selectedLanguage() === language.code"
+        [class.bg-surface-200]="selectedLanguage() !== language.code"
+        [class.text-text-secondary]="selectedLanguage() !== language.code"
+        [class.border]="selectedLanguage() !== language.code"
+        [class.border-surface-100]="selectedLanguage() !== language.code"
+      >
+        {{ getFlag(language.code) }} {{ language.label }}
+      </button>
+    }
   </div>
 
   <!-- Status Notification -->
@@ -142,10 +99,7 @@
 
   <!-- Error State -->
   @if (islandsResource.error()) {
-    <div
-      class="rounded-card border border-danger/30 bg-danger/10 p-4 text-center"
-      role="alert"
-    >
+    <div class="rounded-card border border-danger/30 bg-danger/10 p-4 text-center" role="alert">
       <p class="text-sm font-bold text-danger">
         {{ 'languageIslands.error' | t }}
       </p>
@@ -214,7 +168,10 @@
           </div>
         </article>
       } @empty {
-        <div class="rounded-card bg-surface-200 p-8 text-center text-sm text-text-muted" role="status">
+        <div
+          class="rounded-card bg-surface-200 p-8 text-center text-sm text-text-muted"
+          role="status"
+        >
           {{ 'languageIslands.empty' | t }}
         </div>
       }

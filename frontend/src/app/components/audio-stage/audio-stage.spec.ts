@@ -115,7 +115,9 @@ describe('AudioStage', () => {
     });
 
     const element = fixture.nativeElement as HTMLElement;
-    const openSeatBtn = element.querySelector('button[disabled="false"], button:not([disabled])') as HTMLButtonElement | null;
+    const openSeatBtn = element.querySelector(
+      'button[disabled="false"], button:not([disabled])',
+    ) as HTMLButtonElement | null;
     expect(openSeatBtn).toBeTruthy();
     openSeatBtn?.click();
 
@@ -180,5 +182,15 @@ describe('AudioStage', () => {
 
     component.onToggleMute();
     expect(muteToggled).toBe(true);
+  });
+
+  it('does not offer the host a leave-stage action', async () => {
+    componentRef.setInput('participants', mockParticipants);
+    componentRef.setInput('currentUserId', 'user-host');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('[aria-label="audioStage.leaveStage"]')).toBeNull();
   });
 });

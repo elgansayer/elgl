@@ -1,10 +1,8 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
-import {
-  LanguageIsland,
-  LanguageIslandsService,
-} from '../../services/language-islands.service';
+import { I18nService } from '../../services/i18n.service';
+import { LanguageIsland, LanguageIslandsService } from '../../services/language-islands.service';
 
 @Component({
   selector: 'app-language-islands',
@@ -14,6 +12,7 @@ import {
 })
 export class LanguageIslandsComponent {
   private readonly languageIslandsService = inject(LanguageIslandsService);
+  private readonly i18n = inject(I18nService);
 
   readonly selectedLanguage = signal<string>('all');
   readonly enteredIslandId = signal<string | null>(null);
@@ -38,6 +37,18 @@ export class LanguageIslandsComponent {
     return all.filter((island) =>
       island.language_pair.toLowerCase().startsWith(filter.toLowerCase()),
     );
+  });
+
+  readonly languageFilters = computed(() => {
+    const seen = new Set<string>();
+    return this.islands().flatMap((island) => {
+      const code = this.getPrimaryLanguage(island.language_pair);
+      if (!code || seen.has(code)) {
+        return [];
+      }
+      seen.add(code);
+      return [{ code, label: this.getLanguageLabel(code) }];
+    });
   });
 
   selectLanguage(lang: string): void {
@@ -75,7 +86,7 @@ export class LanguageIslandsComponent {
   }
 
   getFlag(pair: string): string {
-    const primary = pair.split('-')[0]?.toLowerCase();
+    const primary = this.getPrimaryLanguage(pair);
     switch (primary) {
       case 'ja':
         return '🇯🇵';
@@ -100,5 +111,21 @@ export class LanguageIslandsComponent {
       default:
         return '🌐';
     }
+  }
+
+  getPinPosition(index: number): string {
+    const positions = ['18%', '42%', '66%', '30%', '54%', '78%'];
+    return positions[index % positions.length] ?? '50%';
+  }
+
+  getLanguageLabel(code: string): string {
+    const names = new Intl.DisplayNames([this.i18n.currentLang()], {
+      type: 'language',
+    });
+    return names.of(code) ?? code.toUpperCase();
+  }
+
+  private getPrimaryLanguage(pair: string): string {
+    return pair.split('-')[0]?.toLowerCase() ?? '';
   }
 }

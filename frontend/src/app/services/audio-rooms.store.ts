@@ -169,16 +169,20 @@ export class AudioRoomsStore {
 
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
-  private onTrackSubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
-  private onTrackUnsubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
+  private onTrackSubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
+  private onTrackUnsubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
@@ -744,22 +748,18 @@ export class AudioRoomsStore {
     }
   }
 
-  async unmuteSpeaker(targetUserId: string): Promise<void> {
-    const room = this.currentRoom();
-    if (!room) return;
+  async setLocalMicrophoneMuted(isMuted: boolean): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
     try {
-      await firstValueFrom(
-        this.http.post<AudioRoomRecord>(
-          `${this.baseUrl}/unmute-speaker`,
-          {
-            room_id: room.id,
-            target_user_id: targetUserId,
-          },
-          { headers: this.getHeaders() },
+      await this.livekitRoom?.localParticipant.setMicrophoneEnabled(!isMuted);
+      this.stageParticipants.update((participants) =>
+        participants.map((participant) =>
+          participant.user_id === currentUserId ? { ...participant, isMuted } : participant,
         ),
       );
     } catch (e) {
-      console.error('Unmute speaker error:', e);
+      console.error('Local microphone update error:', e);
     }
   }
 

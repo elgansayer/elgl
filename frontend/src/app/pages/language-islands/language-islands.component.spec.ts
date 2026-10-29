@@ -89,6 +89,21 @@ describe('LanguageIslandsComponent', () => {
     expect(element.textContent).toContain('Spanish Island');
     expect(element.textContent).toContain('128');
     expect(element.textContent).toContain('204');
+    expect(element.querySelectorAll('.map-pin')).toHaveLength(2);
+    expect(element.querySelector('.map-pin')?.getAttribute('aria-label')).toBe(
+      'languageIslands.mapPinLabel:128',
+    );
+  });
+
+  it('derives map pins and language filters from loaded islands', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.languageFilters()).toEqual([
+      { code: 'ja', label: 'Japanese' },
+      { code: 'es', label: 'Spanish' },
+    ]);
+    expect(fixture.nativeElement.textContent).not.toContain('Arabic');
   });
 
   it('filters islands by language', async () => {

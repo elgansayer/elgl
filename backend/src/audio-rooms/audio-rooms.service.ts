@@ -980,7 +980,7 @@ export class AudioRoomsService implements OnModuleInit {
   }
 
   async demoteSpeaker(
-    hostId: string,
+    actorId: string,
     dto: DemoteSpeakerDto,
   ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
@@ -992,7 +992,8 @@ export class AudioRoomsService implements OnModuleInit {
     if (!response.data) throw new NotFoundException('Room not found');
     const room = response.data as AudioRoomRow;
 
-    if (room.host_id !== hostId) {
+    const isSelfDemotion = actorId === dto.target_user_id;
+    if (room.host_id !== actorId && !isSelfDemotion) {
       throw new ForbiddenException('Only the host can demote a stage speaker.');
     }
 
@@ -1058,7 +1059,7 @@ export class AudioRoomsService implements OnModuleInit {
   }
 
   async dismissRaisedHand(
-    hostId: string,
+    actorId: string,
     dto: DismissRaisedHandDto,
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
@@ -1069,7 +1070,8 @@ export class AudioRoomsService implements OnModuleInit {
       .single();
     if (!response.data) throw new NotFoundException('Room not found');
     const room = response.data as AudioRoomRow;
-    if (room.host_id !== hostId)
+    const isOwnHand = actorId === dto.target_user_id;
+    if (room.host_id !== actorId && !isOwnHand)
       throw new ForbiddenException('Only the host can dismiss raised hands.');
     await supabase
       .from('audio_rooms')

@@ -693,6 +693,8 @@ export class I18nService {
     'languageIslands.retry': 'Retry',
     'languageIslands.empty': 'No language islands available right now.',
     'languageIslands.mapAriaLabel': 'Language islands interactive map',
+    'languageIslands.mapPinLabel': '{{name}}: {{count}} practising now',
+    'languageIslands.filterLabel': 'Language filters',
     'audioRoom.raisedHandsTitle': '✋ Raised hands',
     'audioRoom.approveSpeakerModalTitle': '✋ Speaker requests',
     'audioRoom.approveSpeakerModalDesc':

@@ -8,7 +8,9 @@
       <h3 class="text-sm font-bold text-text-primary">
         {{ 'audioStage.title' | t }}
       </h3>
-      <span class="rounded-full bg-surface-300 px-2 py-0.5 text-xs font-semibold text-text-secondary">
+      <span
+        class="rounded-full bg-surface-300 px-2 py-0.5 text-xs font-semibold text-text-secondary"
+      >
         {{ 'audioStage.speakerCount' | t: { count: participants().length } }}
       </span>
     </div>
@@ -85,7 +87,10 @@
           <app-audio-equalizer [isActive]="true" customClass="mb-1"></app-audio-equalizer>
         }
 
-        <p class="w-full truncate text-xs font-bold text-text-primary" [title]="participant.display_name">
+        <p
+          class="w-full truncate text-xs font-bold text-text-primary"
+          [title]="participant.display_name"
+        >
           {{ participant.display_name }}
           @if (participant.isHost) {
             <span class="text-text-muted"> · {{ 'audioStage.host' | t }}</span>
@@ -127,7 +132,9 @@
         (click)="onOpenSeatClick()"
         [disabled]="isCurrentUserOnStage() || !canRaiseHand()"
         class="flex flex-col items-center justify-center rounded-card border border-dashed border-surface-600 bg-surface-300/60 p-3 text-center transition-all hover:bg-surface-400 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
-        [attr.aria-label]="isHandRaised() ? ('audioStage.handRaised' | t) : ('audioStage.openSeat' | t)"
+        [attr.aria-label]="
+          isHandRaised() ? ('audioStage.handRaised' | t) : ('audioStage.openSeat' | t)
+        "
       >
         <div
           class="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-surface-700 text-lg"
@@ -153,7 +160,9 @@
   }
 
   <!-- Stage Control Toolbar -->
-  <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-surface-100 pt-3">
+  <div
+    class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-surface-100 pt-3"
+  >
     @if (isCurrentUserOnStage()) {
       <div class="flex items-center gap-2">
         <button
@@ -161,19 +170,23 @@
           type="button"
           (click)="onToggleMute()"
           class="rounded-app bg-surface-300 px-3 py-1.5 text-xs font-bold text-text-primary hover:bg-surface-400 focus-visible:outline-2 focus-visible:outline-primary"
-          [attr.aria-label]="(currentUserParticipant()?.isMuted ? 'audioStage.unmute' : 'audioStage.mute') | t"
+          [attr.aria-label]="
+            (currentUserParticipant()?.isMuted ? 'audioStage.unmute' : 'audioStage.mute') | t
+          "
         >
           {{ (currentUserParticipant()?.isMuted ? 'audioStage.unmute' : 'audioStage.mute') | t }}
         </button>
-        <button
-          hlmBtn
-          type="button"
-          (click)="onDemoteParticipant(currentUserId()!)"
-          class="rounded-app bg-surface-300 px-3 py-1.5 text-xs font-bold text-danger hover:bg-danger/20 focus-visible:outline-2 focus-visible:outline-primary"
-          [attr.aria-label]="'audioStage.leaveStage' | t"
-        >
-          {{ 'audioStage.leaveStage' | t }}
-        </button>
+        @if (!currentUserParticipant()?.isHost) {
+          <button
+            hlmBtn
+            type="button"
+            (click)="onDemoteParticipant(currentUserId()!)"
+            class="rounded-app bg-surface-300 px-3 py-1.5 text-xs font-bold text-danger hover:bg-danger/20 focus-visible:outline-2 focus-visible:outline-primary"
+            [attr.aria-label]="'audioStage.leaveStage' | t"
+          >
+            {{ 'audioStage.leaveStage' | t }}
+          </button>
+        }
       </div>
     } @else if (canRaiseHand()) {
       <div class="flex items-center gap-2">

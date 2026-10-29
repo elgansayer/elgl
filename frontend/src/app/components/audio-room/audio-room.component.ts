@@ -230,11 +230,7 @@ export class AudioRoomComponent implements OnInit {
     const currentUserId = this.authService.currentUser()?.id;
     if (!currentUserId) return;
     const participant = this.stageParticipants().find((p) => p.user_id === currentUserId);
-    if (participant?.isMuted) {
-      await this.store.unmuteSpeaker(currentUserId);
-    } else {
-      await this.store.muteSpeaker(currentUserId);
-    }
+    await this.store.setLocalMicrophoneMuted(!participant?.isMuted);
   }
 
   async approve(targetUserId: string): Promise<void> {

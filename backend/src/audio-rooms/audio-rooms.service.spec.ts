@@ -755,6 +755,71 @@ describe('AudioRoomsService', () => {
       });
       expect(result.id).toBe('room-1');
     });
+
+    it('should allow a non-host speaker to leave the stage', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await service.demoteSpeaker('user-2', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        speakers: ['host-1'],
+      });
+    });
+  });
+
+  describe('dismissRaisedHand', () => {
+    it('should allow a listener to lower their own hand', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        raised_hands: ['user-2', 'user-3'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await service.dismissRaisedHand('user-2', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        raised_hands: ['user-3'],
+      });
+    });
+
+    it('should reject a listener dismissing another listener hand', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        raised_hands: ['user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.dismissRaisedHand('user-3', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can dismiss raised hands.'),
+      );
+    });
   });
 
   describe('muteSpeaker', () => {

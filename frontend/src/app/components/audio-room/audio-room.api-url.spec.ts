@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { AudioRoomsStore } from '../../services/audio-rooms.store';
+import { AudioRoomsStore, StageParticipant } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
@@ -17,7 +17,7 @@ describe('AudioRoomComponent API URLs', () => {
   const store = {
     currentRoom: signal({ id: 'room-123' }),
     stageInfo: signal(null),
-    stageParticipants: signal([]),
+    stageParticipants: signal<StageParticipant[]>([]),
     audienceCount: signal(0),
     selectedLanguageGroup: signal<string | null>(null),
     roomsByLanguage: signal([]),
@@ -25,6 +25,7 @@ describe('AudioRoomComponent API URLs', () => {
     loadActiveRooms: vi.fn().mockResolvedValue(undefined),
     loadRoomsByLanguage: vi.fn().mockResolvedValue(undefined),
     loadPrivateRooms: vi.fn().mockResolvedValue(undefined),
+    setLocalMicrophoneMuted: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(() => {
@@ -34,7 +35,10 @@ describe('AudioRoomComponent API URLs', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AudioRoomsStore, useValue: store },
-        { provide: AuthService, useValue: {} },
+        {
+          provide: AuthService,
+          useValue: { currentUser: signal({ id: 'user-1' }) },
+        },
         { provide: ConfirmService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
         { provide: I18nService, useValue: { translate: (key: string) => key } },
         { provide: QuickPollService, useValue: {} },
@@ -72,5 +76,23 @@ describe('AudioRoomComponent API URLs', () => {
     request.flush({ emojiId: 'heart', animationUrl: 'https://example.test/heart.json' });
 
     await reactionPromise;
+  });
+
+  it('toggles the current participant microphone locally', async () => {
+    store.stageParticipants.set([
+      {
+        user_id: 'user-1',
+        display_name: 'Speaker',
+        avatar_url: null,
+        isSpeaking: false,
+        isMuted: false,
+        isHost: false,
+        isCoHost: false,
+      },
+    ]);
+
+    await component.toggleMute();
+
+    expect(store.setLocalMicrophoneMuted).toHaveBeenCalledWith(true);
   });
 });
