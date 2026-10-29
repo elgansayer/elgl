@@ -6,6 +6,10 @@ import {
   Histogram,
   Gauge,
 } from 'prom-client';
+import type {
+  LinkPreviewFailureReason,
+  LinkPreviewOutcome,
+} from '../link-preview/link-preview-diagnostics';
 
 @Injectable()
 export class MetricsService {
@@ -95,6 +99,11 @@ export class MetricsService {
   readonly adminPendingReports: Gauge<string>;
   readonly adminActiveBlocks: Gauge<string>;
   readonly adminLoginHistoryRequests: Counter<string>;
+
+  // Link Preview (OpenGraph scraper) metrics
+  readonly linkPreviewRequests: Counter<string>;
+  readonly linkPreviewFailures: Counter<string>;
+  readonly linkPreviewFetchDuration: Histogram<string>;
 
   constructor() {
     this.register = new Registry();
@@ -600,6 +609,30 @@ export class MetricsService {
       labelNames: ['result'],
       registers: [this.register],
     });
+
+    // --- Link Preview (OpenGraph scraper) Metrics ---
+
+    this.linkPreviewRequests = new Counter({
+      name: 'hellotalk_link_preview_requests_total',
+      help: 'Total link preview requests by outcome (cache_hit, fetched, empty, rejected, failed)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.linkPreviewFailures = new Counter({
+      name: 'hellotalk_link_preview_failures_total',
+      help: 'Total rejected or failed link preview requests by classified reason',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
+    this.linkPreviewFetchDuration = new Histogram({
+      name: 'hellotalk_link_preview_fetch_duration_seconds',
+      help: 'Duration of one origin scrape (fetch and parse) by outcome',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
+    });
   }
 
   recordHttpRequest(
@@ -962,6 +995,31 @@ export class MetricsService {
 
   recordAdminLoginHistoryRequest(result: 'success' | 'failure'): void {
     this.adminLoginHistoryRequests.inc({ result });
+  }
+
+  // --- Link Preview (OpenGraph scraper) metric helpers ---
+
+  /**
+   * Records one link-preview request. Labels are closed enums rather than URLs
+   * or hostnames so cardinality stays bounded and no private link is exported.
+   */
+  recordLinkPreview(
+    outcome: LinkPreviewOutcome,
+    details: {
+      reason?: LinkPreviewFailureReason;
+      durationSeconds?: number;
+    } = {},
+  ): void {
+    this.linkPreviewRequests.inc({ outcome });
+    if (details.reason) {
+      this.linkPreviewFailures.inc({ reason: details.reason });
+    }
+    if (details.durationSeconds !== undefined) {
+      this.linkPreviewFetchDuration.observe(
+        { outcome },
+        details.durationSeconds,
+      );
+    }
   }
 
   setModerationQueueSize(count: number): void {
