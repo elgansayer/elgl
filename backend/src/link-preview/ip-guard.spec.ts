@@ -32,6 +32,32 @@ describe('isPrivateIp', () => {
     expect(isPrivateIp('172.32.0.1')).toBe(false);
     expect(isPrivateIp('192.169.0.1')).toBe(false);
     expect(isPrivateIp('100.63.0.1')).toBe(false);
+    expect(isPrivateIp('223.255.255.255')).toBe(false);
+  });
+
+  it('flags multicast, reserved and broadcast IPv4 addresses', () => {
+    expect(isPrivateIp('224.0.0.1')).toBe(true);
+    expect(isPrivateIp('239.255.255.250')).toBe(true);
+    expect(isPrivateIp('240.0.0.1')).toBe(true);
+    expect(isPrivateIp('255.255.255.254')).toBe(true);
+    expect(isPrivateIp('255.255.255.255')).toBe(true);
+  });
+
+  it('flags the IPv4 documentation (TEST-NET) ranges', () => {
+    expect(isPrivateIp('192.0.2.1')).toBe(true);
+    expect(isPrivateIp('198.51.100.7')).toBe(true);
+    expect(isPrivateIp('203.0.113.200')).toBe(true);
+  });
+
+  it('does not over-block public space next to the IETF 192.0.0.0/24 block', () => {
+    // WordPress.com (192.0.64.0/18) and iana.org (192.0.43.0/24) live in
+    // 192.0.0.0/16 and must remain previewable.
+    expect(isPrivateIp('192.0.78.9')).toBe(false);
+    expect(isPrivateIp('192.0.77.32')).toBe(false);
+    expect(isPrivateIp('192.0.43.8')).toBe(false);
+    expect(isPrivateIp('192.0.1.1')).toBe(false);
+    expect(isPrivateIp('198.51.101.1')).toBe(false);
+    expect(isPrivateIp('203.0.114.1')).toBe(false);
   });
 
   it('flags private and special IPv6 addresses', () => {
@@ -84,6 +110,54 @@ describe('isPrivateIp', () => {
   it('allows IPv4-mapped IPv6 addresses when the mapped address is public', () => {
     expect(isPrivateIp('::ffff:8.8.8.8')).toBe(false);
     expect(isPrivateIp('::ffff:808:808')).toBe(false);
+  });
+
+  it('flags IPv6 multicast addresses', () => {
+    expect(isPrivateIp('ff02::1')).toBe(true);
+    expect(isPrivateIp('ff00::')).toBe(true);
+    expect(isPrivateIp('ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff')).toBe(true);
+  });
+
+  it('flags NAT64 addresses that translate to a private IPv4 destination', () => {
+    expect(isPrivateIp('64:ff9b::127.0.0.1')).toBe(true);
+    expect(isPrivateIp('64:ff9b::7f00:1')).toBe(true);
+    expect(isPrivateIp('64:ff9b::a9fe:a9fe')).toBe(true);
+    expect(isPrivateIp('64:ff9b::10.0.0.5')).toBe(true);
+    expect(isPrivateIp('64:ff9b:0:0:0:0:c0a8:101')).toBe(true);
+  });
+
+  it('allows NAT64 addresses that translate to a public IPv4 destination', () => {
+    expect(isPrivateIp('64:ff9b::8.8.8.8')).toBe(false);
+    expect(isPrivateIp('64:ff9b::808:808')).toBe(false);
+  });
+
+  it('flags local-use NAT64 prefixes outright', () => {
+    expect(isPrivateIp('64:ff9b:1::1')).toBe(true);
+    expect(isPrivateIp('64:ff9b:1:2:3:4:5:6')).toBe(true);
+  });
+
+  it('flags 6to4 addresses that embed a private IPv4 address', () => {
+    expect(isPrivateIp('2002:7f00:1::')).toBe(true);
+    expect(isPrivateIp('2002:a9fe:a9fe::1')).toBe(true);
+    expect(isPrivateIp('2002:c0a8:101::1')).toBe(true);
+  });
+
+  it('allows 6to4 addresses that embed a public IPv4 address', () => {
+    expect(isPrivateIp('2002:808:808::1')).toBe(false);
+  });
+
+  it('flags IPv4-translated (SIIT) addresses by their embedded IPv4 address', () => {
+    expect(isPrivateIp('::ffff:0:7f00:1')).toBe(true);
+    expect(isPrivateIp('::ffff:0:10.0.0.1')).toBe(true);
+    expect(isPrivateIp('::ffff:0:808:808')).toBe(false);
+  });
+
+  it('flags Teredo and discard-only IPv6 prefixes', () => {
+    expect(isPrivateIp('2001:0:4136:e378:8000:63bf:3fff:fdd2')).toBe(true);
+    expect(isPrivateIp('2001::1')).toBe(true);
+    expect(isPrivateIp('100::1')).toBe(true);
+    // Only 2000::/3 is global unicast, so other non-allocated prefixes are refused.
+    expect(isPrivateIp('100:0:0:1::1')).toBe(true);
   });
 
   it('returns false for values that are not IP addresses', () => {
