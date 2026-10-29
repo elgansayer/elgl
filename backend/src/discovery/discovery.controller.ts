@@ -305,6 +305,10 @@ export class DiscoveryController {
     status: 401,
     description: 'Unauthorized - missing or invalid JWT.',
   })
+  @ApiResponse({
+    status: 503,
+    description: 'Language pair discovery is temporarily unavailable.',
+  })
   async findByLanguagePair(
     @CurrentUser() user: User | null,
     @Query() query: LanguagePairQueryDto,

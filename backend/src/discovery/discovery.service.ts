@@ -11,7 +11,6 @@ import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
-import { MOCK_USERS } from '../mock-data';
 import {
   DiscoveryDegradationService,
   DegradationMarker,
@@ -695,47 +694,13 @@ export class DiscoveryService {
           {
             error: response.error?.message ?? 'PostGIS returned no data',
           },
-          'PostGIS partner search failed; using bounded non-spatial fallback',
+          'PostGIS partner search failed; radius filter unavailable',
         );
-        const fallbackRes = await queryBuilder.limit(50);
-        if (fallbackRes.error || !fallbackRes.data) {
-          throw new ServiceUnavailableException(
-            'Partner discovery is temporarily unavailable',
-          );
-        }
-        if (fallbackRes.data.length === 0) {
-          return enrich([]);
-        }
-        let fallbackResults: DiscoveryUser[] = (
-          fallbackRes.data as unknown as DiscoveryUser[]
-        ).map((item) => ({
-          ...item,
-          distance_metres: undefined,
-        }));
-        if (blockedIds.length > 0) {
-          const blockedSet = new Set(blockedIds);
-          fallbackResults = fallbackResults.filter(
-            (u) => !blockedSet.has(u.id),
-          );
-        }
-        if (query.level) {
-          fallbackResults = fallbackResults.filter(
-            (u) => u.proficiency_level === query.level,
-          );
-        }
-        if (query.age_min !== undefined) {
-          const ageMin = query.age_min;
-          fallbackResults = fallbackResults.filter((u) => u.age! >= ageMin);
-        }
-        if (query.age_max !== undefined) {
-          const ageMax = query.age_max;
-          fallbackResults = fallbackResults.filter((u) => u.age! <= ageMax);
-        }
-        const filtered = await this.filterByVoiceRoomActive(
-          fallbackResults,
-          query.voice_room_active === true,
+        // A non-spatial fallback cannot honour the requested radius. Returning
+        // those rows would silently turn the distance control into a no-op.
+        throw new ServiceUnavailableException(
+          'Partner discovery is temporarily unavailable',
         );
-        return enrich(filtered);
       }
 
       // An empty result is a successful spatial search. Falling back here
@@ -1148,29 +1113,9 @@ export class DiscoveryService {
 
     const response = await queryBuilder;
     if (response.error || !response.data) {
-      // Fallback to mock data if query fails
-      const mockSearch: Partial<SearchQueryDto> = {
-        native_languages: nativeLang,
-        target_language: targetLang,
-        serious_learner_only: undefined,
-        age_min: undefined,
-        age_max: undefined,
-        level: query.level,
-        interests: undefined,
-        latitude: undefined,
-        longitude: undefined,
-        radius_metres: undefined,
-        sort: sort,
-        voice_room_active: query.voice_room_active,
-        country: query.country,
-        city: query.city,
-      };
-      let mock = this.getMockDiscoveryData(mockSearch, blockedIds);
-      mock = await this.filterByVoiceRoomActive(
-        mock,
-        query.voice_room_active === true,
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
       );
-      return sanitiseDiscoveryData(mock.slice(offset, offset + limit));
     }
 
     let results = response.data as unknown as DiscoveryUser[];
@@ -1237,74 +1182,6 @@ export class DiscoveryService {
       );
       return [];
     }
-  }
-
-  private getMockDiscoveryData(
-    query: SearchQueryDto,
-    blockedIds: string[] = [],
-  ): UserProfile[] {
-    let filtered = MOCK_USERS as unknown as DiscoveryUser[];
-
-    if (blockedIds.length > 0) {
-      const blockedSet = new Set(blockedIds);
-      filtered = filtered.filter((u) => !blockedSet.has(u.id));
-    }
-
-    if (query.native_languages) {
-      filtered = filtered.filter((u) =>
-        u.native_languages.includes(query.native_languages!),
-      );
-    }
-
-    if (query.target_language) {
-      filtered = filtered.filter((u) =>
-        u.target_languages.includes(query.target_language!),
-      );
-    }
-
-    if (query.serious_learner_only) {
-      filtered = filtered.filter((u) => isActiveSeriousLearner(u));
-    }
-
-    if (query.age_min !== undefined) {
-      const ageMin = query.age_min;
-      filtered = filtered.filter((u) => u.age! >= ageMin);
-    }
-    if (query.age_max !== undefined) {
-      const ageMax = query.age_max;
-      filtered = filtered.filter((u) => u.age! <= ageMax);
-    }
-
-    if (query.level) {
-      filtered = filtered.filter((u) => u.proficiency_level === query.level);
-    }
-
-    if (query.interests) {
-      filtered = filtered.filter((u) =>
-        u.interests?.includes(query.interests!),
-      );
-    }
-
-    if (query.has_audio_intro) {
-      filtered = filtered.filter(
-        (u) => u.audio_intro_url && u.audio_intro_url !== '',
-      );
-    }
-
-    if (query.country) {
-      const lowerCountry = query.country.toLowerCase();
-      filtered = filtered.filter((u) =>
-        (u.country ?? '').toLowerCase().includes(lowerCountry),
-      );
-    }
-    if (query.city) {
-      const lowerCity = query.city.toLowerCase();
-      filtered = filtered.filter((u) =>
-        (u.city ?? '').toLowerCase().includes(lowerCity),
-      );
-    }
-
-    return filtered.slice(0, 50);
   }
 
   private applyAdvancedFilters(

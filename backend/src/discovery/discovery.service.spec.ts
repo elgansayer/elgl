@@ -1045,21 +1045,22 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['p1', 'p2']);
     });
 
-    // -- RPC fallback chain --------------------------------------------------
-    it('should fall back to standard query when RPC returns error', async () => {
+    // -- RPC failure ---------------------------------------------------------
+    it('should reject instead of returning non-spatial users when RPC returns an error', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
         error: { message: 'PostGIS not ready' },
       });
       stubLimitResponse([{ id: 'fallback-1' }]);
 
-      const result = await service.searchPartners('user-1', null, {
-        latitude: 35.6895,
-        longitude: 139.6917,
-      });
-
-      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
-      expect(result.map((u) => u.id)).toEqual(['fallback-1']);
+      await expect(
+        service.searchPartners('user-1', null, {
+          latitude: 35.6895,
+          longitude: 139.6917,
+          radius_metres: 1_000,
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
     });
 
     it('should preserve an empty successful RPC result', async () => {
@@ -1075,7 +1076,7 @@ describe('DiscoveryService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should apply extra filters on RPC fallback results (level, age)', async () => {
+    it('should not return filter-matching non-spatial rows when the radius query fails', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
         error: { message: 'PostGIS unavailable' },
@@ -1086,24 +1087,22 @@ describe('DiscoveryService', () => {
         { id: 'fb3', proficiency_level: 'B2', age: 18 },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
-        latitude: 1,
-        longitude: 2,
-        level: 'B2',
-        age_min: 20,
-      });
-
-      expect(result.map((u) => u.id)).toEqual(['fb1']);
+      await expect(
+        service.searchPartners('user-1', null, {
+          latitude: 1,
+          longitude: 2,
+          radius_metres: 25_000,
+          level: 'B2',
+          age_min: 20,
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
     });
 
-    it('should reject when both RPC and fallback query fail', async () => {
+    it('should reject when the RPC returns no data', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
         error: { message: 'RPC failure' },
-      });
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'DB error' },
       });
 
       await expect(
@@ -1112,6 +1111,7 @@ describe('DiscoveryService', () => {
           longitude: 139.6917,
         }),
       ).rejects.toThrow('Partner discovery is temporarily unavailable');
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
     });
 
     // -- Advanced post-DB filtering -------------------------------------------
@@ -1477,17 +1477,17 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should fallback to mock data when query errors', async () => {
+    it('should report unavailability instead of fabricating matches when the query errors', async () => {
       mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: null,
         error: { message: 'fail' },
       });
 
-      const result = await service.findByLanguagePair('user-1', {
-        native_language: 'EN',
-      });
-
-      expect(result).toEqual([]);
+      await expect(
+        service.findByLanguagePair('user-1', {
+          native_language: 'EN',
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
     });
 
     it('should apply sort=newest ordering', async () => {

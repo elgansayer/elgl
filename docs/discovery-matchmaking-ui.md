@@ -14,13 +14,15 @@ Issue #959 is implemented by the existing Angular `DiscoveryComponent` and its s
 
 Changing an age or distance slider uses the existing 300 ms debounce. The API applies an ordinary discovery radius relative to the authenticated learner's saved profile location, while the explicit Nearby filter uses its short-lived browser coordinates. This keeps the distance control effective without requesting browser location when discovery opens. A new search aborts the previous request, and only the active request may clear the loading state or replace results. Reset restores the default 50 km radius, 18-100 age range, best-match sort and clears optional filters before issuing one new search.
 
+If the PostGIS radius query is unavailable, the API returns an unavailable response rather than substituting non-spatial partners that may fall outside the selected distance.
+
 ## State and failure behaviour
 
 The component has explicit loading, result, empty and error states. `DiscoveryService` preserves the distinction between a genuine empty result and an API failure. Authentication/authorisation, rate-limit, invalid-filter and unavailable failures receive translated guidance. Retry preserves the user's current criteria; an invalid-filter response offers Reset Filters instead because repeating the same request cannot succeed. Logs contain only the sanitised failure class and status, never the request URL or Nearby coordinates. Superseded requests are ignored after cancellation so a slow response cannot overwrite newer results.
 
 Blocked users are removed before partner cards are exposed even when a lower layer returns a stale cached result. Server-side discovery eligibility and privacy checks remain authoritative; the client-side block pass is defence in depth, not a replacement for backend authorization.
 
-Partner cards render only profile data returned by the API. Missing language lists remain empty. Missing or unreachable avatar images use the bundled default-avatar asset, and Discovery does not synthesise language pairs or contact a third-party image endpoint.
+Partner cards render only profile data returned by the API. Missing language lists remain empty. Missing or unreachable avatar images use the bundled default-avatar asset, and Discovery does not synthesise language pairs or contact a third-party image endpoint. Database failures in both the primary and language-pair searches return an unavailable response rather than fabricating partner profiles; genuine successful empty queries remain empty results.
 
 Offline discovery remains owned by `OfflineDiscoveryCacheService` and `DiscoveryService`. The UI indicates when it is offline and when cached data is being used. This issue does not add another cache or another persistence model.
 
