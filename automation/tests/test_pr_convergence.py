@@ -192,12 +192,13 @@ def test_closed_factory_pr_is_reopened_but_external_closed_pr_blocks() -> None:
 
 
 @pytest.mark.parametrize("label", ["superseded", "duplicate", "factory-skip"])
-def test_retired_external_closed_pr_no_longer_blocks_a_new_pr(label: str) -> None:
+@pytest.mark.parametrize("branch", ["contributor/churn", "factory/42-some-task"])
+def test_retired_closed_pr_is_neither_blocking_nor_reopened(label: str, branch: str) -> None:
     current = identity()
     retired = record(
         81,
         state="CLOSED",
-        branch="contributor/churn",
+        branch=branch,
         body=f"Fixes #42\n{marked_body()}",
         labels=frozenset({label}),
     )

@@ -70,6 +70,11 @@ const userProfileSchema = {
       is_partner_of_week: { type: 'boolean', example: false },
       distance_metres: { type: 'number', nullable: true, example: 1500 },
       proficiency_level: { type: 'string', nullable: true, example: 'B1' },
+      match_reasons: {
+        type: 'array',
+        items: { type: 'string' },
+        example: ['language_exchange', 'shared_interests'],
+      },
     },
   },
 };

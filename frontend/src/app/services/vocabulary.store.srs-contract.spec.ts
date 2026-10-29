@@ -88,6 +88,20 @@ describe('VocabularyStore SRS colour contract', () => {
     expect(status.colorClass).toBe(status.colourClass);
   });
 
+  it('maps a persisted SRS level 0 card to the new-word secondary treatment', () => {
+    const card = makeFlashcard(0);
+    store.flashcardMap.set(new Map([['hello', card]]));
+
+    const status = store.getWordStatus('hello');
+
+    expect(status.level).toBe(0);
+    expect(status.flashcard).toEqual(card);
+    expect(status.colourClass).toContain('bg-secondary/20');
+    expect(status.colourClass).toContain('border-secondary');
+    expect(status.colourClass).not.toContain('bg-warning/20');
+    expect(status.colorClass).toBe(status.colourClass);
+  });
+
   it.each([1, 2, 3])('maps SRS level %i to the learning warning treatment', (level) => {
     const card = makeFlashcard(level);
     store.flashcardMap.set(new Map([['hello', card]]));
