@@ -93,7 +93,7 @@
     "@types/node": "^26.6.5",
     "angular-eslint": "^22.6.0",
     "autoprefixer": "^10.6.1",
-    "cypress": "^15.21.0",
+    "cypress": "^16.2.0",
     "eslint": "10.13.0",
     "eslint-formatter-compact": "^9.0.1",
     "fake-indexeddb": "^6.2.6",
