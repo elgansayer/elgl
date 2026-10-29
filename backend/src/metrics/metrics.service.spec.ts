@@ -390,6 +390,66 @@ describe('MetricsService', () => {
     });
   });
 
+  describe('Moments For You metrics', () => {
+    it('records ranking duration separately for each outcome', async () => {
+      service.observeMomentsForYouRanking('ranked', 0.04);
+      service.observeMomentsForYouRanking('ranked', 0.06);
+      service.observeMomentsForYouRanking('degraded', 0.2);
+      service.observeMomentsForYouRanking('empty', 0.001);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="ranked"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="degraded"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_ranking_duration_seconds_count{outcome="empty"} 1',
+      );
+    });
+
+    it('records candidate volume for every pipeline stage', async () => {
+      service.observeMomentsForYouCandidates('recent_source', 100);
+      service.observeMomentsForYouCandidates('in_network_source', 12);
+      service.observeMomentsForYouCandidates('pool', 87);
+      service.observeMomentsForYouCandidates('served', 50);
+
+      const metrics = await service.getMetrics();
+      for (const stage of [
+        'recent_source',
+        'in_network_source',
+        'pool',
+        'served',
+      ]) {
+        expect(metrics).toContain(
+          `hellotalk_moments_for_you_candidates_count{stage="${stage}"} 1`,
+        );
+      }
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_candidates_sum{stage="recent_source"} 100',
+      );
+    });
+
+    it('counts degraded requests by reason without user-specific labels', async () => {
+      service.recordMomentsForYouDegraded('viewer_context_unavailable');
+      service.recordMomentsForYouDegraded('viewer_context_unavailable');
+      service.recordMomentsForYouDegraded('recent_source_unavailable');
+      service.recordMomentsForYouDegraded('in_network_source_unavailable');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_degraded_total{reason="viewer_context_unavailable"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_degraded_total{reason="recent_source_unavailable"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_moments_for_you_degraded_total{reason="in_network_source_unavailable"} 1',
+      );
+    });
+  });
+
   describe('Escrow metrics', () => {
     it('should record escrow created', () => {
       expect(() => service.recordEscrowCreated(100)).not.toThrow();
@@ -453,43 +513,66 @@ describe('MetricsService', () => {
   });
 
   describe('Link preview metrics', () => {
-    it('exposes request outcomes with a bounded reason label', async () => {
-      service.recordLinkPreviewRequest('cache_hit');
-      service.recordLinkPreviewRequest('fetched');
-      service.recordLinkPreviewRequest('failed', 'timeout');
-      service.recordLinkPreviewRequest('failed', 'timeout');
-      service.recordLinkPreviewRequest('rejected', 'private_network');
+    it('counts requests by outcome and failures by reason', async () => {
+      service.recordLinkPreview('cache_hit');
+      service.recordLinkPreview('cache_hit');
+      service.recordLinkPreview('rejected', { reason: 'blocked_target' });
 
       const metrics = await service.getMetrics();
-
       expect(metrics).toContain(
-        'hellotalk_link_preview_requests_total{outcome="cache_hit",reason="none"} 1',
+        'hellotalk_link_preview_requests_total{outcome="cache_hit"} 2',
       );
       expect(metrics).toContain(
-        'hellotalk_link_preview_requests_total{outcome="fetched",reason="none"} 1',
+        'hellotalk_link_preview_requests_total{outcome="rejected"} 1',
       );
       expect(metrics).toContain(
-        'hellotalk_link_preview_requests_total{outcome="failed",reason="timeout"} 2',
-      );
-      expect(metrics).toContain(
-        'hellotalk_link_preview_requests_total{outcome="rejected",reason="private_network"} 1',
+        'hellotalk_link_preview_failures_total{reason="blocked_target"} 1',
       );
     });
 
-    it('exposes origin scrape latency per outcome', async () => {
-      service.observeLinkPreviewFetch('fetched', 0.3);
-      service.observeLinkPreviewFetch('failed', 7.5);
+    it('does not count a failure for outcomes that carry no reason', async () => {
+      service.recordLinkPreview('fetched', { durationSeconds: 0.2 });
+      service.recordLinkPreview('empty', { durationSeconds: 0.2 });
 
       const metrics = await service.getMetrics();
+      expect(metrics).not.toMatch(/hellotalk_link_preview_failures_total\{/);
+    });
 
+    it('observes the origin scrape duration only when one is supplied', async () => {
+      service.recordLinkPreview('fetched', { durationSeconds: 0.4 });
+      service.recordLinkPreview('failed', {
+        reason: 'timeout',
+        durationSeconds: 8,
+      });
+      service.recordLinkPreview('cache_hit');
+
+      const metrics = await service.getMetrics();
       expect(metrics).toContain(
         'hellotalk_link_preview_fetch_duration_seconds_count{outcome="fetched"} 1',
       );
       expect(metrics).toContain(
-        'hellotalk_link_preview_fetch_duration_seconds_count{outcome="failed"} 1',
+        'hellotalk_link_preview_fetch_duration_seconds_sum{outcome="failed"} 8',
       );
       expect(metrics).toContain(
-        'hellotalk_link_preview_fetch_duration_seconds_bucket{le="8",outcome="failed"} 1',
+        'hellotalk_link_preview_failures_total{reason="timeout"} 1',
+      );
+      expect(metrics).not.toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_count{outcome="cache_hit"}',
+      );
+    });
+
+    it('buckets durations up to and beyond the 8 second fetch deadline', async () => {
+      service.recordLinkPreview('failed', {
+        reason: 'timeout',
+        durationSeconds: 8.001,
+      });
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_bucket{le="8",outcome="failed"} 0',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_bucket{le="10",outcome="failed"} 1',
       );
     });
   });

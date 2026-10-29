@@ -89,3 +89,5 @@ export class ClientErrorDto {
   @IsDateString({ strict: true })
   timestamp?: string;
 }
+
+export { ClientErrorDto as LogClientErrorDto };

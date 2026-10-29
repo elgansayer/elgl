@@ -180,11 +180,19 @@ export class VocabularyStore {
   } {
     const clean = this.normaliseWordToken(word);
     const fc = this.flashcardMap().get(clean);
+    const newWordClass =
+      'bg-secondary/20 text-secondary border-b-2 border-secondary cursor-pointer hover:bg-secondary/30';
+
     if (!fc) {
-      // Level 0 = New / secondary accent
-      const cls =
-        'bg-secondary/20 text-secondary border-b-2 border-secondary cursor-pointer hover:bg-secondary/30';
-      return { level: 0, colorClass: cls, colourClass: cls };
+      return { level: 0, colorClass: newWordClass, colourClass: newWordClass };
+    }
+    if (fc.srs_level === 0) {
+      return {
+        level: 0,
+        colorClass: newWordClass,
+        colourClass: newWordClass,
+        flashcard: fc,
+      };
     }
     if (fc.srs_level >= 4) {
       // Level 4+ = Known / normal text appearance

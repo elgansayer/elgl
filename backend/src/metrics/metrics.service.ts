@@ -6,6 +6,10 @@ import {
   Histogram,
   Gauge,
 } from 'prom-client';
+import type {
+  LinkPreviewFailureReason,
+  LinkPreviewOutcome,
+} from '../link-preview/link-preview-diagnostics';
 
 @Injectable()
 export class MetricsService {
@@ -84,6 +88,11 @@ export class MetricsService {
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
 
+  // Moments For You feed metrics
+  readonly momentsForYouRankingDuration: Histogram<string>;
+  readonly momentsForYouCandidates: Histogram<string>;
+  readonly momentsForYouDegradedTotal: Counter<string>;
+
   // Admin Moderation Dashboard metrics
   readonly adminBanActions: Counter<string>;
   readonly adminWarnActions: Counter<string>;
@@ -96,8 +105,9 @@ export class MetricsService {
   readonly adminActiveBlocks: Gauge<string>;
   readonly adminLoginHistoryRequests: Counter<string>;
 
-  // Link preview (OpenGraph scraper) metrics
+  // Link Preview (OpenGraph scraper) metrics
   readonly linkPreviewRequests: Counter<string>;
+  readonly linkPreviewFailures: Counter<string>;
   readonly linkPreviewFetchDuration: Histogram<string>;
 
   constructor() {
@@ -534,6 +544,31 @@ export class MetricsService {
       registers: [this.register],
     });
 
+    // --- Moments For You Metrics ---
+
+    this.momentsForYouRankingDuration = new Histogram({
+      name: 'hellotalk_moments_for_you_ranking_duration_seconds',
+      help: 'Duration of For You ranking, including viewer context loading',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5],
+    });
+
+    this.momentsForYouCandidates = new Histogram({
+      name: 'hellotalk_moments_for_you_candidates',
+      help: 'Number of Moments at each stage of the For You pipeline',
+      labelNames: ['stage'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 25, 50, 75, 100, 150],
+    });
+
+    this.momentsForYouDegradedTotal = new Counter({
+      name: 'hellotalk_moments_for_you_degraded_total',
+      help: 'Number of For You requests served without an optional candidate source or personalisation context',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
     // --- Admin Moderation Dashboard Metrics ---
 
     this.adminBanActions = new Counter({
@@ -605,18 +640,25 @@ export class MetricsService {
       registers: [this.register],
     });
 
-    // --- Link preview (OpenGraph scraper) Metrics ---
+    // --- Link Preview (OpenGraph scraper) Metrics ---
 
     this.linkPreviewRequests = new Counter({
       name: 'hellotalk_link_preview_requests_total',
-      help: 'Link preview requests by outcome (cache_hit, fetched, empty, rejected, failed) and a bounded failure reason',
-      labelNames: ['outcome', 'reason'],
+      help: 'Total link preview requests by outcome (cache_hit, fetched, empty, rejected, failed)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.linkPreviewFailures = new Counter({
+      name: 'hellotalk_link_preview_failures_total',
+      help: 'Total rejected or failed link preview requests by classified reason',
+      labelNames: ['reason'],
       registers: [this.register],
     });
 
     this.linkPreviewFetchDuration = new Histogram({
       name: 'hellotalk_link_preview_fetch_duration_seconds',
-      help: 'Duration of origin scrapes performed for link previews (cache hits excluded)',
+      help: 'Duration of one origin scrape (fetch and parse) by outcome',
       labelNames: ['outcome'],
       registers: [this.register],
       buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
@@ -901,6 +943,31 @@ export class MetricsService {
     this.matchmakingTierSuccessRate.set(rate);
   }
 
+  // --- Moments For You metric helpers ---
+
+  observeMomentsForYouRanking(
+    outcome: 'ranked' | 'degraded' | 'empty',
+    durationSeconds: number,
+  ): void {
+    this.momentsForYouRankingDuration.observe({ outcome }, durationSeconds);
+  }
+
+  observeMomentsForYouCandidates(
+    stage: 'recent_source' | 'in_network_source' | 'pool' | 'served',
+    count: number,
+  ): void {
+    this.momentsForYouCandidates.observe({ stage }, count);
+  }
+
+  recordMomentsForYouDegraded(
+    reason:
+      | 'viewer_context_unavailable'
+      | 'recent_source_unavailable'
+      | 'in_network_source_unavailable',
+  ): void {
+    this.momentsForYouDegradedTotal.inc({ reason });
+  }
+
   // --- Escrow Payment metric helpers ---
 
   recordEscrowCreated(amountCoins: number): void {
@@ -985,18 +1052,29 @@ export class MetricsService {
     this.adminLoginHistoryRequests.inc({ result });
   }
 
-  recordLinkPreviewRequest(
-    outcome: 'cache_hit' | 'fetched' | 'empty' | 'rejected' | 'failed',
-    reason = 'none',
-  ): void {
-    this.linkPreviewRequests.inc({ outcome, reason });
-  }
+  // --- Link Preview (OpenGraph scraper) metric helpers ---
 
-  observeLinkPreviewFetch(
-    outcome: 'fetched' | 'empty' | 'failed',
-    durationSeconds: number,
+  /**
+   * Records one link-preview request. Labels are closed enums rather than URLs
+   * or hostnames so cardinality stays bounded and no private link is exported.
+   */
+  recordLinkPreview(
+    outcome: LinkPreviewOutcome,
+    details: {
+      reason?: LinkPreviewFailureReason;
+      durationSeconds?: number;
+    } = {},
   ): void {
-    this.linkPreviewFetchDuration.observe({ outcome }, durationSeconds);
+    this.linkPreviewRequests.inc({ outcome });
+    if (details.reason) {
+      this.linkPreviewFailures.inc({ reason: details.reason });
+    }
+    if (details.durationSeconds !== undefined) {
+      this.linkPreviewFetchDuration.observe(
+        { outcome },
+        details.durationSeconds,
+      );
+    }
   }
 
   setModerationQueueSize(count: number): void {

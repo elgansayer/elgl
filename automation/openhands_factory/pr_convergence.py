@@ -457,7 +457,12 @@ def resolve_pull_request(
     # factory_owned rather than an inlined copy of its branch/fork test: reopening a PR
     # hands it the same in-place update, force-sync, and delete authority as REUSE, so
     # this must not drift if that ownership boundary is ever tightened.
-    reusable_closed = [record for record in closed if record.factory_owned]
+    # A retired one is not: reopened, it keeps the labels that review and the
+    # duplicate guard skip, and the job's own rebuilt push trips the moved-branch
+    # check on every retry (issues 1397, 1428, 1436, 1450 and 1584, 2026-10-29).
+    reusable_closed = [
+        record for record in closed if record.factory_owned and not record.labels & RETIRED_LABELS
+    ]
     if reusable_closed:
         canonical = min(reusable_closed, key=lambda item: _canonical_key(identity, item))
         return PullRequestResolution(

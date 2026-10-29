@@ -17,7 +17,13 @@ describe('isPrivateIp', () => {
     expect(isPrivateIp('0.0.0.0')).toBe(true);
     expect(isPrivateIp('100.64.0.1')).toBe(true);
     expect(isPrivateIp('192.0.0.1')).toBe(true);
+    expect(isPrivateIp('192.88.99.1')).toBe(true);
     expect(isPrivateIp('198.18.0.1')).toBe(true);
+    expect(isPrivateIp('198.51.100.1')).toBe(true);
+    expect(isPrivateIp('203.0.113.1')).toBe(true);
+    expect(isPrivateIp('224.0.0.1')).toBe(true);
+    expect(isPrivateIp('240.0.0.1')).toBe(true);
+    expect(isPrivateIp('255.255.255.255')).toBe(true);
   });
 
   it('allows public IPv4 addresses', () => {
@@ -57,12 +63,32 @@ describe('isPrivateIp', () => {
   it('flags private and special IPv6 addresses', () => {
     expect(isPrivateIp('::1')).toBe(true);
     expect(isPrivateIp('::')).toBe(true);
+    expect(isPrivateIp('[::1]')).toBe(true);
+    expect(isPrivateIp('[fe80::1]')).toBe(true);
     expect(isPrivateIp('fc00::1')).toBe(true);
     expect(isPrivateIp('fd12:3456:789a::1')).toBe(true);
     expect(isPrivateIp('fe80::1')).toBe(true);
     expect(isPrivateIp('febf::1')).toBe(true);
     expect(isPrivateIp('fec0::1')).toBe(true);
     expect(isPrivateIp('feff::1')).toBe(true);
+    expect(isPrivateIp('ff02::1')).toBe(true);
+    expect(isPrivateIp('100::1')).toBe(true);
+    expect(isPrivateIp('4000::1')).toBe(true);
+  });
+
+  it('flags translated and tunneled IPv6 addresses with private targets', () => {
+    expect(isPrivateIp('64:ff9b::127.0.0.1')).toBe(true);
+    expect(isPrivateIp('64:ff9b::169.254.169.254')).toBe(true);
+    expect(isPrivateIp('64:ff9b::192.168.1.1')).toBe(true);
+    expect(isPrivateIp('64:ff9b:1::1')).toBe(true);
+    expect(isPrivateIp('2002:7f00:0001::')).toBe(true);
+    expect(isPrivateIp('2002:a9fe:a9fe::')).toBe(true);
+    expect(isPrivateIp('2002:c0a8:0101::')).toBe(true);
+  });
+
+  it('allows translated and tunneled IPv6 addresses with public targets', () => {
+    expect(isPrivateIp('64:ff9b::8.8.8.8')).toBe(false);
+    expect(isPrivateIp('2002:0808:0808::')).toBe(false);
   });
 
   it('flags IPv4-mapped IPv6 addresses when the mapped address is private', () => {
@@ -130,7 +156,8 @@ describe('isPrivateIp', () => {
     expect(isPrivateIp('2001:0:4136:e378:8000:63bf:3fff:fdd2')).toBe(true);
     expect(isPrivateIp('2001::1')).toBe(true);
     expect(isPrivateIp('100::1')).toBe(true);
-    expect(isPrivateIp('100:0:0:1::1')).toBe(false);
+    // Only 2000::/3 is global unicast, so other non-allocated prefixes are refused.
+    expect(isPrivateIp('100:0:0:1::1')).toBe(true);
   });
 
   it('returns false for values that are not IP addresses', () => {

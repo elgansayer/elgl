@@ -53,7 +53,26 @@ export class NotificationPreferencesService {
     if (!data) {
       return this.getDefaultPreferences(userId);
     }
-    return data;
+    return {
+      user_id: data.user_id,
+      new_message: data.new_message,
+      call_invite: data.call_invite,
+      moment_like: data.moment_like,
+      moment_comment: data.moment_comment,
+      correction: data.correction,
+      gift: data.gift,
+      profile_view: data.profile_view,
+      study_reminder: data.study_reminder,
+      friend_request: data.friend_request,
+      audio_room_invite: data.audio_room_invite,
+      new_follower: data.new_follower,
+      quiet_hours_start: data.quiet_hours_start ?? null,
+      quiet_hours_end: data.quiet_hours_end ?? null,
+      do_not_disturb: data.do_not_disturb ?? false,
+      customToneUrl: data.custom_tone_url ?? null,
+      vibrationPattern: data.vibration_pattern ?? null,
+      updated_at: data.updated_at,
+    };
   }
 
   async updatePreferences(
@@ -82,9 +101,29 @@ export class NotificationPreferencesService {
         ...changes,
         updated_at: new Date().toISOString(),
       })
+      .select()
       .single();
     if (error) throw error;
-    return data;
+    return {
+      user_id: data.user_id,
+      new_message: data.new_message,
+      call_invite: data.call_invite,
+      moment_like: data.moment_like,
+      moment_comment: data.moment_comment,
+      correction: data.correction,
+      gift: data.gift,
+      profile_view: data.profile_view,
+      study_reminder: data.study_reminder,
+      friend_request: data.friend_request,
+      audio_room_invite: data.audio_room_invite,
+      new_follower: data.new_follower,
+      quiet_hours_start: data.quiet_hours_start ?? null,
+      quiet_hours_end: data.quiet_hours_end ?? null,
+      do_not_disturb: data.do_not_disturb ?? false,
+      customToneUrl: data.custom_tone_url ?? null,
+      vibrationPattern: data.vibration_pattern ?? null,
+      updated_at: data.updated_at,
+    };
   }
 
   private getDefaultPreferences(userId: string) {

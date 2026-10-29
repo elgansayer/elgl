@@ -38,22 +38,28 @@ vi.mock('dompurify', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { of, throwError } from 'rxjs';
+import { AxiosError } from 'axios';
+import { of, throwError, TimeoutError } from 'rxjs';
 import { LinkPreviewService } from './link-preview.service';
+import { LinkPreviewFailure } from './link-preview-diagnostics';
 import { MetricsService } from '../metrics/metrics.service';
 
-function errorWithCode(message: string, code: string): Error {
-  return Object.assign(new Error(message), { code });
+function axiosError(
+  message: string,
+  code: string,
+  status?: number,
+): AxiosError {
+  const error = new AxiosError(message, code);
+  return status === undefined
+    ? error
+    : Object.assign(error, { response: { status } });
 }
 
 describe('LinkPreviewService observability and deadlines', () => {
   let service: LinkPreviewService;
   let httpService: { get: Mock };
   let redis: { get: Mock; set: Mock };
-  let metrics: {
-    recordLinkPreviewRequest: Mock;
-    observeLinkPreviewFetch: Mock;
-  };
+  let metrics: { recordLinkPreview: Mock };
 
   beforeEach(async () => {
     httpService = { get: vi.fn() };
@@ -61,10 +67,7 @@ describe('LinkPreviewService observability and deadlines', () => {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
     };
-    metrics = {
-      recordLinkPreviewRequest: vi.fn(),
-      observeLinkPreviewFetch: vi.fn(),
-    };
+    metrics = { recordLinkPreview: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,61 +90,45 @@ describe('LinkPreviewService observability and deadlines', () => {
   }
 
   describe('scrape deadlines', () => {
-    it('combines a per-leg idle timeout with an overall abort signal', async () => {
+    it('bounds each origin request with a socket timeout and a body size limit', async () => {
       mockHtmlResponse('<html><head><title>Bounded</title></head></html>');
 
       await service.getPreview('https://example.com/');
 
       const config = httpService.get.mock.calls[0][1] as {
         timeout: number;
-        signal: unknown;
+        maxContentLength: number;
+        proxy: boolean;
       };
       expect(config.timeout).toBe(5_000);
-      expect(config.signal).toBeInstanceOf(AbortSignal);
-      expect((config.signal as AbortSignal).aborted).toBe(false);
+      expect(config.maxContentLength).toBe(5_000_000);
+      expect(config.proxy).toBe(false);
     });
 
-    it('uses a fresh deadline for every scrape', async () => {
-      mockHtmlResponse('<html><head><title>Bounded</title></head></html>');
-
-      await service.getPreview('https://example.com/one');
-      await service.getPreview('https://example.com/two');
-
-      const first = httpService.get.mock.calls[0][1] as { signal: unknown };
-      const second = httpService.get.mock.calls[1][1] as { signal: unknown };
-      expect(first.signal).not.toBe(second.signal);
-    });
-
-    it('reports a deadline abort as a stable bad request classified as a timeout', async () => {
-      httpService.get.mockReturnValue(
-        throwError(() => errorWithCode('canceled', 'ERR_CANCELED')),
-      );
-      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    it('reports the overall deadline as a bad request classified as a timeout', async () => {
+      httpService.get.mockReturnValue(throwError(() => new TimeoutError()));
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(service.getPreview('https://slow.example/')).rejects.toThrow(
         'Unable to fetch preview for this URL',
       );
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith(
-        'failed',
-        'timeout',
-      );
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('failed', {
+        reason: 'timeout',
+        durationSeconds: expect.any(Number),
+      });
     });
   });
 
   describe('guarded DNS lookup', () => {
     type LookupResult = {
-      error: NodeJS.ErrnoException | null;
+      error: Error | null;
       address: unknown;
     };
     type GuardedLookup = (
       hostname: string,
       options: object,
-      callback: (
-        error: NodeJS.ErrnoException | null,
-        address: unknown,
-        family: number,
-      ) => void,
+      callback: (error: Error | null, address: unknown, family: number) => void,
     ) => void;
 
     async function resolveThroughGuard(
@@ -160,11 +147,11 @@ describe('LinkPreviewService observability and deadlines', () => {
       });
     }
 
-    it('rejects a hostname that resolves to a non-public address with a tagged error', async () => {
+    it('rejects a hostname that resolves to a non-public address with a policy failure', async () => {
       const { error } = await resolveThroughGuard('localhost');
 
-      expect(error?.code).toBe('ESSRFBLOCKED');
-      expect(error?.message).toContain('SSRF blocked');
+      expect(error).toBeInstanceOf(LinkPreviewFailure);
+      expect(error?.message).toContain('not publicly routable');
     });
 
     it('lets a public address through unchanged', async () => {
@@ -181,14 +168,14 @@ describe('LinkPreviewService observability and deadlines', () => {
 
       await service.getPreview('https://example.com/post');
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledTimes(1);
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith('fetched');
-      expect(metrics.observeLinkPreviewFetch).toHaveBeenCalledWith(
-        'fetched',
-        expect.any(Number),
-      );
-      const duration = metrics.observeLinkPreviewFetch.mock.calls[0][1];
-      expect(duration).toBeGreaterThanOrEqual(0);
+      expect(metrics.recordLinkPreview).toHaveBeenCalledTimes(1);
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('fetched', {
+        durationSeconds: expect.any(Number),
+      });
+      const details = metrics.recordLinkPreview.mock.calls[0][1] as {
+        durationSeconds: number;
+      };
+      expect(details.durationSeconds).toBeGreaterThanOrEqual(0);
     });
 
     it('records an empty outcome when the page exposes no preview metadata', async () => {
@@ -198,11 +185,9 @@ describe('LinkPreviewService observability and deadlines', () => {
         service.getPreview('https://example.com/empty'),
       ).resolves.toBeNull();
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith('empty');
-      expect(metrics.observeLinkPreviewFetch).toHaveBeenCalledWith(
-        'empty',
-        expect.any(Number),
-      );
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('empty', {
+        durationSeconds: expect.any(Number),
+      });
     });
 
     it('records cache hits without an origin latency sample', async () => {
@@ -218,10 +203,8 @@ describe('LinkPreviewService observability and deadlines', () => {
 
       await service.getPreview('https://example.com/cached');
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith(
-        'cache_hit',
-      );
-      expect(metrics.observeLinkPreviewFetch).not.toHaveBeenCalled();
+      expect(metrics.recordLinkPreview).toHaveBeenCalledTimes(1);
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('cache_hit');
       expect(httpService.get).not.toHaveBeenCalled();
     });
 
@@ -231,69 +214,68 @@ describe('LinkPreviewService observability and deadlines', () => {
 
       await service.getPreview('https://example.com/stale');
 
-      expect(metrics.recordLinkPreviewRequest).not.toHaveBeenCalledWith(
-        'cache_hit',
-      );
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith('fetched');
+      expect(metrics.recordLinkPreview).not.toHaveBeenCalledWith('cache_hit');
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('fetched', {
+        durationSeconds: expect.any(Number),
+      });
     });
 
     it.each([
-      ['http://localhost/admin', 'private_network'],
-      ['http://169.254.169.254/latest/meta-data', 'private_network'],
-      ['http://[::ffff:7f00:1]/', 'private_network'],
+      ['http://localhost/admin', 'blocked_target'],
+      ['http://169.254.169.254/latest/meta-data', 'blocked_target'],
+      ['http://[::ffff:7f00:1]/', 'blocked_target'],
       ['not a url', 'invalid_url'],
       ['ftp://example.com/file', 'invalid_url'],
       ['https://user:pass@example.com/', 'invalid_url'],
-      ['https://example.com:8443/', 'invalid_url'],
+      ['https://example.com:8443/', 'blocked_target'],
     ])('records a rejected outcome for %s as %s', async (url, reason) => {
       await expect(service.getPreview(url)).rejects.toBeInstanceOf(
         BadRequestException,
       );
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith(
-        'rejected',
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('rejected', {
         reason,
-      );
+      });
       expect(httpService.get).not.toHaveBeenCalled();
-      expect(metrics.observeLinkPreviewFetch).not.toHaveBeenCalled();
     });
 
     it.each<[string, Error, string]>([
       [
         'DNS resolving to a private address',
-        errorWithCode(
+        new LinkPreviewFailure(
           'SSRF blocked: resolved address is not publicly routable',
-          'ESSRFBLOCKED',
+          'blocked_target',
         ),
-        'blocked_network',
+        'blocked_target',
       ],
       [
         'a redirect to a disallowed target',
         new Error('Redirect rejected', {
-          cause: new BadRequestException(
+          cause: new LinkPreviewFailure(
             'Private network URLs are not allowed',
+            'blocked_target',
           ),
         }),
-        'blocked_network',
+        'blocked_target',
       ],
       [
         'the overall deadline aborting the request',
-        errorWithCode('canceled', 'ERR_CANCELED'),
+        new TimeoutError(),
         'timeout',
       ],
       [
         'the idle timeout',
-        errorWithCode('timeout of 5000ms exceeded', 'ECONNABORTED'),
+        axiosError('timeout of 5000ms exceeded', 'ECONNABORTED'),
         'timeout',
       ],
       [
         'a socket timeout',
-        errorWithCode('connect ETIMEDOUT', 'ETIMEDOUT'),
+        axiosError('connect ETIMEDOUT', 'ETIMEDOUT'),
         'timeout',
       ],
       [
         'an oversized response',
-        errorWithCode(
+        axiosError(
           'maxContentLength size of 5000000 exceeded',
           'ERR_BAD_RESPONSE',
         ),
@@ -301,98 +283,92 @@ describe('LinkPreviewService observability and deadlines', () => {
       ],
       [
         'an oversized redirect body',
-        errorWithCode(
+        axiosError(
           'Request body larger than maxBodyLength limit',
           'ERR_FR_MAX_BODY_LENGTH_EXCEEDED',
         ),
         'too_large',
       ],
       [
-        'too many redirects',
-        errorWithCode(
-          'Maximum number of redirects exceeded',
-          'ERR_FR_TOO_MANY_REDIRECTS',
-        ),
-        'redirect',
-      ],
-      [
         'an upstream 5xx',
-        errorWithCode(
+        axiosError(
           'Request failed with status code 503',
           'ERR_BAD_RESPONSE',
+          503,
         ),
         'upstream_status',
       ],
       [
         'an upstream 404',
-        errorWithCode('Request failed with status code 404', 'ERR_BAD_REQUEST'),
+        axiosError(
+          'Request failed with status code 404',
+          'ERR_BAD_REQUEST',
+          404,
+        ),
         'upstream_status',
       ],
       [
         'an unresolvable host',
-        errorWithCode('getaddrinfo ENOTFOUND missing.example', 'ENOTFOUND'),
+        axiosError('getaddrinfo ENOTFOUND missing.example', 'ENOTFOUND'),
         'network',
       ],
       [
         'a refused connection',
-        errorWithCode('connect ECONNREFUSED', 'ECONNREFUSED'),
+        axiosError('connect ECONNREFUSED', 'ECONNREFUSED'),
         'network',
       ],
-      ['an error without a code', new Error('boom'), 'other'],
+      ['an error without a known shape', new Error('boom'), 'unknown'],
     ])('classifies %s as %s', async (_label, error, reason) => {
       httpService.get.mockReturnValue(throwError(() => error));
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
       vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
       await expect(
         service.getPreview('https://example.com/failing'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith(
-        'failed',
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('failed', {
         reason,
-      );
-      expect(metrics.observeLinkPreviewFetch).toHaveBeenCalledWith(
-        'failed',
-        expect.any(Number),
-      );
+        durationSeconds: expect.any(Number),
+      });
     });
 
-    it('classifies a non-HTML response as non_html', async () => {
+    it('classifies a non-HTML response as not_html', async () => {
       mockHtmlResponse('{}', 'application/json');
-      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(
         service.getPreview('https://example.com/data.json'),
       ).rejects.toThrow('URL does not point to an HTML resource');
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledWith(
-        'failed',
-        'non_html',
-      );
+      expect(metrics.recordLinkPreview).toHaveBeenCalledWith('failed', {
+        reason: 'not_html',
+        durationSeconds: expect.any(Number),
+      });
     });
 
     it('counts exactly one outcome per request', async () => {
       httpService.get.mockReturnValue(
-        throwError(() => errorWithCode('refused', 'ECONNREFUSED')),
+        throwError(() => axiosError('refused', 'ECONNREFUSED')),
       );
-      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
       await expect(
         service.getPreview('https://example.com/once'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(metrics.recordLinkPreviewRequest).toHaveBeenCalledTimes(1);
+      expect(metrics.recordLinkPreview).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('failure logging', () => {
     it('logs the bounded reason without URLs or provider messages', async () => {
-      const errorSpy = vi
-        .spyOn(Logger.prototype, 'error')
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
         .mockImplementation(() => undefined);
       httpService.get.mockReturnValue(
         throwError(() =>
-          errorWithCode(
+          axiosError(
             'connect ETIMEDOUT secret-host.internal token=provider-secret',
             'ETIMEDOUT',
           ),
@@ -403,7 +379,7 @@ describe('LinkPreviewService observability and deadlines', () => {
         service.getPreview('https://example.com/private?token=super-secret'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      const log = errorSpy.mock.calls
+      const log = warnSpy.mock.calls
         .map(([message]) => String(message))
         .join('\n');
       expect(log).toContain('reason=timeout');
@@ -416,7 +392,7 @@ describe('LinkPreviewService observability and deadlines', () => {
   });
 
   describe('with the real metrics registry', () => {
-    it('exposes scrape outcomes and latency on the Prometheus endpoint', async () => {
+    it('exposes scrape outcomes, failure reasons and latency on the Prometheus endpoint', async () => {
       const registry = new MetricsService();
       const module = await Test.createTestingModule({
         providers: [
@@ -436,31 +412,16 @@ describe('LinkPreviewService observability and deadlines', () => {
 
       const output = await registry.getMetrics();
       expect(output).toContain(
-        'hellotalk_link_preview_requests_total{outcome="fetched",reason="none"} 1',
+        'hellotalk_link_preview_requests_total{outcome="fetched"} 1',
       );
       expect(output).toContain(
-        'hellotalk_link_preview_requests_total{outcome="rejected",reason="private_network"} 1',
+        'hellotalk_link_preview_requests_total{outcome="rejected"} 1',
+      );
+      expect(output).toContain(
+        'hellotalk_link_preview_failures_total{reason="blocked_target"} 1',
       );
       expect(output).toContain(
         'hellotalk_link_preview_fetch_duration_seconds_count{outcome="fetched"} 1',
-      );
-    });
-  });
-
-  describe('without a metrics provider', () => {
-    it('still scrapes and degrades normally', async () => {
-      const bare = new LinkPreviewService(
-        httpService as unknown as HttpService,
-        redis as never,
-      );
-      mockHtmlResponse('<html><head><title>No metrics</title></head></html>');
-
-      await expect(
-        bare.getPreview('https://example.com/bare'),
-      ).resolves.toMatchObject({ title: 'No metrics' });
-
-      await expect(bare.getPreview('http://localhost')).rejects.toBeInstanceOf(
-        BadRequestException,
       );
     });
   });
