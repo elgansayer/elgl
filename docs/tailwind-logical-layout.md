@@ -1,11 +1,11 @@
 # Tailwind logical layout contract
 
-Issue #1283 is satisfied by the existing Angular/Tailwind integration plus the regression contract added alongside it.
+Issue #1718 is satisfied by the existing Angular/Tailwind integration plus the regression contract added alongside it.
 
 ## Runtime ownership
 
 - `frontend/src/styles.scss` loads Tailwind theme, preflight, and utilities layers and points Tailwind at `frontend/tailwind.config.js`.
-- `frontend/tailwind.config.js` scans Angular HTML, TypeScript, and SCSS under `frontend/src` and uses class-based dark mode.
+- `frontend/tailwind.config.js` exports an ES module to match the frontend package mode, scans Angular HTML, TypeScript, and SCSS under `frontend/src`, and uses class-based dark mode. Its adjacent TypeScript declaration keeps typed tooling and Angular contract tests on the same production configuration boundary.
 - Safe-area inline spacing is exposed as `ps-safe` and `pe-safe`. The utilities use logical CSS properties and swap the physical viewport inset source under RTL, while top and bottom safe-area spacing remains direction-neutral.
 - Relay semantic colours, radii, elevation, and typography remain defined through the existing Tailwind/CSS-variable contract. This change does not introduce a second token system.
 

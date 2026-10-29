@@ -32,6 +32,19 @@ describe('Tailwind logical layout contract', () => {
     expect(styles).toContain("@config '../tailwind.config.js';");
   });
 
+  it('exports the Tailwind config in the frontend package module format', async () => {
+    const configModule = await import('../../tailwind.config.js');
+
+    expect(configModule.default).toMatchObject({
+      darkMode: 'class',
+      content: ['./src/**/*.{html,ts,scss}'],
+    });
+    expect(configModule.default.plugins).toHaveLength(1);
+    expect(readFrontendFile('tailwind.config.d.ts')).toContain(
+      "import type { Config } from 'tailwindcss';",
+    );
+  });
+
   it('keeps production styles independent of remote font stylesheets', () => {
     const styles = readFrontendFile('src/styles.scss');
     const serviceWorkerConfig = readFrontendFile('ngsw-config.json');
