@@ -51,7 +51,7 @@
     "lint:admin": "cd admin-portal && npm run lint:check",
     "bootstrap:node": "bash install-node.sh",
     "build": "npm run build:frontend && npm run build:backend && npm run build:admin",
-    "build:frontend": "cd frontend && npx ng build",
+    "build:frontend": "npm --prefix frontend run build",
     "build:backend": "cd backend && npm run build",
     "build:admin": "cd admin-portal && npm run build",
     "start:admin": "cd admin-portal && npm start",
