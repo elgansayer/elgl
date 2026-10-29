@@ -107,6 +107,12 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `participants_count` (Integer, default `1`)
 - `created_at` (Timestamp with time zone, default `now()`)
 
+### Tables: `language_islands` and `language_island_members`
+
+- `language_islands`: `id`, `name`, `description`, `language_pair`, `host_id`, `max_members`, `is_active`, `created_at`, `updated_at`
+- `language_island_members`: composite key (`island_id`, `user_id`), `role` (`host` or `member`), `joined_at`
+- Both tables are accessed through the NestJS API with service-role credentials. Direct browser access is revoked.
+
 ### Table: `blocks` & `reports` (Trust and Safety)
 
 - `blocks`: `id`, `blocker_id`, `blocked_id`, `created_at`

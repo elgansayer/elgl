@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   createLocalVideoTrack,
   LocalVideoTrack,
+  Participant,
   RemoteParticipant,
   RemoteTrack,
   RemoteTrackPublication,
@@ -12,6 +13,7 @@ import {
   Room,
   RoomEvent,
   Track,
+  TrackPublication,
 } from 'livekit-client';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -183,6 +185,13 @@ export class AudioRoomsStore {
         participant: RemoteParticipant,
       ) => void)
     | null = null;
+  private onTrackMutedBound:
+    | ((publication: TrackPublication, participant: Participant) => void)
+    | null = null;
+  private onTrackUnmutedBound:
+    | ((publication: TrackPublication, participant: Participant) => void)
+    | null = null;
+  private onActiveSpeakersChangedBound: ((speakers: Participant[]) => void) | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
@@ -346,17 +355,24 @@ export class AudioRoomsStore {
 
       this.isSpeaker.set(tokenRes.is_speaker);
 
-      // Connect to LiveKit SFU (or mock fallback if local dev)
-      if (typeof window !== 'undefined' && !tokenRes.livekit_url.includes('mock')) {
+      // Connect to the LiveKit SFU endpoint supplied by the API.
+      if (typeof window !== 'undefined') {
         try {
           this.livekitRoom = new Room();
           this.onTrackSubscribedBound = this.onTrackSubscribed.bind(this);
           this.onTrackUnsubscribedBound = this.onTrackUnsubscribed.bind(this);
+          this.onTrackMutedBound = this.onTrackMuted.bind(this);
+          this.onTrackUnmutedBound = this.onTrackUnmuted.bind(this);
+          this.onActiveSpeakersChangedBound = this.onActiveSpeakersChanged.bind(this);
           this.livekitRoom
             .on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound)
-            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound)
+            .on(RoomEvent.TrackMuted, this.onTrackMutedBound)
+            .on(RoomEvent.TrackUnmuted, this.onTrackUnmutedBound)
+            .on(RoomEvent.ActiveSpeakersChanged, this.onActiveSpeakersChangedBound);
           await this.livekitRoom.connect(tokenRes.livekit_url, tokenRes.token);
           this.isConnectedToLiveKit.set(true);
+          this.syncLiveKitStageState();
 
           if (tokenRes.is_speaker) {
             await this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
@@ -374,9 +390,6 @@ export class AudioRoomsStore {
           void this.degradationService.refreshHealth();
           showToast(this.i18n.translate('audioRoom.degradedAudioToast'));
         }
-      } else {
-        // Mock connection simulation
-        this.isConnectedToLiveKit.set(true);
       }
     } catch (e) {
       console.error('Failed to join audio room:', e);
@@ -409,12 +422,9 @@ export class AudioRoomsStore {
           return { ...r, raised_hands: updatedHands, speakers: updatedSpeakers };
         });
 
-        // If target user is me, refresh token and enable mic
+        // A listener token cannot publish. Reconnect with a freshly minted speaker token.
         if (p.target_user_id === this.authService.currentUser()?.id) {
-          this.isSpeaker.set(true);
-          if (this.livekitRoom) {
-            void this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
-          }
+          void this.refreshSpeakerToken();
           showToast(this.i18n.translate('audioRoom.speakerApprovedToast'));
         }
       } else if (p.type === 'speaker_demoted' && p.target_user_id) {
@@ -645,6 +655,107 @@ export class AudioRoomsStore {
         next.delete(participant.identity);
         return next;
       });
+    }
+  }
+
+  private participantUserId(identity: string): string | null {
+    const exactParticipant = this.stageParticipants().find(
+      (participant) => participant.user_id === identity,
+    );
+    if (exactParticipant) return exactParticipant.user_id;
+
+    return (
+      this.stageParticipants().find((participant) =>
+        identity.endsWith(`_${participant.user_id.slice(0, 6)}`),
+      )?.user_id ?? null
+    );
+  }
+
+  private updateParticipantMute(participant: Participant, isMuted: boolean): void {
+    const userId = this.participantUserId(participant.identity);
+    if (!userId) return;
+    this.stageParticipants.update((participants) =>
+      participants.map((stageParticipant) =>
+        stageParticipant.user_id === userId
+          ? { ...stageParticipant, isMuted }
+          : stageParticipant,
+      ),
+    );
+  }
+
+  private onTrackMuted(publication: TrackPublication, participant: Participant): void {
+    if (publication.source === Track.Source.Microphone) {
+      this.updateParticipantMute(participant, true);
+    }
+  }
+
+  private onTrackUnmuted(publication: TrackPublication, participant: Participant): void {
+    if (publication.source === Track.Source.Microphone) {
+      this.updateParticipantMute(participant, false);
+    }
+  }
+
+  private onActiveSpeakersChanged(speakers: Participant[]): void {
+    const speakingUserIds = new Set(
+      speakers
+        .map((speaker) => this.participantUserId(speaker.identity))
+        .filter((userId): userId is string => userId !== null),
+    );
+    this.stageParticipants.update((participants) =>
+      participants.map((participant) => ({
+        ...participant,
+        isSpeaking: speakingUserIds.has(participant.user_id),
+      })),
+    );
+  }
+
+  private syncLiveKitStageState(): void {
+    this.stageParticipants.update((participants) =>
+      participants.map((participant) => {
+        const liveKitParticipant = this.liveKitParticipantForUser(participant.user_id);
+        if (!liveKitParticipant) return participant;
+        return {
+          ...participant,
+          isSpeaking: liveKitParticipant.isSpeaking,
+          isMuted:
+            liveKitParticipant.getTrackPublication(Track.Source.Microphone)?.isMuted ?? true,
+        };
+      }),
+    );
+  }
+
+  private async refreshSpeakerToken(): Promise<void> {
+    const roomRecord = this.currentRoom();
+    if (!roomRecord) return;
+
+    try {
+      const tokenResponse = await firstValueFrom(
+        this.http.post<{
+          token: string;
+          livekit_url: string;
+          is_speaker: boolean;
+        }>(
+          `${this.baseUrl}/token`,
+          { room_name: roomRecord.room_name },
+          { headers: this.getHeaders() },
+        ),
+      );
+      if (!tokenResponse.is_speaker) return;
+
+      this.isSpeaker.set(true);
+      if (!this.livekitRoom) return;
+
+      this.isConnectedToLiveKit.set(false);
+      await this.livekitRoom.disconnect();
+      await this.livekitRoom.connect(tokenResponse.livekit_url, tokenResponse.token);
+      this.syncLiveKitStageState();
+      await this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
+      this.isConnectedToLiveKit.set(true);
+    } catch (error) {
+      console.error('Failed to refresh speaker permissions:', error);
+      this.isSpeaker.set(false);
+      this.isConnectedToLiveKit.set(false);
+      showToast(this.i18n.translate('audioRoom.joinError'));
     }
   }
 
@@ -970,8 +1081,10 @@ export class AudioRoomsStore {
           user_id: s.user_id,
           display_name: s.display_name,
           avatar_url: s.avatar_url,
-          isSpeaking: false,
-          isMuted: false,
+          isSpeaking: this.liveKitParticipantForUser(s.user_id)?.isSpeaking ?? false,
+          isMuted:
+            this.liveKitParticipantForUser(s.user_id)?.getTrackPublication(Track.Source.Microphone)
+              ?.isMuted ?? true,
           isHost: s.user_id === (result.host?.id ?? ''),
           isCoHost: s.user_id === (result.co_host_id ?? ''),
         })),
@@ -980,6 +1093,21 @@ export class AudioRoomsStore {
     } catch {
       // Non-critical, stage info is best-effort
     }
+  }
+
+  private liveKitParticipantForUser(userId: string): Participant | null {
+    if (!this.livekitRoom) return null;
+    const participants: Participant[] = [
+      this.livekitRoom.localParticipant,
+      ...this.livekitRoom.remoteParticipants.values(),
+    ];
+    return (
+      participants.find(
+        (participant) =>
+          participant.identity === userId ||
+          participant.identity.endsWith(`_${userId.slice(0, 6)}`),
+      ) ?? null
+    );
   }
 
   leaveRoom(): void {
@@ -994,6 +1122,21 @@ export class AudioRoomsStore {
       if (this.onTrackUnsubscribedBound) {
         this.livekitRoom.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
         this.onTrackUnsubscribedBound = null;
+      }
+      if (this.onTrackMutedBound) {
+        this.livekitRoom.off(RoomEvent.TrackMuted, this.onTrackMutedBound);
+        this.onTrackMutedBound = null;
+      }
+      if (this.onTrackUnmutedBound) {
+        this.livekitRoom.off(RoomEvent.TrackUnmuted, this.onTrackUnmutedBound);
+        this.onTrackUnmutedBound = null;
+      }
+      if (this.onActiveSpeakersChangedBound) {
+        this.livekitRoom.off(
+          RoomEvent.ActiveSpeakersChanged,
+          this.onActiveSpeakersChangedBound,
+        );
+        this.onActiveSpeakersChangedBound = null;
       }
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
