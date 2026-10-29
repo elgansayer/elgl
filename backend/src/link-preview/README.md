@@ -38,12 +38,25 @@ returns `null`.
    The same protocol, credential, host and port policy is re-applied to every
    redirect target before `follow-redirects` is allowed to continue, closing
    the redirect-to-private/custom-port bypass class.
-3. **Fetching:** the page is downloaded with a 5 second timeout, at most three
-   redirects, and a 5 MB response size cap.
+3. **Fetching:** the page is downloaded as text with at most three redirects
+   and a 5 MB response size cap. Two time limits apply. The 5 second axios
+   `timeout` bounds connecting and waiting for response headers, and then acts
+   only as an idle timer that every received byte resets. A hard 8 second
+   deadline covers the whole scrape, redirects and body included. The deadline
+   exists because a server that sends headers and then drips the body just
+   inside the idle timer would otherwise hold the request, and the chat send
+   awaiting it, open indefinitely. When it expires the request is cancelled and
+   its socket destroyed.
 4. **Parsing:** `cheerio` extracts `og:title`, `og:description`, `og:image`
-   and `og:site_name`, falling back to `<title>` and the `description` meta
-   tag when OpenGraph tags are absent. Relative image URLs are resolved
-   against the source page.
+   and `og:site_name`. When OpenGraph tags are absent or empty, it falls back to
+   Twitter card tags (`twitter:title`, `twitter:description`, `twitter:image`,
+   `twitter:site`), alternative image properties (`og:image:url`,
+   `og:image:secure_url`, `twitter:image:src`), the document `<title>` (the first
+   `<title>` only, so inline SVG icon titles are not appended), the
+   `description` meta tag, and `application-name` before defaulting to the
+   hostname. Relative and protocol-relative image URLs are resolved against the
+   source page. Both `text/html` and `application/xhtml+xml` content types are
+   supported.
 5. **Sanitisation and output bounds:** all scraped text fields are run through
    a strict DOMPurify configuration that allows no tags and no attributes.
    Titles are capped at 300 characters, descriptions at 1,000 and site names
@@ -55,9 +68,10 @@ returns `null`.
    only a SHA-256 digest of the normalized URL (`link_preview:v2:<digest>`),
    so private query strings are not copied into Redis keys. Redis read/write
    failures are best-effort and do not make a valid chat message fail.
-7. **Logging:** scraper diagnostics identify a target by hostname plus a short
-   non-reversible URL fingerprint. Full URLs, query strings and raw upstream
-   error messages are not written to application logs.
+7. **Logging and metrics:** scraper diagnostics identify a target by hostname
+   plus a short non-reversible URL fingerprint. Full URLs, query strings and
+   raw upstream error messages are not written to application logs. See
+   [Observability](#observability).
 
 ## Integration
 
@@ -88,29 +102,115 @@ existing service error contract.
 - Redis failure degrades to an uncached fetch; it never weakens URL validation.
 - Oversized pages, URLs and metadata are rejected or bounded before they can
   become unbounded cache/API payloads.
+- A slow or stalled origin is abandoned at the 8 second deadline. Nothing is
+  cached, the caller receives the same generic 400, and chat delivery carries on
+  without a preview.
+- Every refusal and failure is classified into a small closed set of reasons
+  that feed both the logs and the metrics below.
+
+## Observability
+
+Each request ends in exactly one outcome, and refusals and failures also carry a
+reason. Both are closed sets, so metric cardinality is bounded and neither can
+contain a URL, hostname or upstream message.
+
+| Outcome     | Meaning                                                |
+| ----------- | ------------------------------------------------------ |
+| `cache_hit` | A validated Redis entry answered the request.          |
+| `fetched`   | The origin was scraped and produced a preview.         |
+| `empty`     | The origin was scraped but exposed no usable metadata. |
+| `rejected`  | The URL was refused before any network access.         |
+| `failed`    | The origin scrape did not complete.                    |
+
+| Reason            | Cause                                                              |
+| ----------------- | ------------------------------------------------------------------ |
+| `invalid_url`     | Malformed, overlong, non-http(s) or credential-bearing URL.        |
+| `blocked_target`  | Custom port, private host, private DNS answer or refused redirect. |
+| `timeout`         | Connect or idle timeout, or the 8 second hard deadline.            |
+| `not_html`        | The origin answered with a non-HTML content type.                  |
+| `too_large`       | The response exceeded the 5 MB bound.                              |
+| `upstream_status` | The origin answered with an HTTP error status.                     |
+| `network`         | DNS, connection, TLS or other transport failure.                   |
+| `unknown`         | Anything unclassified. This is the only reason logged as an error. |
+
+Prometheus series, exposed by `MetricsService`:
+
+- `hellotalk_link_preview_requests_total{outcome}`: volume and cache efficiency.
+- `hellotalk_link_preview_failures_total{reason}`: why previews are refused or
+  fail.
+- `hellotalk_link_preview_fetch_duration_seconds{outcome}`: origin scrape time
+  for `fetched`, `empty` and `failed`, with buckets up to 10 seconds so the 8
+  second deadline is visible.
+
+Useful queries:
+
+```promql
+# Share of previews served from Redis
+sum(rate(hellotalk_link_preview_requests_total{outcome="cache_hit"}[15m]))
+  / sum(rate(hellotalk_link_preview_requests_total[15m]))
+
+# Deadline hits: a rise suggests a slow-drip origin or an upstream regression
+sum(rate(hellotalk_link_preview_failures_total{reason="timeout"}[15m]))
+
+# SSRF probing: private hosts, ports, DNS answers and redirects being refused
+sum(rate(hellotalk_link_preview_failures_total{reason="blocked_target"}[15m]))
+
+# p95 origin scrape time
+histogram_quantile(0.95, sum by (le) (rate(hellotalk_link_preview_fetch_duration_seconds_bucket[15m])))
+```
+
+Failure logs follow `Link-preview fetch failed (<host>#<fingerprint>; reason=<reason>; <ErrorName>)`.
+The host and fingerprint correlate a failure with a report without exposing the
+path or query. Expected, origin-caused reasons are logged at `warn`; only
+`unknown` is logged at `error`, so dead links and non-HTML URLs do not drown out
+real faults. `rejected` requests are counted but not logged, because they never
+reach the network.
 
 ## Tests
 
-- `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6).
+- `dto/link-preview-query.dto.spec.ts`: query validation constraints.
+- `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6, multicast, broadcast).
 - `link-preview.service.spec.ts`: URL validation, SSRF boundaries, privacy-safe
   cache keys/logging, cache degradation, parsing, sanitisation, safe image
   handling and network error handling.
 - `link-preview.security.spec.ts`: redirect revalidation, metadata bounds and
   overlong image metadata.
+- `link-preview.real-dependencies.spec.ts`: executes the installed `cheerio`,
+  `dompurify` and `jsdom` packages directly. It proves entity decoding,
+  active-content stripping (including a mutation-XSS vector), multilingual
+  text, first-title fallback, bounds and cache re-sanitisation.
+- `link-preview.resilience.spec.ts`: proves the hard deadline with a controlled
+  clock and against a slow-drip server through the actual `HttpService`. It also
+  covers the DNS guard over sockets, redirect refusal reasons, and
+  outcome/reason accounting in metrics and logs.
+- `link-preview-diagnostics.spec.ts`: failure classification, pinned against
+  real axios and follow-redirects errors so a library upgrade cannot silently
+  change the reasons.
+- `link-preview.module.spec.ts`: module metadata, Nest dependency resolution
+  with the real `MetricsService`, and the exported Prometheus series.
+- `metrics/metrics.service.spec.ts`: the link-preview counters and histogram.
 - `link-preview.controller.spec.ts`: authenticated endpoint ownership, query
   parameter validation and service delegation.
+- `dto/link-preview-query.dto.spec.ts`: DTO validation covering valid URLs,
+  missing/empty values, disallowed protocols, length caps and non-string types.
 - `link-preview-card.component.spec.ts`: safe external-link rendering, unsafe
   URL suppression and broken/replacement image behaviour.
 
 ## Rollout and rollback
 
-This is application-only and has no schema migration. Deploy backend instances
-normally; mixed versions remain compatible because the response interface and
-Redis namespace are unchanged. Existing internal callers are unaffected by the
-new controller guard.
+This is application-only and has no schema migration, environment variable or
+feature flag. Deploy backend instances normally; mixed versions remain
+compatible because the response interface and Redis namespace are unchanged.
+`LinkPreviewService` now injects `MetricsService`, which `MetricsModule` provides
+globally, so `LinkPreviewModule` needs no new import. After deploying, confirm
+`hellotalk_link_preview_requests_total` appears on `/api/metrics` and that
+`reason="timeout"` and `reason="unknown"` stay near zero.
 
 Rollback can revert the controller/service/tests/documentation commits. The
 security checks are intentionally fail-closed, so do not selectively remove
 redirect validation or DNS guarding while leaving the public scraper exposed.
+Removing the 8 second deadline restores the unbounded slow-drip exposure, so
+prefer tuning `FETCH_DEADLINE_MS` over removing it. The metrics are additive:
+reverting them leaves dashboards empty but changes no behaviour.
 Redis entries in the `v2` namespace naturally expire after one hour and require
 no cleanup.

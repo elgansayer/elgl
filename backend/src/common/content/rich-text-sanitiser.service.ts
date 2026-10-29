@@ -83,6 +83,12 @@ function isAllowedRichTextUrl(value: string): boolean {
   if (!value) {
     return false;
   }
+  if (
+    value.toLowerCase().startsWith('javascript:') ||
+    value.toLowerCase().startsWith('data:')
+  ) {
+    return false;
+  }
   if (value.startsWith('/') || value.startsWith('#')) {
     return true;
   }

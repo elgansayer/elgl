@@ -120,6 +120,8 @@ The exact controller should use its feature DTO and authorization policy. The im
 `SanitiseHtmlPipe` remains temporarily as a deprecated compatibility name. It:
 
 - sanitises only a directly supplied string;
+- exempts non-user-authored technical body fields (`stack`, `componentStack`, `functionName`, `fileName`, `source`, `rawBody`, `signedPayload`, `signedTransactionInfo`, `signedRenewalInfo`, `purchaseToken`, `receiptData`, `receiptToken`, and passwords) when targeted directly, preserving `<anonymous>`, generic type parameters like `<T>`, and provider signatures;
+- exempts technical crash report DTOs (`LogClientErrorDto`, `ClientErrorDto`) and provider webhook payloads (`AppleNotificationDto`, `GoogleNotificationDto`);
 - does not recurse into arrays or objects;
 - is not registered globally;
 - must not be used for plain-text fields;

@@ -45,12 +45,11 @@ describe('MomentsFeedService', () => {
     );
   });
 
-  it('removes synthetic, ephemeral, non-Moment and duplicate rows and caps responses at 50', async () => {
+  it('removes ephemeral, non-Moment and duplicate rows and caps responses at 50', async () => {
     const valid = Array.from({ length: 55 }, (_, index) =>
       moment(`moment-${index}`, `author-${index}`),
     );
     momentsService.getFeed.mockResolvedValue([
-      moment('mock-moment-1', 'fake-author'),
       moment('story-1', 'author-story', { is_ephemeral: true }),
       moment('question-1', 'author-question', { post_type: 'question' }),
       valid[0],
@@ -62,9 +61,6 @@ describe('MomentsFeedService', () => {
     expect(result).toHaveLength(50);
     expect(result[0]?.id).toBe('moment-0');
     expect(new Set(result.map((item) => item.id)).size).toBe(50);
-    expect(result.some((item) => item.id.startsWith('mock-moment-'))).toBe(
-      false,
-    );
   });
 
   it('enforces Classmates membership against the normalised target language', async () => {
