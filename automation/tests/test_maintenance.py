@@ -210,32 +210,6 @@ def test_spent_budget_incident_evidence_names_each_blocking_cause(controller) ->
     assert rows == errors
 
 
-def test_spent_budget_snapshot_names_blocking_findings_for_named_live_tasks(
-    controller,
-) -> None:
-    errors = {
-        "1478": "Quality repair limit exceeded: design-sync-drift in scripts/design-sync-drift.mjs",
-        "1397": "Quality repair limit exceeded: review findings",
-        "1437": "Quality repair limit exceeded: review findings",
-        "1584": "Repair limit exceeded: backend / test, frontend / test",
-        "9593": "Repair limit exceeded: CI / required",
-        "9597": "Repair limit exceeded: CI / required",
-    }
-    jobs = controller.pipeline.jobs.load()
-    for task_id, error in errors.items():
-        jobs[task_id] = Job(
-            Task(task_id, f"Task {task_id}", "", "github-issue", 0),
-            last_error=error,
-        )
-
-    incidents = collect_incidents(jobs)
-    spent_budget_incident = next(i for i in incidents if i.key == "exhausted-repair-budget")
-    evidence_by_task = {row["task_id"]: row["error"] for row in spent_budget_incident.evidence()}
-    for task_id, expected_error in errors.items():
-        assert task_id in evidence_by_task
-        assert evidence_by_task[task_id] == expected_error
-
-
 def test_one_deduplicated_repair_with_durable_schedule_and_daily_report(controller) -> None:
     controller.run()
     pipeline = controller.pipeline

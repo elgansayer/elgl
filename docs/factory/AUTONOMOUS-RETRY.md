@@ -54,7 +54,7 @@ The opening words alone decide the failure class and the maintenance incident. B
 
 The budgets themselves, the stale-unpublished rebuild and the capped-conflict rebuild are unchanged. This is diagnostic only: no limit is raised, no gate is skipped and no job state is reset.
 
-Post-deployment snapshot verification for named live tasks (1478, 1397, 1437, 1584, 9593, 9597) and outcome measurements comparing application merges, repeated failures, and model time against the baseline are recorded in [AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md](AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md).
+Incident task cause attribution, verified pipeline execution for live tasks (1478, 1397, 1437, 1584, 9593, 9597), and post-deployment outcome measurement against the baseline are recorded in [AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md](AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md).
 
 ## Rolling-upgrade compatibility
 

@@ -3317,6 +3317,188 @@ def test_spent_quality_budget_with_only_review_findings_says_so(
     assert result.provider_history == []
 
 
+def test_spent_budget_pipeline_emits_causes_for_incident_task_scenarios(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openhands_factory.maintenance import collect_incidents
+
+    factory_config = config(tmp_path)
+    github = GitHub()
+    statuses = {
+        9679: PullRequestStatus(
+            9679, "OPEN", False, "MERGEABLE", "", "sha-1478", False, True, frozenset()
+        ),
+        9689: PullRequestStatus(
+            9689, "OPEN", False, "MERGEABLE", "", "sha-1397", False, True, frozenset()
+        ),
+        9685: PullRequestStatus(
+            9685, "OPEN", False, "MERGEABLE", "", "sha-1437", False, True, frozenset()
+        ),
+        9682: PullRequestStatus(
+            9682,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "sha-1584",
+            False,
+            True,
+            frozenset({"frontend / test", "backend / test"}),
+        ),
+        9593: PullRequestStatus(
+            9593,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "sha-9593",
+            False,
+            True,
+            frozenset({"CI / required"}),
+        ),
+        9597: PullRequestStatus(
+            9597,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "sha-9597",
+            False,
+            True,
+            frozenset({"CI / required"}),
+        ),
+    }
+    github.pull_request_status = (  # type: ignore[assignment,method-assign]
+        lambda pull_request: statuses[pull_request]
+    )
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_run_agent",
+        lambda *args, **kwargs: pytest.fail("agent must not run on spent budget"),
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+
+    findings_by_task = {
+        "1478": [
+            QualityFinding(
+                "design-sync-drift",
+                Path("scripts/design-sync-drift.mjs"),
+                1,
+                "Drift",
+                "manifest drift",
+            )
+        ],
+        "1397": [],
+        "1437": [],
+    }
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: findings_by_task.get(
+            workflow.repository.name.replace("issue-", ""), []
+        ),
+    )
+
+    # Prepare jobs for the 6 tasks named in the incident:
+    # 1478: published job in QUALITY_REPAIRING at quality limit with quality gate finding
+    (factory_config.worktree_dir / "issue-1478").mkdir(parents=True)
+    job_1478 = Job(
+        Task("1478", "Task 1478", "", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/1478-task",
+        pull_request=9679,
+        head_sha="sha-1478",
+        quality_repairs=MAX_CONSECUTIVE_QUALITY_REPAIRS,
+        review_findings=["Local verification failed: error"],
+    )
+    # 1397 and 1437: published jobs in QUALITY_REPAIRING at quality limit with review findings
+    (factory_config.worktree_dir / "issue-1397").mkdir(parents=True)
+    job_1397 = Job(
+        Task("1397", "Task 1397", "", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/1397-task",
+        pull_request=9689,
+        head_sha="sha-1397",
+        quality_repairs=MAX_CONSECUTIVE_QUALITY_REPAIRS,
+        review_findings=["Local verification failed: error"],
+    )
+    (factory_config.worktree_dir / "issue-1437").mkdir(parents=True)
+    job_1437 = Job(
+        Task("1437", "Task 1437", "", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/1437-task",
+        pull_request=9685,
+        head_sha="sha-1437",
+        quality_repairs=MAX_CONSECUTIVE_QUALITY_REPAIRS,
+        review_findings=["Review rejected: missing test"],
+    )
+    # 1584: published job in REPAIRING at CI limit with test failures
+    (factory_config.worktree_dir / "issue-1584").mkdir(parents=True)
+    job_1584 = Job(
+        Task("1584", "Task 1584", "", "github-issue", 0),
+        state=JobState.REPAIRING,
+        branch="factory/1584-task",
+        pull_request=9682,
+        head_sha="sha-1584",
+        repair_attempts=5,
+    )
+    # 9593 and 9597: PR jobs in REPAIRING at CI limit with required check failure
+    (factory_config.worktree_dir / "issue-9593").mkdir(parents=True)
+    job_9593 = Job(
+        Task("9593", "PR 9593", "", "github-pull-request", 0),
+        state=JobState.REPAIRING,
+        branch="factory/9593-task",
+        pull_request=9593,
+        head_sha="sha-9593",
+        repair_attempts=5,
+    )
+    (factory_config.worktree_dir / "issue-9597").mkdir(parents=True)
+    job_9597 = Job(
+        Task("9597", "PR 9597", "", "github-pull-request", 0),
+        state=JobState.REPAIRING,
+        branch="factory/9597-task",
+        pull_request=9597,
+        head_sha="sha-9597",
+        repair_attempts=5,
+    )
+
+    all_jobs = {
+        "1478": job_1478,
+        "1397": job_1397,
+        "1437": job_1437,
+        "1584": job_1584,
+        "9593": job_9593,
+        "9597": job_9597,
+    }
+    pipeline.jobs.save(all_jobs)
+
+    expected_errors = {
+        "1478": "Quality repair limit exceeded: design-sync-drift in scripts/design-sync-drift.mjs",
+        "1397": "Quality repair limit exceeded: review findings",
+        "1437": "Quality repair limit exceeded: review findings",
+        "1584": "Repair limit exceeded: backend / test, frontend / test",
+        "9593": "Repair limit exceeded: CI / required",
+        "9597": "Repair limit exceeded: CI / required",
+    }
+    for task_id in all_jobs:
+        github.statuses = [statuses[all_jobs[task_id].pull_request]]
+        res = pipeline.run_job(task_id)
+        assert res is not None
+        assert res.last_error == expected_errors[task_id]
+
+    incidents = collect_incidents(pipeline.jobs.load())
+    spent_budget_incident = next(i for i in incidents if i.key == "exhausted-repair-budget")
+    evidence_by_task = {row["task_id"]: row["error"] for row in spent_budget_incident.evidence()}
+    assert evidence_by_task == expected_errors
+
+
 @pytest.mark.parametrize(
     "failure",
     [
