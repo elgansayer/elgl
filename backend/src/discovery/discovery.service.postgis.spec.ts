@@ -282,7 +282,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
     expect(queryBuilder.limit).toHaveBeenCalledWith(50);
     expect(logger.warn).toHaveBeenCalledWith(
       { error: 'PostGIS unavailable' },
-      'PostGIS search_nearby_users RPC failed, falling back to standard query',
+      'PostGIS partner search failed; using bounded non-spatial fallback',
     );
     expect(result).toEqual([
       expect.objectContaining({
@@ -324,7 +324,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
     ]);
   });
 
-  it('falls back when the PostGIS RPC returns no nearby users', async () => {
+  it('preserves an empty successful PostGIS result without returning users outside the radius', async () => {
     rpc.mockResolvedValue({ data: [], error: null } satisfies QueryResult);
     queryBuilder.limit.mockResolvedValue({
       data: [makeRpcUser('fallback-empty')],
@@ -336,12 +336,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
       longitude: -0.1278,
     });
 
-    expect(queryBuilder.limit).toHaveBeenCalledWith(50);
-    expect(result).toEqual([
-      expect.objectContaining({
-        id: 'fallback-empty',
-        distance_metres: undefined,
-      }),
-    ]);
+    expect(queryBuilder.limit).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
   });
 });

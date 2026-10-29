@@ -656,14 +656,13 @@ export class DiscoveryService {
         error: { message?: string } | null;
       };
 
-      if (response.error) {
+      if (response.error || !response.data) {
         this.logger.warn(
-          { error: response.error.message },
-          'PostGIS search_nearby_users RPC failed, falling back to standard query',
+          {
+            error: response.error?.message ?? 'PostGIS returned no data',
+          },
+          'PostGIS partner search failed; using bounded non-spatial fallback',
         );
-      }
-
-      if (response.error || !response.data || response.data.length === 0) {
         const fallbackRes = await queryBuilder.limit(50);
         if (
           fallbackRes.error ||
@@ -708,6 +707,13 @@ export class DiscoveryService {
         );
         return enrich(filtered);
       }
+
+      // An empty result is a successful spatial search. Falling back here
+      // would leak users outside the requested radius into proximity results.
+      if (response.data.length === 0) {
+        return enrich([]);
+      }
+
       let rpcResults: DiscoveryUser[] = (
         response.data as unknown as DiscoveryUser[]
       ).map((item) => ({

@@ -333,6 +333,87 @@ describe('LinkPreviewService', () => {
     expect(result?.siteName).toBe('example.com');
   });
 
+  it('extracts Twitter card metadata when OG tags are absent', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta name="twitter:title" content="Twitter Title" />
+        <meta name="twitter:description" content="Twitter Description" />
+        <meta name="twitter:image" content="/img/twitter-cover.png" />
+        <meta name="twitter:site" content="@ExampleOrg" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/tweet');
+
+    expect(result).toEqual({
+      url: 'https://example.com/tweet',
+      title: 'Twitter Title',
+      description: 'Twitter Description',
+      image: 'https://example.com/img/twitter-cover.png',
+      siteName: '@ExampleOrg',
+    });
+  });
+
+  it('accepts application/xhtml+xml responses', async () => {
+    mockHtmlResponse(
+      '<?xml version="1.0" encoding="UTF-8"?><html><head><title>XHTML Title</title></head></html>',
+      'application/xhtml+xml; charset=utf-8',
+    );
+
+    const result = await service.getPreview('https://example.com/xhtml');
+    expect(result?.title).toBe('XHTML Title');
+  });
+
+  it('uses only the first <title> so inline SVG icon titles are not appended', async () => {
+    mockHtmlResponse(`
+      <html><head><title>Real Page Title</title></head>
+      <body><svg><title>Icon</title></svg></body></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/svg-title');
+
+    expect(result?.title).toBe('Real Page Title');
+  });
+
+  it('extracts og:image:secure_url when og:image is absent', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="og:title" content="Secure Image Article" />
+        <meta property="og:image:secure_url" content="https://example.com/img/secure.png" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/secure');
+    expect(result?.image).toBe('https://example.com/img/secure.png');
+  });
+
+  it('extracts case-insensitive OpenGraph tags and alternative image properties', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="OG:TITLE" content="Case Insensitive Title" />
+        <meta property="og:image:secure_url" content="https://example.com/secure.jpg" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.title).toBe('Case Insensitive Title');
+    expect(result?.image).toBe('https://example.com/secure.jpg');
+  });
+
+  it('resolves protocol-relative image URLs safely', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="og:title" content="Protocol Relative Image" />
+        <meta property="og:image" content="//cdn.example.com/photo.png" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.image).toBe('https://cdn.example.com/photo.png');
+  });
+
   it('strips markup from scraped fields including the site name', async () => {
     mockHtmlResponse(`
       <html><head>
