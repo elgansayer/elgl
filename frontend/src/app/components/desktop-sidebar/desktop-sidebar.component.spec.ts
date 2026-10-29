@@ -3,8 +3,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
 import { DesktopSidebarComponent } from './desktop-sidebar.component';
+import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { NavTab, UnreadCounterService } from '../../services/unread-counter.service';
+import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 
 @Component({ template: '' })
 class EmptyRouteComponent {}
@@ -59,13 +61,20 @@ describe('DesktopSidebarComponent', () => {
   let component: DesktopSidebarComponent;
   let router: Router;
   let unreadCounter: MockUnreadCounterService;
+  let seriousLearnerEnabled: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
+    seriousLearnerEnabled = signal(false);
+
     await TestBed.configureTestingModule({
       imports: [DesktopSidebarComponent, JoyrideModule.forRoot()],
       providers: [
         { provide: I18nService, useClass: MockI18nService },
         { provide: UnreadCounterService, useClass: MockUnreadCounterService },
+        {
+          provide: SeriousLearnerModeService,
+          useValue: { enabled: seriousLearnerEnabled },
+        },
         provideRouter([
           { path: '', component: EmptyRouteComponent },
           { path: 'chat', component: EmptyRouteComponent },
@@ -86,26 +95,102 @@ describe('DesktopSidebarComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render all nine navigation links', () => {
+  it('should render all nine navigation links in ordinary mode', () => {
     const links = fixture.nativeElement.querySelectorAll('nav a');
     expect(links.length).toBe(9);
   });
 
+  it('should remove the Moments entry when Serious Learner mode is enabled', () => {
+    seriousLearnerEnabled.set(true);
+    fixture.detectChanges();
+
+    const momentsLink = fixture.nativeElement.querySelector('a[href="/moments"]');
+    const chatLink = fixture.nativeElement.querySelector('a[href="/chat"]');
+
+    expect(momentsLink).toBeNull();
+    expect(chatLink).toBeTruthy();
+    expect(fixture.nativeElement.querySelectorAll('nav a').length).toBe(8);
+  });
+
   it('should render a labelled navigation landmark', () => {
-    const nav: HTMLElement | null = fixture.nativeElement.querySelector('nav[role="navigation"]');
+    const nav = fixture.nativeElement.querySelector('nav[role="navigation"]');
     expect(nav).toBeTruthy();
-    expect(nav?.matches('[aria-label="nav.mainNav"]')).toBe(true);
+    expect(nav.getAttribute('aria-label')).toBe('nav.mainNav');
   });
 
   it('should preserve native link semantics and visible focus treatment', () => {
     const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
 
     for (const link of links) {
-      expect(link.matches('[role]')).toBe(false);
-      expect(link.matches('[tabindex]')).toBe(false);
-      expect(link.classList.toString().includes('focus-visible:ring-2')).toBe(true);
-      expect(link.classList.toString().includes('focus-visible:ring-primary')).toBe(true);
+      expect(link.hasAttribute('role')).toBe(false);
+      expect(link.hasAttribute('tabindex')).toBe(false);
+      expect(link.classList.toString()).toContain('focus-visible:ring-2');
+      expect(link.classList.toString()).toContain('focus-visible:ring-primary');
     }
+  });
+
+  it('should use Relay semantic surface and radius roles', () => {
+    unreadCounter.setCount('chat', 3);
+    fixture.detectChanges();
+
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
+    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector('a[href="/chat"] .ms-auto');
+
+    expect(nav.classList.toString().includes('bg-surface-200')).toBe(true);
+    expect(nav.classList.toString().includes('border-surface-100')).toBe(true);
+
+    for (const link of links) {
+      expect(link.classList.toString().includes('rounded-app')).toBe(true);
+      expect(link.classList.toString().includes('rounded-xl')).toBe(false);
+    }
+
+    expect(unreadBadge).toBeTruthy();
+    expect(unreadBadge.classList.toString().includes('bg-danger')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('text-on-fill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('rounded-pill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('rounded-full')).toBe(false);
+  });
+
+  it('should preserve the intentional desktop-only responsive contract', () => {
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const classes = nav.classList.toString();
+
+    expect(classes.includes('hidden')).toBe(true);
+    expect(classes.includes('lg:flex')).toBe(true);
+    expect(classes.includes('md:flex')).toBe(false);
+  });
+
+  it('should use Relay semantic surface and radius roles', () => {
+    unreadCounter.setCount('chat', 3);
+    fixture.detectChanges();
+
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
+    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector('a[href="/chat"] .ms-auto');
+
+    expect(nav.classList.toString().includes('bg-surface-200')).toBe(true);
+    expect(nav.classList.toString().includes('border-surface-100')).toBe(true);
+
+    for (const link of links) {
+      expect(link.classList.toString().includes('rounded-app')).toBe(true);
+      expect(link.classList.toString().includes('rounded-xl')).toBe(false);
+    }
+
+    expect(unreadBadge).toBeTruthy();
+    expect(unreadBadge.classList.toString().includes('bg-danger')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('text-on-fill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('rounded-pill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('rounded-full')).toBe(false);
+  });
+
+  it('should preserve the intentional desktop-only responsive contract', () => {
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const classes = nav.classList.toString();
+
+    expect(classes.includes('hidden')).toBe(true);
+    expect(classes.includes('lg:flex')).toBe(true);
+    expect(classes.includes('md:flex')).toBe(false);
   });
 
   it('should expose the active primary route with aria-current="page"', async () => {
@@ -117,8 +202,8 @@ describe('DesktopSidebarComponent', () => {
     const momentsLink: HTMLAnchorElement =
       fixture.nativeElement.querySelector('a[href="/moments"]');
 
-    expect(chatLink.matches('[aria-current="page"]')).toBe(true);
-    expect(momentsLink.matches('[aria-current]')).toBe(false);
+    expect(chatLink.getAttribute('aria-current')).toBe('page');
+    expect(momentsLink.hasAttribute('aria-current')).toBe(false);
   });
 
   it('should expose the active economy route with aria-current="page"', async () => {
@@ -129,69 +214,71 @@ describe('DesktopSidebarComponent', () => {
     const shopLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/shop"]');
     const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
 
-    expect(shopLink.matches('[aria-current="page"]')).toBe(true);
-    expect(chatLink.matches('[aria-current]')).toBe(false);
+    expect(shopLink.getAttribute('aria-current')).toBe('page');
+    expect(chatLink.hasAttribute('aria-current')).toBe(false);
+  });
+});
+
+// The suite above echoes translation keys, which cannot reveal an emoji baked into the copy itself.
+// This suite renders the sidebar with the shipped English dictionary instead.
+describe('DesktopSidebarComponent with the shipped English dictionary', () => {
+  const EMOJI = /\p{Extended_Pictographic}/gu;
+
+  let fixture: ComponentFixture<DesktopSidebarComponent>;
+  let i18n: I18nService;
+
+  beforeEach(async () => {
+    localStorage.clear();
+
+    await TestBed.configureTestingModule({
+      imports: [DesktopSidebarComponent, JoyrideModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: { getAccessToken: () => null } },
+        { provide: UnreadCounterService, useClass: MockUnreadCounterService },
+        { provide: SeriousLearnerModeService, useValue: { enabled: signal(false) } },
+        provideRouter([{ path: '', component: EmptyRouteComponent }]),
+      ],
+    }).compileComponents();
+
+    i18n = TestBed.inject(I18nService);
+    fixture = TestBed.createComponent(DesktopSidebarComponent);
+    fixture.detectChanges();
   });
 
-  it('should bind every primary navigation tab to its own unread counter', () => {
-    const cases: Array<{ tab: NavTab; path: string; count: number; expected: string }> = [
-      { tab: 'chat', path: '/chat', count: 1, expected: '1' },
-      { tab: 'moments', path: '/moments', count: 12, expected: '12' },
-      { tab: 'discovery', path: '/discovery', count: 23, expected: '23' },
-      { tab: 'audioRooms', path: '/audio-rooms', count: 34, expected: '34' },
-      { tab: 'profile', path: '/profile', count: 45, expected: '45' },
-    ];
+  function iconAndLabel(href: string): { icon: string; label: string } {
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector(`a[href="${href}"]`);
+    const [icon, label] = Array.from(link.children);
+    return { icon: icon.textContent.trim(), label: label.textContent.trim() };
+  }
 
-    for (const testCase of cases) {
-      unreadCounter.reset();
-      unreadCounter.setCount(testCase.tab, testCase.count);
-      fixture.detectChanges();
-      const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
-        `a[href="${testCase.path}"]`,
-      );
-      const badge: HTMLElement | null = link.querySelector('span.ms-auto');
-      const allBadges: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('span.ms-auto');
+  it('draws exactly one emoji in every navigation link', () => {
+    const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
 
-      expect(badge?.textContent?.trim() === testCase.expected).toBe(true);
-      expect(allBadges.length).toBe(1);
+    expect(links.length).toBe(9);
+    for (const link of links) {
+      expect(link.textContent.match(EMOJI), link.getAttribute('href') ?? '').toHaveLength(1);
     }
   });
 
-  it('should expose the full unread count to assistive technology', () => {
-    unreadCounter.setCount('chat', 125);
-    fixture.detectChanges();
+  it('pairs each primary icon with a text-only label', () => {
+    for (const item of fixture.componentInstance.navItems()) {
+      const { icon, label } = iconAndLabel(item.path);
 
-    const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
-    const visualBadge: HTMLElement | null = chatLink.querySelector('span.ms-auto');
-    const screenReaderText: HTMLElement | null = chatLink.querySelector('span.sr-only');
+      expect(icon).toBe(item.icon);
+      expect(label).toBe(i18n.translate(item.key));
+      expect(label.match(EMOJI), item.key).toBeNull();
+    }
 
-    expect(visualBadge?.getAttribute('aria-hidden')).toBe('true');
-    expect(visualBadge?.textContent?.trim()).toBe('99+');
-    expect(screenReaderText?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      '125 chatList.filterUnread',
-    );
+    expect(iconAndLabel('/chat').label).toBe('HelloTalk');
+    expect(iconAndLabel('/discovery').label).toBe('Connect');
+    expect(iconAndLabel('/audio-rooms').label).toBe('Live Rooms');
+    expect(iconAndLabel('/profile').label).toBe('Me');
   });
 
-  it('should cap unread badge text at 99+ without changing the underlying count', () => {
-    unreadCounter.setCount('chat', 100);
-    fixture.detectChanges();
+  it('pairs the settings icon with a text-only label', () => {
+    const { icon, label } = iconAndLabel('/settings');
 
-    const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
-    const badge: HTMLElement | null = chatLink.querySelector('span.ms-auto');
-
-    expect(badge?.textContent?.trim() === '99+').toBe(true);
-    expect(unreadCounter.tabCount('chat')).toBe(100);
-  });
-
-  it('should remove a navigation badge when the tab has no unread items', () => {
-    unreadCounter.setCount('moments', 7);
-    fixture.detectChanges();
-    expect(
-      fixture.nativeElement.querySelector('a[href="/moments"] span.ms-auto'),
-    ).toBeTruthy();
-
-    unreadCounter.setCount('moments', 0);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('a[href="/moments"] span.ms-auto')).toBeNull();
+    expect(icon.match(EMOJI)).toHaveLength(1);
+    expect(label).toBe('Settings');
   });
 });

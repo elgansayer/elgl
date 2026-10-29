@@ -51,26 +51,49 @@ Current Playwright coverage includes authentication/onboarding pages, chat/messa
 
 Playwright is the better home for cross-browser, RTL, device-profile, and full-stack/infrastructure-sensitive flows. Cypress remains appropriate for existing Angular-centric feature flows.
 
+Playwright specs must use Playwright's own runner API (`test`, `test.describe`, `expect`) and be launched from `e2e/`. Vitest or Jest style globals abort the whole run with `ReferenceError: describe is not defined`; see [Playwright test-runner boundary](./playwright-test-boundary.md) for the enforced contract and triage steps.
+
+## Runner context contract
+
+Test files must be executed by the package and runner that owns them. A Playwright spec imports `test`, `expect`, and suite helpers from `@playwright/test`; running that file directly through Node, `tsx`, `ts-node`, Bun, Vitest, or Jest bypasses Playwright's runner bootstrap and fails during initialisation or collection. Conversely, launching Playwright from the repository root or frontend can discover Angular/Vitest specs and produce misleading errors such as `ReferenceError: describe is not defined`.
+
+Use these package-owned entry points:
+
+- Angular/frontend unit tests: `cd frontend && npm test`
+- NestJS/backend unit tests: `cd backend && npm test`
+- Admin portal unit tests: `cd admin-portal && npm test`
+- Standalone Playwright E2E: `cd e2e && npm test`
+- Playwright discovery without starting browsers: `cd e2e && npm test -- --list`
+
+Do not execute `e2e/tests/*.spec.ts` directly with a generic JavaScript/TypeScript runtime, and do not pass `e2e/tests` to Vitest or Jest. CI and automation commands that run the standalone Playwright suite must either enter the `e2e` package context or pass the explicit root config `--config e2e/playwright.config.ts`.
+
+`npm run check:playwright-test-boundary` is the repository guard for this ownership contract. It validates package and configuration ownership, rejects known wrong-runner command forms in workflows, scripts, package manifests, and automation instructions, and verifies that Playwright invocations use the `e2e` package context or its explicit configuration.
+
 ## Playwright web-server readiness contract
 
 Playwright starts the NestJS and Angular web servers as separate `webServer` entries. Playwright may launch entries in that array concurrently, so the Angular development/SSR server must not assume that NestJS is already accepting connections merely because the backend process has been spawned.
 
 `e2e/backend-readiness.mjs` is the explicit dependency gate. The Angular web-server command runs it before `npm run start`; the gate polls only the backend health endpoint, uses bounded per-request and overall timeouts, backs off between retries, and exits non-zero if the backend never becomes healthy. Expected connection-refusal errors during NestJS startup are intentionally not dumped to QA output because undici can surface them as noisy `AggregateError [ECONNREFUSED]` stacks that hide the real readiness state.
 
-The E2E endpoints use `127.0.0.1` consistently rather than mixing loopback spellings. This removes host-resolution differences between browser, Node/undici and CI environments. `E2E_BACKEND_HEALTH_URL` can override the health endpoint for an isolated harness; credential-bearing and non-HTTP(S) URLs are rejected. `E2E_BACKEND_READY_TIMEOUT_MS`, `E2E_BACKEND_ATTEMPT_TIMEOUT_MS` and `E2E_BACKEND_READY_INTERVAL_MS` are optional positive-integer tuning controls.
+The default E2E backend health endpoint and Angular development `apiUrl` both use the exact IPv4 loopback origin `http://127.0.0.1:3000`. Do not mix `localhost` with `127.0.0.1` at this boundary: Node SSR may resolve `localhost` to `::1` while the readiness gate has only proved the IPv4 listener healthy, recreating the misleading `TypeError: fetch failed` / `ECONNREFUSED` startup failure. `e2e/webserver-readiness-contract.test.mjs` locks the two defaults to the same origin so this drift cannot silently return.
 
-Run the focused contract with:
+`E2E_BACKEND_HEALTH_URL` can override the health endpoint for an isolated harness; credential-bearing and non-HTTP(S) URLs are rejected. When using an override whose origin differs from `http://127.0.0.1:3000`, the harness must also provide a matching frontend API configuration. Otherwise the readiness probe would be checking a different server than Angular SSR uses. `E2E_BACKEND_READY_TIMEOUT_MS`, `E2E_BACKEND_ATTEMPT_TIMEOUT_MS` and `E2E_BACKEND_READY_INTERVAL_MS` are optional positive-integer tuning controls.
+
+Run the focused contracts with:
 
 ```bash
 cd e2e
 npm run test:readiness
+npm run test:webserver-readiness-contract
 ```
 
-A readiness timeout is an infrastructure/startup failure, not an application assertion failure. Diagnose the NestJS process/configuration first. Do not replace the gate with a fixed sleep or suppress the failure. The change is operational only: it creates no persisted data, changes no authorization boundary, and can be rolled back by restoring the previous Playwright web-server command.
+A readiness timeout is an infrastructure/startup failure, not an application assertion failure. Diagnose the NestJS process/configuration first. Do not replace the gate with a fixed sleep or suppress the failure. The change is operational only: it creates no persisted data, changes no authorization boundary, and can be rolled back by restoring the previous Playwright/frontend loopback configuration.
 
 ## Current Playwright CI blocker
 
-Playwright is not currently wired into the canonical GitHub Actions workflows. Its config starts the real backend and frontend servers. Backend startup validates configuration for Supabase, database, Redis, Centrifugo, LiveKit, R2, translation services, and Stripe. A nightly Playwright job therefore needs a reproducible test harness/service stack or explicit test doubles before it can be added without becoming permanently red.
+Full Playwright browser execution is not currently wired into the canonical GitHub Actions workflows. The lightweight `E2E Runner Context` workflow performs test discovery only, which proves the correct runner can collect the suite without starting application servers or browsers.
+
+The Playwright config starts the real backend and frontend servers. Backend startup validates configuration for Supabase, database, Redis, Centrifugo, LiveKit, R2, translation services, and Stripe. A full or nightly Playwright job therefore needs a reproducible test harness/service stack or explicit test doubles before it can be added without becoming permanently red.
 
 Do not solve this by injecting production credentials into untrusted PR jobs. Build an isolated CI environment first.
 

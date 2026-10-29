@@ -1,9 +1,15 @@
 import type { Mock } from 'vitest';
+import type { Request } from 'express';
+import type { User } from '@supabase/supabase-js';
 import { Test, TestingModule } from '@nestjs/testing';
 import { VideoCallsController } from './video-calls.controller';
 import { VideoCallsService } from './video-calls.service';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  VIDEO_CALLS_RATE_LIMIT_KEY,
+  VideoCallsRateLimiterGuard,
+} from './video-calls-rate-limiter.guard';
 
 describe('VideoCallsController', () => {
   let controller: VideoCallsController;
@@ -13,6 +19,7 @@ describe('VideoCallsController', () => {
     id: '11111111-1111-4111-8111-111111111111',
     email: 'test@hellotalk.com',
   };
+  const mockReq = { user: mockUser as unknown as User } as unknown as Request;
   const remoteUserId = '22222222-2222-4222-8222-222222222222';
   const roomName = 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890';
 
@@ -37,9 +44,15 @@ describe('VideoCallsController', () => {
           provide: VideoCallsDegradationService,
           useValue: mockDegradationService,
         },
+        {
+          provide: VideoCallsRateLimiterGuard,
+          useValue: { canActivate: vi.fn().mockReturnValue(true) },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(VideoCallsRateLimiterGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
@@ -55,6 +68,38 @@ describe('VideoCallsController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('should attach authentication and video-call rate-limit guards', () => {
+    const guards = Reflect.getMetadata(
+      '__guards__',
+      VideoCallsController,
+    ) as unknown[];
+
+    expect(guards).toEqual(
+      expect.arrayContaining([SupabaseAuthGuard, VideoCallsRateLimiterGuard]),
+    );
+  });
+
+  it('should rate-limit call mutations while leaving health unmetered', () => {
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.startCall,
+      ),
+    ).toEqual({ maxRequests: 3, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.acceptCall,
+      ),
+    ).toEqual({ maxRequests: 10, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.health,
+      ),
+    ).toBeUndefined();
+  });
+
   describe('startCall', () => {
     it('should bind room creation to the authenticated caller and intended recipient', async () => {
       const mockResponse = {
@@ -64,7 +109,7 @@ describe('VideoCallsController', () => {
       };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
       const result = await controller.startCall(req, { remoteUserId });
 
       expect(videoCallsService.createRoom).toHaveBeenCalledWith(
@@ -84,7 +129,7 @@ describe('VideoCallsController', () => {
       };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
       const result = await controller.startCall(req, { remoteUserId });
 
       expect(result).toEqual(mockResponse);
@@ -97,7 +142,7 @@ describe('VideoCallsController', () => {
         new Error('Encrypted calls unavailable'),
       );
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
 
       await expect(controller.startCall(req, { remoteUserId })).rejects.toThrow(
         'Encrypted calls unavailable',
@@ -114,7 +159,7 @@ describe('VideoCallsController', () => {
       };
       (videoCallsService.joinRoom as Mock).mockResolvedValue(mockResponse);
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
       const result = await controller.acceptCall(req, { roomName });
 
       expect(videoCallsService.joinRoom).toHaveBeenCalledWith(
@@ -129,7 +174,7 @@ describe('VideoCallsController', () => {
         new Error('Call is unavailable'),
       );
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
 
       await expect(controller.acceptCall(req, { roomName })).rejects.toThrow(
         'Call is unavailable',

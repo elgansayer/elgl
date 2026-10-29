@@ -1,8 +1,10 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.config import FactoryConfig
-from openhands_factory.daemon import select_batch
+from openhands_factory.daemon import refund_unspent_issue_admission, select_batch
 from openhands_factory.issue_admission import IssueAdmissionGate
 from openhands_factory.models import Job, JobState, Task
 
@@ -43,6 +45,31 @@ def test_issue_admission_gate_allows_one_issue_per_interval(tmp_path: Path) -> N
     assert gate.admit("101", started + timedelta(hours=1))
 
 
+@pytest.mark.parametrize(
+    ("finished", "refunded"),
+    [
+        (JobState.DONE, True),
+        (None, True),
+        (JobState.IMPLEMENTING, False),
+        (JobState.QUARANTINED, False),
+    ],
+)
+def test_intake_slot_is_returned_only_when_the_issue_needed_no_work(
+    tmp_path: Path, finished: JobState | None, refunded: bool
+) -> None:
+    gate = IssueAdmissionGate(
+        tmp_path / "issue-admissions.json",
+        interval_seconds=3600,
+        max_admissions=1,
+    )
+    admitted_at = datetime.now(UTC)
+    assert gate.admit("100", admitted_at)
+    job = None if finished is None else issue_job("100", 1, finished)
+
+    assert refund_unspent_issue_admission(gate, "100", admitted_at, job) is refunded
+    assert gate.available_slots() == (1 if refunded else 0)
+
+
 def test_issue_admission_gate_survives_daemon_restart(tmp_path: Path) -> None:
     state_path = tmp_path / "issue-admissions.json"
     started = datetime(2026, 8, 17, 10, 0, tzinfo=UTC)
@@ -54,6 +81,21 @@ def test_issue_admission_gate_survives_daemon_restart(tmp_path: Path) -> None:
     assert restarted.available_slots(started + timedelta(minutes=10)) == 0
     snapshot = restarted.snapshot(started + timedelta(minutes=10))
     assert snapshot["next_available_at"] == (started + timedelta(hours=1)).isoformat()
+
+
+def test_future_issue_admission_is_clamped_to_current_clock(tmp_path: Path) -> None:
+    state_path = tmp_path / "issue-admissions.json"
+    current = datetime(2026, 8, 17, 10, 0, tzinfo=UTC)
+    future = current + timedelta(days=1)
+    skewed = IssueAdmissionGate(state_path, interval_seconds=3600, max_admissions=1)
+    assert skewed.admit("100", future)
+
+    corrected = IssueAdmissionGate(state_path, interval_seconds=3600, max_admissions=1)
+
+    assert corrected.available_slots(current) == 0
+    snapshot = corrected.snapshot(current)
+    assert snapshot["next_available_at"] == (current + timedelta(hours=1)).isoformat()
+    assert corrected.available_slots(current + timedelta(hours=1)) == 1
 
 
 def test_disabled_issue_admission_gate_preserves_historical_unlimited_mode(
@@ -105,11 +147,11 @@ def test_factory_config_reads_hourly_issue_admission_policy() -> None:
     assert config.new_issues_per_interval == 1
 
 
-def test_production_templates_and_host_repair_keep_hourly_issue_admission() -> None:
+def test_production_templates_and_host_repair_keep_bounded_issue_admission() -> None:
     repository_root = Path(__file__).parents[2]
     template = (repository_root / "config/systemd/factory.env.example").read_text(encoding="utf-8")
     repair = (repository_root / "scripts/repair-factory-host.sh").read_text(encoding="utf-8")
 
     for content in (template, repair):
         assert "FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600" in content
-        assert "FACTORY_NEW_ISSUES_PER_INTERVAL=1" in content
+        assert "FACTORY_NEW_ISSUES_PER_INTERVAL=4" in content

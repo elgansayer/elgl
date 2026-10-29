@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
+import { AuthService } from './services/auth.service';
+import { I18nService } from './services/i18n.service';
 
 const template = readFileSync(resolve(process.cwd(), 'src/app/app.component.html'), 'utf8');
 const desktopTemplate = readFileSync(
@@ -17,6 +20,16 @@ const PRIMARY_TABS = ['chat', 'moments', 'discovery', 'audioRooms', 'profile'] a
 function mobileNavigationTemplate(): string {
   const start = template.indexOf('<!-- Mobile Bottom Navigation Bar -->');
   const end = template.indexOf('<!-- Incoming Call Modal -->');
+
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+
+  return template.slice(start, end);
+}
+
+function topBarTemplate(): string {
+  const start = template.indexOf('<!-- Top Bar with Theme Selector -->');
+  const end = template.indexOf('<app-toast />');
 
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);
@@ -41,6 +54,54 @@ describe('primary navigation unread contract', () => {
       expect(navigation).toContain(`unreadCounter.tabCount('${tab}')`);
       expect(navigation).toContain(`unreadCounter.badgeText('${tab}')`);
     }
+  });
+
+  it('suppresses zero-count badges while keeping compact badge text visual-only', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`@if (unreadCounter.tabCount('${tab}') > 0) {`);
+      expect(navigation).toContain(`{{ unreadCounter.badgeText('${tab}') }}`);
+    }
+
+    expect(navigation.match(/aria-hidden="true"/g)?.length ?? 0).toBeGreaterThanOrEqual(
+      PRIMARY_TABS.length * 2,
+    );
+    expect(desktopTemplate).toContain('@if (unreadCounter.tabCount(item.tab) > 0) {');
+    expect(desktopTemplate).toContain('{{ unreadCounter.badgeText(item.tab) }}');
+    expect(desktopTemplate).toContain('aria-hidden="true"');
+  });
+
+  it('announces the full unread count instead of the visually capped badge value', () => {
+    const navigation = mobileNavigationTemplate();
+
+    for (const tab of PRIMARY_TABS) {
+      expect(navigation).toContain(`unreadCounter.tabCount('${tab}') + ' ' +`);
+    }
+
+    expect(desktopTemplate).toContain('{{ unreadCounter.tabCount(item.tab) }}');
+    expect(desktopTemplate).toContain("{{ 'chatList.filterUnread' | t }}");
+  });
+
+  it('renders a top-level notification badge from totalUnread()', () => {
+    const topBar = topBarTemplate();
+
+    expect(topBar).toContain('routerLink="/notifications"');
+    expect(topBar).toContain('@if (unreadCounter.totalUnread() > 0)');
+    expect(topBar).toContain(
+      "unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread()",
+    );
+  });
+
+  it('omits the visual total-unread badge when there is no unread activity', () => {
+    const topBar = topBarTemplate();
+    const totalUnreadCondition = '@if (unreadCounter.totalUnread() > 0)';
+    const totalUnreadBadge = topBar.slice(topBar.indexOf(totalUnreadCondition));
+
+    expect(topBar.indexOf(totalUnreadCondition)).toBeGreaterThanOrEqual(0);
+    expect(totalUnreadBadge).toContain('bg-danger');
+    expect(totalUnreadBadge).toContain('text-on-fill');
+    expect(totalUnreadBadge).toContain('min-w-[18px]');
   });
 
   it('binds desktop navigation badges to the same shared service', () => {
@@ -70,6 +131,40 @@ describe('primary navigation unread contract', () => {
     }
     expect(desktopTemplate).toContain('unreadCounter.tabCount(item.tab)');
     expect(desktopTemplate).toContain('class="sr-only"');
+  });
+
+  it('keeps mobile tab labels as plain text because every tab draws its own icon', () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: AuthService, useValue: { getAccessToken: () => null } }],
+    });
+    const i18n = TestBed.inject(I18nService);
+    const navigation = mobileNavigationTemplate();
+    const tabIcons = [
+      ...navigation.matchAll(
+        /<span class="text-2xl leading-none" aria-hidden="true">([^<]+)<\/span>/g,
+      ),
+    ];
+    const labelKeys = [
+      ...navigation.matchAll(
+        /<span class="text-\[10px\] font-bold">\{\{ '([^']+)' \| t \}\}<\/span>/g,
+      ),
+    ].map((match) => match[1]);
+    const navKeys = new Set(
+      [...navigation.matchAll(/'(nav\.[A-Za-z]+)' \| t/g)].map((match) => match[1]),
+    );
+
+    expect(tabIcons).toHaveLength(PRIMARY_TABS.length);
+    expect(labelKeys).toEqual([
+      'nav.helloTalk',
+      'nav.moments',
+      'nav.connect',
+      'nav.liveRooms',
+      'nav.profile',
+    ]);
+    // The same keys also feed each tab's accessible name, so none may carry an emoji.
+    for (const key of navKeys) {
+      expect(i18n.translate(key), key).not.toMatch(/\p{Extended_Pictographic}/u);
+    }
   });
 
   it('does not regress to unrelated audio-room co-host controls', () => {

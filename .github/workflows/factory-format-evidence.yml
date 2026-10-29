@@ -3,8 +3,13 @@ name: Factory format evidence
 on:
   pull_request:
     branches: [main]
+    # This evidence job only copies, formats, diffs and uploads daemon.py. The
+    # canonical Factory CI already runs Ruff format across all automation Python,
+    # so starting a Python/uv runner for unrelated Factory modules cannot produce
+    # additional evidence. Keep this specialised artifact only when its actual
+    # input or the workflow itself changes.
     paths:
-      - 'automation/**/*.py'
+      - 'automation/openhands_factory/daemon.py'
       - '.github/workflows/factory-format-evidence.yml'
 
 permissions:
@@ -19,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
         with:
           version: '0.12.5'
           enable-cache: true
@@ -32,7 +37,7 @@ jobs:
           uv run --frozen ruff format openhands_factory/daemon.py
           diff -u test-results/daemon.before.py openhands_factory/daemon.py > test-results/daemon-format.patch || true
         working-directory: automation
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: factory-format-patch-${{ github.sha }}
           path: |

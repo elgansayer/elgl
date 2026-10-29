@@ -6,9 +6,9 @@ import { environment } from '../../environments/environment';
 export interface QuizQuestion {
   id: string;
   text: string;
-  skill: string;
-  category: string;
-  options: { id: string; text: string }[];
+  skill?: string;
+  category?: string;
+  options: { id: string; text: string; points?: number }[];
 }
 
 export interface DiagnosticQuizResult {
@@ -16,17 +16,22 @@ export interface DiagnosticQuizResult {
   maxScore: number;
   percentage: number;
   suggestedCefr: string;
-  skillBreakdown: Record<
+  skillBreakdown?: Record<
     string,
     { score: number; max: number; percentage: number }
   >;
-  description: string;
+  description?: string;
 }
 
 export interface QuizSubmission {
-  targetLanguage: string;
-  answers: Record<string, string>;
+  targetLanguage?: string;
+  answers: Record<string, string | number>;
+  score?: number;
+  maxScore?: number;
+  suggestedLevel?: string;
 }
+
+export type QuizResults = QuizSubmission;
 
 @Injectable({ providedIn: 'root' })
 export class QuizService {

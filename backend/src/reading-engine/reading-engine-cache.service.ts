@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import Redis from 'ioredis';
+import type Redis from 'ioredis';
 import {
   ReadingEngineCacheNamespace,
   CacheInvalidationRule,
@@ -245,9 +245,13 @@ export class ReadingEngineCacheService {
       ReadingEngineCacheNamespace.TRANSLATION,
       ReadingEngineCacheNamespace.SESSION,
     ];
-    for (const ns of prefixes) {
-      await this.deletePattern(this.buildUserPattern(ns, payload.userId));
-    }
+    // Invalidate independent namespaces concurrently and await all operations.
+    await Promise.all(
+      prefixes.map((ns) =>
+        this.deletePattern(this.buildUserPattern(ns, payload.userId)),
+      ),
+    );
+
     this.logger.log(
       { userId: payload.userId },
       'Bulk-invalidated all reading-engine caches for user (user_data_cleared)',

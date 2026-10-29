@@ -1,0 +1,43 @@
+name: 200 Percent Zoom Contract
+
+on:
+  pull_request:
+    paths:
+      - 'visual-contract.matrix.json'
+      - 'frontend/cypress/visual/design-contracts.cy.ts'
+      - 'scripts/verify-200-percent-zoom-contract.mjs'
+      - 'scripts/verify-200-percent-zoom-contract.test.mjs'
+      - 'docs/200-percent-zoom-behaviour.md'
+      - 'docs/200-percent-zoom-verification.md'
+      - '.github/workflows/zoom-200-contract.yml'
+  merge_group:
+  push:
+    branches: [main]
+    paths:
+      - 'visual-contract.matrix.json'
+      - 'frontend/cypress/visual/design-contracts.cy.ts'
+      - 'scripts/verify-200-percent-zoom-contract.mjs'
+      - 'scripts/verify-200-percent-zoom-contract.test.mjs'
+      - 'docs/200-percent-zoom-behaviour.md'
+      - 'docs/200-percent-zoom-verification.md'
+      - '.github/workflows/zoom-200-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Verify 200% zoom migration contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run regression tests
+        run: node --test scripts/verify-200-percent-zoom-contract.test.mjs
+      - name: Verify repository contract
+        run: |
+          node scripts/verify-visual-contract-matrix.mjs
+          node scripts/verify-200-percent-zoom-contract.mjs

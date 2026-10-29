@@ -8,7 +8,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Post('client-error')
-  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async logClientError(
     @Body() dto: ClientErrorDto,
   ): Promise<{ status: string }> {

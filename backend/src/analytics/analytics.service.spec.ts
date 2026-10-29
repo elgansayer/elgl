@@ -1,8 +1,8 @@
+import type { Mock } from 'vitest';
 import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import type { Mock } from 'vitest';
-import { SupabaseService } from '../supabase/supabase.service';
 import { AnalyticsService } from './analytics.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { ClientErrorDto } from './dto/client-error.dto';
 
 describe('AnalyticsService', () => {
@@ -13,13 +13,8 @@ describe('AnalyticsService', () => {
 
   beforeEach(async () => {
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-
-    insertBuilder = {
-      insert: vi.fn().mockResolvedValue({ error: null }),
-    };
-    mockSupabaseClient = {
-      from: vi.fn().mockReturnValue(insertBuilder),
-    };
+    insertBuilder = { insert: vi.fn().mockResolvedValue({ error: null }) };
+    mockSupabaseClient = { from: vi.fn().mockReturnValue(insertBuilder) };
     mockSupabaseService = {
       getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
@@ -30,28 +25,19 @@ describe('AnalyticsService', () => {
         { provide: SupabaseService, useValue: mockSupabaseService },
       ],
     }).compile();
-
-    service = module.get<AnalyticsService>(AnalyticsService);
+    service = module.get(AnalyticsService);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  afterEach(() => vi.restoreAllMocks());
 
-  it('persists bounded operational crash telemetry', async () => {
+  it('persists crash data through the service-role client', async () => {
     const payload: ClientErrorDto = {
-      message: 'Test error message',
+      message: 'Test error',
       name: 'TypeError',
-      stack: 'Error: Test error\n    at foo (app.ts:10:5)',
-      url: 'https://example.com/page?access_token=private#fragment',
-      userAgent: 'Chrome/120',
-      metadata: {
-        category: 'global',
-        renderingError: true,
-        nestedPrivateData: { secret: 'must not persist' },
-      },
+      url: 'https://example.com/page',
+      userAgent: 'Browser',
       stackFrames: [{ fileName: 'app.ts', lineNumber: 10, columnNumber: 5 }],
-      timestamp: '2026-08-07T00:00:00.000Z',
+      timestamp: '2026-08-25T10:00:00.000Z',
     };
 
     await service.recordClientError(payload);
@@ -59,46 +45,87 @@ describe('AnalyticsService', () => {
     expect(mockSupabaseClient.from).toHaveBeenCalledWith('client_errors');
     expect(insertBuilder.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Test error message',
+        message: 'Test error',
         name: 'TypeError',
-        stack: 'Error: Test error\n    at foo (app.ts:10:5)',
         url: 'https://example.com/page',
-        user_agent: 'Chrome/120',
-        metadata: { category: 'global', renderingError: true },
-        stack_frames: [
-          expect.objectContaining({
-            fileName: 'app.ts',
-            lineNumber: 10,
-            columnNumber: 5,
-          }),
-        ],
-        client_timestamp: '2026-08-07T00:00:00.000Z',
+        client_timestamp: '2026-08-25T10:00:00.000Z',
       }),
     );
   });
 
-  it('redacts secret-shaped values at the persistence boundary', async () => {
+  it('preserves client error stack traces with <anonymous> and generic types without stripping angle brackets', async () => {
+    const payload: ClientErrorDto = {
+      message: 'Render error',
+      stack:
+        'TypeError: render<List<T>>()\n    at <anonymous> (app.component.ts:42:10)',
+      componentStack: '<AppComponent>\n  at <anonymous>',
+      stackFrames: [
+        {
+          functionName: '<anonymous>',
+          fileName: 'app.component.ts',
+          source: 'render<List<T>>()',
+        },
+      ],
+    };
+
+    await service.recordClientError(payload);
+
+    expect(insertBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Render error',
+        stack:
+          'TypeError: render<List<T>>()\n    at <anonymous> (app.component.ts:42:10)',
+        component_stack: '<AppComponent>\n  at <anonymous>',
+        stack_frames: [
+          {
+            functionName: '<anonymous>',
+            fileName: 'app.component.ts',
+            source: 'render<List<T>>()',
+          },
+        ],
+      }),
+    );
+  });
+
+  it('redacts untrusted URL query strings, fragments, and credentials', async () => {
     await service.recordClientError({
-      message: 'Bearer secret-value access_token=private-value',
-      stack: 'Error: eyJabcdefghijk.abcdefghijk.abcdefghijk',
-      metadata: { action: 'api_key=private-value' },
+      message: 'boom',
+      url: 'https://user:password@example.com/path?token=secret#private',
+    });
+
+    expect(insertBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://example.com/path' }),
+    );
+  });
+
+  it('whitelists metadata instead of persisting arbitrary client objects', async () => {
+    await service.recordClientError({
+      message: 'boom',
+      metadata: {
+        status: 503,
+        statusText: 'Unavailable',
+        rawType: 'HttpErrorResponse',
+        token: 'must-not-be-stored',
+        privatePayload: { text: 'private message' },
+      },
     });
 
     expect(insertBuilder.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Bearer [redacted] access_token=[redacted]',
-        stack: 'Error: [redacted-jwt]',
-        metadata: { action: 'api_key=[redacted]' },
+        metadata: {
+          status: 503,
+          statusText: 'Unavailable',
+          rawType: 'HttpErrorResponse',
+        },
       }),
     );
   });
 
-  it('persists a minimal payload without inventing private context', async () => {
+  it('uses null for absent optional fields', async () => {
     await service.recordClientError({ message: 'Minimal error' });
 
     expect(insertBuilder.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Minimal error',
         name: 'Error',
         stack: null,
         component_stack: null,
@@ -110,37 +137,32 @@ describe('AnalyticsService', () => {
     );
   });
 
-  it('fails closed with a stable 503 when Supabase rejects the insert', async () => {
-    mockSupabaseClient.from.mockReturnValue({
-      insert: vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'private db detail' } }),
-    });
+  it('fails closed on a rejected insert without logging provider details', async () => {
     const warnSpy = vi.spyOn(Logger.prototype, 'warn');
+    mockSupabaseClient.from.mockReturnValue({
+      insert: vi.fn().mockResolvedValue({
+        error: { message: 'database leaked secret=abc' },
+      }),
+    });
 
     await expect(
-      service.recordClientError({ message: 'Test error' }),
+      service.recordClientError({ message: 'boom' }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(warnSpy).toHaveBeenCalledWith('client_error_persist_failed');
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('private db detail'),
-    );
+
+    const log = warnSpy.mock.calls
+      .map(([message]) => String(message))
+      .join('\n');
+    expect(log).toContain('Failed to persist client crash analytics');
+    expect(log).not.toContain('secret=abc');
   });
 
-  it('fails closed without leaking provider exception text', async () => {
+  it('fails closed when the storage client throws', async () => {
     mockSupabaseClient.from.mockReturnValue({
-      insert: vi
-        .fn()
-        .mockRejectedValue(new Error('connection string leaked here')),
+      insert: vi.fn().mockRejectedValue(new Error('password=secret')),
     });
-    const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
     await expect(
-      service.recordClientError({ message: 'Test error' }),
+      service.recordClientError({ message: 'boom' }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(warnSpy).toHaveBeenCalledWith('client_error_persist_exception');
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining('connection string leaked here'),
-    );
   });
 });

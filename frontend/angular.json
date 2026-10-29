@@ -41,16 +41,21 @@
               }
             ],
             "styles": ["src/styles.scss", "src/forced-colors.scss", "src/reduced-motion.scss"],
-            "serviceWorker": "ngsw-config.json",
             "optimization": {
-              "fonts": false
-            }
+              "fonts": {
+                "inline": false
+              }
+            },
+            "serviceWorker": "ngsw-config.json"
           },
           "configurations": {
             "production": {
               "optimization": {
                 "scripts": true,
-                "styles": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
                 "fonts": false
               },
               "budgets": [

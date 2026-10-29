@@ -5,6 +5,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+    paths:
+      - 'e2e/**'
+      - '.github/workflows/e2e-runner-context.yml'
   merge_group:
     types: [checks_requested]
 
@@ -40,7 +43,7 @@ jobs:
             while IFS= read -r path; do
               [ -z "$path" ] && continue
               case "$path" in
-                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                automation/*|factory-dashboard/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
                   ;;
                 *)
                   run_e2e=true
@@ -67,6 +70,9 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: e2e/package-lock.json
+
+      - name: Verify test runner ownership
+        run: npm run check:playwright-test-boundary
 
       - name: Install E2E dependencies
         run: npm ci --legacy-peer-deps

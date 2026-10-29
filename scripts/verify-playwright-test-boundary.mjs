@@ -5,32 +5,601 @@ import { readFileSync } from 'node:fs';
 import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SCRIPT_EXTENSIONS = new Set(['.sh', '.bash', '.mjs', '.cjs', '.js', '.ts', '.json', '.yml', '.yaml']);
+const SCRIPT_EXTENSIONS = new Set([
+  '.sh',
+  '.bash',
+  '.mjs',
+  '.cjs',
+  '.js',
+  '.ts',
+  '.json',
+  '.yml',
+  '.yaml',
+]);
 const IGNORED_SCAN_PATHS = new Set([
   'scripts/verify-playwright-test-boundary.mjs',
   'scripts/verify-playwright-test-boundary.test.mjs',
 ]);
-const CONTEXT_LINES = 10;
+
+const PLAYWRIGHT_TEST_FILE_PATTERN = /\.(?:spec|test)\.[cm]?[jt]sx?$/;
+const RUNNER_GLOBAL_REPLACEMENTS = new Map([
+  ['describe', 'test.describe'],
+  ['it', 'test'],
+  ['beforeAll', 'test.beforeAll'],
+  ['beforeEach', 'test.beforeEach'],
+  ['afterAll', 'test.afterAll'],
+  ['afterEach', 'test.afterEach'],
+]);
+const RUNNER_MODIFIERS = [
+  'only',
+  'skip',
+  'todo',
+  'each',
+  'for',
+  'concurrent',
+  'sequential',
+  'shuffle',
+  'runIf',
+  'skipIf',
+  'fails',
+  'failing',
+];
+const RUNNER_NAMESPACES = ['vi', 'jest'];
+const FOREIGN_RUNNER_MODULES = ['vitest', '@jest/globals', 'node:test'];
+// Comments and string literals, matched left to right so a quote inside a comment (or the other
+// way round) cannot start the wrong token.
+const COMMENT_OR_STRING_PATTERN =
+  /\/\*[\s\S]*?\*\/|\/\/[^\n]*|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\[\s\S]|[^`\\])*`/g;
+const NOT_A_MEMBER = String.raw`(?<![\w$])(?<!\.\s*)`;
+const FOREIGN_RUNNER_IMPORT_PATTERN = new RegExp(
+  String.raw`\b(?:from|import|require)\s*\(?\s*(['"])(${FOREIGN_RUNNER_MODULES.join('|')})\1`,
+  'g',
+);
+const RUNNER_GLOBAL_CALL_PATTERN = new RegExp(
+  String.raw`${NOT_A_MEMBER}(${[...RUNNER_GLOBAL_REPLACEMENTS.keys()].join('|')})(?![\w$])(?:\s*\.\s*(?:${RUNNER_MODIFIERS.join('|')})(?![\w$]))*\s*\(`,
+  'g',
+);
+const RUNNER_NAMESPACE_PATTERN = new RegExp(
+  String.raw`${NOT_A_MEMBER}(${RUNNER_NAMESPACES.join('|')})\s*\.\s*[A-Za-z_$]`,
+  'g',
+);
+const COMMAND_SOURCE_PREFIXES = [
+  '.github/workflows/',
+  '.agents/automations/',
+  'automation/',
+  'scripts/',
+];
 
 function normalizePath(path) {
   return path.replaceAll('\\', '/').replace(/^\.\//, '');
 }
 
-function hasSafePlaywrightContext(lines, index, path) {
+function workflowStepContext(lines, index) {
+  let start = index;
+  let stepIndent = null;
+
+  for (let cursor = index; cursor >= 0; cursor -= 1) {
+    const match = lines[cursor].match(/^(\s*)-\s+/);
+    if (match) {
+      start = cursor;
+      stepIndent = match[1].length;
+      break;
+    }
+  }
+
+  if (stepIndent === null) {
+    return lines[index] ?? '';
+  }
+
+  let end = lines.length;
+  for (let cursor = start + 1; cursor < lines.length; cursor += 1) {
+    const match = lines[cursor].match(/^(\s*)-\s+/);
+    if (match && match[1].length === stepIndent) {
+      end = cursor;
+      break;
+    }
+  }
+
+  return lines.slice(start, end).join('\n');
+}
+
+function commandStartsInE2e(lines, index, path) {
   const normalizedPath = normalizePath(path);
   if (normalizedPath.startsWith('e2e/')) {
     return true;
   }
+  if (!/\.ya?ml$/.test(normalizedPath)) {
+    return false;
+  }
+  const contextLines = workflowStepContext(lines, index).split('\n');
+  const stepIndent = contextLines[0]?.match(/^(\s*)-\s+/)?.[1].length;
+  if (stepIndent === undefined) {
+    return false;
+  }
 
-  const start = Math.max(0, index - CONTEXT_LINES);
-  const end = Math.min(lines.length, index + CONTEXT_LINES + 1);
-  const context = lines.slice(start, end).join('\n');
+  return contextLines.some((line) => {
+    const match = /^(\s*)(-\s*)?working-directory\s*:\s*["']?(?:\.\/)?e2e\/?["']?\s*$/.exec(line);
+    if (!match) {
+      return false;
+    }
+    return match[2] ? match[1].length === stepIndent : match[1].length === stepIndent + 2;
+  });
+}
 
-  const changesIntoE2e = /\bcd\s+(?:\.\/)?e2e(?:\s|&&|;|\)|$)/m.test(context);
-  const usesE2eWorkingDirectory = /working-directory\s*:\s*["']?(?:\.\/)?e2e["']?\s*$/m.test(context);
-  const usesE2eConfig = /--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/m.test(context);
+function isCommandSource(path) {
+  return (
+    ['.sh', '.bash'].includes(extname(path)) ||
+    path.endsWith('package.json') ||
+    COMMAND_SOURCE_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
+}
 
-  return changesIntoE2e || usesE2eWorkingDirectory || usesE2eConfig;
+function normalizeCommandLine(line) {
+  return line
+    .replace(/\\(?=[^;|&'"`\\\s])/g, '/')
+    .replace(/\/{2,}/g, '/')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stripUnquotedShellComment(line) {
+  let quote = null;
+  let escaped = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === '\\' && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === '#' && (index === 0 || /[\s;|&()]/.test(line[index - 1]))) {
+      return line.slice(0, index).trimEnd();
+    }
+  }
+  return line;
+}
+
+function logicalCommandLines(lines, path) {
+  const commands = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const foldedRun = /^(\s*)(?:-\s*)?run\s*:\s*>[+-]?\s*$/.exec(line);
+    const literalRun = /^(\s*)(?:-\s*)?run\s*:\s*\|[+-]?\s*$/.exec(line);
+    const blockRun = foldedRun ?? literalRun;
+    if (/\.ya?ml$/.test(path) && blockRun) {
+      const indent = blockRun[1].length;
+      const parts = [];
+      let cursor = index + 1;
+      for (; cursor < lines.length; cursor += 1) {
+        const next = lines[cursor];
+        if (next.trim() && next.match(/^\s*/)[0].length <= indent) {
+          break;
+        }
+        parts.push(next.trim());
+      }
+      let command = '';
+      for (const rawPart of parts) {
+        const part = literalRun ? stripUnquotedShellComment(rawPart) : rawPart;
+        if (!part) {
+          continue;
+        }
+        const continued = /\\\s*$/.test(command);
+        const separator = command && literalRun && !continued ? ' ; ' : command ? ' ' : '';
+        command = `${command.replace(/\\\s*$/, '')}${separator}${part}`;
+      }
+      if (foldedRun) {
+        command = stripUnquotedShellComment(command);
+      }
+      commands.push({ command, index });
+      index = cursor - 1;
+      continue;
+    }
+
+    const startIndex = index;
+    const inlineRun = /^(?:\s*)(?:-\s*)?run\s*:\s*(.+)$/.exec(line);
+    if (/\.ya?ml$/.test(path) && !inlineRun) {
+      continue;
+    }
+    let command = inlineRun?.[1] ?? line;
+    while (/\\\s*$/.test(command) && index + 1 < lines.length) {
+      command = `${command.replace(/\\\s*$/, '')} ${lines[index + 1].trim()}`;
+      index += 1;
+    }
+    command = stripUnquotedShellComment(command);
+    commands.push({ command, index: startIndex });
+  }
+
+  return commands;
+}
+
+function commandSegments(command) {
+  const segments = [];
+  let start = 0;
+  let quote = null;
+  let escaped = false;
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (![';', '|', '&'].includes(character)) {
+      continue;
+    }
+    const separator =
+      command[index + 1] === character && (character === '|' || character === '&')
+        ? character.repeat(2)
+        : character;
+    segments.push({
+      command: command.slice(start, index),
+      separatorAfter: separator,
+    });
+    if (separator.length === 2) {
+      index += 1;
+    }
+    start = index + 1;
+  }
+  segments.push({ command: command.slice(start), separatorAfter: null });
+  return segments;
+}
+
+function shellTokens(command) {
+  const tokens = [];
+  let token = '';
+  let quote = null;
+  let escaped = false;
+  for (const character of command) {
+    if (escaped) {
+      token += character;
+      escaped = false;
+      continue;
+    }
+    if (character === '\\' && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      } else {
+        token += character;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (/\s/.test(character)) {
+      if (token) {
+        tokens.push(token);
+        token = '';
+      }
+    } else {
+      token += character;
+    }
+  }
+  if (escaped) {
+    token += '\\';
+  }
+  if (token) {
+    tokens.push(token);
+  }
+  return tokens;
+}
+
+function normalizeExecutable(token) {
+  const executable = token.split('/').at(-1) ?? '';
+  return executable.replace(/@[^@/]+$/, '');
+}
+
+function commandInvocation(segment) {
+  let command = segment
+    .trim()
+    .replace(/^\(+\s*/, '')
+    .replace(/\)+\s*$/, '')
+    .replace(/^-\s+/, '')
+    .replace(/^(?:[-\w.]+\s*:\s*)/, '');
+  if (
+    command.length >= 2 &&
+    ((command.startsWith('"') && command.endsWith('"')) ||
+      (command.startsWith("'") && command.endsWith("'")))
+  ) {
+    command = command.slice(1, -1);
+  }
+  let tokens = shellTokens(command);
+
+  if (normalizeExecutable(tokens[0] ?? '') === 'env') {
+    tokens = tokens.slice(1);
+    const envOptionsWithValues = new Set([
+      '-u',
+      '--unset',
+      '-C',
+      '--chdir',
+      '-S',
+      '--split-string',
+    ]);
+    while (tokens[0]?.startsWith('-')) {
+      const flag = tokens.shift();
+      const optionName = flag.split('=', 1)[0];
+      if (!flag.includes('=') && envOptionsWithValues.has(optionName) && tokens.length > 0) {
+        tokens.shift();
+      }
+    }
+  }
+  while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0] ?? '')) {
+    tokens = tokens.slice(1);
+  }
+
+  const wrapper = tokens[0];
+  if (wrapper === 'npx') {
+    tokens = consumeWrapperOptions(tokens.slice(1));
+  } else if (wrapper === 'npm' && ['exec', 'x'].includes(tokens[1])) {
+    tokens = consumeWrapperOptions(tokens.slice(2));
+  } else if (['pnpm', 'yarn'].includes(wrapper) && tokens[1] === 'exec') {
+    tokens = tokens.slice(2);
+  }
+  while (tokens[0] === '--') {
+    tokens = tokens.slice(1);
+  }
+
+  const executable = normalizeExecutable(tokens.shift() ?? '');
+  return { executable, args: tokens };
+}
+
+function consumeWrapperOptions(tokens) {
+  const remaining = [...tokens];
+  while (remaining[0]?.startsWith('-')) {
+    const flag = remaining.shift();
+    if (['--package', '-p'].includes(flag) && remaining.length > 0) {
+      remaining.shift();
+    }
+  }
+  return remaining;
+}
+
+function runtimeEntrypoint(invocation) {
+  if (!['node', 'tsx', 'ts-node', 'bun'].includes(invocation.executable)) {
+    return null;
+  }
+
+  let args = [...invocation.args];
+  const optionsWithValues = {
+    node: new Set([
+      '--conditions',
+      '--env-file',
+      '--experimental-loader',
+      '--import',
+      '--loader',
+      '--require',
+      '-r',
+      '--test-name-pattern',
+      '--test-reporter',
+      '--test-reporter-destination',
+    ]),
+    tsx: new Set(['--tsconfig']),
+    'ts-node': new Set([
+      '--compiler',
+      '--compilerOptions',
+      '-O',
+      '--cwd',
+      '--dir',
+      '--project',
+      '-P',
+      '--require',
+      '-r',
+      '--scopeDir',
+      '--transpiler',
+      '--tsconfig',
+    ]),
+    bun: new Set(['--config', '--cwd', '--preload', '-r']),
+  }[invocation.executable];
+  const consumeOptions = (values) => {
+    const remaining = [...values];
+    while (remaining[0]?.startsWith('-')) {
+      const flag = remaining.shift();
+      const optionName = flag.split('=', 1)[0];
+      if (!flag.includes('=') && optionsWithValues.has(optionName) && remaining.length > 0) {
+        remaining.shift();
+      }
+    }
+    return remaining;
+  };
+  args = consumeOptions(args);
+  if (invocation.executable === 'bun' && ['run', 'test'].includes(args[0])) {
+    args.shift();
+  }
+  if (invocation.executable === 'tsx' && args[0] === 'watch') {
+    args.shift();
+  }
+  args = consumeOptions(args);
+  return args[0] ?? null;
+}
+
+function runnerTargets(invocation) {
+  const args = [...invocation.args];
+  if (['run', 'watch'].includes(args[0])) {
+    args.shift();
+  }
+
+  const selectingOptions = new Set([
+    '--dir',
+    '--include',
+    '--root',
+    '--roots',
+    '--testPathPattern',
+    '--testPathPatterns',
+  ]);
+  const nonSelectingOptions = new Set([
+    '--config',
+    '--exclude',
+    '--testNamePattern',
+    '--testPathIgnorePatterns',
+    '-t',
+  ]);
+  const targets = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === '--') {
+      continue;
+    }
+    if (argument.startsWith('-')) {
+      const equalsIndex = argument.indexOf('=');
+      const optionName = equalsIndex === -1 ? argument : argument.slice(0, equalsIndex);
+      const inlineValue = equalsIndex === -1 ? null : argument.slice(equalsIndex + 1);
+      if (selectingOptions.has(optionName) && inlineValue) {
+        targets.push(inlineValue);
+      } else if (selectingOptions.has(optionName) && args[index + 1]) {
+        targets.push(args[index + 1]);
+        index += 1;
+      } else if (nonSelectingOptions.has(optionName) && inlineValue === null) {
+        index += 1;
+      }
+      continue;
+    }
+    targets.push(argument);
+  }
+  return targets;
+}
+
+function commandEntries(content, path) {
+  if (path.endsWith('package.json')) {
+    try {
+      const scripts = JSON.parse(content)?.scripts ?? {};
+      return Object.entries(scripts)
+        .filter(([, command]) => typeof command === 'string')
+        .map(([name, command]) => ({ command, index: 0, location: `${path}#scripts.${name}` }));
+    } catch {
+      return [];
+    }
+  }
+  return logicalCommandLines(content.split(/\r?\n/), path);
+}
+
+function cwdAfterSegment(cwdState, baseCwdIsE2e, segment, separatorAfter, precedingSeparator) {
+  let { cwdIsE2e, cwdIsConditional } = cwdState;
+  const cdMatch = /^\s*(?:[-\w.]+\s*:\s*)?\(?\s*cd\s+([^\s;&|)]+)/i.exec(segment);
+  if (cdMatch) {
+    const target = normalizePath(cdMatch[1].replace(/^['"]|['"]$/g, '')).replace(/\/+$/, '');
+    cwdIsE2e =
+      precedingSeparator === '||' || precedingSeparator === '|'
+        ? baseCwdIsE2e
+        : target === 'e2e' || target.startsWith('e2e/');
+    cwdIsConditional = precedingSeparator === '&&';
+  }
+
+  if (/\)\s*$/.test(segment) || !['&&', ';', null].includes(separatorAfter)) {
+    return { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+  }
+  if (separatorAfter === ';' && cwdIsConditional) {
+    return { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+  }
+  return { cwdIsE2e, cwdIsConditional };
+}
+
+function isPlaywrightTestInvocation(invocation) {
+  if (invocation.executable !== 'playwright') {
+    return false;
+  }
+  return invocation.args.filter((argument) => argument !== '--')[0] === 'test';
+}
+
+function targetBelongsToE2e(match, cwdIsE2e) {
+  return Boolean(match?.[1]) || cwdIsE2e;
+}
+
+function scanWrongRunnerInvocations(files) {
+  const violations = [];
+
+  for (const [rawPath, content] of Object.entries(files)) {
+    const path = normalizePath(rawPath);
+    if (IGNORED_SCAN_PATHS.has(path) || !isCommandSource(path)) {
+      continue;
+    }
+
+    const lines = content.split(/\r?\n/);
+    const persistsCwd = ['.sh', '.bash'].includes(extname(path));
+    let fileCwdState = {
+      cwdIsE2e: path.startsWith('e2e/'),
+      cwdIsConditional: false,
+    };
+    for (const { command: rawCommand, index, location } of commandEntries(content, path)) {
+      const command = normalizeCommandLine(rawCommand);
+      const baseCwdIsE2e = persistsCwd
+        ? fileCwdState.cwdIsE2e
+        : commandStartsInE2e(lines, index, path);
+      let cwdState = persistsCwd
+        ? { ...fileCwdState }
+        : { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+      let previousSeparator = null;
+      for (const segment of commandSegments(command)) {
+        const invocation = commandInvocation(segment.command);
+        const entrypoint = runtimeEntrypoint(invocation);
+        const specTarget = entrypoint?.match(
+          /^((?:\.\/)?e2e\/)?(?:\.\/)?tests(?:\/[^\s),]*\.spec\.[cm]?[jt]sx?)?$/i,
+        );
+        const cwdRelativeSpecTarget =
+          cwdState.cwdIsE2e && entrypoint?.match(/^(?:\.\/)?[^\s),]*\.spec\.[cm]?[jt]sx?$/i);
+        if (
+          (specTarget && targetBelongsToE2e(specTarget, cwdState.cwdIsE2e)) ||
+          cwdRelativeSpecTarget
+        ) {
+          violations.push(
+            `${location ?? `${path}:${index + 1}`} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
+          );
+        }
+
+        if (
+          ['vitest', 'jest'].includes(invocation.executable) &&
+          runnerTargets(invocation).some((target) => {
+            const testsTarget = target.match(/^((?:\.\/)?e2e\/)?(?:\.\/)?tests(?:\/[^\s),]*)?$/i);
+            return testsTarget && targetBelongsToE2e(testsTarget, cwdState.cwdIsE2e);
+          })
+        ) {
+          violations.push(
+            `${location ?? `${path}:${index + 1}`} sends the Playwright suite to Vitest or Jest`,
+          );
+        }
+        cwdState = cwdAfterSegment(
+          cwdState,
+          baseCwdIsE2e,
+          segment.command,
+          segment.separatorAfter,
+          previousSeparator,
+        );
+        previousSeparator = segment.separatorAfter;
+      }
+      if (persistsCwd) {
+        fileCwdState = cwdState;
+      }
+    }
+  }
+
+  return violations;
 }
 
 function scanPlaywrightInvocations(files) {
@@ -38,23 +607,55 @@ function scanPlaywrightInvocations(files) {
 
   for (const [rawPath, content] of Object.entries(files)) {
     const path = normalizePath(rawPath);
-    if (IGNORED_SCAN_PATHS.has(path) || !SCRIPT_EXTENSIONS.has(extname(path))) {
+    const scansCommandMarkdown = extname(path) === '.md' && isCommandSource(path);
+    if (
+      IGNORED_SCAN_PATHS.has(path) ||
+      (!SCRIPT_EXTENSIONS.has(extname(path)) && !scansCommandMarkdown)
+    ) {
       continue;
     }
 
     const lines = content.split(/\r?\n/);
-    lines.forEach((line, index) => {
-      const normalizedLine = line.replace(/\s+/g, ' ').trim();
-      if (!normalizedLine.includes('playwright test')) {
-        return;
-      }
-
-      if (!hasSafePlaywrightContext(lines, index, path)) {
-        violations.push(
-          `${path}:${index + 1} invokes Playwright without the e2e working directory or explicit e2e config`,
+    const persistsCwd = ['.sh', '.bash'].includes(extname(path));
+    let fileCwdState = {
+      cwdIsE2e: path.startsWith('e2e/'),
+      cwdIsConditional: false,
+    };
+    for (const { command, index, location } of commandEntries(content, path)) {
+      const normalizedLine = command.replace(/\\\s*/g, ' ').replace(/\s+/g, ' ').trim();
+      const baseCwdIsE2e = persistsCwd
+        ? fileCwdState.cwdIsE2e
+        : commandStartsInE2e(lines, index, path);
+      let cwdState = persistsCwd
+        ? { ...fileCwdState }
+        : { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+      let previousSeparator = null;
+      for (const segment of commandSegments(normalizedLine)) {
+        const invocation = commandInvocation(segment.command);
+        if (
+          isPlaywrightTestInvocation(invocation) &&
+          !cwdState.cwdIsE2e &&
+          !/--config(?:=|\s+)(?:"(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)"|'(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)'|(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs))(?=$|[\s;&|)])/.test(
+            segment.command,
+          )
+        ) {
+          violations.push(
+            `${location ?? `${path}:${index + 1}`} invokes Playwright without the e2e working directory or explicit e2e config`,
+          );
+        }
+        cwdState = cwdAfterSegment(
+          cwdState,
+          baseCwdIsE2e,
+          segment.command,
+          segment.separatorAfter,
+          previousSeparator,
         );
+        previousSeparator = segment.separatorAfter;
       }
-    });
+      if (persistsCwd) {
+        fileCwdState = cwdState;
+      }
+    }
   }
 
   return violations;
@@ -131,14 +732,99 @@ function scanBrittleE2eLoginHelpers(files) {
   return violations;
 }
 
+function maskSource(source, keepStrings) {
+  return source.replace(COMMENT_OR_STRING_PATTERN, (token) =>
+    keepStrings && !token.startsWith('/') ? token : token.replace(/[^\n]/g, ' '),
+  );
+}
+
+function isLocallyBound(name, code) {
+  const identifier = String.raw`(?<![\w$.])${name}(?![\w$])`;
+  return [
+    String.raw`\b(?:const|let|var|function|class)\s+${identifier}`,
+    String.raw`\b(?:const|let|var)\s*\{[^}]*${identifier}[^}]*\}\s*=`,
+    String.raw`\bimport\s*(?:[\w$]+\s*,\s*)?\{[^}]*${identifier}[^}]*\}\s*from`,
+    String.raw`\bimport\s+${identifier}`,
+  ].some((pattern) => new RegExp(pattern).test(code));
+}
+
+function findBareRunnerGlobals(code, pattern, describeViolation) {
+  const findings = [];
+  const reported = new Set();
+
+  for (const match of code.matchAll(pattern)) {
+    const name = match[1];
+    if (reported.has(name) || isLocallyBound(name, code)) {
+      continue;
+    }
+    reported.add(name);
+    findings.push({ index: match.index, message: describeViolation(name) });
+  }
+
+  return findings;
+}
+
+function findForeignRunnerImports(sourceWithStrings) {
+  return [...sourceWithStrings.matchAll(FOREIGN_RUNNER_IMPORT_PATTERN)].map((match) => ({
+    index: match.index,
+    message: `imports ${match[2]}; Playwright specs must import test and expect from @playwright/test only`,
+  }));
+}
+
+function scanE2eRunnerGlobals(files) {
+  const violations = [];
+
+  for (const [rawPath, content] of Object.entries(files)) {
+    const path = normalizePath(rawPath);
+    if (!path.startsWith('e2e/tests/') || !PLAYWRIGHT_TEST_FILE_PATTERN.test(path)) {
+      continue;
+    }
+
+    const code = maskSource(content, false);
+    const findings = [
+      ...findForeignRunnerImports(maskSource(content, true)),
+      ...findBareRunnerGlobals(
+        code,
+        RUNNER_GLOBAL_CALL_PATTERN,
+        (name) =>
+          `calls ${name}() as a bare runner global; Playwright does not define it and fails with "ReferenceError: ${name} is not defined". Use ${RUNNER_GLOBAL_REPLACEMENTS.get(name)}() from @playwright/test`,
+      ),
+      ...findBareRunnerGlobals(
+        code,
+        RUNNER_NAMESPACE_PATTERN,
+        (name) =>
+          `uses the ${name} test-runner namespace; Playwright does not define it and fails with "ReferenceError: ${name} is not defined". Use page.route() to intercept network calls and plain closures to record calls`,
+      ),
+    ].sort((left, right) => left.index - right.index);
+
+    for (const { index, message } of findings) {
+      violations.push(`${path}:${content.slice(0, index).split('\n').length} ${message}`);
+    }
+  }
+
+  return violations;
+}
+
 export function analysePlaywrightBoundary({ files, e2ePackageJson, e2eConfig }) {
   return [
     ...validateE2ePackage(e2ePackageJson),
     ...validateE2eConfig(e2eConfig),
     ...scanPlaywrightInvocations(files),
+    ...scanWrongRunnerInvocations(files),
     ...scanFrontendSpecs(files),
     ...scanBrittleE2eLoginHelpers(files),
+    ...scanE2eRunnerGlobals(files),
   ];
+}
+
+export function shouldReadTrackedFile(path) {
+  const extension = extname(path);
+  const automationMarkdown = extension === '.md' && isCommandSource(path);
+  return (
+    SCRIPT_EXTENSIONS.has(extension) ||
+    PLAYWRIGHT_TEST_FILE_PATTERN.test(path) ||
+    automationMarkdown
+  );
 }
 
 function readTrackedFiles(repoRoot) {
@@ -153,8 +839,7 @@ function readTrackedFiles(repoRoot) {
       continue;
     }
     const path = normalizePath(rawPath);
-    const extension = extname(path);
-    if (!SCRIPT_EXTENSIONS.has(extension) && !/\.(?:spec|test)\.ts$/.test(path)) {
+    if (!shouldReadTrackedFile(path)) {
       continue;
     }
     files[path] = readFileSync(resolve(repoRoot, path), 'utf8');

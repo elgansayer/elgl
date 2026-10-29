@@ -8,9 +8,10 @@ import { socialRoutes } from './routes/social.routes';
 import { settingsRoutes } from './routes/settings.routes';
 import { chatRoutes } from './routes/chat.routes';
 import { adminRoutes } from './routes/admin.routes';
+import { eventDetailRoutes } from './routes/events.routes';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'ai-conversation', pathMatch: 'full' },
+  { path: '', redirectTo: 'learn/ai-chat', pathMatch: 'full' },
   {
     path: 'home',
     loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent),
@@ -18,9 +19,8 @@ export const routes: Routes = [
   },
   {
     path: 'community',
-    loadComponent: () =>
-      import('./components/communities/communities.component').then((m) => m.CommunitiesComponent),
-    title: 'Communities - HelloTalk',
+    redirectTo: 'chat/groups',
+    pathMatch: 'full',
   },
   ...authRoutes,
   ...mediaRoutes,
@@ -30,4 +30,7 @@ export const routes: Routes = [
   ...settingsRoutes,
   ...chatRoutes,
   ...adminRoutes,
+  // Event detail must be composed before the wildcard redirect.
+  ...eventDetailRoutes,
+  { path: '**', redirectTo: 'learn/ai-chat' },
 ];

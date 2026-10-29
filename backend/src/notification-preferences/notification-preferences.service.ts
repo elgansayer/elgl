@@ -2,32 +2,35 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
-export interface NotificationCategoryPreference {
-  push: boolean;
-  email: boolean;
-  in_app: boolean;
+export interface CategoryPreference {
+  push?: boolean;
+  email?: boolean;
+  in_app?: boolean;
   badges?: boolean;
 }
 
-export interface NotificationPreferences {
+export interface NotificationPreferencesRecord {
+  id?: string;
   user_id: string;
-  new_message: NotificationCategoryPreference;
-  call_invite: NotificationCategoryPreference;
-  moment_like: NotificationCategoryPreference;
-  moment_comment: NotificationCategoryPreference;
-  correction: NotificationCategoryPreference;
-  gift: NotificationCategoryPreference;
-  profile_view: NotificationCategoryPreference;
-  study_reminder: NotificationCategoryPreference;
-  friend_request: NotificationCategoryPreference;
-  audio_room_invite: NotificationCategoryPreference;
-  new_follower: NotificationCategoryPreference;
-  quiet_hours_start: string | null;
-  quiet_hours_end: string | null;
-  do_not_disturb: boolean;
-  customToneUrl: string | null;
-  vibrationPattern: string | null;
-  updated_at: string;
+  new_message?: CategoryPreference;
+  call_invite?: CategoryPreference;
+  moment_like?: CategoryPreference;
+  moment_comment?: CategoryPreference;
+  correction?: CategoryPreference;
+  gift?: CategoryPreference;
+  profile_view?: CategoryPreference;
+  study_reminder?: CategoryPreference;
+  friend_request?: CategoryPreference;
+  audio_room_invite?: CategoryPreference;
+  new_follower?: CategoryPreference;
+  quiet_hours_start?: string | null;
+  quiet_hours_end?: string | null;
+  do_not_disturb?: boolean;
+  customToneUrl?: string | null;
+  vibrationPattern?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
 }
 
 @Injectable()
@@ -36,7 +39,7 @@ export class NotificationPreferencesService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getPreferences(userId: string): Promise<NotificationPreferences> {
+  async getPreferences(userId: string): Promise<NotificationPreferencesRecord> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
@@ -75,11 +78,13 @@ export class NotificationPreferencesService {
   async updatePreferences(
     userId: string,
     dto: UpdateNotificationPreferencesDto,
-  ): Promise<NotificationPreferences> {
+  ): Promise<NotificationPreferencesRecord> {
     return this.upsertPreferences(userId, dto);
   }
 
-  async resetToDefaults(userId: string): Promise<NotificationPreferences> {
+  async resetToDefaults(
+    userId: string,
+  ): Promise<NotificationPreferencesRecord> {
     const defaults = this.getDefaultPreferences(userId);
     return this.upsertPreferences(userId, defaults);
   }
@@ -87,7 +92,7 @@ export class NotificationPreferencesService {
   private async upsertPreferences(
     userId: string,
     changes: object,
-  ): Promise<NotificationPreferences> {
+  ): Promise<NotificationPreferencesRecord> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)

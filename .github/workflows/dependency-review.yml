@@ -4,6 +4,12 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - '**/package.json'
+      - '**/package-lock.json'
+      - 'automation/pyproject.toml'
+      - 'automation/uv.lock'
+      - '.github/workflows/**'
 
 permissions:
   contents: read

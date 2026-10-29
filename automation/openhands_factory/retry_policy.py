@@ -33,6 +33,17 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
         return _AGENT_KIND_MAP[agent_kind]
 
     text = detail.lower()
+    infrastructure_tokens = (
+        "the cypress binary is missing",
+        "we expected the binary to be installed here",
+        "getaddrinfo eai_again",
+        "no space left on device",
+        "failed with exit 137",
+        "failed with exit 143",
+    )
+    if any(token in text for token in infrastructure_tokens):
+        return FailureKind.INFRASTRUCTURE
+
     authentication_tokens = (
         "unauthorized",
         "authentication",
@@ -80,7 +91,7 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
     if any(token in text for token in validation_tokens):
         return FailureKind.VALIDATION
 
-    if any(token in text for token in ("budget", "cost ceiling", "spend limit")):
+    if any(token in text for token in ("budget", "cost ceiling", "spend limit", "repair limit")):
         return FailureKind.BUDGET
 
     configuration_tokens = (

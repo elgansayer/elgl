@@ -451,4 +451,69 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
     });
   });
+
+  describe('Link preview metrics', () => {
+    it('counts requests by outcome and failures by reason', async () => {
+      service.recordLinkPreview('cache_hit');
+      service.recordLinkPreview('cache_hit');
+      service.recordLinkPreview('rejected', { reason: 'blocked_target' });
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="cache_hit"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_requests_total{outcome="rejected"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_failures_total{reason="blocked_target"} 1',
+      );
+    });
+
+    it('does not count a failure for outcomes that carry no reason', async () => {
+      service.recordLinkPreview('fetched', { durationSeconds: 0.2 });
+      service.recordLinkPreview('empty', { durationSeconds: 0.2 });
+
+      const metrics = await service.getMetrics();
+      expect(metrics).not.toMatch(/hellotalk_link_preview_failures_total\{/);
+    });
+
+    it('observes the origin scrape duration only when one is supplied', async () => {
+      service.recordLinkPreview('fetched', { durationSeconds: 0.4 });
+      service.recordLinkPreview('failed', {
+        reason: 'timeout',
+        durationSeconds: 8,
+      });
+      service.recordLinkPreview('cache_hit');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_count{outcome="fetched"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_sum{outcome="failed"} 8',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_failures_total{reason="timeout"} 1',
+      );
+      expect(metrics).not.toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_count{outcome="cache_hit"}',
+      );
+    });
+
+    it('buckets durations up to and beyond the 8 second fetch deadline', async () => {
+      service.recordLinkPreview('failed', {
+        reason: 'timeout',
+        durationSeconds: 8.001,
+      });
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_bucket{le="8",outcome="failed"} 0',
+      );
+      expect(metrics).toContain(
+        'hellotalk_link_preview_fetch_duration_seconds_bucket{le="10",outcome="failed"} 1',
+      );
+    });
+  });
 });

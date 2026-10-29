@@ -19,7 +19,7 @@
       "claudeDesignPath": "foundations/tokens.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1094-appearance-settings-2026-08-23; rtl-safe-area-padding-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1094-appearance-settings-2026-08-23; rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "forced-colours", "accent-override"]
     },
     {
@@ -35,7 +35,7 @@
       "claudeDesignPath": "components/primitives/buttons.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "focus-visible", "disabled", "390px", "rtl"]
     },
     {
@@ -51,7 +51,7 @@
       "claudeDesignPath": "components/primitives/card-inputs.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; card-consumer-role-override-2026-08-22",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; card-consumer-role-override-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "focus-visible", "error", "390px", "rtl"]
     },
     {
@@ -66,7 +66,7 @@
       "claudeDesignPath": "components/primitives/chip-pill-badges.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "rtl"]
     },
     {
@@ -78,7 +78,7 @@
       "claudeDesignPath": "components/primitives/feedback-states.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "error", "loading", "empty", "rtl"]
     },
     {
@@ -90,7 +90,7 @@
       "claudeDesignPath": "components/primitives/indicators-media.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "reduced-motion"]
     },
     {
@@ -98,15 +98,28 @@
       "kind": "primitive",
       "ownerLayer": "spartan-helm",
       "repositoryPaths": ["frontend/src/app/components/ui/dialog"],
-      "previewPaths": ["frontend/design-preview/components/primitives/overlays-menus.html"],
+      "previewPaths": [
+        "frontend/design-preview/components/primitives/overlays-menus.html",
+        "frontend/design-preview/components/confirm-dialog.html"
+      ],
       "claudeDesignPath": "components/primitives/overlays-menus.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "focus-visible", "keyboard", "390px", "rtl", "400%-zoom"]
     },
     {
       "id": "spartan.component-system",
+      "nonVisualFollowupAudit": {
+        "pullRequest": 9469,
+        "designSync": "not-required",
+        "reason": "Remove duplicate changeDetection metadata and its unused import from empty-state and scrollable-pills. Angular's existing default change detection is retained. No template, style, token, layout or interaction change, and no preview or Claude Design approval is claimed."
+      },
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 repairs duplicate imports, uses framework-default change detection, narrows malformed realtime payloads and removes an unused test import. No template content, styles, tokens, controls or valid-publication behaviour changes. No preview or Claude Design reconciliation is claimed."
+      },
       "kind": "primitive",
       "ownerLayer": "spartan-helm",
       "repositoryPaths": ["frontend/src/app/components"],
@@ -114,7 +127,7 @@
       "claudeDesignPath": "components/component-system.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-594-grammar-explanation-dialog; issue-659-simplify-context-menu; merged-regression-repair-2026-08-18; secure-component-identifiers-2026-08-18; issue-6124-diagnostic-quiz-radio-group; issue-6115-device-lock-relay-tokens-2026-08-19; issue-6082-create-group-native-form-interactions-2026-08-19; issue-6179-events-calendar-spartan-controls-2026-08-19; issue-6164-emoji-picker-spartan-selection-2026-08-19; issue-6154-doodle-pad-spartan-selection-2026-08-19; issue-1713-voice-playback-speed-2026-08-20; appa11yclickable-explicit-tabindex-2026-08-20; issue-6144-distance-slider-native-control-2026-08-21; quests-retry-hlmbtn-spartan-contract-2026-08-22; issue-1078-link-preview-rendering-2026-08-23; frontend-unit-baseline-repair-2026-08-25; issue-1467-dnd-quiet-hours-save-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; canonical-ci-regression-repair-2026-08-26; issue-1702-liked-by-modal-contract-2026-08-26; liked-by-spartan-title-contract-2026-08-26; issue-757-direct-profile-chat-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-594-grammar-explanation-dialog; issue-659-simplify-context-menu; merged-regression-repair-2026-08-18; secure-component-identifiers-2026-08-18; issue-6124-diagnostic-quiz-radio-group; issue-6115-device-lock-relay-tokens-2026-08-19; issue-6082-create-group-native-form-interactions-2026-08-19; issue-6179-events-calendar-spartan-controls-2026-08-19; issue-6164-emoji-picker-spartan-selection-2026-08-19; issue-6154-doodle-pad-spartan-selection-2026-08-19; issue-1713-voice-playback-speed-2026-08-20; appa11yclickable-explicit-tabindex-2026-08-20; issue-852-events-discovery-completion-2026-08-21; issue-6144-distance-slider-native-control-2026-08-21; quests-retry-hlmbtn-spartan-contract-2026-08-22; issue-1078-link-preview-rendering-2026-08-23; frontend-unit-baseline-repair-2026-08-25; issue-1467-dnd-quiet-hours-save-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; canonical-ci-regression-repair-2026-08-26; issue-1702-liked-by-modal-contract-2026-08-26; liked-by-spartan-title-contract-2026-08-26; issue-757-direct-profile-chat-2026-08-26; issue-8222-api-base-urls-2026-08-28; issue-6134-discovery-error-boundary-spartan-controls-2026-08-21; issue-1032-diagnostic-quiz-completion-2026-08-21; issue-1664-quests-spartan-retry-2026-08-22; issue-6068-correction-modal-relay-tokens-2026-08-21; issue-1680-translate-bio-accessibility-2026-08-24; issue-6098-daily-login-modal-relay-tokens-2026-08-25; issue-1822-touchmove-cancellation-2026-08-27; document-viewer-accessibility-2026-08-27; issue-1742-incoming-call-lifecycle-2026-08-27; issue-8725-host-dashboard-room-binding-2026-09-07; issue-6116-device-lock-accessibility-2026-08-25; issue-966-visual-diff-rendering-2026-08-21; issue-6105-desktop-sidebar-relay-radii-2026-08-21; deduplicate-components-pages-specs-2026-09-12; pr-7588-correction-flashcard-context-2026-08-26; issue-1160-message-reactions-2026-08-22",
       "requiredStates": [
         "light",
         "dark",
@@ -137,11 +150,16 @@
       "claudeDesignPath": "screens/shell.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-6068-correction-modal-relay-tokens-2026-08-21; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
       "id": "screen.home",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 removes duplicate Angular imports and redundant explicit OnPush metadata. Home templates, styles, layout and interaction contracts are unchanged. No preview or Claude Design reconciliation is claimed."
+      },
       "kind": "screen",
       "ownerLayer": "feature",
       "repositoryPaths": ["frontend/src/app/pages/home"],
@@ -149,7 +167,7 @@
       "claudeDesignPath": "screens/home.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -161,7 +179,7 @@
       "claudeDesignPath": "screens/chat.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
     },
     {
@@ -173,7 +191,7 @@
       "claudeDesignPath": "screens/discovery.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -185,7 +203,7 @@
       "claudeDesignPath": "screens/profile.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -204,7 +222,7 @@
       "claudeDesignPath": "screens/settings.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); pr-9586-chat-settings-save-reliability-2026-10-23 (save-failed role=alert state, toggles disabled while saving; preview reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -223,7 +241,7 @@
       "claudeDesignPath": "screens/monetisation.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -238,7 +256,7 @@
       "claudeDesignPath": "screens/moderation.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -253,7 +271,7 @@
       "claudeDesignPath": "screens/calls.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -265,7 +283,7 @@
       "claudeDesignPath": "screens/onboarding.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1032-dynamic-diagnostic-onboarding-2026-08-22",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1032-dynamic-diagnostic-onboarding-2026-08-22; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -283,7 +301,7 @@
       "claudeDesignPath": "screens/social.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6058-communities-relay-tokens-2026-08-19",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6058-communities-relay-tokens-2026-08-19; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -295,7 +313,7 @@
       "claudeDesignPath": "screens/vocabulary.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
     },
     {
@@ -312,7 +330,7 @@
       "claudeDesignPath": "screens/more.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -324,7 +342,7 @@
       "claudeDesignPath": "foundations/focus-ring.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "rtl-safe-area-padding-2026-08-26",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["focus-visible", "light", "dark"]
     },
     {
@@ -336,8 +354,438 @@
       "claudeDesignPath": "foundations/reduced-motion.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "rtl-safe-area-padding-2026-08-26",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
       "requiredStates": ["reduced-motion", "light", "dark"]
+    },
+    {
+      "id": "feature.auth-access",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/forgot-password",
+        "frontend/src/app/components/reset-password",
+        "frontend/src/app/components/password-policy-reset",
+        "frontend/src/app/components/change-password",
+        "frontend/src/app/components/social-login-buttons",
+        "frontend/src/app/components/device-lock",
+        "frontend/src/app/components/version-check",
+        "frontend/src/app/components/forced-update-modal"
+      ],
+      "previewPaths": ["frontend/design-preview/features/auth-access.html"],
+      "claudeDesignPath": "features/auth-access.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "requiredStates": ["light", "dark", "error", "loading", "disabled", "390px", "rtl"]
+    },
+    {
+      "id": "feature.chat-messaging",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/chat-list",
+        "frontend/src/app/components/chat-view",
+        "frontend/src/app/components/chat-message",
+        "frontend/src/app/components/chat-system-bubble",
+        "frontend/src/app/components/chat-media-message",
+        "frontend/src/app/components/chat-media-picker",
+        "frontend/src/app/components/chat-media-share",
+        "frontend/src/app/components/chat-search",
+        "frontend/src/app/components/message-reaction-bar",
+        "frontend/src/app/components/read-receipt",
+        "frontend/src/app/components/quick-replies",
+        "frontend/src/app/components/emoji-picker",
+        "frontend/src/app/components/sticker-picker",
+        "frontend/src/app/components/long-press-context-menu",
+        "frontend/src/app/components/link-preview-card",
+        "frontend/src/app/components/tokenised-text",
+        "frontend/src/app/components/word-definition-modal",
+        "frontend/src/app/components/voice-recorder",
+        "frontend/src/app/components/audio-player",
+        "frontend/src/app/components/audio-recorder",
+        "frontend/src/app/components/media-attachments",
+        "frontend/src/app/components/chat-backup",
+        "frontend/src/app/components/text-to-speech",
+        "frontend/src/app/components/cultural-tip",
+        "frontend/src/app/chat/threaded-reply",
+        "frontend/src/app/chat/wallpaper-picker",
+        "frontend/src/app/features/premium-ai",
+        "frontend/src/app/ai-conversation",
+        "frontend/src/app/components/message-reaction-control"
+      ],
+      "previewPaths": ["frontend/design-preview/features/chat-messaging.html"],
+      "claudeDesignPath": "features/chat-messaging.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "requiredStates": ["light", "dark", "loading", "error", "empty", "390px", "rtl", "400%-zoom"]
+    },
+    {
+      "id": "feature.calls-live",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/active-call",
+        "frontend/src/app/components/incoming-call",
+        "frontend/src/app/components/incoming-call-modal",
+        "frontend/src/app/components/voip-call",
+        "frontend/src/app/components/voip-active-call",
+        "frontend/src/app/components/video-call",
+        "frontend/src/app/components/split-screen-video",
+        "frontend/src/app/components/video-room",
+        "frontend/src/app/components/audio-room",
+        "frontend/src/app/components/audio-stage",
+        "frontend/src/app/components/approve-speaker-modal",
+        "frontend/src/app/components/host-dashboard",
+        "frontend/src/app/components/voiceroom-create-modal",
+        "frontend/src/app/components/voiceroom-notes",
+        "frontend/src/app/components/live-chat-overlay",
+        "frontend/src/app/components/room-chat",
+        "frontend/src/app/components/soundboard",
+        "frontend/src/app/components/tip-host-modal",
+        "frontend/src/app/components/private-party-create-modal",
+        "frontend/src/app/components/language-parties",
+        "frontend/src/app/components/classrooms-marketplace",
+        "frontend/src/app/components/video-classroom-error-boundary",
+        "frontend/src/app/components/instant-video-recorder",
+        "frontend/src/app/components/audio-room-archive"
+      ],
+      "previewPaths": ["frontend/design-preview/features/calls-live.html"],
+      "claudeDesignPath": "features/calls-live.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 narrows unknown voice-room publication data before property access and adds malformed-input tests. Valid publications and all templates, styles and interactions are unchanged. No preview or Claude Design reconciliation is claimed."
+      },
+      "requiredStates": ["light", "dark", "error", "loading", "390px", "rtl", "reduced-motion"]
+    },
+    {
+      "id": "feature.profile-identity",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/profile-edit",
+        "frontend/src/app/components/profile-cover-photo",
+        "frontend/src/app/components/cover-photo-cropper",
+        "frontend/src/app/components/cover-photo-uploader",
+        "frontend/src/app/components/avatar-upload",
+        "frontend/src/app/components/audio-intro-recorder",
+        "frontend/src/app/components/profile-interests",
+        "frontend/src/app/components/hobby-tags",
+        "frontend/src/app/interests-select",
+        "frontend/src/app/components/external-profile",
+        "frontend/src/app/components/follow-list",
+        "frontend/src/app/components/profile-visitors",
+        "frontend/src/app/components/visitor-logs",
+        "frontend/src/app/components/earned-badges",
+        "frontend/src/app/components/my-stats",
+        "frontend/src/app/components/milestone",
+        "frontend/src/app/components/favourites",
+        "frontend/src/app/components/business-profile",
+        "frontend/src/app/components/topic-following",
+        "frontend/src/app/components/language-questions",
+        "frontend/src/app/achievements",
+        "frontend/src/app/features/settings",
+        "frontend/src/app/components/user-quick-actions"
+      ],
+      "previewPaths": [
+        "frontend/design-preview/features/profile-identity.html",
+        "frontend/design-preview/components/cover-photo-cropper.html"
+      ],
+      "claudeDesignPath": "features/profile-identity.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "requiredStates": ["light", "dark", "empty", "loading", "error", "390px", "rtl"]
+    },
+    {
+      "id": "feature.discovery-community",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/profile-discovery-card",
+        "frontend/src/app/components/age-range-slider",
+        "frontend/src/app/components/distance-slider",
+        "frontend/src/app/components/discovery-error-boundary",
+        "frontend/src/app/discovery/audio-intro-feed",
+        "frontend/src/app/components/moments-feed",
+        "frontend/src/app/components/moment-translate",
+        "frontend/src/app/components/liked-by-modal",
+        "frontend/src/app/components/lightbox",
+        "frontend/src/app/components/share-modal",
+        "frontend/src/app/components/groups-discovery",
+        "frontend/src/app/components/create-group",
+        "frontend/src/app/components/group-participant-drawer",
+        "frontend/src/app/components/events-feed",
+        "frontend/src/app/components/events-calendar",
+        "frontend/src/app/components/event-detail",
+        "frontend/src/app/events/create-event-modal",
+        "frontend/src/app/components/notifications-inbox",
+        "frontend/src/app/components/notification-preferences",
+        "frontend/src/app/components/notification-customization",
+        "frontend/src/app/pages/language-islands",
+        "frontend/src/app/components/report-user-modal",
+        "frontend/src/app/components/trust-safety-modal",
+        "frontend/src/app/components/event-rsvp-controls"
+      ],
+      "previewPaths": [
+        "frontend/design-preview/features/discovery-community.html",
+        "frontend/design-preview/components/distance-slider.html",
+        "frontend/design-preview/screens/audio-intros.html"
+      ],
+      "claudeDesignPath": "features/discovery-community.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "requiredStates": [
+        "light",
+        "dark",
+        "empty",
+        "loading",
+        "error",
+        "focus-visible",
+        "390px",
+        "rtl"
+      ]
+    },
+    {
+      "id": "feature.learning",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/flashcard-deck",
+        "frontend/src/app/components/flashcard-review",
+        "frontend/src/app/components/suggest-flashcards",
+        "frontend/src/app/components/vocabulary-dashboard",
+        "frontend/src/app/components/vocabulary-display",
+        "frontend/src/app/components/srs-error-boundary",
+        "frontend/src/app/components/srs-rtl-verification",
+        "frontend/src/app/components/srs-tour-trigger",
+        "frontend/src/app/components/diagnostic-quiz",
+        "frontend/src/app/components/proficiency-assessment",
+        "frontend/src/app/components/pronunciation-feedback",
+        "frontend/src/app/components/reading-engine",
+        "frontend/src/app/components/reading-engine-error-boundary",
+        "frontend/src/app/components/audio-sync-reader",
+        "frontend/src/app/components/document-viewer",
+        "frontend/src/app/components/resource-library",
+        "frontend/src/app/components/study-buddy",
+        "frontend/src/app/components/quests",
+        "frontend/src/app/components/leaderboard",
+        "frontend/src/app/components/word-of-the-day",
+        "frontend/src/app/components/streak-celebration-overlay",
+        "frontend/src/app/components/streak-congratulations",
+        "frontend/src/app/components/streak-counter",
+        "frontend/src/app/components/study-streak-counter",
+        "frontend/src/app/components/study-streak-widget",
+        "frontend/src/app/components/celebration-overlay",
+        "frontend/src/app/components/language-challenges"
+      ],
+      "previewPaths": ["frontend/design-preview/features/learning.html"],
+      "claudeDesignPath": "features/learning.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 repairs duplicate imports and redundant framework-default change detection in the existing study-streak widget. Template formatting is whitespace-only; no content, style, token, layout or interaction changes. No preview or Claude Design reconciliation is claimed."
+      },
+      "requiredStates": [
+        "light",
+        "dark",
+        "empty",
+        "loading",
+        "error",
+        "390px",
+        "rtl",
+        "reduced-motion"
+      ]
+    },
+    {
+      "id": "feature.commerce",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/shop",
+        "frontend/src/app/components/cart",
+        "frontend/src/app/components/sticker-store",
+        "frontend/src/app/components/gift-picker",
+        "frontend/src/app/components/gift-animation",
+        "frontend/src/app/components/gift-animation-overlay",
+        "frontend/src/app/components/virtual-gift-modal",
+        "frontend/src/app/components/coin-economy-dashboard",
+        "frontend/src/app/components/coins-success",
+        "frontend/src/app/components/coins-cancel",
+        "frontend/src/app/components/subscription-plans",
+        "frontend/src/app/components/subscription-success",
+        "frontend/src/app/components/subscription-cancel",
+        "frontend/src/app/components/restore-purchases-button",
+        "frontend/src/app/components/escrow-payments",
+        "frontend/src/app/components/developer-dashboard"
+      ],
+      "previewPaths": ["frontend/design-preview/features/commerce.html"],
+      "claudeDesignPath": "features/commerce.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "requiredStates": [
+        "light",
+        "dark",
+        "empty",
+        "loading",
+        "error",
+        "disabled",
+        "390px",
+        "rtl",
+        "reduced-motion"
+      ]
+    },
+    {
+      "id": "feature.settings-system",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/account-deletion",
+        "frontend/src/app/components/gdpr",
+        "frontend/src/app/components/device-transfer",
+        "frontend/src/app/components/theme-selector",
+        "frontend/src/app/components/font-scale-slider",
+        "frontend/src/app/components/app-language-selector",
+        "frontend/src/app/components/language-selector",
+        "frontend/src/app/components/legal-document-viewer",
+        "frontend/src/app/components/desktop-sidebar",
+        "frontend/src/app/components/confirm-dialog",
+        "frontend/src/app/components/error-boundary",
+        "frontend/src/app/components/visual-diff"
+      ],
+      "previewPaths": ["frontend/design-preview/features/settings-system.html"],
+      "claudeDesignPath": "features/settings-system.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "requiredStates": [
+        "light",
+        "dark",
+        "error",
+        "focus-visible",
+        "390px",
+        "wide",
+        "rtl",
+        "forced-colours"
+      ]
+    },
+    {
+      "id": "feature.admin-console",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/admin-actions",
+        "frontend/src/app/components/admin-error-boundary",
+        "frontend/src/app/components/admin-offline-banner",
+        "frontend/src/app/components/admin-portal",
+        "frontend/src/app/components/admin-user-actions",
+        "frontend/src/app/components/user-detail",
+        "frontend/src/app/components/moderation",
+        "frontend/src/app/components/lesson-manager",
+        "frontend/src/app/moderation",
+        "frontend/src/app/admin/user-management"
+      ],
+      "previewPaths": ["frontend/design-preview/features/admin-console.html"],
+      "claudeDesignPath": "features/admin-console.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "requiredStates": ["light", "dark", "empty", "loading", "error", "wide", "rtl"]
+    },
+    {
+      "id": "spartan.helm-controls",
+      "kind": "helm",
+      "ownerLayer": "spartan-helm",
+      "repositoryPaths": [
+        "frontend/src/app/components/ui/autocomplete",
+        "frontend/src/app/components/ui/button",
+        "frontend/src/app/components/ui/checkbox",
+        "frontend/src/app/components/ui/combobox",
+        "frontend/src/app/components/ui/input",
+        "frontend/src/app/components/ui/input-group",
+        "frontend/src/app/components/ui/native-select",
+        "frontend/src/app/components/ui/popover",
+        "frontend/src/app/components/ui/radio-group",
+        "frontend/src/app/components/ui/textarea",
+        "frontend/src/app/components/ui/tabs"
+      ],
+      "previewPaths": ["frontend/design-preview/components/primitives/helm-controls.html"],
+      "claudeDesignPath": "components/primitives/helm-controls.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "requiredStates": [
+        "light",
+        "dark",
+        "focus-visible",
+        "disabled",
+        "error",
+        "390px",
+        "rtl",
+        "forced-colours"
+      ]
+    },
+    {
+      "id": "feature.correction-modal",
+      "kind": "modal",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/correction-modal"],
+      "previewPaths": ["frontend/design-preview/components/correction-modal.html"],
+      "claudeDesignPath": "components/correction-modal.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "requiredStates": ["light", "dark", "focus-visible", "390px", "rtl"]
+    },
+    {
+      "id": "feature.daily-learning-tip",
+      "kind": "primitive",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/daily-learning-tip"],
+      "previewPaths": ["frontend/design-preview/components/daily-learning-tip.html"],
+      "claudeDesignPath": "components/daily-learning-tip.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "nonVisualMaintenanceAudit": {
+        "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
+        "designSync": "not-required",
+        "reason": "PR 9456 removes duplicate Angular imports and redundant explicit default change detection from the existing component. No template, style, token, layout or interaction change. No preview or Claude Design reconciliation is claimed."
+      },
+      "requiredStates": ["light", "dark", "390px", "wide"]
+    },
+    {
+      "id": "feature.daily-login-modal",
+      "kind": "modal",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/daily-login-modal"],
+      "previewPaths": ["frontend/design-preview/components/daily-login-modal.html"],
+      "claudeDesignPath": "components/daily-login-modal.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "requiredStates": ["light", "dark", "390px", "wide"]
+    },
+    {
+      "id": "feature.doodle-pad",
+      "kind": "primitive",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/doodle-pad"],
+      "previewPaths": ["frontend/design-preview/components/doodle-pad.html"],
+      "claudeDesignPath": "components/doodle-pad.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": null,
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "requiredStates": ["light", "dark", "390px", "wide"]
     }
   ]
 }
