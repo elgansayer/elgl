@@ -2,10 +2,11 @@ import { Component, computed, input, output } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { StageParticipant } from '../../services/audio-rooms.store';
+import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
 
 @Component({
   selector: 'app-audio-stage',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmButton, TranslatePipe, AudioEqualizerComponent],
   templateUrl: './audio-stage.html',
   styleUrl: './audio-stage.scss',
 })

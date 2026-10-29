@@ -131,141 +131,19 @@
             </div>
           }
 
-          <app-card customClass="app-padded">
-            <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-sm font-black text-text-primary">
-                {{ 'audioRoom.speakerStage' | t }}
-              </h3>
-              <span class="app-muted" aria-live="polite">{{
-                'audioRoom.speakerCount'
-                  | t: { count: stageParticipants().length + stageOverflowCount() }
-              }}</span>
-            </div>
-            <div
-              class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-              role="list"
-              [attr.aria-label]="'audioRoom.speakerStage' | t"
-            >
-              @for (participant of stageParticipants(); track participant.user_id) {
-                <div
-                  class="rounded-card border border-primary/30 bg-primary/10 p-3 text-center transition-colors hover:bg-primary/20"
-                  role="listitem"
-                >
-                  <div class="relative mx-auto inline-block">
-                    @if (participant.avatar_url) {
-                      <img
-                        loading="lazy"
-                        [src]="participant.avatar_url"
-                        [alt]="participant.display_name"
-                        class="mx-auto h-14 w-14 rounded-full object-cover border-2"
-                        [class.border-primary]="participant.isHost"
-                        [class.border-secondary]="participant.isCoHost"
-                        [class.border-surface-100]="!participant.isHost && !participant.isCoHost"
-                      />
-                    } @else {
-                      <div
-                        class="mx-auto h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold border-2"
-                        [class.bg-primary]="participant.isHost"
-                        [class.bg-secondary]="participant.isCoHost && !participant.isHost"
-                        [class.bg-surface-100]="!participant.isHost && !participant.isCoHost"
-                        [class.border-primary]="participant.isHost"
-                        [class.border-secondary]="participant.isCoHost"
-                        [class.border-surface-100]="!participant.isHost && !participant.isCoHost"
-                        [class.text-on-fill]="participant.isHost || participant.isCoHost"
-                        [class.text-text-primary]="!participant.isHost && !participant.isCoHost"
-                        aria-hidden="true"
-                      >
-                        {{ participant.display_name.slice(0, 1).toUpperCase() }}
-                      </div>
-                    }
-                    @if (participant.isSpeaking) {
-                      <span
-                        class="absolute bottom-0 end-0 inline-block w-4 h-4 rounded-full bg-success border-2 border-surface-200"
-                        aria-hidden="true"
-                      ></span>
-                    }
-                    @if (participant.isMuted) {
-                      <span
-                        class="absolute bottom-0 end-0 inline-flex items-center justify-center w-4 h-4 rounded-full bg-surface-400 border-2 border-surface-200 text-[10px]"
-                        aria-hidden="true"
-                      >
-                        🔇
-                      </span>
-                    }
-                  </div>
-
-                  @if (participant.isSpeaking) {
-                    <app-audio-equalizer [isActive]="true" customClass="mt-2"></app-audio-equalizer>
-                  }
-
-                  <p class="mt-1 truncate text-xs font-bold text-text-primary">
-                    {{ participant.display_name }}
-                  </p>
-
-                  <div class="mt-1 flex flex-wrap items-center justify-center gap-1">
-                    @if (participant.isHost) {
-                      <span
-                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-primary/20 text-primary"
-                      >
-                        {{ 'audioRoom.hostLabel' | t }}
-                      </span>
-                    }
-                    @if (participant.isCoHost) {
-                      <span
-                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-secondary/20 text-secondary"
-                      >
-                        {{ 'audioRoom.coHostBadge' | t }}
-                      </span>
-                    }
-                    @if (participant.isMuted) {
-                      <span class="sr-only">{{ 'audioRoom.muteBtn' | t }}</span>
-                    }
-                  </div>
-
-                  @if (
-                    room.host_id === authService.currentUser()?.id &&
-                    participant.user_id !== room.host_id
-                  ) {
-                    <div class="mt-2 flex flex-col gap-1">
-                      @if (!participant.isMuted) {
-                        <button
-                          hlmBtn
-                          (click)="mute(participant.user_id)"
-                          class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-warning/20"
-                          [attr.aria-label]="'audioRoom.muteBtn' | t"
-                        >
-                          {{ 'audioRoom.muteBtn' | t }}
-                        </button>
-                      }
-                      <button
-                        hlmBtn
-                        (click)="demote(participant.user_id)"
-                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-danger/20"
-                        [attr.aria-label]="'audioRoom.demoteBtn' | t"
-                      >
-                        {{ 'audioRoom.demoteBtn' | t }}
-                      </button>
-                    </div>
-                  }
-                </div>
-              } @empty {
-                <div class="col-span-full text-center py-6 opacity-70" role="status">
-                  <p class="text-sm text-text-secondary">{{ 'audioRoom.stageEmpty' | t }}</p>
-                </div>
-              }
-              @if (stageOverflowCount() > 0) {
-                <div
-                  class="rounded-card border border-surface-200 bg-surface-100 p-3 text-center text-xs font-bold text-text-secondary"
-                  role="listitem"
-                  [attr.aria-label]="
-                    'audioRoom.speakerCount' | t: { count: stageOverflowCount() }
-                  "
-                >
-                  +{{ stageOverflowCount() }}
-                </div>
-              }
-            </div>
-          </app-card>
+          <app-audio-stage
+            [participants]="stageParticipants()"
+            [maxSeats]="4"
+            [currentUserId]="authService.currentUser()?.id ?? null"
+            [isHost]="room.host_id === authService.currentUser()?.id"
+            [canRaiseHand]="!store.isSpeaker()"
+            [isHandRaised]="room.raised_hands ? room.raised_hands.includes(authService.currentUser()?.id ?? '') : false"
+            (raiseHand)="raiseHand()"
+            (lowerHand)="lowerHand()"
+            (toggleMute)="toggleMute()"
+            (muteParticipant)="mute($event)"
+            (demoteParticipant)="demote($event)"
+          ></app-audio-stage>
 
           @if (
             room.host_id === authService.currentUser()?.id &&

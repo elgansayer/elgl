@@ -81,6 +81,10 @@
           }
         </div>
 
+        @if (participant.isSpeaking) {
+          <app-audio-equalizer [isActive]="true" customClass="mb-1"></app-audio-equalizer>
+        }
+
         <p class="w-full truncate text-xs font-bold text-text-primary" [title]="participant.display_name">
           {{ participant.display_name }}
           @if (participant.isHost) {

@@ -15,7 +15,7 @@ import { QuickPollService } from '../../services/quick-poll.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { VideoRoomComponent } from '../video-room/video-room.component';
-import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
+import { AudioStage } from '../audio-stage/audio-stage';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
@@ -48,12 +48,12 @@ import {
     VoiceroomNotesComponent,
     VideoRoomComponent,
     VideoClassroomErrorBoundaryComponent,
+    AudioStage,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
 
     ApproveSpeakerModalComponent,
-    AudioEqualizerComponent,
     AppCardComponent,
     AppChipComponent,
     AppButtonPrimaryComponent,
@@ -217,6 +217,24 @@ export class AudioRoomComponent implements OnInit {
 
   async raiseHand(): Promise<void> {
     await this.store.raiseHand();
+  }
+
+  async lowerHand(): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (currentUserId) {
+      await this.store.dismissRaisedHand(currentUserId);
+    }
+  }
+
+  async toggleMute(): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
+    const participant = this.stageParticipants().find((p) => p.user_id === currentUserId);
+    if (participant?.isMuted) {
+      await this.store.unmuteSpeaker(currentUserId);
+    } else {
+      await this.store.muteSpeaker(currentUserId);
+    }
   }
 
   async approve(targetUserId: string): Promise<void> {
