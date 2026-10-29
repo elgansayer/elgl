@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsIn,
   IsNotEmpty,
@@ -111,6 +111,9 @@ export class SendMessageDto {
   ])
   message_type!: string;
 
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replace(/\0/g, '') : value,
+  )
   @ValidateIf(
     (dto: SendMessageDto) =>
       dto.message_type === 'text' || dto.text_content !== undefined,

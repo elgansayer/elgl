@@ -431,7 +431,9 @@ export class ChatService {
         room_id: dto.room_id,
         sender_id: senderId,
         message_type: dto.message_type,
-        text_content: dto.text_content ?? null,
+        text_content: dto.text_content
+          ? dto.text_content.replace(/\0/g, '')
+          : null,
         media_url: dto.media_url ?? null,
         correction_payload: dto.correction_payload ?? null,
         reply_to_id: dto.reply_to_id ?? null,

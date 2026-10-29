@@ -40,6 +40,26 @@ describe('SendMessageDto', () => {
     expect(hasError(blank, 'text_content')).toBe(true);
   });
 
+  it('strips null bytes from text_content during transformation', async () => {
+    const instance = plainToInstance(SendMessageDto, {
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'test\u0000injection',
+    });
+    const errors = await validate(instance);
+    expect(errors).toHaveLength(0);
+    expect(instance.text_content).toBe('testinjection');
+  });
+
+  it('rejects text_content that becomes blank after stripping null bytes', async () => {
+    const errors = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: '\u0000\u0000',
+    });
+    expect(hasError(errors, 'text_content')).toBe(true);
+  });
+
   it('bounds text message size', async () => {
     const errors = await validateMessage({
       room_id: 'room-1',

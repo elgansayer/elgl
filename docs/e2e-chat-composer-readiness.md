@@ -11,9 +11,14 @@ Older adversarial QA specs targeted `data-testid="message-input"`. The Angular c
 - `ChatRoomComponent` declares the canonical `chat-message-input` test ID;
 - `HlmAutocompleteInput` forwards its `testId` input to the native `<input>`, so `locator.fill()` targets an editable element;
 - no Playwright spec uses the removed `message-input` ID;
-- the canonical chat messaging suite exercises the current locator.
+- the canonical chat messaging suite exercises the current locator;
+- the adversarial chat security suite exercises the current locator across XSS, long payload, null-byte injection, whitespace rejection, RTL unicode, and rapid sequential message flows.
 
 The contract runs from the E2E package `pretest` hook before Playwright discovery or browser startup. Selector drift therefore fails in seconds with a targeted message instead of timing out inside an adversarial case.
+
+## Backend persistence defence
+
+In addition to locator contract validation in Playwright, the NestJS chat service and DTO layer (`SendMessageDto` and `EditMessageDto`) explicitly strip null bytes (`\0`) from message text payloads before persisting to Supabase PostgreSQL. This prevents PostgreSQL from terminating the transaction with a UTF-8 encoding error (`0x00`) while ensuring the frontend text renderer handles cleaned text safely.
 
 ## Verification
 

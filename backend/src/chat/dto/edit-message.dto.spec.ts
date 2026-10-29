@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { EditMessageDto } from './edit-message.dto';
 
@@ -39,5 +40,22 @@ describe('EditMessageDto', () => {
 
     const messages = await validationMessages(dto);
     expect(messages.some((message) => message.includes('128'))).toBe(true);
+  });
+
+  it('strips null bytes from text_content during transformation', async () => {
+    const dto = plainToInstance(EditMessageDto, {
+      text_content: 'test\u0000edit',
+    });
+    const messages = await validationMessages(dto);
+    expect(messages).toEqual([]);
+    expect(dto.text_content).toBe('testedit');
+  });
+
+  it('rejects text_content that becomes blank after stripping null bytes', async () => {
+    const dto = plainToInstance(EditMessageDto, {
+      text_content: '\u0000   \u0000',
+    });
+    const messages = await validationMessages(dto);
+    expect(messages).toContain('text_content must not be blank');
   });
 });

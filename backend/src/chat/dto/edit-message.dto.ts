@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
   IsOptional,
@@ -7,6 +8,9 @@ import {
 } from 'class-validator';
 
 export class EditMessageDto {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replace(/\0/g, '') : value,
+  )
   @IsString()
   @Matches(/\S/, { message: 'text_content must not be blank' })
   @MaxLength(10000)
