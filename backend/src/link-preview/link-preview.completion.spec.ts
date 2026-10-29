@@ -38,6 +38,7 @@ vi.mock('dompurify', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { of } from 'rxjs';
+import { MetricsService } from '../metrics/metrics.service';
 import { LinkPreviewService } from './link-preview.service';
 
 describe('LinkPreviewService completion boundaries', () => {
@@ -57,6 +58,7 @@ describe('LinkPreviewService completion boundaries', () => {
         LinkPreviewService,
         { provide: HttpService, useValue: httpService },
         { provide: 'REDIS_CLIENT', useValue: redis },
+        { provide: MetricsService, useValue: { recordLinkPreview: vi.fn() } },
       ],
     }).compile();
 

@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { SafetyService } from '../safety/safety.service';
@@ -16,6 +18,12 @@ import { EditTextDto } from './dto/edit-text.dto';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
 import { TimelineWorker } from './timeline.worker';
+import {
+  FOR_YOU_CANDIDATE_POOL_LIMIT,
+  FOR_YOU_FOLLOWED_AUTHOR_LIMIT,
+  FOR_YOU_IN_NETWORK_SOURCE_LIMIT,
+  FOR_YOU_RECENT_SOURCE_LIMIT,
+} from './moments-for-you.constants';
 import { MOCK_USERS } from '../mock-data';
 import { MomentCommentEvent } from '../notifications/events/notification.events';
 import { R2Service } from '../cloudflare-r2/r2.service';
@@ -63,6 +71,8 @@ interface MomentCommentRow {
 
 @Injectable()
 export class MomentsService {
+  private readonly logger = new Logger(MomentsService.name);
+
   async getLifetimeCounts(_userId?: string): Promise<{
     translations: number;
     corrections: number;
@@ -73,16 +83,18 @@ export class MomentsService {
 
     // ⚡ Bolt Optimization: Replace sequential awaits with Promise.all mapped concurrent operations
     const [
-      { data: momentsData, error: momentsError },
-      { data: correctionsData, error: correctionsError },
-      { data: translationsData, error: translationsError },
+      { count: momentsCount, error: momentsError },
+      { count: correctionsCount, error: correctionsError },
+      { count: translationsCount, error: translationsError },
     ] = await Promise.all([
-      supabase.from('moments').select('id'),
+      supabase.from('moments').select('id', { count: 'exact', head: true }),
       supabase
         .from('moment_comments')
-        .select('id')
+        .select('id', { count: 'exact', head: true })
         .not('correction_payload', 'is', null),
-      supabase.from('translations').select('id'),
+      supabase
+        .from('translations')
+        .select('id', { count: 'exact', head: true }),
     ]);
 
     if (momentsError || correctionsError || translationsError) {
@@ -92,9 +104,9 @@ export class MomentsService {
     }
 
     return {
-      translations: translationsData?.length ?? 0,
-      corrections: correctionsData?.length ?? 0,
-      moments: momentsData?.length ?? 0,
+      translations: translationsCount ?? 0,
+      corrections: correctionsCount ?? 0,
+      moments: momentsCount ?? 0,
     };
   }
   constructor(
@@ -106,6 +118,7 @@ export class MomentsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly r2Service: R2Service,
+    private readonly metricsService: MetricsService,
   ) {}
 
   private inferMediaType(dto: CreateStoryDto): string {
@@ -308,11 +321,11 @@ export class MomentsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    // 1) Get blocked+blocker user IDs (bidirectional)
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
-
-    // 2) Get current user's native language for targeted visibility routing
-    const profile = await this.usersService.getProfile(userId);
+    // 1 & 2) ⚡ Bolt Optimization: Fetch blocked IDs and profile concurrently
+    const [blockedIds, profile] = await Promise.all([
+      this.safetyService.getBlockedAndBlockerIds(userId),
+      this.usersService.getProfile(userId),
+    ]);
     const userNativeLang = profile?.native_languages?.[0] ?? null;
 
     let moments: MomentRecord[] = [];
@@ -355,23 +368,10 @@ export class MomentsService {
         .limit(50);
       if (data) moments = data as unknown as MomentRecord[];
     } else if (filter === 'For You') {
-      const { data } = await supabase
-        .from('moments')
-        .select('*')
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (data) {
-        moments = (data as unknown as MomentRecord[])
-          .sort((a, b) => {
-            const scoreA =
-              (a.likes_count || 0) * 2 + (a.comments_count || 0) * 3;
-            const scoreB =
-              (b.likes_count || 0) * 2 + (b.comments_count || 0) * 3;
-            return scoreB - scoreA;
-          })
-          .slice(0, 50);
-      }
+      // Candidate retrieval only: ordering is decided by MomentsRankingService,
+      // so no engagement sort or truncation happens before the ranker sees the
+      // pool.
+      moments = await this.getForYouCandidates(userId);
     } else {
       // All
       const { data } = await supabase
@@ -403,77 +403,36 @@ export class MomentsService {
       moments = moments.filter((m) => !blockedIds.includes(m.user_id));
     }
 
-    if (moments.length === 0) {
-      let generated: MomentRecord[] = [];
-      const eligibleUsers = MOCK_USERS.filter(
-        (u) => !blockedIds.includes(u.id),
-      );
-      for (let i = 0; i < Math.min(eligibleUsers.length, 50); i++) {
-        const u = eligibleUsers[i];
-        generated.push({
-          id: `mock-moment-${i}`,
-          user_id: u.id,
-          text_content: `Just practicing my ${u.target_languages[0].toUpperCase()} today! How is everyone doing? Let me know if you want to chat.`,
-          media_urls:
-            Math.random() > 0.5
-              ? [`https://i.pravatar.cc/300?u=moment-${i}`]
-              : [],
-          media_type: Math.random() > 0.5 ? 'images' : 'none',
-          target_language: u.target_languages[0],
-          likes_count: Math.floor(Math.random() * 100),
-          comments_count: Math.floor(Math.random() * 20),
-          is_pinned: false,
-          created_at: new Date(
-            Date.now() - Math.random() * 86400000 * 3,
-          ).toISOString(),
-          author: {
-            id: u.id,
-            display_name: u.display_name,
-            avatar_url: u.avatar_url,
-          },
-          is_liked_by_me: Math.random() > 0.8,
-        });
-      }
-
-      // Filter the generated mock data same as DB query
-      if (filter === 'Classmates' && targetLang) {
-        return generated.filter(
-          (m) => m.target_language.toLowerCase() === targetLang.toLowerCase(),
-        );
-      }
-      // Targeted visibility for non-Classmates filters: only show moments
-      // whose target_language matches the current user's native language.
-      if (filter !== 'Classmates' && userNativeLang) {
-        generated = generated.filter(
-          (m) =>
-            !m.target_language ||
-            m.target_language.toLowerCase() === userNativeLang,
-        );
-      }
-      return generated.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
+    // Bound the ranker input only after every visibility rule has run, so
+    // filtered rows never shrink the pool and hydration below stays bounded.
+    if (filter === 'For You') {
+      moments = moments.slice(0, FOR_YOU_CANDIDATE_POOL_LIMIT);
     }
+
+    if (moments.length === 0) return [];
 
     // Hydrate author profiles & likes
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    const profilesResponse = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url')
-      .in('id', authorIds);
+    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
+    const [profilesResponse, likesResponse] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', authorIds),
+      supabase
+        .from('moment_likes')
+        .select('moment_id')
+        .eq('user_id', userId)
+        .in('moment_id', momentIdsList),
+    ]);
+
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
 
-    const likesResponse = await supabase
-      .from('moment_likes')
-      .select('moment_id')
-      .eq('user_id', userId)
-      .in('moment_id', momentIdsList);
     const myLikes = likesResponse.data as MomentLikeRow[] | null;
     const likeRows = myLikes ?? [];
     const likedSet = new Set<string>(likeRows.map((l) => l.moment_id));
@@ -490,6 +449,130 @@ export class MomentsService {
         is_liked_by_me: likedSet.has(m.id),
       };
     });
+  }
+
+  /**
+   * Candidate sources for the personalised `For You` feed, mirroring the two
+   * source types of X's public For You pipeline: in-network Moments from
+   * followed authors and out-of-network Moments from the wider network. Each
+   * source is bounded and degrades independently; visibility filtering and
+   * ranking run after this merge.
+   */
+  private async getForYouCandidates(userId: string): Promise<MomentRecord[]> {
+    const [recent, inNetwork] = await Promise.all([
+      this.loadForYouSource('recent_source_unavailable', () =>
+        this.loadRecentMoments(),
+      ),
+      this.loadForYouSource('in_network_source_unavailable', () =>
+        this.loadInNetworkMoments(userId),
+      ),
+    ]);
+
+    this.metricsService.observeMomentsForYouCandidates(
+      'recent_source',
+      recent.length,
+    );
+    this.metricsService.observeMomentsForYouCandidates(
+      'in_network_source',
+      inNetwork.length,
+    );
+
+    // In-network first, so capping the pool never evicts a followed author's
+    // Moment in favour of an older out-of-network one. The viewer's own
+    // Moments are excluded here so they cannot consume pool slots.
+    const seen = new Set<string>();
+    const merged: MomentRecord[] = [];
+    for (const candidate of [...inNetwork, ...recent]) {
+      if (
+        !candidate?.id ||
+        candidate.user_id === userId ||
+        seen.has(candidate.id)
+      ) {
+        continue;
+      }
+      seen.add(candidate.id);
+      merged.push(candidate);
+    }
+    return merged;
+  }
+
+  private async loadForYouSource(
+    reason: 'recent_source_unavailable' | 'in_network_source_unavailable',
+    load: () => Promise<MomentRecord[]>,
+  ): Promise<MomentRecord[]> {
+    try {
+      return await load();
+    } catch {
+      // A missing source narrows the pool rather than failing the feed. Never
+      // log IDs, Moment text or provider errors.
+      this.logger.warn(`moments_for_you_${reason}`);
+      this.metricsService.recordMomentsForYouDegraded(reason);
+      return [];
+    }
+  }
+
+  private mapMomentsData(data: unknown[] | null): MomentRecord[] {
+    if (!data) return [];
+    return data.map((item) => item as MomentRecord);
+  }
+
+  private async loadRecentMoments(): Promise<MomentRecord[]> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('moments')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(FOR_YOU_RECENT_SOURCE_LIMIT);
+
+    if (error) throw new Error('recent moments unavailable');
+    return this.mapMomentsData(data);
+  }
+
+  private async loadInNetworkMoments(userId: string): Promise<MomentRecord[]> {
+    const supabase = this.supabaseService.getClient();
+    const redis = this.supabaseService.getRedisClient();
+
+    // The Redis timeline is the same in-network read model the Following feed
+    // uses (see TimelineWorker fan-out and MomentsCacheInvalidationService).
+    const momentIds = await redis.lrange(
+      `timeline_queue:${userId}`,
+      0,
+      FOR_YOU_IN_NETWORK_SOURCE_LIMIT - 1,
+    );
+
+    if (momentIds.length > 0) {
+      const { data, error } = await supabase
+        .from('moments')
+        .select('*')
+        .in('id', momentIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error('in-network moments unavailable');
+      return this.mapMomentsData(data);
+    }
+
+    // Cold timeline (never fanned out, reset by a follow change, or evicted):
+    // resolve a bounded set of followed authors from the follow graph instead.
+    const { data: follows, error: followsError } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', userId)
+      .limit(FOR_YOU_FOLLOWED_AUTHOR_LIMIT);
+
+    if (followsError) throw new Error('followed authors unavailable');
+
+    const authorIds = (follows ?? []).map((row) => row.following_id);
+    if (authorIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('moments')
+      .select('*')
+      .in('user_id', authorIds)
+      .order('created_at', { ascending: false })
+      .limit(FOR_YOU_IN_NETWORK_SOURCE_LIMIT);
+
+    if (error) throw new Error('in-network moments unavailable');
+    return this.mapMomentsData(data);
   }
 
   async getQuestions(
@@ -563,19 +646,23 @@ export class MomentsService {
     const authorIds = Array.from(new Set(moments.map((m) => m.user_id)));
     const momentIdsList = moments.map((m) => m.id);
 
-    const profilesResponse = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url')
-      .in('id', authorIds);
+    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
+    const [profilesResponse, likesResponse] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', authorIds),
+      supabase
+        .from('moment_likes')
+        .select('moment_id')
+        .eq('user_id', userId)
+        .in('moment_id', momentIdsList),
+    ]);
+
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileMap = new Map<string, UserProfileRow>();
     (profiles ?? []).forEach((p) => profileMap.set(p.id, p));
 
-    const likesResponse = await supabase
-      .from('moment_likes')
-      .select('moment_id')
-      .eq('user_id', userId)
-      .in('moment_id', momentIdsList);
     const myLikes = likesResponse.data as MomentLikeRow[] | null;
     const likedSet = new Set<string>((myLikes ?? []).map((l) => l.moment_id));
 
@@ -1078,21 +1165,24 @@ export class MomentsService {
     }
 
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
-    const profilesResponse = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url')
-      .in('id', authorIds);
+    const commentIds = commentRows.map((c) => c.id);
+
+    // ⚡ Bolt Optimization: Replace sequential awaits with concurrent Promise.all execution to improve hydration performance
+    const [profilesResponse, { data: votesData }] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', authorIds),
+      supabase
+        .from('moment_comment_votes')
+        .select('comment_id, user_id, vote')
+        .in('comment_id', commentIds),
+    ]);
+
     const profiles = profilesResponse.data as UserProfileRow[] | null;
     const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
-
-    // Fetch vote data for these comments
-    const commentIds = commentRows.map((c) => c.id);
-    const { data: votesData } = await supabase
-      .from('moment_comment_votes')
-      .select('comment_id, user_id, vote')
-      .in('comment_id', commentIds);
 
     const votesMap = new Map<string, { up: number; down: number }>();
     const myVotesMap = new Map<string, string>();
@@ -1171,6 +1261,10 @@ export class MomentsService {
 
     const momentAuthorId = (momentData as unknown as { user_id: string })
       .user_id;
+
+    if (userId !== momentAuthorId) {
+      throw new ForbiddenException('You can only edit your own Moments.');
+    }
 
     // Check if the editor is blocked by the moment author
     const blockedIds =

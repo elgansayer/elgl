@@ -29,6 +29,7 @@ export class MediaService {
   ];
 
   private static readonly MAX_OBJECT_KEY_LENGTH = 512;
+  private static readonly VOICE_NOTE_MAX_BYTES = 10 * 1024 * 1024;
 
   constructor(
     private readonly r2ObjectService: R2ObjectService,
@@ -40,14 +41,19 @@ export class MediaService {
   async generatePresignedUrl(
     userId: string,
     dto: PresignedUrlDto,
+    maximumBytes?: number,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
     const uniqueHash = randomBytes(8).toString('hex');
     const extension = this.safeExtension(dto.filename, 'bin');
     const objectKey = `${dto.folder}/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
-    const upload = this.r2ObjectService.createUploadUrl(
-      objectKey,
-      dto.contentType,
-    );
+    const upload =
+      maximumBytes === undefined
+        ? this.r2ObjectService.createUploadUrl(objectKey, dto.contentType)
+        : this.r2ObjectService.createUploadUrl(
+            objectKey,
+            dto.contentType,
+            maximumBytes,
+          );
 
     return {
       uploadUrl: upload.uploadUrl,
@@ -99,6 +105,26 @@ export class MediaService {
       contentType: dto.contentType,
       folder: 'audio-intros',
     });
+  }
+
+  async generateVoiceNotePresignedUrl(
+    userId: string,
+    dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_AUDIO_CONTENT_TYPES,
+      'Unsupported voice note format',
+    );
+    return this.generatePresignedUrl(
+      userId,
+      {
+        filename: dto.filename,
+        contentType: dto.contentType,
+        folder: 'voice-notes',
+      },
+      MediaService.VOICE_NOTE_MAX_BYTES,
+    );
   }
 
   async uploadAndCompressVoiceNote(

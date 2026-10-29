@@ -2,7 +2,7 @@ import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { MomentsStore, MomentRecord } from './moments.store';
+import { MomentsStore, MomentLikeUser, MomentRecord } from './moments.store';
 import { AuthService } from './auth.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { environment } from '../../environments/environment';
@@ -10,7 +10,10 @@ import { environment } from '../../environments/environment';
 describe('MomentsStore', () => {
   let store: MomentsStore;
   let httpMock: HttpTestingController;
-  let hapticFeedback: { success: ReturnType<typeof vi.fn>; tap: ReturnType<typeof vi.fn> };
+  let hapticFeedback: {
+    success: ReturnType<typeof vi.fn>;
+    tap: ReturnType<typeof vi.fn>;
+  };
 
   const mockMoment: MomentRecord = {
     id: 'moment1',
@@ -56,6 +59,62 @@ describe('MomentsStore', () => {
     expect(store).toBeTruthy();
   });
 
+  describe('loadFeed', () => {
+    const feedUrl = `${environment.apiUrl}/moments/feed`;
+
+    it('requests the For You filter and stores the ranked feed in API order', async () => {
+      const ranked: MomentRecord[] = [
+        { ...mockMoment, id: 'ranked-1', hashtags: ['日本語'] },
+        { ...mockMoment, id: 'ranked-2' },
+      ];
+
+      const promise = store.loadFeed('For You');
+
+      expect(store.activeFilter()).toBe('For You');
+      expect(store.isLoading()).toBe(true);
+
+      const req = httpMock.expectOne((request) => request.url === feedUrl);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('filter')).toBe('For You');
+      expect(req.request.params.has('lang')).toBe(false);
+      expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
+      req.flush(ranked);
+
+      await promise;
+
+      expect(store.feed().map((moment) => moment.id)).toEqual(['ranked-1', 'ranked-2']);
+      expect(store.feed()[0].hashtags).toEqual(['日本語']);
+      expect(store.isLoading()).toBe(false);
+    });
+
+    it('reuses the active filter when none is supplied', async () => {
+      store.activeFilter.set('For You');
+
+      const promise = store.loadFeed();
+
+      const req = httpMock.expectOne((request) => request.url === feedUrl);
+      expect(req.request.params.get('filter')).toBe('For You');
+      req.flush([]);
+
+      await promise;
+    });
+
+    it('shows an empty feed and stops loading when the request fails', async () => {
+      store.feed.set([mockMoment]);
+
+      const promise = store.loadFeed('For You');
+
+      httpMock
+        .expectOne((request) => request.url === feedUrl)
+        .error(new ProgressEvent('Network error'));
+
+      await promise;
+
+      expect(store.feed()).toEqual([]);
+      expect(store.isLoading()).toBe(false);
+    });
+  });
+
   it('should trigger haptic feedback and update the feed when a moment is liked', async () => {
     store.feed.set([mockMoment]);
 
@@ -83,5 +142,32 @@ describe('MomentsStore', () => {
     await promise;
 
     expect(hapticFeedback.success).not.toHaveBeenCalled();
+  });
+
+  it('loads a bounded liker page through the configured authenticated API', async () => {
+    const response: MomentLikeUser[] = [
+      {
+        id: 'user-2',
+        display_name: 'Alice',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: ['ja'],
+      },
+    ];
+
+    const promise = store.loadMomentLikes('moment1', 50, 25);
+
+    const req = httpMock.expectOne((request) => {
+      return (
+        request.url === `${environment.apiUrl}/moments/moment1/likes` &&
+        request.params.get('offset') === '50' &&
+        request.params.get('limit') === '25'
+      );
+    });
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
+    req.flush(response);
+
+    await expect(promise).resolves.toEqual(response);
   });
 });

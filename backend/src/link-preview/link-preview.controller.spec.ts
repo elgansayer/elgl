@@ -12,7 +12,7 @@ describe('LinkPreviewController', () => {
 
   beforeEach(() => vi.clearAllMocks());
 
-  it('requires Supabase authentication before allowing an external scrape', () => {
+  it('requires Supabase authentication for the network scraper endpoint', () => {
     const guards = Reflect.getMetadata(
       GUARDS_METADATA,
       LinkPreviewController,
@@ -46,6 +46,29 @@ describe('LinkPreviewController', () => {
     ).resolves.toEqual(preview);
     expect(mockGetPreview).toHaveBeenCalledWith('https://example.com/post');
     expect(mockGetPreview).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a LinkPreviewQueryDto object and trims whitespace', async () => {
+    const preview = {
+      url: 'https://example.com/post',
+      title: 'Great Article',
+      description: 'A description',
+      image: 'https://example.com/img/cover.png',
+      siteName: 'Example',
+    };
+    mockGetPreview.mockResolvedValue(preview);
+
+    await expect(
+      controller.getPreview({ url: '  https://example.com/post  ' }),
+    ).resolves.toEqual(preview);
+    expect(mockGetPreview).toHaveBeenCalledWith('https://example.com/post');
+  });
+
+  it('rejects a LinkPreviewQueryDto object with an empty url', async () => {
+    await expect(controller.getPreview({ url: '   ' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(mockGetPreview).not.toHaveBeenCalled();
   });
 
   it('passes through a null preview when the page exposes no metadata', async () => {

@@ -61,18 +61,21 @@ import { BadRequestException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
 import { LinkPreviewService } from './link-preview.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LinkPreviewService', () => {
   let service: LinkPreviewService;
   let httpService: { get: Mock };
   let redis: { get: Mock; set: Mock };
+  let metrics: { recordLinkPreview: Mock };
 
   beforeEach(async () => {
     redis = {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
     };
+    metrics = { recordLinkPreview: vi.fn() };
 
     httpService = {
       get: vi.fn(),
@@ -87,6 +90,7 @@ describe('LinkPreviewService', () => {
           useValue: { getRedisClient: vi.fn().mockReturnValue(redis) },
         },
         { provide: 'REDIS_CLIENT', useValue: redis },
+        { provide: MetricsService, useValue: metrics },
       ],
     }).compile();
 
@@ -327,6 +331,54 @@ describe('LinkPreviewService', () => {
     expect(result?.title).toBe('Fallback Title');
     expect(result?.description).toBe('Fallback description');
     expect(result?.siteName).toBe('example.com');
+  });
+
+  it('falls back to Twitter card tags when OpenGraph tags are absent', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta name="twitter:title" content="Twitter Title" />
+        <meta name="twitter:description" content="Twitter description" />
+        <meta name="twitter:image" content="https://example.com/tw-img.png" />
+        <meta name="twitter:site" content="@example" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result).toEqual({
+      url: 'https://example.com/',
+      title: 'Twitter Title',
+      description: 'Twitter description',
+      image: 'https://example.com/tw-img.png',
+      siteName: '@example',
+    });
+  });
+
+  it('extracts case-insensitive OpenGraph tags and alternative image properties', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="OG:TITLE" content="Case Insensitive Title" />
+        <meta property="og:image:secure_url" content="https://example.com/secure.jpg" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.title).toBe('Case Insensitive Title');
+    expect(result?.image).toBe('https://example.com/secure.jpg');
+  });
+
+  it('resolves protocol-relative image URLs safely', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="og:title" content="Protocol Relative Image" />
+        <meta property="og:image" content="//cdn.example.com/photo.png" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.image).toBe('https://cdn.example.com/photo.png');
   });
 
   it('strips markup from scraped fields including the site name', async () => {

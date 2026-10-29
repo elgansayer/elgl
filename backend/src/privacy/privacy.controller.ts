@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -12,13 +13,33 @@ import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PrivacyService } from './privacy.service';
+import { PrivacyLifecycleService } from './privacy-lifecycle.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Controller('privacy')
 @UseGuards(SupabaseAuthGuard)
 export class PrivacyController {
-  constructor(private readonly privacyService: PrivacyService) {}
+  constructor(
+    private readonly privacyService: PrivacyService,
+    private readonly privacyLifecycleService: PrivacyLifecycleService,
+  ) {}
+
+  @Get('status')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 30, ttl: 60 * 1000 } })
+  async getStatus(@CurrentUser() user: User | null) {
+    if (!user) throw new UnauthorizedException();
+    // ⚡ Bolt Optimization: Group independent database queries with concurrent Promise.all execution to reduce latency.
+    const [status, deletion] = await Promise.all([
+      this.privacyService.getStatus(user.id),
+      this.privacyLifecycleService.getAccountDeletionStatus(user.id),
+    ]);
+    return {
+      ...status,
+      deletion,
+    };
+  }
 
   @Post('request-archive')
   @HttpCode(HttpStatus.OK)

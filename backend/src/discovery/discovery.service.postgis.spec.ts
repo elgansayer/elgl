@@ -11,6 +11,7 @@ type QueryBuilderMock = {
   select: Mock;
   neq: Mock;
   eq: Mock;
+  is: Mock;
   not: Mock;
   contains: Mock;
   gt: Mock;
@@ -27,6 +28,7 @@ const createQueryBuilder = (): QueryBuilderMock => {
     'select',
     'neq',
     'eq',
+    'is',
     'not',
     'contains',
     'gt',
@@ -211,7 +213,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
 
     await service.searchPartners(
       'current-user',
-      { is_serious_learner: true } as UserProfile,
+      { serious_learner_mode: true } as UserProfile,
       {
         latitude: 53.4808,
         longitude: -2.2426,

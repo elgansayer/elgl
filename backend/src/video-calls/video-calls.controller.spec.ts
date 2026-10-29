@@ -1,4 +1,6 @@
 import type { Mock } from 'vitest';
+import type { Request } from 'express';
+import type { User } from '@supabase/supabase-js';
 import { Test, TestingModule } from '@nestjs/testing';
 import { VideoCallsController } from './video-calls.controller';
 import { VideoCallsService } from './video-calls.service';
@@ -17,6 +19,7 @@ describe('VideoCallsController', () => {
     id: '11111111-1111-4111-8111-111111111111',
     email: 'test@hellotalk.com',
   };
+  const mockReq = { user: mockUser as unknown as User } as unknown as Request;
   const remoteUserId = '22222222-2222-4222-8222-222222222222';
   const roomName = 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890';
 
@@ -106,7 +109,7 @@ describe('VideoCallsController', () => {
       };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
       const result = await controller.startCall(req, { remoteUserId });
 
       expect(videoCallsService.createRoom).toHaveBeenCalledWith(
@@ -126,7 +129,7 @@ describe('VideoCallsController', () => {
       };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
       const result = await controller.startCall(req, { remoteUserId });
 
       expect(result).toEqual(mockResponse);
@@ -139,7 +142,7 @@ describe('VideoCallsController', () => {
         new Error('Encrypted calls unavailable'),
       );
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
 
       await expect(controller.startCall(req, { remoteUserId })).rejects.toThrow(
         'Encrypted calls unavailable',
@@ -156,7 +159,7 @@ describe('VideoCallsController', () => {
       };
       (videoCallsService.joinRoom as Mock).mockResolvedValue(mockResponse);
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
       const result = await controller.acceptCall(req, { roomName });
 
       expect(videoCallsService.joinRoom).toHaveBeenCalledWith(
@@ -171,7 +174,7 @@ describe('VideoCallsController', () => {
         new Error('Call is unavailable'),
       );
 
-      const req = { user: mockUser } as any;
+      const req = mockReq;
 
       await expect(controller.acceptCall(req, { roomName })).rejects.toThrow(
         'Call is unavailable',

@@ -63,6 +63,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
     limit: Mock;
     range: Mock;
     single: Mock;
+    then: Mock;
   };
 
   beforeAll(async () => {
@@ -108,6 +109,8 @@ describe('HelloTalk API E2E Integration Suite', () => {
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       neq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
       gt: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       lt: vi.fn().mockReturnThis(),
@@ -118,6 +121,9 @@ describe('HelloTalk API E2E Integration Suite', () => {
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       range: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve: (value: unknown) => unknown) =>
+        resolve({ data: [], error: null }),
+      ),
       single: vi
         .fn()
         .mockResolvedValue({ data: { id: 'mock-id' }, error: null }),
@@ -392,6 +398,58 @@ describe('HelloTalk API E2E Integration Suite', () => {
         });
     });
 
+    it('/discovery/audio-intros (GET) - should return visible audio introductions', () => {
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'speaker-1',
+            display_name: 'Audio Partner',
+            native_languages: ['es'],
+            target_languages: ['en'],
+            audio_intro_url: 'https://media.example.test/audio-intro.mp3',
+          },
+        ],
+        error: null,
+      });
+
+      return request(app.getHttpServer())
+        .get('/discovery/audio-intros')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).toEqual([
+            expect.objectContaining({
+              id: 'speaker-1',
+              display_name: 'Audio Partner',
+              audio_intro_url: 'https://media.example.test/audio-intro.mp3',
+            }),
+          ]);
+          expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+            'scheduled_for_deletion_at',
+            null,
+          );
+        });
+    });
+
+    it('/discovery/audio-intros (GET) - should report a query outage as 503', () => {
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST503', message: 'sensitive database detail' },
+      });
+
+      return request(app.getHttpServer())
+        .get('/discovery/audio-intros')
+        .expect(503)
+        .expect((res) => {
+          expect(res.body).toMatchObject({
+            statusCode: 503,
+            message: 'Audio introductions are temporarily unavailable',
+          });
+          expect(JSON.stringify(res.body)).not.toContain(
+            'sensitive database detail',
+          );
+        });
+    });
+
     it('/audio-rooms/create (POST) - should create new audio room and return room object', () => {
       const newRoom = {
         id: 'room-101',
@@ -522,6 +580,226 @@ describe('HelloTalk API E2E Integration Suite', () => {
           expect(res.body.pricing_info).toContain('20 UKP / $26 USD per month');
           expect(res.body.pricing_info).toContain('8 UKP / $10 USD per month');
         });
+    });
+  });
+
+  describe('Moments For You feed (#1668)', () => {
+    interface QueryCall {
+      selected: unknown[];
+      eq: Array<[string, unknown]>;
+      in: Array<[string, unknown[]]>;
+    }
+    interface QueryResult {
+      data: unknown;
+      error: unknown;
+      count?: number;
+    }
+
+    const HOUR_MS = 60 * 60 * 1000;
+    const hoursAgo = (hours: number) =>
+      new Date(Date.now() - hours * HOUR_MS).toISOString();
+
+    const moment = (
+      id: string,
+      userId: string,
+      overrides: Record<string, unknown> = {},
+    ) => ({
+      id,
+      user_id: userId,
+      text_content: `Moment ${id}`,
+      media_urls: [],
+      media_type: 'none',
+      target_language: 'ja',
+      post_type: 'moment',
+      is_pinned: false,
+      is_ephemeral: false,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: hoursAgo(1),
+      ...overrides,
+    });
+
+    /** Chainable, awaitable query double that records how it was called. */
+    function query(resolve: (call: QueryCall) => QueryResult) {
+      const call: QueryCall = { selected: [], eq: [], in: [] };
+      const builder: Record<string, unknown> = {};
+      const chain = (record?: (...args: any[]) => void) =>
+        vi.fn((...args: any[]) => {
+          record?.(...args);
+          return builder;
+        });
+      builder.select = chain((...args) => call.selected.push(...args));
+      builder.eq = chain((column, value) => call.eq.push([column, value]));
+      builder.in = chain((column, values) => call.in.push([column, values]));
+      builder.order = chain();
+      builder.limit = chain();
+      builder.single = vi.fn(() => Promise.resolve(resolve(call)));
+      builder.then = (onFulfilled: (value: QueryResult) => unknown) =>
+        onFulfilled(resolve(call));
+      return builder;
+    }
+
+    interface FeedFixture {
+      recent: unknown[];
+      inNetwork?: unknown[];
+      followsFail?: boolean;
+    }
+
+    function wireFeed({ recent, inNetwork = [], followsFail }: FeedFixture) {
+      mockRedisClient.lrange.mockResolvedValue(
+        (inNetwork as Array<{ id: string }>).map((row) => row.id),
+      );
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        switch (table) {
+          case 'blocks':
+            return query((call) => ({
+              data:
+                call.selected[0] === 'blocked_id'
+                  ? [{ blocked_id: 'blocked-author' }]
+                  : [],
+              error: null,
+            }));
+          case 'users':
+            return query((call) =>
+              call.in.length > 0
+                ? {
+                    data: (call.in[0][1] as string[]).map((id) => ({
+                      id,
+                      display_name: `Author ${id}`,
+                      avatar_url: null,
+                    })),
+                    error: null,
+                  }
+                : {
+                    data: {
+                      id: 'e2e-user-1',
+                      display_name: 'Viewer',
+                      native_languages: ['ja'],
+                      target_languages: ['en'],
+                    },
+                    error: null,
+                  },
+            );
+          case 'user_follows':
+            return query((call) => {
+              if (call.selected[1])
+                return { data: null, error: null, count: 0 };
+              return followsFail
+                ? { data: null, error: { message: 'follows unavailable' } }
+                : {
+                    data: [{ following_id: 'followed-author' }],
+                    error: null,
+                  };
+            });
+          case 'moment_likes':
+            return query(() => ({
+              data: [{ moment_id: 'liked-1' }],
+              error: null,
+            }));
+          case 'moments':
+            return query((call) => {
+              if (call.selected[0] === 'text_content') {
+                return {
+                  data: [{ text_content: 'Loved these #日本語 posts' }],
+                  error: null,
+                };
+              }
+              return {
+                data: call.in[0]?.[0] === 'id' ? inNetwork : recent,
+                error: null,
+              };
+            });
+          default:
+            return query(() => ({ data: [], error: null }));
+        }
+      });
+    }
+
+    const feed = () =>
+      request(app.getHttpServer()).get('/moments/feed').query({
+        filter: 'For You',
+      });
+
+    it('ranks by recency, in-network affinity and viewer interests instead of raw engagement', async () => {
+      const followed = moment('n-followed', 'followed-author', {
+        likes_count: 2,
+        created_at: hoursAgo(40),
+      });
+      wireFeed({
+        inNetwork: [followed],
+        recent: [
+          moment('r-popular-old', 'author-b', {
+            likes_count: 300,
+            comments_count: 50,
+            created_at: hoursAgo(96),
+          }),
+          moment('r-fresh-tagged', 'author-a', {
+            text_content: '今日は #日本語 を勉強しています',
+          }),
+          moment('r-blocked', 'blocked-author', { likes_count: 999 }),
+          moment('r-other-language', 'author-c', { target_language: 'fr' }),
+          moment('r-own', 'e2e-user-1', { likes_count: 999 }),
+        ],
+      });
+
+      const res = await feed().expect(200);
+
+      // The legacy engagement sort would have served r-popular-old first.
+      expect(res.body.map((item: { id: string }) => item.id)).toEqual([
+        'r-fresh-tagged',
+        'n-followed',
+        'r-popular-old',
+      ]);
+      expect(res.body[0].hashtags).toEqual(['日本語']);
+      expect(res.body[0].author.display_name).toBe('Author author-a');
+      expect(res.body[1].is_liked_by_me).toBe(false);
+    });
+
+    it('never exposes ranking scores or private viewer context', async () => {
+      wireFeed({ recent: [moment('r-1', 'author-a')] });
+
+      const res = await feed().expect(200);
+      const serialised = JSON.stringify(res.body);
+
+      expect(serialised).not.toMatch(
+        /score|followedAuthorIds|interestedHashtags|liked-1|followed-author/i,
+      );
+    });
+
+    it('still serves For You from public signals when viewer context is unavailable', async () => {
+      wireFeed({
+        followsFail: true,
+        recent: [
+          moment('r-quiet', 'author-a'),
+          moment('r-popular', 'author-b', { likes_count: 400 }),
+        ],
+      });
+
+      const res = await feed().expect(200);
+
+      expect(res.body.map((item: { id: string }) => item.id)).toEqual([
+        'r-popular',
+        'r-quiet',
+      ]);
+    });
+
+    it('serves an empty feed rather than synthetic Moments when no real candidates exist', async () => {
+      wireFeed({ recent: [] });
+
+      const res = await feed().expect(200);
+
+      expect(res.body).toEqual([]);
+    });
+
+    it('rejects an unsupported filter without reading any Moments', async () => {
+      wireFeed({ recent: [moment('r-1', 'author-a')] });
+
+      await request(app.getHttpServer())
+        .get('/moments/feed')
+        .query({ filter: 'Everyone' })
+        .expect(400);
+
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('moments');
     });
   });
 });

@@ -10,8 +10,7 @@ record, cache, cursor, connector, secret, export, notification, programme and de
 client-supplied owner identifier for authorisation. Use parameterised SQL, synthetic fixtures, approved secret
 stores and the repository's provider abstraction. Public behaviour and security boundaries fail closed.
 
-Keep the Hevy-first dynamic programme architecture. Do not reintroduce retired static programme fallbacks or
-reactivate GitHub-hosted autonomous coding workflows. LLM output cannot bypass deterministic programme,
+LLM output cannot bypass deterministic programme,
 safety, authorisation, connector or persistence validation.
 
 Inspect AGENTS.md, existing code and tests, Git history, issues and pull requests before editing. Preserve

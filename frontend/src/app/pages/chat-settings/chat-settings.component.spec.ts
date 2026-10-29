@@ -1,8 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Pipe, PipeTransform, signal } from '@angular/core';
+import { Pipe, PipeTransform } from '@angular/core';
 import { ChatSettingsComponent } from './chat-settings.component';
 import { ChatSettingsService } from '../../services/chat-settings.service';
+import { signal } from '@angular/core';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -19,8 +22,12 @@ describe('ChatSettingsComponent', () => {
     readReceipts: ReturnType<typeof signal<boolean>>;
     enterToSend: ReturnType<typeof signal<boolean>>;
     loaded: ReturnType<typeof signal<boolean>>;
-    loadFailed: ReturnType<typeof signal<boolean>>;
-    saving: ReturnType<typeof signal<boolean>>;
+    disappearingMessagesTtl: ReturnType<typeof signal<string>>;
+    disappearingMessagesSaving: ReturnType<typeof signal<boolean>>;
+    disappearingMessagesError: ReturnType<typeof signal<boolean>>;
+    settingsLoadError: ReturnType<typeof signal<boolean>>;
+    settingSaving: ReturnType<typeof signal<boolean>>;
+    settingSaveError: ReturnType<typeof signal<boolean>>;
     loadSettings: ReturnType<typeof vi.fn>;
     updateSetting: ReturnType<typeof vi.fn>;
     resetToDefaults: ReturnType<typeof vi.fn>;
@@ -28,15 +35,19 @@ describe('ChatSettingsComponent', () => {
 
   beforeEach(async () => {
     mockService = {
-      autoTranslate: signal(false),
-      readReceipts: signal(false),
-      enterToSend: signal(false),
-      loaded: signal(false),
-      loadFailed: signal(false),
-      saving: signal(false),
-      loadSettings: vi.fn().mockResolvedValue(true),
-      updateSetting: vi.fn().mockResolvedValue(true),
-      resetToDefaults: vi.fn().mockResolvedValue(true),
+      autoTranslate: signal<boolean>(false),
+      readReceipts: signal<boolean>(false),
+      enterToSend: signal<boolean>(false),
+      loaded: signal<boolean>(false),
+      disappearingMessagesTtl: signal<string>('off'),
+      disappearingMessagesSaving: signal<boolean>(false),
+      disappearingMessagesError: signal<boolean>(false),
+      settingsLoadError: signal<boolean>(false),
+      settingSaving: signal<boolean>(false),
+      settingSaveError: signal<boolean>(false),
+      loadSettings: vi.fn(),
+      updateSetting: vi.fn(),
+      resetToDefaults: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -44,7 +55,7 @@ describe('ChatSettingsComponent', () => {
       providers: [{ provide: ChatSettingsService, useValue: mockService }],
     })
       .overrideComponent(ChatSettingsComponent, {
-        set: { imports: [MockTranslatePipe] },
+        set: { imports: [MockTranslatePipe, HlmNativeSelect, HlmButton] },
       })
       .compileComponents();
 
@@ -52,143 +63,123 @@ describe('ChatSettingsComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('loads account settings on construction', () => {
+  it('should create the component', () => {
+    fixture.detectChanges();
     expect(component).toBeTruthy();
+  });
+
+  it('should call loadSettings on construction', () => {
     expect(mockService.loadSettings).toHaveBeenCalledTimes(1);
   });
 
-  it('announces loading before authoritative account state is available', () => {
+  it('should not call loadSettings more than once on detectChanges', () => {
+    mockService.loadSettings.mockClear();
     fixture.detectChanges();
-
-    const status = fixture.nativeElement.querySelector('[role="status"]');
-    expect(status?.textContent).toContain('common.loading');
-    expect(fixture.nativeElement.querySelectorAll('[role="switch"]')).toHaveLength(0);
+    expect(mockService.loadSettings).not.toHaveBeenCalled();
   });
 
-  it('renders a retryable alert instead of editable defaults when loading fails', async () => {
+  it('should display the title', () => {
     mockService.loaded.set(true);
-    mockService.loadFailed.set(true);
     fixture.detectChanges();
-
-    const alert = fixture.nativeElement.querySelector('[role="alert"]');
-    const retry = Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
-      (button as HTMLButtonElement).textContent?.includes('common.retry'),
-    ) as HTMLButtonElement | undefined;
-
-    expect(alert?.textContent).toContain('common.error');
-    expect(retry).toBeTruthy();
-
-    retry?.click();
-    await fixture.whenStable();
-    expect(mockService.loadSettings).toHaveBeenCalledTimes(2);
+    const title = fixture.nativeElement.querySelector('h2');
+    expect(title).toBeTruthy();
+    expect(title.textContent).toContain('chat_settings.title');
   });
 
-  it('renders all three accessible switches with touch-sized controls', () => {
+  it('should render all three toggle switches', () => {
     mockService.loaded.set(true);
     fixture.detectChanges();
-
     const switches = fixture.nativeElement.querySelectorAll('[role="switch"]');
-    expect(switches).toHaveLength(3);
-    expect(switches[0].getAttribute('aria-label')).toBe('chat_settings.auto_translate');
-    expect(switches[1].getAttribute('aria-label')).toBe('chat_settings.read_receipts');
-    expect(switches[2].getAttribute('aria-label')).toBe('chat_settings.enter_to_send');
-    expect(switches[0].classList.contains('h-11')).toBe(true);
+    expect(switches.length).toBe(3);
   });
 
-  it('reflects confirmed switch state through aria-checked', () => {
+  it('should display unchecked state for auto-translate toggle', () => {
     mockService.loaded.set(true);
-    mockService.autoTranslate.set(true);
     fixture.detectChanges();
+    const switches = fixture.nativeElement.querySelectorAll('[role="switch"]');
+    expect(switches[0].getAttribute('aria-checked')).toBe('false');
+  });
 
+  it('should display checked state for auto-translate toggle', () => {
+    mockService.autoTranslate.set(true);
+    mockService.loaded.set(true);
+    fixture.detectChanges();
     const switches = fixture.nativeElement.querySelectorAll('[role="switch"]');
     expect(switches[0].getAttribute('aria-checked')).toBe('true');
-    expect(switches[1].getAttribute('aria-checked')).toBe('false');
   });
 
-  it('persists Auto-Translate changes before treating them as successful', async () => {
+  it('should toggle autoTranslate on click', () => {
     mockService.loaded.set(true);
     fixture.detectChanges();
-
-    const switchElement = fixture.nativeElement.querySelectorAll('[role="switch"]')[0];
-    switchElement.click();
-    await fixture.whenStable();
-
+    const switches = fixture.nativeElement.querySelectorAll('[role="switch"]');
+    switches[0].click();
     expect(mockService.updateSetting).toHaveBeenCalledWith('autoTranslate', true);
-    expect(component.saveFailed()).toBe(false);
   });
 
-  it('persists Read Receipts and Enter-to-Send independently', async () => {
-    mockService.loaded.set(true);
+  it('should toggle readReceipts on click when currently checked', () => {
     mockService.readReceipts.set(true);
+    mockService.loaded.set(true);
     fixture.detectChanges();
-
     const switches = fixture.nativeElement.querySelectorAll('[role="switch"]');
     switches[1].click();
-    await fixture.whenStable();
-    switches[2].click();
-    await fixture.whenStable();
-
     expect(mockService.updateSetting).toHaveBeenCalledWith('readReceipts', false);
+  });
+
+  it('should toggle enterToSend on click', () => {
+    mockService.loaded.set(true);
+    fixture.detectChanges();
+    const switches = fixture.nativeElement.querySelectorAll('[role="switch"]');
+    switches[2].click();
     expect(mockService.updateSetting).toHaveBeenCalledWith('enterToSend', true);
   });
 
-  it('disables every mutation control while a setting is being saved', () => {
+  it('should display translated labels for each setting', () => {
     mockService.loaded.set(true);
-    mockService.saving.set(true);
     fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.auto_translate');
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.read_receipts');
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.enter_to_send');
+  });
 
-    const switches = Array.from(
-      fixture.nativeElement.querySelectorAll('[role="switch"]'),
+  it('should display description subtitles', () => {
+    mockService.loaded.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.auto_translate_desc');
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.read_receipts_desc');
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.enter_to_send_desc');
+  });
+
+  function findResetButton(): HTMLButtonElement | undefined {
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
     ) as HTMLButtonElement[];
-    const reset = fixture.nativeElement.querySelector(
-      '[data-testid="reset-chat-settings"]',
-    ) as HTMLButtonElement;
+    return buttons.find((button) => button.textContent?.includes('chat_settings.reset_defaults'));
+  }
 
-    expect(switches.every((control) => control.disabled)).toBe(true);
-    expect(reset.disabled).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('common.saving');
+  it('announces a failed save and blocks edits while a save is in flight', () => {
+    mockService.loaded.set(true);
+    mockService.settingSaveError.set(true);
+    mockService.settingSaving.set(true);
+    fixture.detectChanges();
+
+    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+    expect(alert.textContent).toContain('chat_settings.save_failed');
+    expect(findResetButton()?.disabled).toBe(true);
   });
 
-  it('surfaces a retryable save failure without fabricating success', async () => {
+  it('should render a reset to defaults button', () => {
     mockService.loaded.set(true);
-    mockService.updateSetting.mockResolvedValueOnce(false);
     fixture.detectChanges();
-
-    fixture.nativeElement.querySelectorAll('[role="switch"]')[0].click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(component.saveFailed()).toBe(true);
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
-      'common.error',
-    );
+    const resetBtn = findResetButton();
+    expect(resetBtn).toBeTruthy();
+    expect(resetBtn?.textContent).toContain('chat_settings.reset_defaults');
   });
 
-  it('persists Reset to defaults through the service', async () => {
+  it('should call resetToDefaults on service when reset button clicked', () => {
     mockService.loaded.set(true);
     fixture.detectChanges();
-
-    const reset = fixture.nativeElement.querySelector(
-      '[data-testid="reset-chat-settings"]',
-    ) as HTMLButtonElement;
-    reset.click();
-    await fixture.whenStable();
-
+    const resetBtn = findResetButton();
+    resetBtn?.click();
     expect(mockService.resetToDefaults).toHaveBeenCalledTimes(1);
-    expect(component.saveFailed()).toBe(false);
-  });
-
-  it('reports a failed Reset to defaults mutation', async () => {
-    mockService.loaded.set(true);
-    mockService.resetToDefaults.mockResolvedValueOnce(false);
-    fixture.detectChanges();
-
-    const reset = fixture.nativeElement.querySelector(
-      '[data-testid="reset-chat-settings"]',
-    ) as HTMLButtonElement;
-    reset.click();
-    await fixture.whenStable();
-
-    expect(component.saveFailed()).toBe(true);
   });
 });

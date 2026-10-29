@@ -66,8 +66,18 @@ const PLACEHOLDER_PATTERNS = [
   /^test-/i,
   /^sk_test(?:_|$)/i,
   /^whsec_test(?:_|$)/i,
+  /-change-in-prod$/i,
   /example\.supabase\.co/i,
   /\.example\.(?:com|org|net)$/i,
+  /^device-transfer-secret-dev-only$/i,
+  /^test-transfer-secret$/i,
+  /^dev_livekit_(?:key|secret)_test_value/i,
+  /localhost/i,
+  /^https?:\/\/pubsub\.googleapis\.com\/test/i,
+  /^test@example\.com/i,
+  /^price_.*_test$/i,
+  /^com\.hellotalk\.app$/i,
+  /sandbox\.itunes\.apple\.com/i,
 ] as const;
 
 function isBlank(value: unknown): boolean {
@@ -100,6 +110,19 @@ function assertNoProductionPlaceholders(config: Record<string, unknown>): void {
   if (placeholders.length > 0) {
     throw new Error(
       `Production environment contains placeholder values for: ${placeholders.join(', ')}`,
+    );
+  }
+}
+
+function assertNoProductionPadding(config: Record<string, unknown>): void {
+  const padded = PRODUCTION_REQUIRED_ENV_KEYS.filter((key) => {
+    const value = config[key];
+    return typeof value === 'string' && value !== value.trim();
+  });
+
+  if (padded.length > 0) {
+    throw new Error(
+      `Production environment contains surrounding whitespace for: ${padded.join(', ')}`,
     );
   }
 }
@@ -151,6 +174,7 @@ export function validateEnvironment(
 
   if (nodeEnv === 'production') {
     assertRequiredProductionValues(rawConfig);
+    assertNoProductionPadding(rawConfig);
     assertNoProductionPlaceholders(rawConfig);
   }
 

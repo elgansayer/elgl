@@ -25,10 +25,20 @@ describe('Tailwind logical layout contract', () => {
   it('loads Tailwind utilities and the project config from global styles', () => {
     const styles = readFrontendFile('src/styles.scss');
 
+    expect(styles).not.toMatch(/@import\s+url\(/);
     expect(styles).toContain("@import 'tailwindcss/theme.css' layer(theme);");
     expect(styles).toContain("@import 'tailwindcss/preflight.css' layer(base);");
     expect(styles).toContain("@import 'tailwindcss/utilities.css';");
     expect(styles).toContain("@config '../tailwind.config.js';");
+  });
+
+  it('keeps production styles independent of remote font stylesheets', () => {
+    const styles = readFrontendFile('src/styles.scss');
+    const serviceWorkerConfig = readFrontendFile('ngsw-config.json');
+
+    expect(styles).not.toContain('fonts.googleapis.com');
+    expect(serviceWorkerConfig).not.toContain('fonts.googleapis.com');
+    expect(serviceWorkerConfig).not.toContain('fonts.gstatic.com');
   });
 
   it('scans Angular templates, TypeScript, and SCSS with class-based dark mode', () => {

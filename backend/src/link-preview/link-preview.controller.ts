@@ -7,24 +7,28 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
-  ApiTags,
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiOkResponse,
   ApiOperation,
   ApiQuery,
-  ApiOkResponse,
-  ApiBadRequestResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewService } from './link-preview.service';
 import { LinkPreview } from './interfaces/link-preview.interface';
+import { LinkPreviewQueryDto, LinkPreviewResponseDto } from './dto';
 
 @ApiTags('Link Preview')
+@ApiBearerAuth()
 @Controller('link-preview')
 @UseGuards(SupabaseAuthGuard)
 export class LinkPreviewController {
   constructor(private readonly linkPreviewService: LinkPreviewService) {}
 
   @Get()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Fetch an OpenGraph link preview',
     description:
@@ -39,26 +43,29 @@ export class LinkPreviewController {
   })
   @ApiOkResponse({
     description: 'Link preview metadata extracted from the page.',
-    schema: {
-      type: 'object',
-      nullable: true,
-      properties: {
-        url: { type: 'string' },
-        title: { type: 'string' },
-        description: { type: 'string' },
-        image: { type: 'string' },
-        siteName: { type: 'string' },
-      },
-    },
+    type: LinkPreviewResponseDto,
   })
   @ApiBadRequestResponse({
     description:
       'The url query parameter is missing, malformed, uses a disallowed protocol or port, or the page could not be fetched.',
   })
-  async getPreview(@Query('url') url: string): Promise<LinkPreview | null> {
-    if (!url) {
+  @ApiUnauthorizedResponse({
+    description: 'A valid Supabase session is required.',
+  })
+  async getPreview(
+    @Query('url') urlParam?: string | LinkPreviewQueryDto,
+    @Query() queryDto?: LinkPreviewQueryDto,
+  ): Promise<LinkPreview | null> {
+    const raw =
+      typeof urlParam === 'string' && urlParam.length > 0
+        ? urlParam
+        : typeof urlParam === 'object' && urlParam !== null && 'url' in urlParam
+          ? urlParam.url
+          : queryDto?.url;
+
+    if (!raw || typeof raw !== 'string' || !raw.trim()) {
       throw new BadRequestException('Missing url query parameter');
     }
-    return this.linkPreviewService.getPreview(url);
+    return this.linkPreviewService.getPreview(raw.trim());
   }
 }

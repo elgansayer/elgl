@@ -75,7 +75,7 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
       } @else if (statsResource.error()) {
         <div class="space-y-4 py-12 text-center" role="alert">
           <p class="text-danger">{{ 'stats.myStats.error' | t }}</p>
-          <button hlmBtn type="button" variant="outline" (click)="retry()">
+          <button hlmBtn size="touch" type="button" variant="outline" (click)="retry()">
             {{ 'common.retry' | t }}
           </button>
         </div>

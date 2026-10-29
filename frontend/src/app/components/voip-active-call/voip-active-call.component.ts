@@ -1,10 +1,22 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideMic,
+  lucideMicOff,
+  lucidePhoneOff,
+  lucideVolume2,
+  lucideVolumeX,
+} from '@ng-icons/lucide';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-voip-active-call',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmButton, NgIcon, TranslatePipe],
+  providers: [
+    provideIcons({ lucideMic, lucideMicOff, lucidePhoneOff, lucideVolume2, lucideVolumeX }),
+  ],
   templateUrl: './voip-active-call.component.html',
   styleUrl: './voip-active-call.component.scss',
 })

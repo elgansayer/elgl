@@ -41,8 +41,10 @@ The contract is covered by `scripts/verify-playwright-test-boundary.test.mjs`, i
 
 The existing Playwright Test Boundary workflow and root `npm run verify` pipeline execute this contract in a clean environment.
 
+Playwright builds NestJS and launches it through the backend's `start:prod` script before starting Angular. The backend build configuration includes only `src/**/*.ts`, which keeps `src/main.ts` emitted as `dist/main.js` and prevents test-runner configuration files from changing the production entrypoint path. The E2E process supplies the served frontend origin to NestJS explicitly so the production CORS bootstrap check cannot abort startup before the health probe succeeds.
+
 ## Rollout and rollback
 
-This is a CI/test-governance change only. It does not alter application runtime behavior, APIs, data, authentication policy, or schema and therefore needs no data migration.
+The Playwright lifecycle change affects test infrastructure only. The accompanying backend correction treats a successful blocks query with `data: null` as an empty collection, matching Supabase's response contract without changing the API shape, authentication policy, or schema. No data migration is required.
 
-Rollback is a code revert of the verifier, its tests, and this document. No production-state recovery is required. If a future authentication-test layout changes, update the explicit authentication-spec allowance and its regression tests rather than weakening the non-authentication boundary.
+Rollback is a code revert of the backend correction, verifier, lifecycle configuration, tests, and this document. No production-state recovery is required. If a future authentication-test layout changes, update the explicit authentication-spec allowance and its regression tests rather than weakening the non-authentication boundary.

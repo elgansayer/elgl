@@ -37,7 +37,10 @@ const STACK_FRAME_RE =
 const BEARER_TOKEN_RE = /\bBearer\s+[^\s,;]+/gi;
 const JWT_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
 const SECRET_PARAM_RE =
-  /\b(authorization|access[_-]?token|refresh[_-]?token|api[_-]?key|password)=([^\s&#]+)/gi;
+  /\b(authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|password)=([^\s&#]+)/gi;
+// Query strings and fragments routinely carry tokens and personal data, and
+// HTTP error messages embed the full request URL, so drop them from any URL.
+const URL_QUERY_RE = /\b(https?:\/\/[^\s?#'"]+)[?#][^\s'"]*/gi;
 
 function truncate(value: string, maxLength: number): string {
   return value.length <= maxLength ? value : value.slice(0, maxLength);
@@ -45,6 +48,7 @@ function truncate(value: string, maxLength: number): string {
 
 function redactSecrets(value: string): string {
   return value
+    .replace(URL_QUERY_RE, '$1')
     .replace(BEARER_TOKEN_RE, 'Bearer [redacted]')
     .replace(JWT_RE, '[redacted-jwt]')
     .replace(SECRET_PARAM_RE, '$1=[redacted]');
