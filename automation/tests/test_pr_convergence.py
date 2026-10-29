@@ -348,6 +348,26 @@ def test_capacity_ignores_major_dependency_parked_in_compatibility_queue() -> No
     assert not capacity.pause_new_dispatch
 
 
+def test_capacity_ignores_factory_pull_requests_whose_repair_budget_is_spent() -> None:
+    capped = [
+        record(n, branch=f"factory/{n}-task", labels=frozenset({"factory-capped"}))
+        for n in range(70, 79)
+    ]
+    working = record(79, branch="factory/79-task")
+
+    capacity = calculate_capacity(
+        [*capped, working],
+        max_open_pull_requests=40,
+        max_queued_ci=10,
+        lane_limits={"factory": 8},
+        component_limits={},
+    )
+
+    assert capacity.open_count == 10
+    assert capacity.active_by_lane == {"factory": 1}
+    assert not capacity.pause_new_dispatch
+
+
 def test_capacity_counts_explicit_downstream_stack_as_deferred() -> None:
     parent = record(90, body=marked_body(task_key="explicit:parent", change="parent"))
     child = record(

@@ -608,7 +608,8 @@ def _duplicate_excess(records: Sequence[PullRequestRecord], attribute: str) -> i
 # A major dependency queued behind its lane's single active candidate waits by
 # design (scripts/dependency-compatibility-lanes.mjs) and consumes no factory
 # work, so it must not hold lane or component WIP and stall all new dispatch.
-PARKED_LABELS = frozenset({"compat:queued"})
+# A factory-capped PR has spent its repair budgets and likewise consumes none.
+PARKED_LABELS = frozenset({"compat:queued", "factory-capped"})
 RETIRED_LABELS = frozenset({"duplicate", "factory-skip", "superseded"})
 
 
