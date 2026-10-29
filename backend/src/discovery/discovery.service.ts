@@ -664,17 +664,13 @@ export class DiscoveryService {
           'PostGIS partner search failed; using bounded non-spatial fallback',
         );
         const fallbackRes = await queryBuilder.limit(50);
-        if (
-          fallbackRes.error ||
-          !fallbackRes.data ||
-          fallbackRes.data.length === 0
-        ) {
-          const mockData = this.getMockDiscoveryData(query, blockedIds);
-          const filtered = await this.filterByVoiceRoomActive(
-            mockData,
-            query.voice_room_active === true,
+        if (fallbackRes.error || !fallbackRes.data) {
+          throw new ServiceUnavailableException(
+            'Partner discovery is temporarily unavailable',
           );
-          return enrich(filtered);
+        }
+        if (fallbackRes.data.length === 0) {
+          return enrich([]);
         }
         let fallbackResults: DiscoveryUser[] = (
           fallbackRes.data as unknown as DiscoveryUser[]
@@ -746,13 +742,13 @@ export class DiscoveryService {
     }
 
     const response = await queryBuilder.limit(50);
-    if (response.error || !response.data || response.data.length === 0) {
-      const mockData = this.getMockDiscoveryData(query, blockedIds);
-      const filtered = await this.filterByVoiceRoomActive(
-        mockData,
-        query.voice_room_active === true,
+    if (response.error || !response.data) {
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
       );
-      return enrich(filtered);
+    }
+    if (response.data.length === 0) {
+      return enrich([]);
     }
     let results: DiscoveryUser[] = (
       response.data as unknown as DiscoveryUser[]
@@ -818,21 +814,12 @@ export class DiscoveryService {
       );
 
       if (marker.degraded && result.length === 0) {
-        const mockData = this.getMockDiscoveryData(query, blockedIds);
         await this.degradationService.recordDegradationEvent(
           '/discovery/partners',
-          marker.reason ?? 'Search failed, using mock data',
-          'mock',
+          marker.reason ?? 'Partner search unavailable',
+          marker.fallbackSource ?? 'basic_query',
           currentUserId,
         );
-        return {
-          data: mockData,
-          marker: {
-            degraded: true,
-            reason: `${marker.reason ?? 'unknown'}; fell through to mock data`,
-            fallbackSource: 'mock',
-          },
-        };
       }
 
       return { data: result, marker };
@@ -841,18 +828,12 @@ export class DiscoveryService {
       await this.degradationService.recordDegradationEvent(
         '/discovery/partners',
         message,
-        'mock',
+        'basic_query',
         currentUserId,
       );
-      const mockData = this.getMockDiscoveryData(query, blockedIds);
-      return {
-        data: mockData,
-        marker: {
-          degraded: true,
-          reason: message,
-          fallbackSource: 'mock',
-        },
-      };
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
+      );
     }
   }
 

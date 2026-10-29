@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Query,
+  ServiceUnavailableException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -131,6 +132,11 @@ export class DiscoveryController {
       profile,
       query,
     );
+    if (result.marker.degraded) {
+      throw new ServiceUnavailableException(
+        'Partner discovery is temporarily unavailable',
+      );
+    }
     return result.data;
   }
 

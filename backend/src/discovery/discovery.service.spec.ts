@@ -624,14 +624,23 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['ok-1']);
     });
 
-    it('should return empty array when standard query returns error', async () => {
+    it('should preserve a successful empty standard query', async () => {
+      stubLimitResponse([]);
+
+      await expect(service.searchPartners('user-1', null, {})).resolves.toEqual(
+        [],
+      );
+    });
+
+    it('should reject when the standard query returns an error', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'Query error' },
       });
 
-      const result = await service.searchPartners('user-1', null, {});
-      expect(result).toHaveLength(0);
+      await expect(service.searchPartners('user-1', null, {})).rejects.toThrow(
+        'Partner discovery is temporarily unavailable',
+      );
     });
 
     // -- PostGIS RPC path ---------------------------------------------------
@@ -1067,7 +1076,7 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['fb1']);
     });
 
-    it('should return empty when both RPC and fallback query fail', async () => {
+    it('should reject when both RPC and fallback query fail', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
         error: { message: 'RPC failure' },
@@ -1077,12 +1086,12 @@ describe('DiscoveryService', () => {
         error: { message: 'DB error' },
       });
 
-      const result = await service.searchPartners('user-1', null, {
-        latitude: 35.6895,
-        longitude: 139.6917,
-      });
-
-      expect(result).toHaveLength(0);
+      await expect(
+        service.searchPartners('user-1', null, {
+          latitude: 35.6895,
+          longitude: 139.6917,
+        }),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
     });
 
     // -- Advanced post-DB filtering -------------------------------------------
@@ -1594,10 +1603,7 @@ describe('DiscoveryService', () => {
       });
     });
 
-    it('should fall back to mock data when breaker degrades and search returns empty', async () => {
-      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
-        'fake-1',
-      ]);
+    it('should preserve degraded empty results without fabricating partners', async () => {
       mockDegradationService.executeWithBreaker.mockImplementationOnce(
         (
           _svc: string,
@@ -1612,10 +1618,6 @@ describe('DiscoveryService', () => {
         },
       );
 
-      // The fallbackFn sets marker.fallbackSource = 'basic_query' and returns []
-      // Since result is empty [], the method should try mock data
-      // Mock searchByCountryCity to verify mockData is used
-      // The mock data path calls getMockDiscoveryData which uses MOCK_USERS
       const result = await service.searchPartnersWithDegradation(
         'user-1',
         null,
@@ -1623,18 +1625,15 @@ describe('DiscoveryService', () => {
       );
 
       expect(result.marker.degraded).toBe(true);
-      expect(result.marker.fallbackSource).toBe('mock');
-      expect(result.marker.reason).toContain('circuit open');
-      expect(Array.isArray(result.data)).toBe(true);
-      expect(result.data.map((candidate) => candidate.id)).not.toContain(
-        'fake-1',
-      );
+      expect(result.marker.fallbackSource).toBe('basic_query');
+      expect(result.marker.reason).toBe('circuit open');
+      expect(result.data).toEqual([]);
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(
         '/discovery/partners',
         'circuit open',
-        'mock',
+        'basic_query',
         'user-1',
       );
     });
@@ -1672,33 +1671,20 @@ describe('DiscoveryService', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should catch thrown errors and fall back to mock data', async () => {
-      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
-        'fake-1',
-      ]);
+    it('should surface unexpected degradation failures as unavailable', async () => {
       mockDegradationService.executeWithBreaker.mockRejectedValueOnce(
         new Error('supabase down'),
       );
 
-      const result = await service.searchPartnersWithDegradation(
-        'user-1',
-        null,
-        {},
-      );
-
-      expect(result.marker.degraded).toBe(true);
-      expect(result.marker.fallbackSource).toBe('mock');
-      expect(result.marker.reason).toBe('supabase down');
-      expect(Array.isArray(result.data)).toBe(true);
-      expect(result.data.map((candidate) => candidate.id)).not.toContain(
-        'fake-1',
-      );
+      await expect(
+        service.searchPartnersWithDegradation('user-1', null, {}),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(
         '/discovery/partners',
         'supabase down',
-        'mock',
+        'basic_query',
         'user-1',
       );
     });
@@ -1708,15 +1694,9 @@ describe('DiscoveryService', () => {
         'string error',
       );
 
-      const result = await service.searchPartnersWithDegradation(
-        'user-1',
-        null,
-        {},
-      );
-
-      expect(result.marker.degraded).toBe(true);
-      expect(result.marker.fallbackSource).toBe('mock');
-      expect(result.marker.reason).toBe('string error');
+      await expect(
+        service.searchPartnersWithDegradation('user-1', null, {}),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
     });
 
     it('should pass RPC proximity search through degradation layer', async () => {

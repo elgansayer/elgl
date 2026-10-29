@@ -142,6 +142,24 @@ describe('DiscoveryController', () => {
       expect(result).toEqual(mockPartners);
     });
 
+    it('should report a degraded partner search as unavailable', async () => {
+      (usersService.getProfile as Mock).mockResolvedValue({ id: 'user-1' });
+      (
+        discoveryService.searchPartnersWithDegradation as Mock
+      ).mockResolvedValue({
+        data: [],
+        marker: {
+          degraded: true,
+          reason: 'Service discovery_partners failed',
+          fallbackSource: 'basic_query',
+        },
+      });
+
+      await expect(
+        controller.findPartners({ id: 'user-1' } as any, {}),
+      ).rejects.toThrow('Partner discovery is temporarily unavailable');
+    });
+
     it('should enable the algorithmic filter when serious learner mode is requested', async () => {
       const mockProfile: any = { id: 'user-1', is_serious_learner: false };
       const query: any = { serious_learner_mode: true };
