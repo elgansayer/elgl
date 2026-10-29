@@ -15,6 +15,7 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { SecureChatService } from './secure-chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -23,6 +24,8 @@ import { DirectConversationService } from './direct-conversation.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatEditController } from './chat-edit.controller';
+import { ChatForwardController } from './chat-forward.controller';
+import { ChatSearchController } from './chat-search.controller';
 import { ChatSettingsService } from './chat-settings.service';
 import { ChatBackupController } from '../chat-backup/chat-backup.controller';
 import { ChatBackupService } from '../chat-backup/chat-backup.service';
@@ -48,6 +51,8 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
   controllers: [
     ChatController,
     ChatEditController,
+    ChatForwardController,
+    ChatSearchController,
     DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
@@ -59,7 +64,10 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     TranslationService,
     ChatLlmService,
     ChatLlmProxyService,
-    ChatService,
+    {
+      provide: ChatService,
+      useClass: SecureChatService,
+    },
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,
