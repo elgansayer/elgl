@@ -48,8 +48,10 @@ export class ConversationStarterService {
 
     let interests: string[] = [];
     if (!interestsError && interestsData && interestsData.length > 0) {
-      interests = interestsData
-        .map((row: any) => row.interest?.name)
+      interests = (
+        interestsData as Array<{ interest: { name?: string } | null }>
+      )
+        .map((row) => row.interest?.name)
         .filter((name: string | null | undefined): name is string => !!name);
     }
 
