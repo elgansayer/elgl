@@ -10,6 +10,7 @@ describe('SharedLoggerModule', () => {
 
     expect(exports).toEqual(
       expect.arrayContaining([
+        getLoggerToken('GrammarCheckService'),
         getLoggerToken('StudyBuddiesRateLimiterGuard'),
         getLoggerToken('VideoCallsRateLimiterGuard'),
       ]),

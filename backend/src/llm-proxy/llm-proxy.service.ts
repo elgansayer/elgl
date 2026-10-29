@@ -6,6 +6,26 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ChatCompletionOptions {
+  maxTokens?: number;
+  signal?: AbortSignal;
+}
+
+const DEFAULT_MAX_TOKENS = 500;
+
+class LlmProviderHttpError extends Error {
+  constructor(status: number) {
+    super(`LLM provider returned HTTP ${status}`);
+    this.name = 'LlmProviderHttpError';
+  }
+}
+
+function isAbortSignal(
+  value: ChatCompletionOptions | AbortSignal,
+): value is AbortSignal {
+  return 'aborted' in value && typeof value.addEventListener === 'function';
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -16,19 +36,22 @@ export class LlmProxyService {
 
   async proxyMessage(
     text: string,
-    signal?: AbortSignal,
+    options: ChatCompletionOptions | AbortSignal = {},
   ): Promise<{ response: string }> {
     const response = await this.chatCompletion(
       [{ role: 'user', content: text }],
-      signal,
+      options,
     );
     return { response };
   }
 
   async chatCompletion(
     messages: ChatMessage[],
-    signal?: AbortSignal,
+    options: ChatCompletionOptions | AbortSignal = {},
   ): Promise<string> {
+    const completionOptions = isAbortSignal(options)
+      ? { signal: options }
+      : options;
     const apiKey = this.configService.get<string>('LLM_API_KEY');
     const apiUrl = this.configService.get<string>(
       'LLM_API_URL',
@@ -39,7 +62,7 @@ export class LlmProxyService {
     const payload = {
       model,
       messages,
-      max_tokens: 500,
+      max_tokens: completionOptions.maxTokens ?? DEFAULT_MAX_TOKENS,
     };
 
     const headers: Record<string, string> = {
@@ -53,10 +76,10 @@ export class LlmProxyService {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
-      signal,
+      signal: completionOptions.signal,
     });
     if (!response.ok) {
-      throw new Error(`LLM provider returned HTTP ${response.status}`);
+      throw new LlmProviderHttpError(response.status);
     }
 
     const data: unknown = await response.json();

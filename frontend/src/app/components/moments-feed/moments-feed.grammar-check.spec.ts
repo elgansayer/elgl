@@ -114,9 +114,104 @@ describe('MomentsFeedComponent pre-publish grammar review', () => {
     expect(saveMomentDraft).toHaveBeenCalled();
     expect(createMoment).not.toHaveBeenCalled();
     expect(component.isCreating()).toBe(false);
+    expect(component.grammarReview()).toEqual({
+      original: 'I go yesterday.',
+      suggestion: 'I went yesterday.',
+    });
+  });
+
+  it('keeps the composer open while the suggestion is reviewed', async () => {
+    checkGrammar.mockResolvedValue({
+      original: 'I go yesterday.',
+      corrected: 'I went yesterday.',
+      explanation: 'Use the past tense.',
+      errors_found: 1,
+    });
+    component.showComposeForm.set(true);
+    component.newText.set('I go yesterday.');
+
+    await component.submitMoment();
+
+    expect(component.showComposeForm()).toBe(true);
   });
 
   it('publishes an accepted suggestion when the user submits it again', async () => {
+    checkGrammar.mockResolvedValue({
+      original: 'I go yesterday.',
+      corrected: 'I went yesterday.',
+      explanation: 'Use the past tense.',
+      errors_found: 1,
+    });
+    component.newText.set('I go yesterday.');
+    component.newTargetLanguage.set('en-GB');
+
+    await component.submitMoment();
+    await component.submitMoment();
+
+    expect(checkGrammar).toHaveBeenCalledTimes(1);
+    expect(createMoment).toHaveBeenCalledTimes(1);
+    expect(createMoment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text_content: 'I went yesterday.',
+        target_language: 'en-GB',
+      }),
+    );
+    expect(component.showComposeForm()).toBe(false);
+    expect(component.grammarReview()).toBeNull();
+  });
+
+  it('ignores a concurrent second submission', async () => {
+    let resolveGrammar: ((value: unknown) => void) | undefined;
+    checkGrammar.mockReturnValue(
+      new Promise((resolve) => {
+        resolveGrammar = resolve;
+      }),
+    );
+    component.newText.set('Keep this.');
+
+    const first = component.submitMoment();
+    const second = component.submitMoment();
+
+    expect(checkGrammar).toHaveBeenCalledTimes(1);
+    expect(component.isCreating()).toBe(true);
+    resolveGrammar?.({
+      original: 'Keep this.',
+      corrected: 'Keep this.',
+      explanation: '',
+      errors_found: 0,
+    });
+    await Promise.all([first, second]);
+
+    expect(createMoment).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps newer text entered while a grammar check is in flight', async () => {
+    let resolveGrammar: ((value: unknown) => void) | undefined;
+    checkGrammar.mockReturnValue(
+      new Promise((resolve) => {
+        resolveGrammar = resolve;
+      }),
+    );
+    component.showComposeForm.set(true);
+    component.newText.set('I go yesterday.');
+
+    const submission = component.submitMoment();
+    component.newText.set('I go yesterday. Then I');
+    resolveGrammar?.({
+      original: 'I go yesterday.',
+      corrected: 'I went yesterday.',
+      explanation: 'Use the past tense.',
+      errors_found: 1,
+    });
+    await submission;
+
+    expect(component.newText()).toBe('I go yesterday. Then I');
+    expect(component.grammarReview()).toBeNull();
+    expect(createMoment).not.toHaveBeenCalled();
+    expect(component.showComposeForm()).toBe(true);
+  });
+
+  it('rechecks after the target language changes', async () => {
     checkGrammar
       .mockResolvedValueOnce({
         original: 'I go yesterday.',
@@ -127,22 +222,18 @@ describe('MomentsFeedComponent pre-publish grammar review', () => {
       .mockResolvedValueOnce({
         original: 'I went yesterday.',
         corrected: 'I went yesterday.',
-        explanation: 'No grammar changes suggested.',
+        explanation: '',
         errors_found: 0,
       });
     component.newText.set('I go yesterday.');
     component.newTargetLanguage.set('en-GB');
 
     await component.submitMoment();
+    component.onTargetLanguageSelected('en-US');
     await component.submitMoment();
 
-    expect(createMoment).toHaveBeenCalledTimes(1);
-    expect(createMoment).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text_content: 'I went yesterday.',
-        target_language: 'en-GB',
-      }),
-    );
+    expect(checkGrammar).toHaveBeenCalledTimes(2);
+    expect(checkGrammar).toHaveBeenLastCalledWith('I went yesterday.', 'en-US');
   });
 
   it('does not block publishing when the advisory checker degrades without a suggestion', async () => {
@@ -168,8 +259,6 @@ describe('MomentsFeedComponent pre-publish grammar review', () => {
     await component.submitMoment();
 
     expect(checkGrammar).not.toHaveBeenCalled();
-    expect(createMoment).toHaveBeenCalledWith(
-      expect.objectContaining({ text_content: undefined }),
-    );
+    expect(createMoment).toHaveBeenCalledWith(expect.objectContaining({ text_content: undefined }));
   });
 });

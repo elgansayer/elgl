@@ -158,43 +158,101 @@ describe('ChatRoomComponent pre-send grammar review', () => {
 
     await component.sendTextMessage();
 
-    expect(checkGrammar).toHaveBeenCalledWith(
-      'I go to school yesterday.',
-      'en-GB',
-    );
+    expect(checkGrammar).toHaveBeenCalledWith('I go to school yesterday.', 'en-GB');
     expect(component.textInput).toBe('I went to school yesterday.');
-    expect(saveChatDraft).toHaveBeenCalledWith(
-      'room-1',
-      'I went to school yesterday.',
-    );
+    expect(saveChatDraft).toHaveBeenCalledWith('room-1', 'I went to school yesterday.');
     expect(sendMessage).not.toHaveBeenCalled();
     expect(component.isCheckingGrammar()).toBe(false);
   });
 
   it('sends an accepted suggestion when the user submits it again', async () => {
-    checkGrammar
-      .mockResolvedValueOnce({
-        original: 'I go to school yesterday.',
-        corrected: 'I went to school yesterday.',
-        explanation: 'Use the past tense.',
-        errors_found: 1,
-      })
-      .mockResolvedValueOnce({
-        original: 'I went to school yesterday.',
-        corrected: 'I went to school yesterday.',
-        explanation: 'No grammar changes suggested.',
-        errors_found: 0,
-      });
+    checkGrammar.mockResolvedValue({
+      original: 'I go to school yesterday.',
+      corrected: 'I went to school yesterday.',
+      explanation: 'Use the past tense.',
+      errors_found: 1,
+    });
     component.textInput = 'I go to school yesterday.';
 
     await component.sendTextMessage();
     await component.sendTextMessage();
 
+    expect(checkGrammar).toHaveBeenCalledTimes(1);
     expect(sendMessage).toHaveBeenCalledTimes(1);
     expect(sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ text_content: 'I went to school yesterday.' }),
     );
     expect(component.textInput).toBe('');
+    expect(component.grammarReview()).toBeNull();
+  });
+
+  it('lets the learner keep the reviewed original wording', async () => {
+    checkGrammar.mockResolvedValue({
+      original: 'I go yesterday.',
+      corrected: 'I went yesterday.',
+      explanation: 'Use the past tense.',
+      errors_found: 1,
+    });
+    component.textInput = 'I go yesterday.';
+
+    await component.sendTextMessage();
+    component.textInput = 'I go yesterday.';
+    await component.sendTextMessage();
+
+    expect(checkGrammar).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ text_content: 'I go yesterday.' }),
+    );
+  });
+
+  it('rechecks when the learner edits beyond either reviewed wording', async () => {
+    checkGrammar
+      .mockResolvedValueOnce({
+        original: 'I go yesterday.',
+        corrected: 'I went yesterday.',
+        explanation: 'Use the past tense.',
+        errors_found: 1,
+      })
+      .mockResolvedValueOnce({
+        original: 'I went there yesterday.',
+        corrected: 'I went there yesterday.',
+        explanation: '',
+        errors_found: 0,
+      });
+    component.textInput = 'I go yesterday.';
+
+    await component.sendTextMessage();
+    component.textInput = 'I went there yesterday.';
+    await component.sendTextMessage();
+
+    expect(checkGrammar).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ text_content: 'I went there yesterday.' }),
+    );
+  });
+
+  it('keeps newer text entered while a grammar check is in flight', async () => {
+    let resolveGrammar: ((value: unknown) => void) | undefined;
+    checkGrammar.mockReturnValue(
+      new Promise((resolve) => {
+        resolveGrammar = resolve;
+      }),
+    );
+    component.textInput = 'I go yesterday.';
+
+    const submission = component.sendTextMessage();
+    component.textInput = 'I go yesterday. Then I';
+    resolveGrammar?.({
+      original: 'I go yesterday.',
+      corrected: 'I went yesterday.',
+      explanation: 'Use the past tense.',
+      errors_found: 1,
+    });
+    await submission;
+
+    expect(component.textInput).toBe('I go yesterday. Then I');
+    expect(component.grammarReview()).toBeNull();
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 
   it('prevents duplicate grammar checks while a submission is already being reviewed', async () => {
