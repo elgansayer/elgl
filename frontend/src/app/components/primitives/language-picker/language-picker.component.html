@@ -21,15 +21,16 @@
     <span class="ms-2 text-xs text-text-muted" aria-hidden="true">▼</span>
   </button>
 
-  @if (isOpen()) {
-    <div
-      class="animate-fadeIn fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="lang-picker-title"
-    >
-      <div
-        class="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-sheet border border-surface-100 bg-surface-200 shadow-lift"
+  <hlm-dialog
+    [state]="isOpen() ? 'open' : 'closed'"
+    (stateChanged)="onDialogStateChanged($event)"
+  >
+    @if (isOpen()) {
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="flex max-h-[85dvh] w-[calc(100vw-2rem)] max-w-md flex-col gap-0 overflow-hidden rounded-sheet border border-surface-100 bg-surface-200 p-0 shadow-lift"
+        aria-labelledby="lang-picker-title"
       >
         <div class="flex items-center justify-between border-b border-surface-100 bg-surface-300/80 px-6 py-4">
           <h3 id="lang-picker-title" class="text-lg font-bold text-text-primary">
@@ -103,7 +104,7 @@
             </div>
           }
         </div>
-      </div>
-    </div>
-  }
+      </hlm-dialog-content>
+    }
+  </hlm-dialog>
 </div>

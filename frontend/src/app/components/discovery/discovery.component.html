@@ -229,7 +229,7 @@
           <div class="flex items-center">
             <hlm-checkbox
               inputId="seriousModeCheckbox"
-              [checked]="seriousToggleChecked()"
+              [checked]="seriousLearnerMode()"
               [disabled]="seriousModeSaving()"
               [attr.aria-describedby]="
                 seriousModeError() ? 'seriousModeError' : 'seriousModeDescription'
@@ -442,7 +442,8 @@
                   <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
                     <img
                       loading="lazy"
-                      [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
+                      [src]="partner.avatar_url || '/assets/default-avatar.png'"
+                      (error)="useDefaultAvatar($event)"
                       [attr.alt]="
                         'discovery.partnerAvatar'
                           | t: { name: partner.display_name || ('discovery.partnerFallback' | t) }

@@ -7,7 +7,6 @@ import {
   signal,
   computed,
   effect,
-  linkedSignal,
   OnInit,
   OnDestroy,
   DestroyRef,
@@ -57,6 +56,7 @@ import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 const SEARCH_DEBOUNCE_MS = 300;
 const NEARBY_RADIUS_KM = 10;
 const NEARBY_COORDINATE_MAX_AGE_MS = 5 * 60 * 1000;
+const DEFAULT_AVATAR_URL = '/assets/default-avatar.png';
 
 type NearbyLocationStatus =
   | 'idle'
@@ -169,12 +169,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly seriousLearnerMode = this.seriousLearnerModeService.enabled;
   readonly seriousModeSaving = this.seriousLearnerModeService.saving;
   readonly seriousModeError = computed(() => this.seriousLearnerModeService.error() !== null);
-  /**
-   * What the Serious Learner checkbox shows. It follows the persisted mode, is set optimistically
-   * while a save is pending, and is snapped back when the save fails: the Helm checkbox flips its
-   * own state on click, so without this a failed save would leave it announcing "checked".
-   */
-  readonly seriousToggleChecked = linkedSignal(() => this.seriousLearnerMode());
   readonly seriousLearnerRelaxed = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
@@ -353,6 +347,16 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  useDefaultAvatar(event: Event): void {
+    const image = event.target;
+    if (
+      image instanceof HTMLImageElement &&
+      image.src !== new URL(DEFAULT_AVATAR_URL, image.baseURI).href
+    ) {
+      image.src = DEFAULT_AVATAR_URL;
+    }
+  }
+
   toggleShowAllInterests(): void {
     this.showAllInterests.update((value) => !value);
   }
@@ -494,13 +498,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
       const mapped = filtered.map((partner) => ({
         ...partner,
-        nativeLangs: (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 })),
-        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map(
-          (code) => ({
-            code,
-            level: 1,
-          }),
-        ),
+        nativeLangs: (partner.native_languages ?? []).map((code) => ({ code, level: 5 })),
+        targetLangs: (partner.target_languages ?? []).map((code) => ({ code, level: 1 })),
         formattedDistance: this.formatDistanceHelper(partner.distance_metres),
       }));
 
@@ -557,12 +556,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     if (this.seriousModeSaving()) return;
 
     const next = !this.seriousLearnerMode();
-    this.seriousToggleChecked.set(next);
     const saved = await this.seriousLearnerModeService.setEnabled(next);
-    if (!saved) {
-      this.seriousToggleChecked.set(this.seriousLearnerMode());
-      return;
-    }
+    if (!saved) return;
 
     this.seriousLearnerRelaxed.set(false);
     if (this.seriousLearnerMode()) {

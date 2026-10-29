@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,6 +34,7 @@ function makePartner(overrides: Partial<UserProfile> = {}): UserProfile {
 
 describe('DiscoveryComponent matchmaking filter contract', () => {
   let component: DiscoveryComponent;
+  let fixture: ComponentFixture<DiscoveryComponent>;
   let findPartners: ReturnType<typeof vi.fn>;
   let currentUser: ReturnType<typeof signal<{ is_vip: boolean } | null>>;
   let seriousLearnerMode: ReturnType<typeof signal<boolean>>;
@@ -94,7 +95,9 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
       ],
     }).compileComponents();
 
-    component = TestBed.createComponent(DiscoveryComponent).componentInstance;
+    fixture = TestBed.createComponent(DiscoveryComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
     // ngOnInit() fires fire-and-forget and ends with its own searchPartners()
     // call once profile/blocked-user loading resolves. Flush it here so it
     // can't land findPartners calls mid-test after a mockClear().
@@ -127,6 +130,96 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
       }),
       expect.anything(),
     );
+  });
+
+  it('wires rendered distance, language and Serious Learner controls into the search request', async () => {
+    currentUser.set({ is_vip: true });
+    fixture.detectChanges();
+    findPartners.mockClear();
+
+    const distance: HTMLInputElement = fixture.nativeElement.querySelector(
+      'app-distance-slider input[type="range"]',
+    );
+    distance.value = '80';
+    distance.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(findPartners).toHaveBeenLastCalledWith(
+        expect.objectContaining({ radius_metres: 80_000 }),
+        expect.any(AbortSignal),
+      ),
+    );
+
+    const languageTrigger: HTMLButtonElement = fixture.nativeElement.querySelector(
+      'app-language-picker button[aria-haspopup="dialog"]',
+    );
+    languageTrigger.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const french: HTMLButtonElement | null = document.querySelector(
+      '[role="dialog"] button[aria-label="French"]',
+    );
+    expect(french).toBeTruthy();
+    french?.click();
+    await vi.waitFor(() =>
+      expect(findPartners).toHaveBeenLastCalledWith(
+        expect.objectContaining({ target_language: 'fr' }),
+        expect.any(AbortSignal),
+      ),
+    );
+
+    const serious: HTMLElement = fixture.nativeElement.querySelector('#seriousModeCheckbox');
+    serious.click();
+    await vi.waitFor(() =>
+      expect(findPartners).toHaveBeenLastCalledWith(
+        expect.objectContaining({ serious_learner_only: true }),
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+
+  it('renders the search failure and retries from its action control', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    findPartners.mockClear();
+    findPartners.mockRejectedValueOnce(new DiscoverySearchError('unavailable', 503));
+
+    await component.searchPartners();
+    fixture.detectChanges();
+
+    const retry: HTMLButtonElement = fixture.nativeElement.querySelector('app-empty-state button');
+    expect(retry).toBeTruthy();
+    findPartners.mockResolvedValueOnce([]);
+    retry.click();
+
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(2));
+    expect(component.hasError()).toBe(false);
+  });
+
+  it('renders missing profile data without inventing languages or a remote avatar', async () => {
+    findPartners.mockResolvedValueOnce([
+      makePartner({ avatar_url: undefined, native_languages: [], target_languages: [] }),
+    ]);
+
+    await component.searchPartners();
+    fixture.detectChanges();
+
+    expect(component.partners()[0].nativeLangs).toEqual([]);
+    expect(component.partners()[0].targetLangs).toEqual([]);
+    const avatar: HTMLImageElement = fixture.nativeElement.querySelector('article img');
+    expect(avatar.getAttribute('src')).toBe('/assets/default-avatar.png');
+  });
+
+  it('uses the local avatar asset when an API avatar cannot be loaded', async () => {
+    findPartners.mockResolvedValueOnce([
+      makePartner({ avatar_url: 'https://media.example.test/unavailable-avatar.png' }),
+    ]);
+
+    await component.searchPartners();
+    fixture.detectChanges();
+
+    const avatar: HTMLImageElement = fixture.nativeElement.querySelector('article img');
+    avatar.dispatchEvent(new Event('error'));
+
+    expect(avatar.getAttribute('src')).toBe('/assets/default-avatar.png');
   });
 
   it('maps the shared language search output into the canonical discovery query', async () => {
@@ -263,7 +356,6 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
 
     expect(setSeriousLearnerMode).toHaveBeenCalledWith(true);
     expect(component.seriousLearnerMode()).toBe(false);
-    expect(component.seriousToggleChecked()).toBe(false);
     expect(component.searchFailure()).toBe('invalid_request');
     expect(component.searchError()).toBe('existing search failure');
   });

@@ -46,6 +46,31 @@ type DiscoveryUser = UserProfile & {
   _matchScore?: number;
 };
 
+function parseStoredPoint(location: string | undefined): {
+  latitude: number;
+  longitude: number;
+} | null {
+  if (!location) return null;
+  const match = /^POINT\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)$/i.exec(
+    location,
+  );
+  if (!match) return null;
+
+  const longitude = Number(match[1]);
+  const latitude = Number(match[2]);
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null;
+  }
+  return { latitude, longitude };
+}
+
 export interface DiscoveryResult<T = UserProfile[]> {
   data: T;
   marker: DegradationMarker;
@@ -481,6 +506,15 @@ export class DiscoveryService {
 
     let searchLat = query.latitude;
     let searchLon = query.longitude;
+
+    // The standard discovery controls express a radius relative to the
+    // authenticated learner's saved location. Browser coordinates are only
+    // required for the explicit Nearby flow.
+    if (searchLat === undefined && searchLon === undefined) {
+      const storedPoint = parseStoredPoint(_currentUserProfile?.location);
+      searchLat = storedPoint?.latitude;
+      searchLon = storedPoint?.longitude;
+    }
 
     // Apply VIP location spoofing – override query coordinates with the user’s mock location
     const profile = _currentUserProfile;

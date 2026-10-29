@@ -691,6 +691,26 @@ describe('DiscoveryService', () => {
       );
     });
 
+    it('should apply radius filters relative to the authenticated profile location', async () => {
+      stubRpcResponse([{ id: 'p1', distance_metres: 8_000 }]);
+
+      await service.searchPartners(
+        'user-1',
+        { location: 'POINT(-0.1278 51.5074)' },
+        { radius_metres: 25_000 },
+      );
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({
+          search_lat: 51.5074,
+          search_lon: -0.1278,
+          radius_m: 25_000,
+        }),
+      );
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+    });
+
     it('should map RPC distance field when distance_metres is missing', async () => {
       stubRpcResponse([{ id: 'p1', distance: 1200 }]);
 

@@ -172,13 +172,13 @@ describe('DiscoveryComponent serious learner mode', () => {
     const second = component.toggleSeriousLearnerMode();
 
     expect(component.seriousModeSaving()).toBe(true);
-    expect(component.seriousToggleChecked()).toBe(true);
+    expect(component.seriousLearnerMode()).toBe(false);
     expect(updateMyProfile).toHaveBeenCalledTimes(1);
 
     resolveUpdate?.();
     await Promise.all([first, second]);
     expect(component.seriousModeSaving()).toBe(false);
-    expect(component.seriousToggleChecked()).toBe(true);
+    expect(component.seriousLearnerMode()).toBe(true);
   });
 
   it('keeps persisted mode active when temporary filters are reset', () => {

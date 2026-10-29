@@ -12,7 +12,7 @@ Issue #959 is implemented by the existing Angular `DiscoveryComponent` and its s
 - the Serious Learner filter maps to `serious_learner_only` while the separately persisted Serious Learner mode remains owned by the account/discovery preference flow;
 - age, VIP-gated gender, interests, availability, voice-room activity and sort options continue to compose with the same request rather than starting parallel searches.
 
-Changing an age or distance slider uses the existing 300 ms debounce. A new search aborts the previous request, and only the active request may clear the loading state or replace results. Reset restores the default 50 km radius, 18-100 age range, best-match sort and clears optional filters before issuing one new search.
+Changing an age or distance slider uses the existing 300 ms debounce. The API applies an ordinary discovery radius relative to the authenticated learner's saved profile location, while the explicit Nearby filter uses its short-lived browser coordinates. This keeps the distance control effective without requesting browser location when discovery opens. A new search aborts the previous request, and only the active request may clear the loading state or replace results. Reset restores the default 50 km radius, 18-100 age range, best-match sort and clears optional filters before issuing one new search.
 
 ## State and failure behaviour
 
@@ -20,15 +20,17 @@ The component has explicit loading, result, empty and error states. `DiscoverySe
 
 Blocked users are removed before partner cards are exposed even when a lower layer returns a stale cached result. Server-side discovery eligibility and privacy checks remain authoritative; the client-side block pass is defence in depth, not a replacement for backend authorization.
 
+Partner cards render only profile data returned by the API. Missing language lists remain empty. Missing or unreachable avatar images use the bundled default-avatar asset, and Discovery does not synthesise language pairs or contact a third-party image endpoint.
+
 Offline discovery remains owned by `OfflineDiscoveryCacheService` and `DiscoveryService`. The UI indicates when it is offline and when cached data is being used. This issue does not add another cache or another persistence model.
 
 ## Accessibility and responsive behaviour
 
-The screen uses the existing Spartan controls and shared slider/language-picker primitives. Filters have programmatic labels, the result region exposes loading/error semantics, and controls remain keyboard operable. Filter rows wrap or horizontally scroll on narrow screens rather than requiring a desktop viewport. Important state is expressed in text/ARIA state rather than colour alone.
+The screen uses the existing Spartan controls and shared slider/language-picker primitives. The language picker is a Spartan modal dialog, which owns initial focus, focus containment, Escape and backdrop dismissal, and trigger-focus restoration. Filters have programmatic labels, the result region exposes loading/error semantics, and controls remain keyboard operable. Filter rows wrap or horizontally scroll on narrow screens rather than requiring a desktop viewport. Important state is expressed in text/ARIA state rather than colour alone.
 
 ## Verification
 
-`frontend/src/app/components/discovery/discovery-filter-contract.spec.ts` is the active Vitest contract suite for #959. It verifies that distance, native/target language and Serious Learner criteria reach the canonical search request, that VIP-only gender filtering is not sent for free users, that blocked users are removed, failure classes drive the correct recovery action, reset restores defaults, and superseded requests cannot replace newer results. `frontend/src/app/services/discovery.service.spec.ts` covers classification at the live HTTP boundary, including retry policy and sanitised failure details passed to the component.
+`frontend/src/app/components/discovery/discovery-filter-contract.spec.ts` is the active Vitest contract suite for #959. It renders and drives the actual distance, language and Serious Learner controls, verifies that their criteria reach the canonical search request, exercises rendered error recovery, and proves missing profile data is not fabricated. It also verifies that VIP-only gender filtering is not sent for free users, that blocked users are removed, reset restores defaults, and superseded requests cannot replace newer results. `frontend/src/app/components/primitives/language-picker/language-picker.component.spec.ts` covers the dialog's Escape and focus-restoration contract. `backend/src/discovery/discovery.service.spec.ts` proves that the saved profile point and requested radius reach the PostGIS search. `frontend/src/app/services/discovery.service.spec.ts` covers classification at the live HTTP boundary, including retry policy and sanitised failure details passed to the component.
 
 `frontend/src/app/components/discovery/discovery-search-race.spec.ts` separately locks loading-state ownership during overlapping searches. The older broad discovery component suite remains untouched for historical coverage while the focused #959 contract is executable in normal CI. Shared primitives retain their own component-level coverage.
 
