@@ -333,6 +333,54 @@ describe('LinkPreviewService', () => {
     expect(result?.siteName).toBe('example.com');
   });
 
+  it('falls back to Twitter card tags when OpenGraph tags are absent', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta name="twitter:title" content="Twitter Title" />
+        <meta name="twitter:description" content="Twitter description" />
+        <meta name="twitter:image" content="https://example.com/tw-img.png" />
+        <meta name="twitter:site" content="@example" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result).toEqual({
+      url: 'https://example.com/',
+      title: 'Twitter Title',
+      description: 'Twitter description',
+      image: 'https://example.com/tw-img.png',
+      siteName: '@example',
+    });
+  });
+
+  it('extracts case-insensitive OpenGraph tags and alternative image properties', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="OG:TITLE" content="Case Insensitive Title" />
+        <meta property="og:image:secure_url" content="https://example.com/secure.jpg" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.title).toBe('Case Insensitive Title');
+    expect(result?.image).toBe('https://example.com/secure.jpg');
+  });
+
+  it('resolves protocol-relative image URLs safely', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="og:title" content="Protocol Relative Image" />
+        <meta property="og:image" content="//cdn.example.com/photo.png" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result?.image).toBe('https://cdn.example.com/photo.png');
+  });
+
   it('strips markup from scraped fields including the site name', async () => {
     mockHtmlResponse(`
       <html><head>
