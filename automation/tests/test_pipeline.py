@@ -1202,6 +1202,48 @@ def test_verified_repair_of_existing_pull_request_returns_to_review_without_new_
     assert github.comments[-1][0] == 77
 
 
+@pytest.mark.parametrize(("latest_verified_sha", "commits"), [("verified-head", 0), (None, 1)])
+def test_a_clean_worktree_commits_only_when_its_head_was_not_already_verified(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    latest_verified_sha: str | None,
+    commits: int,
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", True, "MERGEABLE", "", "verified-head", True, False)
+    ]
+    (factory_config.worktree_dir / "issue-77").mkdir(parents=True)
+    job = Job(
+        task=Task("77", "Finish placeholder surfaces", "Body", "github-issue", 10),
+        state=JobState.VERIFYING,
+        branch="factory/77-finish",
+        pull_request=77,
+        head_sha="verified-head",
+        latest_verified_sha=latest_verified_sha,
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    pipeline.jobs.save({"77": job})
+    committed: list[str] = []
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: committed.append(message))
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "verified-head")
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert len(committed) == commits
+    assert result.state is JobState.REVIEWING
+
+
 @pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
 def test_unknown_mergeability_waits_without_repair_or_merge(
     tmp_path: Path,
