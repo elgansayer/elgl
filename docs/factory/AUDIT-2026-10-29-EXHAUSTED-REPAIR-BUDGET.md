@@ -38,28 +38,19 @@ The `VERIFYING` path already raised `Quality gate blocked: {code} in {path}`. Wi
 6. **Integration with PR parking**:
    - Integrates with `_park_capped_pull_request` (#9702) so capped pull requests are labeled `factory-capped` and commented with the last error evidence, removing them from WIP counts without closing them.
 
-## 3. Incident task analysis and verified pipeline cause attribution
+## 3. Verification boundary
 
-In the incident snapshot, six live tasks were stuck at spent repair budgets with bare terminal errors:
+Focused pipeline tests prove the implementable contract for representative quality-gate,
+review-only and CI failures. They verify that the pipeline:
 
-| Task ID | PR | State | Pre-repair error | Diagnostic cause identified | Blocking defect type |
-|---------|----|-------|------------------|------------------------------|----------------------|
-| 1478 | #9679 | `quality_repairing` | `Quality repair limit exceeded` | `Quality repair limit exceeded: design-sync-drift in scripts/design-sync-drift.mjs` | Design sync drift in script |
-| 1397 | #9689 | `quality_repairing` | `Quality repair limit exceeded` | `Quality repair limit exceeded: review findings` | Independent review / local verification findings |
-| 1437 | #9685 | `quality_repairing` | `Quality repair limit exceeded` | `Quality repair limit exceeded: review findings` | Independent review / local verification findings |
-| 1584 | #9682 | `repairing` | `Repair limit exceeded` | `Repair limit exceeded: backend / test, frontend / test` | Backend and frontend unit/integration test failures |
-| 9593 | #9593 | `repairing` | `Repair limit exceeded` | `Repair limit exceeded: CI / required` | Required CI status check failure |
-| 9597 | #9597 | `repairing` | `Repair limit exceeded` | `Repair limit exceeded: CI / required` | Required CI status check failure |
+1. halts without starting an agent after the relevant budget is spent;
+2. persists a stable cause in `job.last_error`;
+3. publishes that same cause in the one-time capped pull-request notice; and
+4. retains stable failure classification, incident grouping and retry fingerprints.
 
-### Pipeline execution verification
-
-Rather than relying on synthetic manual assignments, the Factory pipeline (`FactoryPipeline.run_job()`) is directly tested in `automation/tests/test_pipeline.py` (`test_spent_budget_pipeline_emits_causes_for_incident_task_scenarios`) with jobs matching each of these failure configurations.
-
-The test proves end-to-end that:
-1. `pipeline.run_job()` halts without starting an agent (`_run_agent` is bypassed; 0 model invocations).
-2. The pipeline autonomously generates and persists the exact diagnostic cause in `job.last_error`.
-3. The pull request is parked via `_park_capped_pull_request` with the `factory-capped` label and notice comment.
-4. `collect_incidents()` groups all tasks under the `exhausted-repair-budget` incident and populates every task's evidence row with its verified cause string.
+These tests do not identify the live blockers for tasks 1478, 1397, 1437, 1584, 9593
+or 9597. Only a post-deployment maintenance snapshot can provide that evidence. No
+test fixture or substituted GitHub status is presented as a production observation.
 
 ## 4. Production baseline and post-deployment measurement protocol
 
@@ -75,13 +66,17 @@ The test proves end-to-end that:
 
 Following verified deployment to `main`, the autonomous maintenance loop (`maintenance.py`) automatically evaluates live outcomes over a 24-hour observation window (`deployed_at + timedelta(hours=24)`):
 
-| Dimension | Baseline (pre-repair) | Post-deployment target & measurement method |
-|-----------|-----------------------|---------------------------------------------|
-| **Application merges** | 33 merges / 24h (paused at 9/8 WIP) | Rolling 24h throughput measured via `pr_metrics.py`. Capped PRs with exposed causes allow parking (#9702) and targeted drift guidance (#9701), unblocking the factory lane to resume new intake below 8 WIP. |
-| **CI workflow runs / merge** | 2.07 runs / merged PR | Measured via `pr_metrics.py`. Terminal errors halt repair dispatch without pushing unverified heads, preventing unnecessary CI workflow triggers. |
-| **Repeated failures** | Unescalated chronic backoff | Tracked via `FailureFingerprint.digest`. Deterministic prefixes and sorted identifiers ensure identical failures escalate backoff (5m -> 10m -> 20m -> 30m chronic floor), while tasks whose blockers change restart count. |
-| **Model time** | Allowance burned on spent loops | Tracked via `MetricsStore`. Strictly 0 additional model invocations once budget cap is reached (`_run_agent` bypassed immediately). |
-| **Diagnostic snapshot** | Bare error strings without causes | In the next scheduled maintenance snapshot, every `exhausted-repair-budget` evidence row names its blocking finding code and path, review findings, or sorted failed checks. |
+| Dimension | Baseline (pre-repair) | Post-deployment measurement |
+|-----------|-----------------------|-----------------------------|
+| **Application merges** | 33 merges / 24h (paused at 9/8 WIP) | Record the rolling 24-hour throughput from `pr_metrics.py`. |
+| **CI workflow runs / merge** | 2.07 runs / merged PR | Record the 24-hour value from `pr_metrics.py`. |
+| **Repeated failures** | Bare errors did not distinguish blockers | Compare persisted failure fingerprints and repetition counts for the affected jobs. |
+| **Model time** | Allowance was spent on repair attempts before the cap | Compare provider usage from `MetricsStore`; a capped dispatch must add no model invocation. |
+| **Diagnostic snapshot** | Bare error strings without causes | Inspect live `exhausted-repair-budget` evidence rows for the named tasks that remain blocked. |
+
+The maintenance controller records the baseline at issue creation, waits for verified
+deployment, and stores an outcome snapshot after 24 hours. Until that observation exists,
+the effect on merges, repeated failures and model time remains unverified.
 
 ## 5. Safeguards and rollback
 

@@ -54,7 +54,7 @@ The opening words alone decide the failure class and the maintenance incident. B
 
 The budgets themselves, the stale-unpublished rebuild and the capped-conflict rebuild are unchanged. This is diagnostic only: no limit is raised, no gate is skipped and no job state is reset.
 
-Incident task cause attribution, verified pipeline execution for live tasks (1478, 1397, 1437, 1584, 9593, 9597), and post-deployment outcome measurement against the baseline are recorded in [AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md](AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md).
+The verification boundary, production baseline and post-deployment measurement protocol are recorded in [AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md](AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md). Live task causes and outcome changes are not claimed before the maintenance controller records them.
 
 ## Rolling-upgrade compatibility
 

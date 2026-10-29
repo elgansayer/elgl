@@ -1158,7 +1158,6 @@ class FactoryPipeline:
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return
-                self._park_capped_pull_request(job, "its quality-repair budget is spent")
                 # Name what still blocks the job, as the VERIFYING gate does.
                 # Gate findings take precedence; otherwise review evidence remains.
                 cause = (
@@ -1167,7 +1166,12 @@ class FactoryPipeline:
                     if findings
                     else "review findings"
                 )
-                raise FactoryError(f"{QUALITY_REPAIR_LIMIT_MESSAGE}: {cause}")
+                error = f"{QUALITY_REPAIR_LIMIT_MESSAGE}: {cause}"
+                # Parking publishes one notice only. Make the newly diagnosed
+                # cause visible before that notice snapshots ``last_error``.
+                job.last_error = error
+                self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                raise FactoryError(error)
 
             quality_finding_text = "\n".join(
                 f"- {f.code} in {f.path}: {f.summary}\n  Evidence: {f.evidence}" for f in findings
@@ -1491,10 +1495,12 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
                         return
+                    error = f"{REPAIR_LIMIT_MESSAGE}: {_failed_checks_cause(status.failed_checks)}"
+                    # Parking publishes one notice only. Persist this check
+                    # diagnosis first so the notice does not retain a bare error.
+                    job.last_error = error
                     self._park_capped_pull_request(job, "its CI-repair budget is spent")
-                    raise FactoryError(
-                        f"{REPAIR_LIMIT_MESSAGE}: {_failed_checks_cause(status.failed_checks)}"
-                    )
+                    raise FactoryError(error)
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
                 # still-conflicting PR then routes QUALITY_REPAIRING back to
