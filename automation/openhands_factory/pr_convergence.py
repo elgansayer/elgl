@@ -457,7 +457,12 @@ def resolve_pull_request(
     # factory_owned rather than an inlined copy of its branch/fork test: reopening a PR
     # hands it the same in-place update, force-sync, and delete authority as REUSE, so
     # this must not drift if that ownership boundary is ever tightened.
-    reusable_closed = [record for record in closed if record.factory_owned]
+    # A retired one is not: reopened, it keeps the labels that review and the
+    # duplicate guard skip, and the job's own rebuilt push trips the moved-branch
+    # check on every retry (issues 1397, 1428, 1436, 1450 and 1584, 2026-10-29).
+    reusable_closed = [
+        record for record in closed if record.factory_owned and not record.labels & RETIRED_LABELS
+    ]
     if reusable_closed:
         canonical = min(reusable_closed, key=lambda item: _canonical_key(identity, item))
         return PullRequestResolution(
@@ -603,7 +608,8 @@ def _duplicate_excess(records: Sequence[PullRequestRecord], attribute: str) -> i
 # A major dependency queued behind its lane's single active candidate waits by
 # design (scripts/dependency-compatibility-lanes.mjs) and consumes no factory
 # work, so it must not hold lane or component WIP and stall all new dispatch.
-PARKED_LABELS = frozenset({"compat:queued"})
+# A factory-capped PR has spent its repair budgets and likewise consumes none.
+PARKED_LABELS = frozenset({"compat:queued", "factory-capped"})
 RETIRED_LABELS = frozenset({"duplicate", "factory-skip", "superseded"})
 
 

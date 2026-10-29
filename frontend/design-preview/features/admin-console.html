@@ -1068,10 +1068,8 @@
           <div class="alert error" role="alert">Ban Failed</div>
         </div>
         <footer>
-          States shown: list with destructive/secondary actions · confirm (proposed - copy
-          <code>admin.banConfirm</code> exists but the component bans without confirming) · success
-          toasts · failure toast. <code>admin.quickModeration</code> is missing from
-          <code>src/assets/i18n/en.json</code>.
+          States shown: list with destructive/secondary actions · confirm dialog with
+          <code>admin.banConfirm</code> copy · success toasts · failure toast.
         </footer>
       </section>
 
@@ -1272,9 +1270,7 @@
         </div>
         <footer>
           States shown: list · create form with uploaded cover · audio uploading (Save disabled).
-          Missing i18n: the list heading reuses <code>admin.lessons.title</code> ("Title");
-          <code>create_lesson</code>/<code>edit_lesson</code> have no strings. Delete has no confirm
-          step at runtime.
+          Delete confirm dialog implemented with Spartan Helm.
         </footer>
       </section>
 

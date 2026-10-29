@@ -17,6 +17,7 @@ from openhands_factory.alerts import AlertService
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
+from openhands_factory.design_drift import check_design_drift, drift_guidance
 from openhands_factory.exceptions import (
     AgentTaskFailure,
     FactoryError,
@@ -65,6 +66,8 @@ MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 # An unpublished job whose repairs ran out on a base this old is rebuilt once on
 # the current base instead of retrying old-main failures forever.
 STALE_UNPUBLISHED_BASE_AGE = timedelta(days=7)
+CAPPED_LABEL = "factory-capped"
+CAPPED_NOTICE_PREFIX = "OpenHands Factory parked this pull request: "
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -1088,7 +1091,11 @@ class FactoryPipeline:
                 return
             job.quality_repairs = 0
             workflow.stage_all()
-            workflow.commit(f"fix: resolve issue {job.task.identifier}")
+            # A head the Factory already verified and pushed can re-enter VERIFYING
+            # with a clean worktree; "nothing to commit" then failed every retry
+            # (issue 9464, PR #9671, 2026-10-29). Any other clean tree still fails.
+            if job.latest_verified_sha != workflow.head_sha() or workflow.has_changes():
+                workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -1127,6 +1134,7 @@ class FactoryPipeline:
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return
+                self._park_capped_pull_request(job, "its quality-repair budget is spent")
                 raise FactoryError("Quality repair limit exceeded")
 
             quality_finding_text = "\n".join(
@@ -1416,10 +1424,24 @@ class FactoryPipeline:
                 f"Mergeability: {status.mergeable}\n"
                 f"Merge state: {status.merge_state_status or 'not reported'}"
             )
-            if job.last_error:
+            if job.last_error and "design sync drift" not in job.last_error.lower():
                 repair_context += (
                     f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
                 )
+            # GitHub names this gate only as `constitution`; run it here so the
+            # agent is told which preview or manifest item to change.
+            if not (base_conflict or stale_base) and (
+                drift := check_design_drift(worktree, job.task.identifier)
+            ):
+                repair_context += f"\n\n{drift}"
+            if status.failed_checks and not (base_conflict or stale_base):
+                try:
+                    excerpts = self.github.failed_check_excerpts(status.head_sha)
+                except (FactoryError, ValueError, KeyError):
+                    LOGGER.warning("Could not read CI logs for %s", job.pull_request, exc_info=True)
+                    excerpts = ""
+                if excerpts:
+                    repair_context += f"\n\nFailed CI job log excerpts:\n\n{excerpts}"
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM
@@ -1445,6 +1467,7 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
                         return
+                    self._park_capped_pull_request(job, "its CI-repair budget is spent")
                     raise FactoryError("Repair limit exceeded")
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
@@ -1987,6 +2010,34 @@ class FactoryPipeline:
         job.state = JobState.DISCOVERED
         return True
 
+    def _park_capped_pull_request(self, job: Job, reason: str) -> None:
+        """Stop a PR the Factory can no longer repair from holding WIP capacity.
+
+        Capped PRs kept the factory lane at 9/8, pausing all new intake for a
+        day while none of them could change (2026-10-29). The parked label only
+        removes the PR from WIP counts: it stays open, CI and independent review
+        still gate it, and it can still merge if its checks are fixed.
+        """
+        if job.pull_request is None:
+            return
+        number = job.pull_request
+        try:
+            self.github.add_issue_labels(number, (CAPPED_LABEL,))
+            if not any(
+                comment.body.startswith(CAPPED_NOTICE_PREFIX)
+                for comment in self.github.list_issue_comments(number)
+            ):
+                evidence = (job.last_error or "no failure recorded")[-1500:]
+                self.github.add_comment(
+                    number,
+                    f"{CAPPED_NOTICE_PREFIX}{reason}. It no longer counts against the "
+                    "Factory's open pull request limits; CI and independent review "
+                    "still gate any merge.\n\nLast failure:\n```\n"
+                    f"{evidence}\n```",
+                )
+        except FactoryError:
+            LOGGER.warning("Could not park capped pull request %s", number, exc_info=True)
+
     def _recover_closed_pull_request(self, job: Job, status: PullRequestStatus) -> bool:
         """Recover Factory-owned work without reopening external contributors' PRs."""
 
@@ -2114,6 +2165,7 @@ class FactoryPipeline:
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return None
+                self._park_capped_pull_request(job, "its quality-repair budget is spent")
                 raise
             # Formatter and auto-fixable lint failures need no model (job 1195
             # spent repairs on prettier whitespace). Re-verify on the next pass if
@@ -2124,7 +2176,7 @@ class FactoryPipeline:
             if workflow.change_fingerprint() != before:
                 LOGGER.info("Mechanically repaired task %s; verifying again", job.task.identifier)
                 return None
-            evidence = detail[-1800:]
+            evidence = drift_guidance(detail, job.task.identifier) or detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
                 f"Factory safety controls intact:\n{evidence}"

@@ -1,9 +1,9 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { Component, inject, input, output, signal, computed } from '@angular/core';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 export interface ShareEntity {
   id: string;
@@ -16,8 +16,7 @@ export interface ShareEntity {
 
 @Component({
   selector: 'app-share-modal',
-  standalone: true,
-  imports: [HlmInput, HlmButton, TranslatePipe, A11yClickableDirective],
+  imports: [HlmInput, HlmButton, TranslatePipe, ...HlmDialogImports],
   templateUrl: './share-modal.html',
   styleUrls: ['./share-modal.scss'],
 })
@@ -35,23 +34,36 @@ export class ShareModalComponent {
   // State
   readonly isCopying = signal(false);
   readonly shareUrl = computed(() => `${this.entity().externalLink}?ref=user_token_123`);
+  readonly dialogState = computed<HlmDialogState>(() => (this.isOpen() ? 'open' : 'closed'));
 
-  async copyLink() {
-    try {
-      await navigator.clipboard.writeText(this.shareUrl());
-      this.isCopying.set(true);
-      setTimeout(() => this.isCopying.set(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy', err);
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.isOpen()) {
+      this.closed.emit();
     }
   }
 
-  shareToFeed() {
+  close(): void {
+    this.closed.emit();
+  }
+
+  async copyLink(): Promise<void> {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(this.shareUrl());
+      }
+      this.isCopying.set(true);
+      setTimeout(() => this.isCopying.set(false), 2000);
+    } catch {
+      this.isCopying.set(false);
+    }
+  }
+
+  shareToFeed(): void {
     // Logic to repost to Moments feed
     this.closed.emit();
   }
 
-  shareToDirectMessage() {
+  shareToDirectMessage(): void {
     this.sharedToChat.emit('dm');
     this.closed.emit();
   }

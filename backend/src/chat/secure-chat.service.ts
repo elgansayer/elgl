@@ -45,7 +45,7 @@ export class SecureChatService extends ChatService {
     private readonly secureReadReceipts: ReadReceiptsService | undefined,
     private readonly secureEvents: EventEmitter2,
     private readonly secureSafety: SafetyService,
-    private readonly secureLinkPreview: LinkPreviewService,
+    secureLinkPreview: LinkPreviewService,
     private readonly secureSpam: SpamDetectionService,
     chatLlmService: ChatLlmService,
     systemMessageService: SystemMessageService,
@@ -195,16 +195,13 @@ export class SecureChatService extends ChatService {
     }
 
     let message: ChatMessage = insertResponse.data;
-    if (dto.message_type === 'text' && dto.text_content) {
-      try {
-        const url = dto.text_content.match(/https?:\/\/[^\s]+/)?.[0];
-        if (url) {
-          const linkPreview = await this.secureLinkPreview.getPreview(url);
-          if (linkPreview) message = { ...message, link_preview: linkPreview };
-        }
-      } catch {
-        // Link previews are enrichment only and must never block a group send.
-      }
+    // Link previews are enrichment only and must never block a group send.
+    const linkPreview =
+      dto.message_type === 'text'
+        ? await this.resolveLinkPreview(dto.text_content)
+        : null;
+    if (linkPreview) {
+      message = { ...message, link_preview: linkPreview };
     }
 
     void this.secureXp.awardXpForActivity(senderId, 'send_message');

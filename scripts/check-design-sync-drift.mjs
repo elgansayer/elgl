@@ -75,6 +75,7 @@ function mappingOwnsFile(file, mappedPath) {
 // Only the most-specific matching repository path owns that file for drift purposes. This preserves broad
 // fallback mappings without forcing unrelated previews to change whenever a narrower artefact is edited.
 const touchedIds = new Set();
+const triggeringFiles = new Map();
 for (const file of changed) {
   const matches = [];
   for (const item of manifest.items) {
@@ -85,7 +86,9 @@ for (const file of changed) {
   if (matches.length === 0) continue;
   const maxSpecificity = Math.max(...matches.map(({ mappedPath }) => mappedPath.length));
   for (const { item, mappedPath } of matches) {
-    if (mappedPath.length === maxSpecificity) touchedIds.add(item.id);
+    if (mappedPath.length !== maxSpecificity) continue;
+    touchedIds.add(item.id);
+    triggeringFiles.set(item.id, [...(triggeringFiles.get(item.id) ?? []), file]);
   }
 }
 const touchedItems = manifest.items.filter((item) => touchedIds.has(item.id));
@@ -108,8 +111,13 @@ for (const item of touchedItems) {
     manifestChanged && JSON.stringify(previousItem ?? null) !== JSON.stringify(item);
 
   if (!previewChanged && !itemMetadataChanged) {
+    // Name the exact files: automated repairs given only the item id retried five
+    // times without finding the preview (issues 1437 and 1478, 2026-10-29).
     failures.push(
-      `${item.id}: mapped implementation changed without its mapped preview or its own manifest metadata changing`,
+      `${item.id}: mapped implementation changed without its mapped preview or its own manifest metadata changing\n` +
+        `    changed: ${[...new Set(triggeringFiles.get(item.id))].join(', ')}\n` +
+        `    update the preview to match: ${item.previewPaths.join(', ')}\n` +
+        `    or, if the visual contract is unchanged, record why in the "${item.id}" item of design-sync.manifest.json`,
     );
   }
 }
