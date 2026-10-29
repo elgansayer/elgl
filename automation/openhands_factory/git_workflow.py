@@ -217,6 +217,17 @@ class GitWorkflow:
         unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
         if unresolved.returncode == 0 and unresolved.stdout.strip():
             return True
+        # A clean merge from an earlier cycle is still uncommitted when its
+        # verification failed and quality repair ran instead. git then refuses a
+        # second merge on every retry ("You have not concluded your merge"), which
+        # held issues 1450, 9460 and 9466 and their PR WIP slots on 2026-10-29.
+        # Verification and the commit that follows conclude it; the next cycle
+        # merges any newer base.
+        in_progress = self.runner(
+            ("git", "rev-parse", "-q", "--verify", "MERGE_HEAD"), self.repository
+        )
+        if in_progress.returncode == 0:
+            return False
         raise RepositorySafetyError(f"Could not merge base branch: {merge.stderr}")
 
     def discard_transient_build_metadata(self) -> bool:
