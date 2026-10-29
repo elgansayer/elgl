@@ -12,9 +12,9 @@ This document describes the frontend unread-count contract implemented by `Unrea
 - `audioRooms`
 - `profile` (notification activity)
 
-Producers update counts through `set`, `increment`, or `decrement`. Navigation components read them through `tabCount` and render compact badge text through `badgeText`. Existing chat/notification helper methods remain supported for mixed-version callers.
+Producers update counts through `set`, `setCount`, `increment`, `decrement`, or `reset`. Navigation components read them through `tabCount` (or `get`) and render compact badge text through `badgeText`. Existing chat/notification helper methods remain supported for mixed-version callers.
 
-All incoming count values are normalized before entering UI state. Negative, non-finite, and invalid values become zero, fractional values are floored, and individual plus aggregate counts saturate at `Number.MAX_SAFE_INTEGER`. Visible badges display `99+` above 99 without discarding the full underlying count used for accessibility and arithmetic.
+All incoming count values are normalised before entering UI state. Negative, non-finite, and invalid values become zero, fractional values are floored, and individual plus aggregate counts saturate at `Number.MAX_SAFE_INTEGER`. Visible badges display `99+` above 99 without discarding the full underlying count used for accessibility and arithmetic.
 
 ## Navigation and accessibility
 
@@ -44,7 +44,7 @@ Unread state contains counts only. The global service must never retain message 
 
 ## Failure handling
 
-A failure to update the platform application badge is isolated from in-app state. Invalid producer counts are normalized at the service boundary, so a malformed response or realtime event cannot create negative, infinite, or fractional navigation badges.
+A failure to update the platform application badge is isolated from in-app state. Invalid producer counts are normalised at the service boundary, so a malformed response or realtime event cannot create negative, infinite, or fractional navigation badges.
 
 The aggregate count is saturated before it reaches the browser API, preventing arithmetic outside JavaScript's safe-integer range when several independently bounded tab counters are combined.
 
@@ -55,7 +55,7 @@ Focused checks live in:
 - `frontend/src/app/services/unread-counter.service.spec.ts`
 - `frontend/src/app/app-navigation-tabs.contract.spec.ts`
 
-The service suite covers normalization, saturation, compact presentation, lifecycle operations, and browser badge failure behavior. The navigation contract verifies that all five tabs remain wired to the shared service in both mobile and desktop navigation and retain accessibility semantics.
+The service suite covers normalisation, saturation, compact presentation, lifecycle operations, and browser badge failure behaviour. The navigation contract verifies that all five tabs remain wired to the shared service in both mobile and desktop navigation and retain accessibility semantics.
 
 Run the focused frontend tests with the repository's normal Vitest command, and use the full frontend lint/build/test CI jobs as the merge gate.
 

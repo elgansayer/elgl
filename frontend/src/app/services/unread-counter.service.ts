@@ -66,10 +66,23 @@ export class UnreadCounterService {
     return this.compactBadgeText(this.totalUnread());
   }
 
+  /**
+   * Returns the current unread count for a given navigation tab.
+   * Mirrors tabCount() for callers expecting a traditional getter.
+   */
+  get(tab: NavTab): number {
+    return this.tabCount(tab);
+  }
+
   // Generic helpers
 
   set(tab: NavTab, count: number): void {
     this.signalFor(tab).set(this.normaliseCount(count));
+  }
+
+  /** Alias for set() to support callers expecting setCount(). */
+  setCount(tab: NavTab, count: number): void {
+    this.set(tab, count);
   }
 
   increment(tab: NavTab): void {
@@ -80,6 +93,15 @@ export class UnreadCounterService {
 
   decrement(tab: NavTab): void {
     this.signalFor(tab).update((count) => Math.max(0, this.normaliseCount(count) - 1));
+  }
+
+  /** Resets unread count for a given tab, or all tabs if tab is omitted. */
+  reset(tab?: NavTab): void {
+    if (tab) {
+      this.set(tab, 0);
+    } else {
+      this.resetAll();
+    }
   }
 
   resetAll(): void {
@@ -143,14 +165,18 @@ export class UnreadCounterService {
 
   private updateAppBadge(count: number): void {
     if (typeof navigator === 'undefined') return;
-    if (count > 0 && this.hasSetAppBadge(navigator)) {
-      navigator.setAppBadge(count).catch(() => {
-        // App Badging is best-effort and unsupported/blocked browsers are expected.
-      });
-    } else if (count === 0 && this.hasClearAppBadge(navigator)) {
-      navigator.clearAppBadge().catch(() => {
-        // App Badging is best-effort and unsupported/blocked browsers are expected.
-      });
+    try {
+      if (count > 0 && this.hasSetAppBadge(navigator)) {
+        navigator.setAppBadge(count).catch(() => {
+          // App Badging is best-effort and unsupported/blocked browsers are expected.
+        });
+      } else if (count === 0 && this.hasClearAppBadge(navigator)) {
+        navigator.clearAppBadge().catch(() => {
+          // App Badging is best-effort and unsupported/blocked browsers are expected.
+        });
+      }
+    } catch {
+      // Synchronous access or SecurityError on navigator.setAppBadge in restricted iframes
     }
   }
 

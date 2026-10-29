@@ -200,4 +200,70 @@ describe('UnreadCounterService', () => {
       { timeout: 100 },
     );
   });
+
+  it('should support setCount as an alias for set', () => {
+    service.setCount('chat', 5);
+    expect(service.chatUnread()).toBe(5);
+    service.setCount('moments', -1);
+    expect(service.momentsUnread()).toBe(0);
+  });
+
+  it('should expose get as an alias for tabCount', () => {
+    service.set('discovery', 4);
+    expect(service.get('discovery')).toBe(4);
+  });
+
+  it('should support resetting a single tab or all tabs', () => {
+    service.set('chat', 5);
+    service.set('moments', 3);
+    service.set('discovery', 2);
+
+    service.reset('moments');
+    expect(service.chatUnread()).toBe(5);
+    expect(service.momentsUnread()).toBe(0);
+    expect(service.discoveryUnread()).toBe(2);
+
+    service.reset();
+    expect(service.chatUnread()).toBe(0);
+    expect(service.momentsUnread()).toBe(0);
+    expect(service.discoveryUnread()).toBe(0);
+  });
+
+  it('should safely swallow synchronous exceptions from navigator.setAppBadge', () => {
+    setAppBadgeSpy.mockImplementation(() => {
+      throw new Error('SecurityError: blocked by permissions policy');
+    });
+
+    expect(() => service.set('chat', 2)).not.toThrow();
+  });
+
+  it('should safely swallow synchronous exceptions from navigator.clearAppBadge', () => {
+    service.set('chat', 2);
+    clearAppBadgeSpy.mockImplementation(() => {
+      throw new Error('SecurityError: blocked by permissions policy');
+    });
+
+    expect(() => service.set('chat', 0)).not.toThrow();
+  });
+
+  it('should ignore non-callable setAppBadge properties on navigator', () => {
+    Object.defineProperty(navigator, 'setAppBadge', {
+      value: 'not-a-function',
+      writable: true,
+      configurable: true,
+    });
+
+    expect(() => service.set('chat', 1)).not.toThrow();
+  });
+
+  it('should ignore non-callable clearAppBadge properties on navigator', () => {
+    service.set('chat', 1);
+    Object.defineProperty(navigator, 'clearAppBadge', {
+      value: true,
+      writable: true,
+      configurable: true,
+    });
+
+    expect(() => service.set('chat', 0)).not.toThrow();
+  });
 });

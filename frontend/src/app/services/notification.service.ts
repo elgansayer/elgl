@@ -87,10 +87,14 @@ export class NotificationService {
     );
     if (!this.isRecord(response)) throw new Error('Invalid unread count response');
     const unreadCount = response['unreadCount'];
-    if (!Number.isSafeInteger(unreadCount) || (unreadCount as number) < 0) {
+    if (
+      typeof unreadCount !== 'number' ||
+      !Number.isSafeInteger(unreadCount) ||
+      unreadCount < 0
+    ) {
       throw new Error('Invalid unread count response');
     }
-    return unreadCount as number;
+    return unreadCount;
   }
 
   async markAsRead(notificationId: string): Promise<void> {
