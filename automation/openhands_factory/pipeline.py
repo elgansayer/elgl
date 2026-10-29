@@ -1434,6 +1434,14 @@ class FactoryPipeline:
                 drift := check_design_drift(worktree, job.task.identifier)
             ):
                 repair_context += f"\n\n{drift}"
+            if status.failed_checks and not (base_conflict or stale_base):
+                try:
+                    excerpts = self.github.failed_check_excerpts(status.head_sha)
+                except (FactoryError, ValueError, KeyError):
+                    LOGGER.warning("Could not read CI logs for %s", job.pull_request, exc_info=True)
+                    excerpts = ""
+                if excerpts:
+                    repair_context += f"\n\nFailed CI job log excerpts:\n\n{excerpts}"
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM

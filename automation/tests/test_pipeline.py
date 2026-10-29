@@ -175,6 +175,9 @@ class GitHub:
     def publish_review_pending(self, head_sha: str, *, detail: str) -> None:
         self.pending_reviews.append(head_sha)
 
+    def failed_check_excerpts(self, head_sha: str) -> str:
+        return self.ci_excerpts if hasattr(self, "ci_excerpts") else ""
+
     def pull_request_status(self, pull_request: int) -> PullRequestStatus:
         return self.statuses.pop(0)
 
@@ -1699,6 +1702,45 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert result.repair_attempts == 1
 
 
+def test_ci_repair_prompt_includes_the_failed_job_log_excerpts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.ci_excerpts = "### backend / unit\n FAIL  src/chat/search.spec.ts > keeps filters"
+    job = _repairing_job(factory_config, github)
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda worktree, task_id: None
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed("stop after the prompt")),
+    )
+
+    pipeline.run_job("77")
+
+    assert len(prompts) == 1
+    assert "Failed CI job log excerpts:" in prompts[0]
+    assert "FAIL  src/chat/search.spec.ts > keeps filters" in prompts[0]
+
+
 def test_ci_repair_is_told_which_design_preview_or_manifest_item_to_change(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1726,11 +1768,11 @@ def test_ci_repair_is_told_which_design_preview_or_manifest_item_to_change(
     monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
     monkeypatch.setattr(
         "openhands_factory.pipeline.run_verification",
         lambda commands: (_ for _ in ()).throw(VerificationFailed("stop after the prompt")),
     )
-    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
 
     pipeline.run_job("77")
 
