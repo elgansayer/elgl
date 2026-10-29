@@ -34,7 +34,10 @@ These are prioritised future tasks, not claims that all seven are implemented.
 1. Group repeated failure shapes across unfinished jobs. Treat historical watchdog
    messages as historical evidence, not proof of current process crashes. The
    baseline snapshot reports actual watchdog recoveries by the running daemon
-   generation (`watchdog.recovered_total`) separately from queued age.
+   generation (`watchdog.recovered_total`) separately from queued age. Jobs that
+   stopped at a spent repair budget form the `exhausted-repair-budget` incident,
+   and each evidence row names the blocking quality finding, failed checks or
+   `review findings` (see [AUTONOMOUS-RETRY.md](AUTONOMOUS-RETRY.md)).
 2. Give AI bounded, redacted diagnostic data, lifetime phase-model metrics and
    read-only repository access. Require a typed report; unknown task IDs and
    arbitrary action names are rejected. Repair proposals must cite exact excerpts

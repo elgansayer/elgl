@@ -8,6 +8,13 @@ from datetime import timedelta
 from openhands_factory.failure_fingerprint import fingerprint_failure
 from openhands_factory.models import FailureKind, Job
 
+# Terminal errors raised once a repair budget is spent. Each is followed by a
+# stable cause (a finding, failed checks or "review findings"), so callers match
+# the opening words rather than the whole string.
+REPAIR_LIMIT_MESSAGE = "Repair limit exceeded"
+QUALITY_REPAIR_LIMIT_MESSAGE = "Quality repair limit exceeded"
+_REPAIR_BUDGET_PREFIXES = (REPAIR_LIMIT_MESSAGE.lower(), QUALITY_REPAIR_LIMIT_MESSAGE.lower())
+
 _AGENT_KIND_MAP: dict[str, FailureKind] = {
     "provider_auth": FailureKind.AUTHENTICATION,
     "provider_rate_limit": FailureKind.RATE_LIMIT,
@@ -18,6 +25,16 @@ _AGENT_KIND_MAP: dict[str, FailureKind] = {
     "repository_failure": FailureKind.TOOL,
     "policy_failure": FailureKind.CONFIGURATION,
 }
+
+
+def is_repair_budget_exhausted(detail: str) -> bool:
+    """Whether an error opens with a spent-repair-budget message, whatever cause follows.
+
+    The cause names a check, path or finding code, so its wording must never pull
+    the failure out of the budget class or the incident family that groups it.
+    """
+
+    return detail.lower().startswith(_REPAIR_BUDGET_PREFIXES)
 
 
 def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKind:
@@ -31,6 +48,9 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
 
     if agent_kind is not None and agent_kind in _AGENT_KIND_MAP:
         return _AGENT_KIND_MAP[agent_kind]
+
+    if is_repair_budget_exhausted(detail):
+        return FailureKind.BUDGET
 
     text = detail.lower()
     infrastructure_tokens = (

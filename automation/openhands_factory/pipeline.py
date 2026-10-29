@@ -49,6 +49,7 @@ from openhands_factory.pr_lifecycle import (
 from openhands_factory.pr_metrics import PullRequestMetricsStore
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
+from openhands_factory.retry_policy import QUALITY_REPAIR_LIMIT_MESSAGE, REPAIR_LIMIT_MESSAGE
 from openhands_factory.review_report import validate_review_report
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
@@ -88,6 +89,11 @@ VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
     "failed with exit 137",
     "failed with exit 143",
 )
+# A spent repair budget names its cause in the terminal error. Check names and
+# paths are untrusted and last_error keeps only its final 2000 characters, so the
+# cause is bounded to leave the opening words (and failure class) intact.
+MAX_BUDGET_CAUSE_ITEMS = 8
+MAX_BUDGET_CAUSE_ITEM_CHARS = 200
 
 # A path in one of these categories can never introduce the vulnerability
 # classes security.md's checklist scans for (hardcoded secrets, webhook/
@@ -125,6 +131,24 @@ def _is_security_review_exempt(changed_paths: set[Path]) -> bool:
             continue
         return False
     return True
+
+
+def _budget_cause_item(value: object) -> str:
+    """One bounded line of a finding code, path or check name for a terminal error."""
+    return " ".join(str(value).split())[:MAX_BUDGET_CAUSE_ITEM_CHARS]
+
+
+def _failed_checks_cause(failed_checks: frozenset[str]) -> str:
+    """Sorted failed check names, so an identical failure repeats an identical error.
+
+    Names only: no evidence text, timestamps or SHAs, which would give every retry a
+    new fingerprint and stop the chronic backoff from escalating.
+    """
+    names = sorted(name for name in map(_budget_cause_item, failed_checks) if name)
+    shown = ", ".join(names[:MAX_BUDGET_CAUSE_ITEMS])
+    if len(names) > MAX_BUDGET_CAUSE_ITEMS:
+        shown += f" (+{len(names) - MAX_BUDGET_CAUSE_ITEMS} more)"
+    return shown or "no failed check reported"
 
 
 class FactoryPipeline:
@@ -1127,7 +1151,15 @@ class FactoryPipeline:
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return
-                raise FactoryError("Quality repair limit exceeded")
+                # Name what still blocks the job, as the VERIFYING gate does.
+                # Gate findings take precedence; otherwise review evidence remains.
+                cause = (
+                    f"{_budget_cause_item(findings[0].code)} in "
+                    f"{_budget_cause_item(findings[0].path)}"
+                    if findings
+                    else "review findings"
+                )
+                raise FactoryError(f"{QUALITY_REPAIR_LIMIT_MESSAGE}: {cause}")
 
             quality_finding_text = "\n".join(
                 f"- {f.code} in {f.path}: {f.summary}\n  Evidence: {f.evidence}" for f in findings
@@ -1445,7 +1477,9 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
                         return
-                    raise FactoryError("Repair limit exceeded")
+                    raise FactoryError(
+                        f"{REPAIR_LIMIT_MESSAGE}: {_failed_checks_cause(status.failed_checks)}"
+                    )
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
                 # still-conflicting PR then routes QUALITY_REPAIRING back to

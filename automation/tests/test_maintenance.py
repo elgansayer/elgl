@@ -23,6 +23,7 @@ from openhands_factory.maintenance import (
     analysis_attempt_feedback,
     collect_incidents,
     error_identity,
+    failure_family,
     maintenance_feedback,
     runtime_signature,
     validate_proposal,
@@ -164,6 +165,49 @@ def test_incidents_group_common_cause_and_exclude_terminal_jobs(controller) -> N
     assert incidents[0].key == "offline-font-verification"
     assert [job.task.identifier for job in incidents[0].jobs] == ["3"]
     assert "topsecret" not in str(incidents[0].evidence())
+
+
+@pytest.mark.parametrize(
+    ("error", "family"),
+    [
+        ("Repair limit exceeded", "exhausted-repair-budget"),
+        ("Repair limit exceeded: backend / lint, frontend / unit", "exhausted-repair-budget"),
+        ("Repair limit exceeded: no failed check reported", "exhausted-repair-budget"),
+        ("Quality repair limit exceeded: review findings", "exhausted-repair-budget"),
+        # The cause may quote another family's marker without leaving this one.
+        (
+            "Quality repair limit exceeded: credential-artifact in scripts/design-sync-drift.mjs",
+            "exhausted-repair-budget",
+        ),
+        ("Repair limit exceeded: frontend / fonts.googleapis.com", "exhausted-repair-budget"),
+        ("Review repair limit exceeded", "exhausted-repair-budget"),
+        ("design-sync-drift: screen.chat preview needs updating", "design-preview-repair"),
+        ("getaddrinfo EAI_AGAIN fonts.googleapis.com", "offline-font-verification"),
+    ],
+)
+def test_failure_family_keeps_a_spent_repair_budget_whatever_its_cause(
+    error: str, family: str
+) -> None:
+    job = Job(Task("1", "Repair", "", "github-issue", 5), last_error=error)
+
+    assert failure_family(job) == family
+
+
+def test_spent_budget_incident_evidence_names_each_blocking_cause(controller) -> None:
+    errors = {
+        "1": "Repair limit exceeded: backend / lint, frontend / unit",
+        "2": "Quality repair limit exceeded: unsafe-type-escape in backend/src/chat/service.ts",
+        "3": "Quality repair limit exceeded: review findings",
+    }
+    jobs = controller.pipeline.jobs.load()
+    for identifier, error in errors.items():
+        jobs[identifier].last_error = error
+
+    incidents = collect_incidents(jobs)
+
+    assert [incident.key for incident in incidents] == ["exhausted-repair-budget"]
+    rows = {row["task_id"]: row["error"] for row in incidents[0].evidence()}
+    assert rows == errors
 
 
 def test_one_deduplicated_repair_with_durable_schedule_and_daily_report(controller) -> None:

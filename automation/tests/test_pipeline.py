@@ -19,7 +19,14 @@ from openhands_factory.exceptions import (
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
-from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
+from openhands_factory.pipeline import (
+    MAX_BUDGET_CAUSE_ITEM_CHARS,
+    MAX_BUDGET_CAUSE_ITEMS,
+    MAX_CONSECUTIVE_QUALITY_REPAIRS,
+    FactoryPipeline,
+    _failed_checks_cause,
+    _is_security_review_exempt,
+)
 from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.quality_gate import QualityFinding
 from openhands_factory.repository_guard import ensure_push_target
@@ -1532,8 +1539,103 @@ def test_exhausted_repair_budget_still_blocks_another_model_start(tmp_path, monk
         pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("budget bypass")
     )
     result = pipeline.run_job("77")
-    assert result.last_error == "Repair limit exceeded"
+    assert result.last_error == "Repair limit exceeded: backend / lint"
     assert result.repair_attempts == 5
+
+
+def _spent_repair_budget_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_checks: frozenset[str],
+) -> FactoryPipeline:
+    """A CI-repair job at the model budget that GitHub still reports as not mergeable."""
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    github.statuses = [replace(github.statuses[0], failed_checks=failed_checks)]
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("budget bypass")
+    )
+    return pipeline
+
+
+@pytest.mark.parametrize(
+    ("failed_checks", "expected"),
+    [
+        (
+            frozenset({"frontend / unit", "backend / lint", "CI / required"}),
+            "Repair limit exceeded: CI / required, backend / lint, frontend / unit",
+        ),
+        (frozenset(), "Repair limit exceeded: no failed check reported"),
+    ],
+)
+def test_spent_repair_budget_lists_the_sorted_failed_checks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_checks: frozenset[str],
+    expected: str,
+) -> None:
+    pipeline = _spent_repair_budget_pipeline(tmp_path, monkeypatch, failed_checks)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.last_error == expected
+    assert result.repair_attempts == 5
+    assert result.provider_history == []
+
+
+def test_repeated_spent_repair_budget_keeps_one_fingerprint_and_escalates_backoff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    failed_checks = frozenset({"frontend / unit", "backend / lint"})
+    pipeline = _spent_repair_budget_pipeline(tmp_path, monkeypatch, failed_checks)
+    status = pipeline.github.statuses[0]
+
+    results = []
+    for _ in range(pipeline.config.max_consecutive_failures):
+        pipeline.github.statuses = [status]
+        result = pipeline.run_job("77")
+        assert result is not None
+        results.append(result)
+
+    assert {result.last_error for result in results} == {
+        "Repair limit exceeded: backend / lint, frontend / unit"
+    }
+    assert len({result.last_failure_fingerprint for result in results}) == 1
+    assert [result.repeated_failure_count for result in results] == [1, 2, 3]
+    assert all(result.last_failure_kind == "budget" for result in results)
+    final = results[-1]
+    assert final.next_attempt_at is not None
+    # Reaching the repeated-failure threshold applies the 30 minute chronic floor.
+    assert final.next_attempt_at - final.updated_at >= timedelta(minutes=30)
+
+
+def test_failed_check_cause_is_sorted_single_line_and_bounded() -> None:
+    many = frozenset(f"check-{index:02d}" for index in range(MAX_BUDGET_CAUSE_ITEMS + 3))
+    assert _failed_checks_cause(many) == (
+        ", ".join(f"check-{index:02d}" for index in range(MAX_BUDGET_CAUSE_ITEMS)) + " (+3 more)"
+    )
+
+    hostile = _failed_checks_cause(frozenset({"first\nsecond\t" + "x" * 500}))
+    assert "\n" not in hostile and "\t" not in hostile
+    assert len(hostile) == MAX_BUDGET_CAUSE_ITEM_CHARS
+
+    assert _failed_checks_cause(frozenset({"", "  \n"})) == "no failed check reported"
+
+    # The opening words must survive the 2000 characters kept in last_error.
+    worst = _failed_checks_cause(frozenset(f"{index:03d}" + "y" * 400 for index in range(40)))
+    assert len(f"Repair limit exceeded: {worst}") < 2000
 
 
 @pytest.mark.parametrize("status_kind", ["merged", "new-head", "green", "pending"])
@@ -1730,10 +1832,10 @@ def test_unpushed_repair_loop_stops_at_the_model_budget(
         pipeline.jobs.save(jobs)
         result = pipeline.run_job("77")
         assert result is not None
-        if result.last_error == "Repair limit exceeded":
+        if (result.last_error or "").startswith("Repair limit exceeded"):
             break
 
-    assert result is not None and result.last_error == "Repair limit exceeded"
+    assert result is not None and result.last_error == "Repair limit exceeded: backend / lint"
     assert len(agent_calls) == 5
     assert result.repair_attempts == 5
 
@@ -2907,7 +3009,7 @@ def test_quality_repair_that_changes_nothing_still_spends_the_budget(
     capped = pipeline.run_job("42")
 
     assert capped is not None
-    assert "Quality repair limit exceeded" in (capped.last_error or "")
+    assert capped.last_error == "Quality repair limit exceeded: review findings"
     assert len(capped.provider_history) == calls
 
 
@@ -2967,6 +3069,97 @@ def test_spent_quality_budget_rebuilds_only_unpublished_work_on_a_stale_base(
         assert result.state is state
         assert result.quality_repairs == 5
         assert result.last_error is not None
+
+
+def _spent_quality_budget_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    findings: list[QualityFinding],
+    review_findings: list[str],
+) -> FactoryPipeline:
+    """A published job whose quality-repair budget is spent, on a current PR head."""
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, True)
+    ]
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save(
+        {
+            "42": Job(
+                Task("42", "Publish the fix", "Body", "github-issue", 0),
+                state=JobState.QUALITY_REPAIRING,
+                branch="factory/42-publish-the-fix",
+                pull_request=77,
+                head_sha="reviewed-head",
+                quality_repairs=MAX_CONSECUTIVE_QUALITY_REPAIRS,
+                review_findings=review_findings,
+            )
+        }
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: findings,
+    )
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("quality budget bypass")
+    )
+    return pipeline
+
+
+def test_spent_quality_budget_names_the_first_gate_finding_of_a_published_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _spent_quality_budget_pipeline(
+        tmp_path,
+        monkeypatch,
+        findings=[
+            QualityFinding(
+                "unsafe-type-escape",
+                Path("backend/src/chat/chat.service.ts"),
+                12,
+                "Type escape",
+                "const raw = payload as any; // token=topsecret",
+            ),
+            QualityFinding("skipped-test", Path("backend/src/chat/chat.spec.ts"), 3, "Skip", "x"),
+        ],
+        review_findings=["Review rejected: the review text must not leak into the error"],
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.last_error == (
+        "Quality repair limit exceeded: unsafe-type-escape in backend/src/chat/chat.service.ts"
+    )
+    assert result.state is JobState.QUALITY_REPAIRING
+    assert result.quality_repairs == MAX_CONSECUTIVE_QUALITY_REPAIRS
+    assert result.provider_history == []
+
+
+def test_spent_quality_budget_with_only_review_findings_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pipeline = _spent_quality_budget_pipeline(
+        tmp_path,
+        monkeypatch,
+        findings=[],
+        review_findings=["Review rejected: the endpoint trusts a client-supplied user id"],
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.last_error == "Quality repair limit exceeded: review findings"
+    assert result.state is JobState.QUALITY_REPAIRING
+    assert result.quality_repairs == MAX_CONSECUTIVE_QUALITY_REPAIRS
+    assert result.provider_history == []
 
 
 @pytest.mark.parametrize(
@@ -3698,5 +3891,5 @@ def test_a_rebuilt_job_is_not_rebuilt_again(
     result = pipeline.run_job("77")
 
     assert result is not None
-    assert result.last_error == "Repair limit exceeded"
+    assert result.last_error == "Repair limit exceeded: no failed check reported"
     assert github.superseded_pull_requests == []
