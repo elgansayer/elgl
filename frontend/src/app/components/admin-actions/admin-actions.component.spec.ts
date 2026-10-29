@@ -116,4 +116,36 @@ describe('AdminActionsComponent', () => {
     expect(adminService.banUser).not.toHaveBeenCalled();
     expect(adminService.warnUser).not.toHaveBeenCalled();
   });
+
+  it('opens confirmation dialog on requestBan and closes on cancelBan without banning', () => {
+    expect(component.banDialogState()).toBe('closed');
+    component.requestBan('user-5', 'Jordan');
+    expect(component.banDialogState()).toBe('open');
+    expect(component.pendingBanTarget()).toEqual({ id: 'user-5', name: 'Jordan' });
+
+    component.cancelBan();
+    expect(component.banDialogState()).toBe('closed');
+    expect(component.pendingBanTarget()).toBeNull();
+    expect(adminService.banUser).not.toHaveBeenCalled();
+  });
+
+  it('bans user and closes dialog on confirmBan', async () => {
+    adminService.banUser.mockResolvedValue({ message: 'User banned' });
+    component.requestBan('user-6', 'Jordan');
+
+    await component.confirmBan();
+    expect(component.banDialogState()).toBe('closed');
+    expect(component.pendingBanTarget()).toBeNull();
+    expect(adminService.banUser).toHaveBeenCalledWith('user-6');
+  });
+
+  it('cancels ban when dialog state changed to closed', () => {
+    component.requestBan('user-7', 'Jordan');
+    expect(component.banDialogState()).toBe('open');
+
+    component.onBanDialogStateChanged('closed');
+    expect(component.banDialogState()).toBe('closed');
+    expect(component.pendingBanTarget()).toBeNull();
+    expect(adminService.banUser).not.toHaveBeenCalled();
+  });
 });
