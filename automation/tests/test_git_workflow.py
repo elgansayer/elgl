@@ -410,6 +410,9 @@ def test_merge_base_for_repair_resumes_a_clean_merge_left_in_progress(tmp_path: 
     subprocess.run((*git, "-C", str(origin), "add", "."), check=True)
     subprocess.run((*git, "-C", str(origin), "commit", "-q", "-m", "base"), check=True)
     subprocess.run(("git", "clone", "-q", str(origin), str(repository)), check=True)
+    # merge_base_for_repair runs plain git, so the clone needs its own identity.
+    for key, value in (("user.name", "t"), ("user.email", "t@example.invalid")):
+        subprocess.run(("git", "-C", str(repository), "config", key, value), check=True)
     subprocess.run(("git", "-C", str(repository), "switch", "-q", "-c", "task"), check=True)
     (repository / "task.txt").write_text("task\n", encoding="utf-8")
     subprocess.run((*git, "-C", str(repository), "add", "."), check=True)
