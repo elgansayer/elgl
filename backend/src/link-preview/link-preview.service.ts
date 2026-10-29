@@ -383,6 +383,7 @@ export class LinkPreviewService {
     const siteName = this.sanitiseMetaContent(
       this.getMetaTag($, 'og:site_name') ||
         this.getMetaTag($, 'twitter:site') ||
+        this.getMetaTag($, 'application-name') ||
         new URL(url).hostname,
       MAX_SITE_NAME_LENGTH,
     );
@@ -401,9 +402,17 @@ export class LinkPreviewService {
   }
 
   private getMetaTag($: cheerio.CheerioAPI, property: string): string {
+    const propLower = property.toLowerCase();
+    const propUpper = property.toUpperCase();
     return (
       $(`meta[property="${property}"]`).attr('content') ||
       $(`meta[name="${property}"]`).attr('content') ||
+      $(`meta[property="${propLower}"]`).attr('content') ||
+      $(`meta[name="${propLower}"]`).attr('content') ||
+      $(`meta[property="${propUpper}"]`).attr('content') ||
+      $(`meta[name="${propUpper}"]`).attr('content') ||
+      $(`meta[itemprop="${property}"]`).attr('content') ||
+      $(`meta[itemprop="${propLower}"]`).attr('content') ||
       ''
     ).trim();
   }
@@ -416,10 +425,6 @@ export class LinkPreviewService {
     const $inner = cheerio.load(`<div>${sanitized}</div>`);
     const text = $inner('div').text().trim();
     return text.length > maxLength ? text.slice(0, maxLength) : text;
-  }
-
-  private sanitizeMetaContent(raw: string, maxLength: number): string {
-    return this.sanitiseMetaContent(raw, maxLength);
   }
 
   private sanitiseImageUrl(raw: string, pageUrl: string): string {
@@ -437,10 +442,6 @@ export class LinkPreviewService {
     } catch {
       return '';
     }
-  }
-
-  private sanitizeImageUrl(raw: string, pageUrl: string): string {
-    return this.sanitiseImageUrl(raw, pageUrl);
   }
 
   private parseCachedPreview(

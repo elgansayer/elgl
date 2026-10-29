@@ -18,7 +18,7 @@ import {
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewService } from './link-preview.service';
 import { LinkPreview } from './interfaces/link-preview.interface';
-import { LinkPreviewQueryDto } from './dto/link-preview-query.dto';
+import { LinkPreviewQueryDto, LinkPreviewResponseDto } from './dto';
 
 @ApiTags('Link Preview')
 @ApiBearerAuth()
@@ -43,17 +43,7 @@ export class LinkPreviewController {
   })
   @ApiOkResponse({
     description: 'Link preview metadata extracted from the page.',
-    schema: {
-      type: 'object',
-      nullable: true,
-      properties: {
-        url: { type: 'string' },
-        title: { type: 'string' },
-        description: { type: 'string' },
-        image: { type: 'string' },
-        siteName: { type: 'string' },
-      },
-    },
+    type: LinkPreviewResponseDto,
   })
   @ApiBadRequestResponse({
     description:
@@ -66,16 +56,16 @@ export class LinkPreviewController {
     @Query('url') urlParam?: string | LinkPreviewQueryDto,
     @Query() queryDto?: LinkPreviewQueryDto,
   ): Promise<LinkPreview | null> {
-    const candidate =
-      typeof urlParam === 'string'
+    const raw =
+      typeof urlParam === 'string' && urlParam.length > 0
         ? urlParam
         : typeof urlParam === 'object' && urlParam !== null && 'url' in urlParam
           ? urlParam.url
           : queryDto?.url;
 
-    if (!candidate || typeof candidate !== 'string' || !candidate.trim()) {
+    if (!raw || typeof raw !== 'string' || !raw.trim()) {
       throw new BadRequestException('Missing url query parameter');
     }
-    return this.linkPreviewService.getPreview(candidate.trim());
+    return this.linkPreviewService.getPreview(raw.trim());
   }
 }
