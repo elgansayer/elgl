@@ -22,6 +22,7 @@ import { DirectConversationController } from './direct-conversation.controller';
 import { DirectConversationService } from './direct-conversation.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
+import { ChatEditController } from './chat-edit.controller';
 import { ChatSettingsService } from './chat-settings.service';
 import { ChatBackupController } from '../chat-backup/chat-backup.controller';
 import { ChatBackupService } from '../chat-backup/chat-backup.service';
@@ -46,6 +47,7 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
   ],
   controllers: [
     ChatController,
+    ChatEditController,
     DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
