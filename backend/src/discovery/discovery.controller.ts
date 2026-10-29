@@ -132,7 +132,7 @@ export class DiscoveryController {
       profile,
       query,
     );
-    if (result.marker.degraded) {
+    if (result.marker.degraded && result.data.length === 0) {
       throw new ServiceUnavailableException(
         'Partner discovery is temporarily unavailable',
       );

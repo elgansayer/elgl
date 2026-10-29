@@ -160,6 +160,25 @@ describe('DiscoveryController', () => {
       ).rejects.toThrow('Partner discovery is temporarily unavailable');
     });
 
+    it('should return valid partners from a partial degraded search', async () => {
+      const fallbackPartners = [{ id: 'partner-1' }];
+      (usersService.getProfile as Mock).mockResolvedValue({ id: 'user-1' });
+      (
+        discoveryService.searchPartnersWithDegradation as Mock
+      ).mockResolvedValue({
+        data: fallbackPartners,
+        marker: {
+          degraded: true,
+          reason: 'Primary query timed out',
+          fallbackSource: 'basic_query',
+        },
+      });
+
+      await expect(
+        controller.findPartners({ id: 'user-1' } as any, {}),
+      ).resolves.toEqual(fallbackPartners);
+    });
+
     it('should enable the algorithmic filter when serious learner mode is requested', async () => {
       const mockProfile: any = { id: 'user-1', is_serious_learner: false };
       const query: any = { serious_learner_mode: true };
