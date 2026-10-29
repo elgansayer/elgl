@@ -638,7 +638,7 @@ export class DiscoveryService {
       const response = (await supabase.rpc('search_nearby_users', {
         search_lat: searchLat,
         search_lon: searchLon,
-        radius_m: query.radius_metres || 50000,
+        radius_m: query.radius_metres ?? 50000,
         exclude_user_id: currentUserId,
         filter_native_arr: query.native_languages
           ? [query.native_languages]
@@ -655,6 +655,13 @@ export class DiscoveryService {
         data: unknown[] | null;
         error: { message?: string } | null;
       };
+
+      if (response.error) {
+        this.logger.warn(
+          { error: response.error.message },
+          'PostGIS search_nearby_users RPC failed, falling back to standard query',
+        );
+      }
 
       if (response.error || !response.data || response.data.length === 0) {
         const fallbackRes = await queryBuilder.limit(50);
@@ -721,6 +728,13 @@ export class DiscoveryService {
       const filtered = await this.filterByVoiceRoomActive(
         rpcResults,
         query.voice_room_active === true,
+      );
+      this.logger.info(
+        {
+          count: filtered.length,
+          radius_m: query.radius_metres ?? 50000,
+        },
+        'PostGIS proximity search matched nearby partners within radius',
       );
       return enrich(filtered);
     }
