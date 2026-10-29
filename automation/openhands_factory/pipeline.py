@@ -1088,7 +1088,11 @@ class FactoryPipeline:
                 return
             job.quality_repairs = 0
             workflow.stage_all()
-            workflow.commit(f"fix: resolve issue {job.task.identifier}")
+            # A head the Factory already verified and pushed can re-enter VERIFYING
+            # with a clean worktree; "nothing to commit" then failed every retry
+            # (issue 9464, PR #9671, 2026-10-29). Any other clean tree still fails.
+            if job.latest_verified_sha != workflow.head_sha() or workflow.has_changes():
+                workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
