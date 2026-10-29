@@ -2462,7 +2462,7 @@ export class I18nService {
     'home.dailyTip.fallback': 'Keep practising every day!',
 
     // Link Preview
-    'linkPreview.openLink': 'Open link: {title}',
+    'linkPreview.opensInNewTab': 'Opens in a new tab',
 
     // Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',

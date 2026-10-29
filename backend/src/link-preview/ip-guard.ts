@@ -105,8 +105,10 @@ function isPrivateIpv4(ip: string): boolean {
     // 192.168.0.0/16: private network
     return true;
   }
-  if (first === 192 && second === 0) {
-    // 192.0.0.0/24: IETF protocol assignments
+  if (first === 192 && second === 0 && (third === 0 || third === 2)) {
+    // 192.0.0.0/24: IETF protocol assignments; 192.0.2.0/24: TEST-NET-1.
+    // The rest of 192.0.0.0/16 is ordinary public space (for example
+    // WordPress.com in 192.0.64.0/18) and must stay reachable.
     return true;
   }
   if (first === 192 && second === 88 && third === 99) {

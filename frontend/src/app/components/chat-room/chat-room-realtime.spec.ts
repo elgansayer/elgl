@@ -133,6 +133,62 @@ describe('applyChatRoomRealtimeEvent', () => {
     expect(result.messages[0]?.text_content).toBe('edited');
   });
 
+  describe('link previews on edited messages', () => {
+    const oldPreview = {
+      url: 'https://example.com/old',
+      title: 'Old page',
+      description: '',
+      image: '',
+      siteName: 'Example',
+    };
+    const newPreview = { ...oldPreview, url: 'https://example.com/new', title: 'New page' };
+    const linkMessage: ChatMessage = {
+      ...baseMessage,
+      text_content: 'see https://example.com/old',
+    };
+    const withPreview: ChatMessage = { ...linkMessage, link_preview: oldPreview };
+
+    it('replaces the card when the edit points at a different link', () => {
+      const result = applyChatRoomRealtimeEvent(
+        [withPreview],
+        {
+          message: {
+            ...withPreview,
+            text_content: 'see https://example.com/new',
+            link_preview: newPreview,
+          },
+        },
+        'room-1',
+        'current-user',
+      );
+
+      expect(result.messages[0]?.link_preview).toEqual(newPreview);
+    });
+
+    it('removes the card when the backend publishes an explicit null preview', () => {
+      const result = applyChatRoomRealtimeEvent(
+        [withPreview],
+        { message: { ...linkMessage, text_content: 'no link now', link_preview: null } },
+        'room-1',
+        'current-user',
+      );
+
+      expect(result.messages[0]?.text_content).toBe('no link now');
+      expect(result.messages[0]?.link_preview).toBeNull();
+    });
+
+    it('keeps the existing card when an event omits the field, which is why edits publish null', () => {
+      const result = applyChatRoomRealtimeEvent(
+        [withPreview],
+        { message: { ...linkMessage, delivery_status: 'delivered' } },
+        'room-1',
+        'current-user',
+      );
+
+      expect(result.messages[0]?.link_preview).toEqual(oldPreview);
+    });
+  });
+
   it('does not acknowledge the current user own messages', () => {
     const result = applyChatRoomRealtimeEvent([], { message: baseMessage }, 'room-1', 'user-1');
 

@@ -2099,7 +2099,7 @@
   "home.dailyTip.title": "Daily learning tip",
   "home.dailyTip.loading": "Fetching your tip...",
   "home.dailyTip.fallback": "Keep practising every day!",
-  "linkPreview.openLink": "Open link: {title}",
+  "linkPreview.opensInNewTab": "Opens in a new tab",
   "diagnosticQuiz.title": "Language Level Diagnostic",
   "diagnosticQuiz.loading": "Loading your diagnostic quiz...",
   "diagnosticQuiz.errorTitle": "Unable to load quiz",
