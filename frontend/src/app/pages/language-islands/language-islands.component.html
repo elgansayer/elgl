@@ -124,6 +124,15 @@
     </div>
   }
 
+  @if (actionFailed()) {
+    <div
+      class="rounded-card border border-danger/30 bg-danger/10 p-3 text-xs font-bold text-danger"
+      role="alert"
+    >
+      {{ 'languageIslands.error' | t }}
+    </div>
+  }
+
   <!-- Loading State -->
   @if (islandsResource.isLoading()) {
     <div class="py-12 text-center text-sm text-text-muted" role="status">

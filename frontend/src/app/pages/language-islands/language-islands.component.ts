@@ -18,15 +18,12 @@ export class LanguageIslandsComponent {
   readonly selectedLanguage = signal<string>('all');
   readonly enteredIslandId = signal<string | null>(null);
   readonly statusMessage = signal<string | null>(null);
+  readonly actionFailed = signal(false);
 
   readonly islandsResource = resource<LanguageIsland[], unknown>({
     loader: async () => {
-      try {
-        const result = await this.languageIslandsService.listIslands();
-        return result ?? [];
-      } catch {
-        return [];
-      }
+      const result = await this.languageIslandsService.listIslands();
+      return result ?? [];
     },
   });
 
@@ -48,20 +45,24 @@ export class LanguageIslandsComponent {
   }
 
   async enterIsland(island: LanguageIsland): Promise<void> {
+    this.actionFailed.set(false);
     try {
       await this.languageIslandsService.joinIsland(island.id);
     } catch {
-      // Fallback for offline or local preview environments
+      this.actionFailed.set(true);
+      return;
     }
     this.enteredIslandId.set(island.id);
     this.statusMessage.set(island.name);
   }
 
   async leaveIsland(island: LanguageIsland): Promise<void> {
+    this.actionFailed.set(false);
     try {
       await this.languageIslandsService.leaveIsland(island.id);
     } catch {
-      // Fallback for offline or local preview environments
+      this.actionFailed.set(true);
+      return;
     }
     if (this.enteredIslandId() === island.id) {
       this.enteredIslandId.set(null);

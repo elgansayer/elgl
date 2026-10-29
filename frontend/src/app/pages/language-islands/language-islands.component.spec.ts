@@ -109,6 +109,13 @@ describe('LanguageIslandsComponent', () => {
     expect(component.filteredIslands().length).toBe(2);
   });
 
+  it('does not report joined when the join request fails', async () => {
+    mockLanguageIslandsService.joinIsland.mockRejectedValue(new Error('x'));
+    await component.enterIsland(mockIslands[0]!);
+    expect(component.enteredIslandId()).toBeNull();
+    expect(component.actionFailed()).toBe(true);
+  });
+
   it('enters island and sets joined state', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
