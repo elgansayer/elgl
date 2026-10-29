@@ -48,6 +48,9 @@ class GitHub:
         self.issues.append(Task("100", title, body, "github-issue", 10))
         return 100
 
+    def failed_check_excerpts(self, head_sha: str) -> str:
+        return ""
+
     def pull_request_status(self, number: int) -> SimpleNamespace:
         return SimpleNamespace(state="MERGED" if self.merged else "CLOSED")
 

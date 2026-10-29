@@ -34,6 +34,9 @@ class GitHub:
         ]
         self.merges: list[tuple[int, str]] = []
 
+    def failed_check_excerpts(self, head_sha: str) -> str:
+        return ""
+
     def pull_request_status(self, pull_request: int) -> PullRequestStatus:
         assert pull_request == 77
         return self.statuses.pop(0)
