@@ -46,6 +46,13 @@ describe('LinkPreviewController', () => {
     ).resolves.toEqual(preview);
     expect(mockGetPreview).toHaveBeenCalledWith('https://example.com/post');
     expect(mockGetPreview).toHaveBeenCalledTimes(1);
+
+    mockGetPreview.mockClear();
+    await expect(
+      controller.getPreview({ url: 'https://example.com/post' }),
+    ).resolves.toEqual(preview);
+    expect(mockGetPreview).toHaveBeenCalledWith('https://example.com/post');
+    expect(mockGetPreview).toHaveBeenCalledTimes(1);
   });
 
   it('passes through a null preview when the page exposes no metadata', async () => {

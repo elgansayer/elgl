@@ -18,6 +18,7 @@ import {
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewService } from './link-preview.service';
 import { LinkPreview } from './interfaces/link-preview.interface';
+import { LinkPreviewQueryDto } from './dto/link-preview-query.dto';
 
 @ApiTags('Link Preview')
 @ApiBearerAuth()
@@ -61,10 +62,20 @@ export class LinkPreviewController {
   @ApiUnauthorizedResponse({
     description: 'A valid Supabase session is required.',
   })
-  async getPreview(@Query('url') url: string): Promise<LinkPreview | null> {
-    if (!url) {
+  async getPreview(
+    @Query('url') urlParam?: string | LinkPreviewQueryDto,
+    @Query() queryDto?: LinkPreviewQueryDto,
+  ): Promise<LinkPreview | null> {
+    const candidate =
+      typeof urlParam === 'string'
+        ? urlParam
+        : typeof urlParam === 'object' && urlParam !== null && 'url' in urlParam
+          ? urlParam.url
+          : queryDto?.url;
+
+    if (!candidate || typeof candidate !== 'string' || !candidate.trim()) {
       throw new BadRequestException('Missing url query parameter');
     }
-    return this.linkPreviewService.getPreview(url);
+    return this.linkPreviewService.getPreview(candidate.trim());
   }
 }

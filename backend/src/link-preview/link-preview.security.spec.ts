@@ -107,6 +107,20 @@ describe('LinkPreviewService security boundaries', () => {
     ).toThrow(BadRequestException);
     expect(() =>
       requestConfig.beforeRedirect?.({
+        protocol: 'http:',
+        hostname: '64:ff9b::127.0.0.1',
+        port: '80',
+      }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      requestConfig.beforeRedirect?.({
+        protocol: 'http:',
+        hostname: '2002:7f00:1::',
+        port: '80',
+      }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      requestConfig.beforeRedirect?.({
         protocol: 'https:',
         hostname: 'example.com',
         port: '443',
@@ -148,5 +162,18 @@ describe('LinkPreviewService security boundaries', () => {
 
     expect(result?.title).toBe('Safe');
     expect(result?.image).toBe('');
+  });
+
+  it('rejects translated and tunneled SSRF addresses directly', async () => {
+    await expect(
+      service.getPreview('http://[64:ff9b::127.0.0.1]/'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.getPreview('http://[2002:7f00:1::]/'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.getPreview('http://[2002:a9fe:a9fe::]/'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(httpService.get).not.toHaveBeenCalled();
   });
 });

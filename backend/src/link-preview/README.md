@@ -40,10 +40,12 @@ returns `null`.
    the redirect-to-private/custom-port bypass class.
 3. **Fetching:** the page is downloaded with a 5 second timeout, at most three
    redirects, and a 5 MB response size cap.
-4. **Parsing:** `cheerio` extracts `og:title`, `og:description`, `og:image`
-   and `og:site_name`, falling back to `<title>` and the `description` meta
-   tag when OpenGraph tags are absent. Relative image URLs are resolved
-   against the source page.
+4. **Parsing:** `cheerio` extracts OpenGraph tags (`og:title`, `og:description`,
+   `og:image`, `og:site_name`), falling back to Twitter card tags (`twitter:title`,
+   `twitter:description`, `twitter:image`, `twitter:site`), `<title>`, and the
+   `description` meta tag when primary tags are absent. Relative image URLs are
+   resolved against the source page. Both `text/html` and `application/xhtml+xml`
+   content types are supported.
 5. **Sanitisation and output bounds:** all scraped text fields are run through
    a strict DOMPurify configuration that allows no tags and no attributes.
    Titles are capped at 300 characters, descriptions at 1,000 and site names
@@ -91,7 +93,8 @@ existing service error contract.
 
 ## Tests
 
-- `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6).
+- `dto/link-preview-query.dto.spec.ts`: query validation constraints.
+- `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6, multicast, broadcast).
 - `link-preview.service.spec.ts`: URL validation, SSRF boundaries, privacy-safe
   cache keys/logging, cache degradation, parsing, sanitisation, safe image
   handling and network error handling.

@@ -160,6 +160,10 @@ export class LinkPreviewService {
       );
     }
 
+    if (!parsed.hostname) {
+      throw new BadRequestException('Hostname is required');
+    }
+
     if (parsed.username || parsed.password) {
       throw new BadRequestException('Embedded credentials are not allowed');
     }
@@ -247,9 +251,20 @@ export class LinkPreviewService {
     );
 
     const rawContentType =
-      (response.headers as Record<string, string>)['content-type'] ?? '';
-    const contentType: string = rawContentType.toLowerCase();
-    if (!contentType.includes('text/html')) {
+      (response.headers as Record<string, string | string[] | undefined>)[
+        'content-type'
+      ] ?? '';
+    const contentType: string = (
+      Array.isArray(rawContentType)
+        ? rawContentType.join(';')
+        : typeof rawContentType === 'string'
+          ? rawContentType
+          : ''
+    ).toLowerCase();
+    if (
+      !contentType.includes('text/html') &&
+      !contentType.includes('application/xhtml+xml')
+    ) {
       throw new BadRequestException('URL does not point to an HTML resource');
     }
 
@@ -260,23 +275,33 @@ export class LinkPreviewService {
     $('script, style, noscript').remove();
 
     const rawTitle =
-      this.getMetaTag($, 'og:title') || $('title').text().trim() || '';
+      this.getMetaTag($, 'og:title') ||
+      this.getMetaTag($, 'twitter:title') ||
+      $('title').text().trim() ||
+      '';
     const rawDescription =
       this.getMetaTag($, 'og:description') ||
+      this.getMetaTag($, 'twitter:description') ||
       this.getMetaTag($, 'description') ||
       '';
 
-    const title = this.sanitizeMetaContent(rawTitle, MAX_TITLE_LENGTH);
-    const description = this.sanitizeMetaContent(
+    const title = this.sanitiseMetaContent(rawTitle, MAX_TITLE_LENGTH);
+    const description = this.sanitiseMetaContent(
       rawDescription,
       MAX_DESCRIPTION_LENGTH,
     );
-    const image = this.sanitizeImageUrl(
-      this.getMetaTag($, 'og:image') || '',
-      url,
-    );
-    const siteName = this.sanitizeMetaContent(
-      this.getMetaTag($, 'og:site_name') || new URL(url).hostname,
+    const rawImage =
+      this.getMetaTag($, 'og:image') ||
+      this.getMetaTag($, 'og:image:url') ||
+      this.getMetaTag($, 'og:image:secure_url') ||
+      this.getMetaTag($, 'twitter:image') ||
+      this.getMetaTag($, 'twitter:image:src') ||
+      '';
+    const image = this.sanitiseImageUrl(rawImage, url);
+    const siteName = this.sanitiseMetaContent(
+      this.getMetaTag($, 'og:site_name') ||
+        this.getMetaTag($, 'twitter:site') ||
+        new URL(url).hostname,
       MAX_SITE_NAME_LENGTH,
     );
 
@@ -301,7 +326,7 @@ export class LinkPreviewService {
     ).trim();
   }
 
-  private sanitizeMetaContent(raw: string, maxLength: number): string {
+  private sanitiseMetaContent(raw: string, maxLength: number): string {
     const sanitized = this.dompurify.sanitize(raw, {
       ALLOWED_TAGS: [],
       ALLOWED_ATTR: [],
@@ -311,7 +336,11 @@ export class LinkPreviewService {
     return text.length > maxLength ? text.slice(0, maxLength) : text;
   }
 
-  private sanitizeImageUrl(raw: string, pageUrl: string): string {
+  private sanitizeMetaContent(raw: string, maxLength: number): string {
+    return this.sanitiseMetaContent(raw, maxLength);
+  }
+
+  private sanitiseImageUrl(raw: string, pageUrl: string): string {
     if (!raw || raw.length > MAX_URL_LENGTH) {
       return '';
     }
@@ -326,6 +355,10 @@ export class LinkPreviewService {
     } catch {
       return '';
     }
+  }
+
+  private sanitizeImageUrl(raw: string, pageUrl: string): string {
+    return this.sanitiseImageUrl(raw, pageUrl);
   }
 
   private parseCachedPreview(
@@ -352,21 +385,21 @@ export class LinkPreviewService {
       return null;
     }
 
-    const title = this.sanitizeMetaContent(
+    const title = this.sanitiseMetaContent(
       typeof candidate['title'] === 'string' ? candidate['title'] : '',
       MAX_TITLE_LENGTH,
     );
-    const description = this.sanitizeMetaContent(
+    const description = this.sanitiseMetaContent(
       typeof candidate['description'] === 'string'
         ? candidate['description']
         : '',
       MAX_DESCRIPTION_LENGTH,
     );
-    const image = this.sanitizeImageUrl(
+    const image = this.sanitiseImageUrl(
       typeof candidate['image'] === 'string' ? candidate['image'] : '',
       requestedUrl,
     );
-    const siteName = this.sanitizeMetaContent(
+    const siteName = this.sanitiseMetaContent(
       typeof candidate['siteName'] === 'string' && candidate['siteName']
         ? candidate['siteName']
         : new URL(requestedUrl).hostname,
