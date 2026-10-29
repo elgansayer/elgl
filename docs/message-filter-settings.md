@@ -1,6 +1,6 @@
 # Message filter settings
 
-Issue: #1100
+Issues: #772, #1100, #1450
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Message filter settings let an authenticated user restrict who may send the firs
 - allowed genders;
 - matching the recipient's native language, target language, gender, or age.
 
-The settings page is available through the existing settings route and persists through the authenticated `/users/me/message-filters` API.
+The settings page is available through the existing settings route and persists through the authenticated `/users/me/message-filters` API. In direct chats, if an initial message is rejected due to recipient filter settings, the sender receives an informative translated error toast.
 
 ## Ownership and data flow
 

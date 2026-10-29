@@ -106,6 +106,17 @@ describe('MessageFilterSettingsComponent', () => {
     expect(messageFilterService.save).not.toHaveBeenCalled();
   });
 
+  it('rejects an inverted age range on the client without sending a save request', async () => {
+    component.ageMin.set(50);
+    component.ageMax.set(20);
+
+    await component.saveFilters();
+
+    expect(messageFilterService.save).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toBe('settings.messageFilters.invalidAgeRange');
+    expect(component.isSaving()).toBe(false);
+  });
+
   it('suppresses duplicate save requests while a persistence request is pending', async () => {
     let resolveSave: (() => void) | undefined;
     messageFilterService.save.mockReturnValue(

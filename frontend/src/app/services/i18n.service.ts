@@ -2406,13 +2406,20 @@ export class I18nService {
     'settings.messageFilters.genderHint': 'Leave empty to allow every gender.',
     'settings.messageFilters.ageRange': 'Age range',
     'settings.messageFilters.ageMin': 'Minimum age',
+    'settings.messageFilters.ageMinPlaceholder': 'Min',
     'settings.messageFilters.ageMax': 'Maximum age',
+    'settings.messageFilters.ageMaxPlaceholder': 'Max',
     'settings.messageFilters.allowedNativeLanguages': 'Allowed native languages',
     'settings.messageFilters.allowedNativeLanguagesHint':
       'Leave empty to allow every native language.',
+    'settings.messageFilters.nativeLanguage': 'Allowed native languages',
+    'settings.messageFilters.nativeLanguageHint':
+      'Select native languages that senders must speak to message you for the first time.',
     'settings.messageFilters.invalidAgeRange': 'Minimum age cannot exceed maximum age.',
     'settings.messageFilters.saveError': 'Message filters could not be saved. Try again.',
     'settings.messageFilters.saved': 'Message filters saved.',
+    'chatRoom.initialMessageRestricted':
+      'You cannot send the first message because this user has restricted who may contact them.',
     'settings.age': 'Age',
     'settings.ageMinPlaceholder': 'Min',
     'settings.ageMaxPlaceholder': 'Max',

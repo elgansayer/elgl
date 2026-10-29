@@ -132,6 +132,16 @@ export class MessageFilterSettingsComponent implements OnInit {
 
     this.errorMessage.set('');
     this.successMessage.set('');
+
+    if (
+      this.ageMin() !== null &&
+      this.ageMax() !== null &&
+      this.ageMin()! > this.ageMax()!
+    ) {
+      this.errorMessage.set('settings.messageFilters.invalidAgeRange');
+      return;
+    }
+
     this.isSaving.set(true);
 
     try {

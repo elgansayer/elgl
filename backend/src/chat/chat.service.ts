@@ -163,24 +163,23 @@ export class ChatService {
 
   /**
    * Enforces the receiver's message_filters for initial messages.
-   * Only applies to the very first message from sender to receiver in a room.
+   * Only applies to the very first message in a direct room.
    */
   private async enforceMessageFilters(
     senderId: string,
     receiverId: string,
     roomId: string,
   ): Promise<void> {
-    // Only enforce for initial messages - check if sender has already sent messages to receiver
+    // Only enforce for initial messages - check if any messages already exist in this room
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase
       .from('chat_messages')
       .select('*', { count: 'exact', head: true })
-      .eq('room_id', roomId)
-      .eq('sender_id', senderId);
+      .eq('room_id', roomId);
 
     if (countError) return;
 
-    // If sender has already messaged in this room, skip filter enforcement
+    // If conversation already has messages, skip filter enforcement (only gate first message)
     if ((count ?? 0) > 0) return;
 
     // Fetch receiver's message filters and profile
@@ -192,17 +191,27 @@ export class ChatService {
 
     if (profileError || !receiverProfile) return;
 
-    const filters = (receiverProfile as Record<string, unknown>)
-      ?.message_filters as
-      | {
-          age_min?: number;
-          age_max?: number;
-          allowed_native_languages?: string[];
-          allowed_genders?: string[];
-        }
-      | undefined;
+    const rawFilters = (receiverProfile as Record<string, unknown>)
+      ?.message_filters as Record<string, unknown> | undefined;
 
-    if (!filters) return;
+    if (!rawFilters) return;
+
+    const filteringEnabled =
+      typeof rawFilters.enabled === 'boolean' ? rawFilters.enabled : true;
+
+    const allowEveryone = Boolean(
+      rawFilters.allow_everyone ?? rawFilters.allowEveryone,
+    );
+
+    if (!filteringEnabled || allowEveryone) return;
+
+    const filters = rawFilters as {
+      age_min?: number;
+      age_max?: number;
+      allowed_native_languages?: string[];
+      allowed_genders?: string[];
+      same_native_language?: boolean;
+    };
 
     // Fetch sender's profile for validation
     const { data: senderProfile, error: senderError } = await supabase
@@ -211,7 +220,11 @@ export class ChatService {
       .eq('id', senderId)
       .single();
 
-    if (senderError || !senderProfile) return;
+    if (senderError || !senderProfile) {
+      throw new BadRequestException(
+        'You cannot send the first message to this user due to their filter settings.',
+      );
+    }
 
     const sender = senderProfile as {
       native_languages?: string[];
@@ -219,43 +232,72 @@ export class ChatService {
       gender?: string;
     };
 
-    // Check native language filter - any of sender's native languages must match
-    if (
-      filters.allowed_native_languages &&
-      filters.allowed_native_languages.length > 0
-    ) {
-      const senderNativeLangs = sender.native_languages ?? [];
-      const hasAllowedLanguage = senderNativeLangs.some((lang: string) =>
-        filters.allowed_native_languages!.includes(lang),
+    const senderNativeLangs = (sender.native_languages ?? []).map(
+      (lang: string) => lang.toLowerCase().trim(),
+    );
+
+    // Check same native language filter
+    if (filters.same_native_language) {
+      const receiverNativeLangs = (
+        ((receiverProfile as Record<string, unknown>).native_languages as
+          string[] | undefined) ?? []
+      ).map((lang: string) => lang.toLowerCase().trim());
+
+      const hasSharedNativeLanguage = senderNativeLangs.some((lang: string) =>
+        receiverNativeLangs.includes(lang),
       );
-      if (senderNativeLangs.length > 0 && !hasAllowedLanguage) {
+      if (!hasSharedNativeLanguage) {
         throw new BadRequestException(
           'You cannot send the first message to this user due to their native language filter settings.',
         );
       }
     }
 
-    // Check age filter
-    if (filters.age_min !== undefined || filters.age_max !== undefined) {
-      const senderAge = sender.age;
-      if (senderAge !== undefined && senderAge !== null) {
-        if (filters.age_min !== undefined && senderAge < filters.age_min) {
-          throw new BadRequestException(
-            'You cannot send the first message to this user due to their age filter settings.',
-          );
-        }
-        if (filters.age_max !== undefined && senderAge > filters.age_max) {
-          throw new BadRequestException(
-            'You cannot send the first message to this user due to their age filter settings.',
-          );
-        }
+    // Check native language filter - any of sender's native languages must match
+    if (
+      filters.allowed_native_languages &&
+      filters.allowed_native_languages.length > 0
+    ) {
+      const allowedLangs = filters.allowed_native_languages.map(
+        (lang: string) => lang.toLowerCase().trim(),
+      );
+      const hasAllowedLanguage = senderNativeLangs.some((lang: string) =>
+        allowedLangs.includes(lang),
+      );
+      if (!hasAllowedLanguage) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their native language filter settings.',
+        );
       }
     }
 
-    // Check gender filter
+    // Check age filter - sender must specify age and satisfy min/max bounds
+    if (filters.age_min !== undefined || filters.age_max !== undefined) {
+      const senderAge = sender.age;
+      if (senderAge === undefined || senderAge === null) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their age filter settings.',
+        );
+      }
+      if (filters.age_min !== undefined && senderAge < filters.age_min) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their age filter settings.',
+        );
+      }
+      if (filters.age_max !== undefined && senderAge > filters.age_max) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their age filter settings.',
+        );
+      }
+    }
+
+    // Check gender filter - sender must specify gender and match allowed genders
     if (filters.allowed_genders && filters.allowed_genders.length > 0) {
-      const senderGender = sender.gender ?? '';
-      if (senderGender && !filters.allowed_genders.includes(senderGender)) {
+      const senderGender = (sender.gender ?? '').toLowerCase().trim();
+      const allowedGenders = filters.allowed_genders.map((g: string) =>
+        g.toLowerCase().trim(),
+      );
+      if (!senderGender || !allowedGenders.includes(senderGender)) {
         throw new BadRequestException(
           'You cannot send the first message to this user due to their gender filter settings.',
         );
@@ -411,8 +453,10 @@ export class ChatService {
         throw new Error('You cannot send messages to this user.');
       }
 
-      // Enforce receiver's message filters for initial messages only
-      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
+      // Enforce receiver's message filters for initial messages only in direct 1-to-1 conversations
+      if (roomMembers.length === 1) {
+        await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
+      }
     }
 
     // Spam detection for text messages
@@ -454,6 +498,11 @@ export class ChatService {
 
     if (insertResponse.error || !insertResponse.data) {
       const msg = insertResponse.error?.message ?? 'Unknown error';
+      if (msg.includes('message_not_allowed_by_recipient_filters')) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their filter settings.',
+        );
+      }
       throw new Error(`Failed to save message: ${msg}`);
     }
 

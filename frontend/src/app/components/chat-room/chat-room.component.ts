@@ -41,6 +41,28 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (!isRecord(error)) return '';
+
+  if ('error' in error) {
+    const responseBody = error['error'];
+    if (typeof responseBody === 'string') return responseBody;
+    if (isRecord(responseBody) && 'message' in responseBody) {
+      const msg = responseBody['message'];
+      if (typeof msg === 'string') return msg;
+      if (Array.isArray(msg) && msg.length > 0 && typeof msg[0] === 'string') return msg[0];
+    }
+  }
+
+  const directMessage = error['message'];
+  return typeof directMessage === 'string' ? directMessage : '';
+}
+
 @Component({
   selector: 'app-chat-room',
   imports: [
@@ -85,6 +107,16 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private presentMessageFilterError(error: unknown): void {
+    const msg = errorMessage(error).toLowerCase();
+    if (
+      msg.includes('filter settings') ||
+      msg.includes('message_not_allowed') ||
+      msg.includes('recipient_filters')
+    ) {
+      showErrorToast(this.i18n.translate('chatRoom.initialMessageRestricted'));
+    }
+  }
 
   id = input.required<string>();
 
@@ -160,9 +192,10 @@ export class ChatRoomComponent implements OnDestroy {
   private mentionRangeEnd = 0;
 
   readonly mentionItemToString = (value: unknown): string => {
-    if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
-    const member = value as GroupMember;
-    const displayName = member.user?.display_name;
+    if (!isRecord(value)) return this.textInput;
+    const user = isRecord(value['user']) ? value['user'] : null;
+    const displayName =
+      user && typeof user['display_name'] === 'string' ? user['display_name'] : null;
     if (!displayName) return this.textInput;
     return (
       this.textInput.slice(0, this.mentionRangeStart) +
@@ -504,6 +537,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send text message:', e);
+      this.presentMessageFilterError(e);
       this.draftService.saveChatDraft(this.roomId, text);
     }
   }
@@ -528,6 +562,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send correction:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -543,6 +578,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to request correction:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -558,6 +594,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send doodle:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -573,6 +610,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send voice note:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
@@ -588,6 +626,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
     } catch (e) {
       console.error('Failed to send sticker:', e);
+      this.presentMessageFilterError(e);
     }
   }
 
