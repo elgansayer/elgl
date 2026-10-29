@@ -61,8 +61,9 @@ function classifyTransportFailure(error: AxiosError): LinkPreviewFailureReason {
     return 'upstream_status';
   }
   if (
-    error.code === AxiosError.ERR_BAD_RESPONSE &&
-    error.message.includes('maxContentLength')
+    (error.code === AxiosError.ERR_BAD_RESPONSE &&
+      error.message.includes('maxContentLength')) ||
+    error.code === 'ERR_FR_MAX_BODY_LENGTH_EXCEEDED'
   ) {
     return 'too_large';
   }

@@ -88,6 +88,13 @@ Preview scraping is best effort for chat delivery. A cache outage does not
 prevent a fresh scrape, while invalid/unreachable external URLs follow the
 existing service error contract.
 
+**URL selection.** `extractFirstHttpUrl` (`link-url.ts`) picks the first
+well-formed `http(s)` URL in a message. A URL ends at whitespace, markup
+delimiters, typographic quotes and the sentence punctuation of CJK, Arabic and
+Indic scripts (which are rarely preceded by a space). Trailing ASCII sentence
+punctuation is dropped, and a closing bracket is kept only when the URL opened
+it (`/wiki/Rust_(language)`).
+
 ## Failure and abuse behaviour
 
 - Missing/malformed URLs and non-HTML responses return the existing 400-class
@@ -170,6 +177,11 @@ reach the network.
 
 - `dto/link-preview-query.dto.spec.ts`: query validation constraints.
 - `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6, multicast, broadcast).
+- `link-url.spec.ts`: first-URL selection, trailing punctuation, balanced
+  brackets and CJK/Arabic/Indic punctuation.
+- `link-preview.observability.spec.ts`: overall deadline, guarded DNS lookup,
+  outcome and failure-reason metrics, privacy-safe failure logs and the real
+  Prometheus registry wiring.
 - `link-preview.service.spec.ts`: URL validation, SSRF boundaries, privacy-safe
   cache keys/logging, cache degradation, parsing, sanitisation, safe image
   handling and network error handling.

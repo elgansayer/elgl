@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface SafePreviewUrl {
   href: string;
@@ -17,7 +18,7 @@ const LINK_PREVIEW_LIMITS = {
 // ⚡ Bolt: Use OnPush change detection since state is derived purely from signal inputs
 @Component({
   selector: 'app-link-preview-card',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (safeDestination(); as destination) {
@@ -66,6 +67,8 @@ const LINK_PREVIEW_LIMITS = {
           <p dir="ltr" class="mt-1.5 truncate text-[10px] text-text-muted">
             {{ destination.displayAddress }}
           </p>
+          <!-- target="_blank" changes context, so say so in the link's accessible name. -->
+          <span class="sr-only">{{ 'linkPreview.opensInNewTab' | t }}</span>
         </div>
       </a>
     }
