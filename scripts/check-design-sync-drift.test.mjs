@@ -62,6 +62,8 @@ test('still rejects a visual change actually owned by the PR', (t) => {
   const result = run(integrationHead);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /screen.shell: mapped implementation changed/);
+  assert.match(result.stderr, /changed: frontend\/src\/app\/shell\.component\.ts\n/);
+  assert.match(result.stderr, /update the preview to match: preview\.html\n/);
 });
 
 test('non-PR invocation continues to inspect the actual checkout', (t) => {
