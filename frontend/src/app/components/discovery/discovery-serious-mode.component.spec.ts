@@ -16,11 +16,13 @@ import { SeriousLearnerModeService } from '../../services/serious-learner-mode.s
 describe('DiscoveryComponent serious learner mode', () => {
   let fixture: ComponentFixture<DiscoveryComponent>;
   let component: DiscoveryComponent;
-  let updateMyProfile: ReturnType<typeof vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>>;
+  let updateMyProfile: ReturnType<
+    typeof vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>
+  >;
   let findPartners: ReturnType<typeof vi.fn>;
   let seriousLearnerModeFake: Pick<
     SeriousLearnerModeService,
-    'enabled' | 'saving' | 'error' | 'refresh' | 'toggle'
+    'enabled' | 'saving' | 'error' | 'refresh' | 'setEnabled'
   >;
 
   afterEach(() => {
@@ -29,20 +31,21 @@ describe('DiscoveryComponent serious learner mode', () => {
   });
 
   beforeEach(async () => {
-    updateMyProfile = vi.fn<(changes: { is_serious_learner: boolean }) => Promise<void>>().mockResolvedValue(undefined);
+    updateMyProfile = vi
+      .fn<(changes: { is_serious_learner: boolean }) => Promise<void>>()
+      .mockResolvedValue(undefined);
     const seriousEnabled = signal(false);
     const seriousSaving = signal(false);
     const seriousError = signal<string | null>(null);
-    // Mirrors SeriousLearnerModeService.toggle(): persist first, then commit, and
+    // Mirrors SeriousLearnerModeService.setEnabled(): persist first, then commit, and
     // refuse concurrent writes. updateMyProfile stands in for the persisted write.
     seriousLearnerModeFake = {
       enabled: seriousEnabled,
       saving: seriousSaving,
       error: seriousError,
       refresh: vi.fn(async () => undefined),
-      async toggle(): Promise<boolean> {
+      async setEnabled(next: boolean): Promise<boolean> {
         if (seriousSaving()) return false;
-        const next = !seriousEnabled();
         seriousSaving.set(true);
         seriousError.set(null);
         try {
@@ -76,7 +79,10 @@ describe('DiscoveryComponent serious learner mode', () => {
           provide: SafetyService,
           useValue: { getBlockedIdsAsync: vi.fn().mockResolvedValue([]) },
         },
-        { provide: AuthService, useValue: { currentUser: signal(null), getAccessToken: () => undefined } },
+        {
+          provide: AuthService,
+          useValue: { currentUser: signal(null), getAccessToken: () => undefined },
+        },
         {
           provide: OfflineDiscoveryCacheService,
           useValue: {
@@ -166,11 +172,13 @@ describe('DiscoveryComponent serious learner mode', () => {
     const second = component.toggleSeriousLearnerMode();
 
     expect(component.seriousModeSaving()).toBe(true);
+    expect(component.seriousToggleChecked()).toBe(true);
     expect(updateMyProfile).toHaveBeenCalledTimes(1);
 
     resolveUpdate?.();
     await Promise.all([first, second]);
     expect(component.seriousModeSaving()).toBe(false);
+    expect(component.seriousToggleChecked()).toBe(true);
   });
 
   it('keeps persisted mode active when temporary filters are reset', () => {

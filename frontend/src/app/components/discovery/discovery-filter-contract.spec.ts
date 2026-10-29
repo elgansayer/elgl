@@ -3,13 +3,14 @@ import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryComponent } from './discovery.component';
-import { DiscoveryService } from '../../services/discovery.service';
+import { DiscoverySearchError, DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
+import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 
 function makePartner(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
@@ -35,10 +36,17 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
   let component: DiscoveryComponent;
   let findPartners: ReturnType<typeof vi.fn>;
   let currentUser: ReturnType<typeof signal<{ is_vip: boolean } | null>>;
+  let seriousLearnerMode: ReturnType<typeof signal<boolean>>;
+  let setSeriousLearnerMode: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     findPartners = vi.fn().mockResolvedValue([]);
     currentUser = signal<{ is_vip: boolean } | null>(null);
+    seriousLearnerMode = signal(false);
+    setSeriousLearnerMode = vi.fn(async (next: boolean) => {
+      seriousLearnerMode.set(next);
+      return true;
+    });
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -54,6 +62,16 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
         },
         { provide: SafetyService, useValue: { getBlockedIdsAsync: vi.fn().mockResolvedValue([]) } },
         { provide: AuthService, useValue: { currentUser } },
+        {
+          provide: SeriousLearnerModeService,
+          useValue: {
+            enabled: seriousLearnerMode.asReadonly(),
+            saving: signal(false).asReadonly(),
+            error: signal<string | null>(null).asReadonly(),
+            refresh: vi.fn().mockResolvedValue(undefined),
+            setEnabled: setSeriousLearnerMode,
+          },
+        },
         {
           provide: OfflineDiscoveryCacheService,
           useValue: {
@@ -198,16 +216,56 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
     expect(component.partners().map((partner) => partner.id)).toEqual(['allowed']);
   });
 
-  it('exposes a retryable unavailable state when partner search rejects', async () => {
+  it('exposes a sanitised rate-limit state when partner search rejects', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    findPartners.mockRejectedValue(new Error('provider unavailable'));
+    findPartners.mockRejectedValue(new DiscoverySearchError('rate_limited', 429));
 
     await component.searchPartners();
 
     expect(component.isLoading()).toBe(false);
     expect(component.hasError()).toBe(true);
     expect(component.searchError()).toBeTruthy();
-    expect(consoleError).toHaveBeenCalled();
+    expect(component.searchFailure()).toBe('rate_limited');
+    expect(component.searchErrorDescriptionKey()).toBe('discovery.searchErrorRateLimited');
+    expect(component.searchErrorActionKey()).toBe('discovery.searchErrorAction');
+    expect(consoleError).toHaveBeenCalledWith('Partner search failed', {
+      kind: 'rate_limited',
+      status: 429,
+    });
+  });
+
+  it('resets invalid filters instead of retrying an identical request', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    findPartners.mockRejectedValueOnce(new DiscoverySearchError('invalid_request', 400));
+
+    await component.searchPartners();
+
+    expect(component.searchErrorDescriptionKey()).toBe('discovery.searchErrorInvalid');
+    expect(component.searchErrorActionKey()).toBe('discovery.noResultsAction');
+
+    const reset = vi.spyOn(component, 'resetFilters').mockImplementation(() => undefined);
+    component.resolveSearchError();
+    expect(reset).toHaveBeenCalledOnce();
+  });
+
+  it('uses an internationalised display name when a profile language has no dictionary key', () => {
+    component.myTargetLangs.set([{ code: 'sv', flag: '🇸🇪', labelKey: 'lang.sv' }]);
+
+    expect(component.targetLanguageChips()[0].label).not.toBe('lang.sv');
+  });
+
+  it('rolls the Serious Learner checkbox state back when persistence fails', async () => {
+    setSeriousLearnerMode.mockResolvedValueOnce(false);
+    component.searchFailure.set('invalid_request');
+    component.searchError.set('existing search failure');
+
+    await component.toggleSeriousLearnerMode();
+
+    expect(setSeriousLearnerMode).toHaveBeenCalledWith(true);
+    expect(component.seriousLearnerMode()).toBe(false);
+    expect(component.seriousToggleChecked()).toBe(false);
+    expect(component.searchFailure()).toBe('invalid_request');
+    expect(component.searchError()).toBe('existing search failure');
   });
 
   it('resets matchmaking filters and executes one fresh search', async () => {

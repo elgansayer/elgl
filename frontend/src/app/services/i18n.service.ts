@@ -379,6 +379,11 @@ export class I18nService {
     'discovery.searchErrorTitle': 'Something went wrong',
     'discovery.searchErrorDescription':
       "We couldn't load partner results. Please check your connection and try again.",
+    'discovery.searchErrorUnauthorised':
+      "We couldn't verify your account. Refresh your session and try again.",
+    'discovery.searchErrorRateLimited': "You've searched too often. Wait a moment, then try again.",
+    'discovery.searchErrorInvalid':
+      "These filters couldn't be applied. Reset them and try a new search.",
     'discovery.searchErrorAction': 'Try Again',
     'discovery.searchError': 'Failed to load partners',
     'discovery.searchErrorHint':
