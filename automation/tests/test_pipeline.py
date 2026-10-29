@@ -1578,6 +1578,37 @@ def test_exhausted_repair_budget_still_blocks_another_model_start(tmp_path, monk
     assert result.repair_attempts == 5
 
 
+def test_exhausted_repair_budget_parks_the_pull_request_once(tmp_path, monkeypatch):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+
+    github.statuses.append(github.statuses[0])
+    first = pipeline.run_job("77")
+    assert first is not None
+    first.next_attempt_at = None
+    pipeline.jobs.save({"77": first})
+    second = pipeline.run_job("77")
+
+    assert second is not None and second.last_error == "Repair limit exceeded"
+    pull_request = job.pull_request
+    assert (pull_request, ("factory-capped",)) in github.labels
+    notices = [
+        body
+        for number, body in github.comments
+        if number == pull_request and body.startswith("OpenHands Factory parked")
+    ]
+    assert len(notices) == 1
+    assert "CI-repair budget is spent" in notices[0]
+
+
 @pytest.mark.parametrize("status_kind", ["merged", "new-head", "green", "pending"])
 def test_exhausted_budget_cannot_hide_current_github_state(tmp_path, monkeypatch, status_kind):
     factory_config = config(tmp_path)

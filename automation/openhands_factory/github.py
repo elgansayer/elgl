@@ -795,6 +795,7 @@ class GitHubClient:
             "factory-reviewed": "0e8a16",
             "factory-stack-blocked": "fbca04",
             "factory-quarantined": "b60205",
+            "factory-capped": "c5def5",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
