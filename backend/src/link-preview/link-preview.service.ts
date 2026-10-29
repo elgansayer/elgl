@@ -316,6 +316,9 @@ export class LinkPreviewService {
           beforeRedirect: (options) => this.validateRedirectTarget(options),
           httpAgent,
           httpsAgent,
+          // A deployment-level proxy would resolve the target outside the
+          // guarded agents and could therefore bypass the SSRF DNS policy.
+          proxy: false,
           // Keep the body a string so axios never JSON-parses a page that
           // merely happens to look like JSON.
           responseType: 'text',
