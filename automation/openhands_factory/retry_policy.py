@@ -14,6 +14,7 @@ from openhands_factory.models import FailureKind, Job
 REPAIR_LIMIT_MESSAGE = "Repair limit exceeded"
 QUALITY_REPAIR_LIMIT_MESSAGE = "Quality repair limit exceeded"
 _REPAIR_BUDGET_PREFIXES = (REPAIR_LIMIT_MESSAGE.lower(), QUALITY_REPAIR_LIMIT_MESSAGE.lower())
+DRIFT_GUIDED_REPAIR_KEY = "design-drift-guided-repair"
 
 _AGENT_KIND_MAP: dict[str, FailureKind] = {
     "provider_auth": FailureKind.AUTHENTICATION,
@@ -183,9 +184,12 @@ def record_failure_diagnostics(job: Job, detail: str) -> int:
 
 
 def reset_retry_diagnostics(job: Job) -> None:
-    """Clear durable retry evidence after meaningful pipeline progress."""
+    """Clear retry evidence while preserving once-per-job action markers."""
 
+    drift_guided_repairs = job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY)
     job.failure_counts.clear()
+    if drift_guided_repairs is not None:
+        job.failure_counts[DRIFT_GUIDED_REPAIR_KEY] = drift_guided_repairs
     job.last_failure_kind = None
     job.last_failure_fingerprint = None
     job.repeated_failure_count = 0

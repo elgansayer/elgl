@@ -6,6 +6,7 @@ import pytest
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import FailureKind, Job, JobState, Task
 from openhands_factory.retry_policy import (
+    DRIFT_GUIDED_REPAIR_KEY,
     classify_failure,
     deterministic_backoff,
     is_repair_budget_exhausted,
@@ -194,10 +195,11 @@ def test_retry_budgets_are_counted_independently_by_failure_class() -> None:
 def test_retry_reset_requires_explicit_meaningful_progress() -> None:
     job = _job()
     record_failure_diagnostics(job, "maximum task duration exceeded")
+    job.failure_counts[DRIFT_GUIDED_REPAIR_KEY] = 1
 
     reset_retry_diagnostics(job)
 
-    assert job.failure_counts == {}
+    assert job.failure_counts == {DRIFT_GUIDED_REPAIR_KEY: 1}
     assert job.last_failure_kind is None
     assert job.last_failure_fingerprint is None
     assert job.repeated_failure_count == 0

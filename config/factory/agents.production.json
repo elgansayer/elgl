@@ -48,7 +48,7 @@
         "architecture": "gemini-3.8-flash-high",
         "security_review": "gemini-3.8-flash-high",
         "implementation": "gemini-3.8-flash-high",
-        "quality_repair": "gemini-3.8-flash-low",
+        "quality_repair": "gemini-3.8-flash-high",
         "code_review": "gemini-3.8-flash-medium",
         "ci_repair": "gemini-3.8-flash-low",
         "general_action": "gemini-3.8-flash-low"
