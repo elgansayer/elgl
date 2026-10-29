@@ -10,6 +10,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from functools import partial
+from pathlib import Path
 from typing import Protocol
 
 from openhands_factory.agents.base import (
@@ -76,6 +77,32 @@ def _record_probe_failure(
     retry_after_seconds: int | None,
 ) -> None:
     breaker.record_failure(failure, retry_after_seconds=retry_after_seconds)
+
+
+def run_preserving_git_link(provider: AgentProvider, request: AgentRequest) -> AgentResult:
+    """Run one provider and put back the worktree's ``.git`` link if it was changed.
+
+    CLI providers run directly in the task worktree. Twice (issue-7593 on
+    2026-10-22, issue-1436 on 2026-10-29) an agent rewrote ``.git`` to point at a
+    gitdir under /tmp that then vanished, so every later git command failed with
+    "not a git repository" and the task could only retry until quarantine.
+    """
+
+    link = request.cwd / ".git"
+    original = _git_link(link)
+    try:
+        return provider.run(request)
+    finally:
+        if original is not None and _git_link(link) != original and not link.is_dir():
+            LOGGER.warning("factory.agent.git_link_restored cwd=%s", request.cwd)
+            link.write_bytes(original)
+
+
+def _git_link(link: Path) -> bytes | None:
+    try:
+        return link.read_bytes() if link.is_file() else None
+    except OSError:
+        return None
 
 
 class AgentRouter:
@@ -606,7 +633,7 @@ class AgentRouter:
                         provider_attempt,
                     )
                     try:
-                        result = provider.run(provider_request)
+                        result = run_preserving_git_link(provider, provider_request)
                     except Exception as error:
                         result = self._crash_result(name, provider_request, error)
                     if self._stopping.is_set():

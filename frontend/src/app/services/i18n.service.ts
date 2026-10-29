@@ -611,6 +611,14 @@ export class I18nService {
     'moments.likedBy': 'Liked by',
     'moments.noLikesYet': 'No likes yet',
 
+    // Share Modal
+    'share.title': 'Share',
+    'share.dm': 'Direct message',
+    'share.moments': 'Moments',
+    'share.copy': 'Copy',
+    'share.copied': 'Copied!',
+    'share.linkInputAria': 'Share link',
+
     // Audio Room Component
     'audioRoom.liveSfuBadge': '🔴 Live SFU room',
     'audioRoom.title': 'Live room',
@@ -1851,6 +1859,7 @@ export class I18nService {
     'admin.banUserAria': 'Ban user {{name}}',
     'admin.warnConfirm': 'Are you sure you want to warn {{name}}?',
     'admin.banConfirm': 'Are you sure you want to ban {{name}}?',
+    'admin.banConfirmTitle': 'Ban user?',
     'admin.quickModeration': 'Quick moderation',
     'admin.quickModerationAria': 'Quick moderation actions',
     'admin.userTableAria': 'Administration user list',
@@ -1874,6 +1883,29 @@ export class I18nService {
     'admin.blocks.loadErrorDesc':
       'An error occurred while loading blocked users. Please try again.',
     'admin.blocks.unblock': 'Unblock',
+
+    // Lesson Manager Component
+    'admin.lessons.title': 'Lessons',
+    'admin.lessons.create': 'Create',
+    'admin.lessons.create_lesson': 'Create lesson',
+    'admin.lessons.edit_lesson': 'Edit lesson',
+    'admin.lessons.language': 'Language',
+    'admin.lessons.difficulty': 'Difficulty',
+    'admin.lessons.actions': 'Actions',
+    'admin.lessons.edit': 'Edit',
+    'admin.lessons.delete': 'Delete',
+    'admin.lessons.delete_confirm': 'Are you sure you want to delete this lesson?',
+    'admin.lessons.deleteConfirmTitle': 'Delete lesson?',
+    'admin.lessons.description': 'Description',
+    'admin.lessons.cover_image': 'Cover image',
+    'admin.lessons.upload_cover': 'Upload cover',
+    'admin.lessons.audio': 'Audio',
+    'admin.lessons.upload_audio': 'Upload audio',
+    'admin.lessons.content': 'Content',
+    'admin.lessons.save': 'Save',
+    'admin.lessons.cancel': 'Cancel',
+    'admin.lessons.error_missing_required': 'Please fill in all required fields.',
+    'admin.lessons.error_invalid_json': 'Invalid JSON format in lesson content.',
 
     // Sticker Store
     'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',
@@ -2455,7 +2487,7 @@ export class I18nService {
     'home.dailyTip.fallback': 'Keep practising every day!',
 
     // Link Preview
-    'linkPreview.openLink': 'Open link: {title}',
+    'linkPreview.opensInNewTab': 'Opens in a new tab',
 
     // Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',

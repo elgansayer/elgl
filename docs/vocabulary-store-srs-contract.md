@@ -1,6 +1,8 @@
 # Vocabulary store SRS contract
 
 Issue #973 is implemented by `frontend/src/app/services/vocabulary.store.ts`.
+Issue #1337 corrects its persisted level-0 presentation so every level follows
+the same mapping whether or not the token already has a flashcard.
 
 ## State ownership
 
@@ -14,7 +16,7 @@ The store owns client-side vocabulary state. The backend remains authoritative f
 
 | SRS state | Meaning | Relay treatment |
 | --- | --- | --- |
-| no flashcard | new word, level 0 | secondary accent |
+| no flashcard or level 0 | new word | secondary accent |
 | 1, 2, 3 | learning | warning accent |
 | 4 or greater | known | normal primary text |
 
@@ -39,7 +41,8 @@ The level mapping itself is pure and performs no network, storage, analytics, or
 `vocabulary.store.srs-contract.spec.ts` locks the issue contract by verifying:
 
 - `flashcardMap` is signal-owned and reacts to map replacement/update;
-- unknown tokens map to level 0;
+- unknown tokens map to level 0 with the new-word treatment;
+- persisted level-0 cards retain their record and use the same new-word treatment;
 - levels 1, 2, and 3 map to the learning treatment;
 - level 4 maps to the known-word treatment;
 - lookups are case-insensitive and trim surrounding whitespace;
@@ -50,4 +53,4 @@ The existing broader `vocabulary.store.spec.ts` continues to cover loading, pers
 
 ## Rollout and rollback
 
-This completion change adds regression coverage and documentation only. It does not change API, schema, persisted SRS values, or runtime styling. Rollback is a normal revert of the test/documentation commit.
+This correction changes only the presentation class returned for persisted level-0 cards. It does not change the API, schema, or persisted SRS values. Rollback is a normal revert of the store, test, and documentation change, which would restore the previous warning treatment for those cards.

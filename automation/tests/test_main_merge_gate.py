@@ -35,11 +35,13 @@ def test_current_main_ci_requires_success_for_exact_head(tmp_path: Path) -> None
                             "headSha": "older-head",
                             "status": "completed",
                             "conclusion": "success",
+                            "event": "push",
                         },
                         {
                             "headSha": "main-head",
                             "status": "completed",
                             "conclusion": "success",
+                            "event": "push",
                         },
                     ]
                 ),
@@ -55,8 +57,22 @@ def test_current_main_ci_requires_success_for_exact_head(tmp_path: Path) -> None
     assert status.green is True
     assert "--workflow" in runner.calls[1]
     assert "ci.yml" in runner.calls[1]
-    assert "--event" in runner.calls[1]
-    assert "push" in runner.calls[1]
+    assert "--event" not in runner.calls[1]
+    assert "headSha,status,conclusion,event" in runner.calls[1]
+
+
+def _gate_for(tmp_path: Path, runs: list[dict[str, str]]) -> MainBranchMergeGate:
+    runner = Runner([ProcessResult(0, "main-head\n", ""), ProcessResult(0, json.dumps(runs), "")])
+    return MainBranchMergeGate("owner/repo", tmp_path, "secret", runner)
+
+
+def test_watchdog_dispatched_main_ci_counts_but_pull_request_runs_do_not(tmp_path: Path) -> None:
+    run = {"headSha": "main-head", "status": "completed", "conclusion": "success"}
+    assert _gate_for(tmp_path, [{**run, "event": "workflow_dispatch"}]).is_green() is True
+    assert _gate_for(tmp_path, [{**run, "event": "pull_request"}]).is_green() is False
+    assert _gate_for(tmp_path, [run]).is_green() is False
+    failed_rerun = {**run, "conclusion": "failure", "event": "workflow_dispatch"}
+    assert _gate_for(tmp_path, [failed_rerun, {**run, "event": "push"}]).is_green() is False
 
 
 def test_current_main_ci_fails_closed_when_exact_head_has_no_run(tmp_path: Path) -> None:
@@ -71,6 +87,7 @@ def test_current_main_ci_fails_closed_when_exact_head_has_no_run(tmp_path: Path)
                             "headSha": "older-head",
                             "status": "completed",
                             "conclusion": "success",
+                            "event": "push",
                         }
                     ]
                 ),
@@ -95,6 +112,7 @@ def test_current_main_ci_fails_closed_when_run_is_pending(tmp_path: Path) -> Non
                             "headSha": "main-head",
                             "status": "in_progress",
                             "conclusion": "",
+                            "event": "push",
                         }
                     ]
                 ),

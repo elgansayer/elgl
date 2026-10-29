@@ -11,6 +11,11 @@ from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient, GitHubRunner
 from openhands_factory.models import Job, JobState
 
+# GitHub sometimes creates no push run for a new main head. main-ci-watchdog.yml
+# then dispatches the same workflow on main, which is equally canonical; only
+# accepting push left merges and deploys blocked on a546750a5 (2026-10-29).
+CANONICAL_CI_EVENTS = frozenset({"push", "workflow_dispatch"})
+
 
 @dataclass(frozen=True)
 class MainCiStatus:
@@ -82,12 +87,10 @@ class MainBranchMergeGate(GitHubClient):
                 "ci.yml",
                 "--branch",
                 self.base_branch,
-                "--event",
-                "push",
                 "--limit",
                 "50",
                 "--json",
-                "headSha,status,conclusion",
+                "headSha,status,conclusion,event",
             )
         )
         try:
@@ -99,6 +102,8 @@ class MainBranchMergeGate(GitHubClient):
 
         for raw in runs:
             if not isinstance(raw, dict) or str(raw.get("headSha") or "") != head_sha:
+                continue
+            if raw.get("event") not in CANONICAL_CI_EVENTS:
                 continue
             return MainCiStatus(
                 head_sha=head_sha,
