@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
+import type { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 
 export type UsersRow = {
   id: string;
@@ -679,6 +680,8 @@ export type ChatMessageRow = {
     animation_type?: string;
     animation_url?: string | null;
   } | null;
+  /** Bounded OpenGraph preview of the first URL in a text message. */
+  link_preview?: LinkPreview | null;
   reply_to_id?: string | null;
   is_view_once?: boolean;
   viewed_at?: string | null;

@@ -21,6 +21,7 @@ import {
   type LinkPreviewFailureReason,
 } from './link-preview-diagnostics';
 import { isPrivateIp } from './ip-guard';
+import { extractFirstHttpUrl } from './link-url';
 import type Redis from 'ioredis';
 
 /**
@@ -47,6 +48,10 @@ const MAX_SITE_NAME_LENGTH = 200;
 const MAX_CACHE_ENTRY_BYTES = 16_384;
 const CACHE_TTL_SECONDS = 3_600;
 const CACHE_PREFIX = 'link_preview:v2';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 const safeLookup = (
   hostname: string,
@@ -182,6 +187,39 @@ export class LinkPreviewService {
       }
     }
     return preview;
+  }
+
+  /**
+   * Rebuilds the preview persisted with a chat message
+   * (`chat_messages.link_preview`) before it is returned to a client.
+   *
+   * A stored preview is untrusted in the same way as a cache entry, so it goes
+   * through the current output contract again. It is also bound to the first
+   * link in the message's present text: an edit that changed or removed the
+   * link can therefore never leave a card for a different page on screen, even
+   * when clearing the stored preview failed or lost a race with another edit.
+   *
+   * @returns the sanitised preview, or `null` when the stored value is
+   * malformed, describes another URL, or the text has no previewable link.
+   */
+  restoreStoredPreview(
+    stored: unknown,
+    text: string | null | undefined,
+  ): LinkPreview | null {
+    const link = text ? extractFirstHttpUrl(text) : null;
+    if (!link) {
+      return null;
+    }
+
+    let parsed: URL;
+    try {
+      // A preview is only ever stored for a link the scraper accepted, so a
+      // stored one for a refused link is not something this service produced.
+      parsed = this.validateUrl(link);
+    } catch {
+      return null;
+    }
+    return this.restorePreview(stored, parsed.href);
   }
 
   private validateUrl(raw: string): URL {
@@ -462,32 +500,37 @@ export class LinkPreviewService {
       return null;
     }
 
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return null;
-    }
+    return this.restorePreview(parsed, requestedUrl);
+  }
 
-    const candidate = parsed as Record<string, unknown>;
-    if (candidate['url'] !== requestedUrl) {
+  /**
+   * Re-validates preview data that left this service earlier (the Redis cache
+   * or a chat message row). It must describe `requestedUrl`; text fields are
+   * sanitised and bounded again and an unsafe image is dropped.
+   */
+  private restorePreview(
+    stored: unknown,
+    requestedUrl: string,
+  ): LinkPreview | null {
+    if (!isRecord(stored) || stored['url'] !== requestedUrl) {
       return null;
     }
 
     const title = this.sanitiseMetaContent(
-      typeof candidate['title'] === 'string' ? candidate['title'] : '',
+      typeof stored['title'] === 'string' ? stored['title'] : '',
       MAX_TITLE_LENGTH,
     );
     const description = this.sanitiseMetaContent(
-      typeof candidate['description'] === 'string'
-        ? candidate['description']
-        : '',
+      typeof stored['description'] === 'string' ? stored['description'] : '',
       MAX_DESCRIPTION_LENGTH,
     );
     const image = this.sanitiseImageUrl(
-      typeof candidate['image'] === 'string' ? candidate['image'] : '',
+      typeof stored['image'] === 'string' ? stored['image'] : '',
       requestedUrl,
     );
     const siteName = this.sanitiseMetaContent(
-      typeof candidate['siteName'] === 'string' && candidate['siteName']
-        ? candidate['siteName']
+      typeof stored['siteName'] === 'string' && stored['siteName']
+        ? stored['siteName']
         : new URL(requestedUrl).hostname,
       MAX_SITE_NAME_LENGTH,
     );
