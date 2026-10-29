@@ -3101,6 +3101,128 @@ def test_quality_repair_that_changes_nothing_still_spends_the_budget(
     assert len(capped.provider_history) == calls
 
 
+def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=5,
+        review_findings=["raw drift tail"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift",
+        lambda worktree, task_id: "edit frontend/design-preview/screens/chat.html",
+    )
+
+    guided = pipeline.run_job("42")
+
+    assert guided is not None
+    assert len(prompts) == 1
+    assert "edit frontend/design-preview/screens/chat.html" in prompts[0]
+    assert guided.failure_counts["design-drift-guided-repair"] == 1
+
+    guided.state = JobState.QUALITY_REPAIRING
+    guided.review_findings = ["raw drift tail"]
+    guided.next_attempt_at = None
+    pipeline.jobs.save({"42": guided})
+    capped = pipeline.run_job("42")
+
+    assert capped is not None
+    assert "Quality repair limit exceeded" in (capped.last_error or "")
+    assert len(prompts) == 1
+
+
+def test_capped_ci_repair_without_design_drift_gets_no_extra_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.check_design_drift", lambda *args: None)
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("unexpected model")
+    )
+
+    capped = pipeline.run_job("77")
+
+    assert capped is not None and capped.last_error == "Repair limit exceeded"
+    assert "design-drift-guided-repair" not in capped.failure_counts
+
+
+def test_capped_ci_repair_gets_one_design_drift_guided_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    github.statuses.append(github.statuses[0])
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift",
+        lambda worktree, task_id: "edit frontend/design-preview/screens/chat.html",
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    contexts: list[str] = []
+
+    def agent(current, worktree, phase, prompt, **kwargs):
+        contexts.append(prompt)
+        raise FactoryError("stop after the guided repair")
+
+    monkeypatch.setattr(pipeline, "_run_agent", agent)
+
+    guided = pipeline.run_job("77")
+
+    assert guided is not None
+    assert len(contexts) == 1
+    assert "edit frontend/design-preview/screens/chat.html" in contexts[0]
+    assert guided.failure_counts["design-drift-guided-repair"] == 1
+    assert guided.repair_attempts == 6
+
+    guided.next_attempt_at = None
+    guided.state = JobState.REPAIRING
+    pipeline.jobs.save({"77": guided})
+    capped = pipeline.run_job("77")
+
+    assert capped is not None and capped.last_error == "Repair limit exceeded"
+    assert len(contexts) == 1
+    assert (job.pull_request, ("factory-capped",)) in github.labels
+
+
 @pytest.mark.parametrize(
     ("state", "pull_request", "age_days", "rebuilt"),
     [

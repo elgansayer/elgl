@@ -68,6 +68,9 @@ MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 STALE_UNPUBLISHED_BASE_AGE = timedelta(days=7)
 CAPPED_LABEL = "factory-capped"
 CAPPED_NOTICE_PREFIX = "OpenHands Factory parked this pull request: "
+# failure_counts key recording that a capped job spent its one design-drift-guided
+# repair, so the extra attempt is granted at most once per job.
+DRIFT_GUIDED_REPAIR_KEY = "design-drift-guided-repair"
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -1134,8 +1137,11 @@ class FactoryPipeline:
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return
-                self._park_capped_pull_request(job, "its quality-repair budget is spent")
-                raise FactoryError("Quality repair limit exceeded")
+                drift = check_design_drift(worktree, job.task.identifier)
+                if not self._grant_drift_guided_repair(job, drift):
+                    self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                    raise FactoryError("Quality repair limit exceeded")
+                job.review_findings = [f"Local verification failed:\n{drift}"]
 
             quality_finding_text = "\n".join(
                 f"- {f.code} in {f.path}: {f.summary}\n  Evidence: {f.evidence}" for f in findings
@@ -1430,6 +1436,7 @@ class FactoryPipeline:
                 )
             # GitHub names this gate only as `constitution`; run it here so the
             # agent is told which preview or manifest item to change.
+            drift = None
             if not (base_conflict or stale_base) and (
                 drift := check_design_drift(worktree, job.task.identifier)
             ):
@@ -1467,8 +1474,9 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
                         return
-                    self._park_capped_pull_request(job, "its CI-repair budget is spent")
-                    raise FactoryError("Repair limit exceeded")
+                    if not self._grant_drift_guided_repair(job, drift):
+                        self._park_capped_pull_request(job, "its CI-repair budget is spent")
+                        raise FactoryError("Repair limit exceeded")
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
                 # still-conflicting PR then routes QUALITY_REPAIRING back to
@@ -2008,6 +2016,20 @@ class FactoryPipeline:
         job.quality_repairs = 0
         job.review_findings.clear()
         job.state = JobState.DISCOVERED
+        return True
+
+    def _grant_drift_guided_repair(self, job: Job, drift: str | None) -> bool:
+        """Allow one repair past the cap when design drift is the failure.
+
+        Jobs 1450 and 9460 spent their whole budget on design-sync drift before
+        the agent was told which preview or manifest item to change, then parked
+        on their first run with that guidance (2026-10-29). The gate is
+        unchanged; this only lets the explicit steps be tried once per job.
+        """
+        if not drift or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+            return False
+        job.failure_counts[DRIFT_GUIDED_REPAIR_KEY] = 1
+        LOGGER.info("Granting task %s one design-drift-guided repair", job.task.identifier)
         return True
 
     def _park_capped_pull_request(self, job: Job, reason: str) -> None:
