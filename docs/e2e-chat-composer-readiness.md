@@ -35,4 +35,6 @@ The second command also runs backend-readiness and chat-composer preflight check
 
 If the production composer test ID intentionally changes, update the Angular template, the Playwright specs, and this contract in the same pull request. Do not add a second hidden input or a compatibility-only interactive control just to preserve an obsolete locator.
 
-This change has no API, database, authentication, analytics, or persisted-state impact. Rollback is a normal revert of the E2E contract/package-script changes.
+Rollout requires no schema migration: deploy the backend validation and persistence defence with the E2E contract. The API now removes null bytes from text-message send and edit payloads before validation and persistence, so stored text can differ from the raw request only by removal of those bytes. Authentication, authorisation, analytics, and existing stored messages are unchanged.
+
+Rollback is a normal revert of the DTO, chat-service, E2E, and contract changes. Existing cleaned messages need no data recovery, but after rollback a client that submits a null byte can once again trigger PostgreSQL's unsupported UTF-8 null-byte failure. Restore the backend sanitisation if that failure reappears.
