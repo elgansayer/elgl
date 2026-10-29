@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { of } from 'rxjs';
 import type Redis from 'ioredis';
+import type { MetricsService } from '../metrics/metrics.service';
 
 vi.mock('jsdom', () => ({
   JSDOM: vi.fn().mockImplementation(function () {
@@ -55,6 +56,7 @@ describe('LinkPreviewService security boundaries', () => {
     service = new LinkPreviewService(
       httpService as unknown as HttpService,
       redis as unknown as Redis,
+      { recordLinkPreview: vi.fn() } as unknown as MetricsService,
     );
   });
 

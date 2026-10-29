@@ -61,18 +61,21 @@ import { BadRequestException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
 import { LinkPreviewService } from './link-preview.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LinkPreviewService', () => {
   let service: LinkPreviewService;
   let httpService: { get: Mock };
   let redis: { get: Mock; set: Mock };
+  let metrics: { recordLinkPreview: Mock };
 
   beforeEach(async () => {
     redis = {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue('OK'),
     };
+    metrics = { recordLinkPreview: vi.fn() };
 
     httpService = {
       get: vi.fn(),
@@ -87,6 +90,7 @@ describe('LinkPreviewService', () => {
           useValue: { getRedisClient: vi.fn().mockReturnValue(redis) },
         },
         { provide: 'REDIS_CLIENT', useValue: redis },
+        { provide: MetricsService, useValue: metrics },
       ],
     }).compile();
 
@@ -358,6 +362,17 @@ describe('LinkPreviewService', () => {
 
     const result = await service.getPreview('https://example.com/xhtml');
     expect(result?.title).toBe('XHTML Title');
+  });
+
+  it('uses only the first <title> so inline SVG icon titles are not appended', async () => {
+    mockHtmlResponse(`
+      <html><head><title>Real Page Title</title></head>
+      <body><svg><title>Icon</title></svg></body></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/svg-title');
+
+    expect(result?.title).toBe('Real Page Title');
   });
 
   it('extracts og:image:secure_url when og:image is absent', async () => {

@@ -60,7 +60,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 
 - `id` (UUID, Primary Key)
 - `moment_id` (UUID, Foreign Key referencing `moments.id`, indexed)
-- `user_id` (UUID, Foreign Key referencing `users.id`)
+- `user_id` (UUID, Foreign Key referencing `users.id`, indexed together with `created_at DESC` for the viewer's recent-likes history used by For You ranking)
 - `created_at` (Timestamp with time zone, default `now()`)
 
 ### Table: `flashcards` (LingQ Interactive Reading & SRS Vocabulary Bank)
@@ -140,6 +140,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 
 - **Publish Flow:** `POST /moments` saves moment to `moments` table, then pushes `moment.id` asynchronously via NestJS background queue (`BullMQ` or native Redis `RPUSH`) into `timeline_queue:{follower_id}` for all followers (and language classmates).
 - **Feed Retrieval:** `GET /moments/feed?filter=all|classmates|following` fetches top 20 IDs from Redis list using `LRANGE`, then retrieves full hydrated objects from Supabase.
+- **For You Ranking:** `GET /moments/feed?filter=For%20You` merges in-network Moments (Redis `timeline_queue:{user_id}`, falling back to a bounded follow-graph read) with the newest network-wide Moments, applies the block and targeted-language rules, then ranks the bounded pool by recency, engagement, followed-author membership, hashtag affinity and author diversity. Details, bounds and metrics: `docs/moments_for_you_ranking.md`.
 
 ### NLP & AI Module
 
