@@ -1,0 +1,1 @@
+Tests already implemented in discovery.postgis.spec.ts and discovery.service.postgis.spec.ts. Verified PostGIS queries for DiscoveryService have full coverage.

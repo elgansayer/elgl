@@ -1,9 +1,17 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nService } from './i18n.service';
 import { AuthService } from './auth.service';
+import { TranslatePipe } from './translate.pipe';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+
+@Component({
+  imports: [TranslatePipe],
+  template: `<h1>{{ 'classroomsMarketplace.title' | t }}</h1>`,
+})
+class ClassroomsTitleHostComponent {}
 
 describe('I18nService', () => {
   let service: I18nService;
@@ -335,6 +343,77 @@ describe('I18nService', () => {
     it('should return the key itself for unknown translation keys', () => {
       const key = 'vip.doesNotExist';
       expect(service.translate(key)).toBe(key);
+    });
+  });
+
+  describe('dictionary value hygiene', () => {
+    // Interpolation and attribute bindings print text verbatim, so entities are never decoded.
+    const HTML_ENTITY = /&(?:#\d+|#x[\da-f]+|[a-z][a-z0-9]{1,8});/i;
+    const EMOJI = /\p{Extended_Pictographic}/u;
+    const INFRASTRUCTURE = /cloudflare|\bR2\b|supabase|centrifugo|livekit|redis|postgres/i;
+
+    function entriesUnder(prefix: string): [string, string][] {
+      return Object.entries(service.translations()).filter(([key]) => key.startsWith(prefix));
+    }
+
+    it('stores the classrooms title as an emoji character rather than HTML entities', () => {
+      const title = service.translate('classroomsMarketplace.title');
+
+      expect(title).toBe('🏫 Video Classrooms');
+      expect(title).not.toMatch(HTML_ENTITY);
+    });
+
+    it('renders the classrooms title through interpolation without literal entity text', () => {
+      const fixture = TestBed.createComponent(ClassroomsTitleHostComponent);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe(
+        '🏫 Video Classrooms',
+      );
+    });
+
+    it('contains no HTML entities in any dictionary value', () => {
+      for (const [key, value] of Object.entries(service.translations())) {
+        expect(value, key).not.toMatch(HTML_ENTITY);
+      }
+    });
+
+    it('uses double-brace placeholders because translate() never substitutes single braces', () => {
+      const singleBracePlaceholder = /(?<!\{)\{[A-Za-z_][\w.]*\}(?!\})/;
+
+      for (const [key, value] of Object.entries(service.translations())) {
+        expect(value, key).not.toMatch(singleBracePlaceholder);
+      }
+    });
+
+    it('announces that link preview cards open in a new tab', () => {
+      expect(service.translate('linkPreview.opensInNewTab')).toBe('Opens in a new tab');
+    });
+
+    it('keeps navigation labels free of emoji because every template draws its own icon', () => {
+      const labels = entriesUnder('nav.');
+
+      expect(labels.length).toBeGreaterThan(0);
+      for (const [key, value] of labels) {
+        expect(value, key).not.toMatch(EMOJI);
+      }
+    });
+
+    it.each(['moments.readAloud', 'moments.stopReading'])(
+      'keeps %s free of emoji because the speech button draws its own icon',
+      (key) => {
+        expect(service.translate(key)).not.toMatch(EMOJI);
+      },
+    );
+
+    it('words the voice note upload state without naming the storage provider', () => {
+      expect(service.translate('voiceRecorder.uploadingBtn')).toBe('⏳ Uploading...');
+
+      const copy = entriesUnder('voiceRecorder.');
+      expect(copy.length).toBeGreaterThan(0);
+      for (const [key, value] of copy) {
+        expect(value, key).not.toMatch(INFRASTRUCTURE);
+      }
     });
   });
 });

@@ -42,6 +42,16 @@ Use `{{placeholder}}` syntax for interpolated params inside the dictionary strin
 4. If the string could reasonably need localisation nuance (pluralisation, gendered forms), note it as a follow-up rather than baking English-only logic into the key.
 5. For dynamically-fetched UI dictionaries in other locales, the backend `POST /nlp/translate-ui` endpoint (`NlpService#translateUi`) merges a Redis-cached per-locale dictionary over the caller-supplied English dictionary - new keys automatically flow through once added to `baseDictionary`, but non-English translations for that key won't exist until the backend dictionary/cache is updated too.
 
+## Dictionary Value Hygiene
+
+`| t` and `I18nService.translate` print a value verbatim, so keep every value plain, user-safe text:
+
+- Store emoji and symbols as characters, never HTML entities such as `&#127979;`. Interpolation does not decode entities, so users would read the entity text literally.
+- Do not put an emoji in a label when the template already draws an icon beside it (every `nav.*` label, `moments.readAloud`, `moments.stopReading`). The icon would show twice and the emoji would leak into the accessible name.
+- Never name infrastructure in end-user copy (Cloudflare, R2, LiveKit, Supabase, Centrifugo, Redis). Describe what the user is doing instead, for example `Uploading...`.
+- `frontend/src/app/services/i18n.service.spec.ts` (`dictionary value hygiene`) guards these rules.
+- A corrected English string reaches non-English users only when their cached copy refreshes: the browser keeps `hellotalk_dict_<locale>` and the backend keeps a 7-day `ui_dict:<locale>` Redis entry.
+
 ## Word Tokenisation
 
 Use the native `Intl.Segmenter` API (baseline browser support since 2024) to parse text into clickable word

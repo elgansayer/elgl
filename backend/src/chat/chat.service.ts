@@ -15,6 +15,7 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
+import { extractFirstHttpUrl } from '../link-preview/link-url';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import {
@@ -374,6 +375,29 @@ export class ChatService {
     return { unreadCount };
   }
 
+  /**
+   * Best-effort OpenGraph enrichment for the first URL in a text message.
+   *
+   * Previews are enrichment only, so every validation, network or parsing
+   * failure resolves to `null` and never blocks message delivery. Shared by
+   * direct sends, group sends, edits and forwards so they all pick the same
+   * URL and degrade the same way.
+   */
+  protected async resolveLinkPreview(
+    text: string | null | undefined,
+  ): Promise<LinkPreview | null> {
+    const url = text ? extractFirstHttpUrl(text) : null;
+    if (!url) {
+      return null;
+    }
+
+    try {
+      return (await this.linkPreviewService.getPreview(url)) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async sendMessage(
     senderId: string,
     dto: SendMessageDto,
@@ -463,17 +487,10 @@ export class ChatService {
     void this.xpService.awardXpForActivity(senderId, 'send_message');
 
     // ---------- Link preview scraping ----------
-    let linkPreview: LinkPreview | null = null;
-    try {
-      if (dto.message_type === 'text' && dto.text_content) {
-        const urlMatch = dto.text_content.match(/https?:\/\/[^\s]+/);
-        if (urlMatch) {
-          linkPreview = await this.linkPreviewService.getPreview(urlMatch[0]);
-        }
-      }
-    } catch {
-      // ignore any error; just continue without preview
-    }
+    const linkPreview =
+      dto.message_type === 'text'
+        ? await this.resolveLinkPreview(dto.text_content)
+        : null;
 
     // ---------- Auto‑generate explanation for correction if missing ----------
     let messageForPublish: ChatMessage = linkPreview
@@ -1631,11 +1648,21 @@ export class ChatService {
       );
     }
 
+    // The preview describes the first URL of the edited text. Realtime clients
+    // merge this event over their local copy of the message, so the field is
+    // always published explicitly: `null` clears a card whose link was removed
+    // or failed to resolve, instead of leaving the previous preview on screen.
+    const linkPreview = await this.resolveLinkPreview(dto.text_content);
+    const editedMessage: ChatMessage = {
+      ...updatedMsg,
+      link_preview: linkPreview,
+    };
+
     await this.centrifugoService.publish(`chat:${roomId}`, {
-      message: updatedMsg,
+      message: editedMessage,
     });
 
-    return updatedMsg;
+    return editedMessage;
   }
 
   async deleteMessage(
@@ -1915,6 +1942,13 @@ export class ChatService {
       membersByRoom.get(member.room_id)!.push({ user_id: member.user_id });
     }
 
+    // The forwarded text is identical in every target room, so scrape its
+    // preview once instead of once per room.
+    const forwardedPreview =
+      validMembershipRoomIds.size > 0 && originalMsg.message_type === 'text'
+        ? await this.resolveLinkPreview(originalMsg.text_content)
+        : null;
+
     // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
     // Promise.allSettled mapped execution to drastically reduce database latency during fan-out inserts.
     // Expected impact: N sequential database roundtrips become 1 concurrent block.
@@ -1972,7 +2006,10 @@ export class ChatService {
           return; // Skip on insert failure
         }
 
-        const forwardedMsg = insertResponse.data as ChatMessage;
+        const insertedMsg: ChatMessage = insertResponse.data;
+        const forwardedMsg: ChatMessage = forwardedPreview
+          ? { ...insertedMsg, link_preview: forwardedPreview }
+          : insertedMsg;
 
         // Publish to Centrifugo channel for the target room
         await this.centrifugoService.publish(`chat:${targetRoomId}`, {

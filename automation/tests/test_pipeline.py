@@ -21,6 +21,7 @@ from openhands_factory.github import IssueComment, PullRequestMatch, PullRequest
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
 from openhands_factory.pr_convergence import PullRequestRecord
+from openhands_factory.quality_gate import QualityFinding
 from openhands_factory.repository_guard import ensure_push_target
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -173,6 +174,9 @@ class GitHub:
 
     def publish_review_pending(self, head_sha: str, *, detail: str) -> None:
         self.pending_reviews.append(head_sha)
+
+    def failed_check_excerpts(self, head_sha: str) -> str:
+        return self.ci_excerpts if hasattr(self, "ci_excerpts") else ""
 
     def pull_request_status(self, pull_request: int) -> PullRequestStatus:
         return self.statuses.pop(0)
@@ -1201,6 +1205,48 @@ def test_verified_repair_of_existing_pull_request_returns_to_review_without_new_
     assert github.comments[-1][0] == 77
 
 
+@pytest.mark.parametrize(("latest_verified_sha", "commits"), [("verified-head", 0), (None, 1)])
+def test_a_clean_worktree_commits_only_when_its_head_was_not_already_verified(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    latest_verified_sha: str | None,
+    commits: int,
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", True, "MERGEABLE", "", "verified-head", True, False)
+    ]
+    (factory_config.worktree_dir / "issue-77").mkdir(parents=True)
+    job = Job(
+        task=Task("77", "Finish placeholder surfaces", "Body", "github-issue", 10),
+        state=JobState.VERIFYING,
+        branch="factory/77-finish",
+        pull_request=77,
+        head_sha="verified-head",
+        latest_verified_sha=latest_verified_sha,
+    )
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    pipeline.jobs.save({"77": job})
+    committed: list[str] = []
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: committed.append(message))
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "verified-head")
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert len(committed) == commits
+    assert result.state is JobState.REVIEWING
+
+
 @pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
 def test_unknown_mergeability_waits_without_repair_or_merge(
     tmp_path: Path,
@@ -1535,6 +1581,37 @@ def test_exhausted_repair_budget_still_blocks_another_model_start(tmp_path, monk
     assert result.repair_attempts == 5
 
 
+def test_exhausted_repair_budget_parks_the_pull_request_once(tmp_path, monkeypatch):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+
+    github.statuses.append(github.statuses[0])
+    first = pipeline.run_job("77")
+    assert first is not None
+    first.next_attempt_at = None
+    pipeline.jobs.save({"77": first})
+    second = pipeline.run_job("77")
+
+    assert second is not None and second.last_error == "Repair limit exceeded"
+    pull_request = job.pull_request
+    assert (pull_request, ("factory-capped",)) in github.labels
+    notices = [
+        body
+        for number, body in github.comments
+        if number == pull_request and body.startswith("OpenHands Factory parked")
+    ]
+    assert len(notices) == 1
+    assert "CI-repair budget is spent" in notices[0]
+
+
 @pytest.mark.parametrize("status_kind", ["merged", "new-head", "green", "pending"])
 def test_exhausted_budget_cannot_hide_current_github_state(tmp_path, monkeypatch, status_kind):
     factory_config = config(tmp_path)
@@ -1625,9 +1702,98 @@ def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
     assert result.repair_attempts == 1
 
 
+def test_ci_repair_prompt_includes_the_failed_job_log_excerpts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.ci_excerpts = "### backend / unit\n FAIL  src/chat/search.spec.ts > keeps filters"
+    job = _repairing_job(factory_config, github)
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda worktree, task_id: None
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed("stop after the prompt")),
+    )
+
+    pipeline.run_job("77")
+
+    assert len(prompts) == 1
+    assert "Failed CI job log excerpts:" in prompts[0]
+    assert "FAIL  src/chat/search.spec.ts > keeps filters" in prompts[0]
+
+
+def test_ci_repair_is_told_which_design_preview_or_manifest_item_to_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.last_error = "Design sync drift verification failed:\n- screen.chat: noisy tail"
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift",
+        lambda worktree, task_id: f"edit frontend/design-preview/screens/chat.html for {task_id}",
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed("stop after the prompt")),
+    )
+
+    pipeline.run_job("77")
+
+    assert len(prompts) == 1
+    assert f"edit frontend/design-preview/screens/chat.html for {job.task.identifier}" in prompts[0]
+    # The raw gate output is replaced by the guidance, not repeated beside it.
+    assert "noisy tail" not in prompts[0]
+
+
+def _without_mechanical_repair(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda repository, changed_paths: None,
+    )
+
+
 def test_repair_verification_failure_enters_quality_repair_without_backoff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     github = GitHub()
     job = _repairing_job(factory_config, github)
@@ -1653,6 +1819,40 @@ def test_repair_verification_failure_enters_quality_repair_without_backoff(
     assert "design-sync-drift" in result.review_findings[0]
 
 
+def test_local_design_drift_failure_becomes_explicit_quality_repair_steps(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _without_mechanical_repair(monkeypatch)
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    failure = (
+        "design-sync-drift failed with exit 1: ok 1 - passing self-test\n"
+        "Design sync drift verification failed:\n"
+        "- screen.chat: mapped implementation changed without its mapped preview\n"
+        "    changed: frontend/src/app/pages/chat/chat.page.html\n"
+        "    update the preview to match: frontend/design-preview/screens/chat.html\n"
+        '    or, if the visual contract is unchanged, record why in the "screen.chat" item\n'
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
+    )
+    result = pipeline.run_job("77")
+    assert result is not None and result.state is JobState.QUALITY_REPAIRING
+    assert "edit frontend/design-preview/screens/chat.html" in result.review_findings[0]
+    assert 'only the "screen.chat" item' in result.review_findings[0]
+    assert "passing self-test" not in result.review_findings[0]
+
+
 def _failing_model_repair_pipeline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[FactoryPipeline, GitHub, list[Task]]:
@@ -1675,8 +1875,8 @@ def _failing_model_repair_pipeline(
     pipeline.jobs.save({"77": job})
     monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
-    fingerprints = iter(range(1_000))
-    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    # Only a model call changes the tree; the stubbed mechanical fixers never do.
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: str(len(agent_calls)))
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
     monkeypatch.setattr(
         GitWorkflow, "push", lambda workflow, branch: pytest.fail("unverified repair pushed")
@@ -2796,6 +2996,7 @@ def test_local_verification_failure_routes_into_quality_repair(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     worktree = factory_config.worktree_dir / "issue-42"
     worktree.mkdir(parents=True)
@@ -2878,6 +3079,7 @@ def test_quality_repair_that_changes_nothing_still_spends_the_budget(
     )
     pipeline.jobs.save({"42": job})
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
     monkeypatch.setattr(
         "openhands_factory.pipeline.check_quality_gate",
         lambda workflow, base_branch: [],
@@ -2897,6 +3099,64 @@ def test_quality_repair_that_changes_nothing_still_spends_the_budget(
     assert capped is not None
     assert "Quality repair limit exceeded" in (capped.last_error or "")
     assert len(capped.provider_history) == calls
+
+
+@pytest.mark.parametrize(
+    ("state", "pull_request", "age_days", "rebuilt"),
+    [
+        (JobState.QUALITY_REPAIRING, None, 40, True),
+        (JobState.VERIFYING, None, 40, True),
+        (JobState.QUALITY_REPAIRING, None, 2, False),
+        (JobState.QUALITY_REPAIRING, 77, 40, False),
+    ],
+)
+def test_spent_quality_budget_rebuilds_only_unpublished_work_on_a_stale_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    state: JobState,
+    pull_request: int | None,
+    age_days: int,
+    rebuilt: bool,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Rebuild stale work", "Body", "github-issue", 0),
+        state=state,
+        branch="factory/42-rebuild-stale-work",
+        pull_request=pull_request,
+        quality_repairs=5,
+        review_findings=["frontend-build failed with exit 1"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=age_days))
+    monkeypatch.setattr(FactoryPipeline, "_verify", lambda pipeline, workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [
+            QualityFinding("credential-artifact", Path(".claude/x"), None, "summary", "evidence")
+        ],
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.provider_history == []
+    if rebuilt:
+        assert result.state is JobState.DISCOVERED
+        assert result.quality_repairs == 0
+        assert result.review_findings == []
+        assert result.last_error is None
+    else:
+        assert result.state is state
+        assert result.quality_repairs == 5
+        assert result.last_error is not None
 
 
 @pytest.mark.parametrize(
@@ -2926,6 +3186,7 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     )
     pipeline.jobs.save({"42": job})
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
     monkeypatch.setattr(
         "openhands_factory.pipeline.run_verification",
         lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
@@ -2940,10 +3201,93 @@ def test_verification_infrastructure_failure_retries_without_agent_repair(
     assert failed.next_attempt_at is not None
 
 
+def test_infrastructure_failure_on_stale_unpublished_base_rebuilds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Rebuild on current fonts", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-rebuild-on-current-fonts",
+        quality_repairs=2,
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=40))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed(
+                "frontend-build failed with exit 1: getaddrinfo EAI_AGAIN fonts.googleapis.com"
+            )
+        ),
+    )
+
+    rebuilt = pipeline.run_job("42")
+
+    assert rebuilt is not None
+    assert rebuilt.state is JobState.DISCOVERED
+    assert rebuilt.quality_repairs == 0
+    assert rebuilt.provider_history == []
+
+
+def test_auto_fixable_verification_failure_is_reverified_without_a_model(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Fix formatting for free", "Body", "github-issue", 0),
+        state=JobState.VERIFYING,
+        branch="factory/42-fix-formatting-for-free",
+        quality_repairs=1,
+    )
+    pipeline.jobs.save({"42": job})
+    fixed: list[set[Path]] = []
+    fingerprints = iter(("before-fix", "after-fix"))
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("backend/x.ts")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair",
+        lambda repository, changed_paths: fixed.append(changed_paths),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(
+            VerificationFailed("backend-lint:check failed with exit 1: prettier/prettier")
+        ),
+    )
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert fixed == [{Path("backend/x.ts")}]
+    assert result.state is JobState.VERIFYING
+    assert result.quality_repairs == 1
+    assert result.review_findings == []
+    assert result.provider_history == []
+
+
 def test_external_pull_request_verification_failure_enters_repair_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _without_mechanical_repair(monkeypatch)
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [

@@ -1033,7 +1033,7 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['fallback-1']);
     });
 
-    it('should fall back to standard query when RPC returns empty data', async () => {
+    it('should preserve an empty successful RPC result', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({ data: [], error: null });
       stubLimitResponse([{ id: 'fb-empty' }]);
 
@@ -1042,8 +1042,8 @@ describe('DiscoveryService', () => {
         longitude: 139.6917,
       });
 
-      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
-      expect(result.map((u) => u.id)).toEqual(['fb-empty']);
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
     });
 
     it('should apply extra filters on RPC fallback results (level, age)', async () => {

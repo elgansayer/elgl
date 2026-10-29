@@ -70,12 +70,18 @@ describe('DiscoveryService PostGIS partner queries', () => {
   let rpc: Mock;
   let getBlockedAndBlockerIds: Mock;
   let redisGet: Mock;
+  let logger: { info: Mock; warn: Mock; error: Mock };
 
   beforeEach(() => {
     queryBuilder = createQueryBuilder();
     rpc = vi.fn();
     getBlockedAndBlockerIds = vi.fn().mockResolvedValue([]);
     redisGet = vi.fn().mockResolvedValue(null);
+    logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
 
     const supabaseClient = {
       from: vi.fn().mockReturnValue(queryBuilder),
@@ -83,11 +89,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
     };
 
     service = new DiscoveryService(
-      {
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-      } as never,
+      logger as never,
       {} as never,
       {
         getClient: vi.fn().mockReturnValue(supabaseClient),
@@ -278,6 +280,10 @@ describe('DiscoveryService PostGIS partner queries', () => {
     });
 
     expect(queryBuilder.limit).toHaveBeenCalledWith(50);
+    expect(logger.warn).toHaveBeenCalledWith(
+      { error: 'PostGIS unavailable' },
+      'PostGIS partner search failed; using bounded non-spatial fallback',
+    );
     expect(result).toEqual([
       expect.objectContaining({
         id: 'fallback-partner',
@@ -286,7 +292,39 @@ describe('DiscoveryService PostGIS partner queries', () => {
     ]);
   });
 
-  it('falls back when the PostGIS RPC returns no nearby users', async () => {
+  it('logs search metrics when PostGIS proximity search matches users within custom radius', async () => {
+    rpc.mockResolvedValue({
+      data: [makeRpcUser('nearby-user-1', 4500)],
+      error: null,
+    } satisfies QueryResult);
+
+    const result = await service.searchPartners('current-user', null, {
+      latitude: 48.8566,
+      longitude: 2.3522,
+      radius_metres: 10000,
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'search_nearby_users',
+      expect.objectContaining({
+        search_lat: 48.8566,
+        search_lon: 2.3522,
+        radius_m: 10000,
+      }),
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      { count: 1, radius_m: 10000 },
+      'PostGIS proximity search matched nearby partners within radius',
+    );
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'nearby-user-1',
+        distance_metres: 4500,
+      }),
+    ]);
+  });
+
+  it('preserves an empty successful PostGIS result without returning users outside the radius', async () => {
     rpc.mockResolvedValue({ data: [], error: null } satisfies QueryResult);
     queryBuilder.limit.mockResolvedValue({
       data: [makeRpcUser('fallback-empty')],
@@ -298,12 +336,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
       longitude: -0.1278,
     });
 
-    expect(queryBuilder.limit).toHaveBeenCalledWith(50);
-    expect(result).toEqual([
-      expect.objectContaining({
-        id: 'fallback-empty',
-        distance_metres: undefined,
-      }),
-    ]);
+    expect(queryBuilder.limit).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
   });
 });

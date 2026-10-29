@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.models import Task
 from openhands_factory.pr_convergence import (
     ConvergenceAction,
@@ -189,6 +191,23 @@ def test_closed_factory_pr_is_reopened_but_external_closed_pr_blocks() -> None:
     assert blocked.action is ConvergenceAction.BLOCKED
 
 
+@pytest.mark.parametrize("label", ["superseded", "duplicate", "factory-skip"])
+@pytest.mark.parametrize("branch", ["contributor/churn", "factory/42-some-task"])
+def test_retired_closed_pr_is_neither_blocking_nor_reopened(label: str, branch: str) -> None:
+    current = identity()
+    retired = record(
+        81,
+        state="CLOSED",
+        branch=branch,
+        body=f"Fixes #42\n{marked_body()}",
+        labels=frozenset({label}),
+    )
+
+    resolution = resolve_pull_request(current, [retired])
+
+    assert resolution.action is ConvergenceAction.CREATE
+
+
 def test_reconciliation_closes_factory_duplicate_and_already_merged_replay() -> None:
     merged = record(
         50,
@@ -326,6 +345,26 @@ def test_capacity_ignores_major_dependency_parked_in_compatibility_queue() -> No
 
     assert capacity.open_count == 4
     assert capacity.active_by_lane == {"dependency": 1}
+    assert not capacity.pause_new_dispatch
+
+
+def test_capacity_ignores_factory_pull_requests_whose_repair_budget_is_spent() -> None:
+    capped = [
+        record(n, branch=f"factory/{n}-task", labels=frozenset({"factory-capped"}))
+        for n in range(70, 79)
+    ]
+    working = record(79, branch="factory/79-task")
+
+    capacity = calculate_capacity(
+        [*capped, working],
+        max_open_pull_requests=40,
+        max_queued_ci=10,
+        lane_limits={"factory": 8},
+        component_limits={},
+    )
+
+    assert capacity.open_count == 10
+    assert capacity.active_by_lane == {"factory": 1}
     assert not capacity.pause_new_dispatch
 
 

@@ -23,9 +23,11 @@
         [class.bg-danger]="isMuted()"
         [attr.aria-label]="'call.mute' | t"
       >
-        <span class="material-icons text-xl sm:text-2xl">
-          {{ isMuted() ? 'mic_off' : 'mic' }}
-        </span>
+        <ng-icon
+          [name]="isMuted() ? 'lucideMicOff' : 'lucideMic'"
+          class="text-xl sm:text-2xl"
+          aria-hidden="true"
+        />
         <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{
           isMuted() ? ('call.unmute' | t) : ('call.mute' | t)
         }}</span>
@@ -40,9 +42,11 @@
         [class.bg-white/20]="!isSpeakerOn()"
         [attr.aria-label]="'call.speaker' | t"
       >
-        <span class="material-icons text-xl sm:text-2xl">
-          {{ isSpeakerOn() ? 'volume_up' : 'volume_off' }}
-        </span>
+        <ng-icon
+          [name]="isSpeakerOn() ? 'lucideVolume2' : 'lucideVolumeX'"
+          class="text-xl sm:text-2xl"
+          aria-hidden="true"
+        />
         <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{ 'call.speaker' | t }}</span>
       </button>
 
@@ -53,7 +57,7 @@
         class="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-danger hover:bg-danger/90 transition-colors"
         [attr.aria-label]="'call.hang_up' | t"
       >
-        <span class="material-icons text-xl sm:text-2xl">call_end</span>
+        <ng-icon name="lucidePhoneOff" class="text-xl sm:text-2xl" aria-hidden="true" />
         <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{ 'call.hang_up' | t }}</span>
       </button>
     </div>

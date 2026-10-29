@@ -113,7 +113,7 @@ describe('MomentsController feed filters', () => {
     expect(result).toEqual([{ id: 'followed-moment', user_id: 'author-2' }]);
   });
 
-  it('routes only production For You candidates through the personalized ranker', async () => {
+  it('routes only production For You candidates through the personalised ranker', async () => {
     momentsFeedService.getFeed.mockResolvedValue([
       { id: 'own-moment', user_id: 'viewer-1' },
       { id: 'real-moment', user_id: 'author-2' },
