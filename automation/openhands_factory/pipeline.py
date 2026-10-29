@@ -50,6 +50,7 @@ from openhands_factory.pr_lifecycle import (
 from openhands_factory.pr_metrics import PullRequestMetricsStore
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
+from openhands_factory.retry_policy import DRIFT_GUIDED_REPAIR_KEY
 from openhands_factory.review_report import validate_review_report
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
@@ -68,9 +69,6 @@ MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 STALE_UNPUBLISHED_BASE_AGE = timedelta(days=7)
 CAPPED_LABEL = "factory-capped"
 CAPPED_NOTICE_PREFIX = "OpenHands Factory parked this pull request: "
-# failure_counts key recording that a capped job spent its one design-drift-guided
-# repair, so the extra attempt is granted at most once per job.
-DRIFT_GUIDED_REPAIR_KEY = "design-drift-guided-repair"
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -1093,8 +1091,11 @@ class FactoryPipeline:
                 if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                     if self._restart_stale_unpublished(job, workflow):
                         return
-                    finding = findings[0]
-                    raise FactoryError(f"Quality gate blocked: {finding.code} in {finding.path}")
+                    drift = check_design_drift(worktree, job.task.identifier)
+                    if not self._grant_drift_guided_repair(job, drift):
+                        self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                        raise FactoryError("Quality repair limit exceeded")
+                    job.review_findings = [f"Local verification failed:\n{drift}"]
                 job.state = JobState.QUALITY_REPAIRING
                 return
             job.quality_repairs = 0

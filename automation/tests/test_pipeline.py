@@ -3108,6 +3108,11 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
     factory_config = config(tmp_path)
     (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
     prompts: list[str] = []
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
+        PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
+    ]
 
     class TrackingConversations(Conversations):
         def run(
@@ -3123,18 +3128,21 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
 
     pipeline = FactoryPipeline(
         factory_config,
-        github=GitHub(),  # type: ignore[arg-type]
+        github=github,  # type: ignore[arg-type]
         conversations=TrackingConversations(),  # type: ignore[arg-type]
     )
     job = Job(
         Task("42", "Repair quality", "Body", "github-issue", 0),
         state=JobState.QUALITY_REPAIRING,
         branch="factory/42-repair-quality",
+        pull_request=42,
+        head_sha="reviewed-head",
         quality_repairs=5,
         review_findings=["raw drift tail"],
     )
     pipeline.jobs.save({"42": job})
-    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    fingerprints = iter(("before-repair", "after-repair"))
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
     monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
     monkeypatch.setattr(
         "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
@@ -3150,16 +3158,22 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
     assert len(prompts) == 1
     assert "edit frontend/design-preview/screens/chat.html" in prompts[0]
     assert guided.failure_counts["design-drift-guided-repair"] == 1
+    assert guided.state is JobState.VERIFYING
+    assert pipeline.jobs.load()["42"].failure_counts["design-drift-guided-repair"] == 1
 
-    guided.state = JobState.QUALITY_REPAIRING
-    guided.review_findings = ["raw drift tail"]
-    guided.next_attempt_at = None
-    pipeline.jobs.save({"42": guided})
+    monkeypatch.setattr(FactoryPipeline, "_verify", lambda pipeline, workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [
+            QualityFinding("design-drift", Path("chat.html"), None, "summary", "evidence")
+        ],
+    )
     capped = pipeline.run_job("42")
 
     assert capped is not None
     assert "Quality repair limit exceeded" in (capped.last_error or "")
     assert len(prompts) == 1
+    assert (42, ("factory-capped",)) in github.labels
 
 
 def test_capped_ci_repair_without_design_drift_gets_no_extra_attempt(
