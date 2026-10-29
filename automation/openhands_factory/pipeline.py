@@ -133,6 +133,11 @@ def _is_security_review_exempt(changed_paths: set[Path]) -> bool:
     return True
 
 
+def _last_attempt(job: Job) -> object | None:
+    """Newest provider attempt; compared by identity because history is bounded."""
+    return job.provider_history[-1] if job.provider_history else None
+
+
 class FactoryPipeline:
     def __init__(
         self,
@@ -1158,14 +1163,23 @@ class FactoryPipeline:
             # changes" raises before any later increment, which let job 1423 make
             # 23 quality-repair calls under a cap of 5 (2026-10-28).
             job.quality_repairs += 1
-            self._run_agent(
-                job,
-                worktree,
-                "quality_repair",
-                build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
-                lease_owner=lease_owner,
-                require_repository_change=True,
-            )
+            last_attempt = _last_attempt(job)
+            try:
+                self._run_agent(
+                    job,
+                    worktree,
+                    "quality_repair",
+                    build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
+                    lease_owner=lease_owner,
+                    require_repository_change=True,
+                )
+            except ProviderCapacityUnavailable:
+                # No model started (every provider was busy), so nothing was
+                # spent. Job 1663 lost three of its five quality repairs to busy
+                # deferrals and parked after two real attempts (2026-10-29).
+                if _last_attempt(job) is last_attempt:
+                    job.quality_repairs -= 1
+                raise
 
             job.review_findings.clear()
             job.state = JobState.VERIFYING
@@ -1483,14 +1497,21 @@ class FactoryPipeline:
                 # REPAIRING, so counting only pushes left this loop unbounded.
                 job.repair_attempts += 1
                 model_repair_started = True
-                self._run_agent(
-                    job,
-                    worktree,
-                    "repair",
-                    build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
-                    lease_owner=lease_owner,
-                    require_repository_change=True,
-                )
+                last_attempt = _last_attempt(job)
+                try:
+                    self._run_agent(
+                        job,
+                        worktree,
+                        "repair",
+                        build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
+                        lease_owner=lease_owner,
+                        require_repository_change=True,
+                    )
+                except ProviderCapacityUnavailable:
+                    # Busy deferrals are not repairs; see the quality-repair site.
+                    if _last_attempt(job) is last_attempt:
+                        job.repair_attempts -= 1
+                    raise
             verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
             if verified_paths is None:
                 return

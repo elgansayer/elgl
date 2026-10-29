@@ -1487,7 +1487,7 @@ def test_verifying_external_closed_pull_request_finishes_without_reopening(tmp_p
     assert github.reopened_pull_requests == []
 
 
-def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
+def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> Job:
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
     _seed_prompts(worktree / "automation/prompts")
@@ -3110,7 +3110,14 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
     prompts: list[str] = []
 
     class TrackingConversations(Conversations):
-        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+        def run(
+            self,
+            task: Task,
+            workspace: Path,
+            prompt: str,
+            *,
+            timeout_seconds: float | None = None,
+        ) -> ConversationResult:
             prompts.append(prompt)
             return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
 
@@ -3221,6 +3228,77 @@ def test_capped_ci_repair_gets_one_design_drift_guided_attempt(
     assert capped is not None and capped.last_error == "Repair limit exceeded"
     assert len(contexts) == 1
     assert (job.pull_request, ("factory-capped",)) in github.labels
+
+
+def test_busy_provider_deferral_does_not_spend_the_ci_repair_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 4
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr("openhands_factory.pipeline.check_design_drift", lambda *args: None)
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline,
+        "_run_agent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ProviderCapacityUnavailable("All eligible providers are busy")
+        ),
+    )
+
+    deferred = pipeline.run_job("77")
+
+    assert deferred is not None
+    assert deferred.repair_attempts == 4
+    assert deferred.attempts == 0
+
+
+@pytest.mark.parametrize("started", [False, True])
+def test_busy_provider_deferral_does_not_spend_the_quality_repair_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, started: bool
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=4,
+        review_findings=["backend-test failed with exit 1"],
+        # A full, bounded history: a started attempt evicts the oldest entry,
+        # so the length alone cannot tell a started model from a busy one.
+        provider_history=[{"phase": "quality-repair"} for _ in range(3)],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+
+    def agent(current, *args, **kwargs):
+        if started:
+            current.provider_history.append({"phase": "quality-repair"})
+            del current.provider_history[0]
+            raise ProviderCapacityUnavailable("All eligible providers failed")
+        raise ProviderCapacityUnavailable("All eligible providers are busy")
+
+    monkeypatch.setattr(pipeline, "_run_agent", agent)
+
+    deferred = pipeline.run_job("42")
+
+    assert deferred is not None
+    assert deferred.quality_repairs == (5 if started else 4)
+    assert deferred.state is JobState.QUALITY_REPAIRING
 
 
 @pytest.mark.parametrize(
