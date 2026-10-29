@@ -3665,6 +3665,67 @@ def test_spent_quality_budget_with_only_review_findings_says_so(
     assert result.provider_history == []
 
 
+def test_spent_quality_budget_found_during_verification_names_the_gate_finding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    github = GitHub()
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save(
+        {
+            "42": Job(
+                Task("42", "Publish the fix", "Body", "github-issue", 0),
+                state=JobState.VERIFYING,
+                branch="factory/42-publish-the-fix",
+                pull_request=77,
+                head_sha="reviewed-head",
+                quality_repairs=MAX_CONSECUTIVE_QUALITY_REPAIRS,
+            )
+        }
+    )
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, True)
+    ]
+    monkeypatch.setattr(
+        FactoryPipeline,
+        "_verify_or_schedule_quality_repair",
+        lambda pipeline, job, workflow: {Path("backend/src/chat/chat.service.ts")},
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate",
+        lambda workflow, base_branch: [
+            QualityFinding(
+                "unsafe-type-escape",
+                Path("backend/src/chat/chat.service.ts"),
+                12,
+                "Type escape",
+                "const raw = payload as any; // token=topsecret",
+            )
+        ],
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.check_design_drift", lambda *args: None)
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("quality budget bypass")
+    )
+
+    result = pipeline.run_job("42")
+
+    expected = (
+        "Quality repair limit exceeded: unsafe-type-escape in backend/src/chat/chat.service.ts"
+    )
+    assert result is not None
+    assert result.last_error == expected
+    assert result.quality_repairs == MAX_CONSECUTIVE_QUALITY_REPAIRS
+    assert result.provider_history == []
+    notice = next(body for _, body in github.comments if body.startswith(CAPPED_NOTICE_PREFIX))
+    assert f"Last failure:\n```\n{expected}\n```" in notice
+
+
 @pytest.mark.parametrize(
     "failure",
     [

@@ -1120,8 +1120,16 @@ class FactoryPipeline:
                         return
                     drift = check_design_drift(worktree, job.task.identifier)
                     if not drift or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+                        finding = findings[0]
+                        error = (
+                            f"{QUALITY_REPAIR_LIMIT_MESSAGE}: "
+                            f"{_budget_cause_item(finding.code)} in "
+                            f"{_budget_cause_item(finding.path)}"
+                        )
+                        # Parking publishes one notice only. Persist the diagnosis first.
+                        job.last_error = error
                         self._park_capped_pull_request(job, "its quality-repair budget is spent")
-                        raise FactoryError("Quality repair limit exceeded")
+                        raise FactoryError(error)
                     job.review_findings = [f"Local verification failed:\n{drift}"]
                 job.state = JobState.QUALITY_REPAIRING
                 return
