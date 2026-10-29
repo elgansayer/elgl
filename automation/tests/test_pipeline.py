@@ -3112,6 +3112,7 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
     github.statuses = [
         PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
         PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
+        PullRequestStatus(42, "OPEN", False, "MERGEABLE", "", "reviewed-head", False, False),
     ]
 
     class TrackingConversations(Conversations):
@@ -3133,17 +3134,27 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
     )
     job = Job(
         Task("42", "Repair quality", "Body", "github-issue", 0),
-        state=JobState.QUALITY_REPAIRING,
+        state=JobState.VERIFYING,
         branch="factory/42-repair-quality",
         pull_request=42,
         head_sha="reviewed-head",
         quality_repairs=5,
-        review_findings=["raw drift tail"],
     )
     pipeline.jobs.save({"42": job})
     fingerprints = iter(("before-repair", "after-repair"))
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
     monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    drift_output = (
+        "design-sync-drift failed with exit 1:\n"
+        "- screen.chat: mapped implementation changed without its preview\n"
+        "  changed: frontend/src/app/chat/chat.component.ts\n"
+        "  update the preview to match: frontend/design-preview/screens/chat.html\n"
+    )
+    monkeypatch.setattr(
+        FactoryPipeline,
+        "_verify",
+        lambda pipeline, workflow: (_ for _ in ()).throw(VerificationFailed(drift_output)),
+    )
     monkeypatch.setattr(
         "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
     )
@@ -3151,6 +3162,13 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
         "openhands_factory.pipeline.check_design_drift",
         lambda worktree, task_id: "edit frontend/design-preview/screens/chat.html",
     )
+
+    scheduled = pipeline.run_job("42")
+
+    assert scheduled is not None
+    assert scheduled.state is JobState.QUALITY_REPAIRING
+    assert prompts == []
+    assert "design-drift-guided-repair" not in scheduled.failure_counts
 
     guided = pipeline.run_job("42")
 
@@ -3161,17 +3179,10 @@ def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
     assert guided.state is JobState.VERIFYING
     assert pipeline.jobs.load()["42"].failure_counts["design-drift-guided-repair"] == 1
 
-    monkeypatch.setattr(FactoryPipeline, "_verify", lambda pipeline, workflow: {Path("README.md")})
-    monkeypatch.setattr(
-        "openhands_factory.pipeline.check_quality_gate",
-        lambda workflow, base_branch: [
-            QualityFinding("design-drift", Path("chat.html"), None, "summary", "evidence")
-        ],
-    )
     capped = pipeline.run_job("42")
 
     assert capped is not None
-    assert "Quality repair limit exceeded" in (capped.last_error or "")
+    assert "design-sync-drift failed" in (capped.last_error or "")
     assert len(prompts) == 1
     assert (42, ("factory-capped",)) in github.labels
 
@@ -3242,6 +3253,77 @@ def test_capped_ci_repair_gets_one_design_drift_guided_attempt(
     assert capped is not None and capped.last_error == "Repair limit exceeded"
     assert len(contexts) == 1
     assert (job.pull_request, ("factory-capped",)) in github.labels
+
+
+def test_busy_provider_does_not_consume_capped_ci_drift_guided_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.repair_attempts = 5
+    job.predecessor_pull_request = 41
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=Conversations())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda *args: "repair the preview"
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(
+        pipeline,
+        "_run_agent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ProviderCapacityUnavailable("All eligible providers are busy")
+        ),
+    )
+
+    deferred = pipeline.run_job("77")
+
+    assert deferred is not None
+    assert deferred.repair_attempts == 5
+    assert "design-drift-guided-repair" not in deferred.failure_counts
+
+
+def test_busy_provider_does_not_consume_capped_quality_drift_guided_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    (factory_config.worktree_dir / "issue-42").mkdir(parents=True)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = Job(
+        Task("42", "Repair quality", "Body", "github-issue", 0),
+        state=JobState.QUALITY_REPAIRING,
+        branch="factory/42-repair-quality",
+        quality_repairs=5,
+        review_findings=["design drift"],
+    )
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "head_age", lambda workflow: timedelta(days=1))
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda *args: "repair the preview"
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_run_agent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ProviderCapacityUnavailable("All eligible providers are busy")
+        ),
+    )
+
+    deferred = pipeline.run_job("42")
+
+    assert deferred is not None
+    assert deferred.quality_repairs == 5
+    assert "design-drift-guided-repair" not in deferred.failure_counts
 
 
 def test_busy_provider_deferral_does_not_spend_the_ci_repair_budget(

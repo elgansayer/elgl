@@ -1092,7 +1092,7 @@ class FactoryPipeline:
                     if self._restart_stale_unpublished(job, workflow):
                         return
                     drift = check_design_drift(worktree, job.task.identifier)
-                    if not self._grant_drift_guided_repair(job, drift):
+                    if not drift or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
                         self._park_capped_pull_request(job, "its quality-repair budget is spent")
                         raise FactoryError("Quality repair limit exceeded")
                     job.review_findings = [f"Local verification failed:\n{drift}"]
@@ -1140,6 +1140,7 @@ class FactoryPipeline:
             if not findings and not job.review_findings:
                 job.state = JobState.VERIFYING
                 return
+            drift_guided_repair_granted = False
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return
@@ -1147,6 +1148,7 @@ class FactoryPipeline:
                 if not self._grant_drift_guided_repair(job, drift):
                     self._park_capped_pull_request(job, "its quality-repair budget is spent")
                     raise FactoryError("Quality repair limit exceeded")
+                drift_guided_repair_granted = True
                 job.review_findings = [f"Local verification failed:\n{drift}"]
 
             quality_finding_text = "\n".join(
@@ -1180,6 +1182,8 @@ class FactoryPipeline:
                 # deferrals and parked after two real attempts (2026-10-29).
                 if _last_attempt(job) is last_attempt:
                     job.quality_repairs -= 1
+                    if drift_guided_repair_granted:
+                        job.failure_counts.pop(DRIFT_GUIDED_REPAIR_KEY, None)
                 raise
 
             job.review_findings.clear()
@@ -1480,6 +1484,7 @@ class FactoryPipeline:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
             mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
             model_repair_started = False
+            drift_guided_repair_granted = False
             if has_unmerged_paths or (
                 not (base_conflict or stale_base) and not mechanically_repaired
             ):
@@ -1492,6 +1497,7 @@ class FactoryPipeline:
                     if not self._grant_drift_guided_repair(job, drift):
                         self._park_capped_pull_request(job, "its CI-repair budget is spent")
                         raise FactoryError("Repair limit exceeded")
+                    drift_guided_repair_granted = True
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
                 # still-conflicting PR then routes QUALITY_REPAIRING back to
@@ -1512,6 +1518,8 @@ class FactoryPipeline:
                     # Busy deferrals are not repairs; see the quality-repair site.
                     if _last_attempt(job) is last_attempt:
                         job.repair_attempts -= 1
+                        if drift_guided_repair_granted:
+                            job.failure_counts.pop(DRIFT_GUIDED_REPAIR_KEY, None)
                     raise
             verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
             if verified_paths is None:
@@ -2206,11 +2214,19 @@ class FactoryPipeline:
                 if self._restart_stale_unpublished(job, workflow):
                     return None
                 raise
+            guidance = drift_guidance(detail, job.task.identifier)
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return None
-                self._park_capped_pull_request(job, "its quality-repair budget is spent")
-                raise
+                if not guidance or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+                    self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                    raise
+                job.review_findings = [
+                    "Local verification failed. Repair the repository and keep all "
+                    f"Factory safety controls intact:\n{guidance}"
+                ]
+                job.state = JobState.QUALITY_REPAIRING
+                return None
             # Formatter and auto-fixable lint failures need no model (job 1195
             # spent repairs on prettier whitespace). Re-verify on the next pass if
             # the fixers changed anything; an unchanged tree falls through to the
@@ -2220,7 +2236,7 @@ class FactoryPipeline:
             if workflow.change_fingerprint() != before:
                 LOGGER.info("Mechanically repaired task %s; verifying again", job.task.identifier)
                 return None
-            evidence = drift_guidance(detail, job.task.identifier) or detail[-1800:]
+            evidence = guidance or detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
                 f"Factory safety controls intact:\n{evidence}"
