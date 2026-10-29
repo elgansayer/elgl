@@ -17,6 +17,7 @@ from openhands_factory.alerts import AlertService
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
+from openhands_factory.design_drift import check_design_drift, drift_guidance
 from openhands_factory.exceptions import (
     AgentTaskFailure,
     FactoryError,
@@ -1420,10 +1421,16 @@ class FactoryPipeline:
                 f"Mergeability: {status.mergeable}\n"
                 f"Merge state: {status.merge_state_status or 'not reported'}"
             )
-            if job.last_error:
+            if job.last_error and "design sync drift" not in job.last_error.lower():
                 repair_context += (
                     f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
                 )
+            # GitHub names this gate only as `constitution`; run it here so the
+            # agent is told which preview or manifest item to change.
+            if not (base_conflict or stale_base) and (
+                drift := check_design_drift(worktree, job.task.identifier)
+            ):
+                repair_context += f"\n\n{drift}"
             if status.failed_checks and not (base_conflict or stale_base):
                 try:
                     excerpts = self.github.failed_check_excerpts(status.head_sha)
@@ -2136,7 +2143,7 @@ class FactoryPipeline:
             if workflow.change_fingerprint() != before:
                 LOGGER.info("Mechanically repaired task %s; verifying again", job.task.identifier)
                 return None
-            evidence = detail[-1800:]
+            evidence = drift_guidance(detail, job.task.identifier) or detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
                 f"Factory safety controls intact:\n{evidence}"

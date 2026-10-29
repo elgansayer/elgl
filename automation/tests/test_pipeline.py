@@ -1691,6 +1691,9 @@ def test_ci_repair_prompt_includes_the_failed_job_log_excerpts(
         conversations=TrackingConversations(),  # type: ignore[arg-type]
     )
     pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift", lambda worktree, task_id: None
+    )
     monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
@@ -1705,6 +1708,47 @@ def test_ci_repair_prompt_includes_the_failed_job_log_excerpts(
     assert len(prompts) == 1
     assert "Failed CI job log excerpts:" in prompts[0]
     assert "FAIL  src/chat/search.spec.ts > keeps filters" in prompts[0]
+
+
+def test_ci_repair_is_told_which_design_preview_or_manifest_item_to_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.last_error = "Design sync drift verification failed:\n- screen.chat: noisy tail"
+    prompts: list[str] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_design_drift",
+        lambda worktree, task_id: f"edit frontend/design-preview/screens/chat.html for {task_id}",
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *args: None)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed("stop after the prompt")),
+    )
+
+    pipeline.run_job("77")
+
+    assert len(prompts) == 1
+    assert f"edit frontend/design-preview/screens/chat.html for {job.task.identifier}" in prompts[0]
+    # The raw gate output is replaced by the guidance, not repeated beside it.
+    assert "noisy tail" not in prompts[0]
 
 
 def _without_mechanical_repair(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1742,6 +1786,40 @@ def test_repair_verification_failure_enters_quality_repair_without_backoff(
     assert result.state is JobState.QUALITY_REPAIRING
     assert result.attempts == 0
     assert "design-sync-drift" in result.review_findings[0]
+
+
+def test_local_design_drift_failure_becomes_explicit_quality_repair_steps(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _without_mechanical_repair(monkeypatch)
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    failure = (
+        "design-sync-drift failed with exit 1: ok 1 - passing self-test\n"
+        "Design sync drift verification failed:\n"
+        "- screen.chat: mapped implementation changed without its mapped preview\n"
+        "    changed: frontend/src/app/pages/chat/chat.page.html\n"
+        "    update the preview to match: frontend/design-preview/screens/chat.html\n"
+        '    or, if the visual contract is unchanged, record why in the "screen.chat" item\n'
+    )
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.run_verification",
+        lambda commands: (_ for _ in ()).throw(VerificationFailed(failure)),
+    )
+    result = pipeline.run_job("77")
+    assert result is not None and result.state is JobState.QUALITY_REPAIRING
+    assert "edit frontend/design-preview/screens/chat.html" in result.review_findings[0]
+    assert 'only the "screen.chat" item' in result.review_findings[0]
+    assert "passing self-test" not in result.review_findings[0]
 
 
 def _failing_model_repair_pipeline(
