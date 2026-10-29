@@ -37,7 +37,8 @@ These are prioritised future tasks, not claims that all seven are implemented.
    generation (`watchdog.recovered_total`) separately from queued age. Jobs that
    stopped at a spent repair budget form the `exhausted-repair-budget` incident,
    and each evidence row names the blocking quality finding, failed checks or
-   `review findings` (see [AUTONOMOUS-RETRY.md](AUTONOMOUS-RETRY.md)).
+   `review findings` (see [AUTONOMOUS-RETRY.md](AUTONOMOUS-RETRY.md) and
+   [AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md](AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md)).
 2. Give AI bounded, redacted diagnostic data, lifetime phase-model metrics and
    read-only repository access. Require a typed report; unknown task IDs and
    arbitrary action names are rejected. Repair proposals must cite exact excerpts
