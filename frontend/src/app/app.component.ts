@@ -10,7 +10,7 @@ import {
   effect,
   DestroyRef,
 } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
@@ -39,6 +39,7 @@ import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
+import { MobileNavigationComponent } from './components/mobile-navigation/mobile-navigation.component';
 import { TourService } from './services/tour.service';
 import { NotificationService } from './services/notification.service';
 import { ChatService } from './services/chat.service';
@@ -55,7 +56,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     HlmButton,
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     TranslatePipe,
     IncomingCallModalComponent,
     ToastComponent,
@@ -70,6 +70,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     ForcedUpdateModalComponent,
     NoNetworkBannerComponent,
     DesktopSidebarComponent,
+    MobileNavigationComponent,
     JoyrideModule,
   ],
   templateUrl: './app.component.html',
