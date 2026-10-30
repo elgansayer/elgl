@@ -198,9 +198,24 @@ export class AudioRoomsHealthService implements OnModuleInit {
 
   private async checkCentrifugoHealth(): Promise<void> {
     try {
+      // CENTRIFUGO_API_URL is an optional override. The canonical, validated
+      // CENTRIFUGO_URL is what CentrifugoService publishes through, so probing
+      // anything else (such as a hard-coded localhost) reports a healthy
+      // deployment as down whenever Centrifugo runs in another container.
       const centrifugoUrl =
         this.configService.get<string>('CENTRIFUGO_API_URL') ||
-        'http://localhost:8000';
+        this.configService.get<string>('CENTRIFUGO_URL');
+
+      if (!centrifugoUrl) {
+        this.centrifugoHealth = {
+          service: 'centrifugo',
+          healthy: false,
+          degraded: true,
+          lastChecked: Date.now(),
+          errorMessage: 'CENTRIFUGO_URL is not configured',
+        };
+        return;
+      }
 
       const apiKey = this.configService.get<string>('CENTRIFUGO_API_KEY') || '';
       const controller = new AbortController();
@@ -219,14 +234,12 @@ export class AudioRoomsHealthService implements OnModuleInit {
         lastChecked: Date.now(),
         errorMessage: response.ok ? undefined : `HTTP ${response.status}`,
       };
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
+    } catch {
       this.centrifugoHealth = {
         service: 'centrifugo',
         healthy: false,
         degraded: true,
         lastChecked: Date.now(),
-        errorMessage: message,
       };
     }
   }
