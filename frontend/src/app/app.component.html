@@ -82,7 +82,12 @@
       <a
         routerLink="/notifications"
         class="relative p-2 rounded-full hover:bg-surface-100 transition-colors"
-        [attr.aria-label]="'nav.notifications' | t"
+        [attr.aria-label]="
+          ('nav.notifications' | t) +
+          (unreadCounter.totalUnread() > 0
+            ? ', ' + unreadCounter.totalUnread() + ' ' + ('chatList.filterUnread' | t)
+            : '')
+        "
         [attr.title]="'nav.notifications' | t"
       >
         <span class="text-xl leading-none">🔔</span>

@@ -92,6 +92,8 @@ describe('primary navigation unread contract', () => {
 
     expect(topBar).toContain('routerLink="/notifications"');
     expect(topBar).toContain('@if (unreadCounter.totalUnread() > 0)');
+    expect(topBar).toContain("unreadCounter.totalUnread() + ' ' +");
+    expect(topBar).toContain("('chatList.filterUnread' | t)");
     expect(topBar).toContain(
       "unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread()",
     );
