@@ -53,16 +53,26 @@ and [unshare process handling](https://man7.org/linux/man-pages/man1/unshare.1.h
 
 `tests/test_process_guardian.py` uses real synthetic OS processes and private
 capacity state, with no vendor calls or credentials. It covers input/output,
-normal exit, lease refusal/loss, checkpoint failure, request timeout, coordinator
-SIGKILL/SIGSTOP and guardian SIGKILL/SIGSTOP. The actual isolated cases run
-descendants that attempt to kill PID 1, clear parent-death signals and escape
-process groups, then inject coordinator/guardian faults.
+normal exit (including provider status 125), lease refusal/loss, checkpoint
+failure, request timeout, coordinator SIGKILL/SIGSTOP and guardian
+SIGKILL/SIGSTOP. These ordinary tests run inside the restricted Factory verifier.
 
-Run `FACTORY_REQUIRE_GUARD_NAMESPACE_TESTS=1 python -m pytest
-tests/test_process_guardian.py` from `automation/` on the target host. That flag
-turns missing namespace support into failure. Unsupported CI hosts explicitly
-skip only the namespace cases; ordinary real-process tests still run. These are
-factory tooling tests, not game, emulator or continuous-service health checks.
+`runtime_checks/test_process_guard_namespace.py` is a separate mandatory host
+integration suite. It runs descendants that attempt to kill PID 1, clear
+parent-death signals and escape process groups, then injects coordinator/guardian
+faults. Run `python -m pytest runtime_checks/test_process_guard_namespace.py`
+from `automation/` on the target host. Missing namespace support fails this
+command; it never substitutes a passing assertion for unavailable containment.
+The default `tests/` collection is not evidence that host integration ran.
+
+The required CI `factory` job runs both suites. Its trusted setup enables
+unprivileged user namespaces on the disposable Ubuntu runner where
+[AppArmor restricts them](https://documentation.ubuntu.com/release-notes/24.04/);
+this changes neither the VPS nor provider-worker privileges.
+The explicit integration step must succeed for `CI / required` to pass. The
+Factory's nested, capability-restricted verifier runs the ordinary suite and
+relies on that exact-head CI result for host integration. These are factory
+tooling tests, not game, emulator or continuous-service health checks.
 
 Neptune [538](https://github.com/elgansayer/Neptune-Bomberman/issues/538) tracks this
 primitive. Parent [536](https://github.com/elgansayer/Neptune-Bomberman/issues/536)

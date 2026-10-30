@@ -127,7 +127,7 @@ def supervise(
                     )
             if worker is not None and worker.poll() is not None:
                 code = worker.wait()
-                channel.sendall(b"F" if code == FAILURE_EXIT else b"D")
+                channel.sendall(b"D")
                 return code if code >= 0 else 128 - code
         # A stopped guardian's writer also closes on SIGKILL. The trusted init
         # then drains/exits independently, without cooperation from model code.
