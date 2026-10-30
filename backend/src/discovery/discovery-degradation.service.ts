@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 export interface DegradationMarker {
@@ -149,6 +149,16 @@ export class DiscoveryDegradationService {
       this.recordSuccess(service);
       return result;
     } catch (error: unknown) {
+      // Authentication, authorisation and validation failures are caller
+      // errors, not dependency failures. Preserve the response and do not trip
+      // the availability circuit.
+      if (
+        error instanceof HttpException &&
+        error.getStatus() >= 400 &&
+        error.getStatus() < 500
+      ) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Circuit ${service}: operation failed: ${message}`);
       this.recordFailure(service);

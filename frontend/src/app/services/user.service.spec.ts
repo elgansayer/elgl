@@ -14,7 +14,7 @@ import { environment } from '../../environments/environment';
 import { MOCK_USER_PROFILE, MOCK_VISITORS } from './mock-data';
 
 class AuthServiceStub {
-  getAccessToken(): string | null {
+  getAccessToken(): string | undefined {
     return 'test-token';
   }
 }
@@ -106,7 +106,14 @@ describe('UserService', () => {
       expect(await resultPromise).toEqual(profile);
     });
 
-    it('should fall back to local mock data when the request fails', async () => {
+    it('should return null without requesting a profile when unauthenticated', async () => {
+      vi.spyOn(TestBed.inject(AuthService), 'getAccessToken').mockReturnValue(undefined);
+
+      await expect(service.getMyProfile()).resolves.toBeNull();
+      httpMock.expectNone(`${baseUrl}/me`);
+    });
+
+    it('should return null instead of fabricating a privileged profile when the request fails', async () => {
       const resultPromise = service.getMyProfile();
 
       const req = httpMock.expectOne(`${baseUrl}/me`);
@@ -115,11 +122,7 @@ describe('UserService', () => {
         statusText: 'Internal Server Error',
       });
 
-      const result = await resultPromise;
-      expect(result).not.toBeNull();
-      expect(result?.status_text).toBe('Learning new languages!');
-      expect(result?.chat_enter_to_send).toBe(false);
-      expect(result?.proficiency_level).toBe('B1');
+      await expect(resultPromise).resolves.toBeNull();
     });
   });
 

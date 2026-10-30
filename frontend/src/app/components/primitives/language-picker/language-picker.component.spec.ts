@@ -45,4 +45,27 @@ describe('LanguagePickerComponent', () => {
     expect(component.languageSelected.emit).toHaveBeenCalledWith('fr');
     expect(component.isOpen()).toBe(false);
   });
+
+  it('renders a modal dialog and closes it with Escape', async () => {
+    const trigger: HTMLButtonElement = fixture.nativeElement.querySelector(
+      'button[aria-haspopup="dialog"]',
+    );
+    trigger.focus();
+    trigger.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).toBeTruthy();
+    expect(document.activeElement).not.toBe(trigger);
+
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.isOpen()).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+  });
 });

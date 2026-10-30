@@ -1,6 +1,7 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
+import { Component, input, output, signal, computed } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../../services/translate.pipe';
 
 export const ALL_LANGUAGE_CODES = [
@@ -37,9 +38,8 @@ export interface LanguageItem {
 }
 
 @Component({
-  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-language-picker',
-  imports: [TranslatePipe, ...HlmButtonImports, ...HlmInputImports],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmInputImports, ...HlmDialogImports],
   templateUrl: './language-picker.component.html',
 })
 export class LanguagePickerComponent {
@@ -99,6 +99,10 @@ export class LanguagePickerComponent {
 
   closeModal(): void {
     this.isOpen.set(false);
+  }
+
+  onDialogStateChanged(state: HlmDialogState): void {
+    this.isOpen.set(state === 'open');
   }
 
   selectLanguage(code: string): void {

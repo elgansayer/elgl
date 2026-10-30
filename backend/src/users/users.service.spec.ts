@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -187,15 +191,26 @@ describe('UsersService', () => {
       expect(result).toMatchObject(mockProfile);
     });
 
-    it('should throw NotFoundException when user is not found or query errors', async () => {
+    it('should throw NotFoundException instead of returning a mock profile when absent', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
-        error: { message: 'Not found' },
+        error: { code: 'PGRST116', message: 'Not found' },
       });
 
-      const result = await service.getProfile('non-existent');
-      expect(result.id).toBe('non-existent');
-      expect(result.display_name).toBe('My Profile (Mock)');
+      await expect(service.getProfile('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should surface database failures instead of returning a mock profile', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { code: '08006', message: 'Connection failed' },
+      });
+
+      await expect(service.getProfile('user-1')).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -504,29 +519,28 @@ describe('UsersService', () => {
       expect(result).toMatchObject(updatedProfile);
     });
 
-    it('should return mock profile when update fails with error message', async () => {
+    it('should surface a profile reload failure after an update', async () => {
       const dto = { display_name: 'Error Name' };
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: { message: 'Database check violation' },
       });
 
-      const result = await service.updateProfile('user-1', dto, false);
-      expect(result.id).toBe('user-1');
-      expect(result.display_name).toBe('Error Name');
-      expect(result.coins_balance).toBe(500); // verify mock fields exist
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
 
-    it('should return mock profile when update fails without error message', async () => {
+    it('should surface a missing profile after an update', async () => {
       const dto = { display_name: 'Error Name' };
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: null,
       });
 
-      const result = await service.updateProfile('user-1', dto, false);
-      expect(result.id).toBe('user-1');
-      expect(result.display_name).toBe('Error Name');
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -694,15 +708,14 @@ describe('UsersService', () => {
   });
 
   describe('getPrivacySettings', () => {
-    it('should return defaults when profile falls back to mock', async () => {
+    it('should surface profile lookup failures instead of returning mock defaults', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: { message: 'not found' },
       });
-      const result = await service.getPrivacySettings('user-1');
-      expect(result.privacy_hide_age).toBe(false);
-      expect(result.privacy_last_seen).toBe('everyone');
-      expect(result.incognito_visits).toBe(false);
+      await expect(service.getPrivacySettings('user-1')).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
