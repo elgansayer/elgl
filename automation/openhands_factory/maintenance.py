@@ -25,6 +25,7 @@ from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailab
 from openhands_factory.main_merge_gate import MainBranchMergeGate
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Task
+from openhands_factory.retry_policy import is_repair_budget_exhausted
 from openhands_factory.state import atomic_write_json, read_json
 
 if TYPE_CHECKING:
@@ -139,6 +140,9 @@ def error_identity(job: Job) -> str:
 
 def failure_family(job: Job) -> str:
     error = (job.last_error or "").lower()
+    if is_repair_budget_exhausted(error):
+        # Its cause may quote a path or check named after another family's marker.
+        return "exhausted-repair-budget"
     for marker, family in (
         ("design-sync-drift", "design-preview-repair"),
         ("fonts.googleapis.com", "offline-font-verification"),

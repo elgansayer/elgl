@@ -9,6 +9,7 @@ from openhands_factory.retry_policy import (
     DRIFT_GUIDED_REPAIR_KEY,
     classify_failure,
     deterministic_backoff,
+    is_repair_budget_exhausted,
     record_failure_diagnostics,
     reset_retry_diagnostics,
 )
@@ -38,6 +39,88 @@ def test_classifies_failure_kinds_from_outer_openhands_diagnostics() -> None:
     )
     for detail in infrastructure_failures:
         assert classify_failure(detail) is FailureKind.INFRASTRUCTURE, detail
+
+
+@pytest.mark.parametrize(
+    "detail",
+    (
+        "Repair limit exceeded",
+        "Repair limit exceeded: backend / lint, frontend / unit",
+        "Repair limit exceeded: no failed check reported",
+        "Quality repair limit exceeded",
+        "Quality repair limit exceeded: review findings",
+        "Quality repair limit exceeded: unsafe-type-escape in backend/src/auth/oauth.guard.ts",
+        # Wording inside the cause must not move the failure to another class.
+        "Repair limit exceeded: backend / authentication-timeout-validation, rate-limit-quota",
+        "REPAIR LIMIT EXCEEDED: Frontend / Unit",
+    ),
+)
+def test_spent_repair_budget_stays_in_the_budget_class_whatever_its_cause(detail: str) -> None:
+    assert is_repair_budget_exhausted(detail)
+    assert classify_failure(detail) is FailureKind.BUDGET
+
+
+@pytest.mark.parametrize(
+    ("detail", "kind"),
+    (
+        ("Review repair limit exceeded", FailureKind.BUDGET),
+        ("Quality gate blocked: credential-artifact in .claude/x", FailureKind.VALIDATION),
+    ),
+)
+def test_only_the_repair_budget_messages_take_the_early_budget_class(
+    detail: str, kind: FailureKind
+) -> None:
+    assert not is_repair_budget_exhausted(detail)
+    assert classify_failure(detail) is kind
+
+
+def test_spent_repair_budget_repeats_one_fingerprint_for_an_identical_cause() -> None:
+    job = _job()
+    detail = "Repair limit exceeded: backend / lint"
+
+    record_failure_diagnostics(job, detail)
+    fingerprint = job.last_failure_fingerprint
+    record_failure_diagnostics(job, detail)
+
+    assert job.last_failure_fingerprint == fingerprint
+    assert job.repeated_failure_count == 2
+    assert job.failure_counts == {FailureKind.BUDGET.value: 2}
+
+    # A different blocker is new evidence, so it starts its own repetition count.
+    record_failure_diagnostics(job, "Repair limit exceeded: frontend / unit")
+    assert job.last_failure_fingerprint != fingerprint
+    assert job.repeated_failure_count == 1
+
+
+def test_job_at_its_budget_keeps_its_backoff_when_the_error_gains_a_cause(tmp_path: Path) -> None:
+    store = JobStore(tmp_path / "jobs.json", max_repeated_failures=3)
+    job = _job()
+    job.state = JobState.QUALITY_REPAIRING
+    job.failure_counts = {FailureKind.BUDGET.value: 6}
+    job.last_failure_kind = FailureKind.BUDGET.value
+    job.last_failure_fingerprint = "bare-message"
+    job.repeated_failure_count = 6
+    store.save({job.task.identifier: job})
+
+    failed = store.load()[job.task.identifier]
+    failed.attempts = 7
+    # The path mentions "oauth", which would otherwise restart the class count as
+    # an authentication failure and with it the 5 minute ordinary backoff.
+    failed.last_error = (
+        "Quality repair limit exceeded: unsafe-type-escape in backend/src/auth/oauth.guard.ts"
+    )
+    failed.updated_at = datetime.now(UTC)
+    store.save_job(failed)
+
+    restored = store.load()[job.task.identifier]
+    assert restored.failure_counts == {FailureKind.BUDGET.value: 7}
+    assert restored.last_failure_kind == FailureKind.BUDGET.value
+    # A new cause is new evidence: the repetition count restarts, the class count does not.
+    assert restored.last_failure_fingerprint != "bare-message"
+    assert restored.repeated_failure_count == 1
+    assert restored.next_attempt_at is not None
+    # Seventh failure of the class: 5 minutes * 2**6, less at most 20% jitter.
+    assert restored.next_attempt_at - restored.updated_at >= timedelta(minutes=256)
 
 
 def test_agent_failure_context_is_persisted_in_stable_fingerprint() -> None:

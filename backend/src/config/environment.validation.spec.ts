@@ -1,7 +1,7 @@
 import {
   PRODUCTION_REQUIRED_ENV_KEYS,
   validateEnvironment,
-} from './environment.validation';
+} from './env.validation';
 
 function productionEnvironment(): Record<string, string> {
   return {
@@ -45,6 +45,14 @@ function productionEnvironment(): Record<string, string> {
       'billing@elgl-prod.iam.gserviceaccount.com',
     TRANSFER_SECRET: 'prod-transfer-secret',
     LLM_API_KEY: 'prod-llm-api-key',
+  };
+}
+
+function development(extra: Record<string, string>): Record<string, string> {
+  return {
+    NODE_ENV: 'development',
+    TRANSFER_SECRET: 'test-transfer-secret',
+    ...extra,
   };
 }
 
@@ -159,5 +167,204 @@ describe('validateEnvironment', () => {
         REDIS_URL: 'https://wrong-scheme.example',
       }),
     ).toThrow('REDIS_URL must use redis: or rediss:');
+  });
+
+  describe('optional override URLs', () => {
+    it.each([
+      ['CENTRIFUGO_API_URL', 'ws://websocket:8000', 'must use http: or https:'],
+      ['CENTRIFUGO_API_URL', 'websocket:8000/api', 'must use http: or https:'],
+      ['LLM_API_URL', 'ftp://llm.internal/v1', 'must use http: or https:'],
+      ['LLM_API_URL', 'not-a-url', 'must be a valid URL'],
+    ])('rejects %s=%s', (key, value, message) => {
+      expect(() => validateEnvironment(development({ [key]: value }))).toThrow(
+        message,
+      );
+    });
+
+    it('accepts well-formed overrides and leaves them unset by default', () => {
+      const validated = validateEnvironment(
+        development({
+          CENTRIFUGO_API_URL: 'http://websocket:8000',
+          LLM_API_URL: 'https://llm.internal/v1/chat/completions',
+        }),
+      );
+
+      expect(validated.CENTRIFUGO_API_URL).toBe('http://websocket:8000');
+      expect(validated.LLM_API_URL).toBe(
+        'https://llm.internal/v1/chat/completions',
+      );
+      expect(validateEnvironment(development({})).LLM_API_URL).toBeUndefined();
+    });
+  });
+
+  describe('list-valued variables', () => {
+    it('accepts STUN lists using the runtime split, trim and filter rules', () => {
+      expect(() =>
+        validateEnvironment(
+          development({
+            LIVEKIT_RTC_STUN_SERVERS:
+              ' stun:stun.l.google.com:19302 , stuns:stun.example.org:5349,stun:10.0.0.5,stun:[2001:db8::1]:3478, ',
+          }),
+        ),
+      ).not.toThrow();
+    });
+
+    it.each([
+      'stun.l.google.com:19302',
+      'https://stun.example.org',
+      'turn:turn.example.org:3478',
+      'stun:stun.example.org:70000',
+      'stun:stun.example.org:0',
+      'stun:stun.example.org/path',
+      'stun:',
+    ])('rejects the STUN server entry %s', (entry) => {
+      expect(() =>
+        validateEnvironment(
+          development({
+            LIVEKIT_RTC_STUN_SERVERS: `stun:stun.l.google.com:19302,${entry}`,
+          }),
+        ),
+      ).toThrow(
+        'LIVEKIT_RTC_STUN_SERVERS entry 2 must be a stun: or stuns: URI with an optional port',
+      );
+    });
+
+    it('accepts R2 source host allow-lists', () => {
+      expect(() =>
+        validateEnvironment(
+          development({
+            CLOUDFLARE_R2_SOURCE_HOSTS:
+              'recordings.example.com, *.livekit.example.com,Media.Example.ORG',
+          }),
+        ),
+      ).not.toThrow();
+      expect(() =>
+        validateEnvironment(development({ CLOUDFLARE_R2_SOURCE_HOSTS: '' })),
+      ).not.toThrow();
+    });
+
+    it.each([
+      'https://recordings.example.com',
+      'recordings.example.com:8443',
+      'recordings.example.com/path',
+      '*',
+      '*.',
+      'rec ordings.example.com',
+      '**.example.com',
+    ])('rejects the R2 source host entry %s', (entry) => {
+      expect(() =>
+        validateEnvironment(
+          development({
+            CLOUDFLARE_R2_SOURCE_HOSTS: `recordings.example.com,${entry}`,
+          }),
+        ),
+      ).toThrow(
+        'CLOUDFLARE_R2_SOURCE_HOSTS entry 2 must be a hostname or *.hostname without scheme, port or path',
+      );
+    });
+
+    it('never echoes list entries into the error message', () => {
+      let message = '';
+      try {
+        validateEnvironment(
+          development({
+            CLOUDFLARE_R2_SOURCE_HOSTS: 'https://user:hunter2-secret@host',
+          }),
+        );
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(message).toContain('CLOUDFLARE_R2_SOURCE_HOSTS entry 1');
+      expect(message).not.toContain('hunter2-secret');
+    });
+  });
+
+  describe('JSON document variables', () => {
+    it('accepts a JSON object credential and an unset or blank value', () => {
+      expect(() =>
+        validateEnvironment(
+          development({
+            FIREBASE_SERVICE_ACCOUNT: '{"type":"service_account"}',
+          }),
+        ),
+      ).not.toThrow();
+      expect(() =>
+        validateEnvironment(development({ FIREBASE_SERVICE_ACCOUNT: '' })),
+      ).not.toThrow();
+      expect(() => validateEnvironment(development({}))).not.toThrow();
+    });
+
+    it.each(['{not json', '[]', '"just a string"', 'null', '42'])(
+      'rejects the non-object FIREBASE_SERVICE_ACCOUNT value %s',
+      (value) => {
+        expect(() =>
+          validateEnvironment(development({ FIREBASE_SERVICE_ACCOUNT: value })),
+        ).toThrow('FIREBASE_SERVICE_ACCOUNT must be a JSON object');
+      },
+    );
+
+    it('never echoes the credential into the error message', () => {
+      let message = '';
+      try {
+        validateEnvironment(
+          development({
+            FIREBASE_SERVICE_ACCOUNT: '{"private_key": "super-secret-key"',
+          }),
+        );
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(message).toContain('FIREBASE_SERVICE_ACCOUNT must be a JSON');
+      expect(message).not.toContain('super-secret-key');
+    });
+  });
+
+  describe('format failure reporting', () => {
+    it('reports every malformed URL, list entry and JSON document in one failure', () => {
+      let message = '';
+      try {
+        validateEnvironment({
+          NODE_ENV: 'development',
+          TRANSFER_SECRET: 'test-transfer-secret',
+          REDIS_URL: 'https://wrong-scheme.example',
+          LLM_API_URL: 'not-a-url',
+          LIVEKIT_RTC_STUN_SERVERS: 'stun.example.org',
+          FIREBASE_SERVICE_ACCOUNT: '{broken',
+        });
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(message).toContain('Invalid environment values:');
+      expect(message).toContain('REDIS_URL must use redis: or rediss:');
+      expect(message).toContain('LLM_API_URL must be a valid URL');
+      expect(message).toContain('LIVEKIT_RTC_STUN_SERVERS entry 1');
+      expect(message).toContain(
+        'FIREBASE_SERVICE_ACCOUNT must be a JSON object',
+      );
+    });
+
+    it('still reaches the production missing-variable check first', () => {
+      // backend-container-ci.yml boots the production image with only
+      // NODE_ENV=production and greps for this message, so it must stay first.
+      expect(() =>
+        validateEnvironment({
+          NODE_ENV: 'production',
+          REDIS_URL: 'https://wrong-scheme.example',
+          FIREBASE_SERVICE_ACCOUNT: '{broken',
+        }),
+      ).toThrow('Production environment is missing required variables:');
+    });
+
+    it('validates formats in production once the required variables are present', () => {
+      expect(() =>
+        validateEnvironment({
+          ...productionEnvironment(),
+          CLOUDFLARE_R2_SOURCE_HOSTS: 'https://recordings.elgl.app',
+        }),
+      ).toThrow('CLOUDFLARE_R2_SOURCE_HOSTS entry 1');
+    });
   });
 });
