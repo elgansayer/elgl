@@ -386,6 +386,53 @@
         outline: 3px solid Highlight;
         outline-offset: 2px;
       }
+      .mobile-navigation-preview {
+        inline-size: min(100%, 24.375rem);
+        min-block-size: 3.75rem;
+        padding: 0.25rem;
+        border: 1px solid ButtonBorder;
+        background: color-mix(in srgb, CanvasText 5%, Canvas);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+      }
+      .mobile-navigation-preview a {
+        min-inline-size: 3.5rem;
+        min-block-size: 3.25rem;
+        color: color-mix(in srgb, CanvasText 72%, Canvas);
+        display: grid;
+        place-items: center;
+        gap: 0.125rem;
+        font-size: 0.625rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .mobile-navigation-preview a[aria-current='page'] {
+        color: Highlight;
+      }
+      .mobile-navigation-preview a:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+      }
+      .mobile-navigation-preview .icon {
+        position: relative;
+        font-size: 1.5rem;
+        line-height: 1;
+      }
+      .mobile-navigation-preview .count {
+        position: absolute;
+        inset-block-start: -0.35rem;
+        inset-inline-end: -0.65rem;
+        min-inline-size: 1.125rem;
+        padding: 0.125rem 0.375rem;
+        border: 2px solid Canvas;
+        border-radius: 999px;
+        background: Mark;
+        color: MarkText;
+        font-size: 0.625rem;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+      }
       .checkout-states {
         display: grid;
         gap: 1rem;
@@ -695,6 +742,31 @@
           >
           <a href="/moments"><span aria-hidden="true">⭕</span><span>Moments</span></a>
           <a href="/discovery"><span aria-hidden="true">🌍</span><span>Find partners</span></a>
+        </nav>
+      </section>
+      <section aria-labelledby="mobile-navigation-title">
+        <h2 id="mobile-navigation-title">Mobile primary navigation</h2>
+        <p>
+          The extracted mobile component preserves the five primary destinations, active-page and
+          focus semantics, compact unread counts, and stable tabular badge numerals.
+        </p>
+        <nav class="mobile-navigation-preview" aria-label="Main navigation">
+          <a href="/chat" aria-current="page" aria-label="HelloTalk, 12 unread">
+            <span class="icon" aria-hidden="true">💬<span class="count">12</span></span>
+            <span>HelloTalk</span>
+          </a>
+          <a href="/moments"><span class="icon" aria-hidden="true">⭕</span><span>Moments</span></a>
+          <a href="/discovery"
+            ><span class="icon" aria-hidden="true">🌍<span class="count">3</span></span
+            ><span>Connect</span></a
+          >
+          <a href="/audio-rooms"
+            ><span class="icon" aria-hidden="true">🎙️</span><span>Live Rooms</span></a
+          >
+          <a href="/profile" aria-label="Me, 100 unread">
+            <span class="icon" aria-hidden="true">👤<span class="count">99+</span></span>
+            <span>Me</span>
+          </a>
         </nav>
       </section>
       <section aria-labelledby="device-lock-relay-title">
