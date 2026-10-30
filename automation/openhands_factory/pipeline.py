@@ -66,6 +66,12 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 CI_POLL_INTERVAL = timedelta(minutes=1)
+
+
+class _ReconciliationLeaseLost(Exception):
+    """A control-plane observation outlived its task ownership."""
+
+
 CONFLICTING_MERGE_STATES = {"DIRTY"}
 MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 # An unpublished job whose repairs ran out on a base this old is rebuilt once on
@@ -436,44 +442,122 @@ class FactoryPipeline:
                 self._publish_quarantine(job)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
-        retired_jobs: list[Job] = []
         for task_id, job in jobs.items():
             if task_id in active_task_ids or task_id in protected or job.state in TERMINAL_STATES:
                 continue
-            worktree = self.config.worktree_dir / f"issue-{task_id}"
-            if worktree.exists():
-                workflow = self._workflow(self.config.repository)
-                inspection = self._workflow(worktree)
-                try:
-                    dirty = inspection.has_changes()
-                except RepositorySafetyError:
-                    # A damaged or partially-created worktree is not safe to delete silently.
-                    dirty = True
-                if dirty:
-                    recovery = self.config.recovery_dir / (
-                        f"issue-{task_id}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
-                    )
-                    workflow.archive_worktree(worktree, recovery)
-                workflow.remove_worktree(worktree, force=dirty)
-            self.tasks.release(task_id)
-            job.state = JobState.DONE
-            # This clause used to be scoped to PRE_PULL_REQUEST_STATES, so a job
-            # whose pull request was closed (not merged) while the factory was
-            # still reviewing or waiting on CI never got here at all - its
-            # worktree, and everything downstream of it, stayed on disk forever.
-            # reconcile() only resets a DONE job with this exact message back to
-            # DISCOVERED when job.pull_request is still None, which is already
-            # never true once a PR-review job reaches this branch (it is set
-            # immediately in _discover_pull_request), so this message split does
-            # not change that behaviour.
-            job.last_error = (
-                "Issue closed before pull request creation"
-                if job.task.source == "github-issue"
-                else "Pull request closed before the factory finished with it"
-            )
-            retired_jobs.append(job)
-        self.jobs.save_reconciled_jobs(retired_jobs)
+            self._reconcile_missing_intake_job(job)
         return self.jobs.load()
+
+    def _reconcile_missing_intake_job(self, snapshot: Job) -> None:
+        """Confirm remote state under the same CAS lease used by execution."""
+        owner = f"{self.tasks.factory_generation}:reconcile:{uuid4().hex}"
+        try:
+            self.tasks.acquire(snapshot.task, owner)
+        except TaskClaimConflict:
+            # A worker may have started after the protected-id snapshot was taken.
+            return
+        try:
+            job = self.jobs.load().get(snapshot.task.identifier)
+            if job is None or job.state in TERMINAL_STATES:
+                return
+            previous = (job.state, job.intake_blocked, job.intake_block_reason, job.last_error)
+            job.intake_blocked = True
+            job.intake_block_reason = "Confirming GitHub state after removal from authorised intake"
+            self.jobs.save_reconciled_jobs([job])
+            try:
+                retire = self._confirm_missing_intake_state(job, owner)
+            except FactoryError:
+                retire = False
+                job.intake_blocked = True
+                job.intake_block_reason = "Remote GitHub state unconfirmed; preserving work"
+            self._renew_reconciliation_claim(job, owner)
+            if retire:
+                self._retire_confirmed_closed_job(job)
+            if previous != (job.state, job.intake_blocked, job.intake_block_reason, job.last_error):
+                job.updated_at = datetime.now(UTC)
+            # Commit before releasing ownership. A sibling execution can neither
+            # delete this worktree nor overwrite this transition during API I/O.
+            self.jobs.save_reconciled_jobs([job])
+        except _ReconciliationLeaseLost:
+            # Expired ownership is not permission to touch work or commit state.
+            LOGGER.warning("Factory reconciliation lease expired for %s", snapshot.task.identifier)
+        finally:
+            try:
+                self.tasks.release(snapshot.task.identifier, owner=owner)
+            except TaskClaimConflict:
+                LOGGER.warning(
+                    "Factory reconciliation ownership changed for %s", snapshot.task.identifier
+                )
+
+    def _renew_reconciliation_claim(self, job: Job, owner: str) -> None:
+        try:
+            self.tasks.renew(job.task.identifier, owner)
+        except ValueError as error:
+            raise _ReconciliationLeaseLost from error
+
+    def _confirm_missing_intake_state(self, job: Job, owner: str) -> bool:
+        if not job.task.identifier.isdecimal():
+            raise FactoryError("GitHub task identifier is malformed")
+        job.intake_blocked = True
+        job.intake_block_reason = "Task remains open but is absent from authorised intake"
+        number = job.pull_request
+        if number is None and job.task.source == "github-pull-request":
+            number = int(job.task.identifier)
+        pull_state = None
+        if number is not None:
+            pull_state = self.github.remote_task_state(number, pull_request=True)
+            self._renew_reconciliation_claim(job, owner)
+            if pull_state.state == "MERGED":
+                if not (
+                    pull_state.head_sha == job.head_sha == job.latest_verified_sha
+                    and job.latest_verified_sha
+                ):
+                    job.intake_block_reason = (
+                        "Merged head differs from verified job; preserving work"
+                    )
+                    return False
+                job.pull_request = number
+                if job.state is not JobState.MERGED:
+                    job.last_error = None
+                    job.next_attempt_at = None
+                job.state = JobState.MERGED
+                job.intake_blocked = False
+                job.intake_block_reason = None
+                return False
+            if job.task.source == "github-pull-request":
+                return pull_state.state == "CLOSED"
+        if job.task.source == "github-issue":
+            issue_state = self.github.remote_task_state(int(job.task.identifier))
+            self._renew_reconciliation_claim(job, owner)
+            return issue_state.state == "CLOSED" and (
+                pull_state is None or pull_state.state == "CLOSED"
+            )
+        return False
+
+    def _retire_confirmed_closed_job(self, job: Job) -> None:
+        worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
+        if worktree.exists():
+            workflow = self._workflow(self.config.repository)
+            try:
+                dirty = self._workflow(worktree).has_changes()
+            except RepositorySafetyError:
+                dirty = True
+            if dirty:
+                recovery = self.config.recovery_dir / (
+                    f"issue-{job.task.identifier}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+                )
+                workflow.archive_worktree(worktree, recovery)
+            workflow.remove_worktree(worktree, force=dirty)
+        job.state = JobState.DONE
+        job.intake_blocked = False
+        job.intake_block_reason = None
+        job.last_error = (
+            "Issue closed before pull request creation"
+            if job.task.source == "github-issue" and job.pull_request is None
+            else "GitHub issue and its unmerged pull request confirmed closed"
+            if job.task.source == "github-issue"
+            else "Pull request closed before the factory finished with it"
+        )
 
     def _calculate_pull_request_capacity(
         self,
@@ -583,6 +667,7 @@ class FactoryPipeline:
             job
             for job in jobs.values()
             if job.state not in TERMINAL_STATES
+            and not job.intake_blocked
             and (job.next_attempt_at is None or job.next_attempt_at <= now)
         ]
         if not candidates:
@@ -597,7 +682,7 @@ class FactoryPipeline:
 
     def _run_claimed_job(self, task_id: str) -> Job | None:
         snapshot = self.jobs.load().get(task_id)
-        if snapshot is None or snapshot.state in TERMINAL_STATES:
+        if snapshot is None or snapshot.state in TERMINAL_STATES or snapshot.intake_blocked:
             return None
         lease_owner = (
             f"{self.tasks.factory_generation}:{task_id}:{snapshot.state.value}:{uuid4().hex}"
@@ -965,6 +1050,10 @@ class FactoryPipeline:
             return resolution.action
 
     def _advance(self, job: Job, lease_owner: str) -> None:
+        if job.intake_blocked:
+            raise ProviderCapacityUnavailable(
+                "Task is outside authorised intake", retry_after_seconds=60
+            )
         # Notification delivery is best-effort and never changes merge eligibility.
         # Retry a small number of previously-recorded lifecycle events on ordinary
         # Factory progress so a transient Telegram outage is eventually visible.
@@ -1698,7 +1787,7 @@ class FactoryPipeline:
             self._record_pr_lifecycle(
                 job,
                 "merged",
-                "GitHub confirmed that the reviewed pull request is merged.",
+                "GitHub confirmed that this pull request is merged.",
             )
             if job.pull_request is not None:
                 self.github.add_comment(

@@ -17,7 +17,12 @@ from openhands_factory.exceptions import (
     VerificationFailed,
 )
 from openhands_factory.git_workflow import GitWorkflow
-from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
+from openhands_factory.github import (
+    IssueComment,
+    PullRequestMatch,
+    PullRequestStatus,
+    RemoteTaskState,
+)
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import (
     CAPPED_NOTICE_PREFIX,
@@ -65,6 +70,8 @@ class GitHub:
         self.updated_pull_requests: list[tuple[int, str, str]] = []
         self.superseded_pull_requests: list[tuple[int, int | None, str]] = []
         self.equivalent_pull_requests: list[PullRequestMatch] = []
+        self.remote_states: dict[tuple[int, bool], RemoteTaskState] = {}
+        self.remote_state_calls: list[tuple[int, bool]] = []
 
     def ensure_factory_labels(self) -> None:
         return None
@@ -195,6 +202,10 @@ class GitHub:
 
     def close_issue(self, issue: int) -> None:
         self.closed.append(issue)
+
+    def remote_task_state(self, number: int, *, pull_request: bool = False) -> RemoteTaskState:
+        self.remote_state_calls.append((number, pull_request))
+        return self.remote_states.get((number, pull_request), RemoteTaskState(number, "OPEN"))
 
 
 class Conversations:
@@ -837,6 +848,7 @@ def test_refresh_releases_closed_issue_before_pull_request(
         GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
 
     refreshed = pipeline.refresh()
 
@@ -879,6 +891,7 @@ def test_refresh_migrates_a_quarantined_closed_issue_into_normal_completion(
     worktree.mkdir(parents=True)
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
 
     refreshed = pipeline.refresh()
 
@@ -901,6 +914,7 @@ def test_refresh_releases_a_closed_issue_during_security_review(
         GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
 
     refreshed = pipeline.refresh()
 
@@ -929,12 +943,224 @@ def test_refresh_releases_a_pull_request_closed_while_under_review(
         GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.pull_requests = []
+    github.remote_states[(40, True)] = RemoteTaskState(40, "CLOSED", "a" * 40)
 
     refreshed = pipeline.refresh()
 
     assert refreshed["40"].state is JobState.DONE
     assert refreshed["40"].last_error == "Pull request closed before the factory finished with it"
     assert removed == [worktree]
+
+
+@pytest.mark.parametrize("source", ["github-issue", "github-pull-request"])
+def test_missing_intake_preserves_and_suspends_open_work(tmp_path, source):
+    github = GitHub()
+    task = Task("42", "Owned work", "Body", source, 5, pr_branch="owned/work")
+    github.tasks = [task] if source == "github-issue" else []
+    github.pull_requests = [task] if source == "github-pull-request" else []
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.state = JobState.REVIEWING
+    job.provider_history = [{"provider": "codex", "success": True}]
+    job.failure_counts = {"test-failure": 2}
+    pipeline.jobs.save_reconciled_jobs([job])
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    evidence = worktree / "unfinished.txt"
+    evidence.write_text("preserve this work")
+    github.tasks = []
+    github.pull_requests = []
+
+    refreshed = pipeline.refresh()["42"]
+
+    assert refreshed.state is JobState.REVIEWING
+    assert refreshed.intake_blocked
+    assert evidence.read_text() == "preserve this work"
+    assert refreshed.provider_history == job.provider_history
+    assert refreshed.failure_counts == job.failure_counts
+    assert pipeline.run_job("42") is None
+    assert pipeline.jobs.load()["42"].attempt_started_at is None
+    # Restoring eligibility resumes the same phase without resetting evidence.
+    github.tasks = [task] if source == "github-issue" else []
+    github.pull_requests = [task] if source == "github-pull-request" else []
+    resumed = pipeline.refresh()["42"]
+    assert not resumed.intake_blocked
+    assert resumed.intake_block_reason is None
+    assert resumed.state is JobState.REVIEWING
+    assert resumed.provider_history == job.provider_history
+
+
+@pytest.mark.parametrize("failure", ["HTTP401", "HTTP403", "HTTP404", "network failure"])
+def test_unconfirmed_remote_state_preserves_work_and_other_eligible_tasks(
+    tmp_path, monkeypatch, failure
+):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    original = pipeline.refresh()["42"]
+    original.state = JobState.IMPLEMENTING
+    original.last_error = "Original diagnostic"
+    pipeline.jobs.save_reconciled_jobs([original])
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    (worktree / "evidence").write_text("retained")
+    github.tasks = [Task("43", "Independent work", "Body", "github-issue", 5)]
+
+    def unavailable(*args, **kwargs):
+        assert pipeline.jobs.load()["42"].intake_blocked
+        raise FactoryError(failure)
+
+    monkeypatch.setattr(github, "remote_task_state", unavailable)
+    jobs = pipeline.refresh()
+    assert jobs["42"].intake_blocked
+    assert jobs["42"].state is JobState.IMPLEMENTING
+    assert jobs["42"].last_error == "Original diagnostic"
+    assert (worktree / "evidence").read_text() == "retained"
+    assert not jobs["43"].intake_blocked
+    assert jobs["43"].state is JobState.DISCOVERED
+
+
+@pytest.mark.parametrize("source", ["github-issue", "github-pull-request"])
+def test_native_merge_of_verified_head_enters_existing_cleanup_without_new_agent(tmp_path, source):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.task = replace(job.task, source=source)
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    job.head_sha = job.latest_verified_sha = "a" * 40
+    job.provider_history = [{"provider": "codex", "phase": "code-review", "success": True}]
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "MERGED", "a" * 40)
+
+    merged = pipeline.refresh()["42"]
+    assert merged.state is JobState.MERGED
+    assert not merged.intake_blocked
+    assert merged.last_error is None
+    assert github.remote_state_calls == [(99, True)]
+    completed = pipeline.run_job("42")
+    assert completed.state is JobState.DONE
+    assert completed.last_error is None
+    assert completed.provider_history == job.provider_history
+    assert pipeline.run_job("42") is None
+
+
+@pytest.mark.parametrize("verified", [None, "b" * 40])
+def test_unverified_merged_head_is_preserved_without_false_credit(tmp_path, verified):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    job.head_sha = "a" * 40
+    job.latest_verified_sha = verified
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "MERGED", "a" * 40)
+
+    preserved = pipeline.refresh()["42"]
+    assert preserved.state is JobState.CI_PENDING
+    assert preserved.intake_blocked
+    assert "verified" in preserved.intake_block_reason
+    assert pipeline.run_job("42") is None
+
+
+def test_reconciliation_cannot_take_a_live_execution_lease(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    pipeline.tasks.acquire(job.task, "actual-live-owner")
+    github.tasks = []
+    # No protected-id hint: the real task claim is the fence.
+    pipeline.refresh()
+    assert github.remote_state_calls == []
+    assert pipeline.tasks.leases()[job.task.logical_key].owner == "actual-live-owner"
+    assert not pipeline.jobs.load()["42"].intake_blocked
+
+
+def test_dispatch_cannot_race_reconciliation_during_remote_query(tmp_path, monkeypatch):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    original = pipeline.refresh()["42"]
+    github.tasks = []
+
+    def blocked_query(number, **kwargs):
+        assert pipeline.run_job("42") is None
+        assert pipeline.jobs.load()["42"].attempt_started_at is None
+        return RemoteTaskState(number, "OPEN")
+
+    monkeypatch.setattr(github, "remote_task_state", blocked_query)
+    pipeline.refresh()
+    assert pipeline.jobs.load()["42"].state is original.state
+    assert pipeline.jobs.load()["42"].intake_blocked
+
+
+@pytest.mark.parametrize("issue_state,pull_state", [("CLOSED", "OPEN"), ("OPEN", "CLOSED")])
+def test_closed_issue_or_pull_request_alone_does_not_discard_the_other_open_work(
+    tmp_path, issue_state, pull_state
+):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, pull_state, "a" * 40)
+    github.remote_states[(42, False)] = RemoteTaskState(42, issue_state)
+    paused = pipeline.refresh()["42"]
+    assert paused.intake_blocked
+    assert paused.state is JobState.CI_PENDING
+
+
+def test_reopened_closed_issue_keeps_known_pull_request_for_supported_recovery(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "CLOSED", "a" * 40)
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
+    assert pipeline.refresh()["42"].state is JobState.DONE
+    github.tasks = [job.task]
+    resumed = pipeline.refresh()["42"]
+    assert resumed.state is JobState.CI_PENDING
+    assert resumed.pull_request == 99
+    assert not resumed.intake_blocked
+
+
+def test_lease_loss_after_remote_observation_cannot_remove_or_finish_work(tmp_path, monkeypatch):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    pipeline.refresh()
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    (worktree / "retained").write_text("unfinished")
+    github.tasks = []
+    github.remote_states[(42, False)] = RemoteTaskState(42, "CLOSED")
+
+    def expired(*args, **kwargs):
+        raise ValueError("expired ownership")
+
+    monkeypatch.setattr(pipeline.tasks, "renew", expired)
+    job = pipeline.refresh()["42"]
+    assert job.intake_blocked
+    assert job.state is JobState.DISCOVERED
+    assert (worktree / "retained").read_text() == "unfinished"
+
+
+def test_unchanged_intake_poll_does_not_reset_age_or_retry_evidence(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    pipeline.refresh()
+    github.tasks = []
+    first = pipeline.refresh()["42"]
+    second = pipeline.refresh()["42"]
+    assert second.intake_blocked
+    assert second.updated_at == first.updated_at
+    assert second.failure_counts == first.failure_counts
 
 
 @pytest.mark.parametrize(

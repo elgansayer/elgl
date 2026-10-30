@@ -54,4 +54,35 @@ reports success by suppressing an arbitrary API failure. This fixes the absent
 
 ## Quality and merge safety
 
+### Intake and remote-state reconciliation
+
+Filtered intake is not closure evidence. A task can disappear because it is a
+draft, lost an admission label or is temporarily unavailable. Before retiring
+such work, the coordinator acquires the ordinary CAS task lease and confirms
+GitHub's actual issue/PR lifecycle through bounded read-only API calls. Existing
+live claims and protected worker identifiers are preserved. Confirmed closed
+unmerged work retains the existing archive/cleanup path.
+
+Open or uncertain work retains its phase, branch, files and failure/provider
+history, with a durable `intake_blocked` flag. Normal/failsafe/maintenance selectors
+and direct dispatch refuse it. Fresh eligible intake clears that pause and resumes
+the existing phase. A reopened issue with a known PR returns to PR reconciliation
+instead of creating a duplicate. Legacy records default to unpaused; malformed
+pause values fail closed. Queue status includes the pause count and reason.
+
+A confirmed merge of the job's exact verified head enters the existing merged
+cleanup phase without another implementation, review or merge. An unexpected or
+unverified merged head remains preserved for diagnosis, without falsely claiming
+verification. The pause is committed before remote I/O, so supervisor failure or
+expired ownership cannot leave a stale dispatch runnable. Repeated unchanged
+observations do not reset retry evidence or the job's age.
+
+Private-store process tests and recorded public merge metadata exercise this
+control path. They do not prove continuous service deployment, account-wide manual
+session supervision or game/emulator health. Neptune's continuous activation still
+depends on those separate runtime gates.
+
+Repository-specific merge policy still applies: Neptune uses its tests-only flow;
+the other profiles retain their configured CI and independent-review requirements.
+
 Adaptive recovery changes only when a repeatedly failing job becomes eligible to run again. It does not skip or weaken implementation, security review, local verification, quality repair, independent review, reviewed-SHA validation, `factory/independent-review`, `CI / required`, mergeability checks, or repository branch protection.
