@@ -367,6 +367,24 @@ describe('ChatRoomComponent draft restore and persistence', () => {
       expect(localStorage.getItem(chatDraftKey('user-1', 'room-1'))).toBeNull();
     });
 
+    it('keeps a newer composition written while an earlier send is in flight', async () => {
+      await createRoom('room-1');
+      let releaseSend!: (message: ChatMessage) => void;
+      sendMessage.mockImplementationOnce(
+        () => new Promise<ChatMessage>((resolve) => (releaseSend = resolve)),
+      );
+      type(component, 'First message');
+
+      const sending = component.sendTextMessage();
+      await settle(fixture);
+      type(component, 'Second message');
+      releaseSend(makeMessage({ id: 'sent-1', sender_id: 'user-1' }));
+      await sending;
+
+      expect(component.textInput).toBe('Second message');
+      expect(draftService.loadChatDraftV2('room-1')?.textInput).toBe('Second message');
+    });
+
     it('keeps the draft, including the reply target, when the send fails', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => undefined);
       await createRoom('room-1');

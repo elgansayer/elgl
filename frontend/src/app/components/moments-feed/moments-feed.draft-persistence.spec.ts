@@ -364,6 +364,27 @@ describe('MomentsFeedComponent draft persistence', () => {
       expect(createMoment).toHaveBeenCalledTimes(1);
     });
 
+    it('keeps a newer composition written while an earlier publish is in flight', async () => {
+      let releasePublish!: () => void;
+      createMoment.mockImplementationOnce(
+        () => new Promise<void>((resolveValue) => (releasePublish = resolveValue)),
+      );
+      await createComponent();
+      component.showComposeForm.set(true);
+      await edit(() => component.newText.set('First Moment'));
+
+      const publishing = component.submitMoment();
+      await settle();
+      await edit(() => component.newText.set('Second Moment'));
+      releasePublish();
+      await publishing;
+      await settle();
+
+      expect(component.newText()).toBe('Second Moment');
+      expect(component.showComposeForm()).toBe(true);
+      expect(draftService.loadMomentDraft()?.text).toBe('Second Moment');
+    });
+
     it('lets the component decide when the composer closes instead of the submit button', () => {
       expect(template).toContain('(click)="submitMoment()"');
       expect(template).not.toMatch(/submitMoment\(\);\s*showComposeForm\.set\(false\)/);

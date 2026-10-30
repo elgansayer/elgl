@@ -528,6 +528,7 @@ export class ChatRoomComponent implements OnDestroy {
     // The learner can move to another room while a request is pending; everything below belongs
     // to the room the message was written in.
     const roomId = this.roomId;
+    const composerText = this.textInput;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
     this.mentionQuery.set(null);
@@ -560,13 +561,23 @@ export class ChatRoomComponent implements OnDestroy {
         text_content: text,
         reply_to_id: replyToId,
       });
-      this.clearChatDrafts(roomId);
       if (this.roomId === roomId) {
         this.messages.update((list) =>
           list.some((m) => m.id === sent.id) ? list : [...list, sent],
         );
-        this.replyingTo.set(null);
-        this.textInput = '';
+        if (this.textInput === composerText && this.replyingTo()?.id === replyToId) {
+          this.clearChatDrafts(roomId);
+          this.replyingTo.set(null);
+          this.textInput = '';
+        } else {
+          // Do not erase a newer composition written while the request was in flight.
+          this.saveChatDrafts();
+        }
+      } else {
+        const savedDraft = this.draftService.loadChatDraftV2(roomId);
+        if (savedDraft?.textInput === composerText && savedDraft.replyToId === replyToId) {
+          this.clearChatDrafts(roomId);
+        }
       }
     } catch (e) {
       console.error('Failed to send text message:', e);

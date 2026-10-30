@@ -330,12 +330,21 @@ export class MomentsFeedComponent {
     // The composer keeps its content until publishing succeeds, so a second submit while a
     // request is pending would otherwise publish the same Moment twice.
     if (this.isCreating()) return;
-    const text = this.newText().trim();
-    if (!text && this.newMediaUrls().length === 0) return;
-    const voiceDurationSec = this.newVoiceDurationSec();
+    const targetLanguage = this.newTargetLanguage();
+    const submittedDraft: MomentDraft = {
+      text: this.newText(),
+      mediaUrls: this.newMediaUrls().length > 0 ? [...this.newMediaUrls()] : undefined,
+      mediaType: this.newMediaType(),
+      targetLanguage,
+      voiceDurationSec: this.newVoiceDurationSec(),
+    };
+    const text = submittedDraft.text?.trim() ?? '';
+    if (!text && (submittedDraft.mediaUrls?.length ?? 0) === 0) return;
+    const voiceDurationSec = submittedDraft.voiceDurationSec;
     if (
-      this.newMediaType() === 'audio' &&
+      submittedDraft.mediaType === 'audio' &&
       voiceDurationSec !== null &&
+      voiceDurationSec !== undefined &&
       voiceDurationSec > this.MAX_VOICE_SECONDS
     ) {
       showToast(
@@ -349,29 +358,31 @@ export class MomentsFeedComponent {
     this.isCreating.set(true);
     try {
       if (text) {
-        const grammar = await this.vocabStore.checkGrammar(text, this.newTargetLanguage());
+        const grammar = await this.vocabStore.checkGrammar(text, submittedDraft.targetLanguage);
         const corrected = grammar.corrected.trim();
         if (grammar.errors_found > 0 && corrected && corrected !== text) {
-          this.newText.set(corrected);
-          this.saveMomentDraft();
-          showToast(grammar.explanation);
+          if (this.matchesMomentDraft(submittedDraft)) {
+            this.newText.set(corrected);
+            this.saveMomentDraft();
+            showToast(grammar.explanation);
+          }
           return;
         }
       }
 
       await this.momentsStore.createMoment({
         text_content: text || undefined,
-        media_urls: this.newMediaUrls(),
-        media_type: this.newMediaType(),
-        target_language: this.newTargetLanguage(),
+        media_urls: submittedDraft.mediaUrls,
+        media_type: submittedDraft.mediaType,
+        target_language: targetLanguage,
       });
-      this.newText.set('');
-      this.newMediaUrls.set([]);
-      this.newMediaType.set('none');
-      this.newVoiceDurationSec.set(null);
-      this.draftService.clearMomentDraft();
-      // Close only on success: after a failure or a grammar suggestion the draft must stay in view.
-      this.showComposeForm.set(false);
+      if (this.matchesMomentDraft(submittedDraft)) {
+        this.resetMomentComposer();
+        this.draftService.clearMomentDraft();
+      } else {
+        // Do not erase a newer composition written while the request was in flight.
+        this.saveMomentDraft();
+      }
     } catch (e) {
       console.error('Error submitting moment:', e);
       showToast(this.i18n.translate('moments.publishError'));
@@ -733,6 +744,21 @@ export class MomentsFeedComponent {
 
   private saveMomentDraft(): void {
     if (this.canPersistMomentDraft()) this.draftService.saveMomentDraft(this.momentDraftSnapshot());
+  }
+
+  private matchesMomentDraft(draft: MomentDraft): boolean {
+    const current = this.momentDraftSnapshot();
+    const mediaMatches =
+      (current.mediaUrls === undefined && draft.mediaUrls === undefined) ||
+      (current.mediaUrls?.length === draft.mediaUrls?.length &&
+        current.mediaUrls?.every((url, index) => url === draft.mediaUrls?.[index]) === true);
+    return (
+      current.text === draft.text &&
+      current.mediaType === draft.mediaType &&
+      current.targetLanguage === draft.targetLanguage &&
+      current.voiceDurationSec === draft.voiceDurationSec &&
+      mediaMatches
+    );
   }
 
   private hydrateMomentDraft(userId: string | null, rendered: boolean): void {

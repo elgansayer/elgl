@@ -25,13 +25,13 @@ Blank fields are omitted. A chat record with nothing in it, and a Moment record 
 - **Save:** on every keystroke, when a reply is started or cancelled, when the grammar review replaces the text, when the room changes, and on teardown.
 - **Never save an unrestored composer:** nothing is written until the draft for the current room and account has been restored. Leaving a room that is still loading, or locked, therefore cannot overwrite its stored draft with an empty composer.
 - **Room changes inside one component:** the outgoing room is saved, then the composer, reply target and correction state are emptied before the next room restores its own draft.
-- **Send:** the composer keeps its text until delivery succeeds, and a second submit is ignored while a request is pending. Success clears the room draft and the composer. Failure keeps both and records the attempted text with the existing reply target. Completion is scoped to the room the message was written in, so a send that finishes after the learner changed rooms never touches the new room.
+- **Send:** the composer keeps its text until delivery succeeds, and a second submit is ignored while a request is pending. Success clears the submitted draft only if it is still current. Text written while delivery is pending remains in the composer and storage. Failure keeps both and records the attempted text with the existing reply target. Completion is scoped to the room the message was written in, so a send that finishes after the learner changed rooms never touches the new room.
 
 ### Moments composer
 
 - **Save:** every change to the text, media, language or voice duration is saved as it happens, and once more on teardown. A reload, crash or discarded mobile tab never runs teardown, so teardown alone is not relied on.
 - **Restore:** after the first browser render and once the account is known, in either order, because the session can resolve after the first render on a reload. A restored draft opens the composer so it is visible. A language restored from a draft, or chosen by the learner, is not replaced by the profile default that arrives later.
-- **Publish:** a second submit is ignored while a request is pending. Success clears the draft and closes the composer. A failure, or a grammar suggestion that needs reviewing, keeps the draft and leaves the composer open.
+- **Publish:** a second submit is ignored while a request is pending. Success clears and closes the submitted draft only if it is still current. A newer composition written while publishing is pending remains open and stored. A failure, or a grammar suggestion that needs reviewing, keeps the draft and leaves the composer open.
 - **Accounts:** if the signed-in account changes while the composer is mounted, the composer is emptied before the new account's draft is restored.
 
 ## Retention
