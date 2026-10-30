@@ -29,25 +29,34 @@ describe('AudioRoomsService co-host replacement', () => {
   function createHarness(options?: {
     participants?: Array<{ identity: string }>;
     updateParticipantError?: Error;
+    publishResults?: boolean[];
+    demotionMatched?: boolean;
+    assignmentMatched?: boolean;
   }) {
     const sequence: string[] = [];
+    let publishCallIndex = 0;
 
     const queryBuilder: Record<string, unknown> & {
       error: null;
       select: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
       eq: ReturnType<typeof vi.fn>;
+      is: ReturnType<typeof vi.fn>;
+      maybeSingle: ReturnType<typeof vi.fn>;
       single: ReturnType<typeof vi.fn>;
     } = {
       error: null,
       select: vi.fn(),
       update: vi.fn(),
       eq: vi.fn(),
+      is: vi.fn(),
+      maybeSingle: vi.fn(),
       single: vi.fn(),
     };
 
     queryBuilder.select.mockReturnValue(queryBuilder);
     queryBuilder.eq.mockReturnValue(queryBuilder);
+    queryBuilder.is.mockReturnValue(queryBuilder);
     queryBuilder.update.mockImplementation(
       (payload: { co_host_id?: string | null }) => {
         if (payload.co_host_id === null) sequence.push('db-demote');
@@ -55,6 +64,15 @@ describe('AudioRoomsService co-host replacement', () => {
         return queryBuilder;
       },
     );
+    queryBuilder.maybeSingle
+      .mockResolvedValueOnce({
+        data: options?.demotionMatched === false ? null : { id: 'room-1' },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: options?.assignmentMatched === false ? null : { id: 'room-1' },
+        error: null,
+      });
     queryBuilder.single
       .mockResolvedValueOnce({ data: roomBefore, error: null })
       .mockResolvedValueOnce({ data: roomAfter, error: null });
@@ -67,30 +85,31 @@ describe('AudioRoomsService co-host replacement', () => {
       publish: vi
         .fn()
         .mockImplementation(
-          async (
-            _channel: string,
-            payload: { type: string },
-          ): Promise<boolean> => {
+          (_channel: string, payload: { type: string }): Promise<boolean> => {
             if (payload.type === 'co_host_removed')
               sequence.push('notify-remove');
             if (payload.type === 'co_host_changed')
               sequence.push('notify-change');
-            return true;
+            const result = options?.publishResults?.[publishCallIndex] ?? true;
+            publishCallIndex += 1;
+            return Promise.resolve(result);
           },
         ),
     };
 
     const livekitClient = {
-      listParticipants: vi.fn().mockImplementation(async () => {
+      listParticipants: vi.fn().mockImplementation(() => {
         sequence.push('livekit-list');
-        return options?.participants ?? [{ identity: 'Old Cohost_user-2' }];
+        return Promise.resolve(
+          options?.participants ?? [{ identity: 'Old Cohost_user-2' }],
+        );
       }),
-      updateParticipant: vi.fn().mockImplementation(async () => {
+      updateParticipant: vi.fn().mockImplementation(() => {
         sequence.push('livekit-revoke');
         if (options?.updateParticipantError) {
-          throw options.updateParticipantError;
+          return Promise.reject(options.updateParticipantError);
         }
-        return {};
+        return Promise.resolve({});
       }),
     };
 
@@ -191,6 +210,92 @@ describe('AudioRoomsService co-host replacement', () => {
 
     expect(queryBuilder.update).not.toHaveBeenCalled();
     expect(centrifugo.publish).not.toHaveBeenCalled();
+  });
+
+  it('does not assign the replacement when the demotion notification is rejected', async () => {
+    const { service, sequence, queryBuilder, centrifugo } = createHarness({
+      publishResults: [false],
+    });
+
+    await expect(
+      service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-3',
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    expect(sequence).toEqual([
+      'livekit-list',
+      'livekit-revoke',
+      'db-demote',
+      'notify-remove',
+    ]);
+    expect(queryBuilder.update).toHaveBeenCalledTimes(1);
+    expect(centrifugo.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not continue when a concurrent replacement wins the demotion race', async () => {
+    const { service, sequence, queryBuilder, centrifugo } = createHarness({
+      demotionMatched: false,
+    });
+
+    await expect(
+      service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-3',
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    expect(sequence).toEqual(['livekit-list', 'livekit-revoke', 'db-demote']);
+    expect(queryBuilder.update).toHaveBeenCalledTimes(1);
+    expect(centrifugo.publish).not.toHaveBeenCalled();
+  });
+
+  it('does not notify a replacement when a concurrent assignment wins', async () => {
+    const { service, sequence, queryBuilder, centrifugo } = createHarness({
+      assignmentMatched: false,
+    });
+
+    await expect(
+      service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-3',
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    expect(sequence).toEqual([
+      'livekit-list',
+      'livekit-revoke',
+      'db-demote',
+      'notify-remove',
+      'db-assign',
+    ]);
+    expect(queryBuilder.update).toHaveBeenCalledTimes(2);
+    expect(centrifugo.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a rejected replacement notification after assignment', async () => {
+    const { service, sequence, queryBuilder, centrifugo } = createHarness({
+      publishResults: [true, false],
+    });
+
+    await expect(
+      service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-3',
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    expect(sequence).toEqual([
+      'livekit-list',
+      'livekit-revoke',
+      'db-demote',
+      'notify-remove',
+      'db-assign',
+      'notify-change',
+    ]);
+    expect(queryBuilder.update).toHaveBeenCalledTimes(2);
+    expect(centrifugo.publish).toHaveBeenCalledTimes(2);
   });
 
   it('continues safely when the previous co-host is already disconnected', async () => {

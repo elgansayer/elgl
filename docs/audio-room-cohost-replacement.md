@@ -21,6 +21,8 @@ Supabase remains the source of truth for room roles. LiveKit is the media plane 
 
 If there is no existing co-host, the normal assignment path remains unchanged. Re-inviting the current co-host remains idempotent and does not revoke that user's publish permission.
 
+Both persistence steps use compare-and-set filters and require a returned row. If another invite changes `co_host_id` between the initial read and either update, the stale request stops without overwriting the newer role state or emitting an incorrect replacement event.
+
 ## Security and privacy
 
 Only the room host may call the existing invite endpoint. The host still cannot assign themselves as co-host.
@@ -37,8 +39,9 @@ The replacement is deliberately fail-safe:
 
 - LiveKit permission-revocation failure stops before any database role mutation.
 - Database demotion failure stops before notifying or assigning the replacement.
-- Outgoing Centrifugo notification failure leaves the room without an active co-host and does not assign the replacement.
+- Outgoing Centrifugo notification failure, including an HTTP publish rejection reported as `false`, leaves the room without an active co-host and does not assign the replacement.
 - Incoming assignment failure leaves the room without an active co-host rather than preserving two publishers.
+- A concurrent role change aborts the stale request instead of silently overwriting the newer co-host.
 - Incoming notification failure may leave the new co-host persisted but unaware of the change. Retrying the same invite is safe and re-emits the current `co_host_changed` event without demoting that user.
 
 These failure states prefer temporarily having no co-host over allowing two co-host publishers.
@@ -61,6 +64,8 @@ Focused regression coverage lives in `backend/src/audio-rooms/audio-rooms.cohost
 
 - LiveKit revocation happens before database demotion.
 - Database demotion and `co_host_removed` happen before incoming assignment.
+- Conflicting concurrent demotion or assignment updates fail closed.
+- Centrifugo `false` responses are handled as delivery failures.
 - The replacement event is emitted only after persistence.
 - LiveKit revocation failures prevent database/realtime mutation.
 - Disconnected outgoing co-hosts can be replaced safely.

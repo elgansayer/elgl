@@ -55,12 +55,16 @@ describe('AudioRoomsService', () => {
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
       or: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       range: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: 'room-1' },
+        error: null,
+      }),
       single: vi.fn(),
     };
 
