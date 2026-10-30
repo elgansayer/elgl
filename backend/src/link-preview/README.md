@@ -48,10 +48,15 @@ returns `null`.
    awaiting it, open indefinitely. When it expires the request is cancelled and
    its socket destroyed.
 4. **Parsing:** `cheerio` extracts `og:title`, `og:description`, `og:image`
-   and `og:site_name`, falling back to the document `<title>` (the first
-   `<title>` only, so inline SVG icon titles are not appended) and the
-   `description` meta tag when OpenGraph tags are absent. Relative image URLs
-   are resolved against the source page.
+   and `og:site_name`. When OpenGraph tags are absent or empty, it falls back to
+   Twitter card tags (`twitter:title`, `twitter:description`, `twitter:image`,
+   `twitter:site`), alternative image properties (`og:image:url`,
+   `og:image:secure_url`, `twitter:image:src`), the document `<title>` (the first
+   `<title>` only, so inline SVG icon titles are not appended), the
+   `description` meta tag, and `application-name` before defaulting to the
+   hostname. Relative and protocol-relative image URLs are resolved against the
+   source page. Both `text/html` and `application/xhtml+xml` content types are
+   supported.
 5. **Sanitisation and output bounds:** all scraped text fields are run through
    a strict DOMPurify configuration that allows no tags and no attributes.
    Titles are capped at 300 characters, descriptions at 1,000 and site names
@@ -82,6 +87,13 @@ render normally.
 Preview scraping is best effort for chat delivery. A cache outage does not
 prevent a fresh scrape, while invalid/unreachable external URLs follow the
 existing service error contract.
+
+**URL selection.** `extractFirstHttpUrl` (`link-url.ts`) picks the first
+well-formed `http(s)` URL in a message. A URL ends at whitespace, markup
+delimiters, typographic quotes and the sentence punctuation of CJK, Arabic and
+Indic scripts (which are rarely preceded by a space). Trailing ASCII sentence
+punctuation is dropped, and a closing bracket is kept only when the URL opened
+it (`/wiki/Rust_(language)`).
 
 ## Failure and abuse behaviour
 
@@ -163,7 +175,13 @@ reach the network.
 
 ## Tests
 
-- `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6).
+- `dto/link-preview-query.dto.spec.ts`: query validation constraints.
+- `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6, multicast, broadcast).
+- `link-url.spec.ts`: first-URL selection, trailing punctuation, balanced
+  brackets and CJK/Arabic/Indic punctuation.
+- `link-preview.observability.spec.ts`: overall deadline, guarded DNS lookup,
+  outcome and failure-reason metrics, privacy-safe failure logs and the real
+  Prometheus registry wiring.
 - `link-preview.service.spec.ts`: URL validation, SSRF boundaries, privacy-safe
   cache keys/logging, cache degradation, parsing, sanitisation, safe image
   handling and network error handling.
@@ -185,6 +203,8 @@ reach the network.
 - `metrics/metrics.service.spec.ts`: the link-preview counters and histogram.
 - `link-preview.controller.spec.ts`: authenticated endpoint ownership, query
   parameter validation and service delegation.
+- `dto/link-preview-query.dto.spec.ts`: DTO validation covering valid URLs,
+  missing/empty values, disallowed protocols, length caps and non-string types.
 - `link-preview-card.component.spec.ts`: safe external-link rendering, unsafe
   URL suppression and broken/replacement image behaviour.
 

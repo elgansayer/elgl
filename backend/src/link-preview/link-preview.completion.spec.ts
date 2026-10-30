@@ -102,6 +102,7 @@ describe('LinkPreviewService completion boundaries', () => {
         maxBodyLength: 5_000_000,
         httpAgent: expect.anything(),
         httpsAgent: expect.anything(),
+        proxy: false,
       }),
     );
   });

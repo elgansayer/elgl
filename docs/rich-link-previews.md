@@ -61,7 +61,8 @@ Focused backend tests cover:
 - malformed, overlong, private-network, credential-bearing, custom-port, and non-HTTP(S) page URLs;
 - hashed cache keys and Redis outage degradation;
 - cache URL binding, cache-size bounds, metadata re-sanitisation, and unsafe cached image rejection;
-- OpenGraph extraction and title/description fallback;
+- OpenGraph extraction, Twitter Card tags, and title/description fallback;
+- request query DTO validation and response typing;
 - 300/1,000/200-character output bounds before caching;
 - strict plain-text sanitisation and unsafe image protocols/private literal image hosts;
 - non-HTML responses and the 5 MB response bound;

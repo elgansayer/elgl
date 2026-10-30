@@ -31,6 +31,20 @@
 $ npm install
 ```
 
+## Environment configuration
+
+```bash
+$ cp .env.example .env
+```
+
+`.env.example` documents every environment variable the API recognises. The API
+validates the environment on startup (`src/config/validation.schema.ts` and
+`src/config/environment.validation.ts`) and exits with a non-zero status when a
+value is malformed. With `NODE_ENV=production` it also refuses to boot while a
+required variable is missing or still contains an example value. See
+[Backend environment configuration](../docs/environment-configuration.md) for
+the rules and for the checklist to follow when adding a variable.
+
 ## Compile and run the project
 
 ```bash

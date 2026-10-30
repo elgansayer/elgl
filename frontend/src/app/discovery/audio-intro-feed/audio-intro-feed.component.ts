@@ -103,16 +103,16 @@ import { UserProfile } from '../../services/user.service';
                     type="button"
                     size="icon-touch"
                     (click)="togglePlay(user.id, user.audio_intro_url)"
-                    class="ms-auto shrink-0 rounded-full"
+                    class="ms-auto shrink-0 rounded-full text-on-fill"
                     [attr.aria-label]="
                       playingId() === user.id ? ('audioIntro.pause' | t) : ('audioIntro.play' | t)
                     "
                     [attr.aria-describedby]="'audio-intro-user-' + user.id"
                   >
                     @if (playingId() === user.id) {
-                      <span class="i-ph-pause-fill text-lg" aria-hidden="true"></span>
+                      <span class="i-ph-pause-fill text-lg text-on-fill" aria-hidden="true"></span>
                     } @else {
-                      <span class="i-ph-play-fill text-lg" aria-hidden="true"></span>
+                      <span class="i-ph-play-fill text-lg text-on-fill" aria-hidden="true"></span>
                     }
                   </button>
                 }

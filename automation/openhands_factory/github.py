@@ -27,6 +27,29 @@ from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ProcessResult, run_process
 
 REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
+MAX_FAILED_JOB_EXCERPTS = 4
+_LOG_TIMESTAMP = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]+Z ")
+_LOG_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_LOG_NOISE = re.compile(r"^\s*\* \[new (branch|tag)\]|^##\[(group|endgroup)\]|^\s*$")
+_LOG_KEY = re.compile(r"^##\[error\]|^\s*(FAIL|not ok)\b|^\s*[\u2715\u00d7\u25cf] ")
+
+
+def failed_log_excerpt(log: str, lines: int = 25, limit: int = 2000) -> str:
+    """Keep a job's failure markers plus the lines leading up to its last error.
+
+    Test runners print the failing test names (FAIL, ●, not ok) and assertion
+    errors far above the final exit-code line, so both are kept.
+    """
+    cleaned = [_LOG_ANSI.sub("", _LOG_TIMESTAMP.sub("", line)) for line in log.splitlines()]
+    cleaned = [line for line in cleaned if not _LOG_NOISE.search(line)]
+    errors = [index for index, line in enumerate(cleaned) if line.startswith("##[error]")]
+    end = errors[-1] + 1 if errors else len(cleaned)
+    tail = cleaned[max(0, end - lines) : end]
+    key = [line[:300] for line in cleaned[: max(0, end - lines)] if _LOG_KEY.search(line)][:10]
+    excerpt = "\n".join([*key, *(["..."] if key else []), *tail])
+    return excerpt[-limit:]
+
+
 _PENDING_CHECK_STATES = frozenset({"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "EXPECTED"})
 LOGGER = logging.getLogger(__name__)
 
@@ -795,6 +818,7 @@ class GitHubClient:
             "factory-reviewed": "0e8a16",
             "factory-stack-blocked": "fbca04",
             "factory-quarantined": "b60205",
+            "factory-capped": "c5def5",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
@@ -932,6 +956,58 @@ class GitHubClient:
                 )
             requeued.append(issue)
         return requeued
+
+    def failed_check_excerpts(self, head_sha: str) -> str:
+        """Return the closing log lines of each failed CI job for one head.
+
+        CI repairs were told only check names such as `constitution` or
+        `backend / unit`, never the failure itself (2026-10-29). Bounded to a
+        few jobs and lines so the prompt stays small.
+        """
+        runs = json.loads(
+            self._run(
+                (
+                    "gh",
+                    "run",
+                    "list",
+                    "--repo",
+                    self.repository,
+                    "--commit",
+                    head_sha,
+                    "--status",
+                    "failure",
+                    "--json",
+                    "databaseId",
+                    "--limit",
+                    "5",
+                )
+            )
+            or "[]"
+        )
+        jobs: list[tuple[int, str]] = []
+        for run in runs:
+            payload = json.loads(
+                self._run(
+                    (
+                        "gh",
+                        "api",
+                        f"repos/{self.repository}/actions/runs/{run['databaseId']}/jobs"
+                        "?filter=latest&per_page=100",
+                    )
+                )
+            )
+            jobs.extend(
+                (job["id"], job["name"])
+                for job in payload.get("jobs", [])
+                if job.get("conclusion") == "failure"
+            )
+        # The aggregate gate only restates which jobs failed.
+        specific = [job for job in jobs if not job[1].endswith("required")] or jobs
+        sections = []
+        for job_id, name in specific[:MAX_FAILED_JOB_EXCERPTS]:
+            log = self._run(("gh", "api", f"repos/{self.repository}/actions/jobs/{job_id}/logs"))
+            sections.append(f"### {name}\n{failed_log_excerpt(log)}")
+        return "\n\n".join(sections)
 
     def add_comment(self, number: int, body: str) -> None:
         """Publish a bounded lifecycle update on an issue or pull request."""

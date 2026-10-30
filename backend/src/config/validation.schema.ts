@@ -72,7 +72,7 @@ const testDefaults: Record<string, string> = {
 
 export const validationSchema = Joi.object({
   // -- Application --
-  PORT: Joi.number().default(3000),
+  PORT: Joi.number().port().default(3000),
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test', 'provision')
     .default('development'),
@@ -82,6 +82,15 @@ export const validationSchema = Joi.object({
   LOG_LEVEL: Joi.string()
     .valid('trace', 'debug', 'info', 'warn', 'error', 'fatal')
     .default('info'),
+  // The network abuse guard only honours the exact string 'true'. Any other
+  // spelling (for example 'TRUE' or '1') would silently switch the control off,
+  // so reject it at startup instead.
+  TRUST_CLOUDFLARE_CONNECTING_IP: Joi.string()
+    .valid('true', 'false')
+    .default('false'),
+  TRUST_CLOUDFLARE_NETWORK_METADATA: Joi.string()
+    .valid('true', 'false')
+    .default('false'),
 
   // -- Supabase (PostgreSQL + Auth) --
   SUPABASE_URL: Joi.string().uri().default(testDefaults.SUPABASE_URL),
@@ -98,6 +107,8 @@ export const validationSchema = Joi.object({
   CENTRIFUGO_URL: Joi.string().uri().default(testDefaults.CENTRIFUGO_URL),
   CENTRIFUGO_API_KEY: Joi.string().default(testDefaults.CENTRIFUGO_API_KEY),
   CENTRIFUGO_SECRET: Joi.string().default(testDefaults.CENTRIFUGO_SECRET),
+  // Optional override for the audio room health probe. Falls back to CENTRIFUGO_URL.
+  CENTRIFUGO_API_URL: Joi.string().uri().optional().allow(''),
   CENTRIFUGO_CONNECTION_RATE_LIMIT: Joi.number().integer().min(1).default(5),
   CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC: Joi.number()
     .integer()
@@ -120,8 +131,8 @@ export const validationSchema = Joi.object({
   LIVEKIT_TURN_KEY_FILE: Joi.string()
     .allow('')
     .default(testDefaults.LIVEKIT_TURN_KEY_FILE),
-  LIVEKIT_TURN_TLS_PORT: Joi.number().default(5349),
-  LIVEKIT_TURN_UDP_PORT: Joi.number().default(3478),
+  LIVEKIT_TURN_TLS_PORT: Joi.number().port().default(5349),
+  LIVEKIT_TURN_UDP_PORT: Joi.number().port().default(3478),
   LIVEKIT_TURN_USERNAME: Joi.string().default(
     testDefaults.LIVEKIT_TURN_USERNAME,
   ),
@@ -273,7 +284,7 @@ export const validationSchema = Joi.object({
 
   // -- Email (password reset, notifications, etc.) --
   MAIL_HOST: Joi.string().optional().allow(''),
-  MAIL_PORT: Joi.number().default(587),
+  MAIL_PORT: Joi.number().port().default(587),
   MAIL_USER: Joi.string().optional().allow(''),
   MAIL_PASS: Joi.string().optional().allow(''),
   MAIL_FROM_NAME: Joi.string().default('HelloTalk'),
@@ -294,12 +305,23 @@ export const validationSchema = Joi.object({
   PRIVACY_EFFECTIVE_DATE: Joi.string().optional().allow(''),
   TOS_EFFECTIVE_DATE: Joi.string().optional().allow(''),
 
+  // -- Datadog metrics (optional) --
+  // The StatsD exporter stays disabled unless host, port and key are all set.
+  DD_AGENT_HOST: Joi.string().hostname().optional().allow(''),
+  DD_DOGSTATSD_PORT: Joi.number().port().optional().allow(''),
+  DD_API_KEY: Joi.string().optional().allow(''),
+  DD_ENV: Joi.string().optional().allow(''),
+
   // -- LLM --
   LLM_PROVIDER: Joi.string()
     .valid('openai', 'anthropic', 'google', 'local')
     .default('openai'),
   LLM_API_KEY: Joi.string().default(testDefaults.LLM_API_KEY),
   LLM_BASE_URL: Joi.string().uri().optional().allow(''),
+  // The consumers read these with a default parameter or `??`, which only
+  // applies to an unset variable. A blank value would be sent as the endpoint
+  // or model name, so blank is rejected: leave the variable unset instead.
+  LLM_API_URL: Joi.string().uri().optional(),
   LLM_MODEL: Joi.string().optional(),
   ANTHROPIC_VERSION: Joi.string().default('2023-06-01'),
   MESSAGE_EDIT_WINDOW_MINUTES: Joi.number().integer().min(1).default(5),

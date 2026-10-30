@@ -638,7 +638,7 @@ export class DiscoveryService {
       const response = (await supabase.rpc('search_nearby_users', {
         search_lat: searchLat,
         search_lon: searchLon,
-        radius_m: query.radius_metres || 50000,
+        radius_m: query.radius_metres ?? 50000,
         exclude_user_id: currentUserId,
         filter_native_arr: query.native_languages
           ? [query.native_languages]
@@ -656,7 +656,13 @@ export class DiscoveryService {
         error: { message?: string } | null;
       };
 
-      if (response.error || !response.data || response.data.length === 0) {
+      if (response.error || !response.data) {
+        this.logger.warn(
+          {
+            error: response.error?.message ?? 'PostGIS returned no data',
+          },
+          'PostGIS partner search failed; using bounded non-spatial fallback',
+        );
         const fallbackRes = await queryBuilder.limit(50);
         if (
           fallbackRes.error ||
@@ -701,6 +707,13 @@ export class DiscoveryService {
         );
         return enrich(filtered);
       }
+
+      // An empty result is a successful spatial search. Falling back here
+      // would leak users outside the requested radius into proximity results.
+      if (response.data.length === 0) {
+        return enrich([]);
+      }
+
       let rpcResults: DiscoveryUser[] = (
         response.data as unknown as DiscoveryUser[]
       ).map((item) => ({
@@ -721,6 +734,13 @@ export class DiscoveryService {
       const filtered = await this.filterByVoiceRoomActive(
         rpcResults,
         query.voice_room_active === true,
+      );
+      this.logger.info(
+        {
+          count: filtered.length,
+          radius_m: query.radius_metres ?? 50000,
+        },
+        'PostGIS proximity search matched nearby partners within radius',
       );
       return enrich(filtered);
     }

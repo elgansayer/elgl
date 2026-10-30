@@ -60,7 +60,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 
 - `id` (UUID, Primary Key)
 - `moment_id` (UUID, Foreign Key referencing `moments.id`, indexed)
-- `user_id` (UUID, Foreign Key referencing `users.id`)
+- `user_id` (UUID, Foreign Key referencing `users.id`, indexed together with `created_at DESC` for the viewer's recent-likes history used by For You ranking)
 - `created_at` (Timestamp with time zone, default `now()`)
 
 ### Table: `flashcards` (LingQ Interactive Reading & SRS Vocabulary Bank)
@@ -140,6 +140,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 
 - **Publish Flow:** `POST /moments` saves moment to `moments` table, then pushes `moment.id` asynchronously via NestJS background queue (`BullMQ` or native Redis `RPUSH`) into `timeline_queue:{follower_id}` for all followers (and language classmates).
 - **Feed Retrieval:** `GET /moments/feed?filter=all|classmates|following` fetches top 20 IDs from Redis list using `LRANGE`, then retrieves full hydrated objects from Supabase.
+- **For You Ranking:** `GET /moments/feed?filter=For%20You` merges in-network Moments (Redis `timeline_queue:{user_id}`, falling back to a bounded follow-graph read) with the newest network-wide Moments, applies the block and targeted-language rules, then ranks the bounded pool by recency, engagement, followed-author membership, hashtag affinity and author diversity. Details, bounds and metrics: `docs/moments_for_you_ranking.md`.
 
 ### NLP & AI Module
 
@@ -162,6 +163,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 ### JSON Message Payloads
 
 - **Text:** `{ "type": "text", "content": "Hello world", "replyToId": null }`
+- **Text link preview:** a text publication may carry `"link_preview": { "url", "title", "description", "image", "siteName" }`, the bounded OpenGraph metadata of the first URL in the text. An edit always includes the field and publishes `null` when the new text has no previewable link, because clients merge edit events over their local copy of the message. Previews are realtime-only (not stored with the message); see `docs/rich-link-previews.md`.
 - **Correction:** `{ "type": "correction", "original": "I goes to school", "fixed": "I go to school", "notes": "Subject-verb agreement" }`
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
