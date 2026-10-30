@@ -256,12 +256,56 @@ def test_already_enabled_auto_merge_is_idempotent(tmp_path: Path) -> None:
         [{}],
         [{"check_runs": None}],
         [{"check_runs": ["bad"]}],
-        [{"check_runs": [check(), check()]}],
     ],
 )
-def test_malformed_or_ambiguous_check_evidence_fails(pages: object) -> None:
+def test_malformed_check_evidence_fails(pages: object) -> None:
     with pytest.raises(FactoryError):
         neptune_gate(pages, HEAD)
+
+
+def test_repeated_success_at_same_app_pinned_head_is_valid() -> None:
+    result = neptune_gate(
+        [{"check_runs": [check(id=1)]}, {"check_runs": [check(id=2), check(id=3)]}], HEAD
+    )
+    assert result.passed
+    assert not result.pending
+    assert not result.failed_checks
+
+
+def test_real_draft_to_ready_check_fixture_is_accepted() -> None:
+    fixture = Path(__file__).parent / "fixtures" / "neptune-repeated-success.json"
+    evidence = json.loads(fixture.read_text())
+    assert len(evidence["check_runs"]) == 2
+    assert neptune_gate([evidence], evidence["head"]).passed
+
+
+@pytest.mark.parametrize(
+    "other",
+    [
+        check(conclusion=value)
+        for value in ("failure", "skipped", "cancelled", "neutral", "timed_out", None)
+    ]
+    + [check(status="in_progress", conclusion=None), check(status=None)],
+)
+@pytest.mark.parametrize("reverse", [False, True])
+def test_success_cannot_shadow_any_unsuccessful_duplicate(
+    other: dict[str, Any], reverse: bool
+) -> None:
+    candidates = [check(id=1), other]
+    if reverse:
+        candidates.reverse()
+    with pytest.raises(FactoryError):
+        neptune_gate([{"check_runs": candidates}], HEAD)
+
+
+def test_repeated_success_cannot_replace_another_missing_required_check() -> None:
+    result = neptune_gate(
+        [{"check_runs": [check(id=1), check(id=2)]}],
+        HEAD,
+        frozenset({NEPTUNE_GATE, PROVISIONING_GATE}),
+    )
+    assert result.pending
+    assert not result.passed
 
 
 def test_paginated_check_evidence_is_not_truncated() -> None:
