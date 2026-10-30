@@ -85,6 +85,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`, `'system'`)
 - `content_json` (JSONB, structure varies depending on `payload_type`)
 - `is_read` (Boolean, default `false`)
+- `link_preview` (JSONB, nullable: the bounded OpenGraph preview `{ url, title, description, image, siteName }` of the first URL in a text message, written by the backend only and removed with the message row; see `docs/rich-link-previews.md`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
 
 ### Table: `favourites` (Bookmarked Messages, Corrections & Audio)
@@ -164,7 +165,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 ### JSON Message Payloads
 
 - **Text:** `{ "type": "text", "content": "Hello world", "replyToId": null }`
-- **Text link preview:** a text publication may carry `"link_preview": { "url", "title", "description", "image", "siteName" }`, the bounded OpenGraph metadata of the first URL in the text. An edit always includes the field and publishes `null` when the new text has no previewable link, because clients merge edit events over their local copy of the message. Previews are realtime-only (not stored with the message); see `docs/rich-link-previews.md`.
+- **Text link preview:** a text publication may carry `"link_preview": { "url", "title", "description", "image", "siteName" }`, the bounded OpenGraph metadata of the first URL in the text. An edit always includes the field and publishes `null` when the new text has no previewable link, because clients merge edit events over their local copy of the message; a correction fix republishes a stored preview only while it still describes the first link and otherwise publishes `null`. The resolved preview is also stored in `chat_messages.link_preview` before the publication, so history, search and export responses return it for recipients who were offline; every read revalidates it against the message's current text and drops it when it is malformed or describes a different first link. See `docs/rich-link-previews.md`.
 - **Correction:** `{ "type": "correction", "original": "I goes to school", "fixed": "I go to school", "notes": "Subject-verb agreement" }`
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`

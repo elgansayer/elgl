@@ -140,7 +140,7 @@ Every URL-like field must declare a purpose:
 | Notification deep link | allowlisted internal routes; re-authorise destination after open |
 | Media | asset ID and server-authorised delivery resolution |
 | Provider callback | exact configured host/path/signature policy |
-| Link preview | HTTP/HTTPS, SSRF protection, redirect revalidation and byte/time limits |
+| Link preview | HTTP/HTTPS, SSRF protection, redirect revalidation, byte/time limits, and revalidation of stored previews against the message text on every read |
 
 Reject executable and unknown schemes. Do not persist an expiring media URL as the asset identity.
 

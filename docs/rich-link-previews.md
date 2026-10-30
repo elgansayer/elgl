@@ -4,7 +4,7 @@
 
 Text chat messages may include a single OpenGraph link preview supplied by the NestJS chat API. The backend remains authoritative for fetching external metadata through `LinkPreviewService`; Angular never fetches arbitrary third-party pages directly. `ChatMessageComponent` renders the optional payload through the shared `LinkPreviewCardComponent`.
 
-The repository now has the complete #1426 production path: the authenticated NestJS OpenGraph scraper, Redis caching, chat payload integration, and the Angular rich-preview card. The frontend and backend contracts remain compatible: a preview contains `url`, `title`, `description`, `image`, and `siteName`, and messages continue to work when `link_preview` is absent.
+The repository now has the complete #1426 production path: the authenticated NestJS OpenGraph scraper, Redis caching, chat payload integration, and the Angular rich-preview card. The frontend and backend contracts remain compatible: a preview contains `url`, `title`, `description`, `image`, and `siteName`, and messages continue to work when `link_preview` is absent. The resolved preview is published in realtime and also stored with the message (`chat_messages.link_preview`), so a client that loads history later, including every recipient who was offline when the message was sent, receives the same card. See [Persistence and history](#persistence-and-history).
 
 ## Backend scraping contract
 
@@ -17,6 +17,35 @@ The repository now has the complete #1426 production path: the authenticated Nes
 - Redis keys contain only a SHA-256 digest of the normalized page URL. Cached preview payloads are treated as untrusted: entries over 16 KiB, malformed JSON, mismatched page URLs, unsafe image URLs, or payloads without usable preview content are ignored and refreshed from origin.
 - Cached metadata is re-sanitised and re-bounded on read. This keeps mixed-version or corrupted cache entries from bypassing the current output contract.
 - Cache failures are best-effort. A Redis outage does not turn link enrichment into a chat-delivery failure.
+
+## Persistence and history
+
+Before this was added a preview existed only in the realtime publication, so reloading a conversation, or opening it after being offline, showed plain text. The preview is now stored on the message row.
+
+- **Column.** `chat_messages.link_preview` is nullable `JSONB` holding the same `{ url, title, description, image, siteName }` object that is published. A `CHECK` constraint (`chat_messages_link_preview_check`) requires a JSON object of at most 16 KiB, which equals the 16 KiB bound already applied to Redis cache entries and sits far above the 300/1,000/200 character field bounds plus two URLs of at most 2,048 characters.
+- **Writers.** Only `ChatService` writes it, and only with a preview it has just resolved through `LinkPreviewService`: direct send, group send, edit and forward. Client input is never stored: insert payloads are built field by field, the global validation pipe rejects unknown properties, and the restrictive `chat_messages_link_preview_backend_only` RLS policy requires authenticated direct inserts to leave the column null. The backend service role is outside that policy and remains the sole non-null writer.
+- **Ordering.** When a preview resolves, it is stored before the message is published, so anything a client sees live is also in the history it loads later. Sends and forwards use a separate idempotent preview update after inserting the message. Edits atomically update the text and preview in one statement.
+- **Best effort.** A failed preview write never fails a send or forward. It is logged as `chat.link_preview_persist_failed message=<id> code=<database error code>` (no URL, title or database message) and the live event still carries the card; only history lacks it. An unmigrated database reports code `42703`.
+- **Edits.** The stored preview follows the text. An edit that removes the link, or whose new link cannot be previewed, atomically stores `null` with the new text and publishes that explicit `null`. The update predicates on the text fetched for authorisation, so the first overlapping edit to commit wins. A slower stale edit receives HTTP 409 and is not persisted or published.
+- **Correction fixes.** Applying another member's correction (`fixMessage`) rewrites the text without scraping anything. A stored preview that still describes the first link is kept; one that no longer does is cleared in the database and published as `null`, so clients drop the card instead of keeping a stale one. A message without a stored preview is published exactly as before.
+- **Reads.** `getMessages`, `searchAllMessages` and `exportChatHistory` pass every row that has a stored preview through `LinkPreviewService.restoreStoredPreview` before it leaves the API. The stored value is treated as untrusted, exactly like a cache entry: text fields are sanitised and bounded again, an unsafe image is dropped, and the preview must describe the normalised first `http(s)` link of the message's current text and pass the scraper's URL policy. A malformed, stale or orphaned preview becomes `null`. This makes a lost clearing write, two concurrent edits, an older instance that edits the text without knowing about the column during a rollout, or a forged backup import unable to put a wrong card on screen. Rows without a stored preview are returned untouched, and the read path makes no network, Redis or metrics call, so history latency does not depend on how many links a room contains.
+- **Not backfilled.** Messages sent before the migration have no stored preview and are not scraped retroactively. Scraping an unbounded backlog of old URLs on deploy would be an abuse risk, and the pages may have changed since the message was sent.
+
+### Retention and deletion
+
+The preview is part of the message row and has no lifecycle of its own.
+
+| Event                               | Effect on the stored preview                                                                                               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Delete for everyone                 | The row is hard-deleted, so the preview is deleted with it.                                                                |
+| Disappearing-message expiry         | The purge function hard-deletes the row and the favourites snapshots of it.                                                |
+| Account deletion and data retention | Messages are hard-deleted by sender.                                                                                       |
+| Delete for me                       | The row is hidden for that user only; the preview stays for the other participants.                                        |
+| Edit                                | Replaced or cleared, see above.                                                                                            |
+| Personal data export                | The user's own messages are exported with their stored preview, which is public third-party metadata for a link they sent. |
+| Favourite                           | The snapshot copies the message row, so it carries the preview and follows the snapshot's own lifetime.                    |
+
+The Redis cache keeps its separate one hour TTL and is not a retention store.
 
 ## Rendering contract
 
@@ -38,7 +67,7 @@ Both the outbound anchor and preview image use `referrerpolicy="no-referrer"`. O
 
 The backend does not log raw scraped URLs or provider error text. Diagnostics use the hostname plus a short SHA-256 URL fingerprint, which is sufficient to correlate failures without copying query strings, paths, credentials, or message content into logs.
 
-No additional analytics, persistence, browser storage, or user profiling is introduced by link previews. The only third-party requests are the bounded backend page scrape and, when present, the browser image request required to render the preview.
+Apart from the preview stored with its message (see [Persistence and history](#persistence-and-history)), link previews introduce no analytics, browser storage, or user profiling. The only third-party requests are the bounded backend page scrape and, when present, the browser image request required to render the preview.
 
 ## Observability
 
@@ -50,7 +79,7 @@ Failure logs carry the hostname, a short URL fingerprint and the reason. Origin-
 
 Link-preview enrichment is optional. If the scraper cannot resolve metadata, the chat message is still delivered and rendered without a preview. Unsupported resources, malformed destinations, blocked network targets, timeouts (including the hard 8 second deadline), oversized pages, and other scrape failures return a stable bad-request response at the preview API boundary rather than exposing provider details.
 
-If Redis is unavailable, the scraper fetches the origin directly and returns the fresh result without caching it. If a malformed, oversized, stale, or URL-mismatched cache entry is encountered, it is ignored and refreshed rather than trusted.
+If the preview cannot be stored, the message is delivered with its live preview and only history is missing the card (see [Persistence and history](#persistence-and-history)). If Redis is unavailable, the scraper fetches the origin directly and returns the fresh result without caching it. If a malformed, oversized, stale, or URL-mismatched cache entry is encountered, it is ignored and refreshed rather than trusted.
 
 If a malformed or unsafe preview reaches the client through an older cache or realtime publication, the preview card fails closed while leaving the original message text visible. Image failures degrade to a text-only preview. No automatic retry loop is used in the browser, avoiding repeated requests to a failing external origin.
 
@@ -71,7 +100,11 @@ Focused backend tests cover:
 - every refused redirect target reporting `blocked_target`;
 - the installed `cheerio`, `dompurify` and `jsdom` libraries executed directly: entity decoding, active-content and mutation-XSS stripping, multilingual and right-to-left text, first-title fallback, bounds and cache re-sanitisation;
 - failure classification pinned against real axios and follow-redirects errors, and the exported Prometheus series through the real `MetricsService`;
-- privacy-safe failure logging and network error normalization.
+- privacy-safe failure logging and network error normalization;
+- persistence on direct send, group send, edit and forward, including that publication waits for the write, that a failing or throwing write never blocks delivery and is logged without the URL, and that client-supplied previews are never stored;
+- clearing on edit, with no write when neither the row nor the new text has a preview;
+- revalidation on read in history, search and export, executed with the real sanitiser: stale, orphaned, malformed, oversized and unsafe stored previews, link selection through punctuation and CJK text, and refusal of links the scraper would refuse;
+- the migration contract: nullable additive column, guarded `CHECK` bounded to the application's cache bound, and no row rewrite.
 
 Focused Angular tests cover:
 
@@ -90,6 +123,18 @@ The repository backend/frontend completion gates remain authoritative for unit t
 
 ## Rollout and rollback
 
-There is no schema migration, data backfill, feature flag, or new environment variable. The server-side bounds are additive hardening and match the frontend limits already in production, so mixed frontend/backend versions remain compatible. Existing Redis entries are not migrated: they are validated under the new contract on read and naturally expire after the one-hour cache TTL.
+The change is additive. Migration `supabase/migrations/20261029120000_chat_messages_link_preview.sql` adds the nullable `link_preview` column, its guarded `CHECK` constraint, and a restrictive insert policy that prevents authenticated direct clients from forging preview metadata. It rewrites no rows, is safe to run twice, and there is no feature flag or new environment variable.
 
-Deploy the backend normally, verify the focused link-preview tests, confirm `hellotalk_link_preview_requests_total` appears on the metrics endpoint, and check that `reason="timeout"` and `reason="unknown"` stay near zero, then deploy the frontend independently as needed. `LinkPreviewService` now injects `MetricsService`, which the global `MetricsModule` already provides. Rollback is code-only. Reverting the backend change restores the previous cache-read behavior; no persisted user data requires cleanup. Keeping the output bounds and cache validation in place is preferred because they protect the chat rendering boundary from oversized or corrupted metadata.
+1. Apply the migration, then deploy the backend. The frontend needs no change: it already renders `link_preview` from history and merges realtime events without discarding it, and its message cache expires after five minutes, so older cached histories refresh on their own.
+2. Mixed backend versions are safe after the migration. Older instances ignore the column when writing and return stored objects written by newer instances. Apply the migration before deploying the new backend because an edit writes its text and preview atomically and will fail if the column is absent. Sends and forwards remain best effort if an instance starts early, with a `chat.link_preview_persist_failed ... code=42703` warning.
+3. Verify after deploy: `chat.link_preview_persist_failed` warnings are absent, and `SELECT count(*) FROM public.chat_messages WHERE link_preview IS NOT NULL` grows as users send links. The scraper metrics are unchanged: confirm `hellotalk_link_preview_requests_total` appears on the metrics endpoint and that `reason="timeout"` and `reason="unknown"` stay near zero.
+
+Rollback is code-only: revert the backend change. The column and constraint are inert when unused and can stay. Removing them is destructive and unnecessary for rollback; if ever required, do it only after every instance runs the reverted code:
+
+```sql
+DROP POLICY IF EXISTS chat_messages_link_preview_backend_only ON public.chat_messages;
+ALTER TABLE public.chat_messages DROP CONSTRAINT IF EXISTS chat_messages_link_preview_check;
+ALTER TABLE public.chat_messages DROP COLUMN IF EXISTS link_preview;
+```
+
+Keep the server-side output bounds and cache validation in place on rollback: they protect the chat rendering boundary from oversized or corrupted metadata. Redis entries are validated under the same contract on read and expire after the one-hour cache TTL, so no cache clean-up is needed.

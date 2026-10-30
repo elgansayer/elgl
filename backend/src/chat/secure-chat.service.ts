@@ -201,6 +201,9 @@ export class SecureChatService extends ChatService {
         ? await this.resolveLinkPreview(dto.text_content)
         : null;
     if (linkPreview) {
+      // Persist before publishing so anything a member sees live is also in
+      // the history they load later.
+      await this.persistLinkPreview(message.id, linkPreview);
       message = { ...message, link_preview: linkPreview };
     }
 

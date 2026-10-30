@@ -88,6 +88,22 @@ Preview scraping is best effort for chat delivery. A cache outage does not
 prevent a fresh scrape, while invalid/unreachable external URLs follow the
 existing service error contract.
 
+**Persistence.** `ChatService` also stores the resolved preview in
+`chat_messages.link_preview` (direct send, group send, edit and forward) before
+it publishes, so history, search and export return the card for recipients who
+were offline. The write is best effort and logged as
+`chat.link_preview_persist_failed message=<id> code=<database code>`; an edit
+that removes or breaks the link clears the stored value, and a correction fix
+(`fixMessage`) keeps a stored preview only while it still describes the first
+link. Reads pass every
+stored preview through `LinkPreviewService.restoreStoredPreview(stored, text)`,
+which treats it as untrusted: it re-sanitises and re-bounds the fields (the same
+code as the cache read), applies the scraper's URL policy to the first link of
+the message's current text and requires the stored `url` to equal it. A
+malformed, stale or orphaned preview becomes `null`. No network, Redis or
+metrics access happens on that path. Retention, deletion and rollout are in
+`docs/rich-link-previews.md`.
+
 **URL selection.** `extractFirstHttpUrl` (`link-url.ts`) picks the first
 well-formed `http(s)` URL in a message. A URL ends at whitespace, markup
 delimiters, typographic quotes and the sentence punctuation of CJK, Arabic and
@@ -107,6 +123,10 @@ it (`/wiki/Rust_(language)`).
   credentials or a custom port. DNS resolution is still checked by the guarded
   HTTP(S) agents on every connection, including redirects.
 - Redis failure degrades to an uncached fetch; it never weakens URL validation.
+- A failed preview write never fails a send or an edit; the live event still
+  carries the card and only history lacks it.
+- A stored preview that is malformed, oversized, unsafe, or that no longer
+  describes the first link of its message is dropped on read rather than shown.
 - Oversized pages, URLs and metadata are rejected or bounded before they can
   become unbounded cache/API payloads.
 - A slow or stalled origin is abandoned at the 8 second deadline. Nothing is
@@ -198,6 +218,18 @@ reach the network.
 - `link-preview-diagnostics.spec.ts`: failure classification, pinned against
   real axios and follow-redirects errors so a library upgrade cannot silently
   change the reasons.
+- `link-preview.stored.spec.ts`: `restoreStoredPreview` with the real sanitiser:
+  binding to the first link of the current text, stale and orphaned previews,
+  malformed values, markup, unsafe or oversized images and fields, hostname
+  fallback and refusal of links the scraper would refuse.
+- `chat/chat-link-preview.history.behaviour.spec.ts`: persistence on direct
+  send, edit and forward (publication waits for the write, failures never block
+  delivery and log no URL, client input is never stored) and revalidation in
+  history, search and export. `chat/secure-chat.service.link-preview.spec.ts`
+  covers the group send path and group history.
+- `database/chat-message-link-preview-migration.contract.spec.ts`: additive
+  nullable column, restrictive authenticated-client insert policy, guarded
+  `CHECK` equal to the application's cache bound and no row rewrite.
 - `link-preview.module.spec.ts`: module metadata, Nest dependency resolution
   with the real `MetricsService`, and the exported Prometheus series.
 - `metrics/metrics.service.spec.ts`: the link-preview counters and histogram.
@@ -210,19 +242,29 @@ reach the network.
 
 ## Rollout and rollback
 
-This is application-only and has no schema migration, environment variable or
-feature flag. Deploy backend instances normally; mixed versions remain
-compatible because the response interface and Redis namespace are unchanged.
-`LinkPreviewService` now injects `MetricsService`, which `MetricsModule` provides
-globally, so `LinkPreviewModule` needs no new import. After deploying, confirm
-`hellotalk_link_preview_requests_total` appears on `/api/metrics` and that
-`reason="timeout"` and `reason="unknown"` stay near zero.
+The scraper itself is application-only. Persisting previews with their message
+adds migration `supabase/migrations/20261029120000_chat_messages_link_preview.sql`
+(a nullable `link_preview` JSONB column, a restrictive policy that prevents
+authenticated direct clients from supplying it, and a guarded size `CHECK`);
+there is no environment variable or feature flag. Apply the migration, then
+deploy backend instances. Mixed versions remain compatible: older instances
+ignore the column, and a new instance that starts before the migration only
+fails its best-effort write with a
+`chat.link_preview_persist_failed ... code=42703` warning. The response interface
+and Redis namespace are unchanged. `LinkPreviewService`
+injects `MetricsService`, which `MetricsModule` provides globally, so
+`LinkPreviewModule` needs no new import. After deploying, confirm
+`hellotalk_link_preview_requests_total` appears on `/api/metrics`, that
+`reason="timeout"` and `reason="unknown"` stay near zero, and that
+`chat.link_preview_persist_failed` warnings are absent.
 
-Rollback can revert the controller/service/tests/documentation commits. The
-security checks are intentionally fail-closed, so do not selectively remove
-redirect validation or DNS guarding while leaving the public scraper exposed.
-Removing the 8 second deadline restores the unbounded slow-drip exposure, so
-prefer tuning `FETCH_DEADLINE_MS` over removing it. The metrics are additive:
-reverting them leaves dashboards empty but changes no behaviour.
-Redis entries in the `v2` namespace naturally expire after one hour and require
-no cleanup.
+Rollback can revert the controller/service/tests/documentation commits; the
+column and constraint are inert when unused and can stay (see
+`docs/rich-link-previews.md` for the destructive removal statements, which are
+not needed for rollback). The security checks are intentionally fail-closed, so
+do not selectively remove redirect validation or DNS guarding while leaving the
+public scraper exposed. Removing the 8 second deadline restores the unbounded
+slow-drip exposure, so prefer tuning `FETCH_DEADLINE_MS` over removing it. The
+metrics are additive: reverting them leaves dashboards empty but changes no
+behaviour. Redis entries in the `v2` namespace naturally expire after one hour
+and require no cleanup.
