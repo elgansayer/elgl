@@ -116,6 +116,11 @@ External pull requests enter through discovery and local verification before `RE
 immediately loses `factory-reviewed` and `factory-review`; the old worktree is safely retired or archived, then
 the current remote head is verified and reviewed again. Reopened external PRs return to `DISCOVERED`.
 
+An interrupted `IMPLEMENTING` attempt can leave tracked or untracked changes in its claimed worktree. A retry
+may advance when those changes still differ from `HEAD`, even if the provider makes no additional edit. A clean
+implementation worktree still requires a new change, while quality-repair and CI-repair attempts always require
+a new fingerprint. Security review, verification, the quality gate and independent review remain unchanged.
+
 If no PR review is already active, the scheduler submits the highest-priority runnable external pull request
 before issue work, including when only one worker is available. It also withholds one provider slot from new issue
 jobs until that review worker finishes. Pull requests default to priority 5, while trusted `guardian-alert`,
