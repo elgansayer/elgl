@@ -2098,6 +2098,26 @@ class FactoryPipeline:
         job.state = JobState.DISCOVERED
         return True
 
+    def _merge_newer_base_for_drift(self, job: Job, workflow: GitWorkflow) -> bool:
+        """Re-verify a capped drift failure once per newer base before parking.
+
+        The drift checker runs from the job's own worktree, so a PR verified
+        against a base older than #9718 could never see its own uncommitted
+        preview fix (issues 1436 and 1716, 2026-10-30). Merging the current base
+        costs no model call and happens at most once per base advance.
+        """
+        if job.pull_request is None:
+            return False
+        try:
+            if workflow.contains_current_base() or workflow.merging_current_base():
+                return False
+            workflow.merge_base_for_repair()
+        except RepositorySafetyError:
+            LOGGER.warning("Could not merge the current base into task %s", job.task.identifier)
+            return False
+        LOGGER.info("Merged the current base into task %s before re-verifying", job.task.identifier)
+        return True
+
     def _grant_drift_guided_repair(self, job: Job, drift: str | None) -> bool:
         """Allow one repair past the cap when design drift is the failure.
 
@@ -2269,6 +2289,8 @@ class FactoryPipeline:
                 if self._restart_stale_unpublished(job, workflow):
                     return None
                 if not guidance or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+                    if guidance and self._merge_newer_base_for_drift(job, workflow):
+                        return None
                     self._park_capped_pull_request(job, "its quality-repair budget is spent")
                     raise
                 job.review_findings = [
