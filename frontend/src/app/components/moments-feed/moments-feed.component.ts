@@ -12,6 +12,7 @@ import {
   resource,
   effect,
   afterNextRender,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -37,7 +38,7 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
-import { DraftService } from '../../services/draft.service';
+import { DraftService, MomentDraft } from '../../services/draft.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 interface MentionSuggestion {
@@ -147,7 +148,23 @@ export class MomentsFeedComponent {
         window.removeEventListener('scroll', this.handleWindowScroll);
         this.saveMomentDraft();
       });
-      this.restoreMomentDraft();
+      this.hasRendered.set(true);
+    });
+
+    // Storage is browser-only and account-scoped. On a reload the first render can finish before
+    // the session resolves, so restore once both are available, in either order.
+    effect(() => {
+      const userId = this.authService.currentUser()?.id ?? null;
+      const rendered = this.hasRendered();
+      untracked(() => this.hydrateMomentDraft(userId, rendered));
+    });
+
+    // Save every change as it happens. A reload, a crash or a discarded mobile tab never runs
+    // component teardown, so teardown alone cannot be relied on to keep the draft.
+    effect(() => {
+      const draft = this.momentDraftSnapshot();
+      if (!this.canPersistMomentDraft()) return;
+      untracked(() => this.draftService.saveMomentDraft(draft));
     });
   }
 
@@ -180,8 +197,24 @@ export class MomentsFeedComponent {
   readonly newMediaUrls = signal<string[]>([]);
   readonly newMediaType = signal<'none' | 'images' | 'audio'>('none');
   readonly newTargetLanguage = signal<string>('en');
-  private newVoiceDurationSec: number | null = null;
+  private readonly newVoiceDurationSec = signal<number | null>(null);
   tempImageUrlInput = '';
+
+  // Draft persistence state
+  private readonly hasRendered = signal(false);
+  // The account whose stored draft the composer was loaded from. Nothing is saved until this
+  // matches the signed-in account, so an unrestored composer can never overwrite a stored draft.
+  private readonly draftOwnerId = signal<string | null>(null);
+  // Set once the learner (or a restored draft) picks a language, so the profile default that
+  // arrives later does not replace it.
+  private targetLanguageChosen = false;
+  private readonly momentDraftSnapshot = computed<MomentDraft>(() => ({
+    text: this.newText(),
+    mediaUrls: this.newMediaUrls().length > 0 ? this.newMediaUrls() : undefined,
+    mediaType: this.newMediaType(),
+    targetLanguage: this.newTargetLanguage(),
+    voiceDurationSec: this.newVoiceDurationSec(),
+  }));
 
   // @mention autocomplete state per momentId
   readonly mentionQueryMap = signal<Record<string, string | null>>({});
@@ -210,13 +243,14 @@ export class MomentsFeedComponent {
     const profile = this.profileResource.value();
     if (profile) {
       const preferredTarget = profile.target_languages?.[0];
-      if (preferredTarget) {
+      if (preferredTarget && !this.targetLanguageChosen) {
         this.newTargetLanguage.set(preferredTarget);
       }
     }
   });
 
   onTargetLanguageSelected(code: string): void {
+    this.targetLanguageChosen = true;
     this.newTargetLanguage.set(code);
   }
 
@@ -286,19 +320,23 @@ export class MomentsFeedComponent {
       );
       return;
     }
-    this.newVoiceDurationSec = durationSec ?? null;
+    this.newVoiceDurationSec.set(durationSec ?? null);
     this.newMediaUrls.set([url]);
     this.newMediaType.set('audio');
     this.showVoiceRecorder.set(false);
   }
 
   async submitMoment(): Promise<void> {
+    // The composer keeps its content until publishing succeeds, so a second submit while a
+    // request is pending would otherwise publish the same Moment twice.
+    if (this.isCreating()) return;
     const text = this.newText().trim();
     if (!text && this.newMediaUrls().length === 0) return;
+    const voiceDurationSec = this.newVoiceDurationSec();
     if (
       this.newMediaType() === 'audio' &&
-      this.newVoiceDurationSec !== null &&
-      this.newVoiceDurationSec > this.MAX_VOICE_SECONDS
+      voiceDurationSec !== null &&
+      voiceDurationSec > this.MAX_VOICE_SECONDS
     ) {
       showToast(
         this.i18n.translate('moments.voiceTooLongAlert', {
@@ -330,8 +368,10 @@ export class MomentsFeedComponent {
       this.newText.set('');
       this.newMediaUrls.set([]);
       this.newMediaType.set('none');
-      this.newVoiceDurationSec = null;
+      this.newVoiceDurationSec.set(null);
       this.draftService.clearMomentDraft();
+      // Close only on success: after a failure or a grammar suggestion the draft must stay in view.
+      this.showComposeForm.set(false);
     } catch (e) {
       console.error('Error submitting moment:', e);
       showToast(this.i18n.translate('moments.publishError'));
@@ -686,17 +726,35 @@ export class MomentsFeedComponent {
     }
   };
 
+  private canPersistMomentDraft(): boolean {
+    const ownerId = this.draftOwnerId();
+    return ownerId !== null && ownerId === this.authService.currentUser()?.id;
+  }
+
   private saveMomentDraft(): void {
-    this.draftService.saveMomentDraft({
-      text: this.newText(),
-      mediaUrls: this.newMediaUrls().length > 0 ? this.newMediaUrls() : undefined,
-      mediaType: this.newMediaType(),
-      targetLanguage: this.newTargetLanguage(),
-      voiceDurationSec: this.newVoiceDurationSec,
-    });
+    if (this.canPersistMomentDraft()) this.draftService.saveMomentDraft(this.momentDraftSnapshot());
+  }
+
+  private hydrateMomentDraft(userId: string | null, rendered: boolean): void {
+    if (!rendered || !userId || this.draftOwnerId() === userId) return;
+    // A different account must never inherit the previous account's unsent composer.
+    if (this.draftOwnerId() !== null) this.resetMomentComposer();
+    this.restoreMomentDraft();
+    this.draftOwnerId.set(userId);
+  }
+
+  private resetMomentComposer(): void {
+    this.newText.set('');
+    this.newMediaUrls.set([]);
+    this.newMediaType.set('none');
+    this.newVoiceDurationSec.set(null);
+    this.tempImageUrlInput = '';
+    this.showComposeForm.set(false);
   }
 
   private restoreMomentDraft(): void {
+    // The composer is usable before restoring finishes, and anything already entered is newer.
+    if (this.newText() !== '' || this.newMediaUrls().length > 0) return;
     const draft = this.draftService.loadMomentDraft();
     if (!draft) return;
     if (draft.text) this.newText.set(draft.text);
@@ -704,7 +762,12 @@ export class MomentsFeedComponent {
       this.newMediaUrls.set(draft.mediaUrls);
       this.newMediaType.set(draft.mediaType ?? 'images');
     }
-    if (draft.targetLanguage) this.newTargetLanguage.set(draft.targetLanguage);
-    if (draft.voiceDurationSec !== undefined) this.newVoiceDurationSec = draft.voiceDurationSec;
+    if (draft.targetLanguage) {
+      this.targetLanguageChosen = true;
+      this.newTargetLanguage.set(draft.targetLanguage);
+    }
+    this.newVoiceDurationSec.set(draft.voiceDurationSec ?? null);
+    // A collapsed composer would hide the restored draft from the learner.
+    this.showComposeForm.set(true);
   }
 }
