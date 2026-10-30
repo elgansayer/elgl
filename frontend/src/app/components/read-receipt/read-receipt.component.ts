@@ -50,7 +50,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       <!-- Read: double check in the Tide secondary tone -->
       @if (displayStatus() === 'read') {
-        <svg class="w-3 h-3 text-secondary" fill="currentColor" viewBox="0 0 16 16">
+        <svg class="w-3 h-3 text-secondary-ink" fill="currentColor" viewBox="0 0 16 16">
           <path
             d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
           />

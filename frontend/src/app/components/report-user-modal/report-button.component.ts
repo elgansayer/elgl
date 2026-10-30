@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       type="button"
       (click)="openReportModal()"
       class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg
-                   text-danger hover:text-danger/80 hover:bg-danger/10
+                   text-danger-ink hover:text-danger-ink/80 hover:bg-danger/10
                    border border-danger/30 hover:border-danger/50
                    transition-all duration-200 text-sm font-medium"
     >

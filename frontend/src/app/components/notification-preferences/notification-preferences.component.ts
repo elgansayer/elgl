@@ -28,7 +28,7 @@ interface DndSchedule {
       @if (loading()) {
         <div class="text-center py-8">{{ 'common.loading' | t }}</div>
       } @else if (error()) {
-        <div class="text-danger">{{ 'common.error_generic' | t }}</div>
+        <div class="text-danger-ink">{{ 'common.error_generic' | t }}</div>
       } @else {
         @for (cat of categories(); track cat) {
           <div class="flex items-center justify-between py-3 border-b border-surface-100">

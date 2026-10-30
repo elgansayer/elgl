@@ -55,7 +55,7 @@ const AUDIO_BITS_PER_SECOND = 64_000;
       </div>
 
       @if (isRecording()) {
-        <p class="mt-3 text-center text-sm font-semibold text-danger" role="status" aria-live="polite">
+        <p class="mt-3 text-center text-sm font-semibold text-danger-ink" role="status" aria-live="polite">
           Recording {{ formatDuration(durationSeconds()) }}
         </p>
       }

@@ -26,7 +26,7 @@ const CALENDAR_EVENT_LIMIT = 100;
           </p>
         } @else if (eventsResource.error()) {
           <div class="mb-6 flex flex-col items-start gap-3" role="alert">
-            <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
             <button
               hlmBtn
               type="button"
@@ -95,7 +95,7 @@ const CALENDAR_EVENT_LIMIT = 100;
                   [class.ring-primary/50]="isToday(day)"
                   (click)="selectDate(day)"
                 >
-                  <span class="text-sm font-medium mb-1" [class.text-primary]="isToday(day)">{{
+                  <span class="text-sm font-medium mb-1" [class.text-primary-ink]="isToday(day)">{{
                     day
                   }}</span>
                   @if (eventsByDate().has(day)) {
@@ -140,7 +140,7 @@ const CALENDAR_EVENT_LIMIT = 100;
                       <div class="flex items-start justify-between mb-2">
                         <h3 class="font-semibold text-text-primary" dir="auto">{{ ev.title }}</h3>
                         @if (ev.category) {
-                          <span class="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                          <span class="text-xs bg-primary/20 text-primary-ink px-2 py-0.5 rounded-full">
                             {{ categoryKey(ev.category) | t }}
                           </span>
                         }
@@ -156,7 +156,7 @@ const CALENDAR_EVENT_LIMIT = 100;
                       </div>
                       <a
                         [routerLink]="['/events', ev.id]"
-                        class="inline-block mt-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                        class="inline-block mt-2 text-sm text-primary-ink hover:text-primary-ink/80 transition-colors"
                       >
                         {{ 'events.calendar.viewDetails' | t }} &rarr;
                       </a>

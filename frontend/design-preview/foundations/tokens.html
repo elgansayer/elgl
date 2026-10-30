@@ -28,6 +28,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -57,6 +60,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -213,10 +219,10 @@
         font-size: 16px;
       }
       .duet-copy .names .you {
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .duet-copy .names .them {
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .duet-copy .meta {
         color: rgb(var(--text-secondary));
@@ -314,7 +320,7 @@
         font-size: 40px;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .streak-demo .unit {
         font-size: 14px;
@@ -545,10 +551,13 @@
         ],
         duet: [
           ['Primary (Ember)', '#C65230'],
+          ['Primary text', '#B24A2B'],
           ['Secondary (Tide)', '#1A8478'],
+          ['Secondary text', '#17776C'],
         ],
         semantic: [
           ['Danger', '#D93A3A'],
+          ['Danger text', '#CC2727'],
           ['Success', '#198654'],
           ['Warning', '#A16C09'],
           ['VIP', '#996F10'],
@@ -582,10 +591,13 @@
         ],
         duet: [
           ['Primary (Ember)', '#FF7A52'],
+          ['Primary text', '#FF7A52'],
           ['Secondary (Tide)', '#35D6C0'],
+          ['Secondary text', '#35D6C0'],
         ],
         semantic: [
           ['Danger', '#FF6B6B'],
+          ['Danger text', '#FF6B6B'],
           ['Success', '#34D399'],
           ['Warning', '#F2B33D'],
           ['VIP', '#E8B84B'],

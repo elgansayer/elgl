@@ -26,7 +26,7 @@ import { MessageReactionBarComponent } from '../message-reaction-bar/message-rea
             (reacted)="onReaction($event)"
           />
           @if (failed()) {
-            <p role="alert" class="mt-1 text-xs text-danger">
+            <p role="alert" class="mt-1 text-xs text-danger-ink">
               {{ 'common.error_generic' | t }}
             </p>
           }

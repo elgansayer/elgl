@@ -126,7 +126,7 @@ export function tokeniseText(
         </hlm-dialog-header>
 
         @if (flashcardError()) {
-          <p role="alert" class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+          <p role="alert" class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink">
             {{ i18n.translate('common.error_generic') }}
           </p>
         }

@@ -32,6 +32,12 @@ const add = (severity, rule, file, detail) =>
 
 // 1. Token contrast (WCAG 2.1 AA, 4.5:1 for body text) in both themes, from the runtime source.
 const tokens = relayTokens();
+const semanticTextPairs = ['primary-text', 'secondary-text', 'danger-text'].flatMap((foreground) =>
+  ['surface-200', 'surface-300', 'surface-400', 'surface-500'].map((background) => [
+    foreground,
+    background,
+  ]),
+);
 const textPairs = [
   ['text-primary', 'surface-500'],
   ['text-secondary', 'surface-500'],
@@ -40,9 +46,7 @@ const textPairs = [
   ['text-secondary', 'surface-300'],
   ['text-muted', 'surface-300'],
   ['text-muted', 'surface-200'],
-  ['primary', 'surface-500'],
-  ['secondary', 'surface-500'],
-  ['danger', 'surface-500'],
+  ...semanticTextPairs,
 ];
 const fillPairs = ['primary', 'secondary', 'danger', 'success', 'warning', 'vip', 'accent'].map(
   (fill) => ['on-fill', fill],

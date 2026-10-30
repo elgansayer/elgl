@@ -436,7 +436,7 @@ describe('UserDetailComponent bio translation', () => {
     fixture.detectChanges();
     const likeBtn = buttons.find((b) => b.getAttribute('aria-label') === 'Unlike profile');
     expect(likeBtn).toBeTruthy();
-    expect(likeBtn?.classList.contains('text-primary')).toBe(true);
+    expect(likeBtn?.classList.contains('text-primary-ink')).toBe(true);
     expect(likeBtn?.classList.contains('border-primary')).toBe(true);
     expect(likeBtn?.classList.contains('text-neon-pink')).toBe(false);
     expect(likeBtn?.classList.contains('border-neon-pink')).toBe(false);
@@ -452,14 +452,14 @@ describe('UserDetailComponent bio translation', () => {
     component.isLoading.set(true);
     fixture.detectChanges();
     const spinner = fixture.nativeElement.querySelector('.animate-spin');
-    expect(spinner?.classList.contains('text-secondary')).toBe(true);
+    expect(spinner?.classList.contains('text-secondary-ink')).toBe(true);
     expect(spinner?.classList.contains('text-neon-blue')).toBe(false);
 
     // Check error token
     component.isLoading.set(false);
     component.errorMessage.set('Test error');
     fixture.detectChanges();
-    const errorP = fixture.nativeElement.querySelector('p.text-danger');
+    const errorP = fixture.nativeElement.querySelector('p.text-danger-ink');
     expect(errorP).toBeTruthy();
     expect(errorP?.classList.contains('text-neon-pink')).toBe(false);
   });
