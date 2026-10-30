@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import sys
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
+from uuid import uuid4
 
 from openhands_factory.exceptions import VerificationFailed
 from openhands_factory.repository_guard import ProcessResult, ProcessRunner, run_process
@@ -72,6 +75,17 @@ if [ -d "$uv_cache" ]; then
   /usr/bin/mkdir -p "$staging/uv-cache"
   /usr/bin/mount --bind "$uv_cache" "$staging/uv-cache"
 fi
+
+# Sources/caches were staged above. Hide login homes, sibling repositories and
+# all coordinator configuration/state before restoring only the allowed roots.
+# HOME=/tmp/home alone does not prevent absolute-path reads of login credentials.
+for private_root in /home /root /etc/repo-factory /etc/hellotalk-factory \
+  /var/lib/repo-factory /var/log/repo-factory \
+  /var/lib/hellotalk-factory /var/log/hellotalk-factory; do
+  if [ -d "$private_root" ]; then
+    /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$private_root"
+  fi
+done
 
 for masked_root in /mnt /srv /media; do
   if [ "$masked_root" != "$sandbox_root" ] && [ -d "$masked_root" ]; then
@@ -314,7 +328,40 @@ def _touches(changed_paths: set[Path], *prefixes: str) -> bool:
     return any(path.parts and path.parts[0] in prefixes for path in changed_paths)
 
 
-RepositoryProfile = Literal["hellotalk", "workout-agent"]
+RepositoryProfile = Literal["hellotalk", "workout-agent", "neptune"]
+
+
+def neptune_commands_for(repository: Path, changed_paths: set[Path]) -> list[VerificationCommand]:
+    """Delegate applicability to Neptune's shared local/CI plan, without network installs."""
+    if not changed_paths:
+        raise VerificationFailed("Verification requires at least one changed path")
+    for path in changed_paths:
+        if path.is_absolute() or ".." in path.parts or str(path) == ".":
+            raise VerificationFailed("Neptune changed paths must be relative files")
+    evidence = repository / ".godot" / "factory-verification" / uuid4().hex
+    arguments = [
+        "python3",
+        "tools/factory/verify.py",
+        "--toolchain",
+        str(repository / ".factory-tools" / "godot"),
+        "--evidence",
+        str(evidence),
+    ]
+    for path in sorted(changed_paths):
+        arguments.append("--changed-path=" + str(path))
+    # Reserve the existing host-heavy lane conservatively for any executable
+    # or unknown change; the delegated plan decides which tests actually apply.
+    exclusive = any(path.suffix != ".md" or path.parts[0] != "docs" for path in changed_paths)
+    return [
+        VerificationCommand(
+            "neptune-acceptance",
+            tuple(arguments),
+            repository,
+            timeout=1200,
+            exclusive=exclusive,
+            workspace=repository,
+        )
+    ]
 
 
 def workout_agent_commands_for(
@@ -382,6 +429,10 @@ def commands_for(
     changed_paths: set[Path],
     profile: RepositoryProfile = "hellotalk",
 ) -> list[VerificationCommand]:
+    if profile == "neptune":
+        return neptune_commands_for(repository, changed_paths)
+    if profile not in {"hellotalk", "workout-agent"}:
+        raise VerificationFailed("Unknown repository verification profile")
     if profile == "workout-agent":
         return workout_agent_commands_for(repository, changed_paths)
     if not changed_paths:
@@ -684,6 +735,14 @@ def commands_for(
 
 
 def verification_descriptions(profile: RepositoryProfile) -> list[str]:
+    if profile == "neptune":
+        return [
+            "python3 tools/factory/verify.py --changed-path <each changed file> "
+            "--toolchain .factory-tools/godot --evidence .godot/factory-verification/<fresh-id>",
+            "Neptune selects its required 5/8/10-check plan; "
+            "native runs require a pinned offline cache.",
+            "Local verification does not publish CI, approve a review or enable a Neptune daemon.",
+        ]
     if profile == "workout-agent":
         return [
             ".venv/bin/python tools/check_openhands_control_plane.py",
@@ -715,6 +774,65 @@ def verification_descriptions(profile: RepositoryProfile) -> list[str]:
     ]
 
 
+def _validate_neptune_receipt(output: str, command: VerificationCommand) -> None:
+    prefix = "NEPTUNE_FACTORY_VERIFICATION="
+    markers = [line[len(prefix) :] for line in output.splitlines() if line.startswith(prefix)]
+    try:
+        if len(markers) != 1:
+            raise ValueError("expected one receipt")
+        report = json.loads(markers[0])
+        if (
+            report["schema"] != "neptune.factory-verification.v1"
+            or report["conclusion"] != "success"
+        ):
+            raise ValueError("failed/incompatible receipt")
+        identity = report["identity"]
+        if not re.fullmatch(r"[0-9a-f]{40}", identity["head"]) or not re.fullmatch(
+            r"[0-9a-f]{64}", identity["selected_contents_sha256"]
+        ):
+            raise ValueError("missing source identity")
+        plan = report["plan"]
+        expected_paths = sorted(
+            {arg.split("=", 1)[1] for arg in command.arguments if arg.startswith("--changed-path=")}
+        )
+        if not expected_paths or plan["paths"] != expected_paths:
+            raise ValueError("receipt selection differs from command")
+        required = plan["required"]
+        expected = {
+            "input-tooling",
+            "catalogue-tests",
+            "catalogue-validation",
+            "factory-contracts",
+            "gate-contracts",
+        }
+        if plan["mode"] not in {"metadata", "runner", "gameplay"}:
+            raise ValueError("unknown test plan")
+        if plan["mode"] != "metadata":
+            expected.update({"native-install", "native-runner", "native-project"})
+        if plan["mode"] == "gameplay":
+            expected.update({"native-runtime", "native-bots"})
+        if (
+            not isinstance(required, list)
+            or len(required) != len(expected)
+            or set(required) != expected
+        ):
+            raise ValueError("empty/incomplete test plan")
+        checks = report["checks"]
+        if set(checks) != set(required):
+            raise ValueError("missing check results")
+        for check in checks.values():
+            if check["status"] != "success" or type(check["exit"]) is not int or check["exit"] != 0:
+                raise ValueError("check did not succeed")
+            if (
+                not isinstance(check["command"], list)
+                or not check["command"]
+                or any(not isinstance(arg, str) or not arg for arg in check["command"])
+            ):
+                raise ValueError("missing executable command")
+    except (ValueError, KeyError, TypeError) as error:
+        raise VerificationFailed(f"Invalid Neptune verification receipt: {error}") from error
+
+
 def run_verification(
     commands: list[VerificationCommand], runner: ProcessRunner | None = None
 ) -> None:
@@ -735,3 +853,5 @@ def run_verification(
             raise VerificationFailed(
                 f"{command.name} failed with exit {result.returncode}: {output[-2000:]}"
             )
+        if command.name == "neptune-acceptance":
+            _validate_neptune_receipt(result.stdout, command)
