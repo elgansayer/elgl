@@ -12,7 +12,7 @@
       <div class="app-empty-state">{{ 'common.loading' | t }}</div>
     } @else {
       @if (errorMessage()) {
-        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink">
           {{ errorMessage() }}
         </div>
       }
@@ -169,7 +169,7 @@
             <hlm-checkbox
               [ngModel]="autoPlayVoiceNotes()"
               (ngModelChange)="autoPlayVoiceNotes.set($event)"
-              class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
+              class="h-5 w-5 rounded border-surface-300 text-primary-ink focus:ring-primary/30"
             />
           </label>
 
@@ -182,7 +182,7 @@
             <hlm-checkbox
               [ngModel]="chatEnterToSend()"
               (ngModelChange)="chatEnterToSend.set($event)"
-              class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
+              class="h-5 w-5 rounded border-surface-300 text-primary-ink focus:ring-primary/30"
             />
           </label>
 
@@ -334,7 +334,7 @@
             @if (isClearingCache()) {
               <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
             } @else {
-              <span class="text-xs uppercase text-primary">{{ 'common.clear' | t }}</span>
+              <span class="text-xs uppercase text-primary-ink">{{ 'common.clear' | t }}</span>
             }
           </button>
 
@@ -349,7 +349,7 @@
             @if (isDeletingOldMedia()) {
               <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
             } @else {
-              <span class="text-xs uppercase text-primary">{{ 'common.delete' | t }}</span>
+              <span class="text-xs uppercase text-primary-ink">{{ 'common.delete' | t }}</span>
             }
           </button>
         </div>
@@ -392,7 +392,7 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.soundEffects' | t
             }}</span>
-            <span class="text-sm font-semibold text-primary">
+            <span class="text-sm font-semibold text-primary-ink">
               {{ soundEffectsEnabled ? ('settings.on' | t) : ('settings.off' | t) }}
             </span>
           </button>
@@ -406,7 +406,7 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.vibration' | t
             }}</span>
-            <span class="text-sm font-semibold text-primary">
+            <span class="text-sm font-semibold text-primary-ink">
               {{ vibrationEnabled ? ('settings.on' | t) : ('settings.off' | t) }}
             </span>
           </button>
@@ -431,7 +431,7 @@
                   hlmBtn
                   type="button"
                   (click)="removeInterest(i)"
-                  class="text-text-secondary hover:text-danger ms-1"
+                  class="text-text-secondary hover:text-danger-ink ms-1"
                   aria-label="Remove interest"
                 >
                   &times;

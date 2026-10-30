@@ -22,7 +22,7 @@
   @if (error()) {
     <app-card variant="outlined" customClass="border-danger/40 bg-danger/10">
       <div class="flex flex-col items-start gap-3">
-        <p class="text-sm text-danger">{{ 'subscription.loadError' | t }}</p>
+        <p class="text-sm text-danger-ink">{{ 'subscription.loadError' | t }}</p>
         <app-button-secondary size="sm" (clicked)="reload()">
           {{ 'subscription.retry' | t }}
         </app-button-secondary>
@@ -32,7 +32,7 @@
 
   @if (actionError()) {
     <div
-      class="rounded-app border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+      class="rounded-app border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink"
       role="alert"
     >
       {{ actionError() }}
@@ -122,7 +122,7 @@
             } @else {
               <app-button-secondary
                 [disabled]="cancelling()"
-                customClass="text-danger border-danger/40 hover:bg-danger/10"
+                customClass="text-danger-ink border-danger/40 hover:bg-danger/10"
                 (clicked)="onCancel()"
               >
                 @if (cancelling()) {
@@ -157,7 +157,7 @@
                     [href]="invoice.hostedInvoiceUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-xs font-bold uppercase text-primary"
+                    class="text-xs font-bold uppercase text-primary-ink"
                   >
                     {{ 'subscription.viewInvoice' | t }}
                   </a>

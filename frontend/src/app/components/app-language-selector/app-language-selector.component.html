@@ -37,7 +37,7 @@
               </h3>
               <p class="text-xs text-text-secondary font-medium">
                 {{ 'lang.label' | t }}:
-                <strong class="text-primary uppercase">{{ currentLang() }}</strong>
+                <strong class="text-primary-ink uppercase">{{ currentLang() }}</strong>
               </p>
             </div>
           </div>
@@ -65,7 +65,7 @@
                   [class]="
                     'flex items-center gap-2.5 p-3 rounded-2xl border text-start transition-all ' +
                     (currentLang() === lang.code
-                      ? 'bg-primary/10 border-primary text-primary font-black shadow-sm'
+                      ? 'bg-primary/10 border-primary text-primary-ink font-black shadow-sm'
                       : 'bg-surface-300/50 border-surface-100 text-text-primary hover:bg-surface-100')
                   "
                   [attr.aria-label]="lang.name || lang.nativeName"

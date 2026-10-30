@@ -74,7 +74,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
         } @else if (lookupFailed()) {
           <div class="space-y-4 py-4">
             <p
-              class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+              class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink"
               role="alert"
             >
               {{ 'common.error_generic' | t }}
@@ -122,7 +122,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
                   {{ 'wordModal.playAudio' | t }}
                 </button>
                 @if (audioFailed()) {
-                  <p role="alert" class="text-xs text-danger">{{ 'common.error_generic' | t }}</p>
+                  <p role="alert" class="text-xs text-danger-ink">{{ 'common.error_generic' | t }}</p>
                 }
               </div>
             }
@@ -135,7 +135,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
               @if (saveFailed()) {
                 <p
                   role="alert"
-                  class="mb-3 rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+                  class="mb-3 rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink"
                 >
                   {{ 'common.error_generic' | t }}
                 </p>
@@ -148,7 +148,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
                   size="touch"
                   (click)="setLevel(0)"
                   [disabled]="isSaving()"
-                  class="flex-1 rounded-app bg-danger/20 text-xs font-bold text-danger hover:bg-danger/30 disabled:opacity-50"
+                  class="flex-1 rounded-app bg-danger/20 text-xs font-bold text-danger-ink hover:bg-danger/30 disabled:opacity-50"
                 >
                   {{ 'wordModal.resetBtn' | t }}
                 </button>
@@ -174,7 +174,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
                 </button>
               </div>
 
-              <button hlmBtn [routerLink]="['/review']" size="touch" variant="outline" class="w-full mt-3 border-primary text-primary hover:bg-primary/10">
+              <button hlmBtn [routerLink]="['/review']" size="touch" variant="outline" class="w-full mt-3 border-primary text-primary-ink hover:bg-primary/10">
                 {{ 'wordModal.reviewFlashcardsBtn' | t }}
               </button>
             </div>

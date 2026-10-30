@@ -77,13 +77,13 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
       </form>
 
       @if (mutationError()) {
-        <p class="mt-4 text-danger" role="alert">{{ 'common.error' | t }}</p>
+        <p class="mt-4 text-danger-ink" role="alert">{{ 'common.error' | t }}</p>
       }
 
       @if (milestonesData.isLoading()) {
         <p class="mt-4 text-text-secondary" role="status">{{ 'common.loading' | t }}</p>
       } @else if (milestonesData.error()) {
-        <p class="mt-4 text-danger" role="alert">{{ 'common.loadError' | t }}</p>
+        <p class="mt-4 text-danger-ink" role="alert">{{ 'common.loadError' | t }}</p>
       } @else {
         <div class="mt-4 grid gap-3">
           @for (ms of milestones(); track ms.id) {
@@ -126,7 +126,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
                     [disabled]="isMutating(ms.id)"
                     [attr.aria-busy]="isMutating(ms.id) ? 'true' : null"
                     [attr.aria-label]="'milestones.removeBtn' | t"
-                    class="min-h-11 w-full text-danger sm:w-auto"
+                    class="min-h-11 w-full text-danger-ink sm:w-auto"
                   >
                     {{ 'milestones.removeBtn' | t }}
                   </button>

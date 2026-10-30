@@ -189,7 +189,7 @@ describe('ChatSystemBubbleComponent', () => {
     const icon = fixture.nativeElement.querySelector('[aria-hidden="true"]');
     expect(bubble.className).toContain('bg-danger/10');
     expect(bubble.className).toContain('border-danger/30');
-    expect(bubble.className).toContain('text-danger');
+    expect(bubble.className).toContain('text-danger-ink');
     expect(icon.textContent).toContain('📞');
   });
 });

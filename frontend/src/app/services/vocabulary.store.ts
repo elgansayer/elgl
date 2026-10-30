@@ -181,7 +181,7 @@ export class VocabularyStore {
     const clean = this.normaliseWordToken(word);
     const fc = this.flashcardMap().get(clean);
     const newWordClass =
-      'bg-secondary/20 text-secondary border-b-2 border-secondary cursor-pointer hover:bg-secondary/30';
+      'bg-secondary/20 text-secondary-ink border-b-2 border-secondary cursor-pointer hover:bg-secondary/30';
 
     if (!fc) {
       return { level: 0, colorClass: newWordClass, colourClass: newWordClass };

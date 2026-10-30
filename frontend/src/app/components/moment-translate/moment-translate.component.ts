@@ -25,7 +25,7 @@ import { environment } from '../../../environments/environment';
         @if (cachedTranslation() ?? translationResource.value()?.translation; as translation) {
           <p class="mt-1 text-sm text-text-secondary italic">{{ translation }}</p>
         } @else {
-          <p class="mt-1 text-xs text-danger">{{ 'moments.translationError' | t }}</p>
+          <p class="mt-1 text-xs text-danger-ink">{{ 'moments.translationError' | t }}</p>
         }
       }
     }

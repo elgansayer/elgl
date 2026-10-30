@@ -69,7 +69,7 @@ const MAX_ANSWER_LENGTH = 256;
             </p>
           }
           @case ('incorrect') {
-            <p class="font-bold text-danger">
+            <p class="font-bold text-danger-ink">
               {{ result.score }}% · {{ 'review.againAriaLabel' | t }}
             </p>
           }

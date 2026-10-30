@@ -345,7 +345,7 @@
       "claudeDesignPath": "foundations/focus-ring.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; issue-9460-semantic-text-roles (new colour tokens do not change focus-ring behaviour or presentation)",
       "requiredStates": ["focus-visible", "light", "dark"]
     },
     {
@@ -357,7 +357,7 @@
       "claudeDesignPath": "foundations/reduced-motion.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26; pr-7588-correction-flashcard-context-2026-08-26; issue-9460-semantic-text-roles (new colour tokens do not change reduced-motion behaviour or presentation)",
       "requiredStates": ["reduced-motion", "light", "dark"]
     },
     {

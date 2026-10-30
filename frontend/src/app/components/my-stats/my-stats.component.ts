@@ -74,7 +74,7 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
         </div>
       } @else if (statsResource.error()) {
         <div class="space-y-4 py-12 text-center" role="alert">
-          <p class="text-danger">{{ 'stats.myStats.error' | t }}</p>
+          <p class="text-danger-ink">{{ 'stats.myStats.error' | t }}</p>
           <button hlmBtn size="touch" type="button" variant="outline" (click)="retry()">
             {{ 'common.retry' | t }}
           </button>
@@ -138,7 +138,7 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
                 <dt class="text-sm text-text-secondary">
                   {{ 'stats.myStats.messagesSent' | t }}
                 </dt>
-                <dd class="mt-1 text-3xl font-bold text-secondary">
+                <dd class="mt-1 text-3xl font-bold text-secondary-ink">
                   {{ currentStats.messages_sent }}
                 </dd>
               </div>

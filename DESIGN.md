@@ -36,6 +36,9 @@ only what they resolve to changed - so no template touch was needed for this pha
 | `primary` (Ember)     | `#C65230`                                                                              | `#FF7A52`             | **Dynamic per-user** by default - `ThemeService.setPrimaryAccentColor()` overrides from `profile.primary_accent_color`. Values here are only the fallback default. "Your voice" in the duet.                                                                                                                                             |
 | `secondary` (Tide)    | `#1A8478`                                                                              | `#35D6C0`             | Fixed, not per-user. "Your exchange partner's voice" in the duet.                                                                                                                                                                                                                                                                        |
 | `danger`              | `#D93A3A`                                                                              | `#FF6B6B`             | **New** - was previously a no-op (`bg-danger` resolved to nothing).                                                                                                                                                                                                                                                                      |
+| `primary-ink`         | `#B24A2B`                                                                              | `primary`             | AA-safe Ember foreground for links, text-only controls and tinted surfaces. A per-user accent derives this role by reducing lightness until it clears 4.5:1 on `surface-500`; dark mode uses the active primary unchanged.                                                                                                               |
+| `secondary-ink`       | `#17776C`                                                                              | `secondary`           | AA-safe Tide foreground for text and icons on neutral surfaces.                                                                                                                                                                                                                                                                          |
+| `danger-ink`          | `#CC2727`                                                                              | `danger`              | AA-safe danger foreground for inline errors and text-only destructive actions.                                                                                                                                                                                                                                                           |
 | `success`             | `#198654`                                                                              | `#34D399`             | **New.**                                                                                                                                                                                                                                                                                                                                 |
 | `warning`             | `#A16C09`                                                                              | `#F2B33D`             | **New.**                                                                                                                                                                                                                                                                                                                                 |
 | `vip`                 | `#996F10`                                                                              | `#E8B84B`             | Antique gold, warmed and darkened from the old bright-amber for better on-fill contrast.                                                                                                                                                                                                                                                 |
@@ -46,7 +49,7 @@ only what they resolve to changed - so no template touch was needed for this pha
 | `text-secondary`      | `#4A5163`                                                                              | `#B4BAC9`             |                                                                                                                                                                                                                                                                                                                                          |
 | `text-muted`          | `#656A7A`                                                                              | `#898F9D`             |                                                                                                                                                                                                                                                                                                                                          |
 
-Every pairing above was contrast-audited: all text/surface and on-fill/fill combinations clear
+Every pairing above was contrast-audited: all text/surface, semantic ink/surface and on-fill/fill combinations clear
 4.5:1 (WCAG AA) in both themes. `neon` is intentionally left as a static (non-branched) scale -
 decorative/tint use, not paired with `on-fill` as a solid fill. `accent`'s `DEFAULT`/`500` became
 theme-aware during Phase 4 (see below) once a real usage needed `on-fill` pairing at small text
@@ -133,18 +136,22 @@ Full findings and the complete feature inventory driving the Claude Design sync 
 1. **Light and dark are both first-class.** `ThemeService`'s existing `system`/`light`/`dark`
    toggle now has a genuinely designed palette on both sides - no more dark-mode-only mandate.
 2. **Primary is per-user, not fixed** - don't hardcode a specific primary hex in new components;
-   use the `primary` token so accent-colour theming keeps working.
+   use `primary` for fills, borders and rings, or `primary-ink` when Ember is a foreground, so
+   accent-colour theming keeps working.
 3. **The duet** - pair `primary` (Ember, you) with `secondary` (Tide, your exchange partner) on
    any screen that shows a 1:1 relationship, rather than reaching for a single accent.
 4. **`on-fill` for text on saturated backgrounds** - don't assume white text on a
    primary/secondary/danger/success/warning/vip fill; use `text-on-fill`, which flips to ink in
    dark mode where those fills are tuned brighter.
-5. **Mobile-first** - design for 390px width, then scale up.
-6. **Logical properties** - use `ps`/`pe`/`ms`/`me`/`border-s`/`border-e` for RTL support (this one
+5. **Ink roles for semantic foregrounds** - use `text-primary-ink`, `text-secondary-ink` and
+   `text-danger-ink` for links, ghost actions, icons and inline status text on neutral surfaces.
+   Do not use the saturated fill roles as text colours.
+6. **Mobile-first** - design for 390px width, then scale up.
+7. **Logical properties** - use `ps`/`pe`/`ms`/`me`/`border-s`/`border-e` for RTL support (this one
    is consistently followed in the codebase).
-7. **Gradient buttons** - VIP/gift CTAs use a gold gradient (`app-gradient-button`), distinct from
+8. **Gradient buttons** - VIP/gift CTAs use a gold gradient (`app-gradient-button`), distinct from
    the primary/secondary button family.
-8. **Flag indicators** - language pairs show flag emoji badges (`getLanguageFlag()` in
+9. **Flag indicators** - language pairs show flag emoji badges (`getLanguageFlag()` in
    `language-picker.component.ts`).
-9. **No em dashes** - use hyphens or colons instead (project-wide rule, see `AGENTS.md`).
-10. **Dual currency** - prices show both UKP and USD (e.g., "8 UKP / $10 USD").
+10. **No em dashes** - use hyphens or colons instead (project-wide rule, see `AGENTS.md`).
+11. **Dual currency** - prices show both UKP and USD (e.g., "8 UKP / $10 USD").

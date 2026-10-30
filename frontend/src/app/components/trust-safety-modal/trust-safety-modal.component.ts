@@ -70,7 +70,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             [attr.aria-controls]="'trust-safety-panel-report'"
             [attr.tabindex]="mode() === 'report' ? 0 : -1"
             [class.bg-surface-200]="mode() === 'report'"
-            [class.text-primary]="mode() === 'report'"
+            [class.text-primary-ink]="mode() === 'report'"
             (click)="switchTab('report')"
             (keydown)="onTabKeydown($event, 'report')"
           >
@@ -159,7 +159,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
               class="space-y-2 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-xs"
               role="alert"
             >
-              <span class="block font-bold text-danger">{{
+              <span class="block font-bold text-danger-ink">{{
                 'safety.blockWarning' | t: { name: targetName() }
               }}</span>
               <ul class="list-inside list-disc space-y-1 text-text-primary">

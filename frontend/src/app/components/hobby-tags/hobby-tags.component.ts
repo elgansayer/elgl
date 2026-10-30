@@ -110,7 +110,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
               type="button"
               variant="ghost"
               size="icon-xs"
-              class="absolute end-1 top-1/2 -translate-y-1/2 rounded-full text-danger opacity-0 transition-opacity group-hover:opacity-100"
+              class="absolute end-1 top-1/2 -translate-y-1/2 rounded-full text-danger-ink opacity-0 transition-opacity group-hover:opacity-100"
               (click)="removeTag(userTag.hobby_tag_id)"
               [attr.aria-label]="
                 i18n.translate('hobby.removeTagLabel', { name: userTag.hobby_tag?.name ?? '' })

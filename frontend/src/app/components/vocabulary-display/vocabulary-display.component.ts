@@ -26,7 +26,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
           <button
             hlmBtn
             (click)="refreshVocabulary()"
-            class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+            class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-primary-ink hover:bg-primary/10 transition-colors disabled:opacity-50"
             [disabled]="loading()"
             [attr.aria-label]="'vocabDisplay.refreshAriaLabel' | t"
           >

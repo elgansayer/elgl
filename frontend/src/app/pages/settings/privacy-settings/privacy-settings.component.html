@@ -33,7 +33,7 @@
           </p>
         } @else if (profileVisibilityResource.error()) {
           <div class="p-4 flex flex-col items-start gap-3" role="alert">
-            <p class="text-sm text-danger">{{ 'privacy.profileVisibility.loadError' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'privacy.profileVisibility.loadError' | t }}</p>
             <button
               hlmBtn
               type="button"
@@ -76,7 +76,7 @@
               {{ 'common.saving' | t }}
             </p>
           } @else if (visibilitySaveError()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-danger" role="alert">
+            <p class="ps-4 pe-4 pb-3 text-xs text-danger-ink" role="alert">
               {{ 'privacy.profileVisibility.saveError' | t }}
             </p>
           } @else if (visibilitySaveSuccess()) {
@@ -102,7 +102,7 @@
           </p>
         } @else if (presencePrivacyResource.error()) {
           <div class="p-4 flex flex-col items-start gap-3" role="alert">
-            <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'common.error_generic' | t }}</p>
             <button
               hlmBtn
               type="button"
@@ -151,7 +151,7 @@
               {{ 'common.saving' | t }}
             </p>
           } @else if (presencePrivacySaveError()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-danger" role="alert">
+            <p class="ps-4 pe-4 pb-3 text-xs text-danger-ink" role="alert">
               {{ 'common.error_generic' | t }}
             </p>
           } @else if (presencePrivacySaveSuccess()) {
@@ -182,7 +182,7 @@
           </div>
           @if (item.route === '/settings/blocks' && blockedCount() > 0) {
             <span
-              class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-danger/20 text-danger text-xs font-medium"
+              class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-danger/20 text-danger-ink text-xs font-medium"
             >
               {{ blockedCount() }}
             </span>
@@ -239,7 +239,7 @@
 
           @if (mutedWordsError()) {
             <div class="flex flex-wrap items-center gap-2 pb-3" role="alert">
-              <span class="text-xs text-danger">{{ 'common.error' | t }}</span>
+              <span class="text-xs text-danger-ink">{{ 'common.error' | t }}</span>
               <button
                 hlmBtn
                 type="button"
@@ -271,7 +271,7 @@
                   size="touch"
                   [disabled]="mutedWordsSaving()"
                   (click)="removeMutedWord(word)"
-                  class="shrink-0 text-danger hover:text-danger/80"
+                  class="shrink-0 text-danger-ink hover:text-danger-ink/80"
                   [attr.aria-label]="'privacy.hub.removeMutedWordAria' | t: { word: word }"
                 >
                   {{ 'privacy.hub.removeMutedWord' | t }}
