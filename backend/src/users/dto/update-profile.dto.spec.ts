@@ -1,5 +1,5 @@
 import { validate } from 'class-validator';
-import { UpdateProfileDto } from './update-profile.dto';
+import { MessageFiltersDto, UpdateProfileDto } from './update-profile.dto';
 import { PROFICIENCY_LEVELS } from '../proficiency-level';
 
 describe('UpdateProfileDto', () => {
@@ -73,4 +73,25 @@ describe('UpdateProfileDto', () => {
       true,
     );
   });
+});
+
+describe('MessageFiltersDto', () => {
+  it.each([0, 120])('accepts the inclusive age boundary %i', async (age) => {
+    const dto = Object.assign(new MessageFiltersDto(), {
+      age_min: age,
+      age_max: age,
+    });
+
+    await expect(validate(dto)).resolves.toHaveLength(0);
+  });
+
+  it.each([-1, 121])(
+    'rejects age %i outside the supported range',
+    async (age) => {
+      const dto = Object.assign(new MessageFiltersDto(), { age_min: age });
+      const errors = await validate(dto);
+
+      expect(errors.some((error) => error.property === 'age_min')).toBe(true);
+    },
+  );
 });

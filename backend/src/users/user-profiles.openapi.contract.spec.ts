@@ -211,6 +211,23 @@ describe('User Profiles OpenAPI architecture contract', () => {
     expect(contract.components?.responses?.['TooManyRequests']).toBeDefined();
   });
 
+  it('documents the exact runtime age-filter boundaries', () => {
+    const messageFilters = contract.components?.schemas?.['MessageFilters'];
+    const properties = messageFilters?.['properties'] as
+      Record<string, Record<string, unknown>> | undefined;
+
+    expect(properties?.['age_min']).toEqual({
+      type: 'integer',
+      minimum: 0,
+      maximum: 120,
+    });
+    expect(properties?.['age_max']).toEqual({
+      type: 'integer',
+      minimum: 0,
+      maximum: 120,
+    });
+  });
+
   it('stays aligned with the actual route decorators for critical operations', () => {
     expect(controllerSource).toContain("@Controller('users')");
     expect(controllerSource).toContain("@Get('me')");

@@ -8,44 +8,47 @@ import { MessageFilterService, MessageFilters } from '../../../services/message-
 
 interface LanguageOption {
   code: string;
-  name: string;
+  labelKey: string;
 }
 
 const COMMON_LANGUAGES: LanguageOption[] = [
-  { code: 'ar', name: 'Arabic' },
-  { code: 'bn', name: 'Bengali' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'cs', name: 'Czech' },
-  { code: 'nl', name: 'Dutch' },
-  { code: 'en', name: 'English' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'el', name: 'Greek' },
-  { code: 'he', name: 'Hebrew' },
-  { code: 'hi', name: 'Hindi' },
-  { code: 'id', name: 'Indonesian' },
-  { code: 'it', name: 'Italian' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'ms', name: 'Malay' },
-  { code: 'fa', name: 'Persian' },
-  { code: 'pl', name: 'Polish' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'sv', name: 'Swedish' },
-  { code: 'th', name: 'Thai' },
-  { code: 'tr', name: 'Turkish' },
-  { code: 'uk', name: 'Ukrainian' },
-  { code: 'ur', name: 'Urdu' },
-  { code: 'vi', name: 'Vietnamese' },
+  { code: 'ar', labelKey: 'languageName.ar' },
+  { code: 'bn', labelKey: 'languageName.bn' },
+  { code: 'zh', labelKey: 'languageName.zh' },
+  { code: 'cs', labelKey: 'languageName.cs' },
+  { code: 'nl', labelKey: 'languageName.nl' },
+  { code: 'en', labelKey: 'languageName.en' },
+  { code: 'fr', labelKey: 'languageName.fr' },
+  { code: 'de', labelKey: 'languageName.de' },
+  { code: 'el', labelKey: 'languageName.el' },
+  { code: 'he', labelKey: 'languageName.he' },
+  { code: 'hi', labelKey: 'languageName.hi' },
+  { code: 'id', labelKey: 'languageName.id' },
+  { code: 'it', labelKey: 'languageName.it' },
+  { code: 'ja', labelKey: 'languageName.ja' },
+  { code: 'ko', labelKey: 'languageName.ko' },
+  { code: 'ms', labelKey: 'languageName.ms' },
+  { code: 'fa', labelKey: 'languageName.fa' },
+  { code: 'pl', labelKey: 'languageName.pl' },
+  { code: 'pt', labelKey: 'languageName.pt' },
+  { code: 'ru', labelKey: 'languageName.ru' },
+  { code: 'es', labelKey: 'languageName.es' },
+  { code: 'sv', labelKey: 'languageName.sv' },
+  { code: 'th', labelKey: 'languageName.th' },
+  { code: 'tr', labelKey: 'languageName.tr' },
+  { code: 'uk', labelKey: 'languageName.uk' },
+  { code: 'ur', labelKey: 'languageName.ur' },
+  { code: 'vi', labelKey: 'languageName.vi' },
 ];
 
 const GENDER_OPTIONS: LanguageOption[] = [
-  { code: 'male', name: 'profile.gender.male' },
-  { code: 'female', name: 'profile.gender.female' },
-  { code: 'other', name: 'profile.gender.other' },
+  { code: 'male', labelKey: 'profile.gender.male' },
+  { code: 'female', labelKey: 'profile.gender.female' },
+  { code: 'other', labelKey: 'profile.gender.other' },
 ];
+
+const MINIMUM_FILTER_AGE = 0;
+const MAXIMUM_FILTER_AGE = 120;
 
 @Component({
   standalone: true,
@@ -77,6 +80,8 @@ export class MessageFilterSettingsComponent implements OnInit {
 
   readonly languages = COMMON_LANGUAGES;
   readonly genderOptions = GENDER_OPTIONS;
+  readonly minimumFilterAge = MINIMUM_FILTER_AGE;
+  readonly maximumFilterAge = MAXIMUM_FILTER_AGE;
 
   readonly hasFilters = computed(() => {
     return (
@@ -133,11 +138,18 @@ export class MessageFilterSettingsComponent implements OnInit {
     this.errorMessage.set('');
     this.successMessage.set('');
 
+    const minimumAge = this.ageMin();
+    const maximumAge = this.ageMax();
     if (
-      this.ageMin() !== null &&
-      this.ageMax() !== null &&
-      this.ageMin()! > this.ageMax()!
+      (minimumAge !== null &&
+        (minimumAge < MINIMUM_FILTER_AGE || minimumAge > MAXIMUM_FILTER_AGE)) ||
+      (maximumAge !== null && (maximumAge < MINIMUM_FILTER_AGE || maximumAge > MAXIMUM_FILTER_AGE))
     ) {
+      this.errorMessage.set('settings.messageFilters.invalidAge');
+      return;
+    }
+
+    if (minimumAge !== null && maximumAge !== null && minimumAge > maximumAge) {
       this.errorMessage.set('settings.messageFilters.invalidAgeRange');
       return;
     }
@@ -168,8 +180,8 @@ export class MessageFilterSettingsComponent implements OnInit {
     }
   }
 
-  getLanguageName(code: string): string {
-    return this.languages.find((l) => l.code === code)?.name ?? code.toUpperCase();
+  getLanguageLabelKey(code: string): string {
+    return this.languages.find((language) => language.code === code)?.labelKey ?? code;
   }
 
   goBack(): void {
