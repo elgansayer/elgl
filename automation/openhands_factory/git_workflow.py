@@ -338,6 +338,7 @@ class GitWorkflow:
             Path("e2e/node_modules"),
             Path("admin-portal/node_modules"),
             Path(".venv"),
+            Path(".factory-tools"),
         ):
             source = self.repository / relative
             destination = worktree / relative
