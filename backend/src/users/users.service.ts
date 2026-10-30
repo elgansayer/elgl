@@ -948,9 +948,7 @@ export class UsersService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const current = await this.getMessageFilters(userId);
     const normalised: MessageFiltersDto = {
-      ...current,
       ...filters,
       ...(filters.allowed_genders !== undefined
         ? {
@@ -967,14 +965,6 @@ export class UsersService {
           }
         : {}),
     };
-    if (
-      normalised.age_min !== undefined &&
-      normalised.age_max !== undefined &&
-      normalised.age_min > normalised.age_max
-    ) {
-      throw new BadRequestException('Minimum age cannot exceed maximum age');
-    }
-
     const { error } = await supabase
       .from('users')
       .update({ message_filters: normalised } as never)
