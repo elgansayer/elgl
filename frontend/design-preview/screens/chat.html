@@ -366,6 +366,17 @@
         color: rgb(var(--on-fill));
         font-weight: 800;
       }
+      .error-toast {
+        margin: 0 10px 10px;
+        border: 1px solid rgb(var(--danger) / 0.45);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgb(var(--danger) / 0.12);
+        color: rgb(var(--danger));
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
       .caption {
         max-width: 1230px;
         margin: 18px auto 0;
@@ -555,6 +566,10 @@
             <div class="composer-input">Type a message…</div>
             <button class="send" type="button">Send</button>
           </div>
+          <div class="error-toast" role="alert">
+            You cannot send the first message because this user has restricted who may contact
+            them.
+          </div>
         </div>
       </section>
     </main>
@@ -567,7 +582,8 @@
       existing composer; the user remains responsible for sending it. Each message's correction
       action now opens the shared <code>app-correction-modal</code> with that message as its
       read-only source, preserving its ghost-text edit, live diff, optional explanation,
-      cancellation and structured correction payload.
+      cancellation and structured correction payload. The new-chat frame also shows the translated
+      error toast presented when the recipient's initial-message filters reject the send.
     </p>
 
     <script>

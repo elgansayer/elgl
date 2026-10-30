@@ -376,6 +376,17 @@
         font-size: 12px;
         color: rgb(var(--text-primary));
       }
+      .age-input.invalid {
+        border-color: rgb(var(--danger));
+      }
+      .field-error {
+        margin: 0;
+        padding: 0 14px 12px;
+        color: rgb(var(--danger));
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
       .sub-label {
         font-size: 11px;
         font-weight: 700;
@@ -640,10 +651,13 @@
               <div class="card-list">
                 <div class="age-row">
                   <span>Age</span>
-                  <span class="age-input">18</span>
+                  <span class="age-input invalid">50</span>
                   <span>to</span>
-                  <span class="age-input">45</span>
+                  <span class="age-input invalid">20</span>
                 </div>
+                <p class="field-error" role="alert">
+                  Minimum age cannot be greater than maximum age.
+                </p>
                 <div class="sub-label">Allowed genders</div>
                 <div class="chips">
                   <span class="chip-toggle on">Female</span>
@@ -961,7 +975,8 @@
       Hub mirrors <code>settings.component.html</code>'s full section list top to bottom
       (subscription through legal); the message-filters and interests sections show a trimmed sample
       of chips rather than every gender/language/interest option, and the linked-accounts row shows
-      a representative "2 active" state. Notification settings mirrors the category-by-channel
+      a representative "2 active" state. The message-filter sample shows the client-side invalid
+      age-range error that prevents persistence. Notification settings mirrors the category-by-channel
       toggle matrix in <code>notification-settings.component.html</code>, reduced to 5
       representative categories rather than the full list. Privacy hub mirrors
       <code>privacy-settings.component.html</code>'s nav-card list plus the muted-words quick

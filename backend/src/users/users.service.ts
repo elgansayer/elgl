@@ -411,8 +411,6 @@ export class UsersService {
       study_streak_days: 15,
       correction_ratio: 0.95,
       is_serious_learner: true,
-      age: 31,
-      gender: 'other',
       privacy_hide_age: false,
       privacy_hide_location: false,
       privacy_hide_from_search: false,
@@ -605,9 +603,8 @@ export class UsersService {
       .update(updatePayload as never)
       .eq('id', userId);
     if (updateError) {
-      Logger.warn(
-        `Supabase update failed, falling back to mock: ${updateError.message}`,
-      );
+      Logger.error('Profile update persistence failed');
+      throw new InternalServerErrorException('Failed to update profile');
     }
 
     // Invalidate matchmaking caches when profile fields that affect

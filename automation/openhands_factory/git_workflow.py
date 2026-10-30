@@ -217,7 +217,46 @@ class GitWorkflow:
         unresolved = self.runner(("git", "diff", "--name-only", "--diff-filter=U"), self.repository)
         if unresolved.returncode == 0 and unresolved.stdout.strip():
             return True
+        # A clean merge from an earlier cycle is still uncommitted when its
+        # verification failed and quality repair ran instead. git then refuses a
+        # second merge on every retry ("You have not concluded your merge"), which
+        # held issues 1450, 9460 and 9466 and their PR WIP slots on 2026-10-29.
+        # Verification and the commit that follows conclude it; the next cycle
+        # merges any newer base.
+        in_progress = self.runner(
+            ("git", "rev-parse", "-q", "--verify", "MERGE_HEAD"), self.repository
+        )
+        if in_progress.returncode == 0:
+            if in_progress.stdout.strip() == self._remote_base_sha():
+                return False
+            # The pending merge is of an older base. Waiting for verification
+            # deadlocks when only the newer base can make it pass: worktrees for
+            # issues 1436, 1450, 1478 and 9460 kept a pre-#9718 drift checker
+            # that cannot see their preview fixes (2026-10-30). Conclude the
+            # clean merge locally (nothing is pushed until verification passes)
+            # and merge the current base on top.
+            self.stage_all()
+            concluded = self.runner(("git", "commit", "--no-edit"), self.repository)
+            if concluded.returncode != 0:
+                raise RepositorySafetyError(
+                    f"Could not conclude the earlier base merge: {concluded.stderr}"
+                )
+            return self.merge_base_for_repair()
         raise RepositorySafetyError(f"Could not merge base branch: {merge.stderr}")
+
+    def merging_current_base(self) -> bool:
+        """Return whether an uncommitted merge of the latest fetched base is pending."""
+
+        in_progress = self.runner(
+            ("git", "rev-parse", "-q", "--verify", "MERGE_HEAD"), self.repository
+        )
+        return in_progress.returncode == 0 and in_progress.stdout.strip() == self._remote_base_sha()
+
+    def _remote_base_sha(self) -> str:
+        result = self.runner(("git", "rev-parse", f"origin/{self.base_branch}"), self.repository)
+        if result.returncode != 0:
+            raise RepositorySafetyError(f"Could not resolve the base branch: {result.stderr}")
+        return result.stdout.strip()
 
     def discard_transient_build_metadata(self) -> bool:
         """Restore only an unstaged, generator-only local build-number change.

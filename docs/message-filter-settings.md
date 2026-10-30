@@ -14,6 +14,8 @@ Message filter settings let an authenticated user restrict who may send the firs
 
 The settings page is available through the existing settings route and persists through the authenticated `/users/me/message-filters` API. In direct chats, if an initial message is rejected due to recipient filter settings, the sender receives an informative translated error toast.
 
+Sender age and native-language attributes come from the persisted user profile. Profile update failures return an error and never substitute synthetic attributes, so the UI cannot report a successful save that the initial-message admission rule would not observe.
+
 ## Ownership and data flow
 
 `MessageFilterSettingsComponent` owns only presentation and editing state. `MessageFilterService` owns the authenticated HTTP boundary:

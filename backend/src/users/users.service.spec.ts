@@ -504,29 +504,17 @@ describe('UsersService', () => {
       expect(result).toMatchObject(updatedProfile);
     });
 
-    it('should return mock profile when update fails with error message', async () => {
-      const dto = { display_name: 'Error Name' };
-      mockQueryBuilder.single.mockResolvedValue({
-        data: null,
+    it('should report an age persistence failure instead of returning synthetic success', async () => {
+      mockQueryBuilder.eq.mockResolvedValueOnce({
         error: { message: 'Database check violation' },
       });
 
-      const result = await service.updateProfile('user-1', dto, false);
-      expect(result.id).toBe('user-1');
-      expect(result.display_name).toBe('Error Name');
-      expect(result.coins_balance).toBe(500); // verify mock fields exist
-    });
+      await expect(
+        service.updateProfile('user-1', { age: 28 }, false),
+      ).rejects.toThrow('Failed to update profile');
 
-    it('should return mock profile when update fails without error message', async () => {
-      const dto = { display_name: 'Error Name' };
-      mockQueryBuilder.single.mockResolvedValue({
-        data: null,
-        error: null,
-      });
-
-      const result = await service.updateProfile('user-1', dto, false);
-      expect(result.id).toBe('user-1');
-      expect(result.display_name).toBe('Error Name');
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({ age: 28 });
+      expect(mockQueryBuilder.single).not.toHaveBeenCalled();
     });
   });
 

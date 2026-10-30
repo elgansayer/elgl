@@ -82,8 +82,8 @@ if not re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", commit):
 try:
     result = subprocess.run(
         ["gh", "run", "list", "--repo", repository, "--workflow", "ci.yml",
-         "--branch", branch, "--event", "push", "--commit", commit, "--limit", "20",
-         "--json", "headSha,status,conclusion"],
+         "--branch", branch, "--commit", commit, "--limit", "20",
+         "--json", "headSha,status,conclusion,event"],
         capture_output=True, text=True, timeout=30, check=False,
     )
     if result.returncode:
@@ -92,8 +92,13 @@ try:
     if not isinstance(runs, list):
         raise SystemExit(1)
     # GitHub returns newest first: a pending/failed rerun beats an older success.
+    # GitHub sometimes creates no push run for a main head; main-ci-watchdog.yml
+    # then dispatches the same workflow on main, which is equally canonical
+    # (a546750a5 was left undeployed on 2026-10-29 until this was accepted).
     for run in runs:
         if not isinstance(run, dict) or run.get("headSha") != commit:
+            continue
+        if run.get("event") not in ("push", "workflow_dispatch"):
             continue
         raise SystemExit(0 if run.get("status") == "completed"
                          and run.get("conclusion") == "success" else 1)

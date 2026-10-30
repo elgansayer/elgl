@@ -17,6 +17,7 @@ from openhands_factory.alerts import AlertService
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
+from openhands_factory.design_drift import check_design_drift, drift_guidance
 from openhands_factory.exceptions import (
     AgentTaskFailure,
     FactoryError,
@@ -49,6 +50,11 @@ from openhands_factory.pr_lifecycle import (
 from openhands_factory.pr_metrics import PullRequestMetricsStore
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
+from openhands_factory.retry_policy import (
+    DRIFT_GUIDED_REPAIR_KEY,
+    QUALITY_REPAIR_LIMIT_MESSAGE,
+    REPAIR_LIMIT_MESSAGE,
+)
 from openhands_factory.review_report import validate_review_report
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
@@ -65,6 +71,8 @@ MAX_CONSECUTIVE_QUALITY_REPAIRS = 5
 # An unpublished job whose repairs ran out on a base this old is rebuilt once on
 # the current base instead of retrying old-main failures forever.
 STALE_UNPUBLISHED_BASE_AGE = timedelta(days=7)
+CAPPED_LABEL = "factory-capped"
+CAPPED_NOTICE_PREFIX = "OpenHands Factory parked this pull request: "
 QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
 QUARANTINE_NOTICE = (
     f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
@@ -88,6 +96,11 @@ VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
     "failed with exit 137",
     "failed with exit 143",
 )
+# A spent repair budget names its cause in the terminal error. Check names and
+# paths are untrusted and last_error keeps only its final 2000 characters, so the
+# cause is bounded to leave the opening words (and failure class) intact.
+MAX_BUDGET_CAUSE_ITEMS = 8
+MAX_BUDGET_CAUSE_ITEM_CHARS = 200
 
 # A path in one of these categories can never introduce the vulnerability
 # classes security.md's checklist scans for (hardcoded secrets, webhook/
@@ -125,6 +138,29 @@ def _is_security_review_exempt(changed_paths: set[Path]) -> bool:
             continue
         return False
     return True
+
+
+def _budget_cause_item(value: object) -> str:
+    """One bounded line of a finding code, path or check name for a terminal error."""
+    return " ".join(str(value).split())[:MAX_BUDGET_CAUSE_ITEM_CHARS]
+
+
+def _failed_checks_cause(failed_checks: frozenset[str]) -> str:
+    """Sorted failed check names, so an identical failure repeats an identical error.
+
+    Names only: no evidence text, timestamps or SHAs, which would give every retry a
+    new fingerprint and stop the chronic backoff from escalating.
+    """
+    names = sorted(name for name in map(_budget_cause_item, failed_checks) if name)
+    shown = ", ".join(names[:MAX_BUDGET_CAUSE_ITEMS])
+    if len(names) > MAX_BUDGET_CAUSE_ITEMS:
+        shown += f" (+{len(names) - MAX_BUDGET_CAUSE_ITEMS} more)"
+    return shown or "no failed check reported"
+
+
+def _last_attempt(job: Job) -> object | None:
+    """Newest provider attempt; compared by identity because history is bounded."""
+    return job.provider_history[-1] if job.provider_history else None
 
 
 class FactoryPipeline:
@@ -1082,13 +1118,28 @@ class FactoryPipeline:
                 if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                     if self._restart_stale_unpublished(job, workflow):
                         return
-                    finding = findings[0]
-                    raise FactoryError(f"Quality gate blocked: {finding.code} in {finding.path}")
+                    drift = check_design_drift(worktree, job.task.identifier)
+                    if not drift or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+                        finding = findings[0]
+                        error = (
+                            f"{QUALITY_REPAIR_LIMIT_MESSAGE}: "
+                            f"{_budget_cause_item(finding.code)} in "
+                            f"{_budget_cause_item(finding.path)}"
+                        )
+                        # Parking publishes one notice only. Persist the diagnosis first.
+                        job.last_error = error
+                        self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                        raise FactoryError(error)
+                    job.review_findings = [f"Local verification failed:\n{drift}"]
                 job.state = JobState.QUALITY_REPAIRING
                 return
             job.quality_repairs = 0
             workflow.stage_all()
-            workflow.commit(f"fix: resolve issue {job.task.identifier}")
+            # A head the Factory already verified and pushed can re-enter VERIFYING
+            # with a clean worktree; "nothing to commit" then failed every retry
+            # (issue 9464, PR #9671, 2026-10-29). Any other clean tree still fails.
+            if job.latest_verified_sha != workflow.head_sha() or workflow.has_changes():
+                workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -1124,10 +1175,26 @@ class FactoryPipeline:
             if not findings and not job.review_findings:
                 job.state = JobState.VERIFYING
                 return
+            drift_guided_repair_granted = False
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return
-                raise FactoryError("Quality repair limit exceeded")
+                drift = check_design_drift(worktree, job.task.identifier)
+                if not self._grant_drift_guided_repair(job, drift):
+                    # Gate findings take precedence; otherwise review evidence remains.
+                    cause = (
+                        f"{_budget_cause_item(findings[0].code)} in "
+                        f"{_budget_cause_item(findings[0].path)}"
+                        if findings
+                        else "review findings"
+                    )
+                    error = f"{QUALITY_REPAIR_LIMIT_MESSAGE}: {cause}"
+                    # Parking publishes one notice only. Persist the diagnosis first.
+                    job.last_error = error
+                    self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                    raise FactoryError(error)
+                drift_guided_repair_granted = True
+                job.review_findings = [f"Local verification failed:\n{drift}"]
 
             quality_finding_text = "\n".join(
                 f"- {f.code} in {f.path}: {f.summary}\n  Evidence: {f.evidence}" for f in findings
@@ -1144,14 +1211,25 @@ class FactoryPipeline:
             # changes" raises before any later increment, which let job 1423 make
             # 23 quality-repair calls under a cap of 5 (2026-10-28).
             job.quality_repairs += 1
-            self._run_agent(
-                job,
-                worktree,
-                "quality_repair",
-                build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
-                lease_owner=lease_owner,
-                require_repository_change=True,
-            )
+            last_attempt = _last_attempt(job)
+            try:
+                self._run_agent(
+                    job,
+                    worktree,
+                    "quality_repair",
+                    build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
+                    lease_owner=lease_owner,
+                    require_repository_change=True,
+                )
+            except ProviderCapacityUnavailable:
+                # No model started (every provider was busy), so nothing was
+                # spent. Job 1663 lost three of its five quality repairs to busy
+                # deferrals and parked after two real attempts (2026-10-29).
+                if _last_attempt(job) is last_attempt:
+                    job.quality_repairs -= 1
+                    if drift_guided_repair_granted:
+                        job.failure_counts.pop(DRIFT_GUIDED_REPAIR_KEY, None)
+                raise
 
             job.review_findings.clear()
             job.state = JobState.VERIFYING
@@ -1416,10 +1494,25 @@ class FactoryPipeline:
                 f"Mergeability: {status.mergeable}\n"
                 f"Merge state: {status.merge_state_status or 'not reported'}"
             )
-            if job.last_error:
+            if job.last_error and "design sync drift" not in job.last_error.lower():
                 repair_context += (
                     f"\n\nPrevious local Factory failure for this same head:\n{job.last_error}"
                 )
+            # GitHub names this gate only as `constitution`; run it here so the
+            # agent is told which preview or manifest item to change.
+            drift = None
+            if not (base_conflict or stale_base) and (
+                drift := check_design_drift(worktree, job.task.identifier)
+            ):
+                repair_context += f"\n\n{drift}"
+            if status.failed_checks and not (base_conflict or stale_base):
+                try:
+                    excerpts = self.github.failed_check_excerpts(status.head_sha)
+                except (FactoryError, ValueError, KeyError):
+                    LOGGER.warning("Could not read CI logs for %s", job.pull_request, exc_info=True)
+                    excerpts = ""
+                if excerpts:
+                    repair_context += f"\n\nFailed CI job log excerpts:\n\n{excerpts}"
             # A large share of CI repairs are a workspace's own formatter or
             # auto-fixable lint rule drifting, not something that needs an
             # agent's judgement. Try that for free first; only spend an LLM
@@ -1436,6 +1529,7 @@ class FactoryPipeline:
                 attempt_mechanical_repair(worktree, workflow.changed_paths())
             mechanically_repaired = not (base_conflict or stale_base) and workflow.has_changes()
             model_repair_started = False
+            drift_guided_repair_granted = False
             if has_unmerged_paths or (
                 not (base_conflict or stale_base) and not mechanically_repaired
             ):
@@ -1445,21 +1539,38 @@ class FactoryPipeline:
                 if job.repair_attempts >= 5:
                     if self._rebuild_capped_conflict(job, lease_owner, base_conflict or stale_base):
                         return
-                    raise FactoryError("Repair limit exceeded")
+                    if not self._grant_drift_guided_repair(job, drift):
+                        error = (
+                            f"{REPAIR_LIMIT_MESSAGE}: {_failed_checks_cause(status.failed_checks)}"
+                        )
+                        # Parking publishes one notice only. Persist the diagnosis first.
+                        job.last_error = error
+                        self._park_capped_pull_request(job, "its CI-repair budget is spent")
+                        raise FactoryError(error)
+                    drift_guided_repair_granted = True
                 # Spend the budget when the model starts, not when a push lands.
                 # A repair that fails local verification never pushes, and a
                 # still-conflicting PR then routes QUALITY_REPAIRING back to
                 # REPAIRING, so counting only pushes left this loop unbounded.
                 job.repair_attempts += 1
                 model_repair_started = True
-                self._run_agent(
-                    job,
-                    worktree,
-                    "repair",
-                    build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
-                    lease_owner=lease_owner,
-                    require_repository_change=True,
-                )
+                last_attempt = _last_attempt(job)
+                try:
+                    self._run_agent(
+                        job,
+                        worktree,
+                        "repair",
+                        build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
+                        lease_owner=lease_owner,
+                        require_repository_change=True,
+                    )
+                except ProviderCapacityUnavailable:
+                    # Busy deferrals are not repairs; see the quality-repair site.
+                    if _last_attempt(job) is last_attempt:
+                        job.repair_attempts -= 1
+                        if drift_guided_repair_granted:
+                            job.failure_counts.pop(DRIFT_GUIDED_REPAIR_KEY, None)
+                    raise
             verified_paths = self._verify_or_schedule_quality_repair(job, workflow)
             if verified_paths is None:
                 return
@@ -1987,6 +2098,68 @@ class FactoryPipeline:
         job.state = JobState.DISCOVERED
         return True
 
+    def _merge_newer_base_for_drift(self, job: Job, workflow: GitWorkflow) -> bool:
+        """Re-verify a capped drift failure once per newer base before parking.
+
+        The drift checker runs from the job's own worktree, so a PR verified
+        against a base older than #9718 could never see its own uncommitted
+        preview fix (issues 1436 and 1716, 2026-10-30). Merging the current base
+        costs no model call and happens at most once per base advance.
+        """
+        if job.pull_request is None:
+            return False
+        try:
+            if workflow.contains_current_base() or workflow.merging_current_base():
+                return False
+            workflow.merge_base_for_repair()
+        except RepositorySafetyError:
+            LOGGER.warning("Could not merge the current base into task %s", job.task.identifier)
+            return False
+        LOGGER.info("Merged the current base into task %s before re-verifying", job.task.identifier)
+        return True
+
+    def _grant_drift_guided_repair(self, job: Job, drift: str | None) -> bool:
+        """Allow one repair past the cap when design drift is the failure.
+
+        Jobs 1450 and 9460 spent their whole budget on design-sync drift before
+        the agent was told which preview or manifest item to change, then parked
+        on their first run with that guidance (2026-10-29). The gate is
+        unchanged; this only lets the explicit steps be tried once per job.
+        """
+        if not drift or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+            return False
+        job.failure_counts[DRIFT_GUIDED_REPAIR_KEY] = 1
+        LOGGER.info("Granting task %s one design-drift-guided repair", job.task.identifier)
+        return True
+
+    def _park_capped_pull_request(self, job: Job, reason: str) -> None:
+        """Stop a PR the Factory can no longer repair from holding WIP capacity.
+
+        Capped PRs kept the factory lane at 9/8, pausing all new intake for a
+        day while none of them could change (2026-10-29). The parked label only
+        removes the PR from WIP counts: it stays open, CI and independent review
+        still gate it, and it can still merge if its checks are fixed.
+        """
+        if job.pull_request is None:
+            return
+        number = job.pull_request
+        try:
+            self.github.add_issue_labels(number, (CAPPED_LABEL,))
+            if not any(
+                comment.body.startswith(CAPPED_NOTICE_PREFIX)
+                for comment in self.github.list_issue_comments(number)
+            ):
+                evidence = (job.last_error or "no failure recorded")[-1500:]
+                self.github.add_comment(
+                    number,
+                    f"{CAPPED_NOTICE_PREFIX}{reason}. It no longer counts against the "
+                    "Factory's open pull request limits; CI and independent review "
+                    "still gate any merge.\n\nLast failure:\n```\n"
+                    f"{evidence}\n```",
+                )
+        except FactoryError:
+            LOGGER.warning("Could not park capped pull request %s", number, exc_info=True)
+
     def _recover_closed_pull_request(self, job: Job, status: PullRequestStatus) -> bool:
         """Recover Factory-owned work without reopening external contributors' PRs."""
 
@@ -2111,10 +2284,21 @@ class FactoryPipeline:
                 if self._restart_stale_unpublished(job, workflow):
                     return None
                 raise
+            guidance = drift_guidance(detail, job.task.identifier)
             if job.quality_repairs >= MAX_CONSECUTIVE_QUALITY_REPAIRS:
                 if self._restart_stale_unpublished(job, workflow):
                     return None
-                raise
+                if not guidance or job.failure_counts.get(DRIFT_GUIDED_REPAIR_KEY):
+                    if guidance and self._merge_newer_base_for_drift(job, workflow):
+                        return None
+                    self._park_capped_pull_request(job, "its quality-repair budget is spent")
+                    raise
+                job.review_findings = [
+                    "Local verification failed. Repair the repository and keep all "
+                    f"Factory safety controls intact:\n{guidance}"
+                ]
+                job.state = JobState.QUALITY_REPAIRING
+                return None
             # Formatter and auto-fixable lint failures need no model (job 1195
             # spent repairs on prettier whitespace). Re-verify on the next pass if
             # the fixers changed anything; an unchanged tree falls through to the
@@ -2124,7 +2308,7 @@ class FactoryPipeline:
             if workflow.change_fingerprint() != before:
                 LOGGER.info("Mechanically repaired task %s; verifying again", job.task.identifier)
                 return None
-            evidence = detail[-1800:]
+            evidence = guidance or detail[-1800:]
             job.review_findings = [
                 "Local verification failed. Repair the repository and keep all "
                 f"Factory safety controls intact:\n{evidence}"
