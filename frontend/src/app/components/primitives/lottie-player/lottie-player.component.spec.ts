@@ -22,6 +22,7 @@ vi.mock('lottie-web', () => ({
       [loop]="loop()"
       [autoplay]="autoplay()"
       [speed]="speed()"
+      [playbackKey]="playbackKey()"
     />
   `,
   imports: [LottiePlayerComponent],
@@ -31,6 +32,7 @@ class TestHostComponent {
   loop = signal(true);
   autoplay = signal(true);
   speed = signal(1);
+  playbackKey = signal('gift-1');
 }
 
 describe('LottiePlayerComponent', () => {
@@ -80,5 +82,48 @@ describe('LottiePlayerComponent', () => {
 
     fixture.destroy();
     expect(destroySpy).toHaveBeenCalled();
+  });
+
+  it('should replace the animation when its data changes', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const firstInstance = loadAnimationMock.mock.results[0].value as { destroy: () => void };
+    const destroySpy = firstInstance.destroy as ReturnType<typeof vi.fn>;
+
+    fixture.componentInstance.data.set({ v: '5.5.1', layers: [] });
+    await fixture.whenStable();
+
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(loadAnimationMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('should restart unchanged animation data for a new playback key', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const firstInstance = loadAnimationMock.mock.results[0].value as { destroy: () => void };
+    const destroySpy = firstInstance.destroy as ReturnType<typeof vi.fn>;
+
+    fixture.componentInstance.playbackKey.set('gift-2');
+    await fixture.whenStable();
+
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(loadAnimationMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('should fail safely when Lottie rejects animation data', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    loadAnimationMock.mockImplementationOnce(() => {
+      throw new Error('Invalid animation');
+    });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const player = fixture.debugElement.children[0].componentInstance as LottiePlayerComponent;
+    expect(player.getAnimation()).toBeNull();
+    expect(consoleError).toHaveBeenCalledWith('Lottie SVG animation failed to render');
+    consoleError.mockRestore();
   });
 });

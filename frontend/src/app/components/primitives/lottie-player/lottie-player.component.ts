@@ -1,75 +1,72 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  input,
-  inject,
-  DestroyRef,
-  ElementRef,
-  output,
-  afterNextRender,
-} from '@angular/core';
+import { afterRenderEffect, Component, ElementRef, input, output, viewChild } from '@angular/core';
 import lottie, { AnimationItem } from 'lottie-web';
 
 @Component({
   selector: 'app-lottie-player',
-  // PERFORMANCE: Enabled OnPush change detection to prevent unnecessary re-renders in this pure UI primitive.
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div class="w-full h-full"></div>`,
-  styles: [`:host { display: block; width: 100%; height: 100%; }`],
+  template: `<div #container class="w-full h-full"></div>`,
+  styles: [
+    `
+      :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    `,
+  ],
 })
 export class LottiePlayerComponent {
-  private readonly elRef = inject(ElementRef<HTMLElement>);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly container = viewChild.required<ElementRef<HTMLElement>>('container');
 
-  animationData = input.required<unknown>();
-  loop = input<boolean>(true);
-  autoplay = input<boolean>(true);
-  speed = input<number>(1);
+  readonly animationData = input.required<unknown>();
+  readonly loop = input<boolean>(true);
+  readonly autoplay = input<boolean>(true);
+  readonly speed = input<number>(1);
+  readonly playbackKey = input<unknown>(null);
 
-  animationComplete = output<void>();
+  readonly animationComplete = output<void>();
 
   private animation: AnimationItem | null = null;
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.destroyAnimation());
+    afterRenderEffect({
+      write: (onCleanup) => {
+        this.playbackKey();
+        const data = this.animationData();
+        if (!data) {
+          this.animation = null;
+          return;
+        }
 
-    afterNextRender({
-      read: () => {
-        this.loadAnimation();
+        try {
+          const animation = lottie.loadAnimation({
+            container: this.container().nativeElement,
+            renderer: 'svg',
+            loop: this.loop(),
+            autoplay: this.autoplay(),
+            animationData: data,
+          });
+
+          animation.setSpeed(this.speed());
+          animation.addEventListener('complete', () => {
+            this.animationComplete.emit();
+          });
+          this.animation = animation;
+
+          onCleanup(() => {
+            animation.destroy();
+            if (this.animation === animation) {
+              this.animation = null;
+            }
+          });
+        } catch {
+          this.animation = null;
+          console.error('Lottie SVG animation failed to render');
+        }
       },
     });
   }
 
   getAnimation(): AnimationItem | null {
     return this.animation;
-  }
-
-  private loadAnimation(): void {
-    this.destroyAnimation();
-
-    const el = this.elRef.nativeElement.querySelector('div');
-    const data = this.animationData();
-    if (!el || !data) return;
-
-    this.animation = lottie.loadAnimation({
-      container: el as Element,
-      renderer: 'svg',
-      loop: this.loop(),
-      autoplay: this.autoplay(),
-      animationData: data,
-    });
-
-    this.animation.setSpeed(this.speed());
-
-    this.animation.addEventListener('complete', () => {
-      this.animationComplete.emit();
-    });
-  }
-
-  private destroyAnimation(): void {
-    if (this.animation) {
-      this.animation.destroy();
-      this.animation = null;
-    }
   }
 }
