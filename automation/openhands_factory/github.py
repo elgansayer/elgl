@@ -13,6 +13,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Literal, Protocol
 
 from openhands_factory.exceptions import FactoryError
@@ -1057,20 +1058,23 @@ class GitHubClient:
             raise FactoryError(f"Could not parse pull request URL: {url}") from error
 
     def update_pull_request(self, pull_request: int, *, title: str, body: str) -> None:
-        self._run(
-            (
-                "gh",
-                "pr",
-                "edit",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--title",
-                title,
-                "--body",
-                body,
+        # gh 2.46 `pr edit` queries retired Projects (classic) fields before it
+        # writes. REST avoids that unrelated failure; JSON preserves literal
+        # newlines and untrusted body text without shell interpolation.
+        with NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".json") as payload:
+            json.dump({"title": title, "body": body}, payload)
+            payload.flush()
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "--method",
+                    "PATCH",
+                    f"repos/{self.repository}/pulls/{pull_request}",
+                    "--input",
+                    payload.name,
+                )
             )
-        )
 
     def supersede_pull_request(
         self,
@@ -1079,7 +1083,7 @@ class GitHubClient:
         canonical: int | None,
         reason: str,
     ) -> None:
-        """Close and delete one non-canonical PR branch before replacement proceeds."""
+        """Close a non-canonical PR, retaining Neptune's branches for stack recovery."""
 
         self.add_issue_labels(pull_request, ("superseded", "duplicate"))
         canonical_text = f" Canonical pull request: #{canonical}." if canonical is not None else ""
@@ -1088,17 +1092,10 @@ class GitHubClient:
             f"Factory convergence closed this non-canonical pull request: {reason}."
             f"{canonical_text}",
         )
-        self._run(
-            (
-                "gh",
-                "pr",
-                "close",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--delete-branch",
-            )
-        )
+        arguments = ["gh", "pr", "close", str(pull_request), "--repo", self.repository]
+        if self.repository.casefold() != NEPTUNE_REPOSITORY.casefold():
+            arguments.append("--delete-branch")
+        self._run(tuple(arguments))
 
     def mark_ready(self, pull_request: int) -> None:
         self._run(

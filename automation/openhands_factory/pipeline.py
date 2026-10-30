@@ -930,10 +930,11 @@ class FactoryPipeline:
             if resolution.action is ConvergenceAction.ALREADY_MERGED:
                 if canonical is None:
                     raise FactoryError("Merged convergence result is missing its canonical PR")
-                workflow.delete_remote_branch(
-                    job.branch,
-                    job.head_sha or workflow.head_sha(),
-                )
+                if not self.config.tests_only_merging:
+                    workflow.delete_remote_branch(
+                        job.branch,
+                        job.head_sha or workflow.head_sha(),
+                    )
                 job.pull_request = canonical.number
                 job.branch = canonical.head_ref
                 job.head_sha = canonical.head_sha
@@ -956,7 +957,7 @@ class FactoryPipeline:
             if resolution.action is ConvergenceAction.REOPEN:
                 self.github.reopen_pull_request(canonical.number)
             self.github.update_pull_request(canonical.number, title=title, body=marked_body)
-            if canonical.head_ref != current_branch:
+            if canonical.head_ref != current_branch and not self.config.tests_only_merging:
                 workflow.delete_remote_branch(current_branch, current_head)
             job.pull_request = canonical.number
             job.branch = canonical.head_ref

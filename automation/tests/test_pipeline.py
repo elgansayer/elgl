@@ -28,7 +28,11 @@ from openhands_factory.pipeline import (
     _failed_checks_cause,
     _is_security_review_exempt,
 )
-from openhands_factory.pr_convergence import PullRequestRecord
+from openhands_factory.pr_convergence import (
+    ConvergenceAction,
+    PullRequestIdentity,
+    PullRequestRecord,
+)
 from openhands_factory.quality_gate import QualityFinding
 from openhands_factory.repository_guard import ensure_push_target
 from openhands_factory.state import atomic_write_json, read_json
@@ -624,6 +628,51 @@ def test_neptune_bootstrap_never_dispatches_extra_backlog_analysis(
     with pytest.raises(FactoryError, match="bootstrap does not run"):
         pipeline.run_architect_cycle()
     assert phases == []
+
+
+def test_neptune_reconciles_merged_canonical_pr_without_deleting_replay_work(
+    neptune_config: FactoryConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline, github, _ = _neptune_dispatcher(neptune_config, monkeypatch)
+    job = Job(task=github.tasks[0], branch="factory/42-replay", head_sha="a" * 40)
+    identity = PullRequestIdentity.for_task(
+        job.task,
+        branch="factory/42-original",
+        base_ref="main",
+        change_fingerprint="verified-change",
+        touched_paths={Path("README.md")},
+    )
+    github.inventory = [
+        PullRequestRecord.from_payload(
+            {
+                "number": 98,
+                "title": "Existing change",
+                "body": identity.markers(),
+                "state": "MERGED",
+                "headRefName": "factory/42-original",
+                "headRefOid": "c" * 40,
+                "baseRefName": "main",
+            }
+        )
+    ]
+    monkeypatch.setattr(
+        GitWorkflow, "committed_change_fingerprint", lambda workflow: "verified-change"
+    )
+
+    def forbidden(*args: object) -> None:
+        pytest.fail("Neptune must preserve the replay branch for recovery")
+
+    monkeypatch.setattr(GitWorkflow, "delete_remote_branch", forbidden)
+    action = pipeline._ensure_pull_request(
+        job,
+        pipeline._workflow(neptune_config.repository),
+        title="Replay",
+        body="Fixes #42",
+    )
+    assert action is ConvergenceAction.ALREADY_MERGED
+    assert job.pull_request == 98
+    assert github.created_pull_requests == []
 
 
 def config(tmp_path: Path) -> FactoryConfig:

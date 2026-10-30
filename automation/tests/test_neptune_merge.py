@@ -304,3 +304,14 @@ def test_existing_zero_review_policy_passes() -> None:
     without_reviews = protection()
     without_reviews["required_pull_request_reviews"] = None
     validate_neptune_protection(settings(), without_reviews)
+
+
+def test_neptune_supersession_preserves_source_branch(tmp_path: Path) -> None:
+    runner = Runner([{}, {}, {}])
+    GitHubClient(NEPTUNE_REPOSITORY, tmp_path, "secret", runner).supersede_pull_request(
+        42,
+        canonical=41,
+        reason="existing canonical task",
+    )
+    assert runner.calls[-1] == ("gh", "pr", "close", "42", "--repo", NEPTUNE_REPOSITORY)
+    assert "--delete-branch" not in repr(runner.calls)
