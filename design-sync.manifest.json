@@ -145,7 +145,10 @@
       "id": "screen.shell",
       "kind": "screen",
       "ownerLayer": "feature",
-      "repositoryPaths": ["frontend/src/app"],
+      "repositoryPaths": [
+        "frontend/src/app",
+        "frontend/src/app/components/mobile-navigation"
+      ],
       "previewPaths": ["frontend/design-preview/screens/shell.html"],
       "claudeDesignPath": "screens/shell.html",
       "syncDirection": "reconcile",
