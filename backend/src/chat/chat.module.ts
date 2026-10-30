@@ -15,6 +15,7 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { SecureChatService } from './secure-chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -57,7 +58,10 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     TranslationService,
     ChatLlmService,
     ChatLlmProxyService,
-    ChatService,
+    {
+      provide: ChatService,
+      useClass: SecureChatService,
+    },
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,
