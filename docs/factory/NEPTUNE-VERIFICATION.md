@@ -56,3 +56,30 @@ changes and synthetic tests do not establish that live acceptance.
 
 Tracked scope: Neptune #33/#474, verification #75/#76 and isolation #84. Merge
 policy integration remains #77. Provider limits and spend are not increased.
+
+## Preparatory GitHub merge boundary
+
+GitHubClient recognises the exact `elgansayer/Neptune-Bomberman` repository.
+Its status reader uses REST check-runs for the required `Neptune merge gate`,
+pinned to GitHub Actions app 15368 and the exact PR head. A same-name commit
+status or a different app cannot satisfy this gate. Missing checks wait; skipped,
+neutral, cancelled, failed and unknown terminal outcomes fail. Paginated evidence
+is retained; ambiguous duplicate required runs fail instead of choosing a success.
+
+The reader compares the PR's base with current main and checks that main is an
+ancestor of the head. Stale bases become revalidation failures. Stacked children
+must first be retargeted to protected main and retested. Optional review decisions
+do not become a second mandatory Neptune gate. Other repositories retain their
+existing CI and independent-review requirements.
+
+Before a Neptune merge request, the coordinator re-reads head/check/base state
+and validates the existing settings: native auto-merge, merge commits, retained
+branches, strict app-pinned required checks, administrator enforcement, zero
+required reviews, and disabled force pushes/deletions. Drift fails; this boundary
+never edits settings. It uses `--auto --merge --match-head-commit` without a bypass
+or branch deletion. Already-enabled auto-merge is left alone. GitHub protection
+remains responsible for rejecting head/base changes at the atomic merge step.
+
+This GitHub adapter is a bounded #77 prerequisite. It does not enable Neptune in
+FactoryConfig, skip lifecycle review phases, install an instance, or establish a
+live issue-to-merge/restart result. Those remain required before activation.

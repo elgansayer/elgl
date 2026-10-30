@@ -23,6 +23,11 @@ from openhands_factory.models import (
     logical_task_key,
     supersession_references,
 )
+from openhands_factory.neptune_merge import (
+    NEPTUNE_REPOSITORY,
+    neptune_gate,
+    validate_neptune_protection,
+)
 from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ProcessResult, run_process
 
@@ -97,6 +102,8 @@ class PullRequestStatus:
     ci_required_passed: bool = False
     ci_required_pending: bool = False
     ci_required_failed: bool = False
+    base_sha: str = ""
+    auto_merge_enabled: bool = False
 
 
 @dataclass(frozen=True)
@@ -1139,15 +1146,20 @@ class GitHubClient:
         )
 
     def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
-        """Squash-merge only the exact reviewed head without bypassing GitHub rules.
+        """Merge an exact head using its repository's ordinary protected policy.
 
-        With a merge queue on the base branch, enqueue the exact head instead;
+        Neptune uses tests-only native auto-merge with merge commits and retained
+        branches. Existing profiles still require review and squash/delete.
+        With a merge queue on their base branch, enqueue the exact head instead;
         GitHub merges it once CI passes on top of the latest main. The pipeline
         keeps polling MERGE_QUEUED, so an already-queued PR is left alone. A head
         the queue removed is re-queued only after main has moved, so a group that
         fails deterministically costs one CI run per main change, not a loop.
         """
 
+        if self.repository.casefold() == NEPTUNE_REPOSITORY.casefold():
+            self._merge_neptune_pull_request(pull_request, expected_head_sha)
+            return
         owner, name = self.repository.split("/", 1)
         output = self._run(
             (
@@ -1207,6 +1219,46 @@ class GitHubClient:
                 self.repository,
                 "--squash",
                 "--delete-branch",
+                "--match-head-commit",
+                expected_head_sha,
+            )
+        )
+
+    def _merge_neptune_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
+        """Queue native tests-only auto-merge, preserving branch and stack ancestry."""
+
+        status = self.pull_request_status(pull_request)
+        if status.head_sha != expected_head_sha:
+            raise FactoryError("Neptune merge head changed; revalidate the new head")
+        if status.state == "MERGED":
+            return
+        if (
+            status.state != "OPEN"
+            or status.is_draft
+            or status.mergeable != "MERGEABLE"
+            or status.merge_state_status != "CLEAN"
+            or not status.checks_passed
+        ):
+            raise FactoryError("Neptune merge requires passing exact-head/current-base tests")
+        settings = json.loads(self._run(("gh", "api", f"repos/{self.repository}")))
+        protection = json.loads(
+            self._run(
+                ("gh", "api", f"repos/{self.repository}/branches/{self.base_branch}/protection")
+            )
+        )
+        validate_neptune_protection(settings, protection)
+        if status.auto_merge_enabled:
+            return
+        self._run(
+            (
+                "gh",
+                "pr",
+                "merge",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--auto",
+                "--merge",
                 "--match-head-commit",
                 expected_head_sha,
             )
@@ -1296,6 +1348,8 @@ class GitHubClient:
         )
 
     def pull_request_status(self, pull_request: int) -> PullRequestStatus:
+        if self.repository.casefold() == NEPTUNE_REPOSITORY.casefold():
+            return self._neptune_pull_request_status(pull_request)
         output = self._run(
             (
                 "gh",
@@ -1382,4 +1436,76 @@ class GitHubClient:
             ),
             ci_required_pending=ci_required_pending,
             ci_required_failed=ci_required_failed,
+        )
+
+    def _neptune_pull_request_status(self, pull_request: int) -> PullRequestStatus:
+        item = json.loads(
+            self._run(
+                (
+                    "gh",
+                    "pr",
+                    "view",
+                    str(pull_request),
+                    "--repo",
+                    self.repository,
+                    "--json",
+                    "number,state,isDraft,mergeable,mergeStateStatus,reviewDecision,"
+                    "headRefOid,baseRefName,baseRefOid,isCrossRepository,autoMergeRequest",
+                )
+            )
+        )
+        # Restrict the preparatory boundary to the existing protected main branch.
+        # Stacked children must be retargeted and retested after their parent merges.
+        if self.base_branch != "main" or item.get("baseRefName") != self.base_branch:
+            raise FactoryError("Neptune merge requires retargeting to protected main")
+        if item.get("isCrossRepository") is not False:
+            raise FactoryError("Neptune factory only merges same-repository worker branches")
+        head = str(item.get("headRefOid") or "")
+        if not re.fullmatch(r"[0-9a-f]{40}", head):
+            raise FactoryError("Neptune PR is missing an exact head SHA")
+        current_base = json.loads(
+            self._run(("gh", "api", f"repos/{self.repository}/git/ref/heads/main"))
+        )["object"]["sha"]
+        if not isinstance(current_base, str) or not re.fullmatch(r"[0-9a-f]{40}", current_base):
+            raise FactoryError("Neptune main is missing an exact base SHA")
+        comparison = json.loads(
+            self._run(("gh", "api", f"repos/{self.repository}/compare/{current_base}...{head}"))
+        )
+        current = item.get("baseRefOid") == current_base and comparison.get("status") in {
+            "ahead",
+            "identical",
+        }
+        pages = json.loads(
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "--paginate",
+                    "--slurp",
+                    f"repos/{self.repository}/commits/{head}/check-runs"
+                    "?check_name=Neptune%20merge%20gate&filter=latest&per_page=100",
+                )
+            )
+        )
+        gate = neptune_gate(pages, head)
+        failed = set(gate.failed_checks)
+        if not current:
+            failed.add("Neptune current base")
+        return PullRequestStatus(
+            number=int(item["number"]),
+            state=str(item["state"]),
+            is_draft=bool(item["isDraft"]),
+            mergeable=str(item.get("mergeable") or "UNKNOWN"),
+            review_decision=str(item.get("reviewDecision") or ""),
+            head_sha=head,
+            checks_passed=gate.passed and current and item.get("mergeStateStatus") == "CLEAN",
+            checks_pending=gate.pending and current,
+            failed_checks=frozenset(failed),
+            merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN"),
+            workflow_run_ids=frozenset(),
+            ci_required_passed=gate.passed and current,
+            ci_required_pending=gate.pending and current,
+            ci_required_failed=bool(failed),
+            base_sha=current_base,
+            auto_merge_enabled=item.get("autoMergeRequest") is not None,
         )
