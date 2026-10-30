@@ -2,6 +2,7 @@ import { Injectable, signal, computed, effect } from '@angular/core';
 
 /** Identifies a navigation tab for per-tab badge counts. */
 export type NavTab = 'chat' | 'moments' | 'discovery' | 'audioRooms' | 'profile';
+export type UnreadSnapshot = Readonly<Record<NavTab, number>>;
 
 const MAX_VISIBLE_BADGE_COUNT = 99;
 
@@ -83,6 +84,22 @@ export class UnreadCounterService {
   /** Alias for set() to support callers expecting setCount(). */
   setCount(tab: NavTab, count: number): void {
     this.set(tab, count);
+  }
+
+  snapshot(): UnreadSnapshot {
+    return {
+      chat: this.chatUnread(),
+      moments: this.momentsUnread(),
+      discovery: this.discoveryUnread(),
+      audioRooms: this.audioRoomsUnread(),
+      profile: this.notificationUnread(),
+    };
+  }
+
+  /** Applies an authoritative count while retaining deltas observed after the request began. */
+  reconcile(tab: NavTab, authoritativeCount: number, snapshot: UnreadSnapshot): void {
+    const delta = this.tabCount(tab) - snapshot[tab];
+    this.set(tab, this.normaliseCount(authoritativeCount) + delta);
   }
 
   increment(tab: NavTab): void {

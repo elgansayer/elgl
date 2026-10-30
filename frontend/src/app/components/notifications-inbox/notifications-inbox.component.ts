@@ -7,6 +7,7 @@ import {
   InAppNotification,
   NotificationFilter,
   NotificationService,
+  notificationUnreadTab,
 } from '../../services/notification.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UnreadCounterService } from '../../services/unread-counter.service';
@@ -71,12 +72,15 @@ export class NotificationsInboxComponent {
     this.additionalNotifications.set([]);
     this.actionError.set(false);
     this.loadMoreError.set(false);
+    const snapshot = this.unreadCounter.snapshot();
     const [list, unread] = await Promise.all([
       this.notificationService.getNotifications(tab, { limit: this.pageSize }),
       this.notificationService.getUnreadCount(),
     ]);
-    this.unreadCount.set(unread);
-    this.unreadCounter.setNotificationUnread(unread);
+    this.unreadCount.set(unread.unreadCount);
+    this.unreadCounter.reconcile('moments', unread.byTab.moments, snapshot);
+    this.unreadCounter.reconcile('discovery', unread.byTab.discovery, snapshot);
+    this.unreadCounter.reconcile('profile', unread.byTab.profile, snapshot);
     this.hasMore.set(list.length === this.pageSize);
     return list;
   }
@@ -133,7 +137,9 @@ export class NotificationsInboxComponent {
       await this.notificationService.markAllAsRead();
       for (const notification of this.notifications()) notification.is_read = true;
       this.unreadCount.set(0);
-      this.unreadCounter.setNotificationUnread(0);
+      this.unreadCounter.set('moments', 0);
+      this.unreadCounter.set('discovery', 0);
+      this.unreadCounter.set('profile', 0);
     } catch {
       this.actionError.set(true);
     } finally {
@@ -166,7 +172,8 @@ export class NotificationsInboxComponent {
       if (notification.is_read) return;
       notification.is_read = true;
       this.unreadCount.update((count) => Math.max(0, count - 1));
-      this.unreadCounter.decrementNotificationUnread();
+      const tab = notificationUnreadTab(notification.type);
+      if (tab) this.unreadCounter.decrement(tab);
     } catch {
       this.actionError.set(true);
     }

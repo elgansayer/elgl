@@ -14,7 +14,7 @@ Issues #1045 and #1046 are implemented by the shared `UnreadCounterService` and 
 
 Both `DesktopSidebarComponent` and `MobileNavigationComponent` read those counters through `tabCount(tab)`. A visual badge is rendered only when the corresponding count is greater than zero. `badgeText(tab)` caps visual text at `99+`, while the full integer remains in service state for totals, assistive technology, later decrements, and the application badge. Tabular numerals keep badge widths visually stable as counts change.
 
-Counter producers remain separate from presentation. Persisted chat messages and notifications emit typed personal unread events through the existing `user_{id}` channel. Moment activity targets Moments, follows and profile activity target Discovery, incoming calls target Live Rooms, chat messages target Chat, and remaining notification activity targets Profile. The root unread bootstrap starts independently of unrelated application startup work. Navigation components perform no network requests and must not fabricate counts when a producer is unavailable.
+Counter producers remain separate from presentation. Persisted chat messages and notifications emit typed personal unread events through the existing `user_{id}` channel. Moment activity targets Moments, follows and profile activity target Discovery, incoming calls target Live Rooms, chat messages target Chat, and remaining notification activity targets Profile. The root subscribes to the personal channel before requesting persisted per-tab counts, then reconciles each response with local deltas observed while the request was in flight. Navigation components perform no network requests and must not fabricate counts when a producer is unavailable.
 
 ## Defensive count handling
 
@@ -61,6 +61,6 @@ Frontend CI should run the normal unit, static-analysis, production-build, trans
 
 ## Rollout and rollback
 
-This is a compatible backend and frontend delivery change. It introduces no schema, API, route, authentication, or migration changes. Deploy the backend first or together with the frontend; mixed-version clients safely ignore unknown personal event types.
+This is a compatible backend and frontend delivery change. The existing unread endpoint retains its aggregate field and adds per-tab notification counts. It introduces no schema, route, authentication, or migration changes. Deploy the backend first or together with the frontend; older clients ignore the additional response field.
 
 Rollback is a normal revert of the issue #1046 commits. Existing producer APIs and persisted data require no cleanup or downgrade procedure.

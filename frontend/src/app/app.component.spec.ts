@@ -77,6 +77,14 @@ describe('AppComponent', () => {
     set: vi.fn(),
     increment: vi.fn(),
     decrement: vi.fn(),
+    snapshot: vi.fn(() => ({
+      chat: 0,
+      moments: 0,
+      discovery: 0,
+      audioRooms: 0,
+      profile: 0,
+    })),
+    reconcile: vi.fn(),
     resetAll: vi.fn(),
     setChatUnread: vi.fn(),
     setNotificationUnread: vi.fn(),
@@ -102,7 +110,12 @@ describe('AppComponent', () => {
   };
 
   const notificationServiceMock = {
-    getUnreadCount: vi.fn(() => Promise.resolve(0)),
+    getUnreadCount: vi.fn(() =>
+      Promise.resolve({
+        unreadCount: 0,
+        byTab: { moments: 0, discovery: 0, profile: 0 },
+      }),
+    ),
     markAllAsRead: vi.fn(() => Promise.resolve()),
     markAsRead: vi.fn(() => Promise.resolve()),
     getNotifications: vi.fn(() => Promise.resolve([])),
@@ -186,27 +199,97 @@ describe('AppComponent', () => {
 
   it('loads the initial chat unread count with one service call', async () => {
     chatServiceMock.getUnreadCount.mockClear();
-    unreadCounterMock.setChatUnread.mockClear();
+    unreadCounterMock.reconcile.mockClear();
     chatServiceMock.getUnreadCount.mockResolvedValueOnce(7);
 
     await (
-      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
-    ).loadInitialUnreadCounts();
+      component as unknown as {
+        loadInitialUnreadCounts(snapshot: ReturnType<typeof unreadCounterMock.snapshot>): Promise<void>;
+      }
+    ).loadInitialUnreadCounts(unreadCounterMock.snapshot());
 
     expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
-    expect(unreadCounterMock.setChatUnread).toHaveBeenLastCalledWith(7);
+    expect(unreadCounterMock.reconcile).toHaveBeenCalledWith('chat', 7, expect.any(Object));
   });
 
   it('preserves the current chat count when the initial request fails', async () => {
     chatServiceMock.getUnreadCount.mockClear();
-    unreadCounterMock.setChatUnread.mockClear();
+    unreadCounterMock.reconcile.mockClear();
     chatServiceMock.getUnreadCount.mockRejectedValueOnce(new Error('unavailable'));
 
     await (
-      component as unknown as { loadInitialUnreadCounts(): Promise<void> }
-    ).loadInitialUnreadCounts();
+      component as unknown as {
+        loadInitialUnreadCounts(snapshot: ReturnType<typeof unreadCounterMock.snapshot>): Promise<void>;
+      }
+    ).loadInitialUnreadCounts(unreadCounterMock.snapshot());
 
-    expect(unreadCounterMock.setChatUnread).not.toHaveBeenCalled();
+    expect(unreadCounterMock.reconcile).not.toHaveBeenCalledWith(
+      'chat',
+      expect.any(Number),
+      expect.any(Object),
+    );
+  });
+
+  it('captures the reconciliation baseline before subscribing and requesting counts', async () => {
+    const order: string[] = [];
+    unreadCounterMock.snapshot.mockImplementationOnce(() => {
+      order.push('snapshot');
+      return {
+        chat: 0,
+        moments: 0,
+        discovery: 0,
+        audioRooms: 0,
+        profile: 0,
+      };
+    });
+    centrifugeServiceMock.subscribe.mockImplementationOnce(
+      (_channel: string, cb: (data: unknown) => void) => {
+        subscribeCallback = cb;
+        order.push('subscribe');
+      },
+    );
+    notificationServiceMock.getUnreadCount.mockImplementationOnce(() => {
+      order.push('count');
+      return Promise.resolve({
+        unreadCount: 0,
+        byTab: { moments: 0, discovery: 0, profile: 0 },
+      });
+    });
+
+    await component.ngOnInit();
+
+    expect(order).toEqual(['snapshot', 'subscribe', 'count']);
+  });
+
+  it('reconciles realtime deltas received while unread requests are in flight', async () => {
+    let resolveCount: ((value: {
+      unreadCount: number;
+      byTab: { moments: number; discovery: number; profile: number };
+    }) => void) | undefined;
+    notificationServiceMock.getUnreadCount.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCount = resolve;
+        }),
+    );
+
+    const initialisation = component.ngOnInit();
+    await vi.waitFor(() => {
+      expect(resolveCount).toBeDefined();
+    });
+    subscribeCallback?.({ type: 'unread_count_changed', tab: 'moments' });
+    resolveCount?.({
+      unreadCount: 2,
+      byTab: { moments: 2, discovery: 0, profile: 0 },
+    });
+    await initialisation;
+
+    expect(unreadCounterMock.increment).toHaveBeenCalledWith('moments');
+    expect(unreadCounterMock.reconcile).toHaveBeenCalledWith(
+      'moments',
+      2,
+      expect.any(Object),
+    );
   });
 
   it('loads unread counts when unrelated startup providers fail', async () => {

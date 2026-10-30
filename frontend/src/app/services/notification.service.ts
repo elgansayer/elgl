@@ -40,6 +40,35 @@ export interface NotificationPageOptions {
   before?: string;
 }
 
+export interface NotificationUnreadCounts {
+  unreadCount: number;
+  byTab: {
+    moments: number;
+    discovery: number;
+    profile: number;
+  };
+}
+
+export type NotificationUnreadTab = keyof NotificationUnreadCounts['byTab'];
+
+export function notificationUnreadTab(type: NotificationType): NotificationUnreadTab | null {
+  switch (type) {
+    case 'like_moment':
+    case 'comment_moment':
+    case 'reply_comment':
+    case 'mention_comment':
+      return 'moments';
+    case 'follow':
+    case 'like_profile':
+    case 'profile_visit':
+      return 'discovery';
+    case 'system':
+      return 'profile';
+    case 'mention_chat':
+      return null;
+  }
+}
+
 const NOTIFICATION_TYPES = new Set<NotificationType>([
   'follow',
   'like_profile',
@@ -79,22 +108,32 @@ export class NotificationService {
       .filter((value): value is InAppNotification => value !== null);
   }
 
-  async getUnreadCount(): Promise<number> {
+  async getUnreadCount(): Promise<NotificationUnreadCounts> {
     const response = await firstValueFrom(
       this.http.get<unknown>(`${this.baseUrl}/unread-count`, {
         headers: this.getHeaders(),
       }),
     );
     if (!this.isRecord(response)) throw new Error('Invalid unread count response');
-    const unreadCount = response['unreadCount'];
+    const unreadCount = this.parseCount(response['unreadCount']);
+    const byTab = response['byTab'];
     if (
-      typeof unreadCount !== 'number' ||
-      !Number.isSafeInteger(unreadCount) ||
-      unreadCount < 0
+      unreadCount === null ||
+      !this.isRecord(byTab) ||
+      this.parseCount(byTab['moments']) === null ||
+      this.parseCount(byTab['discovery']) === null ||
+      this.parseCount(byTab['profile']) === null
     ) {
       throw new Error('Invalid unread count response');
     }
-    return unreadCount;
+    return {
+      unreadCount,
+      byTab: {
+        moments: this.parseCount(byTab['moments']) ?? 0,
+        discovery: this.parseCount(byTab['discovery']) ?? 0,
+        profile: this.parseCount(byTab['profile']) ?? 0,
+      },
+    };
   }
 
   async markAsRead(notificationId: string): Promise<void> {
@@ -113,6 +152,10 @@ export class NotificationService {
 
   private getHeaders(): Record<string, string> {
     return { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` };
+  }
+
+  private parseCount(value: unknown): number | null {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
   }
 
   private parseNotification(value: unknown): InAppNotification | null {

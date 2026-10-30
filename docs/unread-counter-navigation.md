@@ -16,7 +16,9 @@ Producers update counts through `set`, `setCount`, `increment`, `decrement`, or 
 
 After a chat message or in-app notification is persisted, the backend emits a count-only `unread.created` domain event. The Chat-owned personal unread listener publishes `{ type: "unread_count_changed", tab }` to the recipient's authenticated `user_{id}` channel. Notification activity is routed to Moments, Discovery, or Profile according to its persisted type; chat messages target Chat; incoming call events target Live Rooms. Payloads contain no message, profile, or room content.
 
-Successful persisted chat read receipts decrement the shared Chat count immediately. Failed receipts preserve the current count so the client does not claim that server state changed. Initial chat and notification totals start independently of economy, safety, daily check-in, realtime, and push startup tasks; either count can load when another startup dependency is unavailable.
+Successful persisted chat and notification read receipts decrement the tab that owns the activity. Marking the notification inbox read clears Moments, Discovery, and Profile without changing Chat or Live Rooms. Failed receipts preserve the current count so the client does not claim that server state changed.
+
+The authenticated personal channel is subscribed before authoritative counts are requested. `GET /notifications/unread-count` returns the aggregate inbox count plus persisted `moments`, `discovery`, and `profile` counts. Chat remains authoritative from its existing unread endpoint. Each request captures an in-memory snapshot, and reconciliation applies the authoritative response plus local increments or decrements observed since that snapshot. This prevents startup events from being lost or overwritten by an older response.
 
 All incoming count values are normalised before entering UI state. Negative, non-finite, and invalid values become zero, fractional values are floored, and individual plus aggregate counts saturate at `Number.MAX_SAFE_INTEGER`. Visible badges display `99+` above 99 without discarding the full underlying count used for accessibility and arithmetic.
 
@@ -59,12 +61,12 @@ Focused checks live in:
 - `frontend/src/app/services/unread-counter.service.spec.ts`
 - `frontend/src/app/app-navigation-tabs.contract.spec.ts`
 
-The service suite covers normalisation, saturation, compact presentation, lifecycle operations, and browser badge failure behaviour. Root and chat component tests cover real-time tab routing, partial startup failure, and persisted read transitions. Backend listener tests cover personal channel payloads, notification classification, persistence failure, and realtime delivery failure. The navigation contract verifies that all five tabs remain wired to the shared service in both mobile and desktop navigation, retain accessibility semantics, and do not regress to unrelated audio-room co-host controls.
+The service suite covers normalisation, saturation, compact presentation, lifecycle operations, race-safe reconciliation, and browser badge failure behaviour. Root, inbox, and chat component tests cover subscription ordering, real-time tab routing, partial startup failure, and persisted read transitions. Backend inbox and listener tests cover persisted per-tab reconstruction, personal channel payloads, notification classification, persistence failure, and realtime delivery failure. The navigation contract verifies that all five tabs remain wired to the shared service in both mobile and desktop navigation, retain accessibility semantics, and do not regress to unrelated audio-room co-host controls.
 
 Run the focused frontend tests with the repository's normal Vitest command, and use the full frontend lint/build/test CI jobs as the merge gate.
 
 ## Rollout and rollback
 
-This change has no API, database, or migration impact. Deploy the backend before or with the frontend so typed personal unread events are available. Older frontends ignore the new event discriminator, and newer frontends retain bootstrap counts when connected to an older backend.
+This change extends the existing unread-count response while retaining `unreadCount` for older clients. Deploy the backend before or with the frontend so per-tab bootstrap counts and typed personal unread events are available. No schema migration or persisted-data cleanup is required.
 
-Rollback is code-only: revert the personal event publisher and frontend consumer together. Persisted messages and notifications remain authoritative and require no cleanup or migration.
+Rollback is code-only: revert the expanded response and frontend consumer together. Persisted messages and notifications remain authoritative and require no cleanup or migration.

@@ -101,6 +101,26 @@ describe('UnreadCounterService', () => {
     expect(service.discoveryUnread()).toBe(100);
   });
 
+  it('retains realtime increments received after an authoritative request starts', () => {
+    service.set('moments', 4);
+    const snapshot = service.snapshot();
+    service.increment('moments');
+
+    service.reconcile('moments', 7, snapshot);
+
+    expect(service.tabCount('moments')).toBe(8);
+  });
+
+  it('retains persisted read deltas received after an authoritative request starts', () => {
+    service.set('discovery', 4);
+    const snapshot = service.snapshot();
+    service.decrement('discovery');
+
+    service.reconcile('discovery', 4, snapshot);
+
+    expect(service.tabCount('discovery')).toBe(3);
+  });
+
   it('should normalise invalid and fractional counts before navigation renders them', () => {
     service.set('chat', Number.NaN);
     service.set('moments', Number.POSITIVE_INFINITY);

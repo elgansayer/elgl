@@ -27,7 +27,10 @@ import { ReportUserModalService } from './components/report-user-modal/report-us
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { ConversationAnalysisLauncherComponent } from './features/premium-ai/conversation-analysis-launcher.component';
-import { UnreadCounterService } from './services/unread-counter.service';
+import {
+  UnreadCounterService,
+  UnreadSnapshot,
+} from './services/unread-counter.service';
 import { VersionService } from './services/version.service';
 import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
@@ -167,8 +170,6 @@ export class AppComponent implements OnInit {
     const token = this.authService.getAccessToken();
 
     if (user && token) {
-      const unreadBootstrap = this.loadInitialUnreadCounts();
-
       await Promise.allSettled([
         this.economyStore.loadInitialData(),
         this.safetyService.loadBlockedUsers(),
@@ -187,6 +188,7 @@ export class AppComponent implements OnInit {
 
       try {
         await this.centrifugeService.connect();
+        const unreadSnapshot = this.unreadCounter.snapshot();
         this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
           if (!isRecord(data)) return;
           const eventType = typeof data['type'] === 'string' ? data['type'] : null;
@@ -253,11 +255,12 @@ export class AppComponent implements OnInit {
             this.unreadCounter.increment('audioRooms');
           }
         });
+
+        await this.loadInitialUnreadCounts(unreadSnapshot);
       } catch {
         console.warn('Personal realtime updates were unavailable during application startup');
+        await this.loadInitialUnreadCounts(this.unreadCounter.snapshot());
       }
-
-      await unreadBootstrap;
 
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermissionAndGetToken();
@@ -265,18 +268,23 @@ export class AppComponent implements OnInit {
     }
   }
 
-  private async loadInitialUnreadCounts(): Promise<void> {
-    try {
-      const notificationCount = await this.notificationService.getUnreadCount();
-      this.unreadCounter.setNotificationUnread(notificationCount);
-    } catch {
+  private async loadInitialUnreadCounts(snapshot: UnreadSnapshot): Promise<void> {
+    const [notifications, chat] = await Promise.allSettled([
+      this.notificationService.getUnreadCount(),
+      this.chatService.getUnreadCount(),
+    ]);
+
+    if (notifications.status === 'fulfilled') {
+      this.unreadCounter.reconcile('moments', notifications.value.byTab.moments, snapshot);
+      this.unreadCounter.reconcile('discovery', notifications.value.byTab.discovery, snapshot);
+      this.unreadCounter.reconcile('profile', notifications.value.byTab.profile, snapshot);
+    } else {
       console.warn('Notification unread count could not be loaded');
     }
 
-    try {
-      const chatCount = await this.chatService.getUnreadCount();
-      this.unreadCounter.setChatUnread(chatCount);
-    } catch {
+    if (chat.status === 'fulfilled') {
+      this.unreadCounter.reconcile('chat', chat.value, snapshot);
+    } else {
       console.warn('Chat unread count could not be loaded');
     }
   }
