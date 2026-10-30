@@ -1,6 +1,6 @@
 # Matchmaking and Discovery UI
 
-Issue #959 is implemented by the existing Angular `DiscoveryComponent` and its shared filter primitives rather than by a second discovery surface.
+Issue #1715 is implemented by the existing Angular `DiscoveryComponent` and its shared filter primitives rather than by a second discovery surface.
 
 ## Product contract
 
@@ -12,6 +12,7 @@ Issue #959 is implemented by the existing Angular `DiscoveryComponent` and its s
 - native language, target language, proficiency and audio-intro filters are collected by the shared global-search control;
 - the user's target languages are also available as fast target-language pills;
 - the Serious Learner filter maps to `serious_learner_only` while the separately persisted Serious Learner mode remains owned by the account/discovery preference flow;
+- spatial and non-spatial searches share the same Serious Learner qualification: a study streak of at least seven days and activity within the last 24 hours;
 - age, VIP-gated gender, interests, availability, voice-room activity and sort options continue to compose with the same request rather than starting parallel searches.
 
 Changing an age or distance slider uses the existing 300 ms debounce. The API applies an ordinary discovery radius relative to the authenticated learner's saved profile location, while the explicit Nearby filter uses its short-lived browser coordinates. This keeps the distance control effective without requesting browser location when discovery opens. A new search aborts the previous request, and only the active request may clear the loading state or replace results. Reset restores the default 50 km radius, 18-100 age range, best-match sort and clears optional filters before issuing one new search.
@@ -34,12 +35,12 @@ The screen uses the existing Spartan controls and shared slider/language-picker 
 
 ## Verification
 
-`frontend/src/app/components/discovery/discovery-filter-contract.spec.ts` is the active Vitest contract suite for #959. It renders and drives the actual distance, language and Serious Learner controls, verifies that their criteria reach the canonical search request, exercises rendered error recovery, and proves missing profile data is not fabricated. It also verifies that VIP-only gender filtering is not sent for free users, that blocked users are removed, reset restores defaults, and superseded requests cannot replace newer results. `frontend/src/app/components/primitives/language-picker/language-picker.component.spec.ts` covers the dialog's Escape and focus-restoration contract. `backend/src/discovery/discovery.service.spec.ts` proves that the saved profile point and requested radius reach the PostGIS search. `frontend/src/app/services/discovery.service.spec.ts` covers classification at the live HTTP boundary, including retry policy and sanitised failure details passed to the component.
+`frontend/src/app/components/discovery/discovery-filter-contract.spec.ts` is the active Vitest contract suite for #1715. It renders and drives the actual distance, language and Serious Learner controls, verifies that their criteria reach the canonical search request, exercises rendered error recovery, and proves missing profile data is not fabricated. It also verifies that VIP-only gender filtering is not sent for free users, that blocked users are removed, reset restores defaults, and superseded requests cannot replace newer results. `frontend/src/app/components/primitives/language-picker/language-picker.component.spec.ts` covers the dialog's Escape and focus-restoration contract. `backend/src/discovery/discovery.service.spec.ts` proves that the saved profile point and requested radius reach the PostGIS search. `backend/src/database/migrations/20261030033000_align_nearby_serious_learner_policy.spec.ts` keeps the PostGIS Serious Learner predicate aligned with the canonical service policy. `frontend/src/app/services/discovery.service.spec.ts` covers classification at the live HTTP boundary, including retry policy and sanitised failure details passed to the component.
 
-`frontend/src/app/components/discovery/discovery-search-race.spec.ts` separately locks loading-state ownership during overlapping searches. The older broad discovery component suite remains untouched for historical coverage while the focused #959 contract is executable in normal CI. Shared primitives retain their own component-level coverage.
+`frontend/src/app/components/discovery/discovery-search-race.spec.ts` separately locks loading-state ownership during overlapping searches. The older broad discovery component suite remains untouched for historical coverage while the focused #1715 contract is executable in normal CI. Shared primitives retain their own component-level coverage.
 
 ## Rollout and rollback
 
-There is no database migration, new endpoint or persisted-data change for #959. Deploy using the normal frontend release pipeline. Rollback is a normal revert of the issue-completion PR; the existing production discovery route and API contract are unchanged.
+The forward migration replaces the existing PostGIS function body without changing its signature or result shape, so mixed backend versions remain compatible and retries are safe. Deploy it before or with the application release. Rollback restores the previous function body from `20260828082500_enforce_serious_learner_thresholds.sql`; no persisted user data is changed.
 
 Nearby geolocation, persisted Serious Learner mode semantics and recommendation-carousel work are intentionally left to their dedicated issues/PRs so this completion change does not duplicate or conflict with those implementations.
