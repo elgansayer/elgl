@@ -1,7 +1,7 @@
-const plugin = require('tailwindcss/plugin');
+import plugin from 'tailwindcss/plugin';
 
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   darkMode: 'class',
   content: ['./src/**/*.{html,ts,scss}'],
   theme: {
@@ -137,11 +137,17 @@ module.exports = {
         '.pb-safe': {
           paddingBottom: 'env(safe-area-inset-bottom)',
         },
-        '.pl-safe': {
-          paddingLeft: 'env(safe-area-inset-left)',
+        '.ps-safe': {
+          paddingInlineStart: 'env(safe-area-inset-left)',
         },
-        '.pr-safe': {
-          paddingRight: 'env(safe-area-inset-right)',
+        '.pe-safe': {
+          paddingInlineEnd: 'env(safe-area-inset-right)',
+        },
+        "[dir='rtl'] .ps-safe": {
+          paddingInlineStart: 'env(safe-area-inset-right)',
+        },
+        "[dir='rtl'] .pe-safe": {
+          paddingInlineEnd: 'env(safe-area-inset-left)',
         },
       });
     }),

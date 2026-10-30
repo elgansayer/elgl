@@ -33,10 +33,21 @@ try {
     git('merge-base', '--is-ancestor', head, 'HEAD');
     diffHead = head;
   }
-  changed = git('diff', '--name-only', `${base}...${diffHead}`)
-    .split('\n')
-    .map((path) => path.trim())
-    .filter(Boolean);
+  const lines = (output) => output.split('\n').map((path) => path.trim()).filter(Boolean);
+  changed = lines(git('diff', '--name-only', `${base}...${diffHead}`));
+  // Local Factory verification runs before the repair is committed, so edits
+  // that only exist in the working tree (including a fixed preview) were
+  // invisible and the gate could never pass locally (issues 1436 and 1716,
+  // 2026-10-29). GitHub Actions checkouts are clean and keep the commit diff.
+  if (diffHead === 'HEAD' && process.env.GITHUB_ACTIONS !== 'true') {
+    changed = [
+      ...new Set([
+        ...changed,
+        ...lines(git('diff', '--name-only', 'HEAD')),
+        ...lines(git('ls-files', '--others', '--exclude-standard')),
+      ]),
+    ];
+  }
 
   try {
     baseManifest = JSON.parse(git('show', `${base}:design-sync.manifest.json`));
