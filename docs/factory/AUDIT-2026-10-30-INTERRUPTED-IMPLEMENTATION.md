@@ -99,7 +99,7 @@ A resumed edit that the later gates reject spends repair model time that the old
 
 ## 6. Safeguards and rollback
 
-- No budget, gate, review or CI requirement is relaxed. Leftover edits get the same security review (unless tests-only merging applies), verification, quality gate, independent review and required CI as any other edit.
+- No budget, gate, review or CI requirement is relaxed. Leftover edits get the same security review (unless tests-only merging applies), verification, quality gate, independent review and required CI that other edits receive.
 - A clean worktree and both repair phases keep the strict check, so a provider that does nothing is still never counted as work.
 - Credential isolation is unchanged: the new check runs two additional local `git status` calls at most, with the same scoped Git environment, and starts no model session.
 - Rollback: revert the single commit. No job state, budget or ledger needs resetting.
