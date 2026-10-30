@@ -11,6 +11,14 @@ import type {
   LinkPreviewOutcome,
 } from '../link-preview/link-preview-diagnostics';
 
+/**
+ * How a run of the daily top-10 partner recommendation job ended: `partial`
+ * means the cache was refreshed but some language pairs failed, `skipped`
+ * means another replica held the single-flight lock.
+ */
+export type MatchmakingDailyJobOutcome =
+  'success' | 'partial' | 'failed' | 'skipped';
+
 @Injectable()
 export class MetricsService {
   private readonly register: Registry;
@@ -87,6 +95,12 @@ export class MetricsService {
   readonly matchmakingRequestDuration: Histogram<string>;
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
+  readonly matchmakingDailyJobRuns: Counter<string>;
+  readonly matchmakingDailyJobDuration: Histogram<string>;
+  readonly matchmakingDailyJobLearnersScanned: Counter<string>;
+  readonly matchmakingDailyJobSetsCached: Counter<string>;
+  readonly matchmakingDailyJobTruncated: Counter<string>;
+  readonly matchmakingDailyJobLastCompleted: Gauge<string>;
 
   // Moments For You feed metrics
   readonly momentsForYouRankingDuration: Histogram<string>;
@@ -544,6 +558,45 @@ export class MetricsService {
       registers: [this.register],
     });
 
+    this.matchmakingDailyJobRuns = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_runs_total',
+      help: 'Daily top-10 partner recommendation job runs by outcome (success, partial, failed, skipped)',
+      labelNames: ['outcome'],
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobDuration = new Histogram({
+      name: 'hellotalk_matchmaking_daily_job_duration_seconds',
+      help: 'Wall-clock duration of the daily top-10 partner recommendation job',
+      labelNames: ['outcome'],
+      registers: [this.register],
+      buckets: [1, 5, 15, 30, 60, 120, 300, 600, 1200, 1800, 3600],
+    });
+
+    this.matchmakingDailyJobLearnersScanned = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_learners_scanned_total',
+      help: 'Eligible learners read by the daily partner recommendation job',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobSetsCached = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_sets_cached_total',
+      help: 'Per-learner top-10 recommendation sets written to the Redis cache by the daily job',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobTruncated = new Counter({
+      name: 'hellotalk_matchmaking_daily_job_truncated_total',
+      help: 'Daily partner recommendation runs that stopped at the per-run learner ceiling before every eligible learner was processed',
+      registers: [this.register],
+    });
+
+    this.matchmakingDailyJobLastCompleted = new Gauge({
+      name: 'hellotalk_matchmaking_daily_job_last_completed_timestamp_seconds',
+      help: 'Unix time of the last daily partner recommendation run that refreshed the cache (success or partial), read from Redis so it survives restarts',
+      registers: [this.register],
+    });
+
     // --- Moments For You Metrics ---
 
     this.momentsForYouRankingDuration = new Histogram({
@@ -941,6 +994,34 @@ export class MetricsService {
 
   setMatchmakingTierSuccessRate(rate: number): void {
     this.matchmakingTierSuccessRate.set(rate);
+  }
+
+  /**
+   * Records one finished run of the daily top-10 partner recommendation job.
+   * `skipped` means another replica held the single-flight lock.
+   */
+  recordMatchmakingDailyJobRun(run: {
+    outcome: MatchmakingDailyJobOutcome;
+    durationSeconds: number;
+    learnersScanned: number;
+    setsCached: number;
+    truncated: boolean;
+  }): void {
+    this.matchmakingDailyJobRuns.inc({ outcome: run.outcome });
+    this.matchmakingDailyJobDuration.observe(
+      { outcome: run.outcome },
+      run.durationSeconds,
+    );
+    this.matchmakingDailyJobLearnersScanned.inc(run.learnersScanned);
+    this.matchmakingDailyJobSetsCached.inc(run.setsCached);
+    if (run.truncated) {
+      this.matchmakingDailyJobTruncated.inc();
+    }
+  }
+
+  /** Publishes when the daily job last refreshed the cache (unix seconds). */
+  setMatchmakingDailyJobLastCompleted(epochSeconds: number): void {
+    this.matchmakingDailyJobLastCompleted.set(epochSeconds);
   }
 
   // --- Moments For You metric helpers ---
