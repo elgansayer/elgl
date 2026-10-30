@@ -23,7 +23,6 @@ import {
   TranscribeVoiceResult,
   WordBreakdownItem,
 } from './interfaces/nlp-results.interface';
-import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
 
@@ -315,54 +314,6 @@ export class NlpService {
       explanation:
         'Grammar checking service is temporarily unavailable. Your text appears correct.',
       errors_found: 0,
-    };
-  }
-
-  async explainGrammar(
-    userId: string,
-    isVip: boolean,
-    dto: ExplainGrammarDto,
-  ): Promise<{ original: string; corrected: string; explanation: string }> {
-    await this.checkRateLimit(userId, isVip);
-
-    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-    if (!deepLKey) {
-      throw new BadRequestException('DeepL API key not configured');
-    }
-
-    const prompt = `Explain the grammar difference between the original sentence and the corrected sentence. Original: "${dto.original}" Corrected: "${dto.corrected}". Provide a brief explanation in English.`;
-    const res = await NlpService.fetchWithTimeout(
-      'https://api-free.deepl.com/v2/translate',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: [prompt],
-          target_lang: 'EN',
-        }),
-      },
-    );
-    if (!res.ok) {
-      const errorBody = await res.text();
-      throw new BadRequestException(
-        `DeepL API error: ${res.status} ${errorBody}`,
-      );
-    }
-    const json = (await res.json()) as {
-      translations: Array<{ text: string }>;
-    };
-    if (!json?.translations?.length) {
-      throw new BadRequestException('DeepL returned no translations');
-    }
-    const explanation = json.translations[0].text;
-
-    return {
-      original: dto.original,
-      corrected: dto.corrected,
-      explanation,
     };
   }
 
