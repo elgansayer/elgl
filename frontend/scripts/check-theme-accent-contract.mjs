@@ -8,7 +8,7 @@ const source = readFileSync(servicePath, 'utf8');
 
 const requiredSnippets = [
   "export type Theme = 'light' | 'dark' | 'system'",
-  "const HEX_COLOUR_PATTERN = /^#[0-9a-f]{6}$/i",
+  'const HEX_COLOUR_PATTERN = /^#[0-9a-f]{6}$/i',
   'readonly primaryAccentColor = signal<string | null>(null)',
   'if (!isAccentColour(colour))',
   'if (isAccentColour(accent))',
@@ -17,7 +17,9 @@ const requiredSnippets = [
   'this.resetPrimaryAccentColor();',
   "root.style.removeProperty('--color-primary-rgb')",
   "root.style.removeProperty('--color-primary')",
+  "root.style.removeProperty('--color-primary-text-rgb')",
   "root.style.setProperty('--color-primary-rgb', `${r} ${g} ${b}`)",
+  "root.style.setProperty('--color-primary-text-rgb', `${red} ${green} ${blue}`)",
   "this.document.documentElement.classList.toggle('dark', isDark)",
 ];
 
@@ -29,7 +31,9 @@ if (missing.length > 0) {
 }
 
 if (/primaryAccentColor\.set\(profile\?\.primary_accent_color/.test(source)) {
-  console.error('Theme/accent contract check failed: profile accents must be validated before use.');
+  console.error(
+    'Theme/accent contract check failed: profile accents must be validated before use.',
+  );
   process.exit(1);
 }
 

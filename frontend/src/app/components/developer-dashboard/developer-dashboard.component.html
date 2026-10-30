@@ -152,7 +152,7 @@
         </app-card>
         <app-card customClass="app-padded space-y-1">
           <p class="app-muted font-bold uppercase">{{ 'developer.statRateLabel' | t }}</p>
-          <p class="text-3xl font-black text-primary">
+          <p class="text-3xl font-black text-primary-ink">
             {{
               store.developerStats()?.tier === 'developer'
                 ? ('developer.statRate600' | t)
@@ -228,7 +228,7 @@
             <hlm-checkbox
               [ngModel]="spoofVipLocation()"
               (ngModelChange)="spoofVipLocation.set($event)"
-              class="rounded border-surface-100 text-primary focus:ring-primary"
+              class="rounded border-surface-100 text-primary-ink focus:ring-primary"
             />
             <span>{{ 'developer.spoofCheckbox' | t }}</span>
           </label>
@@ -357,7 +357,7 @@
               <span class="text-xs font-black uppercase text-text-primary">{{
                 'developer.simRoleLabel' | t
               }}</span>
-              <app-chip customClass="bg-primary/20 text-primary font-bold uppercase">{{
+              <app-chip customClass="bg-primary/20 text-primary-ink font-bold uppercase">{{
                 simulatedStageRole()
               }}</app-chip>
             </div>
@@ -446,7 +446,7 @@
     customClass="app-padded space-y-3 bg-surface-500 text-text-primary border border-surface-100"
   >
     <div class="flex items-center justify-between border-b border-surface-100 pb-2">
-      <h4 class="text-xs font-black uppercase tracking-wider text-primary">
+      <h4 class="text-xs font-black uppercase tracking-wider text-primary-ink">
         {{ 'developer.logsTitle' | t }}
       </h4>
       <span class="text-[11px] text-text-muted">{{
@@ -463,13 +463,13 @@
           <span
             class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0"
             [class.bg-primary/20]="log.category === 'POSTGIS'"
-            [class.text-primary]="log.category === 'POSTGIS'"
+            [class.text-primary-ink]="log.category === 'POSTGIS'"
             [class.bg-success/20]="log.category === 'CENTRIFUGO'"
             [class.text-success]="log.category === 'CENTRIFUGO'"
             [class.bg-warning/20]="log.category === 'REDIS'"
             [class.text-warning]="log.category === 'REDIS'"
             [class.bg-secondary/20]="log.category === 'LIVEKIT'"
-            [class.text-secondary]="log.category === 'LIVEKIT'"
+            [class.text-secondary-ink]="log.category === 'LIVEKIT'"
           >
             {{ log.category }}
           </span>

@@ -45,7 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
         @if (loadError()) {
           <div class="flex flex-wrap items-center gap-2" role="alert">
-            <span class="text-xs text-danger">{{ 'common.error' | t }}</span>
+            <span class="text-xs text-danger-ink">{{ 'common.error' | t }}</span>
             <button hlmBtn type="button" variant="outline" size="sm" (click)="retryLoad()">
               {{ 'common.retry' | t }}
             </button>
@@ -72,7 +72,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         }
 
         @if (playError()) {
-          <p class="mt-2 text-xs text-danger" role="alert">{{ 'common.error' | t }}</p>
+          <p class="mt-2 text-xs text-danger-ink" role="alert">{{ 'common.error' | t }}</p>
         }
       </section>
     }

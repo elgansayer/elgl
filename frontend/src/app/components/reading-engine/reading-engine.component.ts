@@ -60,7 +60,7 @@ type TabId = (typeof TAB_IDS)[number];
           <p class="app-muted text-xs sm:text-sm">{{ 'readingEngine.subtitle' | t }}</p>
         </div>
         <app-chip
-          customClass="bg-primary/20 text-primary font-bold text-[10px] sm:text-xs px-2 sm:px-3 py-1"
+          customClass="bg-primary/20 text-primary-ink font-bold text-[10px] sm:text-xs px-2 sm:px-3 py-1"
         >
           {{ 'readingEngine.vocabularyCount' | t: { count: vocabularyCount() } }}
         </app-chip>
@@ -120,7 +120,7 @@ type TabId = (typeof TAB_IDS)[number];
                   [class.bg-warning/20]="article.difficulty === 'intermediate'"
                   [class.text-warning]="article.difficulty === 'intermediate'"
                   [class.bg-danger/20]="article.difficulty === 'advanced'"
-                  [class.text-danger]="article.difficulty === 'advanced'"
+                  [class.text-danger-ink]="article.difficulty === 'advanced'"
                   class="rounded-app px-2 py-0.5 text-[11px] font-bold"
                 >
                   {{ 'readingEngine.difficulty.' + article.difficulty | t }}
@@ -290,7 +290,7 @@ type TabId = (typeof TAB_IDS)[number];
                   hlmBtn
                   type="button"
                   (click)="clearFilters()"
-                  class="text-[10px] sm:text-[11px] font-bold text-primary hover:underline py-1.5 sm:py-0 flex-shrink-0 min-h-[36px] sm:min-h-0"
+                  class="text-[10px] sm:text-[11px] font-bold text-primary-ink hover:underline py-1.5 sm:py-0 flex-shrink-0 min-h-[36px] sm:min-h-0"
                   [attr.aria-label]="'readingEngine.clearFilters' | t"
                 >
                   {{ 'readingEngine.clearFilters' | t }}
@@ -335,7 +335,7 @@ type TabId = (typeof TAB_IDS)[number];
                       [class.bg-warning/20]="article.difficulty === 'intermediate'"
                       [class.text-warning]="article.difficulty === 'intermediate'"
                       [class.bg-danger/20]="article.difficulty === 'advanced'"
-                      [class.text-danger]="article.difficulty === 'advanced'"
+                      [class.text-danger-ink]="article.difficulty === 'advanced'"
                       class="rounded-app px-2 py-0.5 text-[10px] sm:text-[11px] font-bold"
                     >
                       {{ 'readingEngine.difficulty.' + article.difficulty | t }}

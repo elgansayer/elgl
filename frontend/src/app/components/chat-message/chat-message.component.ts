@@ -89,7 +89,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <p class="text-sm">
                 @for (segment of textSegments(); track $index) {
                   @if (segment.isMention) {
-                    <span class="font-bold text-secondary cursor-pointer">{{ segment.value }}</span>
+                    <span class="font-bold text-secondary-ink cursor-pointer">{{ segment.value }}</span>
                   } @else {
                     {{ segment.value }}
                   }
@@ -221,7 +221,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
                   @if (message().delivery_status === 'read') {
                     <!-- Double check: read (blue) -->
                     <svg
-                      class="w-3.5 h-3.5 text-secondary"
+                      class="w-3.5 h-3.5 text-secondary-ink"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -234,7 +234,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
                       />
                     </svg>
                     <svg
-                      class="w-3.5 h-3.5 -ms-2 text-secondary"
+                      class="w-3.5 h-3.5 -ms-2 text-secondary-ink"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"

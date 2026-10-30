@@ -23,7 +23,7 @@ export interface DiscoveryMapErrorContext {
           <h2 class="text-xl font-black text-text-primary">{{ 'discoveryMapErrorBoundary.title' | t }}</h2>
           <p class="text-sm text-text-secondary">{{ 'discoveryMapErrorBoundary.description' | t }}</p>
           @if (errorSummary()) {
-            <p class="break-all rounded-app bg-surface-200 p-3 font-mono text-xs text-danger">{{ errorSummary() }}</p>
+            <p class="break-all rounded-app bg-surface-200 p-3 font-mono text-xs text-danger-ink">{{ errorSummary() }}</p>
           }
           <div class="flex flex-wrap justify-center gap-3">
             <button hlmBtn type="button" size="touch" (click)="resetError()" [attr.aria-label]="'discoveryMapErrorBoundary.retryAria' | t">

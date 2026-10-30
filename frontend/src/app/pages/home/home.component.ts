@@ -27,7 +27,7 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
         <div class="flex items-center gap-4">
           <a
             routerLink="/leaderboard"
-            class="text-sm text-primary hover:text-primary/80 transition-colors"
+            class="text-sm text-primary-ink hover:text-primary-ink/80 transition-colors"
             [attr.aria-label]="'nav.leaderboard' | t"
           >
             {{ 'nav.leaderboard' | t }}

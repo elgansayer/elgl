@@ -76,7 +76,7 @@
 
   @if (actionError()) {
     <div
-      class="mb-3 p-3 rounded bg-danger/10 border border-danger/20 text-danger text-sm"
+      class="mb-3 p-3 rounded bg-danger/10 border border-danger/20 text-danger-ink text-sm"
       role="alert"
     >
       {{ actionError() }}
@@ -195,7 +195,7 @@
         <p class="text-text-secondary">{{ 'moderation.noFlags' | t }}</p>
       }
       @if ((analysisResult()?.riskScore ?? 0) > 70) {
-        <p class="mt-2 text-danger">{{ 'moderation.behaviourWarning' | t }}</p>
+        <p class="mt-2 text-danger-ink">{{ 'moderation.behaviourWarning' | t }}</p>
       }
     </section>
   }

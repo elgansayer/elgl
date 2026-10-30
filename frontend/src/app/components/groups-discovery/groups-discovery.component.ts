@@ -77,7 +77,7 @@ interface InterestTopic {
       <!-- Error banner -->
       @if (error()) {
         <div
-          class="bg-danger/10 text-danger px-3 py-2 mx-4 mt-3 rounded-lg text-sm shrink-0"
+          class="bg-danger/10 text-danger-ink px-3 py-2 mx-4 mt-3 rounded-lg text-sm shrink-0"
           role="alert"
         >
           {{ error() }}
