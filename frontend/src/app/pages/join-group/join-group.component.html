@@ -16,15 +16,15 @@
       }
     </button>
     @if (joinFailed()) {
-      <p class="mt-4 text-danger">{{ 'join.error' | t }}</p>
+      <p class="mt-4 text-danger-ink">{{ 'join.error' | t }}</p>
     }
   } @else if (roomInfo.isLoading()) {
     <p class="text-text-muted">{{ 'join.loading' | t }}</p>
   } @else {
-    <p class="text-danger">{{ 'join.invalidLink' | t }}</p>
+    <p class="text-danger-ink">{{ 'join.invalidLink' | t }}</p>
     <a
       routerLink="/groups"
-      class="mt-4 text-primary underline"
+      class="mt-4 text-primary-ink underline"
       [attr.aria-label]="'join.backToGroups' | t"
     >
       {{ 'join.backToGroups' | t }}

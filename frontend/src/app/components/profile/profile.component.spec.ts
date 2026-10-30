@@ -109,6 +109,22 @@ describe('ProfileComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('C1');
   });
 
+  it('should preserve an unset proficiency level without inventing a default', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({ proficiency_level: null }),
+    );
+
+    await fixture.componentInstance.loadProfile();
+
+    expect(fixture.componentInstance.proficiencyLevel()).toBe('');
+
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ proficiency_level: null }),
+    );
+  });
+
   it('should persist the selected CEFR proficiency level with profile updates', async () => {
     mockUserService.getMyProfile.mockResolvedValue(makeProfile({ proficiency_level: 'A2' }));
 
@@ -121,6 +137,55 @@ describe('ProfileComponent', () => {
     expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
       expect.objectContaining({ proficiency_level: 'B2' }),
     );
+  });
+
+  it('should clear a saved proficiency level', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({ proficiency_level: 'A2' }),
+    );
+
+    await fixture.componentInstance.loadProfile();
+
+    fixture.componentInstance.onProficiencyLevelChange('');
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ proficiency_level: null }),
+    );
+  });
+
+  it('should ignore unsupported proficiency values from the select control', () => {
+    fixture.componentInstance.proficiencyLevel.set('A1');
+
+    fixture.componentInstance.onProficiencyLevelChange('B3');
+
+    expect(fixture.componentInstance.proficiencyLevel()).toBe('A1');
+  });
+
+  it('should expose translated proficiency choices with an accessible label', async () => {
+    await fixture.componentInstance.loadProfile();
+
+    fixture.componentInstance.toggleEdit();
+    await fixture.whenStable();
+
+    const select: HTMLSelectElement | null = fixture.nativeElement.querySelector(
+      'select[name="proficiencyLevel"]',
+    );
+    const options = Array.from(select?.options ?? []).map((option) => ({
+      value: option.value,
+      text: option.textContent?.trim(),
+    }));
+
+    expect(select?.getAttribute('aria-label')).toBe('profile.proficiencyLabel');
+    expect(options).toEqual([
+      { value: '', text: 'profile.proficiencyUnset' },
+      { value: 'A1', text: 'profile.proficiencyA1' },
+      { value: 'A2', text: 'profile.proficiencyA2' },
+      { value: 'B1', text: 'profile.proficiencyB1' },
+      { value: 'B2', text: 'profile.proficiencyB2' },
+      { value: 'C1', text: 'profile.proficiencyC1' },
+      { value: 'C2', text: 'profile.proficiencyC2' },
+    ]);
   });
 
   it('round-trips comma-separated learning goals through the array API contract', async () => {

@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -468,7 +474,7 @@
       }
       .btn.outline {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         border-color: rgb(var(--primary));
       }
       .two {
@@ -511,13 +517,13 @@
         font-size: 44px;
       }
       .link {
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         cursor: pointer;
         font-size: 13px;
       }
       .err,
       .danger-text {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .err {
         font-size: 12px;
@@ -637,7 +643,7 @@
       .grade.again {
         background: rgb(var(--danger) / 0.1);
         border-color: rgb(var(--danger) / 0.5);
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .grade.good {
         background: rgb(var(--secondary));
@@ -693,7 +699,7 @@
       .mono {
         font-family: ui-monospace, Menlo, monospace;
         font-size: 11px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         background: rgb(var(--surface-200));
         padding: 8px;
         border-radius: 8px;
@@ -786,7 +792,7 @@
       .score {
         font-size: 32px;
         font-weight: 700;
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .mono-list {
         margin: 6px 0 0;
@@ -811,7 +817,7 @@
         cursor: pointer;
       }
       .tabs button[aria-selected='true'] {
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         border-block-end-color: rgb(var(--primary));
       }
       .article {
@@ -863,7 +869,7 @@
         inline-size: 24px;
         font-size: 18px;
         font-weight: 700;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .wotd {
         font-size: 30px;

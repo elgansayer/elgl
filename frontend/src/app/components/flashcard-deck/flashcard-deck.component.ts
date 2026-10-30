@@ -224,7 +224,7 @@ const DECK_ICONS = [
                         hlmBtn
                         type="button"
                         (click)="deleteDeckById(deck.id, $event)"
-                        class="rounded-app p-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/20 hover:text-danger"
+                        class="rounded-app p-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/20 hover:text-danger-ink"
                         [attr.aria-label]="'deck.deleteAriaLabel' | t: { name: deck.name }"
                       >
                         <svg
@@ -454,7 +454,7 @@ const DECK_ICONS = [
                             hlmBtn
                             type="button"
                             (click)="removeCardFromDeck(fc.id)"
-                            class="rounded-app ms-2 p-1 text-text-muted hover:bg-danger/20 hover:text-danger flex-shrink-0"
+                            class="rounded-app ms-2 p-1 text-text-muted hover:bg-danger/20 hover:text-danger-ink flex-shrink-0"
                             [attr.aria-label]="'deck.removeAriaLabel' | t: { word: fc.word_token }"
                           >
                             <svg

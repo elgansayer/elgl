@@ -68,7 +68,7 @@ interface SelectOption {
               id="language-party-create-error"
               role="alert"
               aria-live="assertive"
-              class="rounded-app border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+              class="rounded-app border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-ink"
             >
               {{ submissionError() }}
             </p>
@@ -160,7 +160,7 @@ interface SelectOption {
               inputId="isVideoStream"
               [(ngModel)]="isVideoStream"
               [disabled]="submitting()"
-              class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-primary focus:ring-primary"
+              class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-primary-ink focus:ring-primary"
             />
             {{ 'languageParty.videoStreamLabel' | t }}
           </label>

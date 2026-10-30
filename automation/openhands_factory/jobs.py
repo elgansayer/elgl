@@ -166,6 +166,12 @@ class JobStore:
             maintenance_recovery_attempts=max(0, int(item.get("maintenance_recovery_attempts", 0))),
             maintenance_recovery_failures=max(0, int(item.get("maintenance_recovery_failures", 0))),
             last_error=last_error,
+            intake_blocked=item.get("intake_blocked", False) is not False,
+            intake_block_reason=(
+                item.get("intake_block_reason")
+                if isinstance(item.get("intake_block_reason"), str)
+                else None
+            ),
             next_attempt_at=next_attempt_at,
             failure_counts=restored_failure_counts,
             last_failure_kind=item.get("last_failure_kind"),
@@ -432,12 +438,12 @@ class JobStore:
             self._save_raw(jobs)
 
     def save_reconciled_jobs(self, reconciled: list[Job]) -> None:
-        """Merge inactive jobs retired by one control-plane reconciliation pass.
+        """Merge lifecycle observations without overwriting concurrent sibling jobs.
 
-        The caller excludes live worker identifiers before collecting this batch.
-        Loading and writing the full durable queue once preserves concurrent sibling
-        transitions without turning a large stale-worktree cleanup into one complete
-        queue rewrite per retired job.
+        The caller excludes protected workers and owns each observed task's CAS
+        lease until this write commits. Remote observations are normally committed
+        one at a time, before releasing ownership. Batch callers must retain all
+        corresponding leases through the write.
         """
 
         if not reconciled:
@@ -476,7 +482,7 @@ class JobStore:
             self._assert_generation_current()
             jobs = self._load()
             job = jobs.get(task_id)
-            if job is None or job.state is JobState.DONE:
+            if job is None or job.state is JobState.DONE or job.intake_blocked:
                 return None
             if job.state not in RECOVERABLE_ACTIVE_STATES:
                 return job
@@ -515,7 +521,7 @@ class JobStore:
             self._assert_generation_current()
             jobs = self._load()
             for task_id, job in jobs.items():
-                if task_id in protected_task_ids:
+                if task_id in protected_task_ids or job.intake_blocked:
                     continue
                 if job.state not in RECOVERABLE_ACTIVE_STATES:
                     continue
@@ -592,8 +598,12 @@ class JobStore:
                 self._stamp(existing)
                 closed_issue_reopened = (
                     existing.state is JobState.DONE
-                    and existing.pull_request is None
-                    and existing.last_error == "Issue closed before pull request creation"
+                    and task.source == "github-issue"
+                    and existing.last_error
+                    in {
+                        "Issue closed before pull request creation",
+                        "GitHub issue and its unmerged pull request confirmed closed",
+                    }
                 )
                 closed_pull_request_reopened = (
                     existing.state is JobState.DONE
@@ -602,7 +612,11 @@ class JobStore:
                     == "Pull request closed before the factory finished with it"
                 )
                 if closed_issue_reopened or closed_pull_request_reopened:
-                    existing.state = JobState.DISCOVERED
+                    existing.state = (
+                        JobState.CI_PENDING
+                        if closed_issue_reopened and existing.pull_request is not None
+                        else JobState.DISCOVERED
+                    )
                     existing.attempts = 0
                     existing.repair_attempts = 0
                     existing.quality_repairs = 0

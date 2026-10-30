@@ -143,3 +143,74 @@ def test_merge_batch_allows_only_one_merge_from_green_main() -> None:
     gated = gate_merge_batch([merge_one, review, merge_two], main_ci_green=True)
 
     assert gated == [merge_one, review]
+
+
+def _neptune_main_gate(
+    tmp_path: Path, checks: list[dict[str, object]]
+) -> tuple[MainBranchMergeGate, Runner]:
+    import base64
+
+    head = "a" * 40
+    encoded = "\n".join(base64.b64encode(json.dumps(check).encode()).decode() for check in checks)
+    runner = Runner(
+        [
+            ProcessResult(0, head, ""),
+            ProcessResult(
+                0,
+                json.dumps(
+                    [
+                        {
+                            "headSha": head,
+                            "event": "push",
+                            "status": "completed",
+                            "conclusion": "success",
+                        }
+                    ]
+                ),
+                "",
+            ),
+            ProcessResult(0, encoded, ""),
+        ]
+    )
+    return MainBranchMergeGate("elgansayer/Neptune-Bomberman", tmp_path, "secret", runner), runner
+
+
+def test_neptune_main_uses_actual_workflow_and_literal_app_pinned_gate(tmp_path: Path) -> None:
+    check = {
+        "name": "Neptune merge gate",
+        "head_sha": "a" * 40,
+        "app": {"id": 15368},
+        "status": "completed",
+        "conclusion": "success",
+    }
+    for checks in ([check], [{**check, "id": 1}, {**check, "id": 2}]):
+        gate, runner = _neptune_main_gate(tmp_path, checks)
+        assert gate.is_green()
+        assert "neptune-merge-gate.yml" in runner.calls[1]
+        assert "--paginate" in runner.calls[2]
+
+
+def test_neptune_successful_main_workflow_cannot_hide_missing_or_skipped_gate(
+    tmp_path: Path,
+) -> None:
+    check = {
+        "name": "Neptune merge gate",
+        "head_sha": "a" * 40,
+        "app": {"id": 15368},
+        "status": "completed",
+        "conclusion": "success",
+    }
+    for changes in (
+        {"conclusion": "skipped"},
+        {"conclusion": "failure"},
+        {"status": "in_progress"},
+        {"app": {"id": 1}},
+        {"head_sha": "b" * 40},
+        {"name": "CI / required"},
+    ):
+        gate, _ = _neptune_main_gate(tmp_path, [{**check, **changes}])
+        assert not gate.is_green(), changes
+    gate, _ = _neptune_main_gate(tmp_path, [])
+    assert not gate.is_green()
+    gate, _ = _neptune_main_gate(tmp_path, [check, {**check, "conclusion": "skipped"}])
+    assert not gate.is_green()

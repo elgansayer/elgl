@@ -205,14 +205,14 @@
                   <div class="mt-1 flex flex-wrap items-center justify-center gap-1">
                     @if (participant.isHost) {
                       <span
-                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-primary/20 text-primary"
+                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-primary/20 text-primary-ink"
                       >
                         {{ 'audioRoom.hostLabel' | t }}
                       </span>
                     }
                     @if (participant.isCoHost) {
                       <span
-                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-secondary/20 text-secondary"
+                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-secondary/20 text-secondary-ink"
                       >
                         {{ 'audioRoom.coHostBadge' | t }}
                       </span>
@@ -293,7 +293,7 @@
             <button
               hlmBtn
               (click)="viewPollResults(currentPollId()!)"
-              class="mt-2 rounded-app bg-primary/20 text-primary ps-3 pe-3 pt-2 pb-2 text-xs font-bold w-full"
+              class="mt-2 rounded-app bg-primary/20 text-primary-ink ps-3 pe-3 pt-2 pb-2 text-xs font-bold w-full"
               [attr.aria-label]="'quickPoll.viewPollResultsBtn' | t"
             >
               {{ 'quickPoll.viewPollResultsBtn' | t }}
@@ -330,7 +330,7 @@
                 }
                 @if (audienceOverflowCount() > 0) {
                   <div
-                    class="h-10 min-w-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center px-2 text-xs font-bold text-primary"
+                    class="h-10 min-w-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center px-2 text-xs font-bold text-primary-ink"
                     role="listitem"
                     [attr.aria-label]="
                       'audioRoom.listenerCount' | t: { count: audienceOverflowCount() }
@@ -511,10 +511,10 @@
       @for (room of displayedRooms(); track room.id) {
         <app-card customClass="app-padded space-y-3">
           <div class="flex items-center justify-between">
-            <app-chip customClass="bg-danger/20 text-danger">{{
+            <app-chip customClass="bg-danger/20 text-danger-ink">{{
               'audioRoom.liveTag' | t
             }}</app-chip>
-            <app-chip customClass="text-primary">{{ room.language_pair }}</app-chip>
+            <app-chip customClass="text-primary-ink">{{ room.language_pair }}</app-chip>
           </div>
           <h3 class="text-base font-black text-text-primary">{{ room.title }}</h3>
           <div class="flex flex-wrap gap-1.5">

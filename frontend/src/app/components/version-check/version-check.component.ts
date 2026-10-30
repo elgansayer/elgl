@@ -11,7 +11,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <div class="p-4">
       <h2>{{ 'appVersion' | t }}</h2>
       @if (versionError()) {
-        <p class="text-danger">{{ versionError() }}</p>
+        <p class="text-danger-ink">{{ versionError() }}</p>
       }
       @if (!versionLoaded()) {
         <p>{{ 'loading' | t }}</p>

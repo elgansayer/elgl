@@ -2,7 +2,7 @@
   <div class="flex items-center justify-between gap-2 border-b border-surface-100 pb-2.5">
     <div class="flex items-center gap-3">
       <div
-        class="h-10 w-10 rounded-card bg-primary/10 text-primary flex items-center justify-center"
+        class="h-10 w-10 rounded-card bg-primary/10 text-primary-ink flex items-center justify-center"
       >
         💬
       </div>
@@ -112,7 +112,7 @@
           />
           <app-button-secondary
             (clicked)="removeMember()"
-            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger-ink"
             [ariaLabel]="'chatRoom.removeMemberBtn' | t"
           >
             {{ 'chatRoom.removeMemberBtn' | t }}
@@ -246,7 +246,7 @@
                       }
                       @if (msg.delivery_status === 'read') {
                         <svg
-                          class="w-3.5 h-3.5 text-secondary"
+                          class="w-3.5 h-3.5 text-secondary-ink"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -260,7 +260,7 @@
                           />
                         </svg>
                         <svg
-                          class="w-3.5 h-3.5 -ms-2 text-secondary"
+                          class="w-3.5 h-3.5 -ms-2 text-secondary-ink"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -310,7 +310,7 @@
                     </p>
                   }
                   @if (showTranslation()[msg.id] && translations()[msg.id]) {
-                    <p class="mt-1 text-[10px] text-primary italic">
+                    <p class="mt-1 text-[10px] text-primary-ink italic">
                       {{ translations()[msg.id] }}
                     </p>
                   }
@@ -474,7 +474,7 @@
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <app-button-secondary
           (clicked)="showDoodleModal.set(true)"
-          customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          customClass="bg-secondary/20 text-secondary-ink ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
           [ariaLabel]="'chatRoom.doodleBtn' | t"
         >
           {{ 'chatRoom.doodleBtn' | t }}

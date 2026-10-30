@@ -216,8 +216,10 @@ def test_requeue_quarantined_issues_clears_stale_labels(tmp_path: Path) -> None:
     runner = Runner(
         [
             ProcessResult(0, json.dumps(payload), ""),  # list quarantined
+            ProcessResult(0, encoded_api_items([{"name": "factory-quarantined"}]), ""),
             ProcessResult(0, "", ""),  # remove labels from #30
             ProcessResult(0, "", ""),  # comment on #30
+            ProcessResult(0, encoded_api_items([{"name": "swarm-active"}]), ""),
             ProcessResult(0, "", ""),  # remove labels from #31
             ProcessResult(0, "", ""),  # comment on #31
         ]
@@ -241,6 +243,7 @@ def test_requeue_restores_required_intake_label(tmp_path: Path) -> None:
     runner = Runner(
         [
             ProcessResult(0, json.dumps([{"number": 32}]), ""),
+            ProcessResult(0, encoded_api_items([{"name": "factory-quarantined"}]), ""),
             ProcessResult(0, "", ""),
             ProcessResult(0, "", ""),
             ProcessResult(0, "", ""),
@@ -263,21 +266,32 @@ def test_requeue_restores_required_intake_label(tmp_path: Path) -> None:
 
 
 def test_requeue_can_silently_clear_automatic_recovery_labels(tmp_path: Path) -> None:
-    runner = Runner([ProcessResult(0, "", "")])
+    runner = Runner(
+        [
+            ProcessResult(0, encoded_api_items([{"name": "factory-quarantined"}]), ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     requeued = client.requeue_quarantined_issues([33], announce=False)
 
     assert requeued == [33]
-    assert len(runner.calls) == 1
-    assert "--remove-label" in runner.calls[0]
+    assert len(runner.calls) == 2
+    assert "--remove-label" in runner.calls[1]
     assert all("comment" not in call for call in runner.calls)
 
 
 def test_release_active_issues_restores_required_intake_without_comments(
     tmp_path: Path,
 ) -> None:
-    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    runner = Runner(
+        [
+            ProcessResult(0, encoded_api_items([{"name": "factory-active"}]), ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
     client = GitHubClient(
         "owner/repo",
         tmp_path,
@@ -320,6 +334,93 @@ def test_release_active_issues_preserves_admission_when_ready_labels_are_optiona
     client.release_active_issues([36])
 
     assert any("--add-label" in call and "factory-ready" in call for call in runner.calls)
+
+
+@pytest.mark.parametrize(
+    "attached",
+    [[], [{"name": "unrelated"}]],
+    ids=["missing-definition-and-attachment", "existing-but-unattached"],
+)
+def test_remove_issue_labels_skips_absent_legacy_names(
+    tmp_path: Path, attached: list[dict[str, str]]
+) -> None:
+    runner = Runner([ProcessResult(0, encoded_api_items(attached), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.remove_issue_labels(535, ("swarm-active",))
+
+    assert len(runner.calls) == 1
+    assert "api" in runner.calls[0]
+    assert "--paginate" in runner.calls[0]
+    assert "repos/owner/repo/issues/535/labels?per_page=100" in runner.calls[0]
+    assert "edit" not in runner.calls[0]
+
+
+def test_remove_issue_labels_preserves_unrelated_and_uses_attached_canonical_names(
+    tmp_path: Path,
+) -> None:
+    attached = [{"name": "unrelated"}, {"name": "Factory-Active"}, {"name": "étiquette"}]
+    runner = Runner([ProcessResult(0, encoded_api_items(attached), ""), ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.remove_issue_labels(535, ("factory-active", "swarm-active", "FACTORY-ACTIVE"))
+
+    assert runner.calls[1] == (
+        "gh",
+        "issue",
+        "edit",
+        "535",
+        "--repo",
+        "owner/repo",
+        "--remove-label",
+        "Factory-Active",
+    )
+    assert "unrelated" not in runner.calls[1]
+    assert "swarm-active" not in runner.calls[1]
+
+
+def test_remove_issue_labels_empty_request_does_not_make_a_call(tmp_path: Path) -> None:
+    runner = Runner([])
+    GitHubClient("owner/repo", tmp_path, "secret", runner).remove_issue_labels(535, ())
+    assert runner.calls == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "not-base64",
+        encoded_api_items([None]),
+        encoded_api_items([{}]),
+        encoded_api_items([{"name": 42}]),
+        encoded_api_items([{"name": ""}]),
+    ],
+)
+def test_remove_issue_labels_rejects_malformed_attachment_evidence(
+    tmp_path: Path, payload: str
+) -> None:
+    runner = Runner([ProcessResult(0, payload, "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+    with pytest.raises(FactoryError, match="malformed"):
+        client.remove_issue_labels(535, ("factory-active",))
+    assert len(runner.calls) == 1
+
+
+@pytest.mark.parametrize("stage", ["list", "remove"])
+@pytest.mark.parametrize("failure", ["HTTP 401", "HTTP 403", "HTTP 404", "connection reset"])
+def test_remove_issue_labels_propagates_auth_permission_transport_and_missing_issue_errors(
+    tmp_path: Path, stage: str, failure: str
+) -> None:
+    results = (
+        [ProcessResult(0, encoded_api_items([{"name": "factory-active"}]), "")]
+        if stage == "remove"
+        else []
+    )
+    results.append(ProcessResult(1, "", failure))
+    runner = Runner(results)
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+    with pytest.raises(FactoryError, match=failure):
+        client.remove_issue_labels(535, ("factory-active", "swarm-active"))
+    assert len(runner.calls) == (2 if stage == "remove" else 1)
 
 
 def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
@@ -825,6 +926,39 @@ def test_pull_request_creation_uses_configured_base_branch(tmp_path: Path) -> No
     assert "develop" in runner.calls[0]
 
 
+@pytest.mark.parametrize("success", [True, False])
+def test_pr_metadata_update_uses_supported_rest_and_preserves_literal_body(
+    tmp_path: Path,
+    success: bool,
+) -> None:
+    captured: list[Path] = []
+    body = "First line\n\nLiteral $(command) and `text`\nFactory-Stack-Parent: #41\n"
+
+    def runner(args: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
+        assert args[:6] == (
+            "gh",
+            "api",
+            "--method",
+            "PATCH",
+            "repos/owner/repo/pulls/42",
+            "--input",
+        )
+        payload = Path(args[6])
+        captured.append(payload)
+        assert payload.stat().st_mode & 0o077 == 0
+        assert json.loads(payload.read_text()) == {"title": "Exact title", "body": body}
+        return ProcessResult(0 if success else 1, "{}", "" if success else "HTTP 403")
+
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+    if success:
+        client.update_pull_request(42, title="Exact title", body=body)
+    else:
+        with pytest.raises(FactoryError, match="HTTP 403"):
+            client.update_pull_request(42, title="Exact title", body=body)
+    assert len(captured) == 1
+    assert not captured[0].exists()
+
+
 def test_comment_is_published_with_a_bounded_body(tmp_path: Path) -> None:
     runner = Runner([ProcessResult(0, "", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
@@ -1251,7 +1385,14 @@ def test_pull_request_update_reopen_and_supersession_use_fixed_argv(tmp_path: Pa
     client.reopen_pull_request(42)
     client.supersede_pull_request(43, canonical=42, reason="duplicate active task")
 
-    assert runner.calls[0][:4] == ("gh", "pr", "edit", "42")
+    assert runner.calls[0][:6] == (
+        "gh",
+        "api",
+        "--method",
+        "PATCH",
+        "repos/owner/repo/pulls/42",
+        "--input",
+    )
     assert runner.calls[1][:4] == ("gh", "pr", "reopen", "42")
     assert runner.calls[2][:4] == ("gh", "issue", "edit", "43")
     assert "superseded" in runner.calls[2] and "duplicate" in runner.calls[2]

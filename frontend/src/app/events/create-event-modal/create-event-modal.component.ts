@@ -87,7 +87,7 @@ const venueLocationValidator: ValidatorFn = (
           </p>
 
           @if (submitError()) {
-            <p role="alert" class="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+            <p role="alert" class="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger-ink">
               {{ 'common.error_generic' | t }}
             </p>
           }
@@ -110,7 +110,7 @@ const venueLocationValidator: ValidatorFn = (
                 [attr.aria-describedby]="showControlError('title') ? 'titleInputError' : null"
               />
               @if (showControlError('title')) {
-                <p id="titleInputError" role="alert" class="mt-1 text-xs text-danger">
+                <p id="titleInputError" role="alert" class="mt-1 text-xs text-danger-ink">
                   {{ 'common.error_generic' | t }}
                 </p>
               }
@@ -132,7 +132,7 @@ const venueLocationValidator: ValidatorFn = (
                 [attr.aria-invalid]="showControlError('date_time') ? 'true' : null"
               />
               @if (showControlError('date_time')) {
-                <p id="dateTimeInputError" role="alert" class="mt-1 text-xs text-danger">
+                <p id="dateTimeInputError" role="alert" class="mt-1 text-xs text-danger-ink">
                   {{ 'common.error_generic' | t }}
                 </p>
               }
@@ -172,7 +172,7 @@ const venueLocationValidator: ValidatorFn = (
                 [attr.aria-describedby]="showLocationError() ? 'locationInputError' : null"
               />
               @if (showLocationError()) {
-                <p id="locationInputError" role="alert" class="mt-1 text-xs text-danger">
+                <p id="locationInputError" role="alert" class="mt-1 text-xs text-danger-ink">
                   {{ 'common.error_generic' | t }}
                 </p>
               }
@@ -235,7 +235,7 @@ const venueLocationValidator: ValidatorFn = (
                 [attr.aria-invalid]="showControlError('max_participants') ? 'true' : null"
               />
               @if (showControlError('max_participants')) {
-                <p role="alert" class="mt-1 text-xs text-danger">
+                <p role="alert" class="mt-1 text-xs text-danger-ink">
                   {{ 'common.error_generic' | t }}
                 </p>
               }
@@ -257,7 +257,7 @@ const venueLocationValidator: ValidatorFn = (
                 [attr.aria-describedby]="showControlError('description') ? 'descriptionInputError' : null"
               ></textarea>
               @if (showControlError('description')) {
-                <p id="descriptionInputError" role="alert" class="mt-1 text-xs text-danger">
+                <p id="descriptionInputError" role="alert" class="mt-1 text-xs text-danger-ink">
                   {{ 'common.error_generic' | t }}
                 </p>
               }

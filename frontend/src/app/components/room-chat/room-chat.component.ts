@@ -76,7 +76,7 @@ import { SoundboardComponent } from '../soundboard/soundboard.component';
           }
           @for (cap of store.captions(); track cap.id) {
             <div class="p-2.5 rounded-xl bg-secondary/10 border border-secondary/30">
-              <span class="font-bold text-[10px] text-secondary block mb-1"
+              <span class="font-bold text-[10px] text-secondary-ink block mb-1"
                 >🎙️ {{ cap.speaker_name }} (Live AI caption):</span
               >
               <p class="text-xs font-medium text-text-primary">

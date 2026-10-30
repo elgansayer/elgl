@@ -21,7 +21,7 @@ interface CartItem {
     <div class="max-w-2xl mx-auto p-4">
       <h1 class="text-xl sm:text-2xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
       @if (message()) {
-        <p class="mb-4 text-sm text-primary" aria-live="polite">{{ message() }}</p>
+        <p class="mb-4 text-sm text-primary-ink" aria-live="polite">{{ message() }}</p>
       }
       @if (items().length === 0) {
         <p class="text-sm opacity-60" role="status">{{ 'cart.empty' | t }}</p>

@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -514,12 +520,12 @@
         border: 1px solid;
       }
       .sys.tide {
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
         border-color: rgb(var(--secondary) / 0.3);
         background: rgb(var(--secondary) / 0.1);
       }
       .sys.danger {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.3);
         background: rgb(var(--danger) / 0.1);
       }
@@ -730,7 +736,7 @@
       .react[aria-pressed='true'] {
         border-color: rgb(var(--primary));
         background: rgb(var(--primary) / 0.12);
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         font-weight: 700;
       }
       .quick-emoji {
@@ -766,7 +772,7 @@
         height: 16px;
       }
       .tick.read svg {
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .tick.muted-tick svg {
         color: rgb(var(--text-muted));
@@ -809,7 +815,7 @@
       }
       .radio-row label.on {
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         font-weight: 700;
       }
       .dot {
@@ -853,7 +859,7 @@
         color: rgb(var(--text-primary));
       }
       .menu button.destructive {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .menu button.cancel {
         background: rgb(var(--surface-300));
@@ -1031,7 +1037,7 @@
       }
       .guide h4 {
         margin: 0 0 4px;
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
         font-size: 13px;
       }
       .reply-quote {
@@ -1101,7 +1107,7 @@
         font-style: italic;
       }
       .diff del {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         text-decoration: line-through;
       }
       .diff ins {
@@ -2077,7 +2083,7 @@
               <i style="height: 20%"></i><i style="height: 20%"></i><i style="height: 20%"></i
               ><i style="height: 20%"></i>
             </div>
-            <span class="time" style="color: rgb(var(--danger))">Unable to play this audio</span>
+            <span class="time" style="color: rgb(var(--danger-text))">Unable to play this audio</span>
           </div>
         </div>
         <footer>
@@ -2148,7 +2154,7 @@
                 min-height: 36px;
                 font-size: 13px;
                 border-color: rgb(var(--primary));
-                color: rgb(var(--primary));
+                color: rgb(var(--primary-text));
               "
             >
               ⏹️ Stop reading
@@ -2297,7 +2303,7 @@
           <div class="state-label">Running · run error</div>
           <div class="aside">
             <button class="btn vip" type="button" disabled aria-busy="true">Loading...</button
-            ><span class="muted" role="status" style="color: rgb(var(--danger))">Error</span
+            ><span class="muted" role="status" style="color: rgb(var(--danger-text))">Error</span
             ><button class="btn vip" type="button">Retry · 🪙 20</button>
           </div>
           <div class="state-label">Result</div>
@@ -2314,7 +2320,7 @@
           <div class="state-label">Catalogue loading · error</div>
           <div class="aside"><span class="muted">Loading...</span></div>
           <div class="aside row">
-            <span class="grow" style="color: rgb(var(--danger))">Error</span
+            <span class="grow" style="color: rgb(var(--danger-text))">Error</span
             ><button class="btn secondary-btn" type="button">Retry</button>
           </div>
         </div>

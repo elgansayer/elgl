@@ -198,8 +198,14 @@ class AgentCircuitBreaker:
 
 
 class AgentHealthStore:
-    def __init__(self, path: Path) -> None:
-        self.path = _coordinated_health_path(path)
+    def __init__(self, path: Path, *, coordination_root: Path | None = None) -> None:
+        if coordination_root is not None and not coordination_root.is_absolute():
+            raise ValueError("provider health coordination root must be absolute")
+        self.path = (
+            coordination_root / path.name
+            if coordination_root is not None
+            else _coordinated_health_path(path)
+        )
         self.lock = FileLock(str(self.path) + ".lock")
 
     def _save(self, breakers: Mapping[str, AgentCircuitBreaker]) -> None:

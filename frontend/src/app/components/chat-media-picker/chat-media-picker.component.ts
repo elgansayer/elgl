@@ -90,7 +90,7 @@ const ACCEPTED_MEDIA =
       </label>
 
       @if (error(); as message) {
-        <p role="alert" class="mt-3 rounded-card bg-danger/10 px-3 py-2 text-sm text-danger">
+        <p role="alert" class="mt-3 rounded-card bg-danger/10 px-3 py-2 text-sm text-danger-ink">
           {{ message }}
         </p>
       }

@@ -9,6 +9,7 @@ Relay owns product colour semantics. Spartan semantic variables are aliases into
 - `primary` is the user's Ember action/accent colour and may change at runtime.
 - `secondary` in Relay is Tide, the partner colour. Spartan's `--secondary` is an affordance role and maps to a neutral Relay surface rather than Tide.
 - `danger`, `success`, `warning`, `vip`, and `accent` are semantic product roles, not arbitrary decorative substitutes.
+- `primary-ink`, `secondary-ink`, and `danger-ink` are AA-safe foreground roles for those semantic hues on neutral surfaces.
 - `surface-*` expresses elevation/background structure.
 - `text-primary`, `text-secondary`, and `text-muted` express text hierarchy.
 - `on-fill` is the only default foreground for text/icons placed directly on saturated semantic fills.
@@ -20,8 +21,7 @@ The light theme uses a paper foreground on saturated fills, while the dark theme
 Correct:
 
 ```html
-<button class="bg-primary text-on-fill">...</button>
-<span class="bg-danger text-on-fill">...</span>
+<button class="bg-primary text-on-fill">...</button> <span class="bg-danger text-on-fill">...</span>
 ```
 
 Incorrect:
@@ -32,20 +32,21 @@ Incorrect:
 
 Tinted semantic backgrounds, for example `bg-primary/10`, normally use the semantic colour itself or a text token rather than `on-fill`, subject to contrast testing.
 
+Use `text-primary-ink`, `text-secondary-ink`, or `text-danger-ink` for semantic text and icons on neutral surfaces. The fill roles remain available for backgrounds, borders, rings and form accents. `ThemeService` derives a light-mode `primary-ink` from a custom per-user accent and keeps it in sync with theme changes.
+
 ## Spartan aliases
 
 Spartan Helm components may consume `--primary`, `--primary-foreground`, `--accent`, `--accent-foreground`, `--destructive`, and related semantic aliases. Those aliases must resolve through Relay CSS variables. Regeneration must not restore a literal upstream palette.
 
 ## Scope of the migration guard
 
-The architectural guard applies immediately to shared Relay primitives and global primitive classes. Feature-level legacy colour misuse is migrated with the numbered screen/component tickets so this foundation change does not silently alter unrelated feature visuals.
-
-Any new shared primitive must use Relay semantic roles from day one. Once a feature surface is migrated, it inherits the same requirement.
+The architectural guard covers shared Relay primitives, global primitive classes and feature source. It rejects use of `primary`, `secondary` or `danger` fill utilities as foreground colours while preserving those roles for fills, borders, rings and form accents.
 
 ## Accessibility
 
 - Semantic meaning must not rely on colour alone.
 - Text/icon contrast on saturated fills must use the theme-aware foreground role.
+- Semantic text and icons on neutral surfaces must use the corresponding `*-ink` role.
 - Focus, selected, error, success and warning states need a non-colour cue where meaning would otherwise be ambiguous.
 - Light and dark themes are independently designed and must both be tested.
 - User-selected primary accents must remain readable because the foreground is role-based rather than hardcoded.
@@ -67,4 +68,4 @@ cd frontend
 npm run check:semantic-colour-roles
 ```
 
-The gate verifies the theme-aware `on-fill` contract, Spartan foreground aliases, the shared primary-button primitive, and shared primitive source for saturated-fill + hardcoded-white regressions. Feature-specific legacy violations are intentionally handled by their migration tickets rather than being grandfathered as acceptable new patterns.
+The gate verifies the theme-aware `on-fill` contract, the AA-safe ink roles, Spartan foreground aliases, the shared primary-button primitive, saturated-fill plus hardcoded-white regressions, and legacy fill-token foregrounds throughout frontend source.

@@ -236,7 +236,7 @@ function firstTouch(list: TouchList | ArrayLike<Touch> | undefined): Touch | nul
         } @else if (simplificationError()) {
           <div
             role="alert"
-            class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+            class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink"
             [attr.data-error-kind]="simplificationError()"
           >
             @switch (simplificationError()) {
@@ -331,7 +331,7 @@ function firstTouch(list: TouchList | ArrayLike<Touch> | undefined): Touch | nul
         @if (!explanationLoading() && explanationError()) {
           <div
             role="alert"
-            class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+            class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink"
             [attr.data-error-kind]="explanationError()"
           >
             @switch (explanationError()) {

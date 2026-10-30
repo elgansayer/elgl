@@ -46,15 +46,15 @@ function getInputValue(event: Event): string {
       </div>
 
       <ul class="list-none p-0 mb-4">
-        <li class="py-1 text-sm" [class]="hasMinLength() ? 'text-success' : 'text-danger'">
+        <li class="py-1 text-sm" [class]="hasMinLength() ? 'text-success' : 'text-danger-ink'">
           <span class="me-1 font-bold">{{ hasMinLength() ? '✓' : '✗' }}</span>
           {{ 'password.minLength' | t }}
         </li>
-        <li class="py-1 text-sm" [class]="hasNumber() ? 'text-success' : 'text-danger'">
+        <li class="py-1 text-sm" [class]="hasNumber() ? 'text-success' : 'text-danger-ink'">
           <span class="me-1 font-bold">{{ hasNumber() ? '✓' : '✗' }}</span>
           {{ 'password.hasNumber' | t }}
         </li>
-        <li class="py-1 text-sm" [class]="hasSymbol() ? 'text-success' : 'text-danger'">
+        <li class="py-1 text-sm" [class]="hasSymbol() ? 'text-success' : 'text-danger-ink'">
           <span class="me-1 font-bold">{{ hasSymbol() ? '✓' : '✗' }}</span>
           {{ 'password.hasSymbol' | t }}
         </li>
@@ -75,7 +75,7 @@ function getInputValue(event: Event): string {
       </div>
 
       @if (confirmPassword().length > 0) {
-        <div class="mb-4 text-sm" [class]="passwordsMatch() ? 'text-success' : 'text-danger'">
+        <div class="mb-4 text-sm" [class]="passwordsMatch() ? 'text-success' : 'text-danger-ink'">
           <span class="me-1 font-bold">{{ passwordsMatch() ? '✓' : '✗' }}</span>
           {{ 'password.passwordsMatch' | t }}
         </div>
@@ -96,7 +96,7 @@ function getInputValue(event: Event): string {
         </div>
       }
       @if (errorMessage()) {
-        <div class="mt-3 p-2 rounded-lg text-sm bg-danger/15 text-danger">
+        <div class="mt-3 p-2 rounded-lg text-sm bg-danger/15 text-danger-ink">
           {{ errorMessage()! | t }}
         </div>
       }

@@ -158,9 +158,9 @@ export class EscrowPaymentsComponent {
       case 'released':
         return 'bg-success/20 text-success';
       case 'disputed':
-        return 'bg-danger/20 text-danger';
+        return 'bg-danger/20 text-danger-ink';
       case 'refunded':
-        return 'bg-surface-300 text-text-secondary';
+        return 'bg-surface-300 text-secondary-ink';
       case 'cancelled':
         return 'bg-surface-100 text-text-muted';
       default:
