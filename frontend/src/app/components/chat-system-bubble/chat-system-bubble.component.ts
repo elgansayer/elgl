@@ -1,4 +1,4 @@
-import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 interface SystemEventConfig {
@@ -11,6 +11,7 @@ interface SystemEventConfig {
 
 const MAX_SYSTEM_EVENT_PARAM_LENGTH = 500;
 const MAX_SYSTEM_EVENT_PARAMS = 12;
+const SYSTEM_EVENT_PARAM_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 
 const EVENT_CONFIGS = new Map<string, SystemEventConfig>([
   [
@@ -82,9 +83,7 @@ const DEFAULT_CONFIG: SystemEventConfig = {
 };
 
 @Component({
-  selector: 'app-chat-system-bubble',
-  // Opt-in to OnPush change detection to avoid unnecessary re-renders in chat lists
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-chat-system-bubble, app-system-message-bubble',
   imports: [TranslatePipe],
   template: `
     <div
@@ -112,10 +111,15 @@ export class ChatSystemBubbleComponent {
   readonly displayParams = computed<Record<string, string | number | boolean | null>>(() => {
     // A null-prototype dictionary ensures untrusted interpolation keys cannot
     // inherit or shadow Object prototype members such as `constructor`.
-    const result = Object.create(null) as Record<string, string | number | boolean | null>;
+    const result: Record<string, string | number | boolean | null> = Object.create(null);
 
-    for (const [key, value] of Object.entries(this.params()).slice(0, MAX_SYSTEM_EVENT_PARAMS)) {
-      if (key === 'type') continue;
+    const rawParams = this.params();
+    if (!rawParams || typeof rawParams !== 'object') {
+      return result;
+    }
+
+    for (const [key, value] of Object.entries(rawParams).slice(0, MAX_SYSTEM_EVENT_PARAMS)) {
+      if (key === 'type' || !SYSTEM_EVENT_PARAM_KEY_PATTERN.test(key)) continue;
 
       if (typeof value === 'string') {
         result[key] = value.slice(0, MAX_SYSTEM_EVENT_PARAM_LENGTH);
@@ -151,3 +155,5 @@ export class ChatSystemBubbleComponent {
     () => EVENT_CONFIGS.get(this.normalizedEventType()) ?? DEFAULT_CONFIG,
   );
 }
+
+export { ChatSystemBubbleComponent as SystemMessageBubbleComponent };

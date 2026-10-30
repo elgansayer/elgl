@@ -192,4 +192,33 @@ describe('ChatSystemBubbleComponent', () => {
     expect(bubble.className).toContain('text-danger');
     expect(icon.textContent).toContain('📞');
   });
+
+  it('drops parameter keys containing non-identifier or regex metacharacters', () => {
+    fixture.componentRef.setInput('eventType', 'announcement');
+    fixture.componentRef.setInput('params', {
+      message: 'Maintenance scheduled',
+      '(': 'malformed-regex-group',
+      '[0-9]+': 'malformed-regex-class',
+      '.*': 'regex-wildcard',
+      '123badLeadingDigit': 'invalid',
+    });
+    fixture.detectChanges();
+
+    const params = fixture.componentInstance.displayParams();
+    expect(params['message']).toBe('Maintenance scheduled');
+    expect(params['(']).toBeUndefined();
+    expect(params['[0-9]+']).toBeUndefined();
+    expect(params['.*']).toBeUndefined();
+    expect(params['123badLeadingDigit']).toBeUndefined();
+    expect(fixture.nativeElement.textContent).toContain('Maintenance scheduled');
+  });
+
+  it('handles null or non-object params gracefully without crashing', () => {
+    fixture.componentRef.setInput('eventType', 'memberRemoved');
+    fixture.componentRef.setInput('params', null as unknown as Record<string, unknown>);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.displayParams()).toEqual({});
+    expect(fixture.nativeElement.textContent).toContain('A member left the group.');
+  });
 });

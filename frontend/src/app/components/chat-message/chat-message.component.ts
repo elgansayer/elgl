@@ -25,6 +25,7 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
@@ -39,9 +40,15 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     CulturalTipComponent,
     LinkPreviewCardComponent,
     VisualDiffComponent,
+    ChatSystemBubbleComponent,
   ],
   template: `
-    @if (!isBlocked()) {
+    @if (message().message_type === 'system') {
+      <app-chat-system-bubble
+        [eventType]="message().system_event?.type ?? ''"
+        [params]="message().system_event ?? {}"
+      ></app-chat-system-bubble>
+    } @else if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
         <app-cultural-tip [language]="lang" />
       }
@@ -51,7 +58,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
         [messageType]="message().message_type"
         [correctionOriginal]="message().correction_payload?.original ?? null"
         [correctionCorrected]="message().correction_payload?.corrected ?? null"
-        [senderId]="message().sender_id"
+        [senderId]="message().sender_id || ''"
         [roomId]="message().room_id"
         [isBlocked]="isBlocked()"
         (copyMessage)="onCopy($event)"
@@ -337,9 +344,9 @@ export class ChatMessageComponent {
     effect(() => {
       const senderId = this.message().sender_id;
       const blockedIds = this.safetyService.blockedUserIdsSignal();
-      const currentlyBlocked = blockedIds.has(senderId);
+      const currentlyBlocked = senderId ? blockedIds.has(senderId) : false;
       this.isBlocked.set(currentlyBlocked);
-      if (currentlyBlocked) {
+      if (currentlyBlocked && senderId) {
         this.messageBlocked.emit(senderId);
       }
     });

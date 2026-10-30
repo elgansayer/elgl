@@ -142,7 +142,7 @@
       }
 
       @for (msg of filteredMessages(); track msg.id) {
-        @if (msg.message_type === 'system' && msg.system_event) {
+        @if (msg.message_type === 'system') {
           <app-chat-system-bubble
             [eventType]="msg.system_event?.type ?? ''"
             [params]="msg.system_event ?? {}"
@@ -152,9 +152,9 @@
             [messageId]="msg.id"
             [messageContent]="msg.text_content ?? ''"
             [messageType]="msg.message_type"
-            [senderId]="msg.sender_id"
+            [senderId]="msg.sender_id || ''"
             [roomId]="roomId"
-            [isBlocked]="blockedUserIds().includes(msg.sender_id)"
+            [isBlocked]="msg.sender_id ? blockedUserIds().includes(msg.sender_id) : false"
             (reply)="startReply(msg.id)"
             (favourite)="bookmark(msg)"
             (block)="onBlockToggle($event)"

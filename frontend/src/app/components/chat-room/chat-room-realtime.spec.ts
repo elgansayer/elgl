@@ -306,4 +306,21 @@ describe('applyChatRoomRealtimeEvent', () => {
         .messages,
     ).toBe(messages);
   });
+
+  it('appends a system message with null or empty sender_id without requesting read acknowledgement', () => {
+    const withNullSender: ChatMessage = {
+      ...systemMessage,
+      sender_id: null,
+    };
+    const result = applyChatRoomRealtimeEvent(
+      [],
+      { message: withNullSender },
+      'room-1',
+      'user-1',
+    );
+
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]?.message_type).toBe('system');
+    expect(result.incomingMessageToMarkRead).toBeNull();
+  });
 });
