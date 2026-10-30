@@ -218,7 +218,7 @@
           "profile_visibility": { "type": "string", "enum": ["everyone", "vips_only", "hidden"] }
         }
       },
-      "MessageFilters": { "type": "object", "additionalProperties": false, "properties": { "age_min": { "type": "integer", "minimum": 18 }, "age_max": { "type": "integer", "minimum": 18 }, "allowed_native_languages": { "type": "array", "items": { "type": "string" } }, "allowed_genders": { "type": "array", "items": { "type": "string" } } } },
+      "MessageFilters": { "type": "object", "additionalProperties": false, "properties": { "age_min": { "type": "integer", "minimum": 0, "maximum": 120 }, "age_max": { "type": "integer", "minimum": 0, "maximum": 120 }, "allowed_native_languages": { "type": "array", "items": { "type": "string" } }, "allowed_genders": { "type": "array", "items": { "type": "string" } } } },
       "BusinessProfile": { "type": "object", "additionalProperties": false, "properties": { "business_name": { "type": "string" }, "business_hours": { "type": "string" }, "website_url": { "type": "string", "format": "uri" }, "catalog": { "type": "array", "items": { "type": "object", "additionalProperties": true } } } },
       "NotificationPreferences": { "type": "object", "additionalProperties": true, "properties": { "custom_tone_url": { "type": "string", "format": "uri" }, "vibration_pattern": { "type": "array", "items": { "type": "integer", "minimum": 0 } } } },
       "MediaPresignRequest": { "type": "object", "required": ["filename", "contentType"], "additionalProperties": false, "properties": { "filename": { "type": "string" }, "contentType": { "type": "string" } } },

@@ -27,26 +27,12 @@ describe('UsersService message filters', () => {
     );
   });
 
-  it('merges partial updates and normalises list values', async () => {
-    const read = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          message_filters: {
-            enabled: true,
-            same_native_language: true,
-            allowed_native_languages: ['ja'],
-          },
-        },
-        error: null,
-      }),
-    };
+  it('replaces the filter snapshot and normalises list values', async () => {
     const write = {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
-    const from = vi.fn().mockReturnValueOnce(read).mockReturnValueOnce(write);
+    const from = vi.fn().mockReturnValue(write);
     const service = createService(from);
 
     await service.setMessageFilters('user-1', {
@@ -55,12 +41,10 @@ describe('UsersService message filters', () => {
 
     expect(write.update).toHaveBeenCalledWith({
       message_filters: {
-        enabled: true,
-        same_native_language: true,
-        allowed_native_languages: ['ja'],
         allowed_genders: ['female', 'other'],
       },
     });
+    expect(from).toHaveBeenCalledTimes(1);
   });
 
   it('rejects an inverted age range before reading or writing', async () => {
@@ -73,26 +57,21 @@ describe('UsersService message filters', () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it('rejects a partial update that inverts the persisted age range', async () => {
-    const read = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          message_filters: {
-            enabled: true,
-            age_max: 20,
-          },
-        },
-        error: null,
-      }),
+  it('allows a replacement snapshot to clear a previously persisted age bound', async () => {
+    const write = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
     };
-    const from = vi.fn().mockReturnValue(read);
+    const from = vi.fn().mockReturnValue(write);
     const service = createService(from);
 
     await expect(
       service.setMessageFilters('user-1', { age_min: 50 }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).resolves.toBeUndefined();
+
+    expect(write.update).toHaveBeenCalledWith({
+      message_filters: { age_min: 50 },
+    });
     expect(from).toHaveBeenCalledTimes(1);
   });
 });

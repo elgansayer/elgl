@@ -1,6 +1,6 @@
 # Message filter settings
 
-Issue: #1100
+Issues: #772, #1100, #1450
 
 ## Purpose
 
@@ -12,7 +12,9 @@ Message filter settings let an authenticated user restrict who may send the firs
 - allowed genders;
 - matching the recipient's native language, target language, gender, or age.
 
-The settings page is available through the existing settings route and persists through the authenticated `/users/me/message-filters` API.
+The settings page is available through the existing settings route and persists through the authenticated `/users/me/message-filters` API. In direct chats, if an initial message is rejected due to recipient filter settings, the sender receives an informative translated error toast.
+
+Sender age and native-language attributes come from the persisted user profile. Profile update failures return an error and never substitute synthetic attributes, so the UI cannot report a successful save that the initial-message admission rule would not observe.
 
 ## Ownership and data flow
 
@@ -26,6 +28,8 @@ PUT /users/me/message-filters
 The service requires an existing access token and deliberately propagates HTTP failures. It must not replace unavailable server state with `{}` or convert a failed update into a successful no-op.
 
 The API uses the repository's canonical snake-case contract. A database trigger is the final enforcement boundary when a sender attempts the first message in a direct room. It serialises concurrent first-message admission and verifies sender membership. Existing conversations are not retroactively blocked by this preference.
+
+Both age fields accept integers from 0 through 120 inclusive. The Angular controls, runtime DTO validation, and published OpenAPI schema expose the same boundaries.
 
 ## Failure behaviour
 
@@ -50,7 +54,7 @@ Saving is also fail closed. A failed `PUT` leaves the current editor state in pl
 
 ## Accessibility and responsive behaviour
 
-The existing settings surface retains its translated labels and logical padding. Loading is exposed through a polite status region. An unavailable state uses an alert plus a native Spartan retry button, and saving exposes native disabled state plus `aria-busy` on the Spartan save action.
+The existing settings surface retains its translated labels and logical padding. Language names come from the UI translation dictionary. Language and gender choices expose `aria-pressed`, and each selected-language removal action is a keyboard-operable button with a localised accessible name. Loading is exposed through a polite status region. An unavailable state uses an alert plus a native Spartan retry button, and saving exposes native disabled state plus `aria-busy` on the Spartan save action.
 
 No new hard-coded product colours, physical-direction utilities, or custom keyboard handlers are introduced by the resilience change.
 
@@ -60,8 +64,9 @@ The focused regression suites cover:
 
 ```bash
 cd frontend
-npm test -- --run src/app/services/message-filter.service.spec.ts
-npm test -- --run src/app/pages/settings/message-filter-settings/message-filter-settings.component.spec.ts
+npx ng test --no-watch --include='src/app/pages/settings/message-filter-settings/message-filter-settings.component.spec.ts'
+cd ../backend
+npx vitest run --configLoader runner src/users/dto/update-profile.dto.spec.ts src/users/user-profiles.openapi.contract.spec.ts
 ```
 
 The normal frontend verification and repository CI remain authoritative for compilation, static analysis, Spartan/design governance, and wider regressions.

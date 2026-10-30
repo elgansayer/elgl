@@ -525,6 +525,7 @@ export class UsersService {
     if (dto.privacy_hide_online_status !== undefined)
       updatePayload.privacy_hide_online_status = dto.privacy_hide_online_status;
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
+    if (dto.age !== undefined) updatePayload.age = dto.age;
     if (dto.profile_visibility !== undefined)
       updatePayload.profile_visibility = dto.profile_visibility;
     if (dto.status_visibility !== undefined)
@@ -602,9 +603,8 @@ export class UsersService {
       .update(updatePayload as never)
       .eq('id', userId);
     if (updateError) {
-      Logger.warn(
-        `Supabase update failed, falling back to mock: ${updateError.message}`,
-      );
+      Logger.error('Profile update persistence failed');
+      throw new InternalServerErrorException('Failed to update profile');
     }
 
     // Invalidate matchmaking caches when profile fields that affect
@@ -948,9 +948,7 @@ export class UsersService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const current = await this.getMessageFilters(userId);
     const normalised: MessageFiltersDto = {
-      ...current,
       ...filters,
       ...(filters.allowed_genders !== undefined
         ? {
@@ -967,14 +965,6 @@ export class UsersService {
           }
         : {}),
     };
-    if (
-      normalised.age_min !== undefined &&
-      normalised.age_max !== undefined &&
-      normalised.age_min > normalised.age_max
-    ) {
-      throw new BadRequestException('Minimum age cannot exceed maximum age');
-    }
-
     const { error } = await supabase
       .from('users')
       .update({ message_filters: normalised } as never)

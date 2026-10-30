@@ -799,6 +799,504 @@ describe('ChatService', () => {
 
       mockSupabaseClient.from = originalFrom;
     }, 15000);
+
+    it('should not reject initial message when receiver message_filters has allow_everyone=true', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn((resolve: any) => resolve({ count: 0, error: null })),
+            single: vi.fn().mockResolvedValue({
+              data: savedMessage,
+              error: null,
+            }),
+            insert: vi.fn().mockReturnThis(),
+          };
+        }
+        if (table === 'users') {
+          usersCallCount++;
+          if (usersCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  message_filters: {
+                    allow_everyone: true,
+                    allowed_native_languages: ['ja'],
+                  },
+                },
+                error: null,
+              }),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: null,
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { native_languages: ['en'], age: 25, gender: 'male' },
+              error: null,
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: null,
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const result = await service.sendMessage('sender-1', dto);
+      expect(result).toBeDefined();
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when receiver has same_native_language=true and sender has no shared language', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn((resolve: any) => resolve({ count: 0, error: null })),
+          };
+        }
+        if (table === 'users') {
+          usersCallCount++;
+          if (usersCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  native_languages: ['ja'],
+                  message_filters: {
+                    same_native_language: true,
+                  },
+                },
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { native_languages: ['en'], age: 25, gender: 'male' },
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their native language filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when sender has missing native language and receiver requires allowed_native_languages', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn((resolve: any) => resolve({ count: 0, error: null })),
+          };
+        }
+        if (table === 'users') {
+          usersCallCount++;
+          if (usersCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  message_filters: {
+                    allowed_native_languages: ['ja'],
+                  },
+                },
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { native_languages: [], age: 25, gender: 'male' },
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their native language filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when sender has missing native language and receiver requires same_native_language', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn((resolve: any) => resolve({ count: 0, error: null })),
+          };
+        }
+        if (table === 'users') {
+          usersCallCount++;
+          if (usersCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  native_languages: ['ja'],
+                  message_filters: {
+                    same_native_language: true,
+                  },
+                },
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { native_languages: [], age: 25, gender: 'male' },
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their native language filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when sender gender is missing and receiver has allowed_genders', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn((resolve: any) => resolve({ count: 0, error: null })),
+          };
+        }
+        if (table === 'users') {
+          usersCallCount++;
+          if (usersCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  message_filters: { allowed_genders: ['female'] },
+                },
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { native_languages: ['en'], age: 25, gender: null },
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their gender filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when sender age is missing and receiver has age filters', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn((resolve: any) => resolve({ count: 0, error: null })),
+          };
+        }
+        if (table === 'users') {
+          usersCallCount++;
+          if (usersCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  message_filters: { age_min: 18, age_max: 30 },
+                },
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { native_languages: ['en'], age: null, gender: 'male' },
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their age filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should fail closed when sender profile cannot be loaded and receiver has filters', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn((resolve: any) => resolve({ count: 0, error: null })),
+          };
+        }
+        if (table === 'users') {
+          usersCallCount++;
+          if (usersCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  message_filters: { age_min: 20 },
+                },
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: new Error('User not found'),
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should not block messages in group rooms with more than two members', async () => {
+      const dto: any = {
+        room_id: 'room-group-1',
+        message_type: 'text',
+        text_content: 'Hello group!',
+      };
+
+      const savedMessage = {
+        id: 'msg-group-1',
+        room_id: 'room-group-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: 'Hello group!',
+      };
+
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }, { user_id: 'receiver-2' }],
+              error: null,
+            }),
+          };
+        }
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: savedMessage,
+              error: null,
+            }),
+            insert: vi.fn().mockReturnThis(),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const result = await service.sendMessage('sender-1', dto);
+      expect(result).toEqual(savedMessage);
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
   });
 
   describe('getRooms', () => {
