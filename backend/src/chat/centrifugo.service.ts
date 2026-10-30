@@ -298,7 +298,19 @@ export class CentrifugoService implements OnModuleInit {
           },
         }),
       });
-      return response.ok;
+      if (!response.ok) return false;
+
+      const payload: unknown = await response.json();
+      if (
+        typeof payload !== 'object' ||
+        payload === null ||
+        'error' in payload ||
+        !('result' in payload)
+      ) {
+        return false;
+      }
+
+      return true;
     } catch (e) {
       this.logger.error(
         { error: (e as Error).message, channel },
