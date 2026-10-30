@@ -39,6 +39,11 @@ The patched canary hides the synthetic file, preserves the worktree and exposes
 only loopback networking. A separate probe verifies that the pinned Godot binary
 starts inside the namespace and the linked cache rejects writes. Existing unit
 coverage remains; regression tests pin staging/masking order and receipt failures.
+The namespace sets `umask 077` itself. A real current-main metadata preflight
+exposed provisioning tests creating group-writable cache directories when launched
+from an interactive shell; service-manager permissions alone do not cover that
+entrypoint. The private umask is exercised under an initially permissive shell
+and by the actual offline preflight, without weakening cache ownership checks.
 
 ## Activation remains disabled
 

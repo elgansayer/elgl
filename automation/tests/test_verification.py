@@ -1,4 +1,6 @@
 import json
+import stat
+import subprocess
 from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
@@ -14,6 +16,26 @@ from openhands_factory.verification import (
     run_isolated_verification_process,
     run_verification,
 )
+
+
+def test_verification_sets_private_umask_before_any_cache_creation(tmp_path: Path) -> None:
+    prefix = _VERIFICATION_SANDBOX_SCRIPT.split("/usr/bin/mount --make-rprivate /", 1)[0]
+    subprocess.run(
+        (
+            "/bin/sh",
+            "-c",
+            "umask 002\n"
+            + prefix
+            + '\nmkdir "$workspace/private-cache"\ntouch "$workspace/private-cache/receipt"\n',
+            "test-verification-umask",
+            *([str(tmp_path)] * 8),
+        ),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert stat.S_IMODE((tmp_path / "private-cache").stat().st_mode) == 0o700
+    assert stat.S_IMODE((tmp_path / "private-cache/receipt").stat().st_mode) == 0o600
 
 
 def test_verification_stages_sources_before_masking_mnt() -> None:

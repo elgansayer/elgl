@@ -30,6 +30,7 @@ class VerificationCommand:
 
 _VERIFICATION_SANDBOX_SCRIPT = r"""
 set -eu
+umask 077
 workspace=$1
 repository=$2
 state_dir=$3
