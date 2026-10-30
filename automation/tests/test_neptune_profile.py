@@ -73,6 +73,24 @@ def test_neptune_cannot_enable_api_fallback(neptune_environment: dict[str, str])
         FactoryConfig.from_environment(neptune_environment)
 
 
+def test_neptune_private_state_cannot_be_mounted_as_canonical_source(
+    neptune_environment: dict[str, str],
+) -> None:
+    neptune_environment["FACTORY_STATE_DIR"] = neptune_environment["FACTORY_REPOSITORY"]
+    with pytest.raises(ConfigurationError, match="must not overlap"):
+        FactoryConfig.from_environment(neptune_environment)
+
+
+def test_neptune_control_prompts_cannot_come_from_game_source(
+    neptune_environment: dict[str, str],
+) -> None:
+    prompts = Path(neptune_environment["FACTORY_REPOSITORY"]) / "automation/neptune-prompts"
+    neptune_environment["FACTORY_PROMPT_DIR"] = str(prompts)
+    neptune_environment["FACTORY_SYSTEM_PROMPT_PATH"] = str(prompts / "system.md")
+    with pytest.raises(ConfigurationError, match="outside game workspaces"):
+        FactoryConfig.from_environment(neptune_environment)
+
+
 def protection() -> dict[str, object]:
     return {
         "required_status_checks": {

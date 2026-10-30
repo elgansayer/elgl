@@ -691,6 +691,19 @@ class FactoryConfig(BaseModel):
             for root in private_roots
         ):
             raise ValueError("Neptune requires explicitly separate absolute repository/state paths")
+        resolved_roots = [root.resolve() for root in private_roots]
+        if any(
+            first.is_relative_to(second) or second.is_relative_to(first)
+            for index, first in enumerate(resolved_roots)
+            for second in resolved_roots[index + 1 :]
+        ):
+            raise ValueError("Neptune repository/state/workspace roots must not overlap")
+        control = self.prompt_dir.resolve()
+        if any(
+            control.is_relative_to(root) or root.is_relative_to(control)
+            for root in (self.repository.resolve(), self.worktree_dir.resolve())
+        ):
+            raise ValueError("Neptune trusted control prompts must be outside game workspaces")
         shared = self.provider_capacity_dir.resolve()
         if not self.provider_capacity_dir.is_absolute() or any(
             shared.is_relative_to(root.resolve()) or root.resolve().is_relative_to(shared)
