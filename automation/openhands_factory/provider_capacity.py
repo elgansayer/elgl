@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import os
 import time
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -17,6 +19,19 @@ from openhands_factory.models import ProviderName
 from openhands_factory.state import atomic_write_json, read_json
 
 DEFAULT_MAX_PROVIDER_LEASE_SECONDS = 24 * 60 * 60
+MAX_RENEWABLE_LEASE_SECONDS = 60
+
+
+@dataclass(frozen=True)
+class RenewableCapacityLease:
+    """Persistable ownership handle; no provider credential or model invocation."""
+
+    provider: str
+    owner: str
+    token: str
+    store_path: str
+    lease_seconds: int
+    protocol_version: int = 1
 
 
 def _is_capacity_payload(value: object) -> bool:
@@ -107,6 +122,21 @@ class ProviderCapacityStore:
             validator=_is_capacity_payload,
         )
 
+    @staticmethod
+    def _is_unexpired(entry: dict[str, object], now: datetime) -> bool:
+        expires_at = entry.get("expires_at")
+        acquired_at = entry.get("acquired_at")
+        if not isinstance(expires_at, str) or not isinstance(acquired_at, str):
+            return False
+        try:
+            expiry = datetime.fromisoformat(expires_at)
+            acquired = datetime.fromisoformat(acquired_at)
+        except ValueError:
+            return False
+        return (
+            expiry.tzinfo is not None and acquired.tzinfo is not None and acquired <= now < expiry
+        )
+
     def acquire(
         self,
         provider: ProviderName | str,
@@ -117,6 +147,24 @@ class ProviderCapacityStore:
         lease_seconds: int,
     ) -> float:
         """Acquire capacity and return seconds spent waiting for a slot."""
+        return self._acquire(
+            provider,
+            limit=limit,
+            owner=owner,
+            wait_seconds=wait_seconds,
+            lease_seconds=lease_seconds,
+        )
+
+    def _acquire(
+        self,
+        provider: ProviderName | str,
+        *,
+        limit: int,
+        owner: str,
+        wait_seconds: int,
+        lease_seconds: int,
+        token: str | None = None,
+    ) -> float:
         if lease_seconds <= 0 or lease_seconds > self.max_lease_seconds:
             raise ValueError("lease_seconds must be positive and no greater than max_lease_seconds")
         started = time.monotonic()
@@ -128,20 +176,29 @@ class ProviderCapacityStore:
                 entries = providers.setdefault(provider_key, [])
                 now = datetime.now(UTC)
                 active = self._active_entries(entries, now)
-                if len(active) < limit:
-                    active.append(
-                        {
-                            "owner": owner,
-                            "pid": os.getpid(),
-                            "factory_generation": self.factory_generation,
-                            "acquired_at": now.isoformat(),
-                            "expires_at": (now + timedelta(seconds=lease_seconds)).isoformat(),
-                        }
-                    )
-                    providers[provider_key] = active
+                renewable_entries = (
+                    [entry for entry in entries if self._is_unexpired(entry, now)]
+                    if token is not None
+                    else active
+                )
+                duplicate_owner = token is not None and any(
+                    entry.get("owner") == owner for entry in renewable_entries
+                )
+                if len(renewable_entries) < limit and not duplicate_owner:
+                    entry: dict[str, object] = {
+                        "owner": owner,
+                        "pid": os.getpid(),
+                        "factory_generation": self.factory_generation,
+                        "acquired_at": now.isoformat(),
+                        "expires_at": (now + timedelta(seconds=lease_seconds)).isoformat(),
+                    }
+                    if token is not None:
+                        entry.update({"lease_protocol": 1, "lease_token": token})
+                    renewable_entries.append(entry)
+                    providers[provider_key] = renewable_entries
                     self._save(providers)
                     return time.monotonic() - started
-                providers[provider_key] = active
+                providers[provider_key] = renewable_entries
                 self._save(providers)
             if time.monotonic() >= deadline:
                 raise ProviderCapacityUnavailable(
@@ -149,6 +206,96 @@ class ProviderCapacityStore:
                     retry_after_seconds=max(wait_seconds, 1),
                 )
             time.sleep(min(1, max(deadline - time.monotonic(), 0.05)))
+
+    def acquire_renewable(
+        self,
+        provider: ProviderName | str,
+        *,
+        limit: int,
+        owner: str,
+        wait_seconds: int = 0,
+        lease_seconds: int = MAX_RENEWABLE_LEASE_SECONDS,
+    ) -> RenewableCapacityLease:
+        """Reserve a short renewable slot visible to existing bounded readers.
+
+        Every participating reader must accept at least ``lease_seconds``. Keep
+        the existing provider key and shared directory; this grants no allowance.
+        """
+        key = provider.value if isinstance(provider, ProviderName) else provider
+        handle = RenewableCapacityLease(
+            key, owner, str(uuid.uuid4()), str(self.path.resolve()), lease_seconds
+        )
+        self._validate_handle(handle)
+        self._acquire(
+            provider,
+            limit=limit,
+            owner=owner,
+            wait_seconds=wait_seconds,
+            lease_seconds=lease_seconds,
+            token=handle.token,
+        )
+        return handle
+
+    def _validate_handle(self, handle: RenewableCapacityLease) -> None:
+        if (
+            self.factory_generation is not None
+            or type(handle.protocol_version) is not int
+            or handle.protocol_version != 1
+            or not isinstance(handle.provider, str)
+            or not handle.provider
+            or not isinstance(handle.owner, str)
+            or not handle.owner
+            or not isinstance(handle.token, str)
+            or not handle.token
+            or handle.store_path != str(self.path.resolve())
+            or type(handle.lease_seconds) is not int
+            or not 0
+            < handle.lease_seconds
+            <= min(self.max_lease_seconds, MAX_RENEWABLE_LEASE_SECONDS)
+        ):
+            raise ValueError("Invalid renewable capacity lease handle or incompatible store bound")
+
+    @staticmethod
+    def _owns_entry(entry: dict[str, object], handle: RenewableCapacityLease) -> bool:
+        return (
+            entry.get("owner") == handle.owner
+            and entry.get("lease_token") == handle.token
+            and entry.get("lease_protocol") == handle.protocol_version
+        )
+
+    def renew(self, handle: RenewableCapacityLease) -> None:
+        """Atomically refresh a live slot, never reacquiring an expired/lost one."""
+        self._validate_handle(handle)
+        with self.lock:
+            providers = self._load()
+            now = datetime.now(UTC)
+            entries = providers.get(handle.provider, [])
+            active = self._active_entries(entries, now)
+            owned = [entry for entry in active if self._owns_entry(entry, handle)]
+            if len(owned) != 1:
+                raise ProviderCapacityUnavailable(
+                    "Renewable provider lease expired or ownership lost; stop the participant",
+                    retry_after_seconds=1,
+                )
+            # Refresh the legacy time envelope too, so old readers count a
+            # heartbeat after the session has outlived their maximum duration.
+            owned[0]["acquired_at"] = now.isoformat()
+            owned[0]["expires_at"] = (now + timedelta(seconds=handle.lease_seconds)).isoformat()
+            providers[handle.provider] = entries
+            self._save(providers)
+
+    def release_renewable(self, handle: RenewableCapacityLease) -> bool:
+        """Release only this ownership token; stale cleanup cannot free a successor."""
+        self._validate_handle(handle)
+        with self.lock:
+            providers = self._load()
+            entries = providers.get(handle.provider, [])
+            remaining = [entry for entry in entries if not self._owns_entry(entry, handle)]
+            if len(remaining) == len(entries):
+                return False
+            providers[handle.provider] = remaining
+            self._save(providers)
+            return True
 
     def release(self, provider: ProviderName | str, *, owner: str) -> None:
         with self.lock:

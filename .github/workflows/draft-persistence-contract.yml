@@ -8,6 +8,7 @@ on:
       - 'frontend/src/app/services/draft.service.spec.ts'
       - 'frontend/src/app/components/chat-room/chat-room.component.ts'
       - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.html'
       - 'scripts/draft-persistence-contract.test.mjs'
       - '.github/workflows/draft-persistence-contract.yml'
   pull_request:
@@ -17,6 +18,7 @@ on:
       - 'frontend/src/app/services/draft.service.spec.ts'
       - 'frontend/src/app/components/chat-room/chat-room.component.ts'
       - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.html'
       - 'scripts/draft-persistence-contract.test.mjs'
       - '.github/workflows/draft-persistence-contract.yml'
   merge_group:
