@@ -120,3 +120,14 @@ test('the canonical chat messaging suite exercises the current composer locator'
     `chat-messaging.spec.ts must target data-testid="${canonicalTestId}".`,
   );
 });
+
+test('the adversarial chat security suite exercises the current composer locator', async () => {
+  const chatSecuritySpec = join(specsRoot, 'chat-security.spec.ts');
+  const source = await readFile(chatSecuritySpec, 'utf8');
+
+  assert.equal(
+    usesTestId(source, canonicalTestId),
+    true,
+    `chat-security.spec.ts must target data-testid="${canonicalTestId}".`,
+  );
+});

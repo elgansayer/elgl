@@ -200,4 +200,149 @@ test.describe('Adversarial Chat Security System', () => {
     const text = await lastMessage.textContent();
     expect(text).toContain('A'.repeat(100)); // Just check part of it
   });
+
+  test('send message containing null byte', async ({ page }) => {
+    await page.route('**/api/chat/messages', async (route) => {
+      const requestBody = route.request().postDataJSON() as { text_content?: string };
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'message_null_byte',
+          room_id: roomId,
+          sender_id: 'mock-user-123',
+          message_type: 'text',
+          text_content: requestBody.text_content?.replace(/\0/g, ''),
+          is_read: false,
+          delivery_status: 'sent',
+          created_at: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+    const input = page.locator('[data-testid="chat-message-input"]');
+    await input.waitFor({ state: 'visible', timeout: 10000 });
+
+    const nullByteMessage = 'test\u0000injection';
+    await input.fill(nullByteMessage);
+
+    const sendRequest = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/api/chat/messages'),
+    );
+    await input.press('Enter');
+    await sendRequest;
+
+    // The null byte should be stripped or handled: the UI must not crash
+    const lastMessage = page.locator('[data-testid="chat-message"]').last();
+    await expect(lastMessage).toBeVisible({ timeout: 5000 });
+    const text = await lastMessage.textContent();
+    expect(text).toContain('test');
+  });
+
+  test('send message containing only whitespace does not send', async ({ page }) => {
+    let messageSent = false;
+    await page.route('**/api/chat/messages', async (route) => {
+      messageSent = true;
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+    const input = page.locator('[data-testid="chat-message-input"]');
+    await input.waitFor({ state: 'visible', timeout: 10000 });
+
+    const messages = page.locator('[data-testid="chat-message"]');
+    const initialCount = await messages.count();
+
+    await input.fill('   ');
+    await input.press('Enter');
+
+    // Composer ignores whitespace-only input and does not invoke the network
+    await page.waitForTimeout(500);
+    expect(messageSent).toBe(false);
+    const finalCount = await messages.count();
+    expect(finalCount).toBe(initialCount);
+  });
+
+  test('send message with right-to-left unicode characters', async ({ page }) => {
+    const rtlPayload = 'مرحبا بالعالم';
+    await page.route('**/api/chat/messages', async (route) => {
+      const requestBody = route.request().postDataJSON() as { text_content?: string };
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'message_rtl',
+          room_id: roomId,
+          sender_id: 'mock-user-123',
+          message_type: 'text',
+          text_content: requestBody.text_content,
+          is_read: false,
+          delivery_status: 'sent',
+          created_at: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+    const input = page.locator('[data-testid="chat-message-input"]');
+    await input.waitFor({ state: 'visible', timeout: 10000 });
+
+    await input.fill(rtlPayload);
+    const sendRequest = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().endsWith('/api/chat/messages'),
+    );
+    await input.press('Enter');
+    await sendRequest;
+
+    const lastMessage = page.locator('[data-testid="chat-message"]').last();
+    await expect(lastMessage).toBeVisible({ timeout: 5000 });
+    const text = await lastMessage.textContent();
+    expect(text).toContain(rtlPayload);
+  });
+
+  test('rapid sends preserve message integrity', async ({ page }) => {
+    let sendCount = 0;
+    await page.route('**/api/chat/messages', async (route) => {
+      const requestBody = route.request().postDataJSON() as { text_content?: string };
+      sendCount++;
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: `message_rapid_${sendCount}`,
+          room_id: roomId,
+          sender_id: 'mock-user-123',
+          message_type: 'text',
+          text_content: requestBody.text_content,
+          is_read: false,
+          delivery_status: 'sent',
+          created_at: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+    const input = page.locator('[data-testid="chat-message-input"]');
+    await input.waitFor({ state: 'visible', timeout: 10000 });
+
+    for (let i = 1; i <= 3; i++) {
+      await input.fill(`message ${i}`);
+      const sendRequest = page.waitForRequest(
+        (request) => request.method() === 'POST' && request.url().endsWith('/api/chat/messages'),
+      );
+      await input.press('Enter');
+      await sendRequest;
+    }
+
+    const messages = page.locator('[data-testid="chat-message"]');
+    await expect(messages).toHaveCount(4); // 1 initial + 3 sent
+    await expect(messages.nth(1)).toContainText('message 1');
+    await expect(messages.nth(2)).toContainText('message 2');
+    await expect(messages.nth(3)).toContainText('message 3');
+  });
 });
