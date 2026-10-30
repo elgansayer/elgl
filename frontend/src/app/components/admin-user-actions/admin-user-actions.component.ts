@@ -43,7 +43,7 @@ export interface ActionFeedback {
         <p
           class="text-xs"
           [class.text-success]="fb.type === 'success'"
-          [class.text-danger]="fb.type === 'error'"
+          [class.text-danger-ink]="fb.type === 'error'"
           role="status"
           aria-live="polite"
         >

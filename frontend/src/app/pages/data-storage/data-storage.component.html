@@ -11,7 +11,7 @@
     @if (errorMessage()) {
       <div
         role="alert"
-        class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+        class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink"
       >
         {{ errorMessage() }}
       </div>
@@ -71,7 +71,7 @@
                 'dataStorage.clearCacheDesc' | t
               }}</span>
             </div>
-            <span class="shrink-0 text-xs uppercase text-primary">{{ 'common.clear' | t }}</span>
+            <span class="shrink-0 text-xs uppercase text-primary-ink">{{ 'common.clear' | t }}</span>
           </button>
         } @else {
           <div class="space-y-3 p-4" role="group" [attr.aria-label]="'dataStorage.clearCache' | t">
@@ -122,7 +122,7 @@
           @if (isDeletingOldMedia()) {
             <span class="shrink-0 text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
           } @else {
-            <span class="shrink-0 text-xs uppercase text-primary">{{ 'common.delete' | t }}</span>
+            <span class="shrink-0 text-xs uppercase text-primary-ink">{{ 'common.delete' | t }}</span>
           }
         </button>
       </div>
@@ -150,7 +150,7 @@
           <hlm-checkbox
             [checked]="cellularAutoDownload()"
             (change)="toggleCellular()"
-            class="h-5 w-5 shrink-0 rounded border-surface-300 text-primary focus:ring-primary/30"
+            class="h-5 w-5 shrink-0 rounded border-surface-300 text-primary-ink focus:ring-primary/30"
           />
         </label>
       </div>

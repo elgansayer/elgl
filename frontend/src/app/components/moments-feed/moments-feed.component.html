@@ -116,7 +116,7 @@
             hlmBtn
             aria-label="Record voice"
             (click)="showVoiceRecorder.set(true)"
-            class="p-2 rounded-full bg-surface-300 text-primary hover:text-primary/80"
+            class="p-2 rounded-full bg-surface-300 text-primary-ink hover:text-primary-ink/80"
           >
             <span class="text-sm">🎤</span>
           </button>
@@ -134,7 +134,7 @@
             <button
               hlmBtn
               (click)="addTempImageUrl()"
-              class="text-[10px] font-bold text-primary"
+              class="text-[10px] font-bold text-primary-ink"
               [attr.aria-label]="'moments.addImageBtn' | t"
             >
               {{ 'moments.addImageBtn' | t | uppercase }}
@@ -144,7 +144,7 @@
         <button
           hlmBtn
           [disabled]="isCreating() || (!newText().trim() && newMediaUrls().length === 0)"
-          (click)="submitMoment(); showComposeForm.set(false)"
+          (click)="submitMoment()"
           class="bg-primary text-on-fill font-bold text-xs px-4 py-1.5 rounded-full shadow-lg hover:bg-primary/90 disabled:opacity-50 transition-opacity"
           [attr.aria-label]="'moments.postingBtn' | t"
         >
@@ -219,7 +219,7 @@
                   </p>
                   @if (moment.target_language) {
                     <span
-                      class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary"
+                      class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary-ink"
                       [title]="getTargetLanguageTitle(moment.target_language)"
                     >
                       <span aria-hidden="true">{{ getLanguageFlag(moment.target_language) }}</span>
@@ -252,7 +252,7 @@
                   <button
                     hlmBtn
                     (click)="toggleMomentExpansion(moment.id)"
-                    class="text-xs font-bold text-primary block mt-1"
+                    class="text-xs font-bold text-primary-ink block mt-1"
                     [attr.aria-label]="'moments.showLess' | t"
                   >
                     {{
@@ -313,7 +313,7 @@
                 hlmBtn
                 (click)="momentsStore.toggleLike(moment.id)"
                 class="flex items-center gap-1.5 transition-colors"
-                [class.text-danger]="moment.is_liked_by_me"
+                [class.text-danger-ink]="moment.is_liked_by_me"
                 [attr.aria-label]="'moments.likeBtn' | t"
               >
                 <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
@@ -360,7 +360,7 @@
                 <button
                   hlmBtn
                   (click)="toggleInlineTranslation(moment)"
-                  class="flex items-center gap-1 hover:text-primary transition-colors ms-auto font-bold"
+                  class="flex items-center gap-1 hover:text-primary-ink transition-colors ms-auto font-bold"
                   [attr.aria-label]="'moments.hideTranslation' | t"
                 >
                   {{
@@ -398,7 +398,7 @@
                         <button
                           hlmBtn
                           (click)="startReply(moment.id, comment)"
-                          class="text-[10px] text-primary font-bold hover:underline"
+                          class="text-[10px] text-primary-ink font-bold hover:underline"
                           [attr.aria-label]="'moments.replyBtn' | t"
                         >
                           {{ 'moments.replyBtn' | t }}
@@ -429,7 +429,7 @@
                             type="button"
                             variant="ghost"
                             class="min-h-11 min-w-11 gap-1 rounded-full px-3"
-                            [class.text-primary]="comment.userVote === 'up'"
+                            [class.text-primary-ink]="comment.userVote === 'up'"
                             [attr.aria-pressed]="comment.userVote === 'up'"
                             [attr.aria-label]="('moments.correctBtn' | t) + ' 👍'"
                             (click)="voteOnCorrection(moment.id, comment, 'up')"
@@ -442,7 +442,7 @@
                             type="button"
                             variant="ghost"
                             class="min-h-11 min-w-11 gap-1 rounded-full px-3"
-                            [class.text-danger]="comment.userVote === 'down'"
+                            [class.text-danger-ink]="comment.userVote === 'down'"
                             [attr.aria-pressed]="comment.userVote === 'down'"
                             [attr.aria-label]="('moments.correctBtn' | t) + ' 👎'"
                             (click)="voteOnCorrection(moment.id, comment, 'down')"
@@ -459,7 +459,7 @@
                 <!-- Replying indicator pill -->
                 @if (replyingToMap[moment.id]; as replyTo) {
                   <div
-                    class="flex items-center justify-between bg-primary/20 text-primary text-xs px-3 py-1 rounded-full border border-primary/30"
+                    class="flex items-center justify-between bg-primary/20 text-primary-ink text-xs px-3 py-1 rounded-full border border-primary/30"
                   >
                     <span>{{ 'moments.replyingTo' | t: { name: '@' + replyTo.replyToName } }}</span>
                     <button

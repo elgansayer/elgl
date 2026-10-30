@@ -42,8 +42,8 @@ describe.skip('ReadingEngineComponent', () => {
       flashcardMap: signal(new Map()),
       getWordStatus: () => ({
         level: 0,
-        colorClass: 'bg-secondary/20 text-secondary',
-        colourClass: 'bg-secondary/20 text-secondary',
+        colorClass: 'bg-secondary/20 text-secondary-ink',
+        colourClass: 'bg-secondary/20 text-secondary-ink',
       }),
     };
 

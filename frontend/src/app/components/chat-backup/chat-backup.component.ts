@@ -12,11 +12,11 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
       <h2 class="text-lg font-bold">{{ 'chat_backup.title' | t }}</h2>
 
       @if (exporting()) {
-        <p class="text-primary">{{ 'chat_backup.exporting' | t }}</p>
+        <p class="text-primary-ink">{{ 'chat_backup.exporting' | t }}</p>
       }
 
       @if (importing()) {
-        <p class="text-primary">{{ 'chat_backup.importing' | t }}</p>
+        <p class="text-primary-ink">{{ 'chat_backup.importing' | t }}</p>
       }
 
       <app-button-primary (clicked)="onExport()" [disabled]="exporting()">
@@ -35,10 +35,10 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
       </app-button-secondary>
 
       @if (exportError()) {
-        <p class="text-danger">{{ 'chat_backup.export_error' | t }}</p>
+        <p class="text-danger-ink">{{ 'chat_backup.export_error' | t }}</p>
       }
       @if (importError()) {
-        <p class="text-danger">{{ 'chat_backup.import_error' | t }}</p>
+        <p class="text-danger-ink">{{ 'chat_backup.import_error' | t }}</p>
       }
     </div>
   `,

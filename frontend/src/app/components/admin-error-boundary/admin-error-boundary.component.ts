@@ -24,7 +24,7 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
           {{ 'admin.errorBoundary.description' | t }}
         </p>
         @if (errorMessage()) {
-          <p class="mt-2 mb-3 max-w-full break-all text-center font-mono text-xs text-danger">
+          <p class="mt-2 mb-3 max-w-full break-all text-center font-mono text-xs text-danger-ink">
             {{ errorMessage() }}
           </p>
         }

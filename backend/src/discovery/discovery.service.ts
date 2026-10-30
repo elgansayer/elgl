@@ -7,7 +7,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
@@ -19,6 +19,7 @@ import {
   DegradationMarker,
 } from './discovery-degradation.service';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+import { resolveVipMockLocation } from './vip-location-spoof.policy';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import {
   getSeriousLearnerActiveSince,
@@ -282,158 +283,6 @@ export class DiscoveryService {
     }
   }
 
-  // Daily calculation (existing functionality)
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async calculateDailyRecommendations() {
-    this.logger.info('Starting daily partner recommendations calculation...');
-    const supabase = this.supabaseService.getClient();
-    const redis = this.supabaseService.getRedisClient();
-
-    let pipeline = redis.pipeline();
-    let pipelineOps = 0;
-    let totalCached = 0;
-
-    const flushPipeline = async (): Promise<void> => {
-      if (pipelineOps > 0) {
-        await pipeline.exec();
-        pipeline = redis.pipeline();
-        pipelineOps = 0;
-      }
-    };
-
-    try {
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('id, native_languages, target_languages')
-        .eq('is_deletion_pending', false)
-        .is('scheduled_for_deletion_at', null)
-        .not('native_languages', 'is', null)
-        .not('target_languages', 'is', null)
-        .limit(1000);
-
-      if (error || !users) {
-        this.logger.error('Failed to fetch users for recommendations', error);
-        return;
-      }
-
-      const typedUsers = users as Array<{
-        id: string;
-        native_languages: string[];
-        target_languages: string[];
-      }>;
-
-      // Collect unique language pairs to batch query, avoiding N+1 queries
-      const pairSet = new Set<string>();
-      const pairIndex = new Map<
-        string,
-        Array<{ userId: string; nativeLang: string; targetLang: string }>
-      >();
-
-      for (const user of typedUsers) {
-        if (!user.native_languages?.length || !user.target_languages?.length) {
-          continue;
-        }
-        const native = user.native_languages[0];
-        const target = user.target_languages[0];
-        const key = `${target}:${native}`; // matches speak user's target natively AND are learning user's native
-        pairSet.add(key);
-        const bucket = pairIndex.get(key) ?? [];
-        bucket.push({
-          userId: user.id,
-          nativeLang: native,
-          targetLang: target,
-        });
-        pairIndex.set(key, bucket);
-      }
-
-      // Batch-fetch matches for each unique language pair (up to 20 queries in parallel)
-      const MAX_PAIR_BATCH = 20;
-      const pairs = Array.from(pairSet);
-      const batches: string[][] = [];
-      for (let i = 0; i < pairs.length; i += MAX_PAIR_BATCH) {
-        batches.push(pairs.slice(i, i + MAX_PAIR_BATCH));
-      }
-
-      for (const batchPairs of batches) {
-        const queries = batchPairs.map((pairKey) => {
-          const [targetCode, nativeCode] = pairKey.split(':');
-          return supabase
-            .from('users')
-            .select('id')
-            .eq('privacy_hide_from_search', false)
-            .eq('is_deletion_pending', false)
-            .is('scheduled_for_deletion_at', null)
-            .contains('native_languages', [targetCode])
-            .contains('target_languages', [nativeCode])
-            .order('study_streak_days', { ascending: false })
-            .limit(10);
-        });
-
-        const results = await Promise.all(queries);
-
-        for (let i = 0; i < batchPairs.length; i++) {
-          const pairKey = batchPairs[i];
-          const matchesData = results[i];
-          if (
-            matchesData.error ||
-            !matchesData.data ||
-            matchesData.data.length === 0
-          ) {
-            continue;
-          }
-
-          const userEntries = pairIndex.get(pairKey) ?? [];
-          const matchIds = (matchesData.data as Array<{ id: string }>).map(
-            (m) => m.id,
-          );
-
-          // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
-          // Promise.all batch map to drastically reduce network latency during recommendation generation.
-          // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
-          const blockedIdsList = await Promise.all(
-            userEntries.map((entry) =>
-              this.safetyService.getBlockedAndBlockerIds(entry.userId),
-            ),
-          );
-
-          // Cache the same match list for every user in this pair bucket
-          for (let entryIdx = 0; entryIdx < userEntries.length; entryIdx++) {
-            const entry = userEntries[entryIdx];
-            const blockedIds = blockedIdsList[entryIdx];
-            let filtered = matchIds.filter((id) => id !== entry.userId);
-            if (blockedIds.length > 0) {
-              const blockedSet = new Set(blockedIds);
-              filtered = filtered.filter((id) => !blockedSet.has(id));
-            }
-            const topN = filtered.slice(0, 10);
-            if (topN.length > 0) {
-              pipeline.set(
-                `daily_recommendations:${entry.userId}`,
-                JSON.stringify(topN),
-                'EX',
-                86400,
-              );
-              pipelineOps++;
-              totalCached++;
-
-              if (pipelineOps >= 200) {
-                await flushPipeline();
-              }
-            }
-          }
-        }
-      }
-
-      await flushPipeline();
-      this.logger.info(
-        `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
-      );
-    } catch (err) {
-      await flushPipeline();
-      this.logger.error('Error calculating daily recommendations', err);
-    }
-  }
-
   // Expose only Partner of the Week IDs that remain discoverable now. The
   // weekly Redis ranking is intentionally revalidated on every read so a
   // privacy, account-deletion, or viewer block change cannot remain visible
@@ -527,29 +376,22 @@ export class DiscoveryService {
       searchLon = storedPoint?.longitude;
     }
 
-    // Apply VIP location spoofing – override query coordinates with the user’s mock location
+    // Apply VIP location spoofing: a VIP's stored mock_location replaces the
+    // request coordinates. VIP status and the stored point come from the
+    // server-loaded profile, never from the query, so a client cannot opt in.
     const profile = _currentUserProfile;
+    const mockLocation = resolveVipMockLocation(profile);
+    if (mockLocation.status === 'applied') {
+      searchLat = mockLocation.point.latitude;
+      searchLon = mockLocation.point.longitude;
+    } else if (mockLocation.status === 'invalid') {
+      // Log the value type only: the stored coordinates are personal data.
+      this.logger.warn(
+        { mockLocationType: typeof profile?.mock_location },
+        'Ignoring unusable VIP mock_location; using request coordinates',
+      );
+    }
     if (profile?.is_vip) {
-      const mock: unknown = profile.mock_location;
-      if (
-        mock &&
-        typeof mock === 'object' &&
-        'type' in mock &&
-        'coordinates' in mock
-      ) {
-        const mockObj = mock as { type: string; coordinates: unknown };
-        if (
-          mockObj.type === 'Point' &&
-          Array.isArray(mockObj.coordinates) &&
-          mockObj.coordinates.length === 2
-        ) {
-          const coords = mockObj.coordinates as [number, number];
-          if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-            searchLon = coords[0];
-            searchLat = coords[1];
-          }
-        }
-      }
       // Apply VIP country/city spoofing
       if (profile.mock_country) {
         query.country = profile.mock_country;

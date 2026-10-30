@@ -67,7 +67,7 @@
               (click)="selectLanguage(lang.code)"
               [class.bg-primary]="selectedCode() === lang.code"
               [class.bg-opacity-10]="selectedCode() === lang.code"
-              [class.text-primary]="selectedCode() === lang.code"
+              [class.text-primary-ink]="selectedCode() === lang.code"
               [attr.aria-label]="lang.name || lang.nativeName"
               [attr.aria-pressed]="selectedCode() === lang.code"
             >
@@ -76,14 +76,14 @@
                 <span class="flex flex-col items-start">
                   <span
                     class="text-sm font-bold"
-                    [class.text-primary]="selectedCode() === lang.code"
+                    [class.text-primary-ink]="selectedCode() === lang.code"
                     [class.text-text-primary]="selectedCode() !== lang.code"
                   >
                     {{ lang.name }}
                   </span>
                   <span
                     class="mt-0.5 text-xs"
-                    [class.text-primary]="selectedCode() === lang.code"
+                    [class.text-primary-ink]="selectedCode() === lang.code"
                     [class.text-text-secondary]="selectedCode() !== lang.code"
                     [class.opacity-80]="selectedCode() === lang.code"
                   >
@@ -92,7 +92,7 @@
                 </span>
               </span>
               @if (selectedCode() === lang.code) {
-                <span class="font-bold text-primary" aria-hidden="true">✓</span>
+                <span class="font-bold text-primary-ink" aria-hidden="true">✓</span>
               }
             </button>
           } @empty {

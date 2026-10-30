@@ -26,13 +26,13 @@ import { FormsModule } from '@angular/forms';
             [placeholder]="'quickPoll.optionPlaceholder' | t: { n: $index + 1 }"
           />
           @if (options().length > 2) {
-            <button hlmBtn (click)="removeOption($index)" class="text-danger text-sm">
+            <button hlmBtn (click)="removeOption($index)" class="text-danger-ink text-sm">
               {{ 'quickPoll.removeOption' | t }}
             </button>
           }
         </div>
       }
-      <button hlmBtn (click)="addOption()" class="text-primary text-sm mb-3">
+      <button hlmBtn (click)="addOption()" class="text-primary-ink text-sm mb-3">
         {{ 'quickPoll.addOption' | t }}
       </button>
       <div class="flex justify-end gap-2">

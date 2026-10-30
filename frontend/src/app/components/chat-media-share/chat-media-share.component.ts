@@ -18,7 +18,7 @@ import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant
     <app-button-secondary
       type="button"
       (clicked)="open.set(true)"
-      customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+      customClass="bg-secondary/20 text-secondary-ink ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
       ariaLabel="Share a photo or video"
     >
       📷 Media

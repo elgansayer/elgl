@@ -162,7 +162,7 @@ interface AiChatMessage {
                   </div>
                 }
                 @if (aiError()) {
-                  <p class="text-sm text-danger">{{ aiError() | t }}</p>
+                  <p class="text-sm text-danger-ink">{{ aiError() | t }}</p>
                 }
               </div>
 
@@ -248,7 +248,7 @@ interface AiChatMessage {
                           <button
                             hlmBtn
                             (click)="replyToStatus(msg)"
-                            class="text-xs text-primary hover:underline"
+                            class="text-xs text-primary-ink hover:underline"
                           >
                             {{ 'chat.replyToStatus' | t }}
                           </button>
@@ -284,7 +284,7 @@ interface AiChatMessage {
                         <button
                           hlmBtn
                           (click)="viewMedia(msg)"
-                          class="text-sm text-primary underline mt-1"
+                          class="text-sm text-primary-ink underline mt-1"
                         >
                           Tap to view
                         </button>
@@ -305,7 +305,7 @@ interface AiChatMessage {
                           <button
                             hlmBtn
                             (click)="requestCorrection(msg)"
-                            class="text-xs text-primary hover:underline"
+                            class="text-xs text-primary-ink hover:underline"
                           >
                             Ask for correction
                           </button>
@@ -314,7 +314,7 @@ interface AiChatMessage {
                           <button
                             hlmBtn
                             (click)="openFix(msg)"
-                            class="text-xs text-secondary hover:underline"
+                            class="text-xs text-secondary-ink hover:underline"
                           >
                             Fix
                           </button>
@@ -330,7 +330,7 @@ interface AiChatMessage {
                           <span class="inline-flex items-center">
                             @if (msg.delivery_status === 'read') {
                               <svg
-                                class="w-3 h-3 text-primary"
+                                class="w-3 h-3 text-primary-ink"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -343,7 +343,7 @@ interface AiChatMessage {
                                 />
                               </svg>
                               <svg
-                                class="w-3 h-3 -ms-2 text-primary"
+                                class="w-3 h-3 -ms-2 text-primary-ink"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"

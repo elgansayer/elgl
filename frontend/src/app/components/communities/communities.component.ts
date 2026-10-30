@@ -70,7 +70,7 @@ import { CommunitiesService } from '../../services/communities.service';
                     type="button"
                     size="touch"
                     (click)="delete(community.id)"
-                    class="w-full text-danger sm:w-auto"
+                    class="w-full text-danger-ink sm:w-auto"
                   >
                     <span>{{ 'communities.delete' | t }}</span>
                     <span class="sr-only">{{ community.name }}</span>

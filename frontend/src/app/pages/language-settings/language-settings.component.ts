@@ -40,7 +40,7 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
         </p>
 
         @if (hasError()) {
-          <p role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+          <p role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink">
             {{ 'common.error_generic' | t }}
           </p>
         }
@@ -80,7 +80,7 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
                 </span>
                 @if (currentLang() === lang.code) {
                   <span
-                    class="ms-3 shrink-0 rounded-pill bg-primary/10 ps-2 pe-2 pt-0.5 pb-0.5 text-xs font-bold text-primary"
+                    class="ms-3 shrink-0 rounded-pill bg-primary/10 ps-2 pe-2 pt-0.5 pb-0.5 text-xs font-bold text-primary-ink"
                     aria-hidden="true"
                   >
                     ✓ {{ 'common.selected' | t }}

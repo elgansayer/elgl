@@ -89,7 +89,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         }
         @if (!isSearching() && searchError()) {
           <div class="space-y-2 p-4 text-center" role="alert">
-            <p class="text-sm text-danger">{{ 'common.error' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'common.error' | t }}</p>
             <button hlmBtn type="button" variant="outline" size="touch" (click)="retrySearch()">
               {{ 'common.retry' | t }}
             </button>

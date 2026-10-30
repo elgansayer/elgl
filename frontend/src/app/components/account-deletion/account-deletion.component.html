@@ -46,7 +46,7 @@
   </button>
 
   @if (message(); as msg) {
-    <p [class.text-success]="!isError()" [class.text-danger]="isError()" class="mt-2 text-sm">
+    <p [class.text-success]="!isError()" [class.text-danger-ink]="isError()" class="mt-2 text-sm">
       {{ msg }}
     </p>
   }
