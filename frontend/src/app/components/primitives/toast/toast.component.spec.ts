@@ -27,6 +27,14 @@ describe('ToastComponent', () => {
     expect(toastElements().length).toBe(0);
   });
 
+  it('should expose a persistent polite live region for announcements', () => {
+    const region: HTMLElement = fixture.nativeElement.querySelector('[role="status"]');
+
+    expect(region).not.toBeNull();
+    expect(region.getAttribute('aria-live')).toBe('polite');
+    expect(region.getAttribute('aria-atomic')).toBe('false');
+  });
+
   it('should render an info toast using the surface/text-primary tokens', () => {
     toastsSignal.set([{ id: 1, message: 'Saved', type: 'info' }]);
     fixture.detectChanges();

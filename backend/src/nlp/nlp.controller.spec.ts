@@ -28,7 +28,6 @@ describe('NlpController', () => {
           useValue: {
             detectLanguage: vi.fn(),
             translateUi: vi.fn(),
-            grammarCheck: vi.fn(),
             pronunciationScore: vi.fn(),
             checkRateLimit: vi.fn().mockResolvedValue(undefined),
           },
@@ -199,7 +198,7 @@ describe('NlpController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.grammarCheck(null, {} as any);
       expect(result).toBeNull();
-      expect(nlpService.grammarCheck).not.toHaveBeenCalled();
+      expect(grammarCheckService.check).not.toHaveBeenCalled();
     });
 
     it('should call service grammarCheck when user is provided', async () => {

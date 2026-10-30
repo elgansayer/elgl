@@ -111,7 +111,9 @@ test.describe('HelloTalk Chat Messaging E2E', () => {
     await page.goto(`/chat/${roomId}`);
 
     await expect(page.locator('[data-testid="chat-message-input"]')).toBeVisible();
-    await expect(page.locator('[data-testid="chat-message"]').filter({ hasText: 'こんにちは！' })).toBeVisible();
+    await expect(
+      page.locator('[data-testid="chat-message"]').filter({ hasText: 'こんにちは！' }),
+    ).toBeVisible();
   });
 
   test('sends the composer text through POST /api/chat/messages and renders the result', async ({
@@ -156,7 +158,65 @@ test.describe('HelloTalk Chat Messaging E2E', () => {
       message_type: 'text',
       text_content: text,
     });
-    await expect(page.locator('[data-testid="chat-message"]').filter({ hasText: text })).toBeVisible();
+    await expect(
+      page.locator('[data-testid="chat-message"]').filter({ hasText: text }),
+    ).toBeVisible();
     await expect(messageInput).toHaveValue('');
+  });
+
+  test('applies a grammar suggestion and sends it on the second submit', async ({ page }) => {
+    const original = 'I go to school yesterday.';
+    const suggestion = 'I went to school yesterday.';
+    let grammarChecks = 0;
+    const sentPayloads: unknown[] = [];
+
+    await page.route('**/api/nlp/grammar-check', async (route) => {
+      grammarChecks += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          original,
+          corrected: suggestion,
+          explanation: 'Use the past tense.',
+          errors_found: 1,
+        }),
+      });
+    });
+    await page.route('**/api/chat/messages', async (route) => {
+      const requestBody = route.request().postDataJSON() as {
+        text_content?: string;
+      };
+      sentPayloads.push(requestBody);
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'message_sent',
+          room_id: roomId,
+          sender_id: 'mock-user-123',
+          message_type: 'text',
+          text_content: requestBody.text_content,
+          is_read: false,
+          delivery_status: 'sent',
+          created_at: '2026-08-25T12:01:00.000Z',
+        }),
+      });
+    });
+
+    await page.goto(`/chat/${roomId}`);
+
+    const messageInput = page.locator('[data-testid="chat-message-input"]');
+    await messageInput.fill(original);
+    await messageInput.press('Enter');
+
+    await expect(messageInput).toHaveValue(suggestion);
+    expect(sentPayloads).toHaveLength(0);
+
+    await messageInput.press('Enter');
+    await expect
+      .poll(() => sentPayloads)
+      .toEqual([expect.objectContaining({ text_content: suggestion })]);
+    expect(grammarChecks).toBe(1);
   });
 });

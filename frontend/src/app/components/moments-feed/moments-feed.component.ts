@@ -20,6 +20,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { MomentsStore, MomentRecord, MomentComment } from '../../services/moments.store';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import {
+  GRAMMAR_REVIEW_TOAST_MS,
+  isGrammarReviewed,
+  toGrammarReview,
+} from '../../services/grammar-review';
+import type { GrammarReview } from '../../services/grammar-review';
 import { TranslationCacheService } from '../../services/translation-cache.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
@@ -177,6 +183,7 @@ export class MomentsFeedComponent {
 
   // New Moment form state
   readonly newText = signal('');
+  readonly grammarReview = signal<GrammarReview | null>(null);
   readonly newMediaUrls = signal<string[]>([]);
   readonly newMediaType = signal<'none' | 'images' | 'audio'>('none');
   readonly newTargetLanguage = signal<string>('en');
@@ -218,6 +225,7 @@ export class MomentsFeedComponent {
 
   onTargetLanguageSelected(code: string): void {
     this.newTargetLanguage.set(code);
+    this.grammarReview.set(null);
   }
 
   getLanguageDisplayName(code: string): string {
@@ -293,6 +301,7 @@ export class MomentsFeedComponent {
   }
 
   async submitMoment(): Promise<void> {
+    if (this.isCreating()) return;
     const text = this.newText().trim();
     if (!text && this.newMediaUrls().length === 0) return;
     if (
@@ -310,13 +319,22 @@ export class MomentsFeedComponent {
 
     this.isCreating.set(true);
     try {
-      if (text) {
+      if (text && !isGrammarReviewed(this.grammarReview(), text)) {
         const grammar = await this.vocabStore.checkGrammar(text, this.newTargetLanguage());
-        const corrected = grammar.corrected.trim();
-        if (grammar.errors_found > 0 && corrected && corrected !== text) {
-          this.newText.set(corrected);
+        if (this.newText().trim() !== text) return;
+
+        const review = toGrammarReview(text, grammar);
+        if (review) {
+          this.grammarReview.set(review);
+          this.newText.set(review.suggestion);
           this.saveMomentDraft();
-          showToast(grammar.explanation);
+          showToast(
+            this.i18n.translate('grammarReview.suggestionApplied', {
+              explanation: grammar.explanation,
+            }),
+            'info',
+            GRAMMAR_REVIEW_TOAST_MS,
+          );
           return;
         }
       }
@@ -331,7 +349,9 @@ export class MomentsFeedComponent {
       this.newMediaUrls.set([]);
       this.newMediaType.set('none');
       this.newVoiceDurationSec = null;
+      this.grammarReview.set(null);
       this.draftService.clearMomentDraft();
+      this.showComposeForm.set(false);
     } catch (e) {
       console.error('Error submitting moment:', e);
       showToast(this.i18n.translate('moments.publishError'));
@@ -583,8 +603,7 @@ export class MomentsFeedComponent {
   }
 
   protected closeMentionSuggestions(momentId: string): void {
-    this.mentionRequestVersionMap[momentId] =
-      (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
+    this.mentionRequestVersionMap[momentId] = (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
     this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
     this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
   }

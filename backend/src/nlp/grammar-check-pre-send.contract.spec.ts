@@ -68,6 +68,21 @@ describe('AI grammar checker pre-send product contract', () => {
     expect(validateSync(invalidLanguage).length).toBeGreaterThan(0);
   });
 
+  it('keeps GrammarCheckService as the only backend grammar-check implementation', () => {
+    const legacyService = source('backend/src/nlp/nlp.service.ts');
+    const grammarService = source('backend/src/nlp/grammar-check.service.ts');
+
+    expect(legacyService).not.toContain('async grammarCheck(');
+    expect(grammarService).toContain('export class GrammarCheckService');
+    expect(grammarService).toContain(
+      "const METRICS_ENDPOINT = 'grammar-check'",
+    );
+    expect(grammarService).toContain(
+      "{ role: 'system', content: SYSTEM_PROMPT }",
+    );
+    expect(grammarService).toContain('controller.abort()');
+  });
+
   it('checks chat text before the authenticated send path and waits for suggestion review', () => {
     const chat = source(
       'frontend/src/app/components/chat-room/chat-room.component.ts',
@@ -79,6 +94,9 @@ describe('AI grammar checker pre-send product contract', () => {
     expect(grammarIndex).toBeGreaterThanOrEqual(0);
     expect(sendIndex).toBeGreaterThan(grammarIndex);
     expect(sendMethod).toContain('this.isCheckingGrammar.set(true)');
+    expect(sendMethod).toContain(
+      'isGrammarReviewed(this.grammarReview(), text)',
+    );
 
     const regression = source(
       'frontend/src/app/components/chat-room/chat-room.grammar-check.spec.ts',
@@ -104,8 +122,12 @@ describe('AI grammar checker pre-send product contract', () => {
 
     expect(grammarIndex).toBeGreaterThanOrEqual(0);
     expect(publishIndex).toBeGreaterThan(grammarIndex);
-    expect(submitMethod).toContain('if (text)');
+    expect(submitMethod).toContain('if (text &&');
     expect(submitMethod).toContain('this.saveMomentDraft()');
+    expect(submitMethod).toContain('if (this.isCreating()) return');
+    expect(submitMethod).toContain(
+      'isGrammarReviewed(this.grammarReview(), text)',
+    );
 
     const regression = source(
       'frontend/src/app/components/moments-feed/moments-feed.grammar-check.spec.ts',
@@ -119,5 +141,19 @@ describe('AI grammar checker pre-send product contract', () => {
     expect(regression).toContain(
       'keeps the existing media-only publish path free of unnecessary grammar calls',
     );
+  });
+
+  it('shares the review decision and translated feedback across both composers', () => {
+    const review = source('frontend/src/app/services/grammar-review.ts');
+    const dictionary = source('frontend/src/app/services/i18n.service.ts');
+    const toast = source(
+      'frontend/src/app/components/primitives/toast/toast.component.ts',
+    );
+
+    expect(review).toContain('export function isGrammarReviewed');
+    expect(review).toContain('export function toGrammarReview');
+    expect(dictionary).toContain("'grammarReview.suggestionApplied'");
+    expect(toast).toContain('role="status"');
+    expect(toast).toContain('aria-live="polite"');
   });
 });

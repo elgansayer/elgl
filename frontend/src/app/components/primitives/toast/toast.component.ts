@@ -6,6 +6,9 @@ import { toastsSignal } from '../../../services/toast.service';
   selector: 'app-toast',
   template: `
     <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
       class="fixed top-10 inset-x-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none p-4"
     >
       @for (toast of toastsSignal(); track toast.id) {
