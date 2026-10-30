@@ -341,7 +341,7 @@
                   <img
                     loading="lazy"
                     [src]="msg.media_url ?? ''"
-                    alt="doodle"
+                    [alt]="'chatRoom.doodleImageAlt' | t"
                     class="max-h-52 rounded-xl border border-surface-100"
                   />
                 }
@@ -436,12 +436,23 @@
     }
 
     @if (showDoodleModal()) {
-      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-        <app-doodle-pad
-          (doodleSaved)="onDoodleSaved($event)"
-          (cancelled)="showDoodleModal.set(false)"
-        ></app-doodle-pad>
-      </div>
+      <hlm-dialog
+        state="open"
+        aria-labelledby="doodle-pad-title"
+        [aria-describedby]="null"
+        (closed)="showDoodleModal.set(false)"
+      >
+        <hlm-dialog-content
+          *hlmDialogPortal
+          [showCloseButton]="false"
+          class="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-transparent p-0 ring-0 sm:max-w-[min(42rem,calc(100%-2rem))]"
+        >
+          <app-doodle-pad
+            (doodleSaved)="onDoodleSaved($event)"
+            (cancelled)="showDoodleModal.set(false)"
+          ></app-doodle-pad>
+        </hlm-dialog-content>
+      </hlm-dialog>
     }
     @if (showVoiceModal()) {
       <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">

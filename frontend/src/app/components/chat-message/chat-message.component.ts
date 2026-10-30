@@ -161,7 +161,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <img
                 [src]="message().media_url"
                 class="max-w-full rounded"
-                alt="Doodle"
+                [alt]="'chatRoom.doodleImageAlt' | t"
                 loading="lazy"
               />
             }
