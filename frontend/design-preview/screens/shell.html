@@ -411,11 +411,11 @@
           <span class="lbl">HelloTalk</span>
         </div>
         <div class="nav-item">
-          <span class="ico">⭕</span>
+          <span class="ico">⭕<span class="nav-badge">2</span></span>
           <span class="lbl">Moments</span>
         </div>
         <div class="nav-item">
-          <span class="ico">🌍</span>
+          <span class="ico">🌍<span class="nav-badge">1</span></span>
           <span class="lbl">Connect</span>
         </div>
         <div class="nav-item">
@@ -432,9 +432,10 @@
     <p class="caption">
       Desktop adds a persistent sidebar (<code>app-desktop-sidebar</code>) alongside this content
       area instead of the bottom nav. The premium AI launcher remains anchored to the logical end
-      edge and is hidden outside <code>/chat/:roomId</code>. Also omitted: the app-lock overlay,
-      forced-update modal, incoming-call modal, and toast/gift-animation overlays - conditional
-      chrome that only makes sense layered over a specific runtime state.
+      edge and is hidden outside <code>/chat/:roomId</code>. The application badge aggregates the
+      per-tab unread counts shown for Chat, Moments, Discovery, and Live Rooms. Also omitted: the
+      app-lock overlay, forced-update modal, incoming-call modal, and toast/gift-animation overlays
+      - conditional chrome that only makes sense layered over a specific runtime state.
     </p>
 
     <script>

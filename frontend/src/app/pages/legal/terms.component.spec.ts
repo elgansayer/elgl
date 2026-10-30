@@ -2,28 +2,26 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TermsComponent } from './terms.component';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
-import { LegalService, LegalDocument } from '../../services/legal.service';
-import { Component, input } from '@angular/core';
+import { LegalService, LegalDocument, LegalSection } from '../../services/legal.service';
+import { I18nService } from '../../services/i18n.service';
+import { Component, input, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 @Component({
   selector: 'app-legal-document-viewer',
   template: '<div></div>',
-  standalone: true,
 })
 class MockLegalDocumentViewerComponent {
   readonly title = input.required<string>();
   readonly lastUpdated = input.required<Date | string>();
-  readonly sections = input.required<any[]>();
+  readonly sections = input.required<LegalSection[]>();
 }
 
 const TERMS_DOCUMENT: LegalDocument = {
   title: 'Terms of Service',
   lastUpdated: '2026-07-01',
-  sections: [
-    { id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' },
-  ],
+  sections: [{ id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' }],
 };
 
 describe('TermsComponent', () => {
@@ -32,7 +30,26 @@ describe('TermsComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TermsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), LegalService],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        LegalService,
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => {
+              const dict: Record<string, string> = {
+                'legal.loadingTerms': 'Loading Terms of Service...',
+                'legal.termsOfService': 'Terms of Service',
+                'legal.errorTerms': 'We could not load the Terms of Service. Please try again.',
+                'legal.retry': 'Try again',
+              };
+              return dict[key] ?? key;
+            },
+            currentLang: signal('en-GB'),
+          },
+        },
+      ],
     })
       .overrideComponent(TermsComponent, {
         remove: { imports: [LegalDocumentViewerComponent] },
@@ -78,6 +95,7 @@ describe('TermsComponent', () => {
     const loading = fixture.nativeElement.querySelector('[data-testid="terms-loading"]');
     expect(loading).toBeTruthy();
     expect(loading.getAttribute('aria-busy')).toBe('true');
+    expect(loading.textContent).toContain('Loading Terms of Service...');
     expect(fixture.nativeElement.querySelector('[role="status"]')).toBeTruthy();
   });
 
@@ -91,12 +109,17 @@ describe('TermsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+    const alert = fixture.nativeElement.querySelector('[role="alert"]');
+    expect(alert).toBeTruthy();
+    expect(alert.textContent).toContain(
+      'We could not load the Terms of Service. Please try again.',
+    );
     const retryButton = fixture.nativeElement.querySelector(
       '[data-testid="terms-retry"]',
     ) as HTMLButtonElement;
     expect(retryButton).toBeTruthy();
     expect(retryButton.type).toBe('button');
+    expect(retryButton.textContent?.trim()).toBe('Try again');
 
     retryButton.click();
     fixture.detectChanges();
