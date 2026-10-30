@@ -421,6 +421,7 @@ export class AudioRoomsStore {
             : [...r.speakers, p.target_user_id!];
           return { ...r, raised_hands: updatedHands, speakers: updatedSpeakers };
         });
+        void this.fetchStage(room.id);
 
         // A listener token cannot publish. Reconnect with a freshly minted speaker token.
         if (p.target_user_id === this.authService.currentUser()?.id) {
@@ -432,6 +433,7 @@ export class AudioRoomsStore {
           if (!r) return r;
           return { ...r, speakers: r.speakers.filter((id) => id !== p.target_user_id) };
         });
+        void this.fetchStage(room.id);
 
         // If target user is me, drop publish permission and mute the microphone
         if (p.target_user_id === this.authService.currentUser()?.id) {

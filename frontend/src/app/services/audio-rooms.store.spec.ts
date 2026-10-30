@@ -175,6 +175,21 @@ describe('AudioRoomsStore LiveKit stage state', () => {
     await joinPromise;
 
     roomEventCallback?.({ type: 'speaker_approved', target_user_id: 'user-1' });
+    http.expectOne((request) => request.url.endsWith('/audio-rooms/room-1/stage')).flush({
+      room_id: 'room-1',
+      room_name: 'language-room',
+      host: null,
+      co_host_id: null,
+      speakers: [
+        {
+          user_id: 'user-1',
+          display_name: 'Approved speaker',
+          avatar_url: null,
+        },
+      ],
+      raised_hands: [],
+      listeners_count: 1,
+    });
     http.expectOne((request) => request.url.endsWith('/audio-rooms/token')).flush({
       token: 'speaker-token',
       livekit_url: 'wss://mock-named-livekit.example',
@@ -188,6 +203,57 @@ describe('AudioRoomsStore LiveKit stage state', () => {
       'speaker-token',
     );
     expect(store.isSpeaker()).toBe(true);
+    expect(store.stageParticipants().map((participant) => participant.user_id)).toEqual([
+      'user-1',
+    ]);
+  });
+
+  it('removes a demoted speaker from the rendered stage snapshot', async () => {
+    const joinedRoom = {
+      ...room,
+      speakers: ['host-1', 'user-1'],
+      raised_hands: [],
+    };
+    const joinPromise = store.joinRoom(joinedRoom);
+    http.expectOne((request) => request.url.endsWith('/audio-rooms/room-1/stage')).flush({
+      room_id: 'room-1',
+      room_name: 'language-room',
+      host: null,
+      co_host_id: null,
+      speakers: [
+        {
+          user_id: 'user-1',
+          display_name: 'Speaker',
+          avatar_url: null,
+        },
+      ],
+      raised_hands: [],
+      listeners_count: 1,
+    });
+    http.expectOne((request) => request.url.endsWith('/audio-rooms/token')).flush({
+      token: 'speaker-token',
+      room_id: 'room-1',
+      room_name: 'language-room',
+      livekit_url: 'wss://livekit.example',
+      is_speaker: true,
+    });
+    await joinPromise;
+
+    roomEventCallback?.({ type: 'speaker_demoted', target_user_id: 'user-1' });
+    http.expectOne((request) => request.url.endsWith('/audio-rooms/room-1/stage')).flush({
+      room_id: 'room-1',
+      room_name: 'language-room',
+      host: null,
+      co_host_id: null,
+      speakers: [],
+      raised_hands: [],
+      listeners_count: 2,
+    });
+
+    expect(store.currentRoom()?.speakers).toEqual(['host-1']);
+    await vi.waitFor(() => expect(store.stageParticipants()).toEqual([]));
+    expect(store.isSpeaker()).toBe(false);
+    expect(setMicrophoneEnabled).toHaveBeenCalledWith(false);
   });
 
   it('projects LiveKit microphone and active-speaker events into the stage grid', () => {

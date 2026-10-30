@@ -244,30 +244,21 @@ export class AudioRoomsService implements OnModuleInit {
     }
   }
 
-  /**
-   * Revoke media publishing for the outgoing co-host before changing the
-   * application-level role. LiveKit immediately unpublishes active tracks when
-   * canPublish is revoked, so a slow or malicious client cannot keep broadcasting
-   * with its old co-host token while a replacement is being assigned.
-   */
-  private async revokeCoHostPublishPermission(
+  /** Revoke media publishing before changing an application-level stage role. */
+  private async revokePublishPermission(
     room: AudioRoomRow,
     userId: string,
+    failureMessage: string,
   ): Promise<void> {
     const client = this.roomServiceClient;
     if (!client || this.livekitUrl.includes('mock')) return;
 
-    // Real RoomServiceClient instances expose both methods. Keep this runtime
-    // guard for legacy/local SDK test doubles so a missing optional integration
-    // degrades to the awaited client demotion event rather than crashing.
     if (
       typeof client.listParticipants !== 'function' ||
       typeof client.updateParticipant !== 'function'
     ) {
-      this.logger.warn(
-        'LiveKit participant controls unavailable during co-host replacement',
-      );
-      return;
+      this.logger.warn('LiveKit participant controls unavailable');
+      throw new ServiceUnavailableException(failureMessage);
     }
 
     try {
@@ -301,11 +292,9 @@ export class AudioRoomsService implements OnModuleInit {
     } catch (error: unknown) {
       const errorName = error instanceof Error ? error.name : 'UnknownError';
       this.logger.warn(
-        `Failed to revoke outgoing co-host publish permission (${errorName})`,
+        `Failed to revoke participant publish permission (${errorName})`,
       );
-      throw new ServiceUnavailableException(
-        'Could not safely replace the current co-host. Please retry.',
-      );
+      throw new ServiceUnavailableException(failureMessage);
     }
   }
 
@@ -1005,6 +994,12 @@ export class AudioRoomsService implements OnModuleInit {
       (id) => id !== dto.target_user_id,
     );
 
+    await this.revokePublishPermission(
+      room,
+      dto.target_user_id,
+      'Could not safely demote the speaker. Please retry.',
+    );
+
     await supabase
       .from('audio_rooms')
       .update({ speakers: updatedSpeakers })
@@ -1125,7 +1120,11 @@ export class AudioRoomsService implements OnModuleInit {
       // Security boundary: revoke LiveKit publish rights before changing the
       // application role. LiveKit automatically unpublishes active tracks when
       // canPublish becomes false.
-      await this.revokeCoHostPublishPermission(room, previousCoHostId);
+      await this.revokePublishPermission(
+        room,
+        previousCoHostId,
+        'Could not safely replace the current co-host. Please retry.',
+      );
 
       // Demote the outgoing co-host in the source of truth before notifying
       // clients or assigning a replacement. If the later assignment fails the
