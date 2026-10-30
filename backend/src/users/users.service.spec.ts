@@ -504,6 +504,23 @@ describe('UsersService', () => {
       expect(result).toMatchObject(updatedProfile);
     });
 
+    it('should persist null when clearing a saved proficiency level', async () => {
+      const dto = { proficiency_level: null };
+
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { id: 'user-1', proficiency_level: null },
+        error: null,
+      });
+
+      const result = await service.updateProfile('user-1', dto, false);
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        proficiency_level: null,
+      });
+      expect(result).toMatchObject({ id: 'user-1', proficiency_level: null });
+    });
+
     it('should report an age persistence failure instead of returning synthetic success', async () => {
       mockQueryBuilder.eq.mockResolvedValueOnce({
         error: { message: 'Database check violation' },

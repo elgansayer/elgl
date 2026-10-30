@@ -74,6 +74,12 @@ describe('MessageFilterSettingsComponent', () => {
     expect(female.getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('renders the save action with the touch-safe Spartan size', () => {
+    const save = fixture.nativeElement.querySelector('button.w-full') as HTMLButtonElement;
+
+    expect(save.classList.contains('min-h-11')).toBe(true);
+  });
+
   it('renders selected-language removal as a keyboard-operable named button', () => {
     component.selectedLanguages.set(['ja']);
     fixture.detectChanges();

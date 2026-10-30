@@ -1,4 +1,8 @@
+import json
+import stat
+import subprocess
 from collections.abc import Sequence
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -12,6 +16,34 @@ from openhands_factory.verification import (
     run_isolated_verification_process,
     run_verification,
 )
+
+
+def test_verification_sets_private_umask_before_any_cache_creation(tmp_path: Path) -> None:
+    prefix = _VERIFICATION_SANDBOX_SCRIPT.split("/usr/bin/mount --make-rprivate /", 1)[0]
+    subprocess.run(
+        (
+            "/bin/sh",
+            "-c",
+            "umask 002\n"
+            + prefix
+            + '\nmkdir "$workspace/private-cache"\ntouch "$workspace/private-cache/receipt"\n',
+            "test-verification-umask",
+            *([str(tmp_path)] * 8),
+        ),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert stat.S_IMODE((tmp_path / "private-cache").stat().st_mode) == 0o700
+    assert stat.S_IMODE((tmp_path / "private-cache/receipt").stat().st_mode) == 0o600
+
+
+def test_verification_hides_runtime_sockets_without_masking_its_own_staging_root() -> None:
+    stage = _VERIFICATION_SANDBOX_SCRIPT.index('mount --bind "$workspace" "$staging/workspace"')
+    guard = _VERIFICATION_SANDBOX_SCRIPT.index('if [ "$sandbox_root" != /run ]; then')
+    mask = _VERIFICATION_SANDBOX_SCRIPT.index("tmpfs /run\n", guard)
+    restore = _VERIFICATION_SANDBOX_SCRIPT.index('mount --bind "$staging/workspace" "$workspace"')
+    assert stage < guard < mask < restore
 
 
 def test_verification_stages_sources_before_masking_mnt() -> None:
@@ -31,6 +63,106 @@ def test_verification_stages_sources_before_masking_mnt() -> None:
         Path("/srv/factory/repository"),
         Path("/srv/factory/home"),
     ) == Path("/media")
+
+
+def test_verification_masks_login_and_sibling_coordinator_roots_after_staging() -> None:
+    script = _VERIFICATION_SANDBOX_SCRIPT
+    assert script.index('mount --bind "$workspace" "$staging/workspace"') < script.index(
+        "for private_root in /home /root"
+    )
+    for path in (
+        "/etc/repo-factory",
+        "/etc/hellotalk-factory",
+        "/var/lib/repo-factory",
+        "/var/log/repo-factory",
+        "/var/lib/hellotalk-factory",
+        "/var/log/hellotalk-factory",
+    ):
+        assert path in script
+    assert script.index('tmpfs "$private_root"') < script.index(
+        'mount --bind "$staging/workspace" "$workspace"'
+    )
+
+
+def test_neptune_delegates_checks_with_literal_paths_and_fresh_evidence(tmp_path: Path) -> None:
+    paths = {Path("game_instance.gd"), Path("client/a file.gd")}
+    commands = commands_for(tmp_path, paths, "neptune")
+    assert len(commands) == 1
+    command = commands[0]
+    assert command.name == "neptune-acceptance" and command.exclusive
+    assert command.timeout == 1200 and command.workspace == tmp_path
+    assert command.arguments[:2] == ("python3", "tools/factory/verify.py")
+    assert "--changed-path=client/a file.gd" in command.arguments
+    assert str(tmp_path / ".factory-tools/godot") in command.arguments
+    assert commands_for(tmp_path, paths, "neptune")[0].arguments != command.arguments
+
+
+def test_neptune_docs_are_shared_but_other_paths_reserve_heavy_slot(tmp_path: Path) -> None:
+    assert not commands_for(tmp_path, {Path("docs/readme.md")}, "neptune")[0].exclusive
+    assert commands_for(tmp_path, {Path("new.file")}, "neptune")[0].exclusive
+    assert commands_for(tmp_path, {Path("docs/check.gd")}, "neptune")[0].exclusive
+    assert commands_for(tmp_path, {Path("README.md")}, "neptune")[0].exclusive
+
+
+@pytest.mark.parametrize("paths", [set(), {Path("../file")}, {Path("/etc/file")}, {Path(".")}])
+def test_neptune_empty_or_unsafe_paths_fail(tmp_path: Path, paths: set[Path]) -> None:
+    with pytest.raises(VerificationFailed):
+        commands_for(tmp_path, paths, "neptune")
+
+
+def test_neptune_zero_exit_requires_a_complete_matching_literal_success_receipt(
+    tmp_path: Path,
+) -> None:
+    command = commands_for(tmp_path, {Path("docs/readme.md")}, "neptune")[0]
+    names = [
+        "input-tooling",
+        "catalogue-tests",
+        "catalogue-validation",
+        "factory-contracts",
+        "gate-contracts",
+    ]
+    report = {
+        "schema": "neptune.factory-verification.v1",
+        "conclusion": "success",
+        "identity": {"head": "a" * 40, "selected_contents_sha256": "b" * 64},
+        "plan": {"paths": ["docs/readme.md"], "mode": "metadata", "required": names},
+        "checks": {
+            name: {"status": "success", "exit": 0, "command": ["python3", "check.py"]}
+            for name in names
+        },
+    }
+    prefix = "NEPTUNE_FACTORY_VERIFICATION="
+
+    def execute(output: str) -> None:
+        run_verification([command], lambda *args: ProcessResult(0, output, ""))
+
+    execute(prefix + json.dumps(report))
+    for output in (
+        "",
+        prefix + "{}",
+        prefix + json.dumps(report) + "\n" + prefix + json.dumps(report),
+    ):
+        with pytest.raises(VerificationFailed):
+            execute(output)
+    for key, value in (("conclusion", "failure"), ("identity", {}), ("checks", {})):
+        changed = deepcopy(report)
+        changed[key] = value
+        with pytest.raises(VerificationFailed):
+            execute(prefix + json.dumps(changed))
+    for status in ("skipped", "neutral", "timed_out", "failure"):
+        changed = deepcopy(report)
+        changed["checks"][names[0]]["status"] = status
+        with pytest.raises(VerificationFailed):
+            execute(prefix + json.dumps(changed))
+    changed = deepcopy(report)
+    changed["plan"]["paths"] = ["other.md"]
+    with pytest.raises(VerificationFailed):
+        execute(prefix + json.dumps(changed))
+    changed = deepcopy(report)
+    changed["plan"]["required"][0] = "invented-check"
+    changed["checks"]["invented-check"] = changed["checks"].pop(names[0])
+    with pytest.raises(VerificationFailed):
+        execute(prefix + json.dumps(changed))
 
 
 def test_every_change_runs_cross_cutting_governance_gate(tmp_path: Path) -> None:
