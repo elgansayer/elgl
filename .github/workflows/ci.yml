@@ -508,11 +508,19 @@ jobs:
         working-directory: automation
       - run: uv run --frozen ruff format --check .
         working-directory: automation
-      - run: uv run --frozen ruff check openhands_factory tests
+      - run: uv run --frozen ruff check openhands_factory tests runtime_checks
         working-directory: automation
       - run: uv run --frozen mypy openhands_factory
         working-directory: automation
       - run: uv run --frozen pytest
+        working-directory: automation
+      - name: Enable unprivileged namespaces for containment integration
+        run: |
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+      - name: Require actual provider namespace containment
+        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py
         working-directory: automation
 
   required-gate:
