@@ -22,7 +22,7 @@ The migration is safe to retry after a successful application because normalizat
 
 ## API and UI behavior
 
-`PATCH /users/me` validates `proficiency_level` against the six canonical CEFR values. The authenticated profile UI loads the saved value, displays it on the profile when present, exposes all six levels in edit mode, and persists the selected value through the existing typed profile-update path. Diagnostic onboarding may also assign the same canonical field through its server-authoritative scoring flow.
+`PATCH /users/me` validates `proficiency_level` against the six canonical CEFR values and accepts `null` to clear a previously saved level. The authenticated profile UI loads the saved value without inventing a default, displays it on the profile when present, exposes all six levels plus a translated "Not set" choice in edit mode, and persists the selected or cleared value through the existing typed profile-update path. Diagnostic onboarding may also assign the same canonical field through its server-authoritative scoring flow.
 
 Discovery and learning features must treat the field as optional and must not infer a level for users with no saved value.
 
@@ -42,8 +42,9 @@ Automated coverage includes:
 
 - `backend/src/users/dto/update-profile.dto.spec.ts` for API validation;
 - `backend/src/users/proficiency-level.spec.ts` for the canonical TypeScript contract;
+- `backend/src/users/user-profiles.openapi.contract.spec.ts` for the public nullable enum contract;
 - `backend/src/database/migrations/20260826140000_harden_proficiency_level_contract.spec.ts` for migration normalization, fail-closed behavior, nullability, and the constraint; and
-- `frontend/src/app/components/profile/profile.component.spec.ts` for loading/displaying and saving the profile level.
+- `frontend/src/app/components/profile/profile.component.spec.ts` for loading, displaying, selecting, clearing, and saving the profile level.
 
 A production rollout should additionally run the repository clean Supabase migration replay and the normal backend/frontend CI suites.
 

@@ -588,18 +588,20 @@
               'profile.proficiencyLabel' | t
             }}</label>
             <hlm-native-select
-              [(ngModel)]="proficiencyLevel"
+              [ngModel]="proficiencyLevel()"
+              (ngModelChange)="onProficiencyLevelChange($event)"
               name="proficiencyLevel"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'profile.proficiencyLabel' | t"
             >
-              <option value="A1">A1</option>
-              <option value="A2">A2</option>
-              <option value="B1">B1</option>
-              <option value="B2">B2</option>
-              <option value="C1">C1</option>
-              <option value="C2">C2</option>
+              <option value="">{{ 'profile.proficiencyUnset' | t }}</option>
+              <option value="A1">{{ 'profile.proficiencyA1' | t }}</option>
+              <option value="A2">{{ 'profile.proficiencyA2' | t }}</option>
+              <option value="B1">{{ 'profile.proficiencyB1' | t }}</option>
+              <option value="B2">{{ 'profile.proficiencyB2' | t }}</option>
+              <option value="C1">{{ 'profile.proficiencyC1' | t }}</option>
+              <option value="C2">{{ 'profile.proficiencyC2' | t }}</option>
             </hlm-native-select>
           </div>
 
