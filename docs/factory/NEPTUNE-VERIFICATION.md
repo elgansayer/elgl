@@ -42,17 +42,49 @@ coverage remains; regression tests pin staging/masking order and receipt failure
 
 ## Activation remains disabled
 
-FactoryConfig deliberately still accepts only the existing `hellotalk` and
-`workout-agent` live profiles. A test pins rejection of live `neptune` activation.
-Before enabling it, implement Neptune's distinct tests-only lifecycle/merge policy
-without weakening the independent-review requirements of existing repositories.
-Preserve Neptune's current-base app-pinned required check and merge ancestry.
+The initial `neptune` profile requires explicit `FACTORY_NEPTUNE_ENABLED=true`.
+The checked-in example leaves it false and is not installed or started by this
+change. Missing opt-in, wrong repository/base, shared private directories,
+untrusted/unlabelled intake policy, additional job concurrency, enabled API
+fallback, broker state inside private roots or inherited Elgl prompts all fail
+configuration. The profile permits one job and subscription CLI routing only,
+with zero variable spending. Reuse the actual operator policy and shared capacity
+and health root; an example file is not a new allowance or permission to scale.
+Neptune passes that health root explicitly so a config loaded from a mapping
+cannot silently use local circuit state or an unrelated process environment.
+Host preflight must still establish that this is the existing broker and provider
+policy; a directory name or schema check cannot establish account ownership.
+
+Neptune skips mandatory model security/code-review phases. Deterministic quality,
+credential protections, applicable verification and protected CI remain required.
+The persisted `REVIEWING` state is retained for compatibility but performs a
+tests-only handoff. It never publishes an approval status, requests review or adds
+`factory-reviewed`. A dirty or changed head returns to verification. Missing or
+failed required CI blocks; changed main requires a merge update and revalidation,
+even if the legacy non-strict option is disabled. Other profiles keep their
+existing independent-review lifecycle. Bootstrap backlog generation and automatic
+maintenance analysis are disabled so they cannot become extra provider jobs.
 
 Then stage an instance with separate state/workspaces/GitHub permissions and the
 existing shared subscription-provider capacity/health/budget policy. Reconcile
 manually running Codex/Gemini sessions, run one bounded issue through merge, test
 restart/quota recovery, and only then enable continuity. These verification
 changes and synthetic tests do not establish that live acceptance.
+
+Use `automation/neptune-prompts` as the trusted control prompts, outside all worker
+diffs. They preserve authoritative Godot, native/browser portability, data-only
+packs, reference provenance and bounded fair game bots. The existing doctor reads
+Neptune's verifier/gate scripts and instance unit, and validates its actual
+tests-only branch protection instead of requiring Elgl review statuses.
+
+The generic systemd unit can host a later Neptune instance, but the existing
+installer still provisions only Elgl and Workout. Do not use it as an automatic
+Neptune activation path or overwrite the operator's shared agent configuration.
+Stage a primary canonical clone with the actual GitHub origin and ignored offline
+cache, then run the read-only doctor against accepted installed code. Only an
+explicit canary may use `repo-factory task run --issue N`; keep ordinary intake
+labelled and bounded. Reconcile existing manual provider sessions first. Enable
+the supervised daemon and continuity only after actual job/recovery acceptance.
 
 Tracked scope: Neptune #33/#474, verification #75/#76 and isolation #84. Merge
 policy integration remains #77. Provider limits and spend are not increased.
@@ -80,6 +112,6 @@ never edits settings. It uses `--auto --merge --match-head-commit` without a byp
 or branch deletion. Already-enabled auto-merge is left alone. GitHub protection
 remains responsible for rejecting head/base changes at the atomic merge step.
 
-This GitHub adapter is a bounded #77 prerequisite. It does not enable Neptune in
-FactoryConfig, skip lifecycle review phases, install an instance, or establish a
-live issue-to-merge/restart result. Those remain required before activation.
+This GitHub adapter and lifecycle are bounded #77 prerequisites. They do not
+install/activate an instance or establish a live issue-to-merge/restart result.
+Those observations remain required before unattended continuity.

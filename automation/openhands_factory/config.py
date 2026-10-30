@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, m
 
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.exceptions import ConfigurationError
+from openhands_factory.neptune_merge import NEPTUNE_REPOSITORY
 
 
 class ProviderConfig(BaseModel):
@@ -409,7 +410,8 @@ class FactoryConfig(BaseModel):
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
-    repository_profile: Literal["hellotalk", "workout-agent"] = "hellotalk"
+    repository_profile: Literal["hellotalk", "workout-agent", "neptune"] = "hellotalk"
+    neptune_activation_enabled: bool = False
     prompt_dir: Path = Path("/var/lib/hellotalk-factory/repository/automation/prompts")
     system_prompt_path: Path = Path(
         "/var/lib/hellotalk-factory/repository/automation/prompts/system.md"
@@ -642,7 +644,66 @@ class FactoryConfig(BaseModel):
             raise ValueError(
                 "OPENCODE_GO_API_KEY and OPENCODE_GO_MODEL must either both be set or both be empty"
             )
+        self._validate_neptune_profile()
         return self
+
+    @property
+    def tests_only_merging(self) -> bool:
+        return self.repository_profile == "neptune"
+
+    def _validate_neptune_profile(self) -> None:
+        neptune_repository = self.github_repository.casefold() == NEPTUNE_REPOSITORY.casefold()
+        if not self.tests_only_merging:
+            if neptune_repository or self.neptune_activation_enabled:
+                raise ValueError("Neptune requires its explicit repository_profile")
+            return
+        if not self.neptune_activation_enabled:
+            raise ValueError("neptune repository_profile requires explicit FACTORY_NEPTUNE_ENABLED")
+        if not neptune_repository or self.base_branch != "main":
+            raise ValueError("Neptune profile requires the exact repository and protected main")
+        if not self.require_trusted_intake or not self.require_ready_label:
+            raise ValueError("Neptune bootstrap requires trusted intake and the ready label")
+        if self.max_parallel_jobs != 1:
+            raise ValueError("Neptune bootstrap permits one bounded job before scaling")
+        if self.maintenance_enabled:
+            raise ValueError("Neptune bootstrap does not start autonomous maintenance analysis")
+        if self.monthly_variable_budget_usd != 0 or not self.agents.routing_enabled:
+            raise ValueError(
+                "Neptune bootstrap requires subscription routing without paid fallback"
+            )
+        if any(
+            provider.enabled
+            and (provider.transport != "cli" or provider.auth_mode != "subscription")
+            for provider in self.agents.providers.values()
+        ):
+            raise ValueError("Neptune bootstrap permits configured subscription CLIs only")
+        private_roots = (
+            self.repository,
+            self.state_dir,
+            self.log_dir,
+            self.profile_store,
+            self.worktree_dir,
+            self.recovery_dir,
+        )
+        if any(
+            not root.is_absolute()
+            or not any(part == "neptune" or part.startswith("neptune-") for part in root.parts)
+            for root in private_roots
+        ):
+            raise ValueError("Neptune requires explicitly separate absolute repository/state paths")
+        shared = self.provider_capacity_dir.resolve()
+        if not self.provider_capacity_dir.is_absolute() or any(
+            shared.is_relative_to(root.resolve()) or root.resolve().is_relative_to(shared)
+            for root in private_roots
+        ):
+            raise ValueError(
+                "Neptune requires the existing shared provider broker outside its state"
+            )
+        if (
+            self.prompt_dir.name != "neptune-prompts"
+            or self.system_prompt_path != self.prompt_dir / "system.md"
+        ):
+            raise ValueError("Neptune requires its repository-specific trusted control prompts")
 
     @classmethod
     def from_environment(cls, environment: Mapping[str, str] | None = None) -> FactoryConfig:
@@ -720,9 +781,10 @@ class FactoryConfig(BaseModel):
                     env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
                 ),
                 repository_profile=cast(
-                    Literal["hellotalk", "workout-agent"],
+                    Literal["hellotalk", "workout-agent", "neptune"],
                     env.get("FACTORY_REPOSITORY_PROFILE", "hellotalk"),
                 ),
+                neptune_activation_enabled=boolean("FACTORY_NEPTUNE_ENABLED", False),
                 prompt_dir=Path(
                     env.get("FACTORY_PROMPT_DIR", str(repository / "automation" / "prompts"))
                 ),
