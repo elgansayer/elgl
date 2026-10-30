@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotificationsService } from './notifications.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -7,9 +8,11 @@ describe('NotificationsService', () => {
   let service: NotificationsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  const emit = vi.fn();
 
   beforeEach(async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
+    emit.mockClear();
 
     mockQueryBuilder = {
       single: vi.fn().mockReturnThis(),
@@ -46,6 +49,7 @@ describe('NotificationsService', () => {
             getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
+        { provide: EventEmitter2, useValue: { emit } },
       ],
     }).compile();
 
@@ -126,7 +130,14 @@ describe('NotificationsService', () => {
 
   describe('createNotification', () => {
     it('should insert notification into Supabase when recipient is not actor', async () => {
-      await service.createNotification('recipient-1', 'actor-1', 'follow');
+      await service.createNotification(
+        'recipient-1',
+        'actor-1',
+        'follow',
+        undefined,
+        undefined,
+        false,
+      );
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('notifications');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
@@ -137,6 +148,43 @@ describe('NotificationsService', () => {
           is_read: false,
         }),
       );
+      expect(emit).toHaveBeenCalledWith(
+        'unread.counts_changed',
+        expect.objectContaining({
+          recipientId: 'recipient-1',
+          source: 'notifications',
+        }),
+      );
+    });
+
+    it('does not double-invalidate the notification tabs for a mirrored chat row', async () => {
+      await service.createNotification(
+        'recipient-1',
+        'actor-1',
+        'mention_chat',
+        undefined,
+        undefined,
+        false,
+      );
+
+      expect(emit).not.toHaveBeenCalled();
+    });
+
+    it('does not emit unread invalidation when persistence fails', async () => {
+      mockQueryBuilder.insert.mockResolvedValueOnce({
+        error: { message: 'unavailable' },
+      });
+
+      await service.createNotification(
+        'recipient-1',
+        'actor-1',
+        'follow',
+        undefined,
+        undefined,
+        false,
+      );
+
+      expect(emit).not.toHaveBeenCalled();
     });
 
     it('should ignore when recipient is the same as actor', async () => {

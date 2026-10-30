@@ -10,7 +10,6 @@ import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
 import { ChatFolderService } from '../../services/chat-folder.service';
-import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { GroupsDiscoveryComponent } from '../groups-discovery/groups-discovery.component';
@@ -51,7 +50,6 @@ export class ChatListComponent implements OnInit {
   private readonly chatFolderService = inject(ChatFolderService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
-  private readonly unreadCounter = inject(UnreadCounterService);
   private readonly groupsService = inject(GroupsService);
 
   readonly isLoading = signal<boolean>(true);
@@ -314,8 +312,6 @@ export class ChatListComponent implements OnInit {
       return b.lastMessageAt.localeCompare(a.lastMessageAt);
     });
     this.previews.set(unique);
-    const totalChatUnread = unique.reduce((sum, preview) => sum + preview.unreadCount, 0);
-    this.unreadCounter.setChatUnread(totalChatUnread);
   }
 
   private async loadRoomMessages(roomId: string): Promise<ChatMessage[]> {
@@ -332,7 +328,10 @@ export class ChatListComponent implements OnInit {
     const currentUserId = this.authService.currentUser()?.id;
 
     const unreadCount = messages.filter(
-      (message) => !message.is_read && message.sender_id !== currentUserId,
+      (message) =>
+        !message.is_read &&
+        message.delivery_status !== 'read' &&
+        message.sender_id !== currentUserId,
     ).length;
 
     return {

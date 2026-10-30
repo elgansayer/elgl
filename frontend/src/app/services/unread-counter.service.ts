@@ -2,8 +2,16 @@ import { Injectable, signal, computed, effect } from '@angular/core';
 
 /** Identifies a navigation tab for per-tab badge counts. */
 export type NavTab = 'chat' | 'moments' | 'discovery' | 'audioRooms' | 'profile';
+export type UnreadSnapshot = Readonly<Record<NavTab, number>>;
 
 const MAX_VISIBLE_BADGE_COUNT = 99;
+
+interface MutationRevision {
+  increases: number;
+  decreases: number;
+}
+
+type MutationRevisionSnapshot = Readonly<Record<NavTab, MutationRevision>>;
 
 @Injectable({
   providedIn: 'root',
@@ -14,6 +22,14 @@ export class UnreadCounterService {
   readonly discoveryUnread = signal<number>(0);
   readonly audioRoomsUnread = signal<number>(0);
   readonly notificationUnread = signal<number>(0);
+  private readonly mutationRevisions: Record<NavTab, MutationRevision> = {
+    chat: { increases: 0, decreases: 0 },
+    moments: { increases: 0, decreases: 0 },
+    discovery: { increases: 0, decreases: 0 },
+    audioRooms: { increases: 0, decreases: 0 },
+    profile: { increases: 0, decreases: 0 },
+  };
+  private readonly snapshotRevisions = new WeakMap<UnreadSnapshot, MutationRevisionSnapshot>();
 
   /** Per-tab lookup so navigation surfaces bind to one shared state owner. */
   readonly tabCount = (tab: NavTab): number => {
@@ -69,25 +85,69 @@ export class UnreadCounterService {
   // Generic helpers
 
   set(tab: NavTab, count: number): void {
-    this.signalFor(tab).set(this.normaliseCount(count));
+    const value = this.normaliseCount(count);
+    const current = this.tabCount(tab);
+    if (value > current) {
+      this.mutationRevisions[tab].increases += 1;
+    } else if (value < current) {
+      this.mutationRevisions[tab].decreases += 1;
+    }
+    this.signalFor(tab).set(value);
+  }
+
+  snapshot(): UnreadSnapshot {
+    const snapshot = {
+      chat: this.chatUnread(),
+      moments: this.momentsUnread(),
+      discovery: this.discoveryUnread(),
+      audioRooms: this.audioRoomsUnread(),
+      profile: this.notificationUnread(),
+    };
+    this.snapshotRevisions.set(snapshot, this.copyMutationRevisions());
+    return snapshot;
+  }
+
+  /**
+   * Applies an authoritative response without overwriting a durable local
+   * change that completed while the request was in flight.
+   */
+  reconcile(tab: NavTab, authoritativeCount: number, snapshot: UnreadSnapshot): void {
+    const currentCount = this.tabCount(tab);
+    const baselineCount = snapshot[tab];
+    const normalisedAuthoritativeCount = this.normaliseCount(authoritativeCount);
+    const baselineRevision = this.snapshotRevisions.get(snapshot)?.[tab];
+    const currentRevision = this.mutationRevisions[tab];
+    const increased = baselineRevision
+      ? currentRevision.increases > baselineRevision.increases
+      : currentCount > baselineCount;
+    const decreased = baselineRevision
+      ? currentRevision.decreases > baselineRevision.decreases
+      : currentCount < baselineCount;
+
+    if (increased && decreased) return;
+    if (increased) {
+      this.set(tab, Math.max(currentCount, normalisedAuthoritativeCount));
+    } else if (decreased) {
+      this.set(tab, Math.min(currentCount, normalisedAuthoritativeCount));
+    } else {
+      this.set(tab, normalisedAuthoritativeCount);
+    }
   }
 
   increment(tab: NavTab): void {
-    this.signalFor(tab).update((count) =>
-      Math.min(Number.MAX_SAFE_INTEGER, this.normaliseCount(count) + 1),
-    );
+    this.set(tab, Math.min(Number.MAX_SAFE_INTEGER, this.tabCount(tab) + 1));
   }
 
   decrement(tab: NavTab): void {
-    this.signalFor(tab).update((count) => Math.max(0, this.normaliseCount(count) - 1));
+    this.set(tab, Math.max(0, this.tabCount(tab) - 1));
   }
 
   resetAll(): void {
-    this.chatUnread.set(0);
-    this.momentsUnread.set(0);
-    this.discoveryUnread.set(0);
-    this.audioRoomsUnread.set(0);
-    this.notificationUnread.set(0);
+    this.set('chat', 0);
+    this.set('moments', 0);
+    this.set('discovery', 0);
+    this.set('audioRooms', 0);
+    this.set('profile', 0);
   }
 
   // Legacy methods kept for backward compat
@@ -137,20 +197,34 @@ export class UnreadCounterService {
     return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(count));
   }
 
+  private copyMutationRevisions(): MutationRevisionSnapshot {
+    return {
+      chat: { ...this.mutationRevisions.chat },
+      moments: { ...this.mutationRevisions.moments },
+      discovery: { ...this.mutationRevisions.discovery },
+      audioRooms: { ...this.mutationRevisions.audioRooms },
+      profile: { ...this.mutationRevisions.profile },
+    };
+  }
+
   private compactBadgeText(count: number): string {
     return count > MAX_VISIBLE_BADGE_COUNT ? `${MAX_VISIBLE_BADGE_COUNT}+` : String(count);
   }
 
   private updateAppBadge(count: number): void {
     if (typeof navigator === 'undefined') return;
-    if (count > 0 && this.hasSetAppBadge(navigator)) {
-      navigator.setAppBadge(count).catch(() => {
-        // App Badging is best-effort and unsupported/blocked browsers are expected.
-      });
-    } else if (count === 0 && this.hasClearAppBadge(navigator)) {
-      navigator.clearAppBadge().catch(() => {
-        // App Badging is best-effort and unsupported/blocked browsers are expected.
-      });
+    try {
+      if (count > 0 && this.hasSetAppBadge(navigator)) {
+        navigator.setAppBadge(count).catch(() => {
+          // App Badging is best-effort and unsupported/blocked browsers are expected.
+        });
+      } else if (count === 0 && this.hasClearAppBadge(navigator)) {
+        navigator.clearAppBadge().catch(() => {
+          // App Badging is best-effort and unsupported/blocked browsers are expected.
+        });
+      }
+    } catch {
+      // Restricted runtimes may throw synchronously while accessing the API.
     }
   }
 

@@ -80,6 +80,27 @@ describe('NotificationsInboxService', () => {
     );
   });
 
+  it('returns persisted unread counts grouped by navigation tab', async () => {
+    result = { data: null, error: null, count: 3 };
+
+    await expect(service.getUnreadCount('user-1')).resolves.toEqual({
+      unreadCount: 3,
+      byTab: { moments: 3, discovery: 3, profile: 3 },
+    });
+    expect(builder.in).toHaveBeenCalledWith('type', [
+      'like_moment',
+      'comment_moment',
+      'reply_comment',
+      'mention_comment',
+    ]);
+    expect(builder.in).toHaveBeenCalledWith('type', [
+      'follow',
+      'like_profile',
+      'profile_visit',
+    ]);
+    expect(builder.in).toHaveBeenCalledWith('type', ['system']);
+  });
+
   it('marks only the authenticated recipient notification as read', async () => {
     await service.markAsRead('user-1', 'd0aa8e62-d334-4d0f-8450-ecb998ed3bf5');
     expect(builder.update).toHaveBeenCalledWith({ is_read: true });
