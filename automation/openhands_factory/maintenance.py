@@ -216,6 +216,10 @@ def measurement_summary(value: object) -> dict[str, object] | None:
     components = components if isinstance(components, dict) else {}
     states = value.get("jobs_by_state")
     states = states if isinstance(states, dict) else {}
+    affected_tasks = value.get("affected_tasks")
+    affected_tasks = affected_tasks if isinstance(affected_tasks, dict) else {}
+    provider_usage = value.get("provider_usage_lifetime")
+    provider_usage = provider_usage if isinstance(provider_usage, list) else []
 
     def counts(items: dict[object, object]) -> dict[str, int]:
         return {
@@ -225,12 +229,62 @@ def measurement_summary(value: object) -> dict[str, object] | None:
         }
 
     merged = window.get("merged_pr_count")
+    model_calls = 0
+    model_failures = 0
+    model_duration_seconds = 0.0
+    for item in provider_usage:
+        if not isinstance(item, dict):
+            continue
+        calls = item.get("calls")
+        failures = item.get("failures")
+        duration = item.get("total_duration_seconds")
+        if type(calls) is int and calls >= 0:
+            model_calls += calls
+        if type(failures) is int and failures >= 0:
+            model_failures += failures
+        if isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration >= 0:
+            model_duration_seconds += float(duration)
     return {
         "observed_at": value.get("observed_at"),
         "merged_pr_count_24h": merged if type(merged) is int and merged >= 0 else None,
         "merged_pr_count_by_component_24h": counts(components),
         "jobs_by_state": counts(states),
+        "affected_tasks": {
+            identifier[:80]: {
+                key: details.get(key)
+                for key in ("state", "attempts", "repetitions", "error")
+                if details.get(key) is None
+                or isinstance(details.get(key), str)
+                or type(details.get(key)) is int
+            }
+            for identifier, details in list(affected_tasks.items())[:40]
+            if isinstance(identifier, str) and isinstance(details, dict)
+        },
+        "model_usage_lifetime": {
+            "calls": model_calls,
+            "failures": model_failures,
+            "duration_seconds": model_duration_seconds,
+        },
     }
+
+
+def affected_task_measurements(
+    jobs: dict[str, Job], identifiers: object
+) -> dict[str, dict[str, object]]:
+    """Capture bounded task outcomes for a maintenance repair's stated scope."""
+    if not isinstance(identifiers, dict):
+        return {}
+    measurements: dict[str, dict[str, object]] = {}
+    for identifier in list(identifiers)[:40]:
+        if not isinstance(identifier, str) or (job := jobs.get(identifier)) is None:
+            continue
+        measurements[identifier] = {
+            "state": job.state.value,
+            "attempts": job.attempts,
+            "repetitions": job.repeated_failure_count,
+            "error": redact_agent_output(job.last_error or "")[-1200:] or None,
+        }
+    return measurements
 
 
 def analysis_attempt_feedback(value: object) -> list[dict[str, object]]:
@@ -485,7 +539,11 @@ class MaintenanceController:
             ):
                 deployed_at = timestamp(record.get("deployed_at"))
                 if deployed_at is not None and now - deployed_at >= timedelta(hours=24):
-                    record.update({"outcome": snapshot, "measured_at": now.isoformat()})
+                    outcome = {
+                        **snapshot,
+                        "affected_tasks": affected_task_measurements(jobs, record.get("affected")),
+                    }
+                    record.update({"outcome": outcome, "measured_at": now.isoformat()})
                     if record.get("status") == "measuring":
                         record["status"] = "measured"
         if any(

@@ -252,6 +252,34 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
         **baseline,
         "observed_at": "2026-10-19T00:00:00+00:00",
         "jobs_by_state": {"repairing": 8},
+        "affected_tasks": {
+            "1195": {
+                "state": "security-review",
+                "attempts": 9,
+                "repetitions": 0,
+                "error": None,
+            }
+        },
+        "provider_usage_lifetime": [
+            {
+                "provider": "codex",
+                "calls": 4,
+                "failures": 1,
+                "total_duration_seconds": 90.5,
+            },
+            {
+                "provider": "malformed",
+                "calls": True,
+                "failures": -1,
+                "total_duration_seconds": None,
+            },
+            {
+                "provider": "also-malformed",
+                "calls": None,
+                "failures": True,
+                "total_duration_seconds": True,
+            },
+        ],
     }
     record = {
         "key": "experiment",
@@ -269,6 +297,12 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
     assert measurement["baseline"]["jobs_by_state"] == {"repairing": 12}
     assert measurement["outcome"]["jobs_by_state"] == {"repairing": 8}
     assert measurement["outcome"]["merged_pr_count_by_component_24h"] == {"unknown": 2}
+    assert measurement["outcome"]["affected_tasks"] == outcome["affected_tasks"]
+    assert measurement["outcome"]["model_usage_lifetime"] == {
+        "calls": 4,
+        "failures": 1,
+        "duration_seconds": 90.5,
+    }
     assert "not causal proof" in measurement["interpretation"]
     assert "must not be copied" not in json.dumps(feedback)
 
@@ -315,6 +349,7 @@ def test_incident_outcomes_are_measured_once_without_relabelling_failed_canaries
         "key": "old",
         "status": status,
         "deployed_at": (datetime.now(UTC) - timedelta(hours=25)).isoformat(),
+        "affected": {"1": {"error": "original", "head": None}},
     }
     atomic_write_json(
         controller.path,
@@ -328,6 +363,14 @@ def test_incident_outcomes_are_measured_once_without_relabelling_failed_canaries
     measured = controller.records()[0]
     assert measured["status"] == ("measured" if status == "measuring" else status)
     assert measured["outcome"]["jobs_by_state"] == {"repairing": 3}
+    assert measured["outcome"]["affected_tasks"] == {
+        "1": {
+            "state": "repairing",
+            "attempts": 3,
+            "repetitions": 1,
+            "error": "Inlining of fonts failed: fonts.googleapis.com token=[redacted]",
+        }
+    }
     first_measurement = measured["measured_at"]
     assert controller.pipeline.calls == 0
     make_due(controller)

@@ -120,6 +120,9 @@ An interrupted `IMPLEMENTING` attempt can leave tracked or untracked changes in 
 may advance when those changes still differ from `HEAD`, even if the provider makes no additional edit. A clean
 implementation worktree still requires a new change, while quality-repair and CI-repair attempts always require
 a new fingerprint. Security review, verification, the quality gate and independent review remain unchanged.
+After 24 hours, the maintenance record reports each affected task's state, attempts, repeated failures and latest
+error alongside application merges and cumulative provider calls, failures and model time. Baseline and outcome
+counters make the observed change available without claiming causal attribution.
 
 If no PR review is already active, the scheduler submits the highest-priority runnable external pull request
 before issue work, including when only one worker is available. It also withholds one provider slot from new issue
