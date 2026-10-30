@@ -152,3 +152,11 @@ test('generateHelpAboutData writes generated metadata and an auditable manifest'
   assert.equal(manifest[0].licence, 'Apache-2.0');
   assert.equal(manifest[0].licenceText, 'Apache licence text');
 });
+
+test('workspace frontend build runs the package prebuild generator', async () => {
+  const workspacePackage = JSON.parse(
+    await readFile(path.resolve(import.meta.dirname, '..', '..', 'package.json'), 'utf8'),
+  );
+
+  assert.equal(workspacePackage.scripts['build:frontend'], 'npm --prefix frontend run build');
+});
