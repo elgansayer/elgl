@@ -212,4 +212,28 @@ describe('ChatMessageComponent', () => {
     expect(speedButton?.nativeElement.getAttribute('type')).toBe('button');
     expect(speedButton?.nativeElement.getAttribute('aria-label')).toContain('1×');
   });
+
+  it('gives doodle images a translated alternative text instead of hard-coded English', () => {
+    const dataUrl = 'data:image/png;base64,ZG9vZGxl';
+    fixture.componentRef.setInput('message', {
+      id: 'doodle-message-id',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'doodle',
+      media_url: dataUrl,
+      text_content: 'Doodle',
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const image = fixture.nativeElement.querySelector(
+      `img[src="${dataUrl}"]`,
+    ) as HTMLImageElement | null;
+
+    expect(image).not.toBeNull();
+    // The mocked I18nService echoes the key, so this proves the label is resolved through the dictionary.
+    expect(image?.getAttribute('alt')).toBe('chatRoom.doodleImageAlt');
+    expect(image?.getAttribute('alt')).not.toBe('Doodle');
+  });
 });

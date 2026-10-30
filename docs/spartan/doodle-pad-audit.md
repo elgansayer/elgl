@@ -6,6 +6,8 @@ Target: `frontend/src/app/components/doodle-pad`
 
 Status: implementation baseline for the Spartan UI + Claude Design migration.
 
+Update (issue #1734): the "Overlay ownership" gap below is closed. `ChatRoomComponent` now hosts the pad in a Spartan Dialog that supplies the modal semantics, focus containment, Escape and backdrop dismissal, and focus restoration, while `showDoodleModal`, `doodleSaved`, and `cancelled` keep their product boundaries. See `docs/doodle-pad.md` for the delivered contract. The rest of this audit is preserved as the baseline it recorded.
+
 ## Scope
 
 `DoodlePadComponent` is a feature-specific freehand drawing surface used from chat. It owns drawing state, canvas coordinate handling, raster serialisation, and the `doodleSaved` / `cancelled` outputs. Generic control behaviour, overlay behaviour, selection semantics, focus management, and product styling should be owned by Spartan/Relay where an approved primitive exists.
