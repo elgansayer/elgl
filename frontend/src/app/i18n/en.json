@@ -89,6 +89,9 @@
     "noResultsAction": "Reset Filters",
     "searchErrorTitle": "Something went wrong",
     "searchErrorDescription": "We couldn't load partner results. Please check your connection and try again.",
+    "searchErrorUnauthorised": "We couldn't verify your account. Refresh your session and try again.",
+    "searchErrorRateLimited": "You've searched too often. Wait a moment, then try again.",
+    "searchErrorInvalid": "These filters couldn't be applied. Reset them and try a new search.",
     "searchErrorAction": "Try Again"
   },
   "aiConversation": {

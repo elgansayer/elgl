@@ -8,6 +8,7 @@ import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { VipGuard } from './../src/monetisation/guards/vip.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
+import { LlmProxyService } from './../src/llm-proxy/llm-proxy.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 let AppModule: typeof import('../src/app.module').AppModule;
@@ -17,7 +18,6 @@ type MockNlpService = {
   checkRateLimit: Mock;
   translate: Mock;
   grammarCheck: Mock;
-  explainGrammar: Mock;
   pronunciationScore: Mock;
   simplify: Mock;
   translateUi: Mock;
@@ -29,6 +29,7 @@ type MockNlpService = {
 describe('HelloTalk API E2E Integration Suite', () => {
   let app: INestApplication;
   let mockNlpService: MockNlpService;
+  let mockLlmProxyService: { chatCompletion: Mock; proxyMessage: Mock };
   let mockSupabaseClient: {
     from: Mock;
     auth: {
@@ -156,6 +157,11 @@ describe('HelloTalk API E2E Integration Suite', () => {
       disconnect: vi.fn().mockReturnValue(undefined),
     };
 
+    mockLlmProxyService = {
+      chatCompletion: vi.fn().mockResolvedValue(''),
+      proxyMessage: vi.fn().mockResolvedValue({ response: '' }),
+    };
+
     mockNlpService = {
       detectLanguage: vi.fn().mockReturnValue({
         language: 'en',
@@ -175,11 +181,6 @@ describe('HelloTalk API E2E Integration Suite', () => {
         corrected: 'hello',
         explanation: 'mocked',
         errors_found: 0,
-      }),
-      explainGrammar: vi.fn().mockResolvedValue({
-        original: 'hello',
-        corrected: 'hello',
-        explanation: 'mocked',
       }),
       pronunciationScore: vi.fn().mockResolvedValue({
         overall_score: 90,
@@ -241,6 +242,8 @@ describe('HelloTalk API E2E Integration Suite', () => {
       })
       .overrideProvider(NlpService)
       .useValue(mockNlpService)
+      .overrideProvider(LlmProxyService)
+      .useValue(mockLlmProxyService)
       .overrideGuard(VipGuard)
       .useValue({
         canActivate: () => true,
@@ -319,6 +322,63 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .send({ text: 'A complex sentence' })
         .expect(201)
         .expect({ original: 'hello', simplified: 'hello' });
+    });
+
+    it('/nlp/explain-grammar (POST) - should return a private AI grammar breakdown for a correction', async () => {
+      mockLlmProxyService.chatCompletion.mockResolvedValueOnce(
+        '  Use the past tense "went" because "yesterday" is in the past.  ',
+      );
+
+      await request(app.getHttpServer())
+        .post('/nlp/explain-grammar')
+        .send({
+          original: ' I go shop yesterday. ',
+          corrected: ' I went to the shop yesterday. ',
+        })
+        .expect(201)
+        .expect('Cache-Control', 'private, no-store')
+        .expect({
+          original: 'I go shop yesterday.',
+          corrected: 'I went to the shop yesterday.',
+          explanation:
+            'Use the past tense "went" because "yesterday" is in the past.',
+        });
+
+      expect(mockNlpService.checkRateLimit).toHaveBeenCalledWith(
+        'e2e-user-1',
+        false,
+      );
+      expect(mockLlmProxyService.chatCompletion).toHaveBeenCalledOnce();
+      const [messages, signal] =
+        mockLlmProxyService.chatCompletion.mock.calls[0];
+      expect(messages[1]).toEqual({
+        role: 'user',
+        content: JSON.stringify({
+          original: 'I go shop yesterday.',
+          corrected: 'I went to the shop yesterday.',
+        }),
+      });
+      expect(signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it('/nlp/explain-grammar (POST) - should fail closed with 503 and no provider details when the AI provider fails', async () => {
+      mockLlmProxyService.chatCompletion.mockRejectedValueOnce(
+        new Error('provider echoed I go shop yesterday.'),
+      );
+
+      const response = await request(app.getHttpServer())
+        .post('/nlp/explain-grammar')
+        .send({
+          original: 'I go shop yesterday.',
+          corrected: 'I went to the shop yesterday.',
+        })
+        .expect(503);
+
+      expect(response.body.message).toBe(
+        'Grammar explanation is temporarily unavailable',
+      );
+      expect(JSON.stringify(response.body)).not.toContain('echoed');
+      expect(response.headers['cache-control']).toBe('private, no-store');
     });
 
     it('/monetisation/webhooks/stripe (POST) - should process Stripe webhooks cleanly', () => {

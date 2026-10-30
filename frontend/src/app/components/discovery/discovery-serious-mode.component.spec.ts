@@ -20,7 +20,7 @@ describe('DiscoveryComponent serious learner mode', () => {
   let findPartners: ReturnType<typeof vi.fn>;
   let seriousLearnerModeFake: Pick<
     SeriousLearnerModeService,
-    'enabled' | 'saving' | 'error' | 'refresh' | 'toggle'
+    'enabled' | 'saving' | 'error' | 'refresh' | 'setEnabled'
   >;
 
   afterEach(() => {
@@ -33,16 +33,15 @@ describe('DiscoveryComponent serious learner mode', () => {
     const seriousEnabled = signal(false);
     const seriousSaving = signal(false);
     const seriousError = signal<string | null>(null);
-    // Mirrors SeriousLearnerModeService.toggle(): persist first, then commit, and
+    // Mirrors SeriousLearnerModeService.setEnabled(): persist first, then commit, and
     // refuse concurrent writes. updateMyProfile stands in for the persisted write.
     seriousLearnerModeFake = {
       enabled: seriousEnabled,
       saving: seriousSaving,
       error: seriousError,
       refresh: vi.fn(async () => undefined),
-      async toggle(): Promise<boolean> {
+      async setEnabled(next: boolean): Promise<boolean> {
         if (seriousSaving()) return false;
-        const next = !seriousEnabled();
         seriousSaving.set(true);
         seriousError.set(null);
         try {

@@ -81,9 +81,9 @@ describe('SearchQueryDto', () => {
   });
 
   describe('radius_metres', () => {
-    it('should default to 50000 when not provided', () => {
+    it('should remain absent when not provided', () => {
       const dto = buildDto({});
-      expect(dto.radius_metres).toBe(50000);
+      expect(dto.radius_metres).toBeUndefined();
     });
 
     it('should accept valid radius', async () => {
@@ -361,7 +361,7 @@ describe('SearchQueryDto', () => {
       const errors = await validateDto({});
       expect(errors).toHaveLength(0);
       const dto = buildDto({});
-      expect(dto.radius_metres).toBe(50000);
+      expect(dto.radius_metres).toBeUndefined();
     });
   });
 

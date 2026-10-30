@@ -111,6 +111,51 @@ describe('NlpService', () => {
     });
   });
 
+  it('rejects blank explanation input before network I/O', async () => {
+    await expect(
+      service.explainGrammar({ original: '   ', corrected: 'right' }),
+    ).rejects.toMatchObject({ kind: 'empty' });
+    await expect(
+      service.explainGrammar({ original: 'wrong', corrected: '' }),
+    ).rejects.toMatchObject({ kind: 'empty' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it.each(['original', 'corrected'] as const)(
+    'rejects an overlong %s sentence before network I/O',
+    async (field) => {
+      const request = { original: 'wrong', corrected: 'right', [field]: 'a'.repeat(4001) };
+
+      await expect(service.explainGrammar(request)).rejects.toMatchObject({ kind: 'request' });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it('accepts sentences exactly at the 4000 character limit', async () => {
+    const sentence = 'a'.repeat(4000);
+    fetchSpy.mockResolvedValue(
+      response({ original: sentence, corrected: sentence, explanation: 'Reason' }),
+    );
+
+    await expect(
+      service.explainGrammar({ original: sentence, corrected: sentence }),
+    ).resolves.toMatchObject({ explanation: 'Reason' });
+  });
+
+  it.each([
+    [400, 'request'],
+    [401, 'auth'],
+    [403, 'auth'],
+    [500, 'request'],
+    [503, 'request'],
+  ] as const)('maps an explanation HTTP %i response to the %s error kind', async (status, kind) => {
+    fetchSpy.mockResolvedValue(response({ message: 'failure' }, status));
+
+    await expect(
+      service.explainGrammar({ original: 'wrong', corrected: 'right' }),
+    ).rejects.toMatchObject({ kind, status });
+  });
+
   it('classifies rate-limit responses and preserves Retry-After', async () => {
     fetchSpy.mockResolvedValue(
       response({ message: 'Too many requests' }, 429, { 'Retry-After': '17' }),
