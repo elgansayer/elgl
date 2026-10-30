@@ -844,6 +844,11 @@ def test_stall_alert_threshold_must_be_positive() -> None:
         FactoryConfig.from_environment(environment(FACTORY_STALL_ALERT_MINUTES="0"))
 
 
+def test_neptune_activation_stays_rejected_until_tests_only_lifecycle_is_implemented() -> None:
+    with pytest.raises(ConfigurationError, match="repository_profile"):
+        FactoryConfig.from_environment(environment(FACTORY_REPOSITORY_PROFILE="neptune"))
+
+
 def test_repo_factory_service_is_instance_scoped_and_resource_bounded() -> None:
     root = Path(__file__).parents[2]
     unit = (root / "config/systemd/repo-factory@.service").read_text(encoding="utf-8")

@@ -24,6 +24,7 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     repository.mkdir()
     (repository / "frontend/node_modules").mkdir(parents=True)
     (repository / "admin-portal/node_modules").mkdir(parents=True)
+    (repository / ".factory-tools/godot").mkdir(parents=True)
     worktree = tmp_path / "worktrees" / "issue-12"
     runner = Runner([ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")])
     workflow = GitWorkflow(repository, "main", runner)
@@ -35,6 +36,8 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     assert runner.calls[2][-1] == "origin/main"
     assert (worktree / "frontend/node_modules").is_symlink()
     assert (worktree / "admin-portal/node_modules").is_symlink()
+    assert (worktree / ".factory-tools").is_symlink()
+    assert (worktree / ".factory-tools").resolve() == (repository / ".factory-tools").resolve()
 
 
 def test_prepare_worktree_resolves_dependency_links_from_repository_alias(
