@@ -30,6 +30,7 @@ class VerificationCommand:
 
 _VERIFICATION_SANDBOX_SCRIPT = r"""
 set -eu
+umask 077
 workspace=$1
 repository=$2
 state_dir=$3
@@ -103,6 +104,12 @@ if [ -d "$state_dir" ]; then
 fi
 if [ -d "$log_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$log_dir"
+fi
+# /run/user alone leaves root-managed Docker/containerd and service sockets
+# visible. If /run is the staging root, its initial tmpfs already hides them;
+# mounting another tmpfs here would hide our own staged sources too.
+if [ "$sandbox_root" != /run ]; then
+  /usr/bin/mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run
 fi
 /usr/bin/mkdir -p /run/user
 /usr/bin/mount -t tmpfs -o mode=755,nosuid,nodev tmpfs /run/user

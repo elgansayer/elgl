@@ -825,6 +825,39 @@ def test_pull_request_creation_uses_configured_base_branch(tmp_path: Path) -> No
     assert "develop" in runner.calls[0]
 
 
+@pytest.mark.parametrize("success", [True, False])
+def test_pr_metadata_update_uses_supported_rest_and_preserves_literal_body(
+    tmp_path: Path,
+    success: bool,
+) -> None:
+    captured: list[Path] = []
+    body = "First line\n\nLiteral $(command) and `text`\nFactory-Stack-Parent: #41\n"
+
+    def runner(args: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
+        assert args[:6] == (
+            "gh",
+            "api",
+            "--method",
+            "PATCH",
+            "repos/owner/repo/pulls/42",
+            "--input",
+        )
+        payload = Path(args[6])
+        captured.append(payload)
+        assert payload.stat().st_mode & 0o077 == 0
+        assert json.loads(payload.read_text()) == {"title": "Exact title", "body": body}
+        return ProcessResult(0 if success else 1, "{}", "" if success else "HTTP 403")
+
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+    if success:
+        client.update_pull_request(42, title="Exact title", body=body)
+    else:
+        with pytest.raises(FactoryError, match="HTTP 403"):
+            client.update_pull_request(42, title="Exact title", body=body)
+    assert len(captured) == 1
+    assert not captured[0].exists()
+
+
 def test_comment_is_published_with_a_bounded_body(tmp_path: Path) -> None:
     runner = Runner([ProcessResult(0, "", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
@@ -1251,7 +1284,14 @@ def test_pull_request_update_reopen_and_supersession_use_fixed_argv(tmp_path: Pa
     client.reopen_pull_request(42)
     client.supersede_pull_request(43, canonical=42, reason="duplicate active task")
 
-    assert runner.calls[0][:4] == ("gh", "pr", "edit", "42")
+    assert runner.calls[0][:6] == (
+        "gh",
+        "api",
+        "--method",
+        "PATCH",
+        "repos/owner/repo/pulls/42",
+        "--input",
+    )
     assert runner.calls[1][:4] == ("gh", "pr", "reopen", "42")
     assert runner.calls[2][:4] == ("gh", "issue", "edit", "43")
     assert "superseded" in runner.calls[2] and "duplicate" in runner.calls[2]
