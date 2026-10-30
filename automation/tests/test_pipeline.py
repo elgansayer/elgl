@@ -3765,10 +3765,39 @@ def _initialise_implementation_worktree(worktree: Path) -> Path:
     return tracked
 
 
+@pytest.mark.parametrize("untracked", [False, True])
 def test_interrupted_implementation_with_leftover_edit_advances_after_no_op_provider(
-    tmp_path: Path,
+    tmp_path: Path, untracked: bool
 ) -> None:
     factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    if untracked:
+        (worktree / "untracked.txt").write_text("untracked leftover\n", encoding="utf-8")
+    else:
+        tracked.write_text("leftover implementation\n", encoding="utf-8")
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    advanced = pipeline.run_job("42")
+
+    assert advanced is not None
+    assert advanced.state is JobState.SECURITY_REVIEW
+    assert advanced.last_error is None
+
+
+def test_interrupted_implementation_leftover_edit_advances_under_tests_only_merging(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    monkeypatch.setattr(FactoryConfig, "tests_only_merging", property(lambda self: True))
     worktree = factory_config.worktree_dir / "issue-42"
     tracked = _initialise_implementation_worktree(worktree)
     tracked.write_text("leftover implementation\n", encoding="utf-8")
@@ -3784,8 +3813,37 @@ def test_interrupted_implementation_with_leftover_edit_advances_after_no_op_prov
     advanced = pipeline.run_job("42")
 
     assert advanced is not None
-    assert advanced.state is JobState.SECURITY_REVIEW
+    assert advanced.state is JobState.VERIFYING
     assert advanced.last_error is None
+
+
+def test_interrupted_implementation_cleaned_up_by_provider_still_fails(
+    tmp_path: Path,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    tracked.write_text("leftover implementation\n", encoding="utf-8")
+
+    class RevertingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            tracked.write_text("base\n", encoding="utf-8")
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=RevertingConversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.IMPLEMENTING
+    assert "Implementation produced no changes" in (failed.last_error or "")
 
 
 def test_clean_implementation_still_rejects_no_op_provider(tmp_path: Path) -> None:
