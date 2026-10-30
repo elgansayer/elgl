@@ -322,6 +322,14 @@
           transform: translateY(0);
         }
       }
+      .animation-fallback {
+        min-height: 120px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        background: rgb(var(--surface-900) / 0.08);
+        border-radius: 16px;
+      }
       .animate-slide-down {
         animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
@@ -510,14 +518,36 @@
         </div>
       </section>
 
+      <!-- lottie-player renderer failure containment -->
+      <section>
+        <h2>Animation Renderer Fallback</h2>
+        <p class="component-note">
+          If <code>lottie-web</code> rejects malformed animation data, the shared player contains
+          the failure and leaves the owning feature's static, accessible content available. The gift
+          overlay therefore keeps its translated announcement and gift icon without showing broken
+          SVG content or retry controls that cannot succeed locally.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Renderer unavailable</p>
+          <div class="animation-fallback" role="alert" aria-live="polite">
+            <div>
+              <div class="text-4xl mb-3" aria-hidden="true">🌹</div>
+              <div class="font-bold text-text-primary">Rose Broadcast!</div>
+              <div class="text-xs text-text-secondary">Mika gifted Sam a Rose.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer>
         Relay - HelloTalk Design System · Primitives · Feedback States. Covers
         <code>empty-state.component.ts</code>, <code>skeleton-loader.component.ts</code>,
-        <code>toast.component.ts</code> and <code>no-network-banner.component.ts</code> in full.
-        Toast and no-network-banner are both normally fixed-position, viewport-level components;
-        they are shown inline here, in normal page flow, purely for design reference. Supersedes the
-        earlier, now-abandoned ember/tide/ink palette version of the toast preview - this file is
-        rebuilt from the real component and real Relay tokens.
+        <code>toast.component.ts</code>, <code>no-network-banner.component.ts</code> and the
+        <code>lottie-player</code> renderer-failure state in full. Toast and no-network-banner are
+        both normally fixed-position, viewport-level components; they are shown inline here, in
+        normal page flow, purely for design reference. Supersedes the earlier, now-abandoned
+        ember/tide/ink palette version of the toast preview - this file is rebuilt from the real
+        component and real Relay tokens.
       </footer>
     </div>
 
