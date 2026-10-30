@@ -487,6 +487,23 @@ describe('UsersService', () => {
       expect(result).toMatchObject(updatedProfile);
     });
 
+    it('should persist null when clearing a saved proficiency level', async () => {
+      const dto = { proficiency_level: null };
+      const updatedProfile = { id: 'user-1', proficiency_level: null };
+
+      mockQueryBuilder.single.mockResolvedValue({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updateProfile('user-1', dto, false);
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        proficiency_level: null,
+      });
+      expect(result).toMatchObject(updatedProfile);
+    });
+
     it('should return mock profile when update fails with error message', async () => {
       const dto = { display_name: 'Error Name' };
       mockQueryBuilder.single.mockResolvedValue({
