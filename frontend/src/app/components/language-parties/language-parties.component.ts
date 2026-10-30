@@ -144,7 +144,7 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
               hlmBtn
               type="button"
               (click)="clearFilters()"
-              class="flex items-center gap-1 px-3 py-2 rounded-full text-xs text-primary bg-primary/15 border border-primary/30 hover:bg-primary/25 transition-colors shrink-0"
+              class="flex items-center gap-1 px-3 py-2 rounded-full text-xs text-primary-ink bg-primary/15 border border-primary/30 hover:bg-primary/25 transition-colors shrink-0"
             >
               <span>{{ 'languageParty.clearFilters' | t }} ({{ activeFilterCount() }})</span>
               <span>✕</span>
@@ -200,14 +200,14 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
                 <div class="flex flex-wrap items-center gap-2 mb-3">
                   @if (party.language_pair) {
                     <span
-                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary border border-primary/25"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary-ink border border-primary/25"
                     >
                       {{ 'audioRoom.languagePair.' + party.language_pair | t }}
                     </span>
                   }
                   @if (party.topic_tag) {
                     <span
-                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary/15 text-secondary border border-secondary/25"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-secondary/15 text-secondary-ink border border-secondary/25"
                       dir="auto"
                     >
                       #{{ party.topic_tag }}

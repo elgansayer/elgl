@@ -30,6 +30,9 @@ const relayVariables = [
   '--color-primary-rgb',
   '--color-secondary-rgb',
   '--color-danger-rgb',
+  '--color-primary-text-rgb',
+  '--color-secondary-text-rgb',
+  '--color-danger-text-rgb',
   '--color-success-rgb',
   '--color-warning-rgb',
   '--color-vip-rgb',
@@ -41,24 +44,29 @@ const relayVariables = [
 for (const variable of relayVariables) {
   const occurrences = styles.split(variable).length - 1;
   if (occurrences < 2) {
-    failures.push(`Relay token ${variable} must be defined for both light and dark theme ownership`);
+    failures.push(
+      `Relay token ${variable} must be defined for both light and dark theme ownership`,
+    );
   }
 }
 
 const tailwindMappings = [
-  "surface-500-rgb",
-  "color-primary-rgb",
-  "color-secondary-rgb",
-  "color-danger-rgb",
-  "color-success-rgb",
-  "color-warning-rgb",
-  "color-vip-rgb",
-  "color-accent-rgb",
-  "on-fill-rgb",
-  "text-primary-rgb",
-  "text-secondary-rgb",
-  "text-muted-rgb",
-  "shadow-color-rgb",
+  'surface-500-rgb',
+  'color-primary-rgb',
+  'color-secondary-rgb',
+  'color-danger-rgb',
+  'color-primary-text-rgb',
+  'color-secondary-text-rgb',
+  'color-danger-text-rgb',
+  'color-success-rgb',
+  'color-warning-rgb',
+  'color-vip-rgb',
+  'color-accent-rgb',
+  'on-fill-rgb',
+  'text-primary-rgb',
+  'text-secondary-rgb',
+  'text-muted-rgb',
+  'shadow-color-rgb',
 ];
 
 for (const token of tailwindMappings) {
@@ -93,7 +101,9 @@ if (aliasStart === -1 || aliasEnd === -1) {
   ]);
 
   for (const [alias, relayToken] of requiredAliases) {
-    const pattern = new RegExp(`${alias.replaceAll('-', '\\-')}\\s*:\\s*rgb\\(var\\(${relayToken.replaceAll('-', '\\-')}\\)\\)`);
+    const pattern = new RegExp(
+      `${alias.replaceAll('-', '\\-')}\\s*:\\s*rgb\\(var\\(${relayToken.replaceAll('-', '\\-')}\\)\\)`,
+    );
     if (!pattern.test(aliasBlock)) {
       failures.push(`Spartan alias ${alias} must resolve directly to Relay token ${relayToken}`);
     }
@@ -103,15 +113,25 @@ if (aliasStart === -1 || aliasEnd === -1) {
   for (const declaration of colourDeclarations) {
     if (declaration.startsWith('--radius')) continue;
     if (/#[0-9a-f]{3,8}\b|\boklch\(|\bhsl\(|\brgb\(\s*\d/i.test(declaration)) {
-      failures.push(`Spartan semantic aliases must not introduce literal colours: ${declaration.trim()}`);
+      failures.push(
+        `Spartan semantic aliases must not introduce literal colours: ${declaration.trim()}`,
+      );
     }
   }
 }
 
-requireFragment(styles, "--primary: rgb(var(--color-primary-rgb));", 'Dynamic primary alias');
-requireFragment(styles, "--primary-foreground: rgb(var(--on-fill-rgb));", 'On-fill foreground alias');
-requireFragment(tailwind, "primary: {", 'Tailwind primary token');
-requireFragment(tailwind, "DEFAULT: 'rgb(var(--color-primary-rgb) / <alpha-value>)'", 'Tailwind dynamic primary mapping');
+requireFragment(styles, '--primary: rgb(var(--color-primary-rgb));', 'Dynamic primary alias');
+requireFragment(
+  styles,
+  '--primary-foreground: rgb(var(--on-fill-rgb));',
+  'On-fill foreground alias',
+);
+requireFragment(tailwind, 'primary: {', 'Tailwind primary token');
+requireFragment(
+  tailwind,
+  "DEFAULT: 'rgb(var(--color-primary-rgb) / <alpha-value>)'",
+  'Tailwind dynamic primary mapping',
+);
 
 if (failures.length > 0) {
   console.error('Relay token ownership check failed:');
@@ -119,4 +139,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Relay token ownership check passed. Spartan semantic aliases remain owned by Relay tokens.');
+console.log(
+  'Relay token ownership check passed. Spartan semantic aliases remain owned by Relay tokens.',
+);

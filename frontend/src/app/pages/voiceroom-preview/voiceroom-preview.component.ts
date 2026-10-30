@@ -35,7 +35,7 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
               room.language_pair
             }}</span>
             <span
-              class="px-3 py-1 bg-secondary/20 text-secondary rounded-full text-sm font-medium"
+              class="px-3 py-1 bg-secondary/20 text-secondary-ink rounded-full text-sm font-medium"
               >{{ room.topic_tag }}</span
             >
           </div>

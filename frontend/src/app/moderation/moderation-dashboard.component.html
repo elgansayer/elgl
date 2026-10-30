@@ -30,7 +30,7 @@
 
   @if (actionError()) {
     <div
-      class="mb-3 p-3 rounded bg-danger/10 border border-danger/20 text-danger text-sm"
+      class="mb-3 p-3 rounded bg-danger/10 border border-danger/20 text-danger-ink text-sm"
       role="alert"
     >
       {{ actionError() }}
@@ -109,7 +109,7 @@
             @if (analysis()?.flags?.length) {
               <div class="mt-1 flex flex-wrap gap-1">
                 @for (flag of analysis()?.flags ?? []; track flag) {
-                  <span class="text-xs bg-danger/10 text-danger rounded px-2 py-0.5">
+                  <span class="text-xs bg-danger/10 text-danger-ink rounded px-2 py-0.5">
                     {{ flag | sanitiseHtml }}
                   </span>
                 }

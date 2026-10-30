@@ -48,7 +48,7 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
         @if (errorMessage()) {
           <app-card variant="outlined" customClass="max-w-md mx-auto border-danger/30 bg-danger/10">
             <div class="text-center py-4">
-              <p class="text-danger font-semibold mb-2">{{ 'subscription.page.loadError' | t }}</p>
+              <p class="text-danger-ink font-semibold mb-2">{{ 'subscription.page.loadError' | t }}</p>
               <p class="text-text-secondary text-sm mb-4">{{ errorMessage() }}</p>
               <app-button-primary (clicked)="loadPlans()" size="sm">{{
                 'subscription.page.retry' | t

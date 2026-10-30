@@ -118,7 +118,7 @@ import { showToast } from '../../services/toast.service';
 
         <div class="border-t border-surface-100 bg-surface-300 px-4 py-4 sm:px-6 sm:pb-6">
           @if (submitError()) {
-            <p class="mb-4 text-sm text-danger" role="alert">
+            <p class="mb-4 text-sm text-danger-ink" role="alert">
               {{ 'diagnosticQuiz.submitError' | t }}
             </p>
           }

@@ -33,7 +33,7 @@ interface DiffSegment {
           }
           @case ('removed') {
             <del
-              class="bg-danger/15 text-danger line-through rounded ps-0.5 pe-0.5"
+              class="bg-danger/15 text-danger-ink line-through rounded ps-0.5 pe-0.5"
               data-type="removed"
             >
               {{ segment.text }}
