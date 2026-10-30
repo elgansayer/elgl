@@ -875,6 +875,35 @@ class GitHubClient:
         self._run(tuple(arguments))
 
     def remove_issue_labels(self, issue: int, labels: Sequence[str]) -> None:
+        if not labels:
+            return
+        # gh issue edit resolves every requested label definition, including
+        # unattached legacy names which the repository may never have defined.
+        # Read all attachments first; remove only the requested ones that exist.
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "--paginate",
+                f"repos/{self.repository}/issues/{issue}/labels?per_page=100",
+                "--jq",
+                ".[] | @base64",
+            )
+        )
+        requested = {label.casefold() for label in labels}
+        attached: dict[str, str] = {}
+        for encoded in output.splitlines():
+            try:
+                item = json.loads(base64.b64decode(encoded, validate=True).decode("utf-8"))
+            except (ValueError, UnicodeError) as error:
+                raise FactoryError("GitHub issue label encoding is malformed") from error
+            name = item.get("name") if isinstance(item, dict) else None
+            if not isinstance(name, str) or not name:
+                raise FactoryError("GitHub issue label attachment is malformed")
+            if name.casefold() in requested:
+                attached[name.casefold()] = name
+        if not attached:
+            return
         arguments = [
             "gh",
             "issue",
@@ -883,7 +912,7 @@ class GitHubClient:
             "--repo",
             self.repository,
         ]
-        for label in labels:
+        for label in attached.values():
             arguments.extend(("--remove-label", label))
         self._run(tuple(arguments))
 
