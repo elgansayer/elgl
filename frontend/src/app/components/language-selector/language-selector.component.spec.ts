@@ -15,7 +15,7 @@ describe('LanguageSelectorComponent', () => {
         { code: 'en-GB', name: 'British English', nativeName: 'English (UK)', flag: '🇬🇧', isRtl: false },
         { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isRtl: false },
       ],
-      translate: vi.fn((key: string) => key),
+      translate: vi.fn((key: string) => (key === 'common.selected' ? 'Selected' : key)),
       setLanguage: vi.fn(),
     };
 
@@ -52,6 +52,37 @@ describe('LanguageSelectorComponent', () => {
   it('should call setLanguage when selecting a language', () => {
     component.selectLanguage('es');
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
+    expect(component.isOpen()).toBe(false);
+  });
+
+  it('should assign accessible labels with language name and selection state', async () => {
+    component.toggle();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const options = fixture.nativeElement.querySelectorAll('button[role="option"]');
+    expect(options).toHaveLength(2);
+
+    // Selected option (British English)
+    expect(options[0].getAttribute('aria-label')).toBe('British English, Selected');
+    expect(options[0].getAttribute('aria-selected')).toBe('true');
+
+    // Unselected option (Spanish)
+    expect(options[1].getAttribute('aria-label')).toBe('Spanish');
+    expect(options[1].getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('should close on Escape keydown', async () => {
+    component.toggle();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.isOpen()).toBe(true);
+
+    const rootElement = fixture.nativeElement.firstElementChild as HTMLElement;
+    rootElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
     expect(component.isOpen()).toBe(false);
   });
 });
