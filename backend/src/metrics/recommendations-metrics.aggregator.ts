@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
+import { DAILY_RECOMMENDATIONS_LAST_COMPLETED_KEY } from '../recommendations/daily-recommendations.keys';
 import { MetricsService } from './metrics.service';
 
 /**
@@ -47,6 +48,15 @@ export class RecommendationsMetricsAggregator {
       // Normalise to 0-1 range (assume healthy when >500 cached users)
       const rate = Math.min(tier1SuccessCount / 500, 1.0);
       this.metricsService.setMatchmakingTierSuccessRate(rate);
+
+      // Mirror the daily job's completion time from Redis (not process memory)
+      // so every replica reports the same value and a deploy does not reset it.
+      const lastCompleted = Number(
+        await redis.get(DAILY_RECOMMENDATIONS_LAST_COMPLETED_KEY),
+      );
+      if (Number.isFinite(lastCompleted) && lastCompleted > 0) {
+        this.metricsService.setMatchmakingDailyJobLastCompleted(lastCompleted);
+      }
 
       this.logger.info(
         { cachedUsers: tier1SuccessCount, tier1SuccessRate: rate },

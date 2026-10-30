@@ -219,7 +219,7 @@ export class RecommendationsController {
     description:
       'Returns up to 10 language exchange partners cached in Redis via the nightly cron job. ' +
       'Gracefully degrades: Redis cache -> live language-exchange computation -> empty array. ' +
-      'The nightly calculation uses complementary native/target language matching ordered by is_serious_learner.',
+      'The nightly calculation uses complementary native/target language matching ordered by study streak, and caches up to 10 partners per learner for 24 hours.',
   })
   @ApiResponse({
     status: 200,
