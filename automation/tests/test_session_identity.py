@@ -190,6 +190,7 @@ def test_unsafe_checkpoint_files_are_refused(tmp_path, checkpoint, kind):
 def test_unsafe_journal_directory_is_not_silently_repaired(tmp_path):
     public = tmp_path / "public"
     public.mkdir(mode=0o755)
+    public.chmod(0o755)
     with pytest.raises(ValueError):
         SessionIdentityJournal(public)
     assert stat.S_IMODE(public.stat().st_mode) == 0o755
