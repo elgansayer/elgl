@@ -420,7 +420,7 @@
       "claudeDesignPath": "features/chat-messaging.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1663-authoritative-unread-state (bounded preview loading and persisted read receipt handling change state ownership only; the visual contract is unchanged)",
       "requiredStates": ["light", "dark", "loading", "error", "empty", "390px", "rtl", "400%-zoom"]
     },
     {
