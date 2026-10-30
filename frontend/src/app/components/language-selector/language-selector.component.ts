@@ -37,6 +37,17 @@ export class LanguageSelectorComponent {
     this.isOpen.update((open) => !open);
   }
 
+  close(): void {
+    this.isOpen.set(false);
+  }
+
+  getLanguageAriaLabel(lang: LanguageInfo): string {
+    const isSelected = lang.code === this.currentLang();
+    return isSelected
+      ? `${lang.name}, ${this.i18n.translate('common.selected')}`
+      : lang.name;
+  }
+
   selectLanguage(code: string): void {
     this.i18n.setLanguage(code);
     this.isOpen.set(false);

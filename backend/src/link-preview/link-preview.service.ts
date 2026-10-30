@@ -217,6 +217,10 @@ export class LinkPreviewService {
       );
     }
 
+    if (!parsed.hostname) {
+      throw new BadRequestException('Hostname is required');
+    }
+
     if (parsed.username || parsed.password) {
       throw new LinkPreviewFailure(
         'Embedded credentials are not allowed',
@@ -312,6 +316,9 @@ export class LinkPreviewService {
           beforeRedirect: (options) => this.validateRedirectTarget(options),
           httpAgent,
           httpsAgent,
+          // A deployment-level proxy would resolve the target outside the
+          // guarded agents and could therefore bypass the SSRF DNS policy.
+          proxy: false,
           // Keep the body a string so axios never JSON-parses a page that
           // merely happens to look like JSON.
           responseType: 'text',
@@ -323,10 +330,21 @@ export class LinkPreviewService {
         .pipe(timeout(FETCH_DEADLINE_MS)),
     );
 
-    const rawContentType = response.headers['content-type'];
-    const contentType =
-      typeof rawContentType === 'string' ? rawContentType.toLowerCase() : '';
-    if (!contentType.includes('text/html')) {
+    const rawContentType =
+      (response.headers as Record<string, string | string[] | undefined>)[
+        'content-type'
+      ] ?? '';
+    const contentType: string = (
+      Array.isArray(rawContentType)
+        ? rawContentType.join(';')
+        : typeof rawContentType === 'string'
+          ? rawContentType
+          : ''
+    ).toLowerCase();
+    if (
+      !contentType.includes('text/html') &&
+      !contentType.includes('application/xhtml+xml')
+    ) {
       throw new LinkPreviewFailure(
         'URL does not point to an HTML resource',
         'not_html',
@@ -352,21 +370,20 @@ export class LinkPreviewService {
       this.getMetaTag($, 'description') ||
       '';
 
-    const title = this.sanitizeMetaContent(rawTitle, MAX_TITLE_LENGTH);
-    const description = this.sanitizeMetaContent(
+    const title = this.sanitiseMetaContent(rawTitle, MAX_TITLE_LENGTH);
+    const description = this.sanitiseMetaContent(
       rawDescription,
       MAX_DESCRIPTION_LENGTH,
     );
-    const image = this.sanitizeImageUrl(
+    const rawImage =
       this.getMetaTag($, 'og:image') ||
-        this.getMetaTag($, 'og:image:url') ||
-        this.getMetaTag($, 'og:image:secure_url') ||
-        this.getMetaTag($, 'twitter:image') ||
-        this.getMetaTag($, 'twitter:image:src') ||
-        '',
-      url,
-    );
-    const siteName = this.sanitizeMetaContent(
+      this.getMetaTag($, 'og:image:url') ||
+      this.getMetaTag($, 'og:image:secure_url') ||
+      this.getMetaTag($, 'twitter:image') ||
+      this.getMetaTag($, 'twitter:image:src') ||
+      '';
+    const image = this.sanitiseImageUrl(rawImage, url);
+    const siteName = this.sanitiseMetaContent(
       this.getMetaTag($, 'og:site_name') ||
         this.getMetaTag($, 'twitter:site') ||
         this.getMetaTag($, 'application-name') ||
@@ -403,7 +420,7 @@ export class LinkPreviewService {
     ).trim();
   }
 
-  private sanitizeMetaContent(raw: string, maxLength: number): string {
+  private sanitiseMetaContent(raw: string, maxLength: number): string {
     const sanitized = this.dompurify.sanitize(raw, {
       ALLOWED_TAGS: [],
       ALLOWED_ATTR: [],
@@ -413,7 +430,7 @@ export class LinkPreviewService {
     return text.length > maxLength ? text.slice(0, maxLength) : text;
   }
 
-  private sanitizeImageUrl(raw: string, pageUrl: string): string {
+  private sanitiseImageUrl(raw: string, pageUrl: string): string {
     if (!raw || raw.length > MAX_URL_LENGTH) {
       return '';
     }
@@ -454,21 +471,21 @@ export class LinkPreviewService {
       return null;
     }
 
-    const title = this.sanitizeMetaContent(
+    const title = this.sanitiseMetaContent(
       typeof candidate['title'] === 'string' ? candidate['title'] : '',
       MAX_TITLE_LENGTH,
     );
-    const description = this.sanitizeMetaContent(
+    const description = this.sanitiseMetaContent(
       typeof candidate['description'] === 'string'
         ? candidate['description']
         : '',
       MAX_DESCRIPTION_LENGTH,
     );
-    const image = this.sanitizeImageUrl(
+    const image = this.sanitiseImageUrl(
       typeof candidate['image'] === 'string' ? candidate['image'] : '',
       requestedUrl,
     );
-    const siteName = this.sanitizeMetaContent(
+    const siteName = this.sanitiseMetaContent(
       typeof candidate['siteName'] === 'string' && candidate['siteName']
         ? candidate['siteName']
         : new URL(requestedUrl).hostname,

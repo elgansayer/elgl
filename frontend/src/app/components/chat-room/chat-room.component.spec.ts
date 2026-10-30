@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -71,6 +71,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       connect: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn().mockReturnValue({}),
       unsubscribe: vi.fn(),
+      listen: vi.fn().mockReturnValue(() => undefined),
     };
 
     mockAuthService = {
@@ -92,6 +93,8 @@ describe('ChatRoomComponent (threaded replies)', () => {
     };
 
     const mockVocabularyStore = {
+      // Rendering a text bubble tokenises it and colours each word by status.
+      getWordStatus: vi.fn().mockReturnValue({ level: 0, colorClass: '', colourClass: '' }),
       translateWordOrSentence: vi.fn(),
       saveWord: vi.fn(),
       updateSrsLevel: vi.fn(),
@@ -538,6 +541,132 @@ describe('ChatRoomComponent (threaded replies)', () => {
       await component.toggleLock();
       expect(mockChatService.unlockChat).toHaveBeenCalledWith('room-1');
       expect(component.isLocked()).toBe(false);
+    });
+  });
+
+  describe('link previews', () => {
+    const preview = {
+      url: 'https://example.com/post',
+      title: 'Great Article',
+      description: 'A description',
+      image: '',
+      siteName: 'Example',
+    };
+    const linkMessage = makeMessage({
+      id: 'link-1',
+      text_content: 'Read https://example.com/post',
+    });
+
+    function renderedCards(): HTMLAnchorElement[] {
+      const host = fixture.nativeElement as HTMLElement;
+      return Array.from(host.querySelectorAll<HTMLAnchorElement>('app-link-preview-card a'));
+    }
+
+    function bubbleText(): string {
+      // The message text is tokenised into per-word spans separated by template whitespace.
+      return ((fixture.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, '');
+    }
+
+    function realtimeHandler(): (data: unknown) => void {
+      const centrifuge = TestBed.inject(CentrifugeService) as unknown as {
+        subscribe: ReturnType<typeof vi.fn>;
+      };
+      const call = centrifuge.subscribe.mock.calls.find(([channel]) => channel === 'chat:room-1');
+      expect(call, 'the room should be subscribed to realtime events').toBeDefined();
+      return call?.[1] as (data: unknown) => void;
+    }
+
+    beforeEach(async () => {
+      // Rendered bubbles mount Spartan primitives that observe their size.
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe(): void {}
+          unobserve(): void {}
+          disconnect(): void {}
+        },
+      );
+      // Let the asynchronous room initialisation finish so it cannot overwrite test state.
+      await fixture.whenStable();
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('renders the card for a message that history returns with a preview', async () => {
+      mockChatService.getMessages.mockResolvedValue([{ ...linkMessage, link_preview: preview }]);
+
+      await component.loadMessages();
+      fixture.detectChanges();
+
+      const cards = renderedCards();
+      expect(cards).toHaveLength(1);
+      expect(cards[0].href).toBe('https://example.com/post');
+      expect(cards[0].textContent).toContain('Great Article');
+      expect(cards[0].textContent).toContain('Opens in a new tab');
+    });
+
+    it('renders plain text only when the message has no preview', async () => {
+      mockChatService.getMessages.mockResolvedValue([linkMessage]);
+
+      await component.loadMessages();
+      fixture.detectChanges();
+
+      expect(renderedCards()).toHaveLength(0);
+      expect(bubbleText()).toContain('example.com/post');
+    });
+
+    it('shows a card delivered in realtime and removes it when an edit publishes a null preview', async () => {
+      mockChatService.getMessages.mockResolvedValue([linkMessage]);
+      await component.loadMessages();
+      const handler = realtimeHandler();
+
+      handler({ message: { ...linkMessage, link_preview: preview } });
+      fixture.detectChanges();
+      expect(renderedCards()).toHaveLength(1);
+
+      handler({
+        message: { ...linkMessage, text_content: 'No link any more', link_preview: null },
+      });
+      fixture.detectChanges();
+
+      expect(renderedCards()).toHaveLength(0);
+      expect(component.messages()).toHaveLength(1);
+      expect(component.messages()[0]?.text_content).toBe('No link any more');
+    });
+
+    it('replaces the card when an edit points at a different link', async () => {
+      mockChatService.getMessages.mockResolvedValue([{ ...linkMessage, link_preview: preview }]);
+      await component.loadMessages();
+      const handler = realtimeHandler();
+
+      handler({
+        message: {
+          ...linkMessage,
+          text_content: 'Read https://example.org/next',
+          link_preview: { ...preview, url: 'https://example.org/next', title: 'Next Article' },
+        },
+      });
+      fixture.detectChanges();
+
+      const cards = renderedCards();
+      expect(cards).toHaveLength(1);
+      expect(cards[0].href).toBe('https://example.org/next');
+      expect(cards[0].textContent).toContain('Next Article');
+      expect(cards[0].textContent).not.toContain('Great Article');
+    });
+
+    it('does not render a card for an unsafe preview that reaches the client', async () => {
+      mockChatService.getMessages.mockResolvedValue([
+        { ...linkMessage, link_preview: { ...preview, url: 'javascript:alert(1)' } },
+      ]);
+
+      await component.loadMessages();
+      fixture.detectChanges();
+
+      expect(renderedCards()).toHaveLength(0);
+      expect(bubbleText()).toContain('example.com/post');
     });
   });
 });

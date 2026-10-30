@@ -184,6 +184,10 @@ describe('I18nService', () => {
     expect(text).toBe('HelloTalk');
   });
 
+  it('should translate the unset profile proficiency option', () => {
+    expect(service.translate('profile.proficiencyUnset')).toBe('Not set');
+  });
+
   it('should translate the audio intro feed empty state from the base dictionary', () => {
     expect(service.translate('discovery.audioIntroFeed.title')).toBe('Audio introductions');
     expect(
@@ -376,6 +380,18 @@ describe('I18nService', () => {
       for (const [key, value] of Object.entries(service.translations())) {
         expect(value, key).not.toMatch(HTML_ENTITY);
       }
+    });
+
+    it('uses double-brace placeholders because translate() never substitutes single braces', () => {
+      const singleBracePlaceholder = /(?<!\{)\{[A-Za-z_][\w.]*\}(?!\})/;
+
+      for (const [key, value] of Object.entries(service.translations())) {
+        expect(value, key).not.toMatch(singleBracePlaceholder);
+      }
+    });
+
+    it('announces that link preview cards open in a new tab', () => {
+      expect(service.translate('linkPreview.opensInNewTab')).toBe('Opens in a new tab');
     });
 
     it('keeps navigation labels free of emoji because every template draws its own icon', () => {

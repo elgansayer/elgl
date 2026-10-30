@@ -81,6 +81,10 @@ def test_production_provider_policy_is_locked() -> None:
     assert routing["ci_repair"][-1] == "codex"
     assert providers["google"]["phase_models"]["ci_repair"].endswith("flash-low")
     assert providers["claude"]["phase_models"]["ci_repair"] == "haiku"
+    # Quality repair judges review and quality findings; flash-low returned no
+    # change in 25 of 63 such runs versus 4 of 32 for Codex (7 days to
+    # 2026-10-29, excluding three unrecoverable tasks).
+    assert providers["google"]["phase_models"]["quality_repair"].endswith("flash-high")
 
     # With only six real provider starts admitted per hour in conservative mode,
     # rediscovering a known provider-wide outage is material allowance waste.

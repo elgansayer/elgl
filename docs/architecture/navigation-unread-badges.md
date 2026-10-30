@@ -12,7 +12,7 @@ Issues #1045 and #1046 are implemented by the shared `UnreadCounterService` and 
 - Live Rooms: `audioRoomsUnread`
 - Profile: `notificationUnread`
 
-Both the desktop sidebar and mobile bottom navigation read those counters through `tabCount(tab)`. A visual badge is rendered only when the corresponding count is greater than zero. `badgeText(tab)` caps visual text at `99+`, while the full integer remains in service state for totals, assistive technology, later decrements, and the application badge.
+Both `DesktopSidebarComponent` and `MobileNavigationComponent` read those counters through `tabCount(tab)`. A visual badge is rendered only when the corresponding count is greater than zero. `badgeText(tab)` caps visual text at `99+`, while the full integer remains in service state for totals, assistive technology, later decrements, and the application badge. Tabular numerals keep badge widths visually stable as counts change.
 
 Counter producers remain separate from presentation. Persisted chat messages and notifications emit typed personal unread events through the existing `user_{id}` channel. Moment activity targets Moments, follows and profile activity target Discovery, incoming calls target Live Rooms, chat messages target Chat, and remaining notification activity targets Profile. The root unread bootstrap starts independently of unrelated application startup work. Navigation components perform no network requests and must not fabricate counts when a producer is unavailable.
 
@@ -53,6 +53,7 @@ Unread counters contain aggregate numbers only. Navigation does not persist mess
 Relevant automated coverage lives in:
 
 - `frontend/src/app/services/unread-counter.service.spec.ts` for per-tab state, normalization, saturation, compact badge presentation, totals, and optional application-badge integration;
+- `frontend/src/app/components/mobile-navigation/mobile-navigation.component.spec.ts` for rendered destination order, per-tab badge state, compact presentation, full assistive counts, native-link semantics, focus treatment, and Serious Learner mode;
 - `frontend/src/app/components/desktop-sidebar/desktop-sidebar.component.spec.ts` for all five tab bindings, zero-state removal, `99+` presentation, full assistive unread text, native-link semantics, focus treatment, and active-route semantics;
 - `frontend/src/app/app.component.spec.ts` for root-service wiring and realtime unread updates.
 

@@ -1,13 +1,23 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AuthService } from '../../services/auth.service';
 import { LinkPreviewCardComponent } from './link-preview-card.component';
 
 describe('LinkPreviewCardComponent', () => {
   let fixture: ComponentFixture<LinkPreviewCardComponent>;
 
   beforeEach(async () => {
+    localStorage.clear();
+
     await TestBed.configureTestingModule({
       imports: [LinkPreviewCardComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { getAccessToken: () => null } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LinkPreviewCardComponent);
@@ -185,5 +195,67 @@ describe('LinkPreviewCardComponent', () => {
 
     expect(autoDirection).toHaveLength(3);
     expect(address).toBeTruthy();
+  });
+
+  describe('accessibility', () => {
+    it('tells assistive technology that the link opens in a new tab', () => {
+      setInputs({
+        url: 'https://example.com/article',
+        title: 'Great Article',
+        siteName: 'Example',
+      });
+
+      const anchor: HTMLAnchorElement = fixture.debugElement.query(By.css('a')).nativeElement;
+      const hint = anchor.querySelector('.sr-only');
+
+      expect(anchor.target).toBe('_blank');
+      expect(hint?.textContent?.trim()).toBe('Opens in a new tab');
+      // The hint lives inside the anchor, so it is part of the link's accessible name.
+      expect(anchor.textContent).toContain('Great Article');
+      expect(anchor.textContent).toContain('Opens in a new tab');
+    });
+
+    it('keeps the visible metadata as the link name instead of replacing it with a label', () => {
+      setInputs({
+        url: 'https://example.com/article',
+        title: 'Great Article',
+        description: 'A description',
+        siteName: 'Example',
+      });
+
+      const anchor: HTMLAnchorElement = fixture.debugElement.query(By.css('a')).nativeElement;
+
+      expect(anchor.hasAttribute('aria-label')).toBe(false);
+      expect(anchor.textContent).toContain('Example');
+      expect(anchor.textContent).toContain('A description');
+      expect(anchor.textContent).toContain('example.com/article');
+    });
+
+    it('always gives the link a non-empty name, even without any metadata', () => {
+      setInputs({ url: 'https://example.com/bare' });
+
+      const anchor: HTMLAnchorElement = fixture.debugElement.query(By.css('a')).nativeElement;
+
+      expect(anchor.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'example.com example.com/bare Opens in a new tab',
+      );
+    });
+
+    it('is keyboard reachable with a visible focus indicator', () => {
+      setInputs({ url: 'https://example.com/article' });
+
+      const anchor: HTMLAnchorElement = fixture.debugElement.query(By.css('a')).nativeElement;
+
+      expect(anchor.hasAttribute('href')).toBe(true);
+      expect(anchor.tabIndex).toBe(0);
+      expect(anchor.className).toContain('focus-visible:ring-2');
+      expect(anchor.className).not.toContain('focus:outline-none');
+    });
+
+    it('renders no hint when the destination is unsafe and no card is shown', () => {
+      setInputs({ url: 'javascript:alert(1)', title: 'Unsafe preview' });
+
+      expect(fixture.nativeElement.querySelector('.sr-only')).toBeNull();
+    });
   });
 });

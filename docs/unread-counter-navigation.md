@@ -59,7 +59,7 @@ Focused checks live in:
 - `frontend/src/app/services/unread-counter.service.spec.ts`
 - `frontend/src/app/app-navigation-tabs.contract.spec.ts`
 
-The service suite covers normalisation, saturation, compact presentation, lifecycle operations, and browser badge failure behaviour. Root and chat component tests cover real-time tab routing, partial startup failure, and persisted read transitions. Backend listener tests cover personal channel payloads, notification classification, persistence failure, and realtime delivery failure. The navigation contract verifies that all five tabs remain wired to the shared service in both mobile and desktop navigation and retain accessibility semantics.
+The service suite covers normalisation, saturation, compact presentation, lifecycle operations, and browser badge failure behaviour. Root and chat component tests cover real-time tab routing, partial startup failure, and persisted read transitions. Backend listener tests cover personal channel payloads, notification classification, persistence failure, and realtime delivery failure. The navigation contract verifies that all five tabs remain wired to the shared service in both mobile and desktop navigation, retain accessibility semantics, and do not regress to unrelated audio-room co-host controls.
 
 Run the focused frontend tests with the repository's normal Vitest command, and use the full frontend lint/build/test CI jobs as the merge gate.
 

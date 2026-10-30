@@ -21,6 +21,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `study_streak_days` (Integer, default `1`)
 - `correction_ratio` (Float, ratio of corrections given vs received, default `1.0`)
 - `is_serious_learner` (Boolean, calculated boolean based on streak > 7 and correction_ratio >= 0.8)
+- `proficiency_level` (Nullable String, canonical CEFR level `'A1'`, `'A2'`, `'B1'`, `'B2'`, `'C1'`, or `'C2'`)
 - `privacy_hide_age` (Boolean, default `false`)
 - `privacy_hide_location` (Boolean, default `false`)
 - `privacy_hide_from_search` (Boolean, default `false`)
@@ -163,6 +164,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 ### JSON Message Payloads
 
 - **Text:** `{ "type": "text", "content": "Hello world", "replyToId": null }`
+- **Text link preview:** a text publication may carry `"link_preview": { "url", "title", "description", "image", "siteName" }`, the bounded OpenGraph metadata of the first URL in the text. An edit always includes the field and publishes `null` when the new text has no previewable link, because clients merge edit events over their local copy of the message. Previews are realtime-only (not stored with the message); see `docs/rich-link-previews.md`.
 - **Correction:** `{ "type": "correction", "original": "I goes to school", "fixed": "I go to school", "notes": "Subject-verb agreement" }`
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`

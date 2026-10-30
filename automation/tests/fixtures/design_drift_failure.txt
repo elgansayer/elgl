@@ -1,0 +1,13 @@
+ok 5 - fails closed when the claimed PR head is outside the integration checkout
+# pass 5
+Design sync drift verification failed:
+- screen.chat: mapped implementation changed without its mapped preview or its own manifest metadata changing
+    changed: frontend/src/app/components/chat-room/chat-room.component.ts
+    update the preview to match: frontend/design-preview/screens/chat.html
+    or, if the visual contract is unchanged, record why in the "screen.chat" item of design-sync.manifest.json
+- screen.settings: mapped implementation changed without its mapped preview or its own manifest metadata changing
+    changed: frontend/src/app/pages/settings/message-filter-settings/message-filter-settings.component.ts
+    update the preview to match: frontend/design-preview/screens/settings.html
+    or, if the visual contract is unchanged, record why in the "screen.settings" item of design-sync.manifest.json
+
+Update the affected preview or the affected manifest item.
