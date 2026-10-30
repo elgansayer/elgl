@@ -79,7 +79,10 @@ class Runner:
 
     def __call__(self, args: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
         self.calls.append(tuple(args))
-        return ProcessResult(0, json.dumps(self.values.pop(0)), "")
+        value = self.values.pop(0)
+        if tuple(args[:3]) == ("gh", "api", "graphql"):
+            value = {"data": {"repository": {"pullRequest": value}}}
+        return ProcessResult(0, json.dumps(value), "")
 
 
 def responses(
@@ -112,6 +115,10 @@ def test_native_merge_preserves_ancestry_and_uses_expected_head(tmp_path: Path) 
     assert "--squash" not in repr(runner.calls)
     assert "--delete-branch" not in repr(runner.calls)
     assert "secret" not in repr(runner.calls)
+    # Older installed gh versions omit baseRefOid from `pr view --json` even
+    # though the server GraphQL API supports it. Do not return to that CLI read.
+    assert runner.calls[0][:3] == ("gh", "api", "graphql")
+    assert any("baseRefOid" in argument for argument in runner.calls[0])
 
 
 @pytest.mark.parametrize("review", ["", "REVIEW_REQUIRED", "CHANGES_REQUESTED"])

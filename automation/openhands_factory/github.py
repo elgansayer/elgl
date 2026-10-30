@@ -1439,21 +1439,36 @@ class GitHubClient:
         )
 
     def _neptune_pull_request_status(self, pull_request: int) -> PullRequestStatus:
-        item = json.loads(
+        owner, name = self.repository.split("/", 1)
+        query = """
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      number state isDraft mergeable mergeStateStatus reviewDecision
+      headRefOid baseRefName baseRefOid isCrossRepository
+      autoMergeRequest { enabledAt }
+    }
+  }
+}
+"""
+        payload = json.loads(
             self._run(
                 (
                     "gh",
-                    "pr",
-                    "view",
-                    str(pull_request),
-                    "--repo",
-                    self.repository,
-                    "--json",
-                    "number,state,isDraft,mergeable,mergeStateStatus,reviewDecision,"
-                    "headRefOid,baseRefName,baseRefOid,isCrossRepository,autoMergeRequest",
+                    "api",
+                    "graphql",
+                    "-f",
+                    f"query={query}",
+                    "-f",
+                    f"owner={owner}",
+                    "-f",
+                    f"name={name}",
+                    "-F",
+                    f"number={pull_request}",
                 )
             )
         )
+        item = payload["data"]["repository"]["pullRequest"]
         # Restrict the preparatory boundary to the existing protected main branch.
         # Stacked children must be retargeted and retested after their parent merges.
         if self.base_branch != "main" or item.get("baseRefName") != self.base_branch:
