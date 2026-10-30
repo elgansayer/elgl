@@ -7,6 +7,8 @@ Issue #959 is implemented by the existing Angular `DiscoveryComponent` and its s
 `/discovery` owns partner matchmaking. The screen exposes the repository's canonical discovery filters and sends them through `DiscoveryService.findPartners()`:
 
 - distance is expressed in kilometres in the UI and converted to `radius_metres` at the API boundary;
+- an explicit distance filter requires browser coordinates or a valid saved profile point; the API returns a validation error instead of silently running an unbounded query when neither origin exists;
+- authenticated profile failures remain unavailable or not-found states and never fall back to synthetic VIP, administrator, or language data;
 - native language, target language, proficiency and audio-intro filters are collected by the shared global-search control;
 - the user's target languages are also available as fast target-language pills;
 - the Serious Learner filter maps to `serious_learner_only` while the separately persisted Serious Learner mode remains owned by the account/discovery preference flow;

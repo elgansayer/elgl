@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 export interface DegradationMarker {
@@ -149,6 +149,11 @@ export class DiscoveryDegradationService {
       this.recordSuccess(service);
       return result;
     } catch (error: unknown) {
+      // Invalid filters are caller errors, not dependency failures. Preserve
+      // the validation response and do not trip the availability circuit.
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Circuit ${service}: operation failed: ${message}`);
       this.recordFailure(service);

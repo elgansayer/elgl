@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Optional,
   ServiceUnavailableException,
@@ -547,6 +548,15 @@ export class DiscoveryService {
       }
     }
 
+    if (
+      query.radius_metres !== undefined &&
+      (searchLat === undefined || searchLon === undefined)
+    ) {
+      throw new BadRequestException(
+        'A saved location or browser coordinates are required for distance filtering',
+      );
+    }
+
     // Serious Learner mode must be resolved before the standard Supabase query
     // is constructed so every discovery path applies the same thresholds.
     if (
@@ -823,6 +833,9 @@ export class DiscoveryService {
 
       return { data: result, marker };
     } catch (error: unknown) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       await this.degradationService.recordDegradationEvent(
         '/discovery/partners',

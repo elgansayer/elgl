@@ -6,6 +6,7 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { BadRequestException } from '@nestjs/common';
 
 vi.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -709,6 +710,29 @@ describe('DiscoveryService', () => {
         }),
       );
       expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+    });
+
+    it('should reject a radius filter when no spatial origin is available', async () => {
+      await expect(
+        service.searchPartners(
+          'user-1',
+          { location: undefined },
+          { radius_metres: 25_000 },
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.limit).not.toHaveBeenCalled();
+    });
+
+    it('should preserve missing-origin validation through the degradation boundary', async () => {
+      await expect(
+        service.searchPartnersWithDegradation(
+          'user-1',
+          { location: undefined },
+          { radius_metres: 25_000 },
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should map RPC distance field when distance_metres is missing', async () => {

@@ -2,6 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { BadRequestException } from '@nestjs/common';
 
 describe('DiscoveryDegradationService', () => {
   let service: DiscoveryDegradationService;
@@ -178,6 +179,28 @@ describe('DiscoveryDegradationService', () => {
       expect(marker.degraded).toBe(true);
       expect(marker.reason).toContain('DB down');
       expect(marker.fallbackSource).toBe('basic_query');
+    });
+
+    it('should preserve validation failures without degrading or opening the circuit', async () => {
+      const operation = vi
+        .fn()
+        .mockRejectedValue(new BadRequestException('Invalid radius'));
+      const fallback = vi.fn().mockResolvedValue('fallback');
+      const marker = {
+        degraded: false,
+        reason: undefined as string | undefined,
+        fallbackSource: 'none' as const,
+      };
+
+      await expect(
+        service.executeWithBreaker('supabase', operation, fallback, marker),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(fallback).not.toHaveBeenCalled();
+      expect(marker.degraded).toBe(false);
+      expect(service.getAllBreakerStates().get('supabase')?.totalFailures).toBe(
+        0,
+      );
     });
 
     it('should use fallback when circuit is open', async () => {
