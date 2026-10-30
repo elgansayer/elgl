@@ -1,6 +1,16 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of, timeout, retry, Subject, takeUntil } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import {
+  firstValueFrom,
+  catchError,
+  of,
+  timeout,
+  timer,
+  throwError,
+  retry,
+  Subject,
+  takeUntil,
+} from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
@@ -33,6 +43,52 @@ export interface SearchFilterParams {
   available_time_start?: string;
   available_time_end?: string;
   voice_room_active?: boolean;
+}
+
+/** Why a partner search could not be answered. Each class gets its own honest UI state. */
+export type DiscoverySearchFailureKind =
+  'unauthorised' | 'rate_limited' | 'invalid_request' | 'unavailable';
+
+/**
+ * Sanitised partner-search failure.
+ *
+ * It carries only the failure class and the HTTP status. An HttpErrorResponse
+ * embeds the request URL and, for Nearby searches, that URL holds the caller's
+ * precise coordinates, so the raw error must never reach a log or an error report.
+ */
+export class DiscoverySearchError extends Error {
+  constructor(
+    readonly kind: DiscoverySearchFailureKind,
+    readonly status: number | null = null,
+  ) {
+    super(`Discovery search failed: ${kind}`);
+    this.name = 'DiscoverySearchError';
+  }
+}
+
+function classifyPartnerSearchFailure(error: unknown): DiscoverySearchError {
+  if (error instanceof HttpErrorResponse) {
+    const status = error.status > 0 ? error.status : null;
+    if (error.status === 401 || error.status === 403) {
+      return new DiscoverySearchError('unauthorised', status);
+    }
+    if (error.status === 429) return new DiscoverySearchError('rate_limited', status);
+    if (error.status === 400 || error.status === 422) {
+      return new DiscoverySearchError('invalid_request', status);
+    }
+    return new DiscoverySearchError('unavailable', status);
+  }
+  // Timeouts and transport failures never reach a server decision, so the user can simply retry.
+  return new DiscoverySearchError('unavailable');
+}
+
+/**
+ * Only transport failures, timeouts and 5xx responses merit an automatic retry. A 4xx will not
+ * change on repeat, and 429 is already retried with back-off and Retry-After by the app-level
+ * interceptor, so retrying it again here would multiply requests against the rate limit.
+ */
+function isTransientPartnerSearchFailure(error: unknown): boolean {
+  return !(error instanceof HttpErrorResponse) || error.status === 0 || error.status >= 500;
 }
 
 @Injectable({
@@ -72,6 +128,14 @@ export class DiscoveryService {
     }
   }
 
+  /**
+   * Searches partners through `GET /discovery/partners`.
+   *
+   * Resolves to `[]` for an offline client, a cancelled request, an unverifiable block graph, or a
+   * genuinely empty result. Rejects with a {@link DiscoverySearchError} when the API itself cannot
+   * answer (401/403, 429, 400/422, 5xx, timeout, transport failure) so callers can show an
+   * unavailable state instead of a misleading "no matches".
+   */
   async findPartners(
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
     abortSignal?: AbortSignal,
@@ -149,16 +213,29 @@ export class DiscoveryService {
       abortSignal.addEventListener('abort', () => cancel$.next(), { once: true });
     }
 
-    const users = await firstValueFrom(
-      this.http
-        .get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
-        .pipe(
-          timeout(15000),
-          retry({ count: 1, delay: 1000 }),
-          takeUntil(cancel$),
-          catchError(() => of<UserProfile[]>([])),
-        ),
-    );
+    let users: UserProfile[];
+    try {
+      users = await firstValueFrom(
+        this.http
+          .get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
+          .pipe(
+            timeout(15000),
+            retry({
+              count: 1,
+              delay: (error: unknown) =>
+                isTransientPartnerSearchFailure(error) ? timer(1000) : throwError(() => error),
+            }),
+            takeUntil(cancel$),
+          ),
+        // A cancelled request completes without a value; that is a superseded search, not a failure.
+        { defaultValue: [] },
+      );
+    } catch (error) {
+      if (abortSignal?.aborted) return [];
+      // Surface the failure instead of an empty list: "the service is unavailable" and "nobody
+      // matches" need different UI. Offline and block-graph failures stay fail-closed (empty).
+      throw classifyPartnerSearchFailure(error);
+    }
 
     return this.enrichPartners(users, filters);
   }

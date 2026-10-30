@@ -164,6 +164,58 @@
         padding: 9px 12px;
         font-size: 12px;
       }
+      .matchmaking-controls {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .control {
+        min-width: 0;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 12px;
+        background: rgb(var(--surface-200));
+        padding: 9px 10px;
+      }
+      .control-label {
+        display: block;
+        margin-bottom: 6px;
+        color: rgb(var(--text-secondary));
+        font-size: 9px;
+        font-weight: 800;
+      }
+      .control select,
+      .control input[type='range'] {
+        width: 100%;
+      }
+      .control select {
+        min-height: 32px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 9px;
+        background: rgb(var(--surface-300));
+        color: rgb(var(--text-primary));
+      }
+      .distance-value {
+        display: block;
+        margin-top: 4px;
+        color: rgb(var(--text-primary));
+        font-size: 10px;
+        font-weight: 850;
+      }
+      .serious-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        color: rgb(var(--text-primary));
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .serious-toggle input {
+        width: 18px;
+        height: 18px;
+        accent-color: rgb(var(--primary));
+      }
       main {
         padding: 14px;
       }
@@ -335,6 +387,44 @@
         font-size: 12px;
         line-height: 1.55;
       }
+      .state-contract {
+        width: min(100%, 760px);
+        margin: 16px auto 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .state-card {
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 14px;
+        background: rgb(var(--surface-500));
+        padding: 12px;
+      }
+      .state-card strong,
+      .state-card span {
+        display: block;
+      }
+      .state-card span {
+        margin-top: 4px;
+        color: rgb(var(--text-secondary));
+        font-size: 10px;
+        line-height: 1.45;
+      }
+      .state-card button {
+        min-height: 44px;
+        margin-top: 10px;
+        border: 0;
+        border-radius: 11px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        padding: 8px 12px;
+        font-size: 10px;
+        font-weight: 850;
+      }
+      .state-card input[type='range'] {
+        width: 100%;
+        margin-top: 10px;
+      }
       @media (max-width: 420px) {
         body {
           padding-inline: 0;
@@ -350,6 +440,10 @@
         }
         .recommendation-card {
           flex-basis: min(270px, 82vw);
+        }
+        .matchmaking-controls,
+        .state-contract {
+          grid-template-columns: 1fr;
         }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -387,6 +481,35 @@
           <button class="filter">Same interests</button>
           <button class="filter">Serious learner</button>
           <button class="filter">Has audio intro</button>
+        </div>
+        <div class="matchmaking-controls">
+          <label class="control">
+            <span class="control-label">Target language</span>
+            <select aria-label="Target language">
+              <option>Any language</option>
+              <option selected>Japanese</option>
+              <option>Spanish</option>
+            </select>
+          </label>
+          <label class="control">
+            <span class="control-label">Maximum distance</span>
+            <input
+              id="preview-distance"
+              type="range"
+              min="10"
+              max="250"
+              value="50"
+              aria-label="Maximum distance"
+            />
+            <output class="distance-value" for="preview-distance">50 km</output>
+          </label>
+          <div class="control">
+            <span class="control-label">Learning intent</span>
+            <label class="serious-toggle">
+              <input type="checkbox" checked />
+              <span>Serious Learner</span>
+            </label>
+          </div>
         </div>
         <div class="search">Search by name, language or interest</div>
       </header>
@@ -469,16 +592,57 @@
       </main>
     </div>
 
+    <section class="state-contract" aria-label="Discovery content states">
+      <article class="state-card" aria-busy="true">
+        <strong>Searching for language partners</strong>
+        <span>Loading remains announced while the latest request owns the result region.</span>
+      </article>
+      <article class="state-card">
+        <strong>No partners match this search</strong>
+        <span>Empty results keep the filters visible and offer a deliberate reset.</span>
+        <button type="button" data-preview-message="Discovery filters reset">Reset Filters</button>
+      </article>
+      <article class="state-card">
+        <strong>Search temporarily limited</strong>
+        <span>Wait a moment, then retry the current filters.</span>
+        <button type="button" data-preview-message="Partner search retried">Try Again</button>
+      </article>
+      <article class="state-card">
+        <strong>Filters could not be applied</strong>
+        <span>Reset invalid filters instead of repeating the same request.</span>
+        <button type="button" data-preview-message="Invalid discovery filters reset">
+          Reset Filters
+        </button>
+      </article>
+      <article class="state-card">
+        <strong>Distance filter unavailable</strong>
+        <span>The disabled native control remains labelled and points to the VIP explanation.</span>
+        <input
+          type="range"
+          min="10"
+          max="250"
+          value="50"
+          aria-label="Maximum distance unavailable"
+          disabled
+        />
+      </article>
+    </section>
+
+    <p id="preview-feedback" class="caption" role="status" aria-live="polite"></p>
+
     <p class="caption">
-      The Discovery visual contract includes separate profile links plus touch-sized Send Message
-      and Follow actions on recommended partner cards. Quick actions preserve card ordering,
-      explainable recommendation reasons, mobile horizontal scrolling, RTL-safe composition and
-      light/dark parity.
+      The Discovery visual contract includes list-driven language filtering, a labelled distance
+      range, persisted Serious Learner intent, classified recovery states and touch-sized partner
+      actions. Controls reflow to one column at the mobile baseline and preserve RTL-safe
+      composition, keyboard operation, visible text state and light/dark parity.
     </p>
 
     <script>
       const light = document.getElementById('light');
       const dark = document.getElementById('dark');
+      const distance = document.getElementById('preview-distance');
+      const distanceValue = document.querySelector('output[for="preview-distance"]');
+      const previewFeedback = document.getElementById('preview-feedback');
       light.addEventListener('click', () => {
         document.documentElement.classList.remove('dark');
         light.classList.add('active');
@@ -488,6 +652,14 @@
         document.documentElement.classList.add('dark');
         dark.classList.add('active');
         light.classList.remove('active');
+      });
+      distance.addEventListener('input', () => {
+        distanceValue.textContent = `${distance.value} km`;
+      });
+      document.querySelectorAll('[data-preview-message]').forEach((action) => {
+        action.addEventListener('click', () => {
+          previewFeedback.textContent = action.dataset.previewMessage;
+        });
       });
     </script>
   </body>

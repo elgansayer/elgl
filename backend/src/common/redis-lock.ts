@@ -11,7 +11,11 @@ end
 return 0
 `;
 
-/** The subset of the ioredis client the lock needs (keeps callers easy to fake). */
+/**
+ * Structural contract for the production ioredis commands used by the lock.
+ * Keeping the boundary command-specific avoids coupling this utility to a
+ * concrete Redis client class while preserving the real command semantics.
+ */
 export interface RedisLockClient {
   set(
     key: string,

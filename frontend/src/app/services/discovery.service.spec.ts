@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { of, throwError } from 'rxjs';
+import { defer, of, throwError } from 'rxjs';
 
-import { DiscoveryService } from './discovery.service';
+import { DiscoverySearchFailureKind, DiscoveryService } from './discovery.service';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { ChatService } from './chat.service';
@@ -12,7 +12,10 @@ import { UserService } from './user.service';
 import { OfflineDiscoveryCacheService } from './offline-discovery-cache.service';
 
 describe('DiscoveryService offline privacy boundary', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    vi.useRealTimers();
+    TestBed.resetTestingModule();
+  });
 
   it('returns no profiles without contacting or reading the API while offline', async () => {
     const get = vi.fn();
@@ -51,8 +54,72 @@ describe('DiscoveryService offline privacy boundary', () => {
     expect(getAllCachedPartners).not.toHaveBeenCalled();
   });
 
-  it('returns no profiles when the partners API fails online', async () => {
-    const get = vi.fn(() => throwError(() => new Error('service unavailable')));
+  it.each([
+    { status: 401, kind: 'unauthorised' },
+    { status: 429, kind: 'rate_limited' },
+    { status: 400, kind: 'invalid_request' },
+  ] satisfies readonly { status: number; kind: DiscoverySearchFailureKind }[])(
+    'classifies an HTTP $status partner-search failure as $kind',
+    async ({ status, kind }) => {
+      const get = vi.fn(() =>
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status,
+              url: 'https://api.example/discovery/partners?latitude=51.5&longitude=-0.1',
+            }),
+        ),
+      );
+
+      await TestBed.configureTestingModule({
+        providers: [
+          DiscoveryService,
+          { provide: HttpClient, useValue: { get } },
+          {
+            provide: AuthService,
+            useValue: {
+              getAccessToken: vi.fn(() => 'token'),
+              currentUser: signal({ id: 'viewer-1' }),
+            },
+          },
+          {
+            provide: SafetyService,
+            useValue: { getBlockedAndBlockerIdsStrict: vi.fn() },
+          },
+          { provide: ChatService, useValue: {} },
+          { provide: UserService, useValue: {} },
+          {
+            provide: OfflineDiscoveryCacheService,
+            useValue: { isOnline: signal(true) },
+          },
+        ],
+      }).compileComponents();
+
+      const service = TestBed.inject(DiscoveryService);
+      await expect(service.findPartners({})).rejects.toMatchObject({
+        name: 'DiscoverySearchError',
+        kind,
+        status,
+      });
+      expect(get).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('retries one transient server failure before returning a sanitised unavailable error', async () => {
+    vi.useFakeTimers();
+    let subscriptions = 0;
+    const get = vi.fn(() =>
+      defer(() => {
+        subscriptions += 1;
+        return throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 503,
+              url: 'https://api.example/discovery/partners?latitude=51.5&longitude=-0.1',
+            }),
+        );
+      }),
+    );
 
     await TestBed.configureTestingModule({
       providers: [
@@ -79,7 +146,15 @@ describe('DiscoveryService offline privacy boundary', () => {
     }).compileComponents();
 
     const service = TestBed.inject(DiscoveryService);
-    await expect(service.findPartners({})).resolves.toEqual([]);
+    const rejection = expect(service.findPartners({})).rejects.toMatchObject({
+      name: 'DiscoverySearchError',
+      kind: 'unavailable',
+      status: 503,
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    await rejection;
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(subscriptions).toBe(2);
   });
 
   it('returns no profiles when the client block graph cannot be verified', async () => {
