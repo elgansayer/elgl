@@ -83,3 +83,16 @@ remains responsible for rejecting head/base changes at the atomic merge step.
 This GitHub adapter is a bounded #77 prerequisite. It does not enable Neptune in
 FactoryConfig, skip lifecycle review phases, install an instance, or establish a
 live issue-to-merge/restart result. Those remain required before activation.
+
+### Recorded publication experiment
+
+Neptune [PR #516](https://github.com/elgansayer/Neptune-Bomberman/pull/516)
+exercised the actual adapter with installed `gh`: a wrong expected head was
+rejected without a merge command, then a fresh current-base read accepted the
+app-pinned successful gate and issued one native merge request. GitHub merged
+head `50ae1d59fc4e1c7259dde76d337f391a73e2e1d1` into base
+`ea22ec03b4c83a50a18712b03788d890500327cb`, producing
+`c85f8ee75fbca76c552672b6c295220e2a465545`. The source branch remained. A fresh
+coordinator process reconciled the merged state without another merge request.
+This proves the publication boundary, not an AI implementation job or a running
+Neptune service; preserve those separate acceptance gates.
