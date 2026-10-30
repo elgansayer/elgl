@@ -1065,6 +1065,26 @@ def test_unverified_merged_head_is_preserved_without_false_credit(tmp_path, veri
     assert pipeline.run_job("42") is None
 
 
+def test_readmission_cannot_approve_an_unverified_merged_head(tmp_path):
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)
+    job = pipeline.refresh()["42"]
+    job.pull_request = 99
+    job.state = JobState.CI_PENDING
+    job.head_sha = "a" * 40
+    job.latest_verified_sha = "b" * 40
+    pipeline.jobs.save_reconciled_jobs([job])
+    github.tasks = []
+    github.remote_states[(99, True)] = RemoteTaskState(99, "MERGED", "a" * 40)
+    assert pipeline.refresh()["42"].intake_blocked
+    github.tasks = [job.task]
+
+    reobserved = pipeline.refresh()["42"]
+    assert reobserved.intake_blocked
+    assert reobserved.latest_verified_sha == "b" * 40
+    assert pipeline.run_job("42") is None
+
+
 def test_reconciliation_cannot_take_a_live_execution_lease(tmp_path):
     github = GitHub()
     pipeline = FactoryPipeline(config(tmp_path), github=github)

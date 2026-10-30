@@ -65,8 +65,9 @@ unmerged work retains the existing archive/cleanup path.
 
 Open or uncertain work retains its phase, branch, files and failure/provider
 history, with a durable `intake_blocked` flag. Normal/failsafe/maintenance selectors
-and direct dispatch refuse it. Fresh eligible intake clears that pause and resumes
-the existing phase. A reopened issue with a known PR returns to PR reconciliation
+and direct dispatch refuse it. Fresh eligible intake rechecks remote lifecycle
+before clearing that pause and resuming the existing phase; it cannot approve an
+unverified merged head. A reopened issue with a known PR returns to PR reconciliation
 instead of creating a duplicate. Legacy records default to unpaused; malformed
 pause values fail closed. Queue status includes the pause count and reason.
 

@@ -443,12 +443,15 @@ class FactoryPipeline:
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
         for task_id, job in jobs.items():
-            if task_id in active_task_ids or task_id in protected or job.state in TERMINAL_STATES:
+            if task_id in protected or job.state in TERMINAL_STATES:
                 continue
-            self._reconcile_missing_intake_job(job)
+            admitted = task_id in active_task_ids
+            if admitted and not job.intake_blocked:
+                continue
+            self._reconcile_missing_intake_job(job, admitted=admitted)
         return self.jobs.load()
 
-    def _reconcile_missing_intake_job(self, snapshot: Job) -> None:
+    def _reconcile_missing_intake_job(self, snapshot: Job, *, admitted: bool = False) -> None:
         """Confirm remote state under the same CAS lease used by execution."""
         owner = f"{self.tasks.factory_generation}:reconcile:{uuid4().hex}"
         try:
@@ -465,7 +468,7 @@ class FactoryPipeline:
             job.intake_block_reason = "Confirming GitHub state after removal from authorised intake"
             self.jobs.save_reconciled_jobs([job])
             try:
-                retire = self._confirm_missing_intake_state(job, owner)
+                retire = self._confirm_missing_intake_state(job, owner, admitted=admitted)
             except FactoryError:
                 retire = False
                 job.intake_blocked = True
@@ -495,7 +498,7 @@ class FactoryPipeline:
         except ValueError as error:
             raise _ReconciliationLeaseLost from error
 
-    def _confirm_missing_intake_state(self, job: Job, owner: str) -> bool:
+    def _confirm_missing_intake_state(self, job: Job, owner: str, *, admitted: bool) -> bool:
         if not job.task.identifier.isdecimal():
             raise FactoryError("GitHub task identifier is malformed")
         job.intake_blocked = True
@@ -525,10 +528,16 @@ class FactoryPipeline:
                 job.intake_block_reason = None
                 return False
             if job.task.source == "github-pull-request":
+                if pull_state.state == "OPEN" and admitted:
+                    job.intake_blocked = False
+                    job.intake_block_reason = None
                 return pull_state.state == "CLOSED"
         if job.task.source == "github-issue":
             issue_state = self.github.remote_task_state(int(job.task.identifier))
             self._renew_reconciliation_claim(job, owner)
+            if issue_state.state == "OPEN" and admitted:
+                job.intake_blocked = False
+                job.intake_block_reason = None
             return issue_state.state == "CLOSED" and (
                 pull_state is None or pull_state.state == "CLOSED"
             )

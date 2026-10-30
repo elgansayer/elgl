@@ -595,8 +595,6 @@ class JobStore:
                     jobs[task.identifier] = job
                     continue
                 existing.task = task
-                existing.intake_blocked = False
-                existing.intake_block_reason = None
                 self._stamp(existing)
                 closed_issue_reopened = (
                     existing.state is JobState.DONE

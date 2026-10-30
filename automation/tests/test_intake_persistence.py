@@ -32,8 +32,10 @@ def test_pause_survives_store_restart_and_readmission_preserves_evidence(tmp_pat
     assert paused.provider_history == job.provider_history
     assert paused.failure_counts == job.failure_counts
     resumed = restarted.reconcile([task])["42"]
-    assert not resumed.intake_blocked
-    assert resumed.intake_block_reason is None
+    # Intake alone is not proof of lifecycle/verification. The controller must
+    # confirm the remote state before clearing a persisted pause.
+    assert resumed.intake_blocked
+    assert resumed.intake_block_reason == "Open draft"
     assert resumed.state is JobState.REVIEWING
     assert resumed.provider_history == job.provider_history
     assert resumed.failure_counts == job.failure_counts

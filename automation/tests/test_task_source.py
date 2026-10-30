@@ -1,5 +1,6 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -8,6 +9,21 @@ import pytest
 from openhands_factory.models import Task, changed_path_fingerprint, logical_task_key
 from openhands_factory.state import atomic_write_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
+
+
+@pytest.mark.parametrize("owner", ["live-worker", "reconciler"])
+def test_active_github_identity_stays_fenced_when_title_changes(tmp_path, owner):
+    store = TaskStore(tmp_path)
+    original = Task("42", "Original title", "Body", "github-issue", 5)
+    store.acquire(original, "live-worker")
+    edited = replace(original, title="Edited title")
+    assert edited.logical_key != original.logical_key
+    with pytest.raises(TaskClaimConflict):
+        store.acquire(edited, owner)
+    assert len(store.leases()) == 1
+    assert store.leases()[original.logical_key].owner == "live-worker"
+    store.release("42", owner="live-worker")
+    assert store.acquire(edited, owner).task_key == edited.logical_key
 
 
 def test_logical_key_is_independent_of_issue_and_pr_numbers() -> None:
