@@ -143,3 +143,44 @@ remains responsible for rejecting head/base changes at the atomic merge step.
 This GitHub adapter and lifecycle are bounded #77 prerequisites. They do not
 install/activate an instance or establish a live issue-to-merge/restart result.
 Those observations remain required before unattended continuity.
+
+### Recorded publication experiment
+
+Neptune [PR #516](https://github.com/elgansayer/Neptune-Bomberman/pull/516)
+exercised the actual adapter with installed `gh`: a wrong expected head was
+rejected without a merge command, then a fresh current-base read accepted the
+app-pinned successful gate and issued one native merge request. GitHub merged
+head `50ae1d59fc4e1c7259dde76d337f391a73e2e1d1` into base
+`ea22ec03b4c83a50a18712b03788d890500327cb`, producing
+`c85f8ee75fbca76c552672b6c295220e2a465545`. The source branch remained. A fresh
+coordinator process reconciled the merged state without another merge request.
+This proves the publication boundary, not an AI implementation job or a running
+Neptune service; preserve those separate acceptance gates.
+
+## Bounded canary entrypoint
+
+After accepted code is staged with the explicit Neptune opt-in, run
+`repo-factory task run --issue 521` under the operator's external process deadline.
+Each invocation advances at most one durable pipeline transition and exits with a
+versioned JSON checkpoint. Reinvoke after the recorded retry/CI deadline to
+continue the same issue; this command has no scheduler loop and never enables
+continuity. Existing profiles retain their refusal of live direct-task execution.
+`--dry-run` remains read-only and contacts no model.
+
+The entrypoint requires offline startup capability/readiness checks, repository access and
+current tests-only protection, followed by the ordinary daemon startup isolation,
+file lock and generation fence. Startup scope omits runtime heartbeat/job-health
+checks because a first canary has no daemon or job file yet; the full doctor keeps
+those checks and still fails for missing live state. Only current trusted/ready issue intake can start
+or continue model work. Existing WIP and issue-admission budgets, shared provider
+health/capacity, provider deadlines and task backoff remain in force. An already
+terminal job is only reported. If native auto-merge closes the issue between
+invocations, existing CI/merge reconciliation states may advance only after a
+fresh read proves the recorded PR merged; they do not reopen model execution.
+
+The main-CI fence uses Neptune's actual `neptune-merge-gate.yml`, exact main SHA,
+canonical run event and the same literal successful app-pinned aggregate check
+used by the PR adapter. A successful workflow with missing/skipped/spoofed check
+records does not pass. Other repositories continue using their existing `ci.yml`
+fence. A fresh-process checkpoint test is preparation; the actual worker job,
+interrupted/restarted coordinator and provider-failure evidence remain #33/#521.

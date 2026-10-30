@@ -1036,7 +1036,9 @@ def opencode_api_check(config: FactoryConfig) -> Check | None:
     return Check("opencode-go-api", True, config.opencode_model)
 
 
-def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
+def run_doctor(
+    config: FactoryConfig, *, online: bool = False, include_runtime: bool = True
+) -> list[Check]:
     """Return diagnostics only. Doctor never pages operators."""
     checks: list[Check] = []
     architecture = check_factory_architecture(config.factory_architecture)
@@ -1099,9 +1101,10 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     for script in scripts:
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
     checks.append(leaked_port_environment_check())
-    checks.append(daemon_health_check(config))
-    checks.extend(job_health_checks(config))
-    checks.append(no_pr_progress_check(config))
+    if include_runtime:
+        checks.append(daemon_health_check(config))
+        checks.extend(job_health_checks(config))
+        checks.append(no_pr_progress_check(config))
     if online:
         checks.append(github_repository_access_check(config))
         checks.append(github_merge_policy_check(config))
