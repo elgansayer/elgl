@@ -395,6 +395,14 @@ class GitHubClient:
             }
             if "factory-skip" in labels:
                 continue
+            if (
+                self.repository.casefold() == NEPTUNE_REPOSITORY.casefold()
+                and self.require_ready_label
+                and self.ready_label not in labels
+            ):
+                # Bootstrap must not adopt another agent's in-progress external
+                # PR merely because the repository owner authored it.
+                continue
             if labels.intersection(COMPATIBILITY_LANE_LABELS):
                 # Major dependency upgrades are staged by the dependency
                 # compatibility lanes; the review lane takes routine updates.

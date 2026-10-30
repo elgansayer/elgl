@@ -90,7 +90,9 @@ Neptune activation path or overwrite the operator's shared agent configuration.
 Stage a primary canonical clone with the actual GitHub origin and ignored offline
 cache, then run the read-only doctor against accepted installed code. Only an
 explicit canary may use `repo-factory task run --issue N`; keep ordinary intake
-labelled and bounded. Reconcile existing manual provider sessions first. Enable
+labelled and bounded. External PRs require an explicit ready label even when
+owner-authored, preserving other agents' active work. Reconcile existing manual
+provider sessions first. Enable
 the supervised daemon and continuity only after actual job/recovery acceptance.
 
 Tracked scope: Neptune #33/#474, verification #75/#76 and isolation #84. Merge

@@ -421,3 +421,41 @@ def test_required_gate_selection_cannot_be_empty_or_unknown() -> None:
     for required in (frozenset(), frozenset({NEPTUNE_GATE, "unrecognised"})):
         with pytest.raises(FactoryError, match="selection"):
             neptune_gate([{"check_runs": [check()]}], HEAD, required)
+
+
+def test_neptune_external_pr_requires_explicit_handoff_even_for_repository_owner(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 41,
+            "title": "Operator's active research",
+            "body": "Keep ownership",
+            "headRefName": "research/operator-active",
+            "isCrossRepository": False,
+            "isDraft": False,
+            "author": {"login": "elgansayer"},
+            "labels": [],
+        },
+        {
+            "number": 42,
+            "title": "Ready bounded handoff",
+            "body": "Concrete acceptance",
+            "headRefName": "research/ready",
+            "isCrossRepository": False,
+            "isDraft": False,
+            "author": {"login": "elgansayer"},
+            "labels": [{"name": "factory-ready"}],
+        },
+    ]
+    runner = Runner([payload])
+    client = GitHubClient(
+        NEPTUNE_REPOSITORY,
+        tmp_path,
+        "secret",
+        runner,
+        require_trusted_intake=True,
+        trusted_github_actors=("elgansayer",),
+        require_ready_label=True,
+    )
+    assert [task.identifier for task in client.collect_open_pull_requests()] == ["42"]
