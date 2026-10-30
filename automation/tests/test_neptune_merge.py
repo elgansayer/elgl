@@ -1,5 +1,6 @@
 """Neptune policy contracts; mocked API evidence is not a live factory job."""
 
+import base64
 import copy
 import json
 from collections.abc import Sequence
@@ -82,6 +83,15 @@ class Runner:
         value = self.values.pop(0)
         if tuple(args[:3]) == ("gh", "api", "graphql"):
             value = {"data": {"repository": {"pullRequest": value}}}
+        if "--paginate" in args:
+            assert "--slurp" not in args
+            assert isinstance(value, list)
+            output = "\n".join(
+                base64.b64encode(json.dumps(item).encode()).decode()
+                for page in value
+                for item in page["check_runs"]
+            )
+            return ProcessResult(0, output, "")
         return ProcessResult(0, json.dumps(value), "")
 
 

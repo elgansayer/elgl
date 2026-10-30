@@ -1490,19 +1490,26 @@ query($owner: String!, $name: String!, $number: Int!) {
             "ahead",
             "identical",
         }
-        pages = json.loads(
-            self._run(
-                (
-                    "gh",
-                    "api",
-                    "--paginate",
-                    "--slurp",
-                    f"repos/{self.repository}/commits/{head}/check-runs"
-                    "?check_name=Neptune%20merge%20gate&filter=latest&per_page=100",
-                )
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "--paginate",
+                f"repos/{self.repository}/commits/{head}/check-runs"
+                "?check_name=Neptune%20merge%20gate&filter=latest&per_page=100",
+                "--jq",
+                ".check_runs[] | @base64",
             )
         )
-        gate = neptune_gate(pages, head)
+        # Use the repository's existing per-record pagination convention. The
+        # installed gh 2.46 has --paginate, but not newer --slurp support.
+        checks = []
+        for encoded in output.splitlines():
+            try:
+                checks.append(json.loads(base64.b64decode(encoded, validate=True).decode("utf-8")))
+            except (ValueError, UnicodeError) as error:
+                raise FactoryError("Neptune check-run encoding is malformed") from error
+        gate = neptune_gate([{"check_runs": checks}], head)
         failed = set(gate.failed_checks)
         if not current:
             failed.add("Neptune current base")
