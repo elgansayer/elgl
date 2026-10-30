@@ -51,13 +51,65 @@ const URL_REQUIREMENTS: ReadonlyArray<{
   { key: 'DATABASE_URL', schemes: ['postgres:', 'postgresql:'] },
   { key: 'REDIS_URL', schemes: ['redis:', 'rediss:'] },
   { key: 'CENTRIFUGO_URL', schemes: ['http:', 'https:', 'ws:', 'wss:'] },
+  { key: 'CENTRIFUGO_API_URL', schemes: ['http:', 'https:'] },
   { key: 'LIVEKIT_URL', schemes: ['ws:', 'wss:'] },
   { key: 'CLOUDFLARE_R2_GATEWAY_URL', schemes: ['http:', 'https:'] },
   { key: 'CLOUDFLARE_R2_PUBLIC_URL', schemes: ['http:', 'https:'] },
   { key: 'APPLE_VERIFICATION_URL', schemes: ['http:', 'https:'] },
   { key: 'GOOGLE_PUBSUB_AUDIENCE', schemes: ['http:', 'https:'] },
   { key: 'LLM_BASE_URL', schemes: ['http:', 'https:'] },
+  { key: 'LLM_API_URL', schemes: ['http:', 'https:'] },
 ];
+
+const HOST_LABEL = '[a-z0-9_](?:[a-z0-9_-]*[a-z0-9_])?';
+const HOSTNAME = `${HOST_LABEL}(?:\\.${HOST_LABEL})*`;
+const STUN_SERVER_PATTERN = new RegExp(
+  `^stuns?:(?:${HOSTNAME}|\\[[0-9a-f:.]+\\])(?::(\\d{1,5}))?$`,
+  'i',
+);
+const SOURCE_HOST_PATTERN = new RegExp(`^(?:\\*\\.)?${HOSTNAME}$`, 'i');
+
+function isStunServer(entry: string): boolean {
+  const match = STUN_SERVER_PATTERN.exec(entry);
+  if (!match) return false;
+  const port = match[1];
+  return port === undefined || (Number(port) >= 1 && Number(port) <= 65535);
+}
+
+function isSourceHost(entry: string): boolean {
+  return SOURCE_HOST_PATTERN.test(entry);
+}
+
+/**
+ * Comma-separated variables whose entries are parsed with the same
+ * split/trim/filter rules the services apply at runtime. A malformed entry is
+ * otherwise accepted silently: a browser can refuse to create a peer
+ * connection when an ICE server URL is invalid, and a source host with a
+ * scheme or port never matches.
+ */
+const LIST_REQUIREMENTS: ReadonlyArray<{
+  key: string;
+  expectation: string;
+  isValid: (entry: string) => boolean;
+}> = [
+  {
+    key: 'LIVEKIT_RTC_STUN_SERVERS',
+    expectation: 'a stun: or stuns: URI with an optional port',
+    isValid: isStunServer,
+  },
+  {
+    key: 'CLOUDFLARE_R2_SOURCE_HOSTS',
+    expectation: 'a hostname or *.hostname without scheme, port or path',
+    isValid: isSourceHost,
+  },
+];
+
+/**
+ * Variables holding a JSON document that the service parses lazily. The
+ * notifications service swallows a parse failure and silently stops sending
+ * push notifications, so a malformed credential must be rejected at startup.
+ */
+const JSON_OBJECT_KEYS = ['FIREBASE_SERVICE_ACCOUNT'] as const;
 
 const PLACEHOLDER_PATTERNS = [
   /^change-me/i,
@@ -82,6 +134,10 @@ const PLACEHOLDER_PATTERNS = [
 
 function isBlank(value: unknown): boolean {
   return typeof value !== 'string' || value.trim().length === 0;
+}
+
+function isEnvironmentRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function assertRequiredProductionValues(config: Record<string, unknown>): void {
@@ -127,12 +183,16 @@ function assertNoProductionPadding(config: Record<string, unknown>): void {
   }
 }
 
-function assertUrlSchemes(config: Record<string, unknown>): void {
+function isUnset(raw: unknown): boolean {
+  return raw === undefined || raw === null || raw === '';
+}
+
+function collectUrlErrors(config: Record<string, unknown>): string[] {
   const errors: string[] = [];
 
   for (const requirement of URL_REQUIREMENTS) {
     const raw = config[requirement.key];
-    if (raw === undefined || raw === null || raw === '') continue;
+    if (isUnset(raw)) continue;
     if (typeof raw !== 'string') {
       errors.push(`${requirement.key} must be a URL string`);
       continue;
@@ -150,8 +210,79 @@ function assertUrlSchemes(config: Record<string, unknown>): void {
     }
   }
 
+  return errors;
+}
+
+/**
+ * Entries are reported by position, never by value, so a misplaced secret in a
+ * list variable cannot be echoed into deployment logs.
+ */
+function collectListErrors(config: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+
+  for (const requirement of LIST_REQUIREMENTS) {
+    const raw = config[requirement.key];
+    if (isUnset(raw)) continue;
+    if (typeof raw !== 'string') {
+      errors.push(`${requirement.key} must be a comma-separated string`);
+      continue;
+    }
+
+    raw
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .forEach((entry, index) => {
+        if (!requirement.isValid(entry)) {
+          errors.push(
+            `${requirement.key} entry ${index + 1} must be ${requirement.expectation}`,
+          );
+        }
+      });
+  }
+
+  return errors;
+}
+
+function isJsonObject(raw: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return (
+      typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function collectJsonErrors(config: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+
+  for (const key of JSON_OBJECT_KEYS) {
+    const raw = config[key];
+    if (isUnset(raw)) continue;
+    if (typeof raw !== 'string' || !isJsonObject(raw)) {
+      errors.push(`${key} must be a JSON object`);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * URL, list and JSON format checks run together so an operator sees every
+ * malformed value in one startup failure instead of fixing them one restart
+ * at a time. Messages name variables and rules only, never their values.
+ */
+function assertValueFormats(config: Record<string, unknown>): void {
+  const errors = [
+    ...collectUrlErrors(config),
+    ...collectListErrors(config),
+    ...collectJsonErrors(config),
+  ];
+
   if (errors.length > 0) {
-    throw new Error(`Invalid environment URLs: ${errors.join('; ')}`);
+    throw new Error(`Invalid environment values: ${errors.join('; ')}`);
   }
 }
 
@@ -178,7 +309,7 @@ export function validateEnvironment(
     assertNoProductionPlaceholders(rawConfig);
   }
 
-  assertUrlSchemes(rawConfig);
+  assertValueFormats(rawConfig);
 
   const result = validationSchema.validate(rawConfig, {
     allowUnknown: true,
@@ -192,8 +323,13 @@ export function validateEnvironment(
     throw new Error(`Environment validation failed: ${details}`);
   }
 
+  const validatedValue: unknown = result.value;
+  if (!isEnvironmentRecord(validatedValue)) {
+    throw new Error('Environment validation failed: expected an object');
+  }
+
   return {
-    ...result.value,
+    ...validatedValue,
     MOCK_BACKEND_MODE: mockBackendMode,
   };
 }

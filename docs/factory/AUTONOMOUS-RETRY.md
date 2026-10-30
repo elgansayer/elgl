@@ -37,6 +37,25 @@ Backoff does not erase diagnostic state. The Factory preserves:
 
 Meaningful pipeline progress continues to reset stale retry diagnostics through the existing retry policy.
 
+## Spent repair budgets name their cause
+
+A job that spends a repair budget keeps its machine-owned state and backs off like any other repeated failure. Its terminal error always opens with the same words and then names what was still blocking it, so a diagnostic snapshot shows why the budget ran out without reading the pull request:
+
+| Budget                                 | Terminal error                                                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Quality repair (5 consecutive repairs) | `Quality repair limit exceeded: <code> in <path>` for the first quality-gate finding, otherwise `Quality repair limit exceeded: review findings` |
+| CI repair (5 model repairs)            | `Repair limit exceeded: <sorted failed check names>`, or `Repair limit exceeded: no failed check reported`                                       |
+
+The quality-gate form mirrors `Quality gate blocked: <code> in <path>`, which verification already raises. `review findings` covers both an independent review rejection and a failed local verification, because both are carried as repair evidence. Evidence text, timestamps and SHAs are never included, so an identical blocker repeats an identical error and fingerprint and the chronic backoff above keeps escalating. A different blocker is new evidence and starts its own repetition count.
+
+Check names and paths are untrusted, and a job retains only the last 2000 characters of its error. Each name is collapsed to one line of at most 200 characters and at most eight check names are listed, followed by `(+N more)`, so the opening words always survive.
+
+The opening words alone decide the failure class and the maintenance incident. Both errors are classified as `budget` and grouped under `exhausted-repair-budget` before any other wording is considered, so a path or check that happens to mention authentication, a timeout, `design-sync-drift` or fonts cannot move the job to another class or family. `Review repair limit exceeded` is unchanged.
+
+The budgets themselves, the stale-unpublished rebuild and the capped-conflict rebuild are unchanged. This is diagnostic only: no limit is raised, no gate is skipped and no job state is reset.
+
+The verification boundary, production baseline and post-deployment measurement protocol are recorded in [AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md](AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md). Live task causes and outcome changes are not claimed before the maintenance controller records them.
+
 ## Rolling-upgrade compatibility
 
 Older installations may already have persisted `quarantined` records or GitHub quarantine labels. Those are treated strictly as legacy input.

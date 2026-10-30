@@ -135,7 +135,9 @@ describe('DesktopSidebarComponent', () => {
 
     const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
     const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
-    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector('a[href="/chat"] .ms-auto');
+    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector(
+      'a[href="/chat"] .ms-auto',
+    );
 
     expect(nav.classList.toString().includes('bg-surface-200')).toBe(true);
     expect(nav.classList.toString().includes('border-surface-100')).toBe(true);
@@ -148,6 +150,7 @@ describe('DesktopSidebarComponent', () => {
     expect(unreadBadge).toBeTruthy();
     expect(unreadBadge.classList.toString().includes('bg-danger')).toBe(true);
     expect(unreadBadge.classList.toString().includes('text-on-fill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('tabular-nums')).toBe(true);
     expect(unreadBadge.classList.toString().includes('rounded-pill')).toBe(true);
     expect(unreadBadge.classList.toString().includes('rounded-full')).toBe(false);
   });
@@ -167,7 +170,9 @@ describe('DesktopSidebarComponent', () => {
 
     const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
     const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
-    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector('a[href="/chat"] .ms-auto');
+    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector(
+      'a[href="/chat"] .ms-auto',
+    );
 
     expect(nav.classList.toString().includes('bg-surface-200')).toBe(true);
     expect(nav.classList.toString().includes('border-surface-100')).toBe(true);
@@ -180,6 +185,7 @@ describe('DesktopSidebarComponent', () => {
     expect(unreadBadge).toBeTruthy();
     expect(unreadBadge.classList.toString().includes('bg-danger')).toBe(true);
     expect(unreadBadge.classList.toString().includes('text-on-fill')).toBe(true);
+    expect(unreadBadge.classList.toString().includes('tabular-nums')).toBe(true);
     expect(unreadBadge.classList.toString().includes('rounded-pill')).toBe(true);
     expect(unreadBadge.classList.toString().includes('rounded-full')).toBe(false);
   });
