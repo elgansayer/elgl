@@ -26,7 +26,7 @@ test('clears the composer and persisted drafts only after sendMessage resolves',
   const method = sendTextMessageSource();
   const sendIndex = method.indexOf('await this.chatService.sendMessage({');
   const textClearIndex = method.indexOf("this.textInput = '';");
-  const draftClearIndex = method.indexOf('this.clearChatDrafts();');
+  const draftClearIndex = method.indexOf('this.clearChatDrafts(roomId);');
 
   assert.ok(sendIndex >= 0, 'sendTextMessage() must await the chat send request');
   assert.ok(textClearIndex > sendIndex, 'textInput must only clear after a successful send');
@@ -41,12 +41,12 @@ test('preserves failed text sends instead of clearing the recoverable draft', ()
   const catchBlock = method.slice(catchIndex);
   assert.doesNotMatch(
     catchBlock,
-    /this\.textInput\s*=\s*['"]{2}|this\.clearChatDrafts\(\)/,
+    /this\.textInput\s*=\s*['"]{2}|this\.clearChatDrafts\(/,
     'failed sends must not clear the composer or persisted draft',
   );
   assert.match(
     catchBlock,
-    /this\.draftService\.saveChatDraft\(this\.roomId,\s*text\)/,
+    /this\.draftService\.saveChatDraft\(roomId,\s*text\)/,
     'failed sends must persist the attempted text for recovery',
   );
 });
@@ -57,4 +57,13 @@ test('clears reply state only after the outgoing message has been accepted', () 
   const replyClearIndex = method.indexOf('this.replyingTo.set(null);');
 
   assert.ok(replyClearIndex > sendIndex, 'reply context must survive a rejected send');
+});
+
+test('ignores a second submit while a request is pending and keeps completion scoped to its room', () => {
+  const method = sendTextMessageSource();
+
+  assert.match(method, /this\.isSendingText\(\)\) return;/);
+  assert.match(method, /const roomId = this\.roomId;/);
+  assert.match(method, /room_id: roomId,/);
+  assert.match(method, /if \(this\.roomId === roomId\) \{[\s\S]*?this\.textInput = '';/);
 });

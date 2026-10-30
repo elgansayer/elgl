@@ -51,7 +51,7 @@ export class LegalService {
           id: 'content',
           heading: '4. User Content',
           content:
-            'You retain all ownership rights to the content you submit to the service. However, by submitting content, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, and distribute such content on and through the service. You warrant that you have the right to grant this license for all content you submit.',
+            'You retain all ownership rights to the content you submit to the service. However, by submitting content, you grant us a worldwide, non-exclusive, royalty-free licence to use, reproduce, and distribute such content on and through the service. You warrant that you have the right to grant this licence for all content you submit.',
         },
         {
           id: 'termination',

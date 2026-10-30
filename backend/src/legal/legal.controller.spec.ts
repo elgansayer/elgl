@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LegalController } from './legal.controller';
 import { LegalService } from './legal.service';
-import { NotFoundException } from '@nestjs/common';
 
 describe('LegalController', () => {
   let controller: LegalController;

@@ -36,8 +36,15 @@ describe('LegalDocumentViewerComponent', () => {
         {
           provide: I18nService,
           useValue: {
-            translate: (key: string) =>
-              key === 'legal.documentSections' ? 'Document sections' : key,
+            translate: (key: string) => {
+              const dict: Record<string, string> = {
+                'legal.documentSections': 'Document sections',
+                'legal.lastUpdated': 'Last updated',
+                'legal.onThisPage': 'On this page',
+                'legal.documentUnavailable': 'This document is currently unavailable.',
+              };
+              return dict[key] ?? key;
+            },
             currentLang: signal('en-GB'),
           },
         },
@@ -89,6 +96,17 @@ describe('LegalDocumentViewerComponent', () => {
     const time = viewerElement.querySelector('time');
     expect(time?.getAttribute('datetime')).toBe('2026-06-15');
     expect(time?.textContent).toContain('15 June 2026');
+  });
+
+  it('renders translated navigation and empty state text', () => {
+    const navText = viewerElement.querySelector('nav p');
+    expect(navText?.textContent?.trim()).toBe('On this page');
+
+    host.sections.set([]);
+    fixture.detectChanges();
+
+    const empty = viewerElement.querySelector('[data-testid="legal-empty"]');
+    expect(empty?.textContent?.trim()).toBe('This document is currently unavailable.');
   });
 
   it('renders an accessible unavailable state when no sections are supplied', () => {
