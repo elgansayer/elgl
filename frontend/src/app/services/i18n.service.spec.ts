@@ -420,4 +420,29 @@ describe('I18nService', () => {
       }
     });
   });
+
+  describe('doodle chat copy', () => {
+    it.each([
+      ['chatRoom.doodleBtn', 'Doodle'],
+      ['chatRoom.doodleCaption', 'Doodle'],
+      ['chatRoom.doodleImageAlt', 'Doodle drawing'],
+      ['chatRoom.doodleSendFailed', 'Your doodle could not be sent. Please try again.'],
+    ])('resolves %s from the base dictionary instead of echoing the key', (key, expected) => {
+      expect(service.translate(key)).toBe(expected);
+    });
+
+    it.each([
+      'doodle.title',
+      'doodle.colorLabel',
+      'doodle.brushLabel',
+      'doodle.clearBtn',
+      'doodle.cancelBtn',
+      'doodle.sendBtn',
+    ])('keeps the doodle pad key %s resolvable', (key) => {
+      const text = service.translate(key);
+
+      expect(text).not.toBe(key);
+      expect(text.trim().length).toBeGreaterThan(0);
+    });
+  });
 });
