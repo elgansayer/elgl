@@ -31,6 +31,12 @@ This is intentionally stricter than cacheable read-only economy data. Cached cat
 - Layout containers can wrap and long package/gift text can break at high zoom instead of forcing horizontal document overflow.
 - Gift icons are decorative; accessible names come from translated text rather than emoji alone.
 
+## Animation rendering
+
+Confirmed local sends and received `virtual_gift` events both reach the application-level `GiftAnimationOverlayComponent`. The overlay maps the store-normalised animation type to one of the repository-owned animation data files and delegates rendering to the shared `LottiePlayerComponent`. That adapter invokes `lottie-web` with the SVG renderer after Angular has committed its container to the DOM. It replaces the player when a second gift arrives and destroys the player when the gift changes or the overlay is removed.
+
+The authored animation is decorative. Users who request reduced motion receive the same translated, screen-reader-visible gift announcement and static gift banner without starting the script-driven animation. Invalid animation data or a renderer failure is contained inside the adapter, records a sanitised browser error, and leaves that static announcement available. The frontend does not fetch arbitrary `animation_url` values for this effect.
+
 ## Security and privacy
 
 The browser does not decide whether a gift may be sent and does not directly mutate coin balances. Authentication, authorization, sufficient-funds checks and persistence remain server-side. The picker sends only the recipient ID, selected gift ID and optional room ID required by the established economy API. No private message text, credentials or payment data are introduced by this component.
@@ -54,6 +60,8 @@ Malformed local balance values are rendered as zero spendable coins. Malformed o
 - connectivity or balance changes after selection;
 - offline coin-purchase suppression and lazy package loading;
 - close suppression while a spend is in flight.
+
+`frontend/src/app/components/gift-animation-overlay/gift-animation-overlay.component.spec.ts` and `frontend/src/app/components/primitives/lottie-player/lottie-player.component.spec.ts` prove that the overlay starts the SVG renderer only after its DOM container exists, replaces and tears down animation instances, honours reduced motion, and fails safely when animation data cannot be rendered.
 
 Repository CI remains the authoritative clean-environment validation for frontend unit, static-analysis/build, translation-safety and UI-governance checks.
 

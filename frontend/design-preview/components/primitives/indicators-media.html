@@ -289,6 +289,22 @@
       .animate-eq {
         animation: eq 0.6s ease-in-out infinite;
       }
+      .lottie-spark {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: lottie-spark 1.4s ease-in-out infinite alternate;
+      }
+      @keyframes lottie-spark {
+        to {
+          opacity: 0.35;
+          transform: scale(0.72) rotate(18deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .lottie-spark {
+          animation: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -517,28 +533,37 @@
         <h2>Lottie Player</h2>
         <p class="component-note">
           <code>app-lottie-player</code> - a thin wrapper around the
-          <code>lottie-web</code> library. Its own template is a single empty
+          <code>lottie-web</code> library. Its own template is a single
           <code>&lt;div class="w-full h-full"&gt;</code>; everything visible is SVG that
           <code>lottie.loadAnimation()</code> renders into that div at runtime from a required
           <code>animationData</code> JSON input, with <code>loop</code> / <code>autoplay</code> /
           <code>speed</code> inputs and an <code>animationComplete</code> output tied to the
-          player's own <code>complete</code> event. Because the rendered content is entirely
-          runtime-generated from whatever Lottie JSON is passed in, there is no static markup or
-          fixed class list to reproduce here - the box below stands in for the
-          <code>w-full h-full</code> container only, not for any specific animation.
+          player's own <code>complete</code> event. A changed <code>animationData</code> or
+          <code>playbackKey</code> destroys the previous player and renders a fresh SVG instance.
+          The specimen below represents the SVG output generated from repository-owned gift data.
         </p>
         <div class="demo-block">
-          <p class="demo-label">Container (renders nothing until given animationData)</p>
+          <p class="demo-label">SVG renderer output</p>
           <div
-            class="flex items-center justify-center text-text-muted text-xs"
+            class="flex items-center justify-center"
             style="
-              width: 96px;
-              height: 96px;
-              border: 1px dashed rgb(var(--surface-600) / 0.6);
+              width: 160px;
+              height: 120px;
+              background: rgb(var(--surface-900) / 0.08);
               border-radius: 12px;
             "
+            aria-hidden="true"
           >
-            SVG renders here
+            <svg width="160" height="120" viewBox="0 0 160 120" role="presentation">
+              <circle cx="80" cy="60" r="32" fill="rgb(var(--accent) / 0.18)" />
+              <path
+                d="M80 35c-12-15-34-4-28 14 4 12 18 23 28 31 10-8 24-19 28-31 6-18-16-29-28-14Z"
+                fill="rgb(var(--accent))"
+              />
+              <circle class="lottie-spark" cx="35" cy="32" r="6" fill="rgb(var(--vip))" />
+              <circle class="lottie-spark" cx="126" cy="40" r="5" fill="rgb(var(--secondary))" />
+              <circle class="lottie-spark" cx="119" cy="91" r="7" fill="rgb(var(--primary))" />
+            </svg>
           </div>
         </div>
       </section>

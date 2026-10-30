@@ -6,7 +6,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 vi.mock('lottie-web', () => ({
   default: {
-    loadAnimation: vi.fn(() => ({ destroy: vi.fn() })),
+    loadAnimation: vi.fn(() => ({
+      destroy: vi.fn(),
+      setSpeed: vi.fn(),
+      addEventListener: vi.fn(),
+    })),
   },
 }));
 
@@ -61,15 +65,26 @@ describe('GiftAnimationOverlayComponent', () => {
     expect(innerOverlay).toBeNull();
   });
 
-  it('should render Lottie container when animation is active', () => {
+  it('should render the active gift with the Lottie SVG renderer', async () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
+    await fixture.whenStable();
 
     const container = fixture.nativeElement.querySelector('.fixed.inset-0');
     expect(container).not.toBeNull();
 
     const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
+    const rendererContainer = fixture.nativeElement.querySelector('app-lottie-player > div');
     expect(lottieContainer).not.toBeNull();
+    expect(rendererContainer).not.toBeNull();
+    expect(lottie.loadAnimation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        container: rendererContainer,
+        renderer: 'svg',
+        loop: false,
+        autoplay: true,
+      }),
+    );
   });
 
   it('should display the decorative gift icon and dismiss control', () => {
@@ -172,24 +187,33 @@ describe('GiftAnimationOverlayComponent', () => {
     expect(banner).not.toBeNull();
   });
 
-  it('should suppress script-driven Lottie motion for reduced-motion users', () => {
+  it('should suppress script-driven Lottie motion for reduced-motion users', async () => {
     vi.mocked(window.matchMedia).mockReturnValue({ matches: true } as MediaQueryList);
 
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(lottie.loadAnimation).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
   });
 
-  it('should show Lottie container when switching to a new animation', () => {
+  it('should replace the Lottie animation when switching gifts', async () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
+    await fixture.whenStable();
+
+    const firstAnimation = vi.mocked(lottie.loadAnimation).mock.results[0]?.value as {
+      destroy: ReturnType<typeof vi.fn>;
+    };
 
     animationService.playAnimation({ ...mockOverlay, giftName: 'Heart' });
     fixture.detectChanges();
+    await fixture.whenStable();
 
     const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
     expect(lottieContainer).not.toBeNull();
+    expect(firstAnimation.destroy).toHaveBeenCalledTimes(1);
+    expect(lottie.loadAnimation).toHaveBeenCalledTimes(2);
   });
 });
