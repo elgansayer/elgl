@@ -88,6 +88,8 @@ _POLICY_MARKERS = (
 _TASK_MARKERS = (
     "task cannot be completed",
     "task is not feasible",
+    "reached max turns",
+    "error_max_turns",
 )
 
 
