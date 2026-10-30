@@ -15,6 +15,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import type { ProficiencyLevel } from '../proficiency-level';
 
 export class CoordinatesDto {
   @IsNumber()
@@ -256,7 +257,7 @@ export class UpdateProfileDto {
   @Matches(/^(A[12]|B[12]|C[12])$/, {
     message: 'proficiency_level must be one of A1, A2, B1, B2, C1, C2',
   })
-  proficiency_level?: string;
+  proficiency_level?: ProficiencyLevel | null;
 
   @IsOptional()
   @IsArray()
