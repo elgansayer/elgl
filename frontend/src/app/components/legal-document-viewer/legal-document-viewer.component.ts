@@ -17,7 +17,7 @@ const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
           {{ title() }}
         </h1>
         <p class="mt-3 text-sm text-text-secondary">
-          Last updated:
+          {{ 'legal.lastUpdated' | t }}:
           @if (dateTimeValue()) {
             <time [attr.datetime]="dateTimeValue()">{{ formattedDate() }}</time>
           } @else {
@@ -31,8 +31,8 @@ const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
           class="mb-8 rounded-2xl border border-surface-200 bg-surface-100 p-5"
           [attr.aria-label]="'legal.documentSections' | t"
         >
-          <p class="text-sm font-bold text-text-primary">On this page</p>
-          <ol class="mt-3 space-y-2">
+          <p class="text-sm font-bold text-text-primary">{{ 'legal.onThisPage' | t }}</p>
+          <ol class="mt-3 flex flex-col gap-2">
             @for (section of sections(); track section.id) {
               <li>
                 <a
@@ -46,7 +46,7 @@ const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
           </ol>
         </nav>
 
-        <div class="space-y-8">
+        <div class="flex flex-col gap-8">
           @for (section of sections(); track section.id) {
             <section
               class="scroll-mt-6 rounded-2xl border border-surface-200 bg-surface-100 p-5"
@@ -71,7 +71,7 @@ const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
           role="status"
           data-testid="legal-empty"
         >
-          This document is currently unavailable.
+          {{ 'legal.documentUnavailable' | t }}
         </p>
       }
     </main>
