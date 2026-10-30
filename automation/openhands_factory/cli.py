@@ -212,11 +212,15 @@ def main(arguments: list[str] | None = None) -> int:
             return 1 if any(finding.active for finding in findings) else 0
         if args.command == "task":
             if not args.dry_run:
-                print(
-                    "Refusing direct task execution until doctor and isolation gates pass",
-                    file=sys.stderr,
-                )
-                return 2
+                if not config.tests_only_merging:
+                    print(
+                        "Refusing direct task execution until doctor and isolation gates pass",
+                        file=sys.stderr,
+                    )
+                    return 2
+                from openhands_factory.canary import run_canary
+
+                return run_canary(config, args.issue)
             print(
                 json.dumps(
                     {"dry_run": True, "issue": args.issue, "llm_contacted": False, "mutated": False}

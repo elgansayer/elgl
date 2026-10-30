@@ -32,6 +32,10 @@ import { AppInputComponent } from '../primitives/input/input.component';
 import { AppTextareaComponent } from '../primitives/textarea/textarea.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import {
+  isProficiencyLevel,
+  type ProficiencyLevel,
+} from '../../services/proficiency.service';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
@@ -100,7 +104,7 @@ export class ProfileComponent implements OnInit {
   avatarUrl = '';
   bioText = '';
   statusText = '';
-  proficiencyLevel = signal<string>('B1');
+  proficiencyLevel = signal<ProficiencyLevel | ''>('');
   learningGoals = signal<string>('');
   profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
   businessName = '';
@@ -148,7 +152,12 @@ export class ProfileComponent implements OnInit {
         this.privacyProfilePhoto = this.sanitizePrivacyVisibility(data.privacy_profile_photo);
         this.privacyAboutInfo = this.sanitizePrivacyVisibility(data.privacy_about_info);
         this.privacyStatus = this.sanitizePrivacyVisibility(data.privacy_status);
-        this.proficiencyLevel.set(data.proficiency_level || 'B1');
+        this.proficiencyLevel.set(
+          typeof data.proficiency_level === 'string' &&
+            isProficiencyLevel(data.proficiency_level)
+            ? data.proficiency_level
+            : '',
+        );
         this.learningGoals.set((data.learning_goals ?? []).join(', '));
         this.statusText = data.status_text || '';
         this.businessName = data.business_name || '';
@@ -213,6 +222,12 @@ export class ProfileComponent implements OnInit {
   async onVisibilityChange(value: string): Promise<void> {
     if (value === 'everyone' || value === 'vips_only' || value === 'hidden') {
       this.profileVisibility.set(value);
+    }
+  }
+
+  onProficiencyLevelChange(value: unknown): void {
+    if (value === '' || (typeof value === 'string' && isProficiencyLevel(value))) {
+      this.proficiencyLevel.set(value);
     }
   }
 
@@ -281,7 +296,7 @@ export class ProfileComponent implements OnInit {
         bio_text: this.bioText,
         status_text: this.statusText,
         profile_visibility: this.profileVisibility(),
-        proficiency_level: this.proficiencyLevel(),
+        proficiency_level: this.proficiencyLevel() || null,
         learning_goals: this.learningGoals()
           .split(',')
           .map((goal) => goal.trim())

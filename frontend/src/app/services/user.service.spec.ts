@@ -119,6 +119,7 @@ describe('UserService', () => {
       expect(result).not.toBeNull();
       expect(result?.status_text).toBe('Learning new languages!');
       expect(result?.chat_enter_to_send).toBe(false);
+      expect(result?.proficiency_level).toBe('B1');
     });
   });
 
