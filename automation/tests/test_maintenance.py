@@ -245,8 +245,23 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
             }
         },
         "jobs_by_state": {"repairing": 12},
+        "affected_tasks": {
+            "1195": {
+                "state": "implementing",
+                "attempts": 8,
+                "repetitions": 3,
+                "error": "Implementation produced no changes",
+            }
+        },
         "recent_maintenance": [{"recursive": "must not be copied"}],
-        "provider_usage_lifetime": [{"irrelevant": "must not be copied"}],
+        "provider_usage_lifetime": [
+            {
+                "provider": "codex",
+                "calls": 2,
+                "failures": 1,
+                "total_duration_seconds": 30,
+            }
+        ],
     }
     outcome = {
         **baseline,
@@ -302,6 +317,21 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
         "calls": 4,
         "failures": 1,
         "duration_seconds": 90.5,
+    }
+    assert measurement["change"] == {
+        "merged_pr_count_24h_delta": 0,
+        "model_calls_delta": 2,
+        "model_failures_delta": 0,
+        "model_duration_seconds_delta": 60.5,
+        "affected_tasks": {
+            "1195": {
+                "state_before": "implementing",
+                "state_after": "security-review",
+                "attempts_delta": 1,
+                "repetitions_delta": -3,
+                "error_after": None,
+            }
+        },
     }
     assert "not causal proof" in measurement["interpretation"]
     assert "must not be copied" not in json.dumps(feedback)
@@ -376,6 +406,21 @@ def test_incident_outcomes_are_measured_once_without_relabelling_failed_canaries
     make_due(controller)
     controller.run()
     assert controller.records()[0]["measured_at"] == first_measurement
+
+
+def test_new_incident_records_affected_task_measurement_baseline(controller) -> None:
+    controller.run()
+
+    record = controller.records()[0]
+    assert record["baseline"]["affected_tasks"] == {
+        identifier: {
+            "state": "repairing",
+            "attempts": 3,
+            "repetitions": 1,
+            "error": "Inlining of fonts failed: fonts.googleapis.com token=[redacted]",
+        }
+        for identifier in ("1", "2", "3")
+    }
 
 
 def test_outcome_is_not_measured_before_a_full_day_after_deployment(controller):

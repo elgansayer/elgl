@@ -11,6 +11,7 @@ import json
 import logging
 import subprocess
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
@@ -287,6 +288,70 @@ def affected_task_measurements(
     return measurements
 
 
+def measurement_change(
+    baseline: dict[str, object] | None, outcome: dict[str, object] | None
+) -> dict[str, object] | None:
+    """Report explicit counter and affected-task movement between observations."""
+    if baseline is None or outcome is None:
+        return None
+
+    def counter_delta(container: str, key: str) -> int | float | None:
+        before_container = baseline.get(container)
+        after_container = outcome.get(container)
+        if not isinstance(before_container, dict) or not isinstance(after_container, dict):
+            return None
+        before = before_container.get(key)
+        after = after_container.get(key)
+        if (
+            not isinstance(before, (int, float))
+            or isinstance(before, bool)
+            or not isinstance(after, (int, float))
+            or isinstance(after, bool)
+        ):
+            return None
+        return after - before
+
+    def integer_delta(
+        before: Mapping[str, object], after: Mapping[str, object], key: str
+    ) -> int | None:
+        before_value = before.get(key)
+        after_value = after.get(key)
+        if (
+            isinstance(before_value, bool)
+            or not isinstance(before_value, int)
+            or isinstance(after_value, bool)
+            or not isinstance(after_value, int)
+        ):
+            return None
+        return after_value - before_value
+
+    before_tasks = baseline.get("affected_tasks")
+    after_tasks = outcome.get("affected_tasks")
+    before_tasks = before_tasks if isinstance(before_tasks, dict) else {}
+    after_tasks = after_tasks if isinstance(after_tasks, dict) else {}
+    task_changes: dict[str, dict[str, object]] = {}
+    for identifier, after in list(after_tasks.items())[:40]:
+        before = before_tasks.get(identifier)
+        if not isinstance(identifier, str) or not isinstance(after, dict):
+            continue
+        before = before if isinstance(before, dict) else {}
+        task_changes[identifier[:80]] = {
+            "state_before": before.get("state"),
+            "state_after": after.get("state"),
+            "attempts_delta": integer_delta(before, after, "attempts"),
+            "repetitions_delta": integer_delta(before, after, "repetitions"),
+            "error_after": after.get("error"),
+        }
+
+    return {
+        "merged_pr_count_24h_delta": integer_delta(baseline, outcome, "merged_pr_count_24h"),
+        "model_calls_delta": counter_delta("model_usage_lifetime", "calls"),
+        "model_failures_delta": counter_delta("model_usage_lifetime", "failures"),
+        "model_duration_seconds_delta": counter_delta("model_usage_lifetime", "duration_seconds"),
+        "affected_tasks": task_changes,
+    }
+
+
 def analysis_attempt_feedback(value: object) -> list[dict[str, object]]:
     """Retain bounded failure diagnostics, never prompts or raw provider output."""
     if not isinstance(value, list):
@@ -342,10 +407,13 @@ def maintenance_feedback(record: dict[str, object]) -> dict[str, object]:
         if isinstance(criteria, list)
         else []
     )
+    baseline = measurement_summary(record.get("baseline"))
+    outcome = measurement_summary(record.get("outcome"))
     feedback["measurement"] = {
         "interpretation": "observational before/after, not causal proof or acceptance verification",
-        "baseline": measurement_summary(record.get("baseline")),
-        "outcome": measurement_summary(record.get("outcome")),
+        "baseline": baseline,
+        "outcome": outcome,
+        "change": measurement_change(baseline, outcome),
         "attribution": "Unknown components must not count as verified application throughput",
     }
     return feedback
@@ -714,24 +782,30 @@ class MaintenanceController:
                 if existing
                 else self.pipeline.github.create_issue(title, body, ("factory-maintenance",))
             )
+        affected = (
+            {
+                job.task.identifier: {"error": error_identity(job), "head": job.head_sha}
+                for job in incident.jobs
+                if job.task.identifier in plan.affected_task_ids
+            }
+            if incident
+            else {}
+        )
         record = {
             "key": key,
             "episode": episode,
             "issue": issue,
             "status": "repairing" if issue else "observing",
             "created_at": now.isoformat(),
-            "baseline": snapshot,
+            "baseline": {
+                **snapshot,
+                "affected_tasks": affected_task_measurements(jobs, affected),
+            },
             "diagnosis": redact_agent_output(plan.diagnosis),
             "change": redact_agent_output(plan.change),
             "acceptance_criteria": [redact_agent_output(item) for item in plan.acceptance_criteria],
             "evidence_fingerprint": incident.fingerprint() if incident else None,
-            "affected": {
-                job.task.identifier: {"error": error_identity(job), "head": job.head_sha}
-                for job in incident.jobs
-                if job.task.identifier in plan.affected_task_ids
-            }
-            if incident
-            else {},
+            "affected": affected,
         }
         records.append(record)
         state["records"] = records[-100:]
