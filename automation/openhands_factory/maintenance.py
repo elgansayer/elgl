@@ -230,6 +230,7 @@ def measurement_summary(value: object) -> dict[str, object] | None:
         }
 
     merged = window.get("merged_pr_count")
+    merged_total = throughput.get("merged_pr_count") if isinstance(throughput, dict) else None
     model_calls = 0
     model_failures = 0
     model_duration_seconds = 0.0
@@ -247,6 +248,9 @@ def measurement_summary(value: object) -> dict[str, object] | None:
             model_duration_seconds += float(duration)
     return {
         "observed_at": value.get("observed_at"),
+        "merged_pr_count_total": (
+            merged_total if type(merged_total) is int and merged_total >= 0 else None
+        ),
         "merged_pr_count_24h": merged if type(merged) is int and merged >= 0 else None,
         "merged_pr_count_by_component_24h": counts(components),
         "jobs_by_state": counts(states),
@@ -344,7 +348,10 @@ def measurement_change(
         }
 
     return {
-        "merged_pr_count_24h_delta": integer_delta(baseline, outcome, "merged_pr_count_24h"),
+        # Unlike the rolling 24-hour windows, the cumulative counter cannot
+        # lose older merges between observations. Its delta therefore measures
+        # exactly the merges recorded during this deployment observation.
+        "merged_pr_count_delta": integer_delta(baseline, outcome, "merged_pr_count_total"),
         "model_calls_delta": counter_delta("model_usage_lifetime", "calls"),
         "model_failures_delta": counter_delta("model_usage_lifetime", "failures"),
         "model_duration_seconds_delta": counter_delta("model_usage_lifetime", "duration_seconds"),

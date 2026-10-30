@@ -237,12 +237,13 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
     baseline = {
         "observed_at": "2026-10-18T00:00:00+00:00",
         "throughput": {
+            "merged_pr_count": 10,
             "rolling_throughput": {
                 "24h": {
                     "merged_pr_count": 2,
                     "merged_pr_count_by_component": {"unknown": 2},
                 }
-            }
+            },
         },
         "jobs_by_state": {"repairing": 12},
         "affected_tasks": {
@@ -266,6 +267,13 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
     outcome = {
         **baseline,
         "observed_at": "2026-10-19T00:00:00+00:00",
+        "throughput": {
+            "merged_pr_count": 13,
+            # Keep the rolling count unchanged to prove that the interval
+            # measurement uses the cumulative counter rather than overlapping
+            # windows whose members can age out.
+            "rolling_throughput": baseline["throughput"]["rolling_throughput"],
+        },
         "jobs_by_state": {"repairing": 8},
         "affected_tasks": {
             "1195": {
@@ -312,6 +320,8 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
     assert measurement["baseline"]["jobs_by_state"] == {"repairing": 12}
     assert measurement["outcome"]["jobs_by_state"] == {"repairing": 8}
     assert measurement["outcome"]["merged_pr_count_by_component_24h"] == {"unknown": 2}
+    assert measurement["baseline"]["merged_pr_count_total"] == 10
+    assert measurement["outcome"]["merged_pr_count_total"] == 13
     assert measurement["outcome"]["affected_tasks"] == outcome["affected_tasks"]
     assert measurement["outcome"]["model_usage_lifetime"] == {
         "calls": 4,
@@ -319,7 +329,7 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
         "duration_seconds": 90.5,
     }
     assert measurement["change"] == {
-        "merged_pr_count_24h_delta": 0,
+        "merged_pr_count_delta": 3,
         "model_calls_delta": 2,
         "model_failures_delta": 0,
         "model_duration_seconds_delta": 60.5,

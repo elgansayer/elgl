@@ -121,8 +121,9 @@ may advance when those changes still differ from `HEAD`, even if the provider ma
 implementation worktree still requires a new change, while quality-repair and CI-repair attempts always require
 a new fingerprint. Security review, verification, the quality gate and independent review remain unchanged.
 After 24 hours, the maintenance record reports each affected task's state, attempts, repeated failures and latest
-error alongside application merges and provider calls, failures and model time. It preserves the affected-task
-baseline and calculates explicit before-and-after deltas without claiming causal attribution.
+error alongside application merges and provider calls, failures and model time. It preserves cumulative baselines
+and calculates exact observation-interval deltas without claiming causal attribution. Rolling 24-hour merge totals
+remain contextual snapshots and are not subtracted because entries can age out between observations.
 
 If no PR review is already active, the scheduler submits the highest-priority runnable external pull request
 before issue work, including when only one worker is available. It also withholds one provider slot from new issue
