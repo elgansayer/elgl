@@ -38,6 +38,7 @@ No new user data is persisted and no schema, retention or deletion behavior chan
 The replacement is deliberately fail-safe:
 
 - LiveKit permission-revocation failure stops before any database role mutation.
+- Missing LiveKit participant controls stop before any database or realtime mutation.
 - Database demotion failure stops before notifying or assigning the replacement.
 - Outgoing Centrifugo notification failure, including an HTTP publish rejection reported as `false`, leaves the room without an active co-host and does not assign the replacement.
 - Incoming assignment failure leaves the room without an active co-host rather than preserving two publishers.

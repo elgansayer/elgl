@@ -29,6 +29,7 @@ describe('AudioRoomsService co-host replacement', () => {
   function createHarness(options?: {
     participants?: Array<{ identity: string }>;
     updateParticipantError?: Error;
+    participantControlsUnavailable?: boolean;
     publishResults?: boolean[];
     demotionMatched?: boolean;
     assignmentMatched?: boolean;
@@ -140,11 +141,13 @@ describe('AudioRoomsService co-host replacement', () => {
       {} as never,
     );
 
-    (
-      service as unknown as {
-        roomServiceClient: typeof livekitClient;
-      }
-    ).roomServiceClient = livekitClient;
+    if (!options?.participantControlsUnavailable) {
+      (
+        service as unknown as {
+          roomServiceClient: typeof livekitClient;
+        }
+      ).roomServiceClient = livekitClient;
+    }
 
     return {
       service,
@@ -199,6 +202,22 @@ describe('AudioRoomsService co-host replacement', () => {
   it('fails closed before persistence when LiveKit cannot revoke publishing', async () => {
     const { service, queryBuilder, centrifugo } = createHarness({
       updateParticipantError: new Error('media plane unavailable'),
+    });
+
+    await expect(
+      service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-3',
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    expect(queryBuilder.update).not.toHaveBeenCalled();
+    expect(centrifugo.publish).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before persistence when LiveKit participant controls are unavailable', async () => {
+    const { service, queryBuilder, centrifugo } = createHarness({
+      participantControlsUnavailable: true,
     });
 
     await expect(

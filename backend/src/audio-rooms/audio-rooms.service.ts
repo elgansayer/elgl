@@ -255,19 +255,18 @@ export class AudioRoomsService implements OnModuleInit {
     userId: string,
   ): Promise<void> {
     const client = this.roomServiceClient;
-    if (!client || this.livekitUrl.includes('mock')) return;
 
-    // Real RoomServiceClient instances expose both methods. Keep this runtime
-    // guard for legacy/local SDK test doubles so a missing optional integration
-    // degrades to the awaited client demotion event rather than crashing.
     if (
+      !client ||
       typeof client.listParticipants !== 'function' ||
       typeof client.updateParticipant !== 'function'
     ) {
       this.logger.warn(
         'LiveKit participant controls unavailable during co-host replacement',
       );
-      return;
+      throw new ServiceUnavailableException(
+        'Could not safely replace the current co-host. Please retry.',
+      );
     }
 
     try {
