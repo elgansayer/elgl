@@ -1446,6 +1446,7 @@ export class I18nService {
     'profile.gender.female': 'Female',
     'profile.gender.other': 'Other',
     'profile.proficiencyLabel': 'Proficiency Level',
+    'profile.proficiencyUnset': 'Not set',
     'profile.proficiencyA1': 'A1 - Beginner',
     'profile.proficiencyA2': 'A2 - Elementary',
     'profile.proficiencyB1': 'B1 - Intermediate',

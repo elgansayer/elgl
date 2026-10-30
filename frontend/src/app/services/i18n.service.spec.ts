@@ -184,6 +184,10 @@ describe('I18nService', () => {
     expect(text).toBe('HelloTalk');
   });
 
+  it('should translate the unset profile proficiency option', () => {
+    expect(service.translate('profile.proficiencyUnset')).toBe('Not set');
+  });
+
   it('should translate the audio intro feed empty state from the base dictionary', () => {
     expect(service.translate('discovery.audioIntroFeed.title')).toBe('Audio introductions');
     expect(
