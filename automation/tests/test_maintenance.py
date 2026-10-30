@@ -252,7 +252,19 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
                 "attempts": 8,
                 "repetitions": 3,
                 "error": "Implementation produced no changes",
-            }
+            },
+            "1746": {
+                "state": "implementing",
+                "attempts": 5,
+                "repetitions": 2,
+                "error": "Implementation produced no changes",
+            },
+            "1752": {
+                "state": "implementing",
+                "attempts": 1,
+                "repetitions": 0,
+                "error": "Implementation produced no changes",
+            },
         },
         "recent_maintenance": [{"recursive": "must not be copied"}],
         "provider_usage_lifetime": [
@@ -281,7 +293,19 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
                 "attempts": 9,
                 "repetitions": 0,
                 "error": None,
-            }
+            },
+            "1746": {
+                "state": "verifying",
+                "attempts": 6,
+                "repetitions": 0,
+                "error": None,
+            },
+            "1752": {
+                "state": "implementing",
+                "attempts": 2,
+                "repetitions": 1,
+                "error": "Implementation produced no changes",
+            },
         },
         "provider_usage_lifetime": [
             {
@@ -340,11 +364,127 @@ def test_planner_receives_measured_outcomes_without_recursive_history(controller
                 "attempts_delta": 1,
                 "repetitions_delta": -3,
                 "error_after": None,
-            }
+            },
+            "1746": {
+                "state_before": "implementing",
+                "state_after": "verifying",
+                "attempts_delta": 1,
+                "repetitions_delta": -2,
+                "error_after": None,
+            },
+            "1752": {
+                "state_before": "implementing",
+                "state_after": "implementing",
+                "attempts_delta": 1,
+                "repetitions_delta": 1,
+                "error_after": "Implementation produced no changes",
+            },
         },
     }
     assert "not causal proof" in measurement["interpretation"]
     assert "must not be copied" not in json.dumps(feedback)
+
+
+def test_24h_post_deployment_observation_measures_affected_tasks_and_model_usage(
+    controller,
+) -> None:
+    """Validate 24-hour observation reporting per task for tasks 1195, 1746, and 1752."""
+    now = datetime.now(UTC)
+    baseline_snapshot = {
+        "observed_at": (now - timedelta(hours=25)).isoformat(),
+        "throughput": {"merged_pr_count": 20},
+        "affected_tasks": {
+            "1195": {
+                "state": "implementing",
+                "attempts": 8,
+                "repetitions": 3,
+                "error": "Implementation produced no changes",
+            },
+            "1746": {
+                "state": "implementing",
+                "attempts": 5,
+                "repetitions": 2,
+                "error": "Implementation produced no changes",
+            },
+            "1752": {
+                "state": "implementing",
+                "attempts": 1,
+                "repetitions": 0,
+                "error": "Implementation produced no changes",
+            },
+        },
+        "provider_usage_lifetime": [
+            {"provider": "codex", "calls": 10, "failures": 2, "total_duration_seconds": 120.0}
+        ],
+    }
+    jobs = controller.pipeline.jobs.load()
+    for task_id, state, attempts, repetitions, err in (
+        ("1195", JobState.SECURITY_REVIEW, 9, 0, None),
+        ("1746", JobState.VERIFYING, 6, 0, None),
+        ("1752", JobState.IMPLEMENTING, 2, 1, "Implementation produced no changes"),
+    ):
+        jobs[task_id] = Job(
+            task=Task(task_id, f"Task {task_id}", "", "github-issue", 1),
+            state=state,
+            attempts=attempts,
+            repeated_failure_count=repetitions,
+            last_error=err,
+        )
+    controller.pipeline.jobs.save(jobs)
+    record = {
+        "key": "ineffective-agent-repair",
+        "status": "measuring",
+        "deployed_at": (now - timedelta(hours=24, minutes=1)).isoformat(),
+        "baseline": baseline_snapshot,
+        "affected": {
+            "1195": {"error": "err1", "head": None},
+            "1746": {"error": "err2", "head": None},
+            "1752": {"error": "err3", "head": None},
+        },
+    }
+    atomic_write_json(controller.path, {"records": [record]})
+    atomic_write_json(
+        controller.config.state_dir / "pr-metrics.json",
+        {
+            "schema_version": 1,
+            "pull_requests": [],
+            "capacity": {},
+            "summary": {"merged_pr_count": 25},
+        },
+    )
+    atomic_write_json(
+        controller.config.state_dir / "metrics.json",
+        {
+            "providers": [
+                {
+                    "provider": "codex",
+                    "model": "gpt-5.6-sol",
+                    "calls": 15,
+                    "failures": 2,
+                    "total_duration_seconds": 185.5,
+                }
+            ]
+        },
+    )
+
+    controller.run()
+
+    measured_record = controller.records()[0]
+    assert measured_record.get("measured_at") is not None
+    feedback = maintenance_feedback(measured_record)
+    measurement = feedback["measurement"]
+    change = measurement["change"]
+    assert change["merged_pr_count_delta"] == 5
+    assert change["model_calls_delta"] == 5
+    assert change["model_failures_delta"] == 0
+    assert change["model_duration_seconds_delta"] == 65.5
+    tasks = change["affected_tasks"]
+    assert tasks["1195"]["state_after"] == "security-review"
+    assert tasks["1195"]["repetitions_delta"] == -3
+    assert tasks["1746"]["state_after"] == "verifying"
+    assert tasks["1746"]["repetitions_delta"] == -2
+    assert tasks["1752"]["state_after"] == "implementing"
+    assert tasks["1752"]["error_after"] == "Implementation produced no changes"
 
 
 @pytest.mark.parametrize(
