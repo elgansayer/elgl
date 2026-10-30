@@ -7,7 +7,7 @@
 import type { Mock } from 'vitest';
 import type { HttpService } from '@nestjs/axios';
 import type Redis from 'ioredis';
-import { ForbiddenException, Logger } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import type { MetricsService } from '../metrics/metrics.service';
@@ -343,21 +343,18 @@ describe('ChatService link preview persistence', () => {
       };
     }
 
-    function createEditHarness(
-      editedRow: ReturnType<typeof updated>,
-      persist: Stub = query(ok(null)),
-    ) {
+    function createEditHarness(editedRow: ReturnType<typeof updated>) {
+      const update = query(ok(editedRow));
       const from = vi
         .fn()
         .mockReturnValueOnce(query(ok(original)))
         .mockReturnValueOnce(query(ok({ user_id: senderId })))
-        .mockReturnValueOnce(query(ok(editedRow)))
-        .mockReturnValueOnce(persist);
-      return { ...createService(from), from, persist };
+        .mockReturnValueOnce(update);
+      return { ...createService(from), from, update };
     }
 
     it('stores the preview of the edited text', async () => {
-      const { service, getPreview, persist, centrifugo } = createEditHarness(
+      const { service, getPreview, update, centrifugo } = createEditHarness(
         updated('Now try https://example.com/post'),
       );
       getPreview.mockResolvedValue(preview);
@@ -366,32 +363,22 @@ describe('ChatService link preview persistence', () => {
         text_content: 'Now try https://example.com/post',
       });
 
-      expect(persist.update).toHaveBeenCalledWith({ link_preview: preview });
-      expect(persist.eq).toHaveBeenCalledWith('id', messageId);
-      expect(centrifugo.publish).toHaveBeenCalledTimes(1);
-    });
-
-    it('announces the edit only once the stored preview follows the text', async () => {
-      const { service, persist, centrifugo } = createEditHarness(
-        updated('No link any more', preview),
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text_content: 'Now try https://example.com/post',
+          link_preview: preview,
+        }),
       );
-      const write = gated(persist);
-
-      const editing = service.editMessage(senderId, messageId, {
-        text_content: 'No link any more',
-      });
-      await settle();
-
-      expect(persist.update).toHaveBeenCalledWith({ link_preview: null });
-      expect(centrifugo.publish).not.toHaveBeenCalled();
-
-      write.release();
-      await editing;
+      expect(update.eq).toHaveBeenCalledWith('id', messageId);
+      expect(update.eq).toHaveBeenCalledWith(
+        'text_content',
+        original.text_content,
+      );
       expect(centrifugo.publish).toHaveBeenCalledTimes(1);
     });
 
     it('clears the stored preview when the edit removes the link', async () => {
-      const { service, persist, centrifugo } = createEditHarness(
+      const { service, update, centrifugo } = createEditHarness(
         updated('No link any more', preview),
       );
 
@@ -399,14 +386,15 @@ describe('ChatService link preview persistence', () => {
         text_content: 'No link any more',
       });
 
-      expect(persist.update).toHaveBeenCalledWith({ link_preview: null });
-      expect(persist.eq).toHaveBeenCalledWith('id', messageId);
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ link_preview: null }),
+      );
       expect(result.link_preview).toBeNull();
       expect(centrifugo.publish).toHaveBeenCalledTimes(1);
     });
 
     it('clears the stored preview when the new link cannot be previewed', async () => {
-      const { service, getPreview, persist } = createEditHarness(
+      const { service, getPreview, update } = createEditHarness(
         updated('Moved to https://broken.example/page', preview),
       );
       getPreview.mockRejectedValue(new Error('Unable to fetch preview'));
@@ -415,11 +403,13 @@ describe('ChatService link preview persistence', () => {
         text_content: 'Moved to https://broken.example/page',
       });
 
-      expect(persist.update).toHaveBeenCalledWith({ link_preview: null });
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({ link_preview: null }),
+      );
     });
 
-    it('does not write when the message never had a preview and none resolves', async () => {
-      const { service, from, persist } = createEditHarness(
+    it('atomically stores null when the message has no preview', async () => {
+      const { service, from, update } = createEditHarness(
         updated('Still no link'),
       );
 
@@ -427,25 +417,62 @@ describe('ChatService link preview persistence', () => {
         text_content: 'Still no link',
       });
 
-      expect(persist.update).not.toHaveBeenCalled();
+      expect(update.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text_content: 'Still no link',
+          link_preview: null,
+        }),
+      );
       expect(from).toHaveBeenCalledTimes(3);
     });
 
-    it('still publishes the edit when clearing the stored preview fails', async () => {
-      const { service, centrifugo } = createEditHarness(
-        updated('No link any more', preview),
-        query({ data: null, error: { code: '57014', message: 'timeout' } }),
+    it('suppresses a slower overlapping edit after a newer edit wins', async () => {
+      let releaseSlowPreview!: (value: LinkPreview | null) => void;
+      const slowPreview = new Promise<LinkPreview | null>((resolve) => {
+        releaseSlowPreview = resolve;
+      });
+      const winningText = 'New https://example.com/post';
+      const staleText = 'Slow https://stale.example/page';
+      const staleUpdate = query({
+        data: null,
+        error: { code: 'PGRST116', message: 'No rows' },
+      });
+      const winningUpdate = query(ok(updated(winningText, preview)));
+      const from = vi
+        .fn()
+        .mockReturnValueOnce(query(ok(original)))
+        .mockReturnValueOnce(query(ok({ user_id: senderId })))
+        .mockReturnValueOnce(query(ok(original)))
+        .mockReturnValueOnce(query(ok({ user_id: senderId })))
+        .mockReturnValueOnce(winningUpdate)
+        .mockReturnValueOnce(staleUpdate);
+      const { service, getPreview, centrifugo } = createService(from);
+      getPreview.mockImplementation((url: string) =>
+        url.includes('stale.example') ? slowPreview : Promise.resolve(preview),
       );
 
-      const result = await service.editMessage(senderId, messageId, {
-        text_content: 'No link any more',
+      const staleEdit = service.editMessage(senderId, messageId, {
+        text_content: staleText,
+      });
+      await settle();
+      const winningEdit = service.editMessage(senderId, messageId, {
+        text_content: winningText,
       });
 
-      expect(result.link_preview).toBeNull();
-      expect(centrifugo.publish).toHaveBeenCalledTimes(1);
-      expect(warn).toHaveBeenCalledWith(
-        `chat.link_preview_persist_failed message=${messageId} code=57014`,
+      await expect(winningEdit).resolves.toMatchObject({
+        text_content: winningText,
+        link_preview: preview,
+      });
+      releaseSlowPreview({ ...preview, url: 'https://stale.example/page' });
+      await expect(staleEdit).rejects.toBeInstanceOf(ConflictException);
+
+      expect(staleUpdate.update).toHaveBeenCalledWith(
+        expect.objectContaining({ text_content: staleText }),
       );
+      expect(centrifugo.publish).toHaveBeenCalledTimes(1);
+      expect(centrifugo.publish).toHaveBeenCalledWith(`chat:${roomId}`, {
+        message: expect.objectContaining({ text_content: winningText }),
+      });
     });
 
     it('writes nothing for a caller who may not edit the message', async () => {

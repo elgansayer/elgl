@@ -6,6 +6,7 @@ import {
   Optional,
   Logger,
   ServiceUnavailableException,
+  ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -1662,8 +1663,9 @@ export class ChatService {
     const messageType = asString(originalMsg.message_type);
     const roomId = asString(originalMsg.room_id);
     const createdAt = asString(originalMsg.created_at);
+    const originalText = asString(originalMsg.text_content);
 
-    if (!senderId || !messageType || !roomId) {
+    if (!senderId || !messageType || !roomId || originalText === undefined) {
       throw new BadRequestException('Message is missing required fields');
     }
 
@@ -1703,14 +1705,21 @@ export class ChatService {
       throw new ForbiddenException('You are not a member of this room');
     }
 
+    // Resolve enrichment before writing so text and preview have one atomic
+    // database state. The original-text predicate also makes overlapping edits
+    // optimistic: once one edit wins, a slower edit cannot overwrite or publish
+    // a stale text-preview pair.
+    const linkPreview = await this.resolveLinkPreview(dto.text_content);
     const { data: updatedMsg, error: updateErr } = await supabase
       .from('chat_messages')
       .update({
         text_content: dto.text_content,
+        link_preview: linkPreview,
         is_edited: true,
         edited_at: new Date().toISOString(),
       })
       .eq('id', messageId)
+      .eq('text_content', originalText)
       .select(
         `
         *,
@@ -1723,7 +1732,11 @@ export class ChatService {
       )
       .single();
 
-    if (updateErr || !updatedMsg) {
+    if (updateErr?.code === 'PGRST116' || (!updateErr && !updatedMsg)) {
+      throw new ConflictException();
+    }
+
+    if (updateErr) {
       throw new Error(
         `Failed to edit message: ${updateErr?.message ?? 'Unknown error'}`,
       );
@@ -1733,14 +1746,6 @@ export class ChatService {
     // merge this event over their local copy of the message, so the field is
     // always published explicitly: `null` clears a card whose link was removed
     // or failed to resolve, instead of leaving the previous preview on screen.
-    const linkPreview = await this.resolveLinkPreview(dto.text_content);
-    // History must follow the text as well. A row that had a preview is cleared
-    // when the edit removes or breaks the link; a row that had none needs no
-    // write. Concurrent edits cannot leave a wrong card behind because reads
-    // revalidate the stored preview against the current text.
-    if (linkPreview || updatedMsg.link_preview) {
-      await this.persistLinkPreview(messageId, linkPreview);
-    }
     const editedMessage: ChatMessage = {
       ...updatedMsg,
       link_preview: linkPreview,
