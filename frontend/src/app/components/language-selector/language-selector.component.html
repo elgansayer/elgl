@@ -24,6 +24,14 @@
       role="listbox"
       [attr.aria-label]="'settings.changeLanguage' | t"
     >
+      @if (hasError()) {
+        <p
+          role="alert"
+          class="m-3 rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+        >
+          {{ 'common.error_generic' | t }}
+        </p>
+      }
       <div class="p-3 border-b border-surface-200">
         <input
           hlmInput
@@ -44,6 +52,7 @@
               role="option"
               [attr.aria-selected]="lang.code === currentLang()"
               (click)="selectLanguage(lang.code)"
+              [disabled]="isChanging()"
               class="w-full flex items-center justify-between gap-2 text-start px-4 py-2.5 text-sm hover:bg-surface-200 transition-colors cursor-pointer"
               [attr.aria-label]="getLanguageAriaLabel(lang)"
             >

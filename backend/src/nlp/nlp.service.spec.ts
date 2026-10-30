@@ -1,6 +1,11 @@
 import type { Mock } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NlpService } from './nlp.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -23,18 +28,27 @@ describe('NlpService', () => {
     incr: Mock;
     expire: Mock;
     set: Mock;
+    mget: Mock;
+    pipeline: Mock;
   };
+  let mockPipeline: { set: Mock; exec: Mock };
 
   let mockConfigService: { get: Mock };
   let mockLlmProxyService: { proxyMessage: Mock };
 
   beforeEach(async () => {
     mockGuess.mockClear();
+    mockPipeline = {
+      set: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue([]),
+    };
     mockRedisClient = {
       get: vi.fn().mockResolvedValue(null),
       incr: vi.fn().mockResolvedValue(1),
       expire: vi.fn().mockResolvedValue(1),
       set: vi.fn().mockResolvedValue('OK'),
+      mget: vi.fn((...keys: string[]) => Promise.resolve(keys.map(() => null))),
+      pipeline: vi.fn().mockReturnValue(mockPipeline),
     };
 
     mockConfigService = {
@@ -490,149 +504,486 @@ describe('NlpService', () => {
   });
 
   describe('translateUi', () => {
-    it('should return cached true and unchanged dictionary for en or en-GB target', async () => {
-      const dto = {
-        target_language: 'en-GB',
-        dictionary: { 'app.title': 'HelloTalk Clone' },
-      };
+    const cacheKey = (locale: string, source: string): string =>
+      `ui_str:${locale}:${createHash('sha256').update(source, 'utf8').digest('hex')}`;
 
-      const result = await service.translateUi(dto);
+    const requestJson = (
+      init: RequestInit,
+    ): { text: string[]; target_lang: string } => {
+      if (typeof init.body !== 'string') {
+        throw new Error('Expected a JSON string request body');
+      }
+      return JSON.parse(init.body) as { text: string[]; target_lang: string };
+    };
+
+    /** DeepL stand-in that "translates" by prefixing, and records every request body. */
+    const translatingFetch = (prefix = 'ES:') =>
+      vi.fn((_url: string, init: RequestInit) => {
+        const { text } = requestJson(init);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              translations: text.map((item) => ({ text: `${prefix}${item}` })),
+            }),
+        });
+      });
+
+    const sentBodies = (): Array<{ text: string[]; target_lang: string }> =>
+      (global.fetch as Mock).mock.calls.map(([, init]: [string, RequestInit]) =>
+        requestJson(init),
+      );
+
+    /** Stateful in-memory stand-in for the shared Redis cache. */
+    const useSharedCache = () => {
+      const store = new Map<string, string>();
+      mockRedisClient.mget.mockImplementation((...keys: string[]) =>
+        Promise.resolve(keys.map((key) => store.get(key) ?? null)),
+      );
+      mockRedisClient.pipeline.mockImplementation(() => {
+        const queued: Array<[string, string]> = [];
+        const pipeline = {
+          set: vi.fn((key: string, value: string) => {
+            queued.push([key, value]);
+            return pipeline;
+          }),
+          exec: vi.fn(() => {
+            queued.forEach(([key, value]) => store.set(key, value));
+            return Promise.resolve([]);
+          }),
+        };
+        return pipeline;
+      });
+      return store;
+    };
+
+    let logSpy: ReturnType<typeof vi.spyOn>;
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+      warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    describe.each(['en', 'en-GB', 'en-US', 'EN-gb'])(
+      'English locale %s',
+      (locale) => {
+        it('returns the dictionary unchanged without touching Redis or the provider', async () => {
+          const dictionary = { 'app.title': 'HelloTalk Clone' };
+
+          const result = await service.translateUi({
+            target_language: locale,
+            dictionary,
+          });
+
+          expect(result).toEqual({
+            target_language: locale,
+            translations: dictionary,
+            cached: true,
+          });
+          expect(mockRedisClient.mget).not.toHaveBeenCalled();
+          expect(global.fetch).not.toHaveBeenCalled();
+        });
+      },
+    );
+
+    it('serves a fully cached locale from Redis without calling the provider', async () => {
+      mockRedisClient.mget.mockResolvedValueOnce(['Descubrir', 'Guardar']);
+
+      const result = await service.translateUi({
+        target_language: 'es',
+        dictionary: { 'nav.discover': 'Discover', 'common.save': 'Save' },
+      });
+
       expect(result).toEqual({
-        target_language: 'en-GB',
-        translations: { 'app.title': 'HelloTalk Clone' },
+        target_language: 'es',
+        translations: { 'nav.discover': 'Descubrir', 'common.save': 'Guardar' },
         cached: true,
       });
-      expect(mockRedisClient.get).not.toHaveBeenCalled();
-    });
-
-    it('should return merged dictionary from Redis cache when key found', async () => {
-      mockRedisClient.get.mockResolvedValueOnce(
-        JSON.stringify({ 'nav.discover': 'Explorar' }),
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(mockRedisClient.mget).toHaveBeenCalledWith(
+        cacheKey('es', 'Discover'),
+        cacheKey('es', 'Save'),
       );
+    });
 
-      const dto = {
+    it('only sends texts missing from the cache to the provider', async () => {
+      mockRedisClient.mget.mockResolvedValueOnce(['Descubrir', null]);
+      global.fetch = translatingFetch();
+
+      const result = await service.translateUi({
         target_language: 'es',
-        dictionary: { 'app.title': 'HelloTalk' },
-      };
+        dictionary: { 'nav.discover': 'Discover', 'common.save': 'Save' },
+      });
 
-      const result = await service.translateUi(dto);
-      expect(result.cached).toBe(true);
+      expect(sentBodies()).toEqual([{ text: ['Save'], target_lang: 'ES' }]);
+      expect(result.cached).toBe(false);
       expect(result.translations).toEqual({
-        'app.title': 'HelloTalk',
-        'nav.discover': 'Explorar',
+        'nav.discover': 'Descubrir',
+        'common.save': 'ES:Save',
       });
     });
 
-    it('should call DeepL and save the result to Redis when not cached', async () => {
-      mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: () => ({
-          translations: [{ text: 'App de Prueba' }],
-        }),
+    it('translates repeated texts once and applies the result to every key', async () => {
+      global.fetch = translatingFetch();
+
+      const result = await service.translateUi({
+        target_language: 'de',
+        dictionary: {
+          'common.cancel': 'Cancel',
+          'dialog.cancel': 'Cancel',
+          'common.save': 'Save',
+        },
       });
 
-      const dto = {
+      expect(sentBodies()).toEqual([
+        { text: ['Cancel', 'Save'], target_lang: 'DE' },
+      ]);
+      expect(result.translations).toEqual({
+        'common.cancel': 'ES:Cancel',
+        'dialog.cancel': 'ES:Cancel',
+        'common.save': 'ES:Save',
+      });
+    });
+
+    it('stores each translation under its source hash with a seven day expiry', async () => {
+      global.fetch = translatingFetch();
+
+      await service.translateUi({
         target_language: 'es',
         dictionary: { 'app.title': 'Test App' },
-      };
-
-      const result = await service.translateUi(dto);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api-free.deepl.com/v2/translate',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({
-            text: ['Test App'],
-            target_lang: 'ES',
-          }),
-        }),
-      );
-      expect(result.cached).toBe(false);
-      expect(result.translations['app.title']).toBe('App de Prueba');
-      expect(mockRedisClient.set).toHaveBeenCalledWith(
-        'ui_dict:es',
-        JSON.stringify({ 'app.title': 'App de Prueba' }),
-      );
-      expect(mockRedisClient.expire).toHaveBeenCalledWith('ui_dict:es', 604800);
-    });
-
-    it('should translate dictionaries for any target language dynamically (de)', async () => {
-      mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: () => ({
-          translations: [{ text: 'Willkommen' }, { text: 'Startseite' }],
-        }),
       });
 
-      const dto = {
-        target_language: 'de',
-        dictionary: { 'app.title': 'Welcome', 'nav.home': 'Home' },
-      };
+      expect(mockPipeline.set).toHaveBeenCalledWith(
+        cacheKey('es', 'Test App'),
+        'ES:Test App',
+        'EX',
+        604800,
+      );
+      expect(mockPipeline.exec).toHaveBeenCalledTimes(1);
+    });
 
-      const result = await service.translateUi(dto);
-      expect(result.cached).toBe(false);
+    it('normalises the locale so differently cased requests share cache entries', async () => {
+      global.fetch = translatingFetch();
+
+      await service.translateUi({
+        target_language: 'PT-br',
+        dictionary: { 'app.title': 'Test App' },
+      });
+
+      expect(mockPipeline.set).toHaveBeenCalledWith(
+        cacheKey('pt-br', 'Test App'),
+        expect.any(String),
+        'EX',
+        604800,
+      );
+      expect(sentBodies()[0].target_lang).toBe('PT-BR');
+    });
+
+    it('does not let one user poison the translations another user receives', async () => {
+      useSharedCache();
+      global.fetch = translatingFetch();
+
+      // An attacker submits hostile copy under a key the product really uses.
+      await service.translateUi({
+        target_language: 'es',
+        dictionary: {
+          'auth.login.title':
+            'Your session expired. Re-enter your password at https://evil.example',
+        },
+      });
+
+      // A genuine client then asks for the same locale with the real English text.
+      const legitimate = await service.translateUi({
+        target_language: 'es',
+        dictionary: { 'auth.login.title': 'Log in', 'common.save': 'Save' },
+      });
+
+      expect(legitimate.translations['auth.login.title']).toBe('ES:Log in');
+      expect(JSON.stringify(legitimate)).not.toContain('evil.example');
+      expect(legitimate.cached).toBe(false);
+
+      // And the legitimate result is itself reusable by the next genuine client.
+      (global.fetch as Mock).mockClear();
+      const repeat = await service.translateUi({
+        target_language: 'es',
+        dictionary: { 'auth.login.title': 'Log in', 'common.save': 'Save' },
+      });
+      expect(repeat.cached).toBe(true);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('splits large dictionaries into provider batches of at most fifty texts', async () => {
+      global.fetch = translatingFetch();
+      const dictionary = Object.fromEntries(
+        Array.from({ length: 120 }, (_, index) => [
+          `k.${index}`,
+          `Text ${index}`,
+        ]),
+      );
+
+      const result = await service.translateUi({
+        target_language: 'fr',
+        dictionary,
+      });
+
+      const bodies = sentBodies();
+      expect(
+        bodies.map((body) => body.text.length).sort((a, b) => b - a),
+      ).toEqual([50, 50, 20]);
+      expect(Object.keys(result.translations)).toHaveLength(120);
+      expect(result.translations['k.119']).toBe('ES:Text 119');
+      expect(mockPipeline.set).toHaveBeenCalledTimes(120);
+    });
+
+    it('keeps each provider request under the body size limit', async () => {
+      global.fetch = translatingFetch();
+      const long = (label: string) => `${label}${'x'.repeat(60 * 1024)}`;
+
+      await service.translateUi({
+        target_language: 'fr',
+        dictionary: { a: long('a'), b: long('b'), c: long('c') },
+      });
+
+      const bodies = (global.fetch as Mock).mock.calls.map(
+        ([, init]: [string, RequestInit]) =>
+          Buffer.byteLength(JSON.stringify(requestJson(init))),
+      );
+      expect(bodies.length).toBeGreaterThan(1);
+      expect(Math.max(...bodies)).toBeLessThan(120 * 1024);
+    });
+
+    it('does not send blank values to the provider', async () => {
+      global.fetch = translatingFetch();
+
+      const result = await service.translateUi({
+        target_language: 'es',
+        dictionary: { 'common.blank': '   ', 'common.save': 'Save' },
+      });
+
+      expect(sentBodies()).toEqual([{ text: ['Save'], target_lang: 'ES' }]);
       expect(result.translations).toEqual({
-        'app.title': 'Willkommen',
-        'nav.home': 'Startseite',
+        'common.blank': '   ',
+        'common.save': 'ES:Save',
       });
     });
 
-    it('should throw BadRequestException when DeepL API key is not configured', async () => {
-      mockRedisClient.get.mockResolvedValueOnce(null);
-      mockConfigService.get.mockImplementation((key: string) => {
-        if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
-        if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
-        return null;
-      });
-
-      const dto = {
-        target_language: 'es',
-        dictionary: { 'app.title': 'App' },
-      };
-
-      await expect(service.translateUi(dto)).rejects.toThrow(
-        BadRequestException,
+    it('defines dictionary keys as own properties so a prototype key cannot pollute the result', async () => {
+      global.fetch = translatingFetch();
+      const dictionary: Record<string, string> = JSON.parse(
+        '{"__proto__":"polluted","common.save":"Save"}',
       );
-    });
 
-    it('should throw BadRequestException when DeepL API call fails', async () => {
-      mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        text: () => 'Internal Server Error',
+      const result = await service.translateUi({
+        target_language: 'es',
+        dictionary,
       });
 
-      const dto = {
-        target_language: 'es',
-        dictionary: { 'app.title': 'App' },
-      };
-
-      await expect(service.translateUi(dto)).rejects.toThrow(
-        BadRequestException,
-      );
+      expect(Object.getPrototypeOf(result.translations)).toBe(Object.prototype);
+      expect(Object.keys(result.translations)).toContain('__proto__');
+      expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
     });
 
-    it('should catch Redis errors during get and set gracefully without crashing', async () => {
-      mockRedisClient.get.mockRejectedValueOnce(new Error('Redis get fail'));
-      mockRedisClient.set.mockRejectedValueOnce(new Error('Redis set fail'));
-      (global.fetch as Mock).mockResolvedValueOnce({
-        ok: true,
-        json: () => ({
-          translations: [{ text: 'Clon de HelloTalk' }],
-        }),
-      });
+    it('keeps working when Redis reads and writes fail', async () => {
+      mockRedisClient.mget.mockRejectedValueOnce(new Error('Redis get fail'));
+      mockPipeline.exec.mockRejectedValueOnce(new Error('Redis set fail'));
+      global.fetch = translatingFetch();
 
-      const dto = {
+      const result = await service.translateUi({
         target_language: 'es',
         dictionary: { 'app.title': 'App' },
-      };
+      });
 
-      const result = await service.translateUi(dto);
       expect(result.cached).toBe(false);
-      expect(result.translations['app.title']).toBe('Clon de HelloTalk');
+      expect(result.translations['app.title']).toBe('ES:App');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('ui_translation_cache_failure operation=read'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('ui_translation_cache_failure operation=write'),
+      );
+    });
+
+    describe('provider failures', () => {
+      const dto = { target_language: 'es', dictionary: { 'app.title': 'App' } };
+
+      it('reports a missing provider key as unavailable without calling out', async () => {
+        mockConfigService.get.mockImplementation(() => null);
+
+        const failure = service.translateUi(dto);
+
+        await expect(failure).rejects.toBeInstanceOf(
+          ServiceUnavailableException,
+        );
+        await expect(failure).rejects.toThrow(
+          'Interface translation is temporarily unavailable',
+        );
+        expect(global.fetch).not.toHaveBeenCalled();
+      });
+
+      it('maps a provider outage to a generic unavailable error and never echoes the response body', async () => {
+        (global.fetch as Mock).mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: () => Promise.resolve('upstream says: key mock-deepl-key App'),
+        });
+
+        const failure = await service
+          .translateUi(dto)
+          .catch((error: unknown) => error);
+
+        expect(failure).toBeInstanceOf(ServiceUnavailableException);
+        expect(JSON.stringify(failure)).not.toContain('mock-deepl-key');
+        expect(JSON.stringify(failure)).not.toContain('upstream says');
+      });
+
+      it('treats a provider rejection of the language as a client error', async () => {
+        (global.fetch as Mock).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          text: () => Promise.resolve('Value for target_lang not supported'),
+        });
+
+        const failure = service.translateUi(dto);
+
+        await expect(failure).rejects.toBeInstanceOf(BadRequestException);
+        await expect(failure).rejects.toThrow(
+          'Interface language is not supported for automatic translation',
+        );
+      });
+
+      it('maps network failures and timeouts to unavailable', async () => {
+        (global.fetch as Mock).mockRejectedValueOnce(
+          new DOMException('Request timed out', 'TimeoutError'),
+        );
+
+        await expect(service.translateUi(dto)).rejects.toBeInstanceOf(
+          ServiceUnavailableException,
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            'ui_translation_provider_exception provider=deepl',
+          ),
+        );
+      });
+
+      it.each([
+        ['a response without translations', {}],
+        [
+          'a translation count that does not match the request',
+          { translations: [] },
+        ],
+        ['a translation without text', { translations: [{}] }],
+        ['an empty translation', { translations: [{ text: '' }] }],
+        ['a non-object response', 'oops'],
+      ])('rejects %s and caches nothing', async (_label, payload) => {
+        (global.fetch as Mock).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(payload),
+        });
+
+        await expect(service.translateUi(dto)).rejects.toBeInstanceOf(
+          ServiceUnavailableException,
+        );
+        expect(mockPipeline.set).not.toHaveBeenCalled();
+      });
+
+      it('rejects a response body that is not JSON', async () => {
+        (global.fetch as Mock).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.reject(new SyntaxError('Unexpected token')),
+        });
+
+        await expect(service.translateUi(dto)).rejects.toBeInstanceOf(
+          ServiceUnavailableException,
+        );
+      });
+
+      it('keeps batches that succeeded cached so a retry only pays for what is missing', async () => {
+        const store = useSharedCache();
+        const dictionary = Object.fromEntries(
+          Array.from({ length: 70 }, (_, index) => [
+            `k.${index}`,
+            `Text ${index}`,
+          ]),
+        );
+        let call = 0;
+        global.fetch = vi.fn((_url: string, init: RequestInit) => {
+          call += 1;
+          const { text } = requestJson(init);
+          if (call === 2) {
+            return Promise.resolve({
+              ok: false,
+              status: 503,
+              text: () => Promise.resolve(''),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                translations: text.map((item) => ({ text: `ES:${item}` })),
+              }),
+          });
+        });
+
+        await expect(
+          service.translateUi({ target_language: 'es', dictionary }),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(store.size).toBe(50);
+
+        global.fetch = translatingFetch();
+        const retry = await service.translateUi({
+          target_language: 'es',
+          dictionary,
+        });
+
+        expect(sentBodies()).toHaveLength(1);
+        expect(sentBodies()[0].text).toHaveLength(20);
+        expect(Object.keys(retry.translations)).toHaveLength(70);
+      });
+    });
+
+    describe('observability', () => {
+      it('logs one structured summary without dictionary content', async () => {
+        global.fetch = translatingFetch();
+
+        await service.translateUi({
+          target_language: 'es',
+          dictionary: { 'secret.key': 'Confidential phrase' },
+        });
+
+        const summary = logSpy.mock.calls
+          .map(([message]) => String(message))
+          .join('\n');
+        expect(summary).toMatch(
+          /ui_translation locale=es entries=1 unique=1 cacheHits=0 cacheMisses=1 providerRequests=1 durationMs=\d+/,
+        );
+        expect(summary).not.toContain('Confidential phrase');
+        expect(summary).not.toContain('secret.key');
+      });
+
+      it('reports zero provider requests for a fully cached locale', async () => {
+        mockRedisClient.mget.mockResolvedValueOnce(['Guardar']);
+
+        await service.translateUi({
+          target_language: 'es',
+          dictionary: { 'common.save': 'Save' },
+        });
+
+        expect(logSpy).toHaveBeenCalledWith(
+          expect.stringMatching(/cacheHits=1 cacheMisses=0 providerRequests=0/),
+        );
+      });
     });
   });
 

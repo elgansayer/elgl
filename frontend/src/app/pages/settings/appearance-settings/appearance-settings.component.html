@@ -41,7 +41,11 @@
           class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4"
         >
           <p class="text-xs text-text-secondary mb-4">{{ 'settings.themeDescription' | t }}</p>
-          <div class="flex flex-wrap gap-2" role="group" [attr.aria-label]="'settings.themeLabel' | t">
+          <div
+            class="flex flex-wrap gap-2"
+            role="group"
+            [attr.aria-label]="'settings.themeLabel' | t"
+          >
             @for (opt of themeOptions; track opt) {
               <button
                 hlmBtn
@@ -130,7 +134,8 @@
           >
             @for (opt of chatTextSizeOptions; track opt) {
               <button
-                hlmBtn size="touch"
+                hlmBtn
+                size="touch"
                 type="button"
                 (click)="setChatTextSize(opt)"
                 class="min-h-11 min-w-24 flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors"
@@ -179,7 +184,8 @@
           <div class="flex gap-3 flex-wrap">
             @for (color of availableColors; track color) {
               <button
-                hlmBtn size="touch"
+                hlmBtn
+                size="touch"
                 type="button"
                 (click)="setAccentColor(color)"
                 [disabled]="!isVip()"
@@ -231,22 +237,28 @@
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.languageSection' | t }}
         </h2>
-        <div
-          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4"
-        >
-          <p class="text-xs text-text-secondary mb-3">
-            {{ 'settings.languageChangeDescription' | t }}
-          </p>
-          <app-select
-            [value]="i18nService.currentLang()"
-            [ariaLabel]="'settings.languageSelectAriaLabel'"
-            (valueChange)="onLanguageValueChange($event)"
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+          <a
+            routerLink="/settings/language"
+            class="flex min-h-11 items-center justify-between gap-3 p-4 hover:bg-surface-200 transition-colors"
           >
-            @for (lang of i18nService.availableLanguages; track lang.code) {
-              <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }}</option>
-            }
-          </app-select>
+            <div class="flex min-w-0 items-center gap-3">
+              <span class="text-xl" aria-hidden="true">{{ currentLanguage().flag }}</span>
+              <span class="min-w-0">
+                <span class="block text-sm font-medium text-text-primary">{{
+                  'settings.languageSelectLabel' | t
+                }}</span>
+                <span class="block break-words text-xs text-text-secondary">{{
+                  currentLanguage().nativeName
+                }}</span>
+              </span>
+            </div>
+            <span class="text-text-secondary rtl:rotate-180" aria-hidden="true">→</span>
+          </a>
         </div>
+        <p class="text-xs text-text-secondary">
+          {{ 'settings.languageChangeDescription' | t }}
+        </p>
       </section>
 
       <!-- Save Button -->

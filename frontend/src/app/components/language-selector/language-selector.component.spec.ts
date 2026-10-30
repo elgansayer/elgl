@@ -1,18 +1,27 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LanguageSelectorComponent } from './language-selector.component';
 import { I18nService } from '../../services/i18n.service';
+import { UiLanguagePreferenceService } from '../../services/ui-language-preference.service';
 import { signal } from '@angular/core';
 
 describe('LanguageSelectorComponent', () => {
   let component: LanguageSelectorComponent;
   let fixture: ComponentFixture<LanguageSelectorComponent>;
   let i18nServiceMock: Partial<I18nService>;
+  let changeLanguage: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    changeLanguage = vi.fn().mockResolvedValue(undefined);
     i18nServiceMock = {
       currentLang: signal('en-GB'),
       availableLanguages: [
-        { code: 'en-GB', name: 'British English', nativeName: 'English (UK)', flag: '🇬🇧', isRtl: false },
+        {
+          code: 'en-GB',
+          name: 'British English',
+          nativeName: 'English (UK)',
+          flag: '🇬🇧',
+          isRtl: false,
+        },
         { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isRtl: false },
       ],
       translate: vi.fn((key: string) => (key === 'common.selected' ? 'Selected' : key)),
@@ -21,7 +30,10 @@ describe('LanguageSelectorComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [LanguageSelectorComponent],
-      providers: [{ provide: I18nService, useValue: i18nServiceMock }],
+      providers: [
+        { provide: I18nService, useValue: i18nServiceMock },
+        { provide: UiLanguagePreferenceService, useValue: { changeLanguage } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LanguageSelectorComponent);
@@ -49,10 +61,57 @@ describe('LanguageSelectorComponent', () => {
     expect(component.isOpen()).toBe(true);
   });
 
-  it('should call setLanguage when selecting a language', () => {
-    component.selectLanguage('es');
-    expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
+  it('should change language through the preference boundary and close the list', async () => {
+    component.toggle();
+    component.searchQuery.set('span');
+
+    await component.selectLanguage('es');
+
+    expect(changeLanguage).toHaveBeenCalledWith('es');
+    expect(i18nServiceMock.setLanguage).not.toHaveBeenCalled();
     expect(component.isOpen()).toBe(false);
+    expect(component.searchQuery()).toBe('');
+    expect(component.hasError()).toBe(false);
+  });
+
+  it('should keep the list open with an alert when the change is rejected', async () => {
+    changeLanguage.mockRejectedValueOnce(new Error('translation provider unavailable'));
+    component.toggle();
+    fixture.detectChanges();
+
+    await component.selectLanguage('es');
+    fixture.detectChanges();
+
+    expect(component.isOpen()).toBe(true);
+    expect(component.hasError()).toBe(true);
+    expect(component.isChanging()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+
+    component.close();
+    expect(component.hasError()).toBe(false);
+  });
+
+  it('should ignore a second selection and disable options while a change is pending', async () => {
+    let finish: (() => void) | undefined;
+    changeLanguage.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    component.toggle();
+
+    const pending = component.selectLanguage('es');
+    await component.selectLanguage('en-GB');
+    fixture.detectChanges();
+
+    expect(changeLanguage).toHaveBeenCalledTimes(1);
+    const options = fixture.nativeElement.querySelectorAll('button[role="option"]');
+    expect(Array.from<HTMLButtonElement>(options).every((option) => option.disabled)).toBe(true);
+
+    finish?.();
+    await pending;
+    expect(component.isChanging()).toBe(false);
   });
 
   it('should assign accessible labels with language name and selection state', async () => {

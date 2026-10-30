@@ -1,5 +1,6 @@
 import { Location } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, linkedSignal, signal } from '@angular/core';
+import { disabled, form, FormField } from '@angular/forms/signals';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,7 +8,7 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
 
 @Component({
   selector: 'app-language-settings',
-  imports: [HlmButton, HlmRadio, HlmRadioGroup, TranslatePipe],
+  imports: [FormField, HlmButton, HlmRadio, HlmRadioGroup, TranslatePipe],
   template: `
     <div class="min-h-screen bg-surface-50">
       <header
@@ -40,7 +41,10 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
         </p>
 
         @if (hasError()) {
-          <p role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+          <p
+            role="alert"
+            class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+          >
             {{ 'common.error_generic' | t }}
           </p>
         }
@@ -57,9 +61,7 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
           </p>
 
           <hlm-radio-group
-            name="interface-language"
-            [value]="currentLang()"
-            [disabled]="isChanging()"
+            [formField]="languageForm.language"
             (valueChange)="onLanguageValueChange($event)"
             aria-labelledby="interface-language-heading"
             aria-describedby="interface-language-description"
@@ -75,7 +77,9 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
                   <span class="text-2xl" aria-hidden="true">{{ lang.flag }}</span>
                   <span class="min-w-0 text-start">
                     <span class="block break-words text-sm font-medium">{{ lang.nativeName }}</span>
-                    <span class="block break-words text-xs text-text-secondary">{{ lang.name }}</span>
+                    <span class="block break-words text-xs text-text-secondary">{{
+                      lang.name
+                    }}</span>
                   </span>
                 </span>
                 @if (currentLang() === lang.code) {
@@ -90,11 +94,13 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
             }
           </hlm-radio-group>
 
-          @if (isChanging()) {
-            <p role="status" aria-live="polite" class="text-sm text-text-secondary">
+          <div role="status" aria-live="polite" class="text-sm text-text-secondary">
+            @if (isChanging()) {
               {{ 'common.loading' | t }}
-            </p>
-          }
+            } @else if (changedLanguageName(); as name) {
+              {{ 'languageSettings.uiLangChanged' | t: { name } }}
+            }
+          </div>
         </section>
       </main>
     </div>
@@ -103,11 +109,27 @@ import { UiLanguagePreferenceService } from '../../services/ui-language-preferen
 export class LanguageSettingsComponent {
   private readonly location = inject(Location);
   private readonly languagePreference = inject(UiLanguagePreferenceService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   readonly langs = this.languagePreference.availableLanguages;
   readonly currentLang = this.languagePreference.currentLang;
   readonly isChanging = signal(false);
   readonly hasError = signal(false);
+  /** Native name of the locale most recently applied, announced once via the status region. */
+  readonly changedLanguageName = signal<string | null>(null);
+
+  /**
+   * The radio group keeps its own selection once a user clicks it and only
+   * adopts a bound value that differs from the last one it saw. A rolled-back
+   * switch lands on the value that was already bound, so the group would keep
+   * showing the rejected locale and ignore a retry click on it. Owning the
+   * selection as a form field lets this page call reset(), which re-writes the
+   * control synchronously, to re-assert the active locale after every attempt.
+   */
+  private readonly selection = linkedSignal(() => ({ language: this.currentLang() }));
+  readonly languageForm = form(this.selection, (path) => {
+    disabled(path.language, () => this.isChanging());
+  });
 
   onLanguageValueChange(value: unknown): void {
     if (typeof value !== 'string') return;
@@ -115,27 +137,43 @@ export class LanguageSettingsComponent {
   }
 
   async selectLang(code: string): Promise<void> {
+    if (this.isChanging()) return;
+
     const nextLanguage = code.trim();
     if (
-      this.isChanging() ||
       nextLanguage === this.currentLang() ||
       !this.langs.some((language) => language.code === nextLanguage)
     ) {
+      this.showActiveLanguage();
       return;
     }
 
     this.hasError.set(false);
+    this.changedLanguageName.set(null);
     this.isChanging.set(true);
+    // Render the pending state before awaiting. The browser has already checked the clicked
+    // radio, and Angular only rewrites a native input when its bound value changes between
+    // renders. A rejection arriving within the same task would otherwise roll the selection
+    // back before it was ever rendered, leaving the rejected locale visibly checked.
+    this.changeDetector.detectChanges();
     try {
       await this.languagePreference.changeLanguage(nextLanguage);
+      const applied = this.langs.find((language) => language.code === nextLanguage);
+      this.changedLanguageName.set(applied?.nativeName ?? null);
     } catch {
       this.hasError.set(true);
     } finally {
       this.isChanging.set(false);
+      this.showActiveLanguage();
     }
   }
 
   goBack(): void {
     this.location.back();
+  }
+
+  /** Makes the radio group reflect the locale that is actually active. */
+  private showActiveLanguage(): void {
+    this.languageForm.language().reset(this.currentLang());
   }
 }

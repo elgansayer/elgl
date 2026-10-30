@@ -21,6 +21,7 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="lang-modal-title"
+      [attr.aria-busy]="isChanging() ? 'true' : null"
     >
       <div
         class="bg-surface-200 rounded-3xl shadow-2xl border border-surface-100 max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden"
@@ -54,6 +55,14 @@
 
         <!-- Modal Body -->
         <div class="flex-1 overflow-y-auto ps-6 pe-6 py-6 space-y-6">
+          @if (hasError()) {
+            <p
+              role="alert"
+              class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+            >
+              {{ 'common.error_generic' | t }}
+            </p>
+          }
           <!-- Quick Select Language Grid -->
           <div>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -62,6 +71,7 @@
                   hlmBtn
                   type="button"
                   (click)="selectLanguage(lang.code)"
+                  [disabled]="isChanging()"
                   [class]="
                     'flex items-center gap-2.5 p-3 rounded-2xl border text-start transition-all ' +
                     (currentLang() === lang.code
@@ -69,6 +79,7 @@
                       : 'bg-surface-300/50 border-surface-100 text-text-primary hover:bg-surface-100')
                   "
                   [attr.aria-label]="lang.name || lang.nativeName"
+                  [attr.aria-current]="currentLang() === lang.code ? 'true' : null"
                 >
                   <span class="text-2xl shrink-0">{{ lang.flag }}</span>
                   <div class="min-w-0 flex-1">
