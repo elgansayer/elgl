@@ -227,8 +227,36 @@ class GitWorkflow:
             ("git", "rev-parse", "-q", "--verify", "MERGE_HEAD"), self.repository
         )
         if in_progress.returncode == 0:
-            return False
+            if in_progress.stdout.strip() == self._remote_base_sha():
+                return False
+            # The pending merge is of an older base. Waiting for verification
+            # deadlocks when only the newer base can make it pass: worktrees for
+            # issues 1436, 1450, 1478 and 9460 kept a pre-#9718 drift checker
+            # that cannot see their preview fixes (2026-10-30). Conclude the
+            # clean merge locally (nothing is pushed until verification passes)
+            # and merge the current base on top.
+            self.stage_all()
+            concluded = self.runner(("git", "commit", "--no-edit"), self.repository)
+            if concluded.returncode != 0:
+                raise RepositorySafetyError(
+                    f"Could not conclude the earlier base merge: {concluded.stderr}"
+                )
+            return self.merge_base_for_repair()
         raise RepositorySafetyError(f"Could not merge base branch: {merge.stderr}")
+
+    def merging_current_base(self) -> bool:
+        """Return whether an uncommitted merge of the latest fetched base is pending."""
+
+        in_progress = self.runner(
+            ("git", "rev-parse", "-q", "--verify", "MERGE_HEAD"), self.repository
+        )
+        return in_progress.returncode == 0 and in_progress.stdout.strip() == self._remote_base_sha()
+
+    def _remote_base_sha(self) -> str:
+        result = self.runner(("git", "rev-parse", f"origin/{self.base_branch}"), self.repository)
+        if result.returncode != 0:
+            raise RepositorySafetyError(f"Could not resolve the base branch: {result.stderr}")
+        return result.stdout.strip()
 
     def discard_transient_build_metadata(self) -> bool:
         """Restore only an unstaged, generator-only local build-number change.
@@ -310,6 +338,7 @@ class GitWorkflow:
             Path("e2e/node_modules"),
             Path("admin-portal/node_modules"),
             Path(".venv"),
+            Path(".factory-tools"),
         ):
             source = self.repository / relative
             destination = worktree / relative

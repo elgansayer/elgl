@@ -70,6 +70,7 @@ ux_capture.log
 analysis/
 __pycache__/
 .venv/
+.factory-tools
 .mypy_cache/
 .pytest_cache/
 *.py[cod]
