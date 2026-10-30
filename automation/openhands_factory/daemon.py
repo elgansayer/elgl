@@ -132,6 +132,7 @@ def maintenance_selection(
         job
         for identifier, job in jobs.items()
         if is_maintenance_job(job)
+        and not job.intake_blocked
         and identifier not in excluded
         and job.state not in {JobState.DONE, JobState.QUARANTINED}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
@@ -265,6 +266,7 @@ def select_batch(
         job
         for job in jobs.values()
         if job.task.identifier not in excluded
+        and not job.intake_blocked
         and job.state.value not in {"done", "quarantined"}
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
         and (not review_only or is_review_lane_job(job))
@@ -327,6 +329,7 @@ def selection_diagnostics(
             job
             for job in ordinary.values()
             if job.task.identifier not in excluded_task_ids
+            and not job.intake_blocked
             and job.state.value not in {"done", "quarantined"}
             and (job.next_attempt_at is None or job.next_attempt_at <= now)
             and (not review_only or is_review_lane_job(job))
@@ -386,6 +389,7 @@ def select_batch_failsafe(
         job
         for job in jobs.values()
         if job.task.identifier not in excluded_task_ids
+        and not job.intake_blocked
         and job.state not in {JobState.DONE, JobState.QUARANTINED}
         and (job.next_attempt_at is None or job.next_attempt_at <= now)
         and (not review_only or is_review_lane_job(job))
@@ -529,11 +533,19 @@ def queue_snapshot(
         job
         for job in non_terminal
         if job.task.identifier not in active
+        and not job.intake_blocked
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     quarantined = [job for job in jobs.values() if job.state.value == "quarantined"]
     blocked = sorted(
-        [*backing_off, *quarantined],
+        {
+            job.task.identifier: job
+            for job in [
+                *backing_off,
+                *quarantined,
+                *(job for job in non_terminal if job.intake_blocked),
+            ]
+        }.values(),
         key=lambda job: (job.updated_at, job.task.identifier),
     )
     failure_fingerprints = Counter(
@@ -558,6 +570,8 @@ def queue_snapshot(
                 job.quarantined_at.isoformat() if job.quarantined_at is not None else None
             ),
             "failure_fingerprint": job.last_failure_fingerprint,
+            "intake_blocked": job.intake_blocked,
+            "intake_block_reason": job.intake_block_reason,
         }
         for job in blocked[:MAX_ACTIONABLE_BLOCKED_TASKS]
     ]
@@ -568,6 +582,7 @@ def queue_snapshot(
         "backing_off_count": len(backing_off),
         "quarantined_count": len(quarantined),
         "blocked_count": len(blocked),
+        "intake_blocked_count": sum(job.intake_blocked for job in non_terminal),
         "top_failure_fingerprints": top_failure_fingerprints,
         "oldest_blocked_tasks": oldest_blocked_tasks,
         "by_state": dict(sorted(state_counts.items())),

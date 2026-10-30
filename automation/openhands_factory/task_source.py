@@ -231,6 +231,16 @@ class TaskStore:
             self._assert_generation_current()
             claims = self.claims(current)
             task_key = task.logical_key
+            for claim in claims.values():
+                if (
+                    claim.task_id == task.identifier
+                    and self._lease_is_active_for_generation(claim, current)
+                    and (claim.task_key != task_key or claim.owner != owner)
+                ):
+                    # A public retitle can change the logical key while a worker
+                    # still holds the previous one. GitHub identity remains the
+                    # same execution, including control-plane reconciliation.
+                    raise TaskClaimConflict(claim)
             existing = claims.get(task_key)
             if existing is not None:
                 if existing.task_id != task.identifier:
