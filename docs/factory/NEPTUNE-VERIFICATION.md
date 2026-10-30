@@ -44,6 +44,10 @@ exposed provisioning tests creating group-writable cache directories when launch
 from an interactive shell; service-manager permissions alone do not cover that
 entrypoint. The private umask is exercised under an initially permissive shell
 and by the actual offline preflight, without weakening cache ownership checks.
+Mask all of `/run` as well as the user runtime directory: a metadata-only probe
+found the host Docker socket still visible through the older namespace. When
+`/run` itself holds staging, its initial private tmpfs already provides that mask;
+preserve it while restoring only the allowed sources. Test both staging choices.
 
 ## Activation remains disabled
 

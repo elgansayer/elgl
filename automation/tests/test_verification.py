@@ -38,6 +38,14 @@ def test_verification_sets_private_umask_before_any_cache_creation(tmp_path: Pat
     assert stat.S_IMODE((tmp_path / "private-cache/receipt").stat().st_mode) == 0o600
 
 
+def test_verification_hides_runtime_sockets_without_masking_its_own_staging_root() -> None:
+    stage = _VERIFICATION_SANDBOX_SCRIPT.index('mount --bind "$workspace" "$staging/workspace"')
+    guard = _VERIFICATION_SANDBOX_SCRIPT.index('if [ "$sandbox_root" != /run ]; then')
+    mask = _VERIFICATION_SANDBOX_SCRIPT.index("tmpfs /run\n", guard)
+    restore = _VERIFICATION_SANDBOX_SCRIPT.index('mount --bind "$staging/workspace" "$workspace"')
+    assert stage < guard < mask < restore
+
+
 def test_verification_stages_sources_before_masking_mnt() -> None:
     stage_workspace = 'mount --bind "$workspace" "$staging/workspace"'
     mask_roots = "for masked_root in /mnt /srv /media"
