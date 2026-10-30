@@ -96,10 +96,19 @@ export class UnreadCounterService {
     };
   }
 
-  /** Applies an authoritative count while retaining deltas observed after the request began. */
+  /** Reconciles an authoritative count without losing or duplicating a newer local change. */
   reconcile(tab: NavTab, authoritativeCount: number, snapshot: UnreadSnapshot): void {
-    const delta = this.tabCount(tab) - snapshot[tab];
-    this.set(tab, this.normaliseCount(authoritativeCount) + delta);
+    const currentCount = this.tabCount(tab);
+    const baselineCount = snapshot[tab];
+    const normalisedAuthoritativeCount = this.normaliseCount(authoritativeCount);
+
+    if (currentCount > baselineCount) {
+      this.set(tab, Math.max(currentCount, normalisedAuthoritativeCount));
+    } else if (currentCount < baselineCount) {
+      this.set(tab, Math.min(currentCount, normalisedAuthoritativeCount));
+    } else {
+      this.set(tab, normalisedAuthoritativeCount);
+    }
   }
 
   increment(tab: NavTab): void {

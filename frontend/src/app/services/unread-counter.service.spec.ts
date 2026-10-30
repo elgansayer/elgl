@@ -101,22 +101,42 @@ describe('UnreadCounterService', () => {
     expect(service.discoveryUnread()).toBe(100);
   });
 
-  it('retains realtime increments received after an authoritative request starts', () => {
+  it('retains a realtime increment when the authoritative response excludes it', () => {
     service.set('moments', 4);
     const snapshot = service.snapshot();
     service.increment('moments');
 
-    service.reconcile('moments', 7, snapshot);
+    service.reconcile('moments', 4, snapshot);
 
-    expect(service.tabCount('moments')).toBe(8);
+    expect(service.tabCount('moments')).toBe(5);
   });
 
-  it('retains persisted read deltas received after an authoritative request starts', () => {
+  it('does not double-count a realtime increment included in the authoritative response', () => {
+    service.set('moments', 4);
+    const snapshot = service.snapshot();
+    service.increment('moments');
+
+    service.reconcile('moments', 5, snapshot);
+
+    expect(service.tabCount('moments')).toBe(5);
+  });
+
+  it('retains a persisted read when the authoritative response excludes it', () => {
     service.set('discovery', 4);
     const snapshot = service.snapshot();
     service.decrement('discovery');
 
     service.reconcile('discovery', 4, snapshot);
+
+    expect(service.tabCount('discovery')).toBe(3);
+  });
+
+  it('does not double-apply a persisted read included in the authoritative response', () => {
+    service.set('discovery', 4);
+    const snapshot = service.snapshot();
+    service.decrement('discovery');
+
+    service.reconcile('discovery', 3, snapshot);
 
     expect(service.tabCount('discovery')).toBe(3);
   });
