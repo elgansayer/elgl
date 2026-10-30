@@ -182,6 +182,22 @@ class SessionIdentityJournal:
                 "schema_version",
             }:
                 raise ValueError("Invalid session checkpoint schema")
+            if not isinstance(value["guardian"], dict) or set(value["guardian"]) != {
+                "pid",
+                "uid",
+                "start_ticks",
+                "boot_id",
+            }:
+                raise ValueError("Invalid guardian identity schema")
+            if not isinstance(value["lease"], dict) or set(value["lease"]) != {
+                "provider",
+                "owner",
+                "token",
+                "store_path",
+                "lease_seconds",
+                "protocol_version",
+            }:
+                raise ValueError("Invalid checkpoint lease schema")
             checkpoint = SessionCheckpoint(
                 value["session_id"],
                 ProcessIdentity(**value["guardian"]),

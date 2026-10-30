@@ -214,6 +214,7 @@ def test_unsafe_journal_directory_is_not_silently_repaired(tmp_path):
         lambda v: v["guardian"].update(boot_id="invalid"),
         lambda v: v["lease"].update(lease_seconds=3960),
         lambda v: v["lease"].update(protocol_version=2),
+        lambda v: v["lease"].pop("protocol_version"),
         lambda v: v["lease"].update(token="invalid"),
         lambda v: v["lease"].update(store_path="relative"),
     ],
