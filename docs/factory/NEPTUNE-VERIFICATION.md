@@ -52,10 +52,10 @@ The checked-in example leaves it false and is not installed or started by this
 change. Missing opt-in, wrong repository/base, shared private directories,
 untrusted/unlabelled intake policy, additional job concurrency, enabled API
 fallback, broker state inside private roots or inherited Elgl prompts all fail
-configuration. The profile permits one job and subscription CLI routing only,
-Canonical source, worker, state, log, profile and recovery roots cannot overlap;
-trusted control prompts must stay outside game sources and workspaces.
-with zero variable spending. Reuse the actual operator policy and shared capacity
+configuration. Canonical source, worker, state, log, profile and recovery roots
+cannot overlap; trusted control prompts stay outside game sources and workspaces.
+The profile permits one job and subscription CLI routing with zero variable
+spending. Reuse the actual operator policy and shared capacity
 and health root; an example file is not a new allowance or permission to scale.
 Neptune passes that health root explicitly so a config loaded from a mapping
 cannot silently use local circuit state or an unrelated process environment.
