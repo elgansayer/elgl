@@ -351,7 +351,7 @@ def neptune_commands_for(repository: Path, changed_paths: set[Path]) -> list[Ver
         arguments.append("--changed-path=" + str(path))
     # Reserve the existing host-heavy lane conservatively for any executable
     # or unknown change; the delegated plan decides which tests actually apply.
-    exclusive = any(path.suffix != ".md" and path.parts[0] != "docs" for path in changed_paths)
+    exclusive = any(path.suffix != ".md" or path.parts[0] != "docs" for path in changed_paths)
     return [
         VerificationCommand(
             "neptune-acceptance",

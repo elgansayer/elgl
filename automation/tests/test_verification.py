@@ -67,9 +67,11 @@ def test_neptune_delegates_checks_with_literal_paths_and_fresh_evidence(tmp_path
     assert commands_for(tmp_path, paths, "neptune")[0].arguments != command.arguments
 
 
-def test_neptune_docs_are_shared_but_unknown_paths_reserve_heavy_slot(tmp_path: Path) -> None:
+def test_neptune_docs_are_shared_but_other_paths_reserve_heavy_slot(tmp_path: Path) -> None:
     assert not commands_for(tmp_path, {Path("docs/readme.md")}, "neptune")[0].exclusive
     assert commands_for(tmp_path, {Path("new.file")}, "neptune")[0].exclusive
+    assert commands_for(tmp_path, {Path("docs/check.gd")}, "neptune")[0].exclusive
+    assert commands_for(tmp_path, {Path("README.md")}, "neptune")[0].exclusive
 
 
 @pytest.mark.parametrize("paths", [set(), {Path("../file")}, {Path("/etc/file")}, {Path(".")}])
