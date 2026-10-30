@@ -401,6 +401,50 @@ def test_merge_base_for_repair_accepts_a_clean_uncommitted_merge(tmp_path: Path)
     assert workflow.merge_base_for_repair() is False
 
 
+def test_merge_base_for_repair_resumes_a_clean_merge_left_in_progress(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    origin = tmp_path / "origin"
+    git = ("git", "-c", "user.name=t", "-c", "user.email=t@example.invalid")
+    subprocess.run(("git", "init", "-q", "-b", "main", str(origin)), check=True)
+    (origin / "base.txt").write_text("one\n", encoding="utf-8")
+    subprocess.run((*git, "-C", str(origin), "add", "."), check=True)
+    subprocess.run((*git, "-C", str(origin), "commit", "-q", "-m", "base"), check=True)
+    subprocess.run(("git", "clone", "-q", str(origin), str(repository)), check=True)
+    # merge_base_for_repair runs plain git, so the clone needs its own identity.
+    for key, value in (("user.name", "t"), ("user.email", "t@example.invalid")):
+        subprocess.run(("git", "-C", str(repository), "config", key, value), check=True)
+    subprocess.run(("git", "-C", str(repository), "switch", "-q", "-c", "task"), check=True)
+    (repository / "task.txt").write_text("task\n", encoding="utf-8")
+    subprocess.run((*git, "-C", str(repository), "add", "."), check=True)
+    subprocess.run((*git, "-C", str(repository), "commit", "-q", "-m", "task"), check=True)
+    (origin / "base.txt").write_text("two\n", encoding="utf-8")
+    subprocess.run((*git, "-C", str(origin), "commit", "-q", "-am", "newer base"), check=True)
+    workflow = GitWorkflow(repository, "main")
+
+    assert workflow.merge_base_for_repair() is False
+    assert workflow.merge_base_for_repair() is False
+
+    assert (repository / "base.txt").read_text(encoding="utf-8") == "two\n"
+
+
+def test_merge_base_for_repair_still_fails_when_no_merge_is_in_progress(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(128, "", "fatal: refusing to merge unrelated histories"),
+            ProcessResult(0, "", ""),
+            ProcessResult(1, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    with pytest.raises(RepositorySafetyError, match="Could not merge base branch"):
+        workflow.merge_base_for_repair()
+
+
 def test_push_allows_the_external_branch_a_pull_request_review_job_is_assigned(
     tmp_path: Path,
 ) -> None:

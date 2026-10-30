@@ -1,4 +1,4 @@
-<div class="relative">
+<div class="relative" (keydown.escape)="close()">
   <button
     hlmBtn
     type="button"
@@ -22,6 +22,7 @@
     <div
       class="absolute start-0 z-30 mt-2 w-full overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 shadow-xl"
       role="listbox"
+      [attr.aria-label]="'settings.changeLanguage' | t"
     >
       <div class="p-3 border-b border-surface-200">
         <input
@@ -34,15 +35,17 @@
           aria-label="{{ 'lang.searchPlaceholder' | t }}"
         />
       </div>
-      <ul class="max-h-72 overflow-y-auto py-1">
+      <ul class="max-h-72 overflow-y-auto py-1" role="presentation">
         @for (lang of filteredLanguages(); track lang.code) {
-          <li>
+          <li role="none">
             <button
               hlmBtn
               type="button"
+              role="option"
+              [attr.aria-selected]="lang.code === currentLang()"
               (click)="selectLanguage(lang.code)"
               class="w-full flex items-center justify-between gap-2 text-start px-4 py-2.5 text-sm hover:bg-surface-200 transition-colors cursor-pointer"
-              [attr.aria-label]="'common.selected' | t"
+              [attr.aria-label]="getLanguageAriaLabel(lang)"
             >
               <span class="flex items-center gap-2">
                 <span class="text-base leading-none">{{ lang.flag }}</span>
