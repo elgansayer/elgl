@@ -181,6 +181,8 @@ class Job:
     # polling job never carries them.
     attempt_started_at: datetime | None = None
     attempt_generation: str | None = None
+    intake_blocked: bool = False
+    intake_block_reason: str | None = None
 
 
 @dataclass

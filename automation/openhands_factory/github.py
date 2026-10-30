@@ -119,6 +119,13 @@ class IssueComment:
 
 
 @dataclass(frozen=True)
+class RemoteTaskState:
+    number: int
+    state: Literal["OPEN", "CLOSED", "MERGED"]
+    head_sha: str = ""
+
+
+@dataclass(frozen=True)
 class PullRequestMatch:
     """A same-repository PR with evidence tying it to one logical task."""
 
@@ -915,6 +922,50 @@ class GitHubClient:
         for label in attached.values():
             arguments.extend(("--remove-label", label))
         self._run(tuple(arguments))
+
+    def remote_task_state(self, number: int, *, pull_request: bool = False) -> RemoteTaskState:
+        """Confirm lifecycle independently from filtered intake and CI readiness."""
+        if type(number) is not int or number <= 0:
+            raise FactoryError("GitHub task number must be a positive integer")
+        endpoint = "pulls" if pull_request else "issues"
+        selector = (
+            "{number,state,merged,head_sha:.head.sha}"
+            if pull_request
+            else '{number,state,is_pull_request:has("pull_request")}'
+        )
+        output = self._run(
+            ("gh", "api", f"repos/{self.repository}/{endpoint}/{number}", "--jq", selector),
+            timeout=30,
+        )
+        try:
+            item = json.loads(output)
+        except ValueError as error:
+            raise FactoryError("GitHub remote task state is malformed") from error
+        if (
+            not isinstance(item, dict)
+            or type(item.get("number")) is not int
+            or item["number"] != number
+            or not isinstance(item.get("state"), str)
+            or item["state"] not in {"open", "closed"}
+        ):
+            raise FactoryError("GitHub remote task identity or state is malformed")
+        if not pull_request:
+            if item.get("is_pull_request") is not False:
+                raise FactoryError("Expected an issue, received ambiguous GitHub task kind")
+            return RemoteTaskState(number, "OPEN" if item["state"] == "open" else "CLOSED")
+        head = item.get("head_sha")
+        merged = item.get("merged")
+        if (
+            type(merged) is not bool
+            or not isinstance(head, str)
+            or re.fullmatch(r"[0-9a-f]{40}", head) is None
+            or (merged and item["state"] != "closed")
+        ):
+            raise FactoryError("GitHub pull request lifecycle evidence is malformed")
+        state: Literal["OPEN", "CLOSED", "MERGED"] = (
+            "MERGED" if merged else "OPEN" if item["state"] == "open" else "CLOSED"
+        )
+        return RemoteTaskState(number, state, head)
 
     def list_quarantined_issues(self, limit: int = 10_000) -> list[int]:
         output = self._run(
