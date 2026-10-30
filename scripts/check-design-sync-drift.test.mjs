@@ -38,12 +38,12 @@ function fixture(t) {
   const prHead = commit('non-visual PR');
   write('frontend/src/app/shell.component.ts', 'export class Shell { changed = true; }\n');
   const integrationHead = commit('unrelated newer main visual change');
-  function run(head = prHead, eventName = 'pull_request') {
+  function run(head = prHead, eventName = 'pull_request', extraEnv = {}) {
     write('event.json', JSON.stringify({ pull_request: { head: { sha: head } } }));
     return spawnSync(process.execPath, ['scripts/check-design-sync-drift.mjs'], {
       cwd: root, encoding: 'utf8', env: {
         ...process.env, DESIGN_SYNC_BASE_SHA: base, GITHUB_EVENT_NAME: eventName,
-        GITHUB_EVENT_PATH: resolve(root, 'event.json'),
+        GITHUB_EVENT_PATH: resolve(root, 'event.json'), ...extraEnv,
       },
     });
   }
@@ -89,4 +89,30 @@ test('fails closed when the claimed PR head is outside the integration checkout'
   const result = run(unrelated);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Unable to calculate design-sync diff/);
+});
+
+test('local run counts an uncommitted preview update for a committed visual change', (t) => {
+  const { run, write } = fixture(t);
+  const local = { GITHUB_ACTIONS: '', GITHUB_EVENT_NAME: '' };
+  assert.equal(run(undefined, '', local).status, 1);
+  write('preview.html', '<main>updated shell</main>\n');
+  const result = run(undefined, '', local);
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test('local run still rejects an uncommitted visual change without its preview', (t) => {
+  const { run, git, base, write } = fixture(t);
+  git('reset', '-q', '--hard', base);
+  write('frontend/src/app/new.component.ts', 'export class New {}\n');
+  const result = run(undefined, '', { GITHUB_ACTIONS: '', GITHUB_EVENT_NAME: '' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /changed: frontend\/src\/app\/new\.component\.ts\n/);
+});
+
+test('GitHub Actions push runs ignore working-tree edits', (t) => {
+  const { run, write } = fixture(t);
+  write('preview.html', '<main>updated shell</main>\n');
+  const result = run(undefined, 'push', { GITHUB_ACTIONS: 'true' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /screen.shell: mapped implementation changed/);
 });
