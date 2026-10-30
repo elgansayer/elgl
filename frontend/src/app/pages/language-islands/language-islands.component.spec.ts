@@ -8,6 +8,7 @@ describe('LanguageIslandsComponent', () => {
   let fixture: ComponentFixture<LanguageIslandsComponent>;
   let mockLanguageIslandsService: {
     listIslands: ReturnType<typeof vi.fn>;
+    getMyIslands: ReturnType<typeof vi.fn>;
     joinIsland: ReturnType<typeof vi.fn>;
     leaveIsland: ReturnType<typeof vi.fn>;
   };
@@ -42,6 +43,7 @@ describe('LanguageIslandsComponent', () => {
   beforeEach(async () => {
     mockLanguageIslandsService = {
       listIslands: vi.fn().mockResolvedValue(mockIslands),
+      getMyIslands: vi.fn().mockResolvedValue([]),
       joinIsland: vi.fn().mockResolvedValue(undefined),
       leaveIsland: vi.fn().mockResolvedValue(undefined),
     };
@@ -93,6 +95,22 @@ describe('LanguageIslandsComponent', () => {
     expect(element.querySelector('.map-pin')?.getAttribute('aria-label')).toBe(
       'languageIslands.mapPinLabel:128',
     );
+  });
+
+  it('restores persisted membership after loading the page', async () => {
+    mockLanguageIslandsService.getMyIslands.mockResolvedValue([mockIslands[0]]);
+
+    component.membershipsResource.reload();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mockLanguageIslandsService.getMyIslands).toHaveBeenCalled();
+    expect(component.enteredIslandId()).toBe('island-1');
+    expect(
+      fixture.nativeElement.querySelector(
+        'button[aria-label="languageIslands.leave"]',
+      ),
+    ).not.toBeNull();
   });
 
   it('derives map pins and language filters from loaded islands', async () => {

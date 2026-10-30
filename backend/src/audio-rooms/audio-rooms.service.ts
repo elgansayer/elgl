@@ -958,7 +958,13 @@ export class AudioRoomsService implements OnModuleInit {
       throw new ForbiddenException('The host cannot be muted.');
     }
 
-    // Notify user via Centrifugo to mute their microphone locally
+    await this.revokePublishPermission(
+      room,
+      dto.target_user_id,
+      'Could not safely mute the speaker. Please retry.',
+    );
+
+    // Keep the target client's controls in sync after LiveKit stops publishing.
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'force_mute',
       target_user_id: dto.target_user_id,

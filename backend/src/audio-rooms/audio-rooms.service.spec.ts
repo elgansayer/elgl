@@ -914,9 +914,10 @@ describe('AudioRoomsService', () => {
       ).rejects.toThrow(new ForbiddenException('The host cannot be muted.'));
     });
 
-    it('should publish force_mute event via Centrifugo', async () => {
+    it('should revoke LiveKit publishing before publishing force_mute', async () => {
       const roomRow: any = {
         id: 'room-1',
+        room_name: 'language-room',
         host_id: 'host-1',
         speakers: ['host-1', 'user-2'],
       };
@@ -924,18 +925,54 @@ describe('AudioRoomsService', () => {
         data: roomRow,
         error: null,
       });
+      mockListParticipants.mockResolvedValue([{ identity: 'Speaker_user-2' }]);
 
       const result = await service.muteSpeaker('host-1', {
         room_id: 'room-1',
         target_user_id: 'user-2',
       });
 
+      expect(mockListParticipants).toHaveBeenCalledWith('language-room');
+      expect(mockUpdateParticipant).toHaveBeenCalledWith(
+        'language-room',
+        'Speaker_user-2',
+        {
+          permission: {
+            canSubscribe: true,
+            canPublish: false,
+            canPublishData: true,
+          },
+        },
+      );
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
         type: 'force_mute',
         target_user_id: 'user-2',
         room_id: 'room-1',
       });
       expect(result.id).toBe('room-1');
+    });
+
+    it('should not report mute when LiveKit cannot revoke publishing', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        room_name: 'language-room',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({ data: roomRow, error: null });
+      mockListParticipants.mockResolvedValue([{ identity: 'Speaker_user-2' }]);
+      mockUpdateParticipant.mockRejectedValue(
+        new Error('media plane unavailable'),
+      );
+
+      await expect(
+        service.muteSpeaker('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow('Could not safely mute the speaker. Please retry.');
+
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
     });
   });
 

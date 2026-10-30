@@ -1,4 +1,11 @@
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  resource,
+  signal,
+} from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -15,7 +22,6 @@ export class LanguageIslandsComponent {
   private readonly i18n = inject(I18nService);
 
   readonly selectedLanguage = signal<string>('all');
-  readonly enteredIslandId = signal<string | null>(null);
   readonly statusMessage = signal<string | null>(null);
   readonly actionFailed = signal(false);
 
@@ -27,6 +33,17 @@ export class LanguageIslandsComponent {
   });
 
   readonly islands = computed(() => this.islandsResource.value() ?? []);
+
+  readonly membershipsResource = resource<LanguageIsland[], unknown>({
+    loader: async () => {
+      const result = await this.languageIslandsService.getMyIslands();
+      return result ?? [];
+    },
+  });
+
+  readonly enteredIslandId = linkedSignal<string | null>(() =>
+    this.membershipsResource.value()?.[0]?.id ?? null,
+  );
 
   readonly filteredIslands = computed(() => {
     const filter = this.selectedLanguage();
@@ -83,6 +100,7 @@ export class LanguageIslandsComponent {
 
   retry(): void {
     this.islandsResource.reload();
+    this.membershipsResource.reload();
   }
 
   getFlag(pair: string): string {
