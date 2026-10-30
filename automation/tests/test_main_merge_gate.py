@@ -183,10 +183,11 @@ def test_neptune_main_uses_actual_workflow_and_literal_app_pinned_gate(tmp_path:
         "status": "completed",
         "conclusion": "success",
     }
-    gate, runner = _neptune_main_gate(tmp_path, [check])
-    assert gate.is_green()
-    assert "neptune-merge-gate.yml" in runner.calls[1]
-    assert "--paginate" in runner.calls[2]
+    for checks in ([check], [{**check, "id": 1}, {**check, "id": 2}]):
+        gate, runner = _neptune_main_gate(tmp_path, checks)
+        assert gate.is_green()
+        assert "neptune-merge-gate.yml" in runner.calls[1]
+        assert "--paginate" in runner.calls[2]
 
 
 def test_neptune_successful_main_workflow_cannot_hide_missing_or_skipped_gate(
@@ -211,5 +212,5 @@ def test_neptune_successful_main_workflow_cannot_hide_missing_or_skipped_gate(
         assert not gate.is_green(), changes
     gate, _ = _neptune_main_gate(tmp_path, [])
     assert not gate.is_green()
-    gate, _ = _neptune_main_gate(tmp_path, [check, check])
+    gate, _ = _neptune_main_gate(tmp_path, [check, {**check, "conclusion": "skipped"}])
     assert not gate.is_green()
