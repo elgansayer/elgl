@@ -887,13 +887,17 @@ class FactoryPipeline:
                     detail=f"Factory {agent_phase.value} in progress",
                 )
         baseline_fingerprint: str | None = None
+        implementation_started_with_changes = False
         workflow = self._workflow(worktree)
 
         def prepare() -> None:
-            nonlocal baseline_fingerprint
+            nonlocal baseline_fingerprint, implementation_started_with_changes
             if prepare_attempt is not None:
                 prepare_attempt()
             if require_repository_change:
+                implementation_started_with_changes = (
+                    phase == "implementation" and workflow.has_changes()
+                )
                 baseline_fingerprint = workflow.change_fingerprint()
 
         def validate() -> None:
@@ -904,6 +908,10 @@ class FactoryPipeline:
             if baseline_fingerprint is None:
                 raise RuntimeError("Repository-change validation was not prepared")
             try:
+                if implementation_started_with_changes:
+                    if workflow.has_changes():
+                        return
+                    raise AgentTaskFailure("Implementation produced no changes")
                 current_fingerprint = workflow.change_fingerprint()
             except RepositorySafetyError as error:
                 raise RuntimeError("Repository-change validation failed internally") from error
