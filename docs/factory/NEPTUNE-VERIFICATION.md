@@ -98,6 +98,21 @@ status or a different app cannot satisfy this gate. Missing checks wait; skipped
 neutral, cancelled, failed and unknown terminal outcomes fail. Paginated evidence
 is retained; ambiguous duplicate required runs fail instead of choosing a success.
 
+Installer/recipe changes additionally require `Pinned Godot and Saturn installation`
+from that same app and head, following Neptune #518. Applicability uses actual
+current-base changed paths, including renamed-from paths, matching the accepted
+provisioning workflow's recipe/installer/lock/probe/test paths. Missing, empty,
+malformed or potentially truncated file evidence fails. The comparison endpoint's
+[documented 300-file cap](https://docs.github.com/en/rest/commits/commits#compare-two-commits)
+is rejected; split oversized work instead of silently omitting files. Both
+applicable checks must literally succeed before the factory requests auto-merge.
+Metadata work does not wait for a workflow that is path-filtered out.
+
+This supplemental requirement is enforced by the publication adapter. The
+current classic branch-protection rule still requires the aggregate only; this
+change does not claim to configure an additional global GitHub required check or
+govern a different actor's independent enqueue path.
+
 The reader compares the PR's base with current main and checks that main is an
 ancestor of the head. Stale bases become revalidation failures. Stacked children
 must first be retargeted to protected main and retested. Optional review decisions

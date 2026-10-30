@@ -25,8 +25,10 @@ from openhands_factory.models import (
     supersession_references,
 )
 from openhands_factory.neptune_merge import (
+    NEPTUNE_GATE,
     NEPTUNE_REPOSITORY,
     neptune_gate,
+    required_neptune_checks,
     validate_neptune_protection,
 )
 from openhands_factory.pr_convergence import PullRequestRecord
@@ -1487,13 +1489,17 @@ query($owner: String!, $name: String!, $number: Int!) {
             "ahead",
             "identical",
         }
+        required = (
+            required_neptune_checks(comparison)
+            if current and item.get("state") == "OPEN"
+            else frozenset({NEPTUNE_GATE})
+        )
         output = self._run(
             (
                 "gh",
                 "api",
                 "--paginate",
-                f"repos/{self.repository}/commits/{head}/check-runs"
-                "?check_name=Neptune%20merge%20gate&filter=latest&per_page=100",
+                f"repos/{self.repository}/commits/{head}/check-runs?filter=latest&per_page=100",
                 "--jq",
                 ".check_runs[] | @base64",
             )
@@ -1506,7 +1512,7 @@ query($owner: String!, $name: String!, $number: Int!) {
                 checks.append(json.loads(base64.b64decode(encoded, validate=True).decode("utf-8")))
             except (ValueError, UnicodeError) as error:
                 raise FactoryError("Neptune check-run encoding is malformed") from error
-        gate = neptune_gate([{"check_runs": checks}], head)
+        gate = neptune_gate([{"check_runs": checks}], head, required)
         failed = set(gate.failed_checks)
         if not current:
             failed.add("Neptune current base")
