@@ -104,6 +104,15 @@ export class ChatRoomComponent implements OnDestroy {
       // and initialisation starts requests; neither may become a dependency.
       untracked(() => this.openRoom(roomId));
     });
+
+    effect(() => {
+      const userId = this.authService.currentUser()?.id;
+      // A direct route reload can finish loading the room before Supabase restores the session.
+      // Retry the synchronous draft restore when that account becomes available.
+      untracked(() => {
+        if (userId && this.roomDraftReady && this.draftScope === null) this.restoreDraft();
+      });
+    });
   }
 
   private openRoom(roomId: string): void {
@@ -115,6 +124,7 @@ export class ChatRoomComponent implements OnDestroy {
     }
     this.roomId = roomId;
     this.draftScope = null;
+    this.roomDraftReady = false;
     void this.initializeRoom();
   }
 
@@ -223,6 +233,7 @@ export class ChatRoomComponent implements OnDestroy {
   // until this matches the current room and account, so leaving a room before its draft was
   // restored (or while it is locked) can never overwrite that draft with an empty composer.
   private draftScope: { roomId: string; userId: string } | null = null;
+  private roomDraftReady = false;
 
   private async initializeRoom(): Promise<void> {
     await this.loadRoomDetails();
@@ -236,6 +247,7 @@ export class ChatRoomComponent implements OnDestroy {
   private async finishLoadingRoom(): Promise<void> {
     // Restoring is a synchronous storage read, so it happens before any request: the composer holds
     // the draft straight away and loadMessages() can match the saved reply target.
+    this.roomDraftReady = true;
     this.restoreDraft();
     await this.loadBlockedUsers();
     await this.loadMessages();

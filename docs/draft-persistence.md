@@ -21,7 +21,7 @@ Blank fields are omitted. A chat record with nothing in it, and a Moment record 
 
 ### Chat composer
 
-- **Restore:** `ChatRoomComponent` restores the room draft as soon as the room is known not to be locked, before the message history is requested. The text is in the composer immediately and the saved reply target is matched when the history arrives. A locked room restores nothing until it is unlocked. Text typed while the room was still loading is newer than the stored draft and is kept.
+- **Restore:** `ChatRoomComponent` restores the room draft as soon as the room is known not to be locked, before the message history is requested. If a direct route reload finishes first, restoration is retried when the authenticated account becomes available. The text is in the composer immediately and the saved reply target is matched when the history arrives. A locked room restores nothing until it is unlocked. Text typed while the room or account was still loading is newer than the stored draft and is kept.
 - **Save:** on every keystroke, when a reply is started or cancelled, when the grammar review replaces the text, when the room changes, and on teardown.
 - **Never save an unrestored composer:** nothing is written until the draft for the current room and account has been restored. Leaving a room that is still loading, or locked, therefore cannot overwrite its stored draft with an empty composer.
 - **Room changes inside one component:** the outgoing room is saved, then the composer, reply target and correction state are emptied before the next room restores its own draft.

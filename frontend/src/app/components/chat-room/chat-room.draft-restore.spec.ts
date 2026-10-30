@@ -224,6 +224,20 @@ describe('ChatRoomComponent draft restore and persistence', () => {
       expect(getItem.mock.calls.some(([key]) => String(key).startsWith('ht_anon'))).toBe(false);
       expect(setItem.mock.calls.some(([key]) => String(key).startsWith('ht_anon'))).toBe(false);
     });
+
+    it('restores once the account becomes available after the room has loaded', async () => {
+      draftService.saveChatDraftV2('room-1', { textInput: 'Saved before reload' });
+      currentUser.set(null);
+      await createRoom('room-1');
+      expect(component.textInput).toBe('');
+
+      currentUser.set({ id: 'user-1' });
+      await settle(fixture);
+
+      expect(component.textInput).toBe('Saved before reload');
+      type(component, 'Continue after reload');
+      expect(draftService.loadChatDraftV2('room-1')?.textInput).toBe('Continue after reload');
+    });
   });
 
   describe('leaving before the draft was restored', () => {
