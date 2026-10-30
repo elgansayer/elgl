@@ -143,6 +143,28 @@ describe('User Profiles OpenAPI architecture contract', () => {
     ).toBe(true);
   });
 
+  it('documents the nullable canonical CEFR profile contract', () => {
+    const proficiencySchema = {
+      type: ['string', 'null'],
+      enum: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', null],
+    };
+
+    expect(contract.components?.schemas?.['UserProfile']).toEqual(
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          proficiency_level: proficiencySchema,
+        }),
+      }),
+    );
+    expect(contract.components?.schemas?.['UpdateProfileRequest']).toEqual(
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          proficiency_level: expect.objectContaining(proficiencySchema),
+        }),
+      }),
+    );
+  });
+
   it('documents bounded social graph and search collection parameters', () => {
     const limit = contract.components?.parameters?.['Limit'];
     const offset = contract.components?.parameters?.['Offset'];

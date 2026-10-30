@@ -416,9 +416,85 @@ class TestAgentProviders(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.summary, "success output")
         self.assertIn("sonnet", runner.commands[0])
-        self.assertNotIn("--max-turns", runner.commands[0])
+        self.assertEqual(runner.commands[0][-2:], ("--max-turns", "100"))
         self.assertIn("--safe-mode", runner.commands[0])
         self.assertEqual(runner.stdin, ["do it"])
+
+    def test_claude_uses_configured_turn_cap_after_optional_arguments(self):
+        request = AgentRequest(
+            AgentPhase.IMPLEMENTATION, Task("1", "test", "body", "issue", 1), "do it", Path("/tmp")
+        )
+        for limit in (1, 7, 100):
+            with self.subTest(limit=limit):
+                runner = FakeProcessRunner("success output")
+                provider = ClaudeCodeProvider(
+                    max_turns=limit,
+                    extra_args=["--verbose"],
+                    process_runner=runner,
+                )
+                self.assertTrue(provider.run(request).success)
+                self.assertEqual(runner.commands[0][-3:], ("--verbose", "--max-turns", str(limit)))
+
+    def test_claude_turn_exhaustion_fails_without_marking_provider_unavailable(self):
+        request = AgentRequest(
+            AgentPhase.IMPLEMENTATION, Task("1", "test", "body", "issue", 1), "do it", Path("/tmp")
+        )
+        for diagnostic, expected in (
+            ("Error: Reached max turns (7)", AgentFailureKind.TASK_FAILURE),
+            ('{"subtype":"error_max_turns"}', AgentFailureKind.TASK_FAILURE),
+            ("quota exhausted; reached max turns", AgentFailureKind.PROVIDER_QUOTA),
+            ("rate limit; reached max turns", AgentFailureKind.PROVIDER_RATE_LIMIT),
+            ("unknown option '--max-turns'", AgentFailureKind.PROVIDER_TRANSPORT),
+        ):
+            with self.subTest(diagnostic=diagnostic):
+                runner = FakeProcessRunner("")
+                provider = ClaudeCodeProvider(max_turns=7, process_runner=runner)
+                process = ProcessResult(("claude",), 1, "", diagnostic, False, False, 0.01)
+                with patch.object(runner, "run", return_value=process):
+                    result = provider.run(request)
+                self.assertFalse(result.success)
+                self.assertIsNotNone(result.failure)
+                self.assertEqual(result.failure.kind, expected)
+
+    def test_claude_turn_cap_is_not_bypassed_by_router_fallback(self):
+        task = Task("1", "test", "body", "issue", 1)
+        runner = FakeProcessRunner("")
+        claude = ClaudeCodeProvider(max_turns=7, process_runner=runner)
+        second = ResultProvider(
+            "second",
+            AgentResult(
+                provider="second",
+                phase=AgentPhase.IMPLEMENTATION,
+                success=True,
+                started_at=datetime.now(UTC),
+                finished_at=datetime.now(UTC),
+                exit_code=0,
+                summary="must not run",
+                output_path=None,
+                failure=None,
+            ),
+        )
+        router = AgentRouter([claude, second])
+        process = ProcessResult(
+            ("claude",), 1, "", "Error: Reached max turns (7)", False, False, 0.01
+        )
+        with (
+            TemporaryDirectory() as directory,
+            patch.object(runner, "run", return_value=process) as run,
+            patch.object(
+                claude,
+                "health",
+                return_value=ProviderHealth("claude", ProviderStatus.HEALTHY, datetime.now(UTC)),
+            ),
+        ):
+            result = router.run(
+                AgentRequest(AgentPhase.IMPLEMENTATION, task, "do it", Path(directory)), Job(task)
+            )
+        self.assertFalse(result.success)
+        self.assertEqual(result.failure.kind, AgentFailureKind.TASK_FAILURE)
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(second.calls, 0)
+        self.assertEqual(router._breakers()["claude"].state, "closed")
 
     def test_claude_separates_factory_policy_from_untrusted_task_prompt(self):
         runner = FakeProcessRunner("success output")

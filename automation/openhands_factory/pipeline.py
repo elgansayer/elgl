@@ -265,7 +265,10 @@ class FactoryPipeline:
             maximum_agent_lease_seconds,
         )
 
-        self.health_store = AgentHealthStore(config.state_dir / "agent_health.json")
+        self.health_store = AgentHealthStore(
+            config.state_dir / "agent_health.json",
+            coordination_root=config.provider_capacity_dir if config.tests_only_merging else None,
+        )
 
         if agent_router is not None:
             self.router = agent_router
@@ -784,7 +787,7 @@ class FactoryPipeline:
                 job.pull_request,
                 ("factory-reviewed", "factory-review"),
             )
-            if job.head_sha is not None:
+            if job.head_sha is not None and not self.config.tests_only_merging:
                 self.github.publish_review_pending(
                     job.head_sha,
                     detail=f"Factory {agent_phase.value} in progress",
@@ -927,10 +930,11 @@ class FactoryPipeline:
             if resolution.action is ConvergenceAction.ALREADY_MERGED:
                 if canonical is None:
                     raise FactoryError("Merged convergence result is missing its canonical PR")
-                workflow.delete_remote_branch(
-                    job.branch,
-                    job.head_sha or workflow.head_sha(),
-                )
+                if not self.config.tests_only_merging:
+                    workflow.delete_remote_branch(
+                        job.branch,
+                        job.head_sha or workflow.head_sha(),
+                    )
                 job.pull_request = canonical.number
                 job.branch = canonical.head_ref
                 job.head_sha = canonical.head_sha
@@ -953,7 +957,7 @@ class FactoryPipeline:
             if resolution.action is ConvergenceAction.REOPEN:
                 self.github.reopen_pull_request(canonical.number)
             self.github.update_pull_request(canonical.number, title=title, body=marked_body)
-            if canonical.head_ref != current_branch:
+            if canonical.head_ref != current_branch and not self.config.tests_only_merging:
                 workflow.delete_remote_branch(current_branch, current_head)
             job.pull_request = canonical.number
             job.branch = canonical.head_ref
@@ -1084,10 +1088,16 @@ class FactoryPipeline:
                 lease_owner=lease_owner,
                 require_repository_change=True,
             )
-            job.state = JobState.SECURITY_REVIEW
+            job.state = (
+                JobState.VERIFYING if self.config.tests_only_merging else JobState.SECURITY_REVIEW
+            )
             return
 
         if job.state is JobState.SECURITY_REVIEW:
+            if self.config.tests_only_merging:
+                # Recover a persisted legacy phase without buying an approval.
+                job.state = JobState.VERIFYING
+                return
             try:
                 exempt = _is_security_review_exempt(workflow.changed_paths())
             except RepositorySafetyError:
@@ -1162,7 +1172,12 @@ class FactoryPipeline:
                     job.pull_request,
                     (
                         "OpenHands factory verified and pushed a repair to the existing "
-                        "pull request branch. Independent review is running again."
+                        "pull request branch. "
+                        + (
+                            "Applicable tests will gate merging."
+                            if self.config.tests_only_merging
+                            else "Independent review is running again."
+                        )
                     ),
                 )
                 job.state = JobState.REVIEWING
@@ -1281,9 +1296,9 @@ class FactoryPipeline:
             self.github.add_comment(
                 job.pull_request,
                 (
-                    "OpenHands factory selected this pull request. The factory will review the "
-                    "same branch, repair verification failures, wait for required checks, and "
-                    "merge only after the reviewed commit is still current."
+                    "OpenHands factory selected this pull request. The factory will validate "
+                    "the same branch, repair verification failures, wait for required checks, "
+                    "and merge only after the tested commit is still current."
                 ),
             )
             job.state = JobState.REVIEWING
@@ -1297,6 +1312,10 @@ class FactoryPipeline:
                 self.github.remove_issue_labels(job.pull_request, ("factory-stack-blocked",))
 
             if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
+                return
+
+            if self.config.tests_only_merging:
+                self._finish_tests_only_validation(job, workflow, lease_owner)
                 return
 
             # The worktree persists across retries of this state, so a review report
@@ -1433,7 +1452,7 @@ class FactoryPipeline:
             elif (
                 status.checks_passed
                 and status.mergeable == "MERGEABLE"
-                and status.merge_state_status in {"CLEAN", "BEHIND"}
+                and status.merge_state_status in self._allowed_merge_states
             ):
                 # Persist a visible queue transition before the merge attempt. The
                 # MERGE_QUEUED worker re-reads GitHub immediately before using an
@@ -1443,11 +1462,7 @@ class FactoryPipeline:
                 self._record_pr_lifecycle(
                     job,
                     "merge-queued",
-                    (
-                        "All required checks passed, GitHub reports the reviewed head as "
-                        "non-conflicting "
-                        "and mergeable, and the Factory queued an exact-head squash merge."
-                    ),
+                    self._merge_queue_detail,
                 )
                 job.state = JobState.MERGE_QUEUED
             else:
@@ -1610,7 +1625,12 @@ class FactoryPipeline:
                     job.pull_request,
                     (
                         "OpenHands factory repaired the branch after verification or CI "
-                        "feedback. The branch is returning to review before merge."
+                        "feedback. "
+                        + (
+                            "Applicable tests will gate merging."
+                            if self.config.tests_only_merging
+                            else "The branch is returning to review before merge."
+                        )
                     ),
                 )
             job.state = JobState.REVIEWING
@@ -1622,11 +1642,7 @@ class FactoryPipeline:
             self._record_pr_lifecycle(
                 job,
                 "merge-queued",
-                (
-                    "All required checks passed, GitHub reports the reviewed head as "
-                    "non-conflicting "
-                    "and mergeable, and the Factory queued an exact-head squash merge."
-                ),
+                self._merge_queue_detail,
             )
             status = self._status(job)
             if status.state == "MERGED":
@@ -1638,7 +1654,9 @@ class FactoryPipeline:
                 job.state = JobState.MERGED
             elif self._recover_closed_pull_request(job, status):
                 return
-            elif job.head_sha != status.head_sha:
+            elif job.head_sha != status.head_sha or (
+                self.config.tests_only_merging and job.latest_verified_sha != status.head_sha
+            ):
                 self._refresh_pull_request_for_review(job, worktree, lease_owner, status)
             elif (
                 status.checks_pending
@@ -1649,7 +1667,7 @@ class FactoryPipeline:
             elif (
                 not status.checks_passed
                 or status.mergeable != "MERGEABLE"
-                or status.merge_state_status not in {"CLEAN", "BEHIND"}
+                or status.merge_state_status not in self._allowed_merge_states
             ):
                 job.state = JobState.REPAIRING
             else:
@@ -1665,7 +1683,11 @@ class FactoryPipeline:
                     self._record_pr_lifecycle(
                         job,
                         "merged",
-                        "GitHub confirmed the Factory exact-head squash merge completed.",
+                        (
+                            "GitHub confirmed the Factory exact-head merge completed."
+                            if self.config.tests_only_merging
+                            else "GitHub confirmed the Factory exact-head squash merge completed."
+                        ),
                     )
                     job.state = JobState.MERGED
                 elif confirmed.head_sha != job.head_sha:
@@ -1710,6 +1732,62 @@ class FactoryPipeline:
             detail=detail,
         )
 
+    @property
+    def _allowed_merge_states(self) -> frozenset[str]:
+        return frozenset({"CLEAN"} if self.config.tests_only_merging else {"CLEAN", "BEHIND"})
+
+    @property
+    def _merge_queue_detail(self) -> str:
+        if self.config.tests_only_merging:
+            return (
+                "Applicable exact-head/current-base tests passed. The Factory queued native "
+                "auto-merge with a merge commit and retained branch; no approval is required."
+            )
+        return (
+            "All required checks passed, GitHub reports the reviewed head as non-conflicting "
+            "and mergeable, and the Factory queued an exact-head squash merge."
+        )
+
+    def _finish_tests_only_validation(
+        self, job: Job, workflow: GitWorkflow, lease_owner: str
+    ) -> None:
+        """Use the persisted REVIEWING state as a deterministic handoff for Neptune."""
+
+        status = self._status(job)
+        if status.state == "MERGED":
+            job.state = JobState.MERGED
+            return
+        if self._recover_closed_pull_request(job, status):
+            return
+        if status.head_sha != job.head_sha or workflow.head_sha() != status.head_sha:
+            self._refresh_pull_request_for_review(job, workflow.repository, lease_owner, status)
+            return
+        if self._review_needs_base_update(job, workflow, status):
+            if self._update_pull_request_branch(job, status):
+                job.state = JobState.CI_PENDING
+            return
+        if workflow.has_changes():
+            job.state = JobState.VERIFYING
+            return
+        if status.ci_required_failed or status.failed_checks:
+            job.state = JobState.REPAIRING
+            return
+        if job.latest_verified_sha != status.head_sha:
+            verified_paths = self._verify_pull_request_for_review(job, workflow, status)
+            if verified_paths is None:
+                return
+            self._record_verified_head(job, lease_owner, verified_paths)
+        if job.pull_request is None:
+            raise FactoryError("Tests-only handoff is missing its pull request")
+        self.github.mark_ready(job.pull_request)
+        self.github.add_comment(
+            job.pull_request,
+            "Factory verification completed for the recorded head. Applicable protected "
+            "exact-head/current-base CI gates merging; no AI or human approval is required.",
+        )
+        job.review_findings.clear()
+        job.state = JobState.CI_PENDING
+
     def _discover_pull_request(
         self,
         job: Job,
@@ -1732,7 +1810,7 @@ class FactoryPipeline:
             branch=job.task.pr_branch,
             lease_owner=lease_owner,
             comment=(
-                "OpenHands factory is independently reviewing this pull request. It will "
+                "OpenHands factory is validating this pull request. It will "
                 "run verification, repair failures if needed, and merge once its checks "
                 "pass and the reviewed commit is still current."
             ),
@@ -1811,6 +1889,8 @@ class FactoryPipeline:
     def _review_needs_base_update(
         self, job: Job, workflow: GitWorkflow, status: PullRequestStatus
     ) -> bool:
+        if self.config.tests_only_merging:
+            return not workflow.contains_current_base()
         # BEHIND is GitHub's explicit strict-base requirement. BLOCKED/UNKNOWN
         # can instead mean that our own independent review is still missing.
         if status.merge_state_status == "BEHIND":
@@ -1862,11 +1942,12 @@ class FactoryPipeline:
             predecessor_pull_request=job.predecessor_pull_request,
         )
         self._copy_claim_metadata(job, bound)
-        self.router.observe_review_head(job)
-        self.github.publish_review_pending(
-            job.head_sha,
-            detail="Factory pull request verification in progress",
-        )
+        if not self.config.tests_only_merging:
+            self.router.observe_review_head(job)
+            self.github.publish_review_pending(
+                job.head_sha,
+                detail="Factory pull request verification in progress",
+            )
         self.github.add_comment(job.pull_request, comment)
         status = self._status(job)
         # GitHub's aggregate state masks base staleness behind required-check
@@ -1974,11 +2055,12 @@ class FactoryPipeline:
 
         workflow.prepare_pull_request_worktree(worktree, job.branch)
         job.head_sha = self._workflow(worktree).head_sha()
-        self.router.observe_review_head(job)
-        self.github.publish_review_pending(
-            job.head_sha,
-            detail="Factory pull request refresh in progress",
-        )
+        if not self.config.tests_only_merging:
+            self.router.observe_review_head(job)
+            self.github.publish_review_pending(
+                job.head_sha,
+                detail="Factory pull request refresh in progress",
+            )
         job.review_findings.clear()
         status = known_status or self._status(job)
         if self._review_needs_base_update(job, self._workflow(worktree), status):
@@ -2025,6 +2107,8 @@ class FactoryPipeline:
             status.merge_state_status == "UNKNOWN"
             and not self._workflow(worktree).contains_current_base()
         )
+        if self.config.tests_only_merging and "Neptune current base" in status.failed_checks:
+            needs_base_refresh = True
         needs_conflict_repair = (
             status.mergeable == "CONFLICTING"
             or status.merge_state_status in CONFLICTING_MERGE_STATES
@@ -2183,7 +2267,9 @@ class FactoryPipeline:
             job.pull_request,
             ("factory-reviewed", "factory-review"),
         )
-        if job.head_sha is not None:
+        if self.config.tests_only_merging:
+            job.latest_verified_sha = None
+        if job.head_sha is not None and not self.config.tests_only_merging:
             self.github.publish_review_pending(
                 job.head_sha,
                 detail="Factory base branch update in progress",
@@ -2363,6 +2449,15 @@ class FactoryPipeline:
         )
         if not provenance:
             provenance = "- Provider provenance will be recorded before review."
+        execution = (
+            "This pull request was implemented and verified by the bounded factory. "
+            "Applicable exact-head/current-base tests gate native automatic merging; "
+            "no AI or human approving review is required."
+            if self.config.tests_only_merging
+            else "This pull request was implemented, security reviewed, and locally verified by "
+            "the bounded OpenHands factory. Independent review runs on this same branch before "
+            "merge, and GitHub required checks remain authoritative."
+        )
         predecessor = (
             f"Supersedes #{job.predecessor_pull_request}\n"
             if job.predecessor_pull_request is not None
@@ -2376,16 +2471,19 @@ class FactoryPipeline:
             f"Changed-Path-Fingerprint: {job.changed_path_fingerprint or 'pending'}\n"
             f"{predecessor}\n"
             "## Factory execution\n\n"
-            "This pull request was implemented, security reviewed, and locally verified by "
-            "the bounded OpenHands factory. Independent review runs on this same branch before "
-            "merge, and GitHub required checks remain authoritative.\n\n"
+            f"{execution}\n\n"
             "## Agent provenance\n\n"
             f"{provenance}\n\n"
-            f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
+            f"{'Tested' if self.config.tests_only_merging else 'Reviewed'} head SHA: "
+            f"`{job.head_sha or 'pending'}`\n"
         )
 
     def architect_due(self) -> bool:
         """Whether enough time has passed to run another weekly gap-analysis cycle."""
+        if self.config.tests_only_merging:
+            # The initial Neptune profile admits labelled, bounded tasks only.
+            # Backlog generation/maintenance must not become an extra provider job.
+            return False
         state = read_json(self._architect_state_path(), {})
         if not isinstance(state, dict):
             return True
@@ -2407,6 +2505,8 @@ class FactoryPipeline:
         it does not. If it fails or times out, the cooldown already recorded below
         means it simply tries again next interval rather than hot-looping.
         """
+        if self.config.tests_only_merging:
+            raise FactoryError("Neptune bootstrap does not run autonomous backlog generation")
         attempted_at = datetime.now(UTC)
         self._write_architect_state(
             {

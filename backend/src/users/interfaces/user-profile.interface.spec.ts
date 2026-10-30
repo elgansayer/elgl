@@ -19,6 +19,7 @@ describe('UserProfile interface', () => {
       privacy_hide_exact_location: false,
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
+      proficiency_level: 'B2',
       created_at: '2026-08-02T00:00:00.000Z',
     };
 
@@ -29,6 +30,7 @@ describe('UserProfile interface', () => {
     expect(profile).toHaveProperty('is_vip');
     expect(profile).toHaveProperty('created_at');
     expect(profile.native_languages).toEqual(['en-GB']);
+    expect(profile.proficiency_level).toBe('B2');
   });
 
   it('should allow optional fields to be omitted', () => {

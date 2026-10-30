@@ -1030,3 +1030,24 @@ def test_health_reports_no_pull_request_progress_with_active_jobs(tmp_path: Path
     check = no_pr_progress_check(factory_config, now)
     assert check.passed
     assert check.detail == "no pull request yet; active_jobs=1"
+
+
+def test_cold_start_scope_keeps_security_but_full_doctor_requires_live_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    monkeypatch.setattr(
+        "openhands_factory.doctor.subprocess.run",
+        lambda *args, **kwargs: CompletedProcess(args, 0, "", ""),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.doctor.startup_security_checks",
+        lambda c: [Check("security-witness", False, "keep failure")],
+    )
+    monkeypatch.setattr("openhands_factory.doctor.agent_provider_checks", lambda c: [])
+    cold = {c.name: c for c in run_doctor(factory_config, include_runtime=False)}
+    full = {c.name: c for c in run_doctor(factory_config)}
+    assert not cold["security-witness"].passed
+    assert "daemon-heartbeat" not in cold and "jobs-stalled" not in cold
+    assert not full["daemon-heartbeat"].passed
+    assert not full["jobs-stalled"].passed
