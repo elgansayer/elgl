@@ -145,12 +145,15 @@
       "id": "screen.shell",
       "kind": "screen",
       "ownerLayer": "feature",
-      "repositoryPaths": ["frontend/src/app"],
+      "repositoryPaths": [
+        "frontend/src/app",
+        "frontend/src/app/components/mobile-navigation"
+      ],
       "previewPaths": ["frontend/design-preview/screens/shell.html"],
       "claudeDesignPath": "screens/shell.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-6068-correction-modal-relay-tokens-2026-08-21; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-6068-correction-modal-relay-tokens-2026-08-21; pr-7588-correction-flashcard-context-2026-08-26; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1397-mobile-navigation-component (rendered five-tab unread contract with stable tabular badge numerals)",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
