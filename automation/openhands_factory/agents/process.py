@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import math
 import os
+import select
 import signal
+import socket
 import subprocess
+import sys
 import threading
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO, ClassVar
+
+from openhands_factory.agents.process_guard import NAMESPACE_INIT
 
 _ENVIRONMENT_ALLOWLIST = {
     "HOME",
@@ -231,8 +237,24 @@ class AgentProcessRunner:
     _processes_lock = threading.Lock()
     _accepting_processes: ClassVar[bool] = True
 
-    def __init__(self, *, isolate_processes: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        isolate_processes: bool = True,
+        guard_timeout_seconds: float | None = None,
+        heartbeat_check: Callable[[], None] | None = None,
+        on_start: Callable[[int], None] | None = None,
+    ) -> None:
+        if guard_timeout_seconds is not None and (
+            not math.isfinite(guard_timeout_seconds) or not 0 < guard_timeout_seconds <= 30
+        ):
+            raise ValueError("guard timeout must be finite, positive and at most 30 seconds")
+        if guard_timeout_seconds is None and (heartbeat_check is not None or on_start is not None):
+            raise ValueError("supervision callbacks require a process guard")
         self.isolate_processes = isolate_processes
+        self.guard_timeout_seconds = guard_timeout_seconds
+        self.heartbeat_check = heartbeat_check
+        self.on_start = on_start
 
     @staticmethod
     def _sandbox_root(
@@ -261,9 +283,21 @@ class AgentProcessRunner:
         cwd: Path,
         env: Mapping[str, str],
         home_mounts: Sequence[ProviderHomeMount],
+        lifetime_fd: int | None = None,
     ) -> list[str]:
         if not self.isolate_processes:
             return list(command)
+        if self.guard_timeout_seconds is not None:
+            if lifetime_fd is None:
+                raise ValueError("guarded namespace requires a lifetime descriptor")
+            command = [
+                str(Path(sys.executable).resolve()),
+                "-I",
+                "-c",
+                NAMESPACE_INIT,
+                str(lifetime_fd),
+                *command,
+            ]
         state_dir = Path(os.environ.get("FACTORY_STATE_DIR", "/var/lib/hellotalk-factory"))
         repository = Path(os.environ.get("FACTORY_REPOSITORY", str(cwd)))
         log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
@@ -404,26 +438,72 @@ class AgentProcessRunner:
         if max_output_bytes <= 0:
             raise ValueError("max_output_bytes must be positive")
         started = time.monotonic()
-        with self._processes_lock:
-            if not self._accepting_processes:
-                raise RuntimeError("Agent process start cancelled during Factory shutdown")
-            process = subprocess.Popen(
-                self._launch_command(
-                    command,
-                    cwd=cwd,
-                    env=env,
-                    home_mounts=home_mounts,
-                ),
+        channel: socket.socket | None = None
+        peer: socket.socket | None = None
+        lifetime: tuple[int, int] | None = None
+        if self.guard_timeout_seconds is not None:
+            if self.heartbeat_check is not None:
+                self.heartbeat_check()
+            channel, peer = socket.socketpair()
+            channel.setblocking(False)
+            lifetime = os.pipe()
+        try:
+            launch = self._launch_command(
+                command,
                 cwd=cwd,
-                env=dict(env),
-                stdin=subprocess.PIPE if stdin_text is not None else subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                start_new_session=True,
+                env=env,
+                home_mounts=home_mounts,
+                lifetime_fd=lifetime[0] if lifetime is not None else None,
             )
-            self._processes.add(process)
+            descriptors: tuple[int, ...] = ()
+            if peer is not None and lifetime is not None:
+                descriptors = (peer.fileno(), *lifetime)
+                launch = [
+                    str(Path(sys.executable).resolve()),
+                    "-I",
+                    str(Path(__file__).with_name("process_guard.py").resolve()),
+                    "--parent",
+                    str(os.getpid()),
+                    "--control-fd",
+                    str(peer.fileno()),
+                    "--life-read",
+                    str(lifetime[0]),
+                    "--life-write",
+                    str(lifetime[1]),
+                    "--timeout",
+                    str(self.guard_timeout_seconds),
+                    *(["--pass-lifetime"] if self.isolate_processes else []),
+                    "--",
+                    *launch,
+                ]
+            with self._processes_lock:
+                if not self._accepting_processes:
+                    raise RuntimeError("Agent process start cancelled during Factory shutdown")
+                process = subprocess.Popen(
+                    launch,
+                    cwd=cwd,
+                    env=dict(env),
+                    stdin=subprocess.PIPE if stdin_text is not None else subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    start_new_session=True,
+                    pass_fds=descriptors,
+                )
+                self._processes.add(process)
+        except BaseException:
+            if channel is not None:
+                channel.close()
+            raise
+        finally:
+            if peer is not None:
+                peer.close()
+            if lifetime is not None:
+                for descriptor in lifetime:
+                    os.close(descriptor)
         capture = _CaptureBuffer(max_output_bytes)
         if process.stdout is None or process.stderr is None:
+            if channel is not None:
+                channel.close()
             self._terminate(process)
             with self._processes_lock:
                 self._cancelled_processes.discard(process)
@@ -452,14 +532,24 @@ class AgentProcessRunner:
             )
             writer.start()
         timed_out = False
+        supervision_failed = False
         try:
+            if self.on_start is not None:
+                self.on_start(process.pid)
             try:
-                process.wait(timeout=timeout_seconds)
+                if channel is None:
+                    process.wait(timeout=timeout_seconds)
+                else:
+                    timed_out, supervision_failed = self._wait_guarded(
+                        process, channel, started + timeout_seconds
+                    )
             except subprocess.TimeoutExpired:
                 timed_out = True
                 self._terminate(process)
         finally:
             self._terminate(process)
+            if channel is not None:
+                channel.close()
             if writer is not None:
                 writer.join(timeout=5)
             if process.stdin is not None and not process.stdin.closed:
@@ -468,13 +558,15 @@ class AgentProcessRunner:
             for reader in readers:
                 reader.join(timeout=5)
             with self._processes_lock:
-                cancelled = process in self._cancelled_processes
+                cancelled = supervision_failed or process in self._cancelled_processes
                 self._cancelled_processes.discard(process)
                 self._processes.discard(process)
 
         exit_code = process.returncode if process.returncode is not None else 1
         if timed_out and exit_code == 0:
             exit_code = 124
+        if supervision_failed and exit_code == 0:
+            exit_code = 125
         return ProcessResult(
             command=tuple(command),
             exit_code=exit_code,
@@ -485,6 +577,61 @@ class AgentProcessRunner:
             duration_seconds=time.monotonic() - started,
             cancelled=cancelled,
         )
+
+    def _wait_guarded(
+        self,
+        process: subprocess.Popen[bytes],
+        channel: socket.socket,
+        deadline: float,
+    ) -> tuple[bool, bool]:
+        assert self.guard_timeout_seconds is not None
+        last_ack = time.monotonic()
+        next_pulse = 0.0
+        completed = False
+        failed = False
+        while True:
+            now = time.monotonic()
+            # Drain the trusted control channel even after process exit. Neither
+            # the model nor its children inherit this descriptor.
+            exited = process.poll() is not None
+            try:
+                readable = select.select([channel], [], [], 0)[0]
+                # A completion can arrive between the first poll and this read;
+                # check exit before draining, never infer success from exit alone.
+                data = channel.recv(4096) if readable else None
+            except OSError:
+                return False, True
+            if data is not None:
+                if data:
+                    if any(value not in b"ADF" for value in data):
+                        return False, True
+                    if b"A" in data:
+                        last_ack = now
+                    completed |= b"D" in data
+                    failed |= b"F" in data
+                elif not completed:
+                    return False, True
+            if exited:
+                return False, failed or not completed
+            if completed:
+                try:
+                    process.wait(timeout=min(1, max(0, deadline - time.monotonic())))
+                except subprocess.TimeoutExpired:
+                    return time.monotonic() >= deadline, True
+                return False, failed
+            if now >= deadline:
+                return True, False
+            if failed or now - last_ack >= self.guard_timeout_seconds:
+                return False, True
+            if now >= next_pulse:
+                try:
+                    if self.heartbeat_check is not None:
+                        self.heartbeat_check()
+                    channel.sendall(b"H")
+                except Exception:
+                    return False, True
+                next_pulse = now + min(1.0, self.guard_timeout_seconds / 4)
+            time.sleep(min(0.05, max(0, deadline - time.monotonic())))
 
 
 def agent_process_isolation_probe() -> tuple[bool, str]:
