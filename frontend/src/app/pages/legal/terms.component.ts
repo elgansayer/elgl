@@ -2,10 +2,11 @@ import { Component, inject, resource } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
 import { LegalService } from '../../services/legal.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-terms',
-  imports: [HlmButton, LegalDocumentViewerComponent],
+  imports: [HlmButton, LegalDocumentViewerComponent, TranslatePipe],
   template: `
     @if (termsResource.isLoading()) {
       <main
@@ -18,7 +19,7 @@ import { LegalService } from '../../services/legal.service';
           role="status"
           aria-live="polite"
         >
-          Loading Terms of Service…
+          {{ 'legal.loadingTerms' | t }}
         </div>
       </main>
     } @else if (termsResource.error()) {
@@ -28,9 +29,9 @@ import { LegalService } from '../../services/legal.service';
           role="alert"
           data-testid="terms-error"
         >
-          <h1 class="text-2xl font-bold text-text-primary">Terms of Service</h1>
+          <h1 class="text-2xl font-bold text-text-primary">{{ 'legal.termsOfService' | t }}</h1>
           <p class="mt-3 text-sm text-text-secondary">
-            We could not load the Terms of Service. Please try again.
+            {{ 'legal.errorTerms' | t }}
           </p>
           <button
             hlmBtn
@@ -40,7 +41,7 @@ import { LegalService } from '../../services/legal.service';
             (click)="retry()"
             data-testid="terms-retry"
           >
-            Try again
+            {{ 'legal.retry' | t }}
           </button>
         </section>
       </main>

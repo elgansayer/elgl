@@ -126,7 +126,7 @@ test.describe('HelloTalk Moment Creation E2E', () => {
 
     await page.goto('/moments');
 
-    const { composeButton, composer, textarea } = await openComposer(page);
+    const { composer, textarea } = await openComposer(page);
     const text = 'Retry-safe draft text';
     await textarea.fill(text);
 
@@ -136,7 +136,9 @@ test.describe('HelloTalk Moment Creation E2E', () => {
     await composer.locator('button').last().click();
     await failedResponse;
 
-    await composeButton.click();
-    await expect(page.locator('section').first().locator('textarea')).toHaveValue(text);
+    // The composer stays open after a failed publish, still holding the draft, so the
+    // learner can retry without reopening it or retyping.
+    await expect(textarea).toBeVisible();
+    await expect(textarea).toHaveValue(text);
   });
 });
