@@ -17,6 +17,7 @@ import {
   DegradationMarker,
 } from './discovery-degradation.service';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+import { resolveVipMockLocation } from './vip-location-spoof.policy';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import {
   getSeriousLearnerActiveSince,
@@ -482,29 +483,22 @@ export class DiscoveryService {
     let searchLat = query.latitude;
     let searchLon = query.longitude;
 
-    // Apply VIP location spoofing – override query coordinates with the user’s mock location
+    // Apply VIP location spoofing: a VIP's stored mock_location replaces the
+    // request coordinates. VIP status and the stored point come from the
+    // server-loaded profile, never from the query, so a client cannot opt in.
     const profile = _currentUserProfile;
+    const mockLocation = resolveVipMockLocation(profile);
+    if (mockLocation.status === 'applied') {
+      searchLat = mockLocation.point.latitude;
+      searchLon = mockLocation.point.longitude;
+    } else if (mockLocation.status === 'invalid') {
+      // Log the value type only: the stored coordinates are personal data.
+      this.logger.warn(
+        { mockLocationType: typeof profile?.mock_location },
+        'Ignoring unusable VIP mock_location; using request coordinates',
+      );
+    }
     if (profile?.is_vip) {
-      const mock: unknown = profile.mock_location;
-      if (
-        mock &&
-        typeof mock === 'object' &&
-        'type' in mock &&
-        'coordinates' in mock
-      ) {
-        const mockObj = mock as { type: string; coordinates: unknown };
-        if (
-          mockObj.type === 'Point' &&
-          Array.isArray(mockObj.coordinates) &&
-          mockObj.coordinates.length === 2
-        ) {
-          const coords = mockObj.coordinates as [number, number];
-          if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-            searchLon = coords[0];
-            searchLat = coords[1];
-          }
-        }
-      }
       // Apply VIP country/city spoofing
       if (profile.mock_country) {
         query.country = profile.mock_country;
