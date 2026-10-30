@@ -61,3 +61,16 @@ export class SystemAlertEvent {
     public readonly entityId?: string,
   ) {}
 }
+
+export type UnreadCountSource = 'chat' | 'notifications';
+
+/**
+ * Signals that durable unread state changed and clients should refresh the
+ * corresponding authenticated count endpoint.
+ */
+export class UnreadCountsChangedEvent {
+  constructor(
+    public readonly recipientId: string,
+    public readonly source: UnreadCountSource,
+  ) {}
+}

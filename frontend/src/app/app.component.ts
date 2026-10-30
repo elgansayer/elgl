@@ -27,7 +27,7 @@ import { ReportUserModalService } from './components/report-user-modal/report-us
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { ConversationAnalysisLauncherComponent } from './features/premium-ai/conversation-analysis-launcher.component';
-import { UnreadCounterService } from './services/unread-counter.service';
+import { UnreadCounterService, UnreadSnapshot } from './services/unread-counter.service';
 import { VersionService } from './services/version.service';
 import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
@@ -49,6 +49,8 @@ import { JoyrideModule } from 'ngx-joyride';
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
+
+type UnreadRefreshSource = 'all' | 'chat' | 'notifications';
 
 @Component({
   selector: 'app-root',
@@ -102,6 +104,9 @@ export class AppComponent implements OnInit {
   private readonly router = inject(Router);
   private notificationService = inject(NotificationService);
   private chatService = inject(ChatService);
+  private unreadRefreshQueue: Promise<void> = Promise.resolve();
+  private readonly pendingUnreadRefreshes = new Set<'chat' | 'notifications'>();
+  private unreadRefreshScheduled = false;
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -166,19 +171,17 @@ export class AppComponent implements OnInit {
     const user = this.authService.currentUser();
     const token = this.authService.getAccessToken();
 
-    if (user && token) {
-      await this.economyStore.loadInitialData();
+    if (!user || !token) {
+      this.unreadCounter.resetAll();
+      return;
+    }
 
-      // Load the blocked user list once the user is available
-      await this.safetyService.loadBlockedUsers();
+    const supportingData = Promise.allSettled([
+      this.economyStore.loadInitialData(),
+      this.safetyService.loadBlockedUsers(),
+    ]);
 
-      // Check for daily login reward
-      const checkIn = await this.economyStore.claimDailyCheckIn();
-      if (checkIn?.claimed) {
-        this.dailyRewardCoins.set(checkIn.coins_rewarded);
-        this.showDailyRewardModal.set(true);
-      }
-
+    try {
       await this.centrifugeService.connect();
       this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
         if (!isRecord(data)) return;
@@ -230,46 +233,102 @@ export class AppComponent implements OnInit {
           });
         }
 
-        // Update unread counters for real-time chat messages
-        if (eventType === 'new_message') {
-          this.unreadCounter.incrementChatUnread();
-        }
-
-        // Update unread counters for real-time notifications
-        if (
-          eventType === 'follow' ||
-          eventType === 'like_profile' ||
-          eventType === 'like_moment' ||
-          eventType === 'comment_moment' ||
-          eventType === 'profile_visit' ||
-          eventType === 'system'
-        ) {
-          this.unreadCounter.incrementNotificationUnread();
+        if (eventType === 'unread_counts_changed') {
+          const source = data['source'];
+          if (source === 'chat' || source === 'notifications') {
+            void this.loadInitialUnreadCounts(source);
+          }
         }
       });
+    } catch {
+      console.warn('Personal realtime updates were unavailable during application startup');
+    }
 
-      // Load initial unread counts from backend
-      await this.loadInitialUnreadCounts();
+    // The first fetch happens after subscription so persisted updates cannot
+    // fall into a gap between the initial response and realtime invalidation.
+    await this.loadInitialUnreadCounts('all');
 
-      // Request notification permission after user is authenticated
-      await this.fcmService.requestPermissionAndGetToken();
-      await this.fcmService.persistFcmToken(user.id);
+    await supportingData;
+    try {
+      const checkIn = await this.economyStore.claimDailyCheckIn();
+      if (checkIn?.claimed) {
+        this.dailyRewardCoins.set(checkIn.coins_rewarded);
+        this.showDailyRewardModal.set(true);
+      }
+    } catch {
+      console.warn('Daily check-in was unavailable during application startup');
+    }
+
+    // Request notification permission after user is authenticated
+    await this.fcmService.requestPermissionAndGetToken();
+    await this.fcmService.persistFcmToken(user.id);
+  }
+
+  private loadInitialUnreadCounts(source: UnreadRefreshSource = 'all'): Promise<void> {
+    if (source === 'all' || source === 'chat') this.pendingUnreadRefreshes.add('chat');
+    if (source === 'all' || source === 'notifications') {
+      this.pendingUnreadRefreshes.add('notifications');
+    }
+
+    if (!this.unreadRefreshScheduled) {
+      this.unreadRefreshScheduled = true;
+      this.unreadRefreshQueue = this.unreadRefreshQueue.then(() => this.drainUnreadRefreshes());
+    }
+    return this.unreadRefreshQueue;
+  }
+
+  private async drainUnreadRefreshes(): Promise<void> {
+    try {
+      while (this.pendingUnreadRefreshes.size > 0) {
+        const refreshChat = this.pendingUnreadRefreshes.has('chat');
+        const refreshNotifications = this.pendingUnreadRefreshes.has('notifications');
+        this.pendingUnreadRefreshes.clear();
+        const source: UnreadRefreshSource =
+          refreshChat && refreshNotifications
+            ? 'all'
+            : refreshChat
+              ? 'chat'
+              : 'notifications';
+        await this.refreshUnreadCounts(source, this.unreadCounter.snapshot());
+      }
+    } finally {
+      this.unreadRefreshScheduled = false;
     }
   }
 
-  private async loadInitialUnreadCounts(): Promise<void> {
-    try {
-      const [notificationCount] = await Promise.all([this.notificationService.getUnreadCount()]);
-      this.unreadCounter.setNotificationUnread(notificationCount);
-    } catch {
-      // Silently ignore - real-time events will update counts
+  private async refreshUnreadCounts(
+    source: UnreadRefreshSource,
+    snapshot: UnreadSnapshot,
+  ): Promise<void> {
+    const requests: Promise<void>[] = [];
+
+    if (source === 'all' || source === 'notifications') {
+      requests.push(this.refreshNotificationUnread(snapshot));
+    }
+    if (source === 'all' || source === 'chat') {
+      requests.push(this.refreshChatUnread(snapshot));
     }
 
+    await Promise.all(requests);
+  }
+
+  private async refreshNotificationUnread(snapshot: UnreadSnapshot): Promise<void> {
+    try {
+      const counts = await this.notificationService.getUnreadCount();
+      this.unreadCounter.reconcile('moments', counts.byTab.moments, snapshot);
+      this.unreadCounter.reconcile('discovery', counts.byTab.discovery, snapshot);
+      this.unreadCounter.reconcile('profile', counts.byTab.profile, snapshot);
+    } catch {
+      console.warn('Notification unread counts could not be loaded');
+    }
+  }
+
+  private async refreshChatUnread(snapshot: UnreadSnapshot): Promise<void> {
     try {
       const chatCount = await this.chatService.getUnreadCount();
-      this.unreadCounter.setChatUnread(chatCount);
+      this.unreadCounter.reconcile('chat', chatCount, snapshot);
     } catch {
-      // Silently ignore - real-time events will update counts
+      console.warn('Chat unread count could not be loaded');
     }
   }
 
