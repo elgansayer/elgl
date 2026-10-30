@@ -56,6 +56,21 @@ The budgets themselves, the stale-unpublished rebuild and the capped-conflict re
 
 The verification boundary, production baseline and post-deployment measurement protocol are recorded in [AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md](AUDIT-2026-10-29-EXHAUSTED-REPAIR-BUDGET.md). Live task causes and outcome changes are not claimed before the maintenance controller records them.
 
+## Interrupted implementations resume their leftover edits
+
+A provider rate limit, transport failure or timeout can end an implementation attempt after it has already edited the claimed worktree. The job stays in `implementing` with those edits in place, and every retry records them in its starting fingerprint. A provider that then finds the work done makes no further edit, so the unchanged-fingerprint check used to fail it with `Implementation produced no changes` on every retry, before the edits ever reached security review or verification.
+
+The check now depends on how the attempt began, and only for the `implementation` phase:
+
+- **Clean worktree at the start** (identical to `HEAD`): unchanged. The attempt is accepted only when its change fingerprint differs from the starting one, otherwise it fails with `Implementation produced no changes`.
+- **Dirty worktree at the start** (tracked edits, deletions or untracked files): the attempt is accepted when the worktree still differs from `HEAD` afterwards, whether or not the fingerprint moved. If nothing differs from `HEAD` any more, it fails with `Implementation produced no changes`.
+
+The starting state is read before every provider attempt, so partial edits left by an earlier provider in the same routed run count in the same way. A provider that discards all of the leftover edits has produced no changes, which keeps a clean tree from reaching a security review of an empty diff and then failing repeatedly in verification on `No changed paths were found`.
+
+`quality_repair` and `repair` keep the strict comparison, because their starting tree is the implementation that verification or CI already rejected and a repair must add a change of its own. Accepting leftover edits skips no gate: they still go through security review (unless tests-only merging applies), local verification, the quality gate, independent review and required CI exactly as new edits do.
+
+The change is a no-op for a task whose worktree was clean, so a task whose issue is already resolved on `main` still records `Implementation produced no changes`. The evidence, verification boundary and per-task measurement protocol are recorded in [AUDIT-2026-10-30-INTERRUPTED-IMPLEMENTATION.md](AUDIT-2026-10-30-INTERRUPTED-IMPLEMENTATION.md).
+
 ## Rolling-upgrade compatibility
 
 Older installations may already have persisted `quarantined` records or GitHub quarantine labels. Those are treated strictly as legacy input.

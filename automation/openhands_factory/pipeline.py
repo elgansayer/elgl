@@ -793,14 +793,25 @@ class FactoryPipeline:
                     detail=f"Factory {agent_phase.value} in progress",
                 )
         baseline_fingerprint: str | None = None
+        resumes_interrupted_attempt = False
         workflow = self._workflow(worktree)
 
         def prepare() -> None:
-            nonlocal baseline_fingerprint
+            nonlocal baseline_fingerprint, resumes_interrupted_attempt
             if prepare_attempt is not None:
                 prepare_attempt()
             if require_repository_change:
                 baseline_fingerprint = workflow.change_fingerprint()
+                # A rate limit, transport failure or timeout can end an implementation
+                # attempt after it edited the claimed worktree, and the job stays in
+                # IMPLEMENTING with those edits in place (tasks 1195, 1746 and 1752,
+                # 2026-10-30). They have not reached verification or review, so a provider
+                # that finds the work done has nothing further to add and the later gates
+                # judge it, provided the worktree still differs from HEAD afterwards.
+                # Repairs start dirty by design and must still add a change of their own.
+                resumes_interrupted_attempt = (
+                    agent_phase is AgentPhase.IMPLEMENTATION and workflow.has_changes()
+                )
 
         def validate() -> None:
             if validate_output is not None:
@@ -810,10 +821,13 @@ class FactoryPipeline:
             if baseline_fingerprint is None:
                 raise RuntimeError("Repository-change validation was not prepared")
             try:
-                current_fingerprint = workflow.change_fingerprint()
+                if resumes_interrupted_attempt:
+                    changed = workflow.has_changes()
+                else:
+                    changed = workflow.change_fingerprint() != baseline_fingerprint
             except RepositorySafetyError as error:
                 raise RuntimeError("Repository-change validation failed internally") from error
-            if current_fingerprint == baseline_fingerprint:
+            if not changed:
                 raise AgentTaskFailure(f"{phase.replace('_', ' ').title()} produced no changes")
 
         request = AgentRequest(

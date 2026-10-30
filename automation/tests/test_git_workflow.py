@@ -268,6 +268,57 @@ def test_change_fingerprint_tolerates_a_symlinked_node_modules(tmp_path: Path) -
     assert isinstance(fingerprint, str) and fingerprint
 
 
+def test_has_changes_sees_edits_additions_and_deletions_but_not_ignored_links(
+    tmp_path: Path,
+) -> None:
+    """The implementation phase resumes leftover edits only while this is exact.
+
+    A fresh task worktree carries git-ignored symlinks to shared dependency caches
+    and must read as clean, or the guard against an implementation that changed
+    nothing would never apply. Any tracked edit, deletion or new file reads as dirty.
+    """
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ("git", *arguments),
+            cwd=repository,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Factory Test")
+    git("config", "user.email", "factory-test@example.invalid")
+    (repository / ".gitignore").write_text("node_modules\n", encoding="utf-8")
+    tracked = repository / "tracked.txt"
+    tracked.write_text("base\n", encoding="utf-8")
+    git("add", ".gitignore", "tracked.txt")
+    git("commit", "-m", "test: seed repository")
+    shared_cache = tmp_path / "shared-node-modules-cache"
+    shared_cache.mkdir()
+    (repository / "node_modules").symlink_to(shared_cache, target_is_directory=True)
+    workflow = GitWorkflow(repository, "main")
+
+    assert not workflow.has_changes()
+
+    tracked.write_text("edited\n", encoding="utf-8")
+    assert workflow.has_changes()
+    tracked.write_text("base\n", encoding="utf-8")
+    assert not workflow.has_changes()
+
+    added = repository / "added.txt"
+    added.write_text("new\n", encoding="utf-8")
+    assert workflow.has_changes()
+    added.unlink()
+    assert not workflow.has_changes()
+
+    tracked.unlink()
+    assert workflow.has_changes()
+
+
 def test_prepare_worktree_reclaims_stale_local_branch(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()

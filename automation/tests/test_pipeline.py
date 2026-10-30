@@ -1,3 +1,5 @@
+import subprocess
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -10,7 +12,7 @@ from pydantic import SecretStr
 from openhands_factory.agents.openhands import OpenHandsProvider
 from openhands_factory.architect_report import ArchitectProposal
 from openhands_factory.config import FactoryConfig
-from openhands_factory.conversation_runner import ConversationResult
+from openhands_factory.conversation_runner import ConversationProviderError, ConversationResult
 from openhands_factory.exceptions import (
     FactoryError,
     ProviderCapacityUnavailable,
@@ -18,7 +20,7 @@ from openhands_factory.exceptions import (
 )
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
-from openhands_factory.models import Job, JobState, Task
+from openhands_factory.models import FailureKind, Job, JobState, Task
 from openhands_factory.pipeline import (
     CAPPED_NOTICE_PREFIX,
     MAX_BUDGET_CAUSE_ITEM_CHARS,
@@ -3440,6 +3442,7 @@ def test_repeated_identical_task_failure_escalates_autonomous_backoff(
     pipeline.jobs.save({"42": job})
     _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
 
     first = pipeline.run_job("42")
     second = pipeline.run_job("42")
@@ -3472,6 +3475,7 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
     pipeline.jobs.save({"42": job})
     _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
 
     first = pipeline.run_job("42")
@@ -3602,6 +3606,232 @@ def test_quality_repair_that_changes_nothing_still_spends_the_budget(
     assert capped is not None
     assert capped.last_error == "Quality repair limit exceeded: review findings"
     assert len(capped.provider_history) == calls
+
+
+def _worktree_with_one_commit(worktree: Path) -> Path:
+    """Create a real repository so change detection is Git behaviour, not a stub."""
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ("git", *arguments),
+            cwd=worktree,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    worktree.mkdir(parents=True)
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Factory Test")
+    git("config", "user.email", "factory-test@example.invalid")
+    (worktree / "tracked.txt").write_text("base\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-m", "test: seed worktree")
+    return worktree
+
+
+def _worktree_status(worktree: Path) -> str:
+    return subprocess.run(
+        ("git", "status", "--porcelain"),
+        cwd=worktree,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+
+def _edit_tracked_file(worktree: Path) -> None:
+    (worktree / "tracked.txt").write_text("edited by an interrupted attempt\n", encoding="utf-8")
+
+
+def _add_untracked_file(worktree: Path) -> None:
+    (worktree / "added.txt").write_text("added by an interrupted attempt\n", encoding="utf-8")
+
+
+def _delete_tracked_file(worktree: Path) -> None:
+    (worktree / "tracked.txt").unlink()
+
+
+def _implementing_pipeline(
+    factory_config: FactoryConfig,
+    conversations: object | None = None,
+) -> FactoryPipeline:
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=conversations or Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save(
+        {
+            "42": Job(
+                Task("42", "Resume implementation", "Body", "github-issue", 0),
+                state=JobState.IMPLEMENTING,
+                branch="factory/42-resume-implementation",
+            )
+        }
+    )
+    return pipeline
+
+
+@pytest.mark.parametrize(
+    "interrupted_edit",
+    [_edit_tracked_file, _add_untracked_file, _delete_tracked_file],
+)
+def test_implementation_accepts_leftover_edits_from_an_interrupted_attempt(
+    tmp_path: Path,
+    interrupted_edit: Callable[[Path], None],
+) -> None:
+    """Tasks 1195, 1746 and 1752 sat in IMPLEMENTING on "produced no changes".
+
+    A rate limit, transport failure or timeout can end an attempt after it edited
+    the claimed worktree. The retry baseline then already holds those edits, so a
+    provider that finds the work done can never change the fingerprint again.
+    """
+    factory_config = config(tmp_path)
+    worktree = _worktree_with_one_commit(factory_config.worktree_dir / "issue-42")
+    interrupted_edit(worktree)
+    leftover = _worktree_status(worktree)
+    assert leftover
+    pipeline = _implementing_pipeline(factory_config)
+
+    advanced = pipeline.run_job("42")
+
+    assert advanced is not None
+    assert advanced.state is JobState.SECURITY_REVIEW
+    assert advanced.attempts == 0
+    assert advanced.last_error is None
+    assert [(entry["phase"], entry["success"]) for entry in advanced.provider_history] == [
+        ("implementation", True)
+    ]
+    # Nothing was reset, committed or hidden: security review, verification, the
+    # quality gate, independent review and CI still judge every leftover edit.
+    assert _worktree_status(worktree) == leftover
+
+
+def test_implementation_retry_after_provider_failure_keeps_the_partial_edits(
+    tmp_path: Path,
+) -> None:
+    """The incident mechanism end to end, inside a single routed implementation."""
+    factory_config = config(tmp_path)
+    worktree = _worktree_with_one_commit(factory_config.worktree_dir / "issue-42")
+    calls: list[str] = []
+
+    class DroppedConnectionConversations(Conversations):
+        def run(  # type: ignore[override]
+            self,
+            task: Task,
+            workspace: Path,
+            prompt: str,
+            *,
+            timeout_seconds: float | None = None,
+        ) -> ConversationResult:
+            calls.append(task.identifier)
+            if len(calls) == 1:
+                _edit_tracked_file(workspace)
+                raise ConversationProviderError("connection reset by peer", FailureKind.TRANSIENT)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = _implementing_pipeline(factory_config, DroppedConnectionConversations())
+
+    advanced = pipeline.run_job("42")
+
+    assert advanced is not None
+    assert advanced.state is JobState.SECURITY_REVIEW
+    assert advanced.last_error is None
+    assert len(calls) == 2
+    assert [entry.get("failure_classification") for entry in advanced.provider_history] == [
+        "provider_transport",
+        None,
+    ]
+    assert _worktree_status(worktree) == " M tracked.txt\n"
+
+
+def test_implementation_that_changes_nothing_in_a_clean_worktree_still_fails(
+    tmp_path: Path,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = _worktree_with_one_commit(factory_config.worktree_dir / "issue-42")
+    pipeline = _implementing_pipeline(factory_config)
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.IMPLEMENTING
+    assert failed.attempts == 1
+    assert failed.last_error == "Implementation produced no changes"
+    assert [entry.get("failure_classification") for entry in failed.provider_history] == [
+        "task_failure"
+    ]
+    assert _worktree_status(worktree) == ""
+
+
+def test_implementation_that_discards_the_leftover_edits_has_produced_no_changes(
+    tmp_path: Path,
+) -> None:
+    """Resuming leftovers needs a worktree that still differs from HEAD afterwards.
+
+    A clean tree would otherwise buy a security review of an empty diff and then
+    keep failing in VERIFYING on "No changed paths were found", never retrying
+    implementation.
+    """
+    factory_config = config(tmp_path)
+    worktree = _worktree_with_one_commit(factory_config.worktree_dir / "issue-42")
+    _edit_tracked_file(worktree)
+
+    class DiscardingConversations(Conversations):
+        def run(  # type: ignore[override]
+            self,
+            task: Task,
+            workspace: Path,
+            prompt: str,
+            *,
+            timeout_seconds: float | None = None,
+        ) -> ConversationResult:
+            subprocess.run(
+                ("git", "checkout", "--", "tracked.txt"),
+                cwd=workspace,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = _implementing_pipeline(factory_config, DiscardingConversations())
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.IMPLEMENTING
+    assert failed.attempts == 1
+    assert failed.last_error == "Implementation produced no changes"
+    assert _worktree_status(worktree) == ""
+
+
+@pytest.mark.parametrize(
+    ("phase", "message"),
+    [
+        ("quality_repair", "Quality Repair produced no changes"),
+        ("repair", "Repair produced no changes"),
+    ],
+)
+def test_repair_phases_stay_strict_when_the_worktree_is_already_dirty(
+    tmp_path: Path,
+    phase: str,
+    message: str,
+) -> None:
+    """Only a fresh implementation may resume leftover edits; repairs must add a change."""
+    factory_config = config(tmp_path)
+    worktree = _worktree_with_one_commit(factory_config.worktree_dir / "issue-42")
+    _edit_tracked_file(worktree)
+    pipeline = _implementing_pipeline(factory_config)
+    job = pipeline.jobs.load()["42"]
+
+    with pytest.raises(FactoryError, match=message):
+        pipeline._run_agent(job, worktree, phase, "prompt", require_repository_change=True)
+
+    assert [entry.get("failure_classification") for entry in job.provider_history] == [
+        "task_failure"
+    ]
 
 
 def test_capped_quality_repair_gets_one_design_drift_guided_attempt(
@@ -4301,6 +4531,7 @@ def test_refresh_preserves_backing_off_failed_job_whose_issue_is_still_open(
     pipeline.jobs.save({"42": job})
     _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
 
     for _ in range(4):
         pipeline.run_job("42")
