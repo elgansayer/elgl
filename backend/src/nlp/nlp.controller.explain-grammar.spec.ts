@@ -6,6 +6,7 @@ import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
 import { TranslationRouterService } from './translation-router.service';
 import { PronunciationScoringService } from './pronunciation-scoring.service';
+import { UiDictionaryTranslationService } from './ui-dictionary-translation.service';
 
 describe('NlpController explainGrammar', () => {
   let checkRateLimit: ReturnType<typeof vi.fn>;
@@ -29,6 +30,7 @@ describe('NlpController explainGrammar', () => {
       {} as unknown as GrammarCheckService,
       { explain } as unknown as GrammarExplanationService,
       {} as unknown as PronunciationScoringService,
+      {} as unknown as UiDictionaryTranslationService,
     );
   });
 

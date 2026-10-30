@@ -3,6 +3,8 @@ import { By } from '@angular/platform-browser';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { vi } from 'vitest';
+import { I18nService } from '../../services/i18n.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { CorrectionModalComponent } from './correction-modal.component';
 
@@ -42,6 +44,71 @@ describe('CorrectionModalComponent completion contract', () => {
     component.addQuickTag('Typo');
 
     expect(component.explanation()).toBe('[Typo]');
+  });
+
+  describe('quick tags', () => {
+    function tagButtons(): HTMLButtonElement[] {
+      return Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).filter(
+        (button) => button.textContent?.trim().startsWith('+'),
+      );
+    }
+
+    it('renders one button per tag in the interface language', () => {
+      expect(tagButtons().map((button) => button.textContent?.trim())).toEqual([
+        '+ Natural phrasing',
+        '+ Grammar',
+        '+ Typo',
+        '+ Vocabulary',
+      ]);
+    });
+
+    it('follows the interface language and inserts the translated label', () => {
+      const i18n = TestBed.inject(I18nService);
+      i18n.translations.update((dictionary) => ({
+        ...dictionary,
+        'correction.tag.grammar': 'Gramática',
+      }));
+      fixture.detectChanges();
+
+      const button = tagButtons().find((candidate) => candidate.textContent?.includes('Gramática'));
+      expect(button).toBeDefined();
+      button?.click();
+
+      expect(component.explanation()).toBe('[Gramática]');
+    });
+
+    it('renders every tag when two labels read the same in the interface language', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const i18n = TestBed.inject(I18nService);
+      i18n.translations.update((dictionary) => ({
+        ...dictionary,
+        'correction.tag.grammar': 'Same',
+        'correction.tag.typo': 'Same',
+      }));
+      fixture.detectChanges();
+
+      expect(tagButtons().map((button) => button.textContent?.trim())).toEqual([
+        '+ Natural phrasing',
+        '+ Same',
+        '+ Same',
+        '+ Vocabulary',
+      ]);
+      // Angular reports a repeated @for track key as NG0955; tags are tracked by key, not label.
+      expect(warn.mock.calls.flat().join(' ')).not.toContain('NG0955');
+      warn.mockRestore();
+    });
+
+    it('keeps user-facing tag labels out of the component source', () => {
+      const source = readFileSync(
+        resolve(componentDirectory, 'correction-modal.component.ts'),
+        'utf8',
+      );
+
+      for (const label of ['Natural phrasing', 'Grammar', 'Typo', 'Vocabulary']) {
+        expect(source).not.toMatch(new RegExp(`['"]${label}['"]`));
+      }
+      expect(source).toContain('correction.tag.naturalPhrasing');
+    });
   });
 
   it('shows the live diff only after the correction differs from the original', () => {

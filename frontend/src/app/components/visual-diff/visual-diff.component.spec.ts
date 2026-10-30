@@ -4,17 +4,27 @@ import { vi } from 'vitest';
 import { ChatService } from '../../services/chat.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
+import { toastsSignal } from '../../services/toast.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from './visual-diff.component';
 
-describe.skip('VisualDiffComponent', () => {
+describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
   const saveWord = vi.fn();
+  const translateText = vi.fn();
+  const cacheGet = vi.fn();
+  const cacheSet = vi.fn();
 
   beforeEach(async () => {
     saveWord.mockReset();
     saveWord.mockResolvedValue(undefined);
+    translateText.mockReset();
+    translateText.mockResolvedValue({ translated_text: 'Translated' });
+    cacheGet.mockReset();
+    cacheGet.mockReturnValue(null);
+    cacheSet.mockReset();
+    toastsSignal.set([]);
 
     await TestBed.configureTestingModule({
       imports: [VisualDiffComponent],
@@ -32,20 +42,20 @@ describe.skip('VisualDiffComponent', () => {
         },
         {
           provide: ChatService,
-          useValue: { translateText: vi.fn().mockResolvedValue({ translated_text: 'Translated' }) },
+          useValue: { translateText },
         },
         {
           provide: TranslationCacheService,
-          useValue: {
-            get: vi.fn().mockReturnValue(null),
-            set: vi.fn(),
-          },
+          useValue: { get: cacheGet, set: cacheSet },
         },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VisualDiffComponent);
     component = fixture.componentInstance;
+    // Both inputs are required, so the first render needs a value for each.
+    fixture.componentRef.setInput('original', '');
+    fixture.componentRef.setInput('corrected', '');
     fixture.detectChanges();
   });
 
@@ -174,6 +184,171 @@ describe.skip('VisualDiffComponent', () => {
       word_token: 'Hello, world',
       translation: 'Hello world',
       original_context: 'e'.repeat(1000),
+    });
+  });
+
+  describe('mixed-direction text', () => {
+    it('lets the browser resolve the direction of the compared text', () => {
+      setInputs('مرحبا بك', 'مرحبا بكم');
+
+      const diff = fixture.nativeElement.querySelector('div[dir="auto"]');
+      expect(diff).not.toBeNull();
+      expect(diff.querySelector('del[data-type="removed"]')?.textContent?.trim()).toBe('بك');
+      expect(diff.querySelector('ins[data-type="added"]')?.textContent?.trim()).toBe('بكم');
+    });
+
+    it('lets the browser resolve the direction of the tutor explanation', () => {
+      setInputs('I goes', 'I go');
+      fixture.componentRef.setInput('explanation', 'يجب استخدام الفعل المناسب');
+      fixture.detectChanges();
+
+      const explanation = fixture.nativeElement.querySelector('span[dir="auto"]');
+      expect(explanation?.textContent?.trim()).toBe('يجب استخدام الفعل المناسب');
+    });
+
+    it('marks changes with semantic insertion and deletion elements, not colour alone', () => {
+      setInputs('Hello World', 'Hello there');
+
+      expect(fixture.nativeElement.querySelector('ins[data-type="added"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('del[data-type="removed"]')).not.toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('del[data-type="removed"]').className,
+      ).toContain('line-through');
+    });
+  });
+
+  describe('explanation translation', () => {
+    function showExplanation(): void {
+      setInputs('I goes to school', 'I go to school');
+      fixture.componentRef.setInput('explanation', 'Subject-verb agreement');
+      fixture.componentRef.setInput('showActions', true);
+      fixture.detectChanges();
+    }
+
+    function translateButton(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('button[aria-label="moments.translate"]');
+    }
+
+    it('keeps the translate control reachable for keyboard and touch users', () => {
+      showExplanation();
+
+      const button = translateButton();
+      expect(button).not.toBeNull();
+      expect(button.type).toBe('button');
+      expect(button.disabled).toBe(false);
+      // A control that only appears on hover cannot be used with a keyboard or a touch screen.
+      expect(button.className).not.toContain('opacity-0');
+      expect(button.className).not.toContain('group-hover');
+      expect(button.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('translates the explanation into the interface language and announces it politely', async () => {
+      showExplanation();
+
+      translateButton().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(translateText).toHaveBeenCalledWith('Subject-verb agreement', 'en');
+      expect(cacheSet).toHaveBeenCalledWith('Subject-verb agreement', 'en', 'Translated');
+      const status = fixture.nativeElement.querySelector('[role="status"]');
+      const translated = status.querySelector('div[dir="auto"]');
+      expect(translated.textContent.trim()).toBe('Translated');
+      expect(translated.getAttribute('lang')).toBe('en');
+      expect(translateButton().getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('hides the translation on the next activation without another request', async () => {
+      showExplanation();
+
+      translateButton().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      translateButton().click();
+      fixture.detectChanges();
+
+      expect(translateText).toHaveBeenCalledTimes(1);
+      expect(fixture.nativeElement.querySelector('[role="status"] div')).toBeNull();
+      expect(translateButton().getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('uses a cached translation without sending the explanation to the provider again', async () => {
+      cacheGet.mockReturnValue('Cached translation');
+      showExplanation();
+
+      translateButton().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(translateText).not.toHaveBeenCalled();
+      expect(
+        fixture.nativeElement.querySelector('[role="status"] div').textContent.trim(),
+      ).toBe('Cached translation');
+    });
+
+    it('reports a translation failure with a translated message and keeps the explanation', async () => {
+      translateText.mockRejectedValue(new Error('provider unavailable'));
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      showExplanation();
+
+      translateButton().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ message: 'moments.transError', type: 'error' }),
+      ]);
+      expect(fixture.nativeElement.textContent).toContain('Subject-verb agreement');
+      expect(translateButton().disabled).toBe(false);
+      expect(cacheSet).not.toHaveBeenCalled();
+    });
+
+    it('does not show an empty translation result', async () => {
+      translateText.mockResolvedValue({ translated_text: '' });
+      showExplanation();
+
+      translateButton().click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[role="status"] div')).toBeNull();
+      expect(cacheSet).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('flashcard feedback', () => {
+    beforeEach(() => {
+      fixture.componentRef.setInput('original', 'I goes');
+      fixture.componentRef.setInput('corrected', 'I go');
+    });
+
+    it('confirms a saved flashcard with a translated success message', async () => {
+      await component.createFlashcard();
+
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ message: 'correction.flashcardCreatedAlert', type: 'success' }),
+      ]);
+    });
+
+    it('reports a failure with its own translation key instead of a raw or English fallback', async () => {
+      saveWord.mockRejectedValue(new Error('storage unavailable'));
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      await component.createFlashcard();
+
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ message: 'correction.flashcardError', type: 'error' }),
+      ]);
+    });
+
+    it('hides the decorative symbol from the accessible name of the flashcard action', () => {
+      fixture.componentRef.setInput('showActions', true);
+      fixture.detectChanges();
+
+      const buttons = fixture.nativeElement.querySelectorAll('button');
+      const action = buttons[buttons.length - 1];
+      expect(action.type).toBe('button');
+      expect(action.querySelector('[aria-hidden="true"]')?.textContent).toBe('➕');
     });
   });
 });

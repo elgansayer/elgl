@@ -135,17 +135,23 @@ scenarios:
           expect:
             - statusCode: [200, 201, 401]
 
+  # The body matches TranslateUiDto: the English strings are sent and translations are
+  # cached per source string, so only the first request per language reaches a provider.
+  # The route is rate limited per user because cache misses can trigger paid provider
+  # calls, so 429 is an expected and acceptable response under spike load.
   - name: "Translate UI strings"
     weight: 3
     flow:
       - post:
           url: "/nlp/translate-ui"
           json:
-            sourceLang: "en"
-            targetLang: "{{ $randomChoice('fr', 'es', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru', 'ar') }}"
-            keys: ["nav.lingqReader", "wordDef.lingqTitle", "wordModal.badge"]
+            target_language: "{{ $randomChoice('fr', 'es', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru', 'ar') }}"
+            dictionary:
+              nav.lingqReader: "LingQ Reader"
+              wordDef.lingqTitle: "LingQ Interactive Reader"
+              wordModal.badge: "LingQ Interactive Reader"
           expect:
-            - statusCode: [200, 201]
+            - statusCode: [200, 201, 429]
 
   - name: "Grammar check"
     weight: 4

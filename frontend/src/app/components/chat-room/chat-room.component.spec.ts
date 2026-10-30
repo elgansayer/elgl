@@ -644,4 +644,68 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect(bubbleText()).toContain('example.com/post');
     });
   });
+
+  describe('mixed-direction translation and correction text', () => {
+    function paragraphWithText(text: string): HTMLParagraphElement | undefined {
+      const host = fixture.nativeElement as HTMLElement;
+      return Array.from(host.querySelectorAll<HTMLParagraphElement>('p')).find(
+        (paragraph) => paragraph.textContent?.trim() === text,
+      );
+    }
+
+    beforeEach(async () => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          observe(): void {}
+          unobserve(): void {}
+          disconnect(): void {}
+        },
+      );
+      await fixture.whenStable();
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('lets the browser resolve the direction of a translation shown under a message', async () => {
+      mockChatService.getMessages.mockResolvedValue([
+        makeMessage({ id: 'm1', text_content: 'Hello there' }),
+      ]);
+      await component.loadMessages();
+      component.translations.set({ m1: 'مرحبا بك' });
+      component.showTranslation.set({ m1: true });
+      fixture.detectChanges();
+
+      // An Arabic translation under an English interface must not inherit left-to-right.
+      expect(paragraphWithText('مرحبا بك')?.getAttribute('dir')).toBe('auto');
+    });
+
+    it('lets the browser resolve the direction of a transliteration', async () => {
+      mockChatService.getMessages.mockResolvedValue([
+        makeMessage({ id: 'm1', text_content: 'مرحبا' }),
+      ]);
+      await component.loadMessages();
+      component.transliterations.set({ m1: 'marhaba' });
+      fixture.detectChanges();
+
+      expect(paragraphWithText('marhaba')?.getAttribute('dir')).toBe('auto');
+    });
+
+    it('lets the browser resolve the direction of the sentence in a correction request', async () => {
+      mockChatService.getMessages.mockResolvedValue([
+        makeMessage({
+          id: 'm1',
+          message_type: 'correction_request',
+          text_content: undefined,
+          correction_request_payload: { original_text: 'هل هذه الجملة صحيحة؟' },
+        }),
+      ]);
+      await component.loadMessages();
+      fixture.detectChanges();
+
+      expect(paragraphWithText('هل هذه الجملة صحيحة؟')?.getAttribute('dir')).toBe('auto');
+    });
+  });
 });

@@ -1285,7 +1285,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `canActivate`
 
 ### `backend/src/nlp/nlp.service.ts`
-- Methods: `detectLanguage`, `checkRateLimit`, `translate`, `grammarCheck`, `explainGrammar`, `while`, `pronunciationScore`, `transcribeAudio`, `simplify`, `translateUi`, `translateBio`, `translateAndCorrect`, `transcribeVoiceOnly`, `transcribeVoice`, `generateSessionSummary`
+- Methods: `detectLanguage`, `checkRateLimit`, `translate`, `grammarCheck`, `explainGrammar`, `while`, `pronunciationScore`, `transcribeAudio`, `simplify`, `translateBio`, `translateAndCorrect`, `transcribeVoiceOnly`, `transcribeVoice`, `generateSessionSummary`
 
 ### `backend/src/nlp/interfaces/nlp-results.interface.ts`
 - *(No methods found or interface/type definition)*
@@ -1313,6 +1313,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 
 ### `backend/src/nlp/dto/translate-ui.dto.ts`
 - *(No methods found or interface/type definition)*
+
+### `backend/src/nlp/ui-dictionary-translation.service.ts`
+- Methods: `translate`
 
 ### `backend/src/nlp/dto/transcribe-audio.dto.ts`
 - *(No methods found or interface/type definition)*

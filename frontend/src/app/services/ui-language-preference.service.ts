@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, WritableSignal } from '@angular/core';
 import { I18nService, LanguageInfo } from './i18n.service';
+import { resolveTextDirection } from './text-direction';
 
 const LOCALE_STORAGE_KEY = 'hellotalk_locale';
 const DICTIONARY_STORAGE_PREFIX = 'hellotalk_dict_';
@@ -138,11 +139,10 @@ export class UiLanguagePreferenceService {
     this.i18n.currentLang.set(snapshot.language);
     this.i18n.translations.set(snapshot.translations);
 
-    const language = this.availableLanguages.find((item) => item.code === snapshot.language);
     const root = this.document.documentElement;
     if (root) {
       root.lang = snapshot.language;
-      root.dir = language?.isRtl ? 'rtl' : 'ltr';
+      root.dir = resolveTextDirection(snapshot.language);
     }
 
     const storage = this.getStorage();

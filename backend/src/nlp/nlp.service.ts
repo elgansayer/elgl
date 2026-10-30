@@ -13,13 +13,11 @@ import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
-import { TranslateUiDto } from './dto/translate-ui.dto';
 import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
   TranslationResult,
-  TranslateUiResult,
   TranscribeVoiceResult,
   WordBreakdownItem,
 } from './interfaces/nlp-results.interface';
@@ -623,89 +621,6 @@ export class NlpService {
       },
       text,
     );
-  }
-
-  async translateUi(dto: TranslateUiDto): Promise<TranslateUiResult> {
-    const targetLang = dto.target_language || 'en-GB';
-    if (targetLang === 'en-GB' || targetLang === 'en') {
-      return {
-        target_language: targetLang,
-        translations: dto.dictionary,
-        cached: true,
-      };
-    }
-
-    const redis = this.supabaseService.getRedisClient();
-    const cacheKey = `ui_dict:${targetLang}`;
-
-    try {
-      const cachedDict = await redis.get(cacheKey);
-      if (cachedDict) {
-        const parsed = JSON.parse(cachedDict) as Record<string, string>;
-        return {
-          target_language: targetLang,
-          translations: { ...dto.dictionary, ...parsed },
-          cached: true,
-        };
-      }
-    } catch {
-      // Redis fallback if offline or unavailable during tests
-    }
-
-    // No cache hit, so translate the full dictionary via DeepL. This supports
-    // ANY target language dynamically, with 0 hard-coded UI strings.
-    const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-    if (!deepLKey) {
-      throw new BadRequestException('DeepL API key not configured');
-    }
-
-    const keys = Object.keys(dto.dictionary);
-    const values = keys.map((key) => dto.dictionary[key]);
-
-    const res = await NlpService.fetchWithTimeout(
-      'https://api-free.deepl.com/v2/translate',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: values,
-          target_lang: targetLang.toUpperCase(),
-        }),
-      },
-    );
-
-    if (!res.ok) {
-      const errorBody = await res.text();
-      throw new BadRequestException(
-        `DeepL API error: ${res.status} ${errorBody}`,
-      );
-    }
-
-    const jsonResponse = (await res.json()) as {
-      translations: Array<{ text: string }>;
-    };
-
-    const translatedDict: Record<string, string> = {};
-    keys.forEach((key, index) => {
-      translatedDict[key] =
-        jsonResponse.translations?.[index]?.text ?? dto.dictionary[key];
-    });
-
-    try {
-      await redis.set(cacheKey, JSON.stringify(translatedDict));
-      await redis.expire(cacheKey, 604800); // 7 days cache
-    } catch {
-      // Redis error handling during tests
-    }
-
-    return {
-      target_language: targetLang,
-      translations: { ...dto.dictionary, ...translatedDict },
-      cached: false,
-    };
   }
 
   async translateBio(

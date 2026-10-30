@@ -8,6 +8,7 @@ import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
 import { VipGuard } from './../src/monetisation/guards/vip.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
+import { UiDictionaryTranslationService } from './../src/nlp/ui-dictionary-translation.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 let AppModule: typeof import('../src/app.module').AppModule;
@@ -20,15 +21,19 @@ type MockNlpService = {
   explainGrammar: Mock;
   pronunciationScore: Mock;
   simplify: Mock;
-  translateUi: Mock;
   translateBio: Mock;
   translateAndCorrect: Mock;
   generateSessionSummary: Mock;
 };
 
+type MockUiDictionaryTranslationService = {
+  translate: Mock;
+};
+
 describe('HelloTalk API E2E Integration Suite', () => {
   let app: INestApplication;
   let mockNlpService: MockNlpService;
+  let mockUiDictionaryTranslationService: MockUiDictionaryTranslationService;
   let mockSupabaseClient: {
     from: Mock;
     auth: {
@@ -190,16 +195,6 @@ describe('HelloTalk API E2E Integration Suite', () => {
         original: 'hello',
         simplified: 'hello',
       }),
-      translateUi: vi
-        .fn()
-        .mockImplementation((dto?: { target_language?: string }) => ({
-          target_language: dto?.target_language ?? 'es',
-          translations: {
-            'app.title': 'Hola',
-            'nav.discover': '🌍 Descubrir',
-          },
-          cached: false,
-        })),
       translateBio: vi.fn().mockResolvedValue({
         original_text: 'text',
         translated_text: 'text',
@@ -218,6 +213,21 @@ describe('HelloTalk API E2E Integration Suite', () => {
         summary: '',
         vocabulary: [],
       }),
+    };
+
+    mockUiDictionaryTranslationService = {
+      translate: vi
+        .fn()
+        .mockImplementation(
+          (_userId: string, dto?: { target_language?: string }) => ({
+            target_language: dto?.target_language ?? 'es',
+            translations: {
+              'app.title': 'Hola',
+              'nav.discover': '🌍 Descubrir',
+            },
+            cached: false,
+          }),
+        ),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -241,6 +251,8 @@ describe('HelloTalk API E2E Integration Suite', () => {
       })
       .overrideProvider(NlpService)
       .useValue(mockNlpService)
+      .overrideProvider(UiDictionaryTranslationService)
+      .useValue(mockUiDictionaryTranslationService)
       .overrideGuard(VipGuard)
       .useValue({
         canActivate: () => true,
@@ -310,6 +322,15 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .expect((res) => {
           expect(res.body.target_language).toBe('es');
           expect(res.body.translations['nav.discover']).toBe('🌍 Descubrir');
+          expect(
+            mockUiDictionaryTranslationService.translate,
+          ).toHaveBeenCalledWith(
+            'e2e-user-1',
+            expect.objectContaining({
+              target_language: 'es',
+              dictionary: { 'app.title': 'HelloTalk' },
+            }),
+          );
         });
     });
 

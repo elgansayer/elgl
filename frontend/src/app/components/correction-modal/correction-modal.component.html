@@ -119,16 +119,16 @@
           />
         </label>
         <div class="mt-2 flex flex-wrap gap-2">
-          @for (tag of quickTags; track tag) {
+          @for (tag of quickTags(); track tag.key) {
             <button
               hlmBtn
               type="button"
               size="touch"
               variant="outline"
-              (click)="addQuickTag(tag)"
+              (click)="addQuickTag(tag.label)"
               class="rounded-pill px-2 text-[10px] text-text-secondary transition-colors hover:bg-surface-200 hover:text-text-primary motion-reduce:transition-none"
             >
-              + {{ tag }}
+              + {{ tag.label }}
             </button>
           }
         </div>

@@ -40,7 +40,7 @@ Use `{{placeholder}}` syntax for interpolated params inside the dictionary strin
 2. Reference it from the template/component via `| t` or `i18n.translate(...)` - never inline the literal string anywhere else.
 3. If the string includes a price, ensure the price is formatted properly.
 4. If the string could reasonably need localisation nuance (pluralisation, gendered forms), note it as a follow-up rather than baking English-only logic into the key.
-5. For dynamically-fetched UI dictionaries in other locales, the backend `POST /nlp/translate-ui` endpoint (`NlpService#translateUi`) merges a Redis-cached per-locale dictionary over the caller-supplied English dictionary - new keys automatically flow through once added to `baseDictionary`, but non-English translations for that key won't exist until the backend dictionary/cache is updated too.
+5. For dynamically-fetched UI dictionaries in other locales, the browser sends `baseDictionary` to `POST /nlp/translate-ui` in batches (`UI_TRANSLATION_BATCH_SIZE`, at most the 500 entries the API accepts) and `UiDictionaryTranslationService` translates each unique string through DeepL, then Azure, caching it per language and per source string. A new key needs no backend change: it is translated the first time a user without a cached dictionary asks for that language. Keep placeholders as `{{name}}` (a translation that alters one is discarded and the English string is shown), keep each value under 2,000 characters, and never use `__proto__`, `constructor` or `prototype` as a key. See `docs/interface-translation-and-mirroring.md`.
 
 ## Dictionary Value Hygiene
 
@@ -50,7 +50,7 @@ Use `{{placeholder}}` syntax for interpolated params inside the dictionary strin
 - Do not put an emoji in a label when the template already draws an icon beside it (every `nav.*` label, `moments.readAloud`, `moments.stopReading`). The icon would show twice and the emoji would leak into the accessible name.
 - Never name infrastructure in end-user copy (Cloudflare, R2, LiveKit, Supabase, Centrifugo, Redis). Describe what the user is doing instead, for example `Uploading...`.
 - `frontend/src/app/services/i18n.service.spec.ts` (`dictionary value hygiene`) guards these rules.
-- A corrected English string reaches non-English users only when their cached copy refreshes: the browser keeps `hellotalk_dict_<locale>` and the backend keeps a 7-day `ui_dict:<locale>` Redis entry.
+- A corrected English string is translated afresh by the API (its cache is addressed by the exact source text), but a browser that already holds `hellotalk_dict_<locale>` keeps its copy until the local entry is cleared. Do not rely on a wording fix reaching existing non-English users.
 
 ## Word Tokenisation
 
@@ -74,7 +74,13 @@ Prefer `gap-*` over `space-*` too - `space-*` is direction-sensitive in ways tha
 
 Changing `I18nService.currentLang` to an RTL language (`ar`, `he`, `fa`, `ur` are already marked `isRtl: true` in
 `availableLanguages`) flips `document` directionality (`dir="rtl"`) - verify any new component still reads
-correctly mirrored.
+correctly mirrored. Direction is always decided by `resolveTextDirection(locale)` in
+`frontend/src/app/services/text-direction.ts`, which also handles region and script tags such as `ar-EG`, `he-IL`
+and `az-Arab`. Never test a locale against a hand-written list of codes.
+
+Text that comes from a user or a translation can run in a different direction from the interface. Give the element
+that prints it `dir="auto"` (translated messages, transliterations, correction text, names) so the browser resolves
+its direction from the text itself.
 
 ## Auditing for Violations
 

@@ -2,6 +2,15 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { resolveTextDirection } from './text-direction';
+
+/**
+ * Interface strings are translated in batches so that every request stays far
+ * below the API body limit and the translation provider limits. Must not
+ * exceed `UI_DICTIONARY_LIMITS.maxEntries` in
+ * `backend/src/nlp/dto/translate-ui.dto.ts`.
+ */
+export const UI_TRANSLATION_BATCH_SIZE = 400;
 
 export interface LanguageInfo {
   code: string;
@@ -17,10 +26,7 @@ export interface LanguageInfo {
 export class I18nService {
   readonly currentLang = signal<string>('en-GB');
 
-  readonly direction = computed(() => {
-    const lang = this.currentLang().toLowerCase();
-    return ['ar', 'he', 'fa', 'ur'].includes(lang) ? 'rtl' : 'ltr';
-  });
+  readonly direction = computed(() => resolveTextDirection(this.currentLang()));
 
   readonly availableLanguages: LanguageInfo[] = [
     {
@@ -951,6 +957,11 @@ export class I18nService {
     'correction.ghostTextLabel': 'Ghost Text',
     'correction.createFlashcard': 'Create Flashcard',
     'correction.flashcardCreatedAlert': 'Flashcard created!',
+    'correction.flashcardError': 'Could not create the flashcard. Please try again.',
+    'correction.tag.naturalPhrasing': 'Natural phrasing',
+    'correction.tag.grammar': 'Grammar',
+    'correction.tag.typo': 'Typo',
+    'correction.tag.vocabulary': 'Vocabulary',
     'typingIndicator.single': '{{name}} is typing...',
     'typingIndicator.multiple': '{{names}} are typing...',
     'typingIndicator.many': '{{names}} and {{count}} others are typing...',
@@ -2559,14 +2570,20 @@ export class I18nService {
     if (!document?.documentElement) return;
 
     document.documentElement.lang = lang;
-    const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
-    document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
+    document.documentElement.dir = resolveTextDirection(lang);
   }
+
+  /**
+   * Identifies the most recent language selection. A slower request for an
+   * earlier selection must never overwrite the dictionary of a newer one.
+   */
+  private latestLanguageRequest = 0;
 
   async setLanguage(langCode: string): Promise<void> {
     const code = langCode.trim();
     if (!code) return;
 
+    const requestId = ++this.latestLanguageRequest;
     this.currentLang.set(code);
     this.applyDocumentRtlAndLocale(code);
     if (typeof localStorage !== 'undefined') {
@@ -2592,10 +2609,47 @@ export class I18nService {
     }
 
     // Call backend dynamic ANY-language translation API
-    try {
-      const token = this.authService.getAccessToken();
-      if (!token) return;
+    const token = this.authService.getAccessToken();
+    if (!token) return;
 
+    let translated: Record<string, string> | null = null;
+    try {
+      translated = await this.fetchInterfaceTranslations(code, token);
+    } catch {
+      // In offline / test environments, fallback to base dictionary or algorithmic keys
+    }
+    if (!translated) return;
+
+    const merged = { ...this.baseDictionary, ...translated };
+    // A complete dictionary is valid for its own language even when the user has
+    // already picked another one, so it is cached either way.
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(`hellotalk_dict_${code}`, JSON.stringify(merged));
+      } catch {
+        // Storage can be full or blocked; the in-memory dictionary is still valid.
+      }
+    }
+    if (requestId === this.latestLanguageRequest) {
+      this.translations.set(merged);
+    }
+  }
+
+  /**
+   * Requests the interface translations in bounded batches. Returns null when
+   * any batch fails so that a half translated dictionary is never applied or
+   * cached. The API caches per source string, so a retry only pays for the
+   * strings that are still missing.
+   */
+  private async fetchInterfaceTranslations(
+    code: string,
+    token: string,
+  ): Promise<Record<string, string> | null> {
+    const entries = Object.entries(this.baseDictionary);
+    const translated: Record<string, string> = {};
+
+    for (let start = 0; start < entries.length; start += UI_TRANSLATION_BATCH_SIZE) {
+      const batch = entries.slice(start, start + UI_TRANSLATION_BATCH_SIZE);
       const response = await fetch(`${environment.apiUrl}/nlp/translate-ui`, {
         method: 'POST',
         headers: {
@@ -2604,23 +2658,36 @@ export class I18nService {
         },
         body: JSON.stringify({
           target_language: code,
-          dictionary: this.baseDictionary,
+          dictionary: Object.fromEntries(batch),
         }),
       });
+      if (!response.ok) return null;
 
-      if (response.ok) {
-        const data: { translations?: Record<string, string> } = await response.json();
-        if (data && data.translations) {
-          const merged = { ...this.baseDictionary, ...data.translations };
-          this.translations.set(merged);
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(`hellotalk_dict_${code}`, JSON.stringify(merged));
-          }
-        }
+      const received = this.readTranslations(await response.json());
+      if (!received) return null;
+      for (const [key] of batch) {
+        const value = received[key];
+        if (value !== undefined) translated[key] = value;
       }
-    } catch {
-      // In offline / test environments, fallback to base dictionary or algorithmic keys
     }
+    return translated;
+  }
+
+  /** Accepts only a `translations` object whose values are strings. */
+  private readTranslations(payload: unknown): Record<string, string> | null {
+    if (typeof payload !== 'object' || payload === null || !('translations' in payload)) {
+      return null;
+    }
+    const { translations } = payload;
+    if (typeof translations !== 'object' || translations === null || Array.isArray(translations)) {
+      return null;
+    }
+
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(translations)) {
+      if (typeof value === 'string') result[key] = value;
+    }
+    return result;
   }
 
   translate(key: string, params?: Record<string, unknown>): string {

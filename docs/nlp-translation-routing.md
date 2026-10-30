@@ -50,6 +50,8 @@ Required production secrets remain server-side:
 
 DeepL keys ending in `:fx` use `api-free.deepl.com`; other keys use the production `api.deepl.com` host. `AZURE_TRANSLATOR_REGION=global` intentionally omits the regional header. The existing environment validation and example files already define these variables.
 
+`POST /nlp/translate-ui` (interface dictionary translation) uses the same keys and provider order through its own service, `UiDictionaryTranslationService`, because it translates many short strings, caches each one, and charges a per-user daily character budget instead of the daily AI allowance. Its contract is in `docs/interface-translation-and-mirroring.md`.
+
 Every external request has a 10-second timeout. A provider timeout or malformed payload moves translation to the next provider instead of hanging the request. Explicit transliteration has no honest second provider and therefore fails with `503` when Azure is unavailable.
 
 ## Automatic transliteration

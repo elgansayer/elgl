@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Post,
+  UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -13,7 +14,6 @@ import {
   CacheControlInterceptor,
   CACHE_PRIVATE_NO_STORE,
   CACHE_PRIVATE_SHORT,
-  CACHE_PUBLIC_SHORT,
 } from '../common/cache.interceptor';
 import { UsersService } from '../users/users.service';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
@@ -38,6 +38,7 @@ import { NlpService } from './nlp.service';
 import { NlpRateLimit, NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
 import { TranslationRouterService } from './translation-router.service';
 import { PronunciationScoringService } from './pronunciation-scoring.service';
+import { UiDictionaryTranslationService } from './ui-dictionary-translation.service';
 
 @Controller('nlp')
 @UseGuards(SupabaseAuthGuard, NlpRateLimiterGuard)
@@ -49,6 +50,7 @@ export class NlpController {
     private readonly grammarCheckService: GrammarCheckService,
     private readonly grammarExplanationService: GrammarExplanationService,
     private readonly pronunciationScoringService: PronunciationScoringService,
+    private readonly uiDictionaryTranslationService: UiDictionaryTranslationService,
   ) {}
 
   /**
@@ -108,13 +110,24 @@ export class NlpController {
   }
 
   /**
-   * UI translations are cached in Redis and change rarely.
-   * Edge caching reduces load on the DeepL integration.
+   * Interface (UI dictionary) translation. The browser sends the English
+   * dictionary in bounded batches; translations are cached in Redis per source
+   * string, so only strings nobody has translated yet reach DeepL or Azure.
+   * Cache misses are charged to a per-user daily character budget, and the
+   * route is rate limited per user because it can trigger paid provider calls.
+   * The response depends on the request body and the caller, so it is never
+   * stored by a browser or shared cache.
    */
   @Post('translate-ui')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
-  async translateUi(@Body() dto: TranslateUiDto): Promise<TranslateUiResult> {
-    return await this.nlpService.translateUi(dto);
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 40, windowSeconds: 600 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  async translateUi(
+    @CurrentUser() user: User | null,
+    @Body() dto: TranslateUiDto,
+  ): Promise<TranslateUiResult> {
+    if (!user) throw new UnauthorizedException();
+    return await this.uiDictionaryTranslationService.translate(user.id, dto);
   }
 
   /**

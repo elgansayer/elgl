@@ -93,10 +93,10 @@ describe('I18nService', () => {
     it('should call the backend API for translations if not cached', async () => {
       vi.spyOn(window, 'fetch').mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ translations: { 'test.key': 'API Translation' } }),
+        json: () => Promise.resolve({ translations: { 'app.title': 'API Translation' } }),
       } as Response);
       await service.setLanguage('de');
-      expect(service.translate('test.key')).toBe('API Translation');
+      expect(service.translate('app.title')).toBe('API Translation');
     });
 
     it('should handle API errors gracefully and fallback to base dictionary', async () => {

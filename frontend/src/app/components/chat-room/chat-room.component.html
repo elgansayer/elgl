@@ -303,12 +303,12 @@
                     (wordClicked)="onWordClicked($event)"
                   ></app-tokenised-text>
                   @if (transliterations()[msg.id]) {
-                    <p class="mt-1 text-[10px] text-text-muted italic">
+                    <p class="mt-1 text-[10px] text-text-muted italic" dir="auto">
                       {{ transliterations()[msg.id] }}
                     </p>
                   }
                   @if (showTranslation()[msg.id] && translations()[msg.id]) {
-                    <p class="mt-1 text-[10px] text-primary italic">
+                    <p class="mt-1 text-[10px] text-primary italic" dir="auto">
                       {{ translations()[msg.id] }}
                     </p>
                   }
@@ -332,7 +332,9 @@
                 }
                 @if (msg.message_type === 'correction_request' && msg.correction_request_payload) {
                   <div>
-                    <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
+                    <p class="text-sm" dir="auto">
+                      {{ msg.correction_request_payload.original_text }}
+                    </p>
                     <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
                   </div>
                 }

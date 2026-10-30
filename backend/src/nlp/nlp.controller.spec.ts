@@ -9,7 +9,12 @@ import { GrammarExplanationService } from './grammar-explanation.service';
 import { PronunciationScoringService } from './pronunciation-scoring.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
+import {
+  NLP_RATE_LIMIT_KEY,
+  NlpRateLimiterGuard,
+} from './nlp-rate-limiter.guard';
+import { UiDictionaryTranslationService } from './ui-dictionary-translation.service';
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('NlpController', () => {
   let controller: NlpController;
@@ -17,6 +22,7 @@ describe('NlpController', () => {
   let translationRouterService: TranslationRouterService;
   let grammarCheckService: GrammarCheckService;
   let pronunciationScoringService: PronunciationScoringService;
+  let uiDictionaryTranslationService: UiDictionaryTranslationService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -27,7 +33,6 @@ describe('NlpController', () => {
           provide: NlpService,
           useValue: {
             detectLanguage: vi.fn(),
-            translateUi: vi.fn(),
             grammarCheck: vi.fn(),
             pronunciationScore: vi.fn(),
             checkRateLimit: vi.fn().mockResolvedValue(undefined),
@@ -59,6 +64,12 @@ describe('NlpController', () => {
           },
         },
         {
+          provide: UiDictionaryTranslationService,
+          useValue: {
+            translate: vi.fn(),
+          },
+        },
+        {
           provide: UsersService,
           useValue: {
             getProfile: vi.fn(),
@@ -82,6 +93,9 @@ describe('NlpController', () => {
     grammarCheckService = module.get<GrammarCheckService>(GrammarCheckService);
     pronunciationScoringService = module.get<PronunciationScoringService>(
       PronunciationScoringService,
+    );
+    uiDictionaryTranslationService = module.get<UiDictionaryTranslationService>(
+      UiDictionaryTranslationService,
     );
     usersService = module.get<UsersService>(UsersService);
   });
@@ -184,14 +198,48 @@ describe('NlpController', () => {
   });
 
   describe('translateUi', () => {
-    it('should pass DTO to service and return UI translations', async () => {
-      const dto: any = { target_language: 'es', dictionary: {} };
-      const response: any = { target_language: 'es', cached: false };
-      (nlpService.translateUi as Mock).mockResolvedValue(response);
+    it('translates the interface dictionary on behalf of the authenticated user', async () => {
+      const dto: any = {
+        target_language: 'es',
+        dictionary: { 'nav.home': 'Home' },
+      };
+      const response: any = {
+        target_language: 'es',
+        translations: { 'nav.home': 'Inicio' },
+        cached: false,
+      };
+      (uiDictionaryTranslationService.translate as Mock).mockResolvedValue(
+        response,
+      );
 
-      const result = await controller.translateUi(dto);
-      expect(nlpService.translateUi).toHaveBeenCalledWith(dto);
+      const result = await controller.translateUi({ id: 'user-1' } as any, dto);
+
+      expect(uiDictionaryTranslationService.translate).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
       expect(result).toEqual(response);
+    });
+
+    it('rejects a request that has no authenticated user', async () => {
+      const dto: any = {
+        target_language: 'es',
+        dictionary: { 'nav.home': 'Home' },
+      };
+
+      await expect(controller.translateUi(null, dto)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(uiDictionaryTranslationService.translate).not.toHaveBeenCalled();
+    });
+
+    it('applies a per-user rate limit because the route can trigger paid provider calls', () => {
+      const options = Reflect.getMetadata(
+        NLP_RATE_LIMIT_KEY,
+        NlpController.prototype.translateUi,
+      );
+
+      expect(options).toEqual({ maxRequests: 40, windowSeconds: 600 });
     });
   });
 

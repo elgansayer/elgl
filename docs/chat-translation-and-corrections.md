@@ -56,6 +56,8 @@ The translation and correction actions remain native/Spartan button actions in t
 
 Text rendering must continue to support mixed-direction and non-Latin content through the existing tokenisation/visual-diff primitives. Translation controls must remain usable at high zoom and by keyboard or assistive technology.
 
+A translation or transliteration shown under a message, the sentence in a correction request and the compared text and tutor explanation in the visual diff can run in a different direction from the interface (for example an Arabic translation in an English interface, or an English correction in a mirrored interface). Each of them sets `dir="auto"` so the browser resolves direction from the text itself. The translate control on a correction is always visible, keyboard reachable and reports its state with `aria-pressed`; the translated explanation is announced politely through a `role="status"` region. Interface mirroring and the interface-dictionary API are specified in `docs/interface-translation-and-mirroring.md`.
+
 ## Verification
 
 Focused frontend regression coverage locks:

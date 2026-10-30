@@ -2,7 +2,7 @@ import { Component, computed, input, inject, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore } from '../../services/vocabulary.store';
-import { showToast } from '../../services/toast.service';
+import { showErrorToast, showToast } from '../../services/toast.service';
 import { I18nService } from '../../services/i18n.service';
 import { ChatService } from '../../services/chat.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
@@ -20,7 +20,7 @@ interface DiffSegment {
   imports: [...HlmButtonImports, TranslatePipe, NgIcon],
   providers: [provideIcons({ lucideLanguages })],
   template: `
-    <div class="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
+    <div dir="auto" class="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
       @for (segment of segments(); track segment.index) {
         @switch (segment.type) {
           @case ('added') {
@@ -46,34 +46,48 @@ interface DiffSegment {
       }
     </div>
     @if (explanation()) {
-      <div class="mt-1 text-xs text-text-secondary italic group flex flex-col gap-1">
+      <div class="mt-1 text-xs text-text-secondary italic flex flex-col gap-1">
         <div class="flex items-center gap-2">
-          <span>{{ explanation() }}</span>
+          <span dir="auto">{{ explanation() }}</span>
           @if (showActions()) {
             <button
               hlmBtn
+              type="button"
               variant="ghost"
               size="icon-sm"
-              class="opacity-0 group-hover:opacity-100 transition-opacity"
               (click)="translateExplanation()"
               [disabled]="isTranslating()"
+              [attr.aria-pressed]="translatedExplanation() !== null"
               [attr.aria-label]="'moments.translate' | t"
             >
               <ng-icon name="lucideLanguages" class="text-text-secondary" />
             </button>
           }
         </div>
-        @if (translatedExplanation()) {
-          <div class="text-text-primary bg-surface-200 p-2 rounded border border-surface-100">
-            {{ translatedExplanation() }}
-          </div>
-        }
+        <div role="status">
+          @if (translatedExplanation(); as translated) {
+            <div
+              dir="auto"
+              [attr.lang]="targetLanguage()"
+              class="text-text-primary bg-surface-200 p-2 rounded border border-surface-100"
+            >
+              {{ translated }}
+            </div>
+          }
+        </div>
       </div>
     }
     @if (showActions()) {
       <div class="mt-2 flex gap-2">
-        <button hlmBtn variant="outline" size="sm" class="text-xs" (click)="createFlashcard()">
-          ➕ {{ 'correction.createFlashcard' | t }}
+        <button
+          hlmBtn
+          type="button"
+          variant="outline"
+          size="sm"
+          class="text-xs"
+          (click)="createFlashcard()"
+        >
+          <span aria-hidden="true">➕</span> {{ 'correction.createFlashcard' | t }}
         </button>
       </div>
     }
@@ -93,6 +107,8 @@ export class VisualDiffComponent {
 
   readonly isTranslating = signal(false);
   readonly translatedExplanation = signal<string | null>(null);
+  /** Language the explanation is translated into, exposed for the `lang` attribute. */
+  readonly targetLanguage = computed(() => this.i18n.currentLang());
 
   async translateExplanation() {
     const text = this.explanation();
@@ -120,7 +136,7 @@ export class VisualDiffComponent {
       }
     } catch (err) {
       console.error('Translation error', err);
-      showToast(this.i18n.translate('moments.translationError') || 'Translation failed');
+      showErrorToast(this.i18n.translate('moments.transError'));
     } finally {
       this.isTranslating.set(false);
     }
@@ -138,10 +154,10 @@ export class VisualDiffComponent {
         translation: translation,
         original_context: originalContext,
       });
-      showToast(this.i18n.translate('correction.flashcardCreatedAlert') || 'Flashcard created');
+      showToast(this.i18n.translate('correction.flashcardCreatedAlert'), 'success');
     } catch (err) {
       console.error('Error creating flashcard', err);
-      showToast(this.i18n.translate('error.general') || 'Error');
+      showErrorToast(this.i18n.translate('correction.flashcardError'));
     }
   }
 
