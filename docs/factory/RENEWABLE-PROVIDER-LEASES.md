@@ -53,6 +53,10 @@ crash windows need an independent bounded watchdog; expiration alone is not proo
 that a model process has stopped. Sessions already running outside this protocol
 are not automatically counted and must be integrated without dropping live work.
 
+The opt-in [provider process guard](PROVIDER-PROCESS-GUARD.md) supplies the
+runner-level watchdog and namespace containment primitive. The manual launcher,
+durable recovery and account-wide enrolment remain separate deployment work.
+
 ## Validation boundary
 
 `tests/test_renewable_provider_capacity.py` checks long-session visibility against
