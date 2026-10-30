@@ -108,6 +108,17 @@ describe('DiscoveryController', () => {
   });
 
   describe('findPartners', () => {
+    it('documents the unavailable response exposed by degraded searches', () => {
+      const responses = Reflect.getMetadata(
+        'swagger/apiResponse',
+        DiscoveryController.prototype.findPartners,
+      ) as Record<string, { description: string }>;
+
+      expect(responses['503']).toEqual({
+        description: 'Partner discovery is temporarily unavailable.',
+      });
+    });
+
     it('should return empty array if user is not provided', async () => {
       const result = await controller.findPartners(null, {});
       expect(result).toEqual([]);
