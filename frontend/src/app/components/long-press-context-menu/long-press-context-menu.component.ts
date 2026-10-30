@@ -161,7 +161,7 @@ function firstTouch(list: TouchList | ArrayLike<Touch> | undefined): Touch | nul
             class="w-full justify-start"
             (click)="openExplanation()"
           >
-            {{ 'moments.explanation' | t }}
+            {{ 'context_menu.explainThis' | t }}
           </button>
         }
 
@@ -293,42 +293,62 @@ function firstTouch(list: TouchList | ArrayLike<Touch> | undefined): Touch | nul
         class="w-full max-w-lg bg-surface-200 rounded-sheet shadow-lift border border-surface-100 p-5"
       >
         <hlm-dialog-header>
-          <h2 hlmDialogTitle>{{ 'moments.explanation' | t }}</h2>
-          <p hlmDialogDescription>{{ 'correction.explainPlaceholder' | t }}</p>
+          <h2 hlmDialogTitle>{{ 'grammarExplanation.title' | t }}</h2>
+          <p hlmDialogDescription>{{ 'grammarExplanation.description' | t }}</p>
         </hlm-dialog-header>
 
         @if (explanationSource(); as source) {
           <div class="space-y-3 text-sm">
             <div>
               <p class="font-semibold text-text-secondary">{{ 'moments.originalSentence' | t }}</p>
-              <p class="mt-1 whitespace-pre-wrap text-text-primary">{{ source.original }}</p>
+              <p dir="auto" class="mt-1 whitespace-pre-wrap text-text-primary">
+                {{ source.original }}
+              </p>
             </div>
             <div>
               <p class="font-semibold text-text-secondary">{{ 'moments.correctedSentence' | t }}</p>
-              <p class="mt-1 whitespace-pre-wrap text-text-primary">{{ source.corrected }}</p>
+              <p dir="auto" class="mt-1 whitespace-pre-wrap text-text-primary">
+                {{ source.corrected }}
+              </p>
             </div>
           </div>
         }
 
-        @if (explanationLoading()) {
-          <p role="status" aria-live="polite" class="py-4 text-sm text-text-secondary">
-            {{ 'common.loading' | t }}
-          </p>
-        } @else if (explanationError()) {
+        <!-- Permanent live region: assistive technology only announces changes to a region that
+             already exists, so the loading text and the result swap inside this one container. -->
+        <div aria-live="polite" aria-atomic="true" [attr.aria-busy]="explanationLoading()">
+          @if (explanationLoading()) {
+            <p class="py-4 text-sm text-text-secondary">
+              {{ 'grammarExplanation.loading' | t }}
+            </p>
+          } @else if (explanationText(); as explanation) {
+            <p dir="auto" class="whitespace-pre-wrap text-sm leading-relaxed text-text-primary">
+              {{ explanation }}
+            </p>
+          }
+        </div>
+
+        @if (!explanationLoading() && explanationError()) {
           <div
             role="alert"
             class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
             [attr.data-error-kind]="explanationError()"
           >
-            {{ 'common.error_generic' | t }}
+            @switch (explanationError()) {
+              @case ('rate_limit') {
+                {{ 'grammarExplanation.errorRateLimit' | t }}
+              }
+              @case ('auth') {
+                {{ 'grammarExplanation.errorAuth' | t }}
+              }
+              @case ('empty') {
+                {{ 'grammarExplanation.errorEmpty' | t }}
+              }
+              @default {
+                {{ 'grammarExplanation.errorRequest' | t }}
+              }
+            }
           </div>
-        } @else if (explanationText(); as explanation) {
-          <p
-            class="whitespace-pre-wrap text-sm leading-relaxed text-text-primary"
-            aria-live="polite"
-          >
-            {{ explanation }}
-          </p>
         }
 
         <hlm-dialog-footer class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

@@ -1831,7 +1831,7 @@
             ><button type="button">Translate</button><button type="button">Simplify</button
             ><button type="button">Transliterate</button><button type="button">Speak</button
             ><button type="button">Correct</button><button type="button">Request correction</button
-            ><button type="button">Explanation</button><button type="button">Favourite</button>
+            ><button type="button">Explain this</button><button type="button">Favourite</button>
             <hr />
             <button type="button" class="destructive">Report</button
             ><button type="button" class="destructive">Block</button>
@@ -1853,10 +1853,43 @@
               ><button class="btn" type="button">Close</button>
             </div>
           </div>
+          <div class="state-label">
+            Grammar explanation dialog · opened by Explain this on corrected text · result
+          </div>
+          <div class="dialog stack" role="dialog" aria-label="Grammar explanation">
+            <div class="title">Grammar explanation</div>
+            <p class="muted" style="margin: 0">
+              An AI-generated breakdown of what changed and why. It may contain mistakes.
+            </p>
+            <div class="card">
+              <div class="muted">Original sentence</div>
+              <div dir="auto">I has a cat</div>
+              <div class="muted">Improved sentence</div>
+              <div dir="auto">I have a cat</div>
+            </div>
+            <p style="margin: 0" aria-live="polite" dir="auto">
+              Use "have" with "I" because "has" is the third person singular form.
+            </p>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn" type="button">Close</button>
+            </div>
+          </div>
+          <div class="state-label">Grammar explanation dialog · error (request failed)</div>
+          <div class="dialog stack" role="dialog" aria-label="Grammar explanation">
+            <div class="title">Grammar explanation</div>
+            <div class="alert error" role="alert">
+              This correction could not be explained. Check your connection and try again.
+            </div>
+            <div class="row" style="justify-content: flex-end">
+              <button class="btn secondary-btn" type="button">Retry</button
+              ><button class="btn" type="button">Close</button>
+            </div>
+          </div>
         </div>
         <footer>
-          Long-press / right-click / button opens · text-only actions hidden for non-text · Simplify
-          &amp; Explanation dialogs: loading · result · rate_limit/auth/empty/request errors
+          Long-press / right-click / button opens · text-only actions hidden for non-text · Explain
+          this appears on corrected text only · Simplify &amp; Grammar explanation dialogs: loading ·
+          result · rate_limit/auth/empty/request errors, each with its own message
         </footer>
       </section>
 
