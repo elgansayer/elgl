@@ -100,15 +100,19 @@ def neptune_gate(
                 and check.get("head_sha") == head
             ):
                 checks[check["name"]].append(check)
-    # filter=latest already selects the latest run per workflow. Ambiguous
-    # publishers/workflows must be diagnosed instead of choosing a green result.
+    # Draft-to-ready can leave multiple latest runs at the same app-pinned head.
+    # Accept only unanimous literal success, never a green result that shadows
+    # a failed, skipped or still-pending duplicate.
     pending = False
     failed: set[str] = set()
     for name, candidates in checks.items():
         if not candidates:
             pending = True
             continue
-        if len(candidates) != 1:
+        if len(candidates) != 1 and not all(
+            check.get("status") == "completed" and check.get("conclusion") == "success"
+            for check in candidates
+        ):
             raise FactoryError("Neptune required check has ambiguous duplicate runs")
         check = candidates[0]
         status = check.get("status")

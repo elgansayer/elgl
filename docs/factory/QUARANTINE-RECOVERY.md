@@ -37,6 +37,21 @@ If the underlying problem changes and the job makes meaningful progress, the exi
 
 Legacy quarantine records that predate persisted quarantine timestamps remain immediately recoverable so old state cannot wedge the queue.
 
+## Idempotent label cleanup
+
+Before removing ownership or recovery labels, the GitHub client reads all actual
+issue label attachments with pagination. Requested labels that are not attached
+are already clean, including legacy names absent from the repository's label
+definitions. Only requested attached names are removed; unrelated labels and
+concurrent additions are preserved. Repeated cleanup is a no-op.
+
+Authentication, permission, transport, missing-issue and malformed-response errors
+still fail the operation. A concurrent deletion between discovery and removal can
+also fail; normal durable retry can observe the completed removal. Cleanup never
+reports success by suppressing an arbitrary API failure. This fixes the absent
+`swarm-active` definition failure observed during Neptune's first real job recovery
+([#535](https://github.com/elgansayer/Neptune-Bomberman/issues/535)).
+
 ## Quality and merge safety
 
 Adaptive recovery changes only when a repeatedly failing job becomes eligible to run again. It does not skip or weaken implementation, security review, local verification, quality repair, independent review, reviewed-SHA validation, `factory/independent-review`, `CI / required`, mergeability checks, or repository branch protection.
