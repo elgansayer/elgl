@@ -27,10 +27,7 @@ import { ReportUserModalService } from './components/report-user-modal/report-us
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { ConversationAnalysisLauncherComponent } from './features/premium-ai/conversation-analysis-launcher.component';
-import {
-  UnreadCounterService,
-  UnreadSnapshot,
-} from './services/unread-counter.service';
+import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionService } from './services/version.service';
 import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
@@ -105,6 +102,10 @@ export class AppComponent implements OnInit {
   private readonly router = inject(Router);
   private notificationService = inject(NotificationService);
   private chatService = inject(ChatService);
+  private unreadSyncActive = false;
+  private unreadRefreshRequested = false;
+  private unreadRefreshPromise: Promise<void> | null = null;
+  private handledConnectionRevision = 0;
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -158,6 +159,13 @@ export class AppComponent implements OnInit {
         void this.router.navigate(['/home']);
       }
     });
+
+    effect(() => {
+      const revision = this.centrifugeService.connectionRevision();
+      if (!this.unreadSyncActive || revision <= this.handledConnectionRevision) return;
+      this.handledConnectionRevision = revision;
+      void this.requestUnreadRefresh();
+    });
   }
 
   async ngOnInit(): Promise<void> {
@@ -188,7 +196,6 @@ export class AppComponent implements OnInit {
 
       try {
         await this.centrifugeService.connect();
-        const unreadSnapshot = this.unreadCounter.snapshot();
         this.centrifugeService.subscribe(`user_${user.id}`, (data: unknown) => {
           if (!isRecord(data)) return;
           const eventType = typeof data['type'] === 'string' ? data['type'] : null;
@@ -249,17 +256,20 @@ export class AppComponent implements OnInit {
               tab === 'audioRooms' ||
               tab === 'profile'
             ) {
-              this.unreadCounter.increment(tab);
+              void this.requestUnreadRefresh();
             }
           } else if (eventType === 'incoming_call') {
             this.unreadCounter.increment('audioRooms');
           }
         });
 
-        await this.loadInitialUnreadCounts(unreadSnapshot);
+        this.unreadSyncActive = true;
+        this.handledConnectionRevision = this.centrifugeService.connectionRevision();
+        await this.requestUnreadRefresh();
       } catch {
         console.warn('Personal realtime updates were unavailable during application startup');
-        await this.loadInitialUnreadCounts(this.unreadCounter.snapshot());
+        this.unreadSyncActive = true;
+        await this.requestUnreadRefresh();
       }
 
       // Request notification permission after user is authenticated
@@ -268,22 +278,39 @@ export class AppComponent implements OnInit {
     }
   }
 
-  private async loadInitialUnreadCounts(snapshot: UnreadSnapshot): Promise<void> {
+  private requestUnreadRefresh(): Promise<void> {
+    this.unreadRefreshRequested = true;
+    if (this.unreadRefreshPromise) return this.unreadRefreshPromise;
+
+    this.unreadRefreshPromise = this.refreshUnreadUntilCurrent().finally(() => {
+      this.unreadRefreshPromise = null;
+    });
+    return this.unreadRefreshPromise;
+  }
+
+  private async refreshUnreadUntilCurrent(): Promise<void> {
+    while (this.unreadRefreshRequested) {
+      this.unreadRefreshRequested = false;
+      await this.loadAuthoritativeUnreadCounts();
+    }
+  }
+
+  private async loadAuthoritativeUnreadCounts(): Promise<void> {
     const [notifications, chat] = await Promise.allSettled([
       this.notificationService.getUnreadCount(),
       this.chatService.getUnreadCount(),
     ]);
 
     if (notifications.status === 'fulfilled') {
-      this.unreadCounter.reconcile('moments', notifications.value.byTab.moments, snapshot);
-      this.unreadCounter.reconcile('discovery', notifications.value.byTab.discovery, snapshot);
-      this.unreadCounter.reconcile('profile', notifications.value.byTab.profile, snapshot);
+      this.unreadCounter.set('moments', notifications.value.byTab.moments);
+      this.unreadCounter.set('discovery', notifications.value.byTab.discovery);
+      this.unreadCounter.set('profile', notifications.value.byTab.profile);
     } else {
       console.warn('Notification unread count could not be loaded');
     }
 
     if (chat.status === 'fulfilled') {
-      this.unreadCounter.reconcile('chat', chat.value, snapshot);
+      this.unreadCounter.set('chat', chat.value);
     } else {
       console.warn('Chat unread count could not be loaded');
     }

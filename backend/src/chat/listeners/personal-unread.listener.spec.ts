@@ -11,7 +11,7 @@ describe('PersonalUnreadListener', () => {
     listener = new PersonalUnreadListener({ publish } as never);
   });
 
-  it('publishes a count-only update to the authenticated user channel', async () => {
+  it('publishes an authoritative-count invalidation to the authenticated user channel', async () => {
     await listener.handleUnreadCreated({
       recipientId: 'user-1',
       tab: 'moments',

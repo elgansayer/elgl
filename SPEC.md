@@ -169,6 +169,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
+- **Unread count invalidation:** `{ "type": "unread_count_changed", "tab": "chat" | "moments" | "discovery" | "audioRooms" | "profile" }` on `user_{user_id}`. The payload is an invalidation, not a delta. Clients reload authoritative REST counts after receipt and after reconnect, coalescing concurrent invalidations and repeating a load when an invalidation arrives in flight.
 - **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
 
 ---

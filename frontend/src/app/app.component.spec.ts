@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DOCUMENT } from '@angular/common';
+import { signal } from '@angular/core';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { AppComponent } from './app.component';
 import { AuthService } from './services/auth.service';
@@ -53,6 +54,7 @@ describe('AppComponent', () => {
   const centrifugeServiceMock = {
     connect: vi.fn(() => Promise.resolve()),
     publish: vi.fn(),
+    connectionRevision: signal(0),
     subscribe: vi.fn((_channel: string, cb: (data: unknown) => void) => {
       subscribeCallback = cb;
     }),
@@ -138,6 +140,7 @@ describe('AppComponent', () => {
     authServiceMock.isAuthenticated.mockReturnValue(true);
     authServiceMock.currentUser.mockReturnValue({ id: 'test-user-1' });
     appLockServiceMock.biometricEnabled.mockReturnValue(false);
+    centrifugeServiceMock.connectionRevision.set(0);
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
@@ -186,62 +189,50 @@ describe('AppComponent', () => {
     expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
-  it('should call core services during ngOnInit', () => {
+  it('should call core services during ngOnInit', async () => {
     expect(versionServiceMock.checkVersion).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.loadInitialData).toHaveBeenCalledTimes(1);
     expect(safetyServiceMock.loadBlockedUsers).toHaveBeenCalledTimes(1);
     expect(economyStoreMock.claimDailyCheckIn).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.connect).toHaveBeenCalledTimes(1);
     expect(centrifugeServiceMock.subscribe).toHaveBeenCalledTimes(1);
-    expect(fcmServiceMock.requestPermissionAndGetToken).toHaveBeenCalledTimes(1);
-    expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(fcmServiceMock.requestPermissionAndGetToken).toHaveBeenCalledTimes(1);
+      expect(fcmServiceMock.persistFcmToken).toHaveBeenCalled();
+    });
   });
 
   it('loads the initial chat unread count with one service call', async () => {
     chatServiceMock.getUnreadCount.mockClear();
-    unreadCounterMock.reconcile.mockClear();
+    unreadCounterMock.set.mockClear();
     chatServiceMock.getUnreadCount.mockResolvedValueOnce(7);
 
     await (
       component as unknown as {
-        loadInitialUnreadCounts(snapshot: ReturnType<typeof unreadCounterMock.snapshot>): Promise<void>;
+        loadAuthoritativeUnreadCounts(): Promise<void>;
       }
-    ).loadInitialUnreadCounts(unreadCounterMock.snapshot());
+    ).loadAuthoritativeUnreadCounts();
 
     expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
-    expect(unreadCounterMock.reconcile).toHaveBeenCalledWith('chat', 7, expect.any(Object));
+    expect(unreadCounterMock.set).toHaveBeenCalledWith('chat', 7);
   });
 
   it('preserves the current chat count when the initial request fails', async () => {
     chatServiceMock.getUnreadCount.mockClear();
-    unreadCounterMock.reconcile.mockClear();
+    unreadCounterMock.set.mockClear();
     chatServiceMock.getUnreadCount.mockRejectedValueOnce(new Error('unavailable'));
 
     await (
       component as unknown as {
-        loadInitialUnreadCounts(snapshot: ReturnType<typeof unreadCounterMock.snapshot>): Promise<void>;
+        loadAuthoritativeUnreadCounts(): Promise<void>;
       }
-    ).loadInitialUnreadCounts(unreadCounterMock.snapshot());
+    ).loadAuthoritativeUnreadCounts();
 
-    expect(unreadCounterMock.reconcile).not.toHaveBeenCalledWith(
-      'chat',
-      expect.any(Number),
-      expect.any(Object),
-    );
+    expect(unreadCounterMock.set).not.toHaveBeenCalledWith('chat', expect.any(Number));
   });
 
-  it('captures the reconciliation baseline before subscribing and requesting counts', async () => {
+  it('subscribes before requesting authoritative counts', async () => {
     const order: string[] = [];
-    unreadCounterMock.snapshot.mockImplementationOnce(() => {
-      order.push('snapshot');
-      return {
-        chat: 0,
-        moments: 0,
-        discovery: 0,
-        audioRooms: 0,
-        profile: 0,
-      };
-    });
     centrifugeServiceMock.subscribe.mockImplementationOnce(
       (_channel: string, cb: (data: unknown) => void) => {
         subscribeCallback = cb;
@@ -258,20 +249,27 @@ describe('AppComponent', () => {
 
     await component.ngOnInit();
 
-    expect(order).toEqual(['snapshot', 'subscribe', 'count']);
+    expect(order).toEqual(['subscribe', 'count']);
   });
 
-  it('reconciles realtime deltas received while unread requests are in flight', async () => {
+  it('repeats an authoritative load when an invalidation arrives in flight', async () => {
     let resolveCount: ((value: {
       unreadCount: number;
       byTab: { moments: number; discovery: number; profile: number };
     }) => void) | undefined;
-    notificationServiceMock.getUnreadCount.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveCount = resolve;
-        }),
-    );
+    notificationServiceMock.getUnreadCount
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveCount = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({
+        unreadCount: 5,
+        byTab: { moments: 5, discovery: 0, profile: 0 },
+      });
+    notificationServiceMock.getUnreadCount.mockClear();
+    unreadCounterMock.set.mockClear();
 
     const initialisation = component.ngOnInit();
     await vi.waitFor(() => {
@@ -279,17 +277,14 @@ describe('AppComponent', () => {
     });
     subscribeCallback?.({ type: 'unread_count_changed', tab: 'moments' });
     resolveCount?.({
-      unreadCount: 2,
-      byTab: { moments: 2, discovery: 0, profile: 0 },
+      unreadCount: 4,
+      byTab: { moments: 4, discovery: 0, profile: 0 },
     });
     await initialisation;
 
-    expect(unreadCounterMock.increment).toHaveBeenCalledWith('moments');
-    expect(unreadCounterMock.reconcile).toHaveBeenCalledWith(
-      'moments',
-      2,
-      expect.any(Object),
-    );
+    expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledTimes(2);
+    expect(unreadCounterMock.set).toHaveBeenLastCalledWith('chat', 0);
+    expect(unreadCounterMock.set).toHaveBeenCalledWith('moments', 5);
   });
 
   it('loads unread counts when unrelated startup providers fail', async () => {
@@ -304,13 +299,31 @@ describe('AppComponent', () => {
     expect(chatServiceMock.getUnreadCount).toHaveBeenCalledTimes(1);
   });
 
-  it('routes personal unread events to every navigation producer', () => {
+  it('treats personal unread events as authoritative-count invalidations', async () => {
     expect(subscribeCallback).toBeDefined();
+    notificationServiceMock.getUnreadCount.mockClear();
+    chatServiceMock.getUnreadCount.mockClear();
 
-    for (const tab of ['chat', 'moments', 'discovery', 'audioRooms', 'profile'] as const) {
-      subscribeCallback?.({ type: 'unread_count_changed', tab });
-      expect(unreadCounterMock.increment).toHaveBeenCalledWith(tab);
-    }
+    subscribeCallback?.({ type: 'unread_count_changed', tab: 'moments' });
+
+    await vi.waitFor(() => {
+      expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledOnce();
+      expect(chatServiceMock.getUnreadCount).toHaveBeenCalledOnce();
+    });
+    expect(unreadCounterMock.increment).not.toHaveBeenCalledWith('moments');
+  });
+
+  it('reloads authoritative counts after a realtime reconnect', async () => {
+    notificationServiceMock.getUnreadCount.mockClear();
+    chatServiceMock.getUnreadCount.mockClear();
+
+    centrifugeServiceMock.connectionRevision.set(1);
+    fixture.detectChanges();
+
+    await vi.waitFor(() => {
+      expect(notificationServiceMock.getUnreadCount).toHaveBeenCalledOnce();
+      expect(chatServiceMock.getUnreadCount).toHaveBeenCalledOnce();
+    });
   });
 
   it('counts an incoming call as live-room activity', () => {

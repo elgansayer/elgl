@@ -56,6 +56,8 @@ export class CentrifugeService {
   readonly events = signal<CentrifugeEvent[]>([]);
   readonly isConnected = signal<boolean>(false);
   readonly connectionStatus = signal<ConnectionStatus>('disconnected');
+  /** Increments after every successful connection, including reconnects. */
+  readonly connectionRevision = signal<number>(0);
 
   /**
    * Calculates exponential backoff delay with jitter.
@@ -258,6 +260,7 @@ export class CentrifugeService {
         this.hasConnectedOnce = true;
         this.isConnected.set(true);
         this.connectionStatus.set('connected');
+        this.connectionRevision.update((revision) => revision + 1);
       });
 
       client.on('disconnected', () => {

@@ -339,11 +339,16 @@ describe('CentrifugeService', () => {
     replacement.emit('connected');
     expect(service.isConnected()).toBe(true);
     expect(service.connectionStatus()).toBe('connected');
+    expect(service.connectionRevision()).toBe(1);
 
     replacement.state = 'connecting';
     replacement.emit('connecting');
     expect(service.isConnected()).toBe(false);
     expect(service.connectionStatus()).toBe('reconnecting');
+
+    replacement.state = 'connected';
+    replacement.emit('connected');
+    expect(service.connectionRevision()).toBe(2);
   });
 
   it('honours Retry-After when the initial connection token endpoint rate limits', async () => {
