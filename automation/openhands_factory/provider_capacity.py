@@ -122,6 +122,21 @@ class ProviderCapacityStore:
             validator=_is_capacity_payload,
         )
 
+    @staticmethod
+    def _is_unexpired(entry: dict[str, object], now: datetime) -> bool:
+        expires_at = entry.get("expires_at")
+        acquired_at = entry.get("acquired_at")
+        if not isinstance(expires_at, str) or not isinstance(acquired_at, str):
+            return False
+        try:
+            expiry = datetime.fromisoformat(expires_at)
+            acquired = datetime.fromisoformat(acquired_at)
+        except ValueError:
+            return False
+        return (
+            expiry.tzinfo is not None and acquired.tzinfo is not None and acquired <= now < expiry
+        )
+
     def acquire(
         self,
         provider: ProviderName | str,
@@ -161,10 +176,15 @@ class ProviderCapacityStore:
                 entries = providers.setdefault(provider_key, [])
                 now = datetime.now(UTC)
                 active = self._active_entries(entries, now)
-                duplicate_owner = token is not None and any(
-                    entry.get("owner") == owner for entry in active
+                renewable_entries = (
+                    [entry for entry in entries if self._is_unexpired(entry, now)]
+                    if token is not None
+                    else active
                 )
-                if len(active) < limit and not duplicate_owner:
+                duplicate_owner = token is not None and any(
+                    entry.get("owner") == owner for entry in renewable_entries
+                )
+                if len(renewable_entries) < limit and not duplicate_owner:
                     entry: dict[str, object] = {
                         "owner": owner,
                         "pid": os.getpid(),
@@ -174,11 +194,11 @@ class ProviderCapacityStore:
                     }
                     if token is not None:
                         entry.update({"lease_protocol": 1, "lease_token": token})
-                    active.append(entry)
-                    providers[provider_key] = active
+                    renewable_entries.append(entry)
+                    providers[provider_key] = renewable_entries
                     self._save(providers)
                     return time.monotonic() - started
-                providers[provider_key] = active
+                providers[provider_key] = renewable_entries
                 self._save(providers)
             if time.monotonic() >= deadline:
                 raise ProviderCapacityUnavailable(
@@ -249,7 +269,8 @@ class ProviderCapacityStore:
         with self.lock:
             providers = self._load()
             now = datetime.now(UTC)
-            active = self._active_entries(providers.get(handle.provider, []), now)
+            entries = providers.get(handle.provider, [])
+            active = self._active_entries(entries, now)
             owned = [entry for entry in active if self._owns_entry(entry, handle)]
             if len(owned) != 1:
                 raise ProviderCapacityUnavailable(
@@ -260,7 +281,7 @@ class ProviderCapacityStore:
             # heartbeat after the session has outlived their maximum duration.
             owned[0]["acquired_at"] = now.isoformat()
             owned[0]["expires_at"] = (now + timedelta(seconds=handle.lease_seconds)).isoformat()
-            providers[handle.provider] = active
+            providers[handle.provider] = entries
             self._save(providers)
 
     def release_renewable(self, handle: RenewableCapacityLease) -> bool:

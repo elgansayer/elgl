@@ -146,6 +146,46 @@ def test_protocol_scope_and_unrelated_live_leases_are_preserved(tmp_path: Path) 
     assert after["claude"] == before["claude"][:1]
 
 
+def test_short_reader_bound_preserves_unrelated_long_lease(tmp_path: Path) -> None:
+    factory = ProviderCapacityStore(tmp_path, max_lease_seconds=3900)
+    factory.acquire("claude", limit=2, owner="factory:1", wait_seconds=0, lease_seconds=3900)
+    before = read_json(factory.path, {})["providers"]["claude"]
+    manual = ProviderCapacityStore(tmp_path, max_lease_seconds=60)
+
+    lease = manual.acquire_renewable("claude", owner="manual:1", limit=2)
+    manual.renew(lease)
+
+    after = read_json(factory.path, {})["providers"]["claude"]
+    assert after[0] == before[0]
+    assert after[1]["lease_token"] == lease.token
+
+
+def test_renewable_admission_discards_malformed_legacy_entries(tmp_path: Path) -> None:
+    store = ProviderCapacityStore(tmp_path, max_lease_seconds=60)
+    store.path.write_text(
+        json.dumps(
+            {
+                "providers": {
+                    "claude": [
+                        {
+                            "owner": "broken",
+                            "acquired_at": "not-a-timestamp",
+                            "expires_at": "also-not-a-timestamp",
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    lease = store.acquire_renewable("claude", owner="manual:1", limit=1)
+
+    entries = read_json(store.path, {})["providers"]["claude"]
+    assert [entry["owner"] for entry in entries] == ["manual:1"]
+    assert entries[0]["lease_token"] == lease.token
+
+
 def test_fresh_process_recovers_persisted_handle_and_blocks_new_participant(tmp_path: Path) -> None:
     store = ProviderCapacityStore(tmp_path, max_lease_seconds=3900)
     lease = store.acquire_renewable("claude", owner="manual:restart", limit=1)
