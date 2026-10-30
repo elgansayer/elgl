@@ -2308,6 +2308,54 @@ def test_local_design_drift_failure_becomes_explicit_quality_repair_steps(
     assert "passing self-test" not in result.review_findings[0]
 
 
+def test_capped_drift_failure_merges_a_newer_base_once_before_parking(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    job.quality_repairs = 5
+    job.failure_counts["design-drift-guided-repair"] = 1
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    failure = (
+        "Design sync drift verification failed:\n"
+        "- screen.chat: mapped implementation changed without its mapped preview\n"
+        "    changed: frontend/src/app/pages/chat/chat.page.html\n"
+        "    update the preview to match: frontend/design-preview/screens/chat.html\n"
+    )
+    monkeypatch.setattr(
+        pipeline, "_verify", lambda workflow: (_ for _ in ()).throw(VerificationFailed(failure))
+    )
+    monkeypatch.setattr(pipeline, "_restart_stale_unpublished", lambda *args: False)
+    merges: list[str] = []
+
+    class Workflow:
+        def contains_current_base(self) -> bool:
+            return False
+
+        def merging_current_base(self) -> bool:
+            return bool(merges)
+
+        def merge_base_for_repair(self) -> bool:
+            merges.append("origin/main")
+            return False
+
+    workflow = Workflow()
+
+    assert pipeline._verify_or_schedule_quality_repair(job, workflow) is None  # type: ignore[arg-type]
+    assert merges == ["origin/main"]
+    assert not github.labels
+
+    with pytest.raises(VerificationFailed):
+        pipeline._verify_or_schedule_quality_repair(job, workflow)  # type: ignore[arg-type]
+    assert merges == ["origin/main"]
+    assert (job.pull_request, ("factory-capped",)) in github.labels
+
+
 def _failing_model_repair_pipeline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[FactoryPipeline, GitHub, list[Task]]:
