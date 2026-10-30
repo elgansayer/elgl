@@ -13,6 +13,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Literal, Protocol
 
 from openhands_factory.exceptions import FactoryError
@@ -24,8 +25,11 @@ from openhands_factory.models import (
     supersession_references,
 )
 from openhands_factory.neptune_merge import (
+    NEPTUNE_GATE,
     NEPTUNE_REPOSITORY,
+    NeptuneGate,
     neptune_gate,
+    required_neptune_checks,
     validate_neptune_protection,
 )
 from openhands_factory.pr_convergence import PullRequestRecord
@@ -391,6 +395,14 @@ class GitHubClient:
                 label.get("name", "") for label in item.get("labels", []) if isinstance(label, dict)
             }
             if "factory-skip" in labels:
+                continue
+            if (
+                self.repository.casefold() == NEPTUNE_REPOSITORY.casefold()
+                and self.require_ready_label
+                and self.ready_label not in labels
+            ):
+                # Bootstrap must not adopt another agent's in-progress external
+                # PR merely because the repository owner authored it.
                 continue
             if labels.intersection(COMPATIBILITY_LANE_LABELS):
                 # Major dependency upgrades are staged by the dependency
@@ -1057,20 +1069,23 @@ class GitHubClient:
             raise FactoryError(f"Could not parse pull request URL: {url}") from error
 
     def update_pull_request(self, pull_request: int, *, title: str, body: str) -> None:
-        self._run(
-            (
-                "gh",
-                "pr",
-                "edit",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--title",
-                title,
-                "--body",
-                body,
+        # gh 2.46 `pr edit` queries retired Projects (classic) fields before it
+        # writes. REST avoids that unrelated failure; JSON preserves literal
+        # newlines and untrusted body text without shell interpolation.
+        with NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".json") as payload:
+            json.dump({"title": title, "body": body}, payload)
+            payload.flush()
+            self._run(
+                (
+                    "gh",
+                    "api",
+                    "--method",
+                    "PATCH",
+                    f"repos/{self.repository}/pulls/{pull_request}",
+                    "--input",
+                    payload.name,
+                )
             )
-        )
 
     def supersede_pull_request(
         self,
@@ -1079,7 +1094,7 @@ class GitHubClient:
         canonical: int | None,
         reason: str,
     ) -> None:
-        """Close and delete one non-canonical PR branch before replacement proceeds."""
+        """Close a non-canonical PR, retaining Neptune's branches for stack recovery."""
 
         self.add_issue_labels(pull_request, ("superseded", "duplicate"))
         canonical_text = f" Canonical pull request: #{canonical}." if canonical is not None else ""
@@ -1088,17 +1103,10 @@ class GitHubClient:
             f"Factory convergence closed this non-canonical pull request: {reason}."
             f"{canonical_text}",
         )
-        self._run(
-            (
-                "gh",
-                "pr",
-                "close",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--delete-branch",
-            )
-        )
+        arguments = ["gh", "pr", "close", str(pull_request), "--repo", self.repository]
+        if self.repository.casefold() != NEPTUNE_REPOSITORY.casefold():
+            arguments.append("--delete-branch")
+        self._run(tuple(arguments))
 
     def mark_ready(self, pull_request: int) -> None:
         self._run(
@@ -1438,6 +1446,30 @@ class GitHubClient:
             ci_required_failed=ci_required_failed,
         )
 
+    def neptune_gate_for_head(
+        self, head: str, required: frozenset[str] = frozenset({NEPTUNE_GATE})
+    ) -> NeptuneGate:
+        """Read the same app-pinned literal check evidence for PR or main heads."""
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "--paginate",
+                f"repos/{self.repository}/commits/{head}/check-runs?filter=latest&per_page=100",
+                "--jq",
+                ".check_runs[] | @base64",
+            )
+        )
+        # Use the repository's existing per-record pagination convention. The
+        # installed gh 2.46 has --paginate, but not newer --slurp support.
+        checks = []
+        for encoded in output.splitlines():
+            try:
+                checks.append(json.loads(base64.b64decode(encoded, validate=True).decode("utf-8")))
+            except (ValueError, UnicodeError) as error:
+                raise FactoryError("Neptune check-run encoding is malformed") from error
+        return neptune_gate([{"check_runs": checks}], head, required)
+
     def _neptune_pull_request_status(self, pull_request: int) -> PullRequestStatus:
         owner, name = self.repository.split("/", 1)
         query = """
@@ -1490,26 +1522,12 @@ query($owner: String!, $name: String!, $number: Int!) {
             "ahead",
             "identical",
         }
-        output = self._run(
-            (
-                "gh",
-                "api",
-                "--paginate",
-                f"repos/{self.repository}/commits/{head}/check-runs"
-                "?check_name=Neptune%20merge%20gate&filter=latest&per_page=100",
-                "--jq",
-                ".check_runs[] | @base64",
-            )
+        required = (
+            required_neptune_checks(comparison)
+            if current and item.get("state") == "OPEN"
+            else frozenset({NEPTUNE_GATE})
         )
-        # Use the repository's existing per-record pagination convention. The
-        # installed gh 2.46 has --paginate, but not newer --slurp support.
-        checks = []
-        for encoded in output.splitlines():
-            try:
-                checks.append(json.loads(base64.b64decode(encoded, validate=True).decode("utf-8")))
-            except (ValueError, UnicodeError) as error:
-                raise FactoryError("Neptune check-run encoding is malformed") from error
-        gate = neptune_gate([{"check_runs": checks}], head)
+        gate = self.neptune_gate_for_head(head, required)
         failed = set(gate.failed_checks)
         if not current:
             failed.add("Neptune current base")

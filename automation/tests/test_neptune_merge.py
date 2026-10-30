@@ -14,7 +14,9 @@ from openhands_factory.github import GitHubClient
 from openhands_factory.neptune_merge import (
     NEPTUNE_GATE,
     NEPTUNE_REPOSITORY,
+    PROVISIONING_GATE,
     neptune_gate,
+    required_neptune_checks,
     validate_neptune_protection,
 )
 from openhands_factory.repository_guard import ProcessResult
@@ -101,7 +103,7 @@ def responses(
     return [
         pr() if item is None else item,
         {"object": {"sha": BASE}},
-        {"status": comparison},
+        {"status": comparison, "files": [{"filename": "README.md"}]},
         [{"check_runs": [check()] if checks is None else checks}],
     ]
 
@@ -304,3 +306,156 @@ def test_existing_zero_review_policy_passes() -> None:
     without_reviews = protection()
     without_reviews["required_pull_request_reviews"] = None
     validate_neptune_protection(settings(), without_reviews)
+
+
+def test_neptune_supersession_preserves_source_branch(tmp_path: Path) -> None:
+    runner = Runner([{}, {}, {}])
+    GitHubClient(NEPTUNE_REPOSITORY, tmp_path, "secret", runner).supersede_pull_request(
+        42,
+        canonical=41,
+        reason="existing canonical task",
+    )
+    assert runner.calls[-1] == ("gh", "pr", "close", "42", "--repo", NEPTUNE_REPOSITORY)
+    assert "--delete-branch" not in repr(runner.calls)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "tools/factory/provision.py",
+        "tools/factory/provision-lock.json",
+        "tools/factory/provision_probe.py",
+        "tools/factory/tests/test_provision.py",
+        "tools/godot/install.py",
+        "tools/godot/toolchain.json",
+        ".github/workflows/tool-provisioning.yml",
+    ],
+)
+def test_installer_paths_require_real_installation_gate(path: str) -> None:
+    assert required_neptune_checks({"files": [{"filename": path}]}) == {
+        NEPTUNE_GATE,
+        PROVISIONING_GATE,
+    }
+
+
+def test_renaming_a_recipe_cannot_remove_its_real_installation_gate() -> None:
+    assert PROVISIONING_GATE in required_neptune_checks(
+        {
+            "files": [
+                {
+                    "filename": "tools/renamed.py",
+                    "previous_filename": "tools/factory/provision.py",
+                    "status": "renamed",
+                }
+            ]
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "comparison",
+    [
+        {},
+        {"files": []},
+        {"files": [None]},
+        {"files": [{"filename": "../escape"}]},
+        {"files": [{"filename": "README.md", "status": "renamed"}]},
+        {"files": [{"filename": f"docs/{n}.md"} for n in range(300)]},
+    ],
+)
+def test_missing_or_truncated_changed_file_evidence_blocks(comparison: object) -> None:
+    with pytest.raises(FactoryError):
+        required_neptune_checks(comparison)
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        "missing",
+        "skipped",
+        "neutral",
+        "failure",
+        "cancelled",
+        "timed_out",
+        "wrong-app",
+        "wrong-head",
+    ],
+)
+def test_aggregate_success_cannot_hide_required_provisioning_gate(
+    tmp_path: Path,
+    result: str,
+) -> None:
+    extra = check(name=PROVISIONING_GATE, conclusion=result)
+    if result == "wrong-app":
+        extra.update(app={"id": 999}, conclusion="success")
+    if result == "wrong-head":
+        extra.update(head_sha="c" * 40, conclusion="success")
+    checks = [check()] if result == "missing" else [check(), extra]
+    values = responses(checks=checks)
+    values[2] = {"status": "ahead", "files": [{"filename": "tools/factory/provision.py"}]}
+    runner = Runner(values)
+    with pytest.raises(FactoryError, match="passing exact-head/current-base"):
+        GitHubClient(NEPTUNE_REPOSITORY, tmp_path, "secret", runner).merge_pull_request(42, HEAD)
+    assert not any(call[:3] == ("gh", "pr", "merge") for call in runner.calls)
+
+
+def test_recipe_merge_requires_both_successful_app_pinned_checks(tmp_path: Path) -> None:
+    values = responses(checks=[check(), check(name=PROVISIONING_GATE)])
+    values[2] = {"status": "ahead", "files": [{"filename": "tools/godot/toolchain.json"}]}
+    runner = Runner([*values, settings(), protection(), {}])
+    GitHubClient(NEPTUNE_REPOSITORY, tmp_path, "secret", runner).merge_pull_request(42, HEAD)
+    assert runner.calls[-1][:3] == ("gh", "pr", "merge")
+    assert "--auto" in runner.calls[-1]
+
+
+def test_metadata_does_not_wait_for_path_filtered_installer_workflow(tmp_path: Path) -> None:
+    runner = Runner(responses())
+    assert (
+        GitHubClient(NEPTUNE_REPOSITORY, tmp_path, "secret", runner)
+        .pull_request_status(42)
+        .checks_passed
+    )
+
+
+def test_required_gate_selection_cannot_be_empty_or_unknown() -> None:
+    for required in (frozenset(), frozenset({NEPTUNE_GATE, "unrecognised"})):
+        with pytest.raises(FactoryError, match="selection"):
+            neptune_gate([{"check_runs": [check()]}], HEAD, required)
+
+
+def test_neptune_external_pr_requires_explicit_handoff_even_for_repository_owner(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 41,
+            "title": "Operator's active research",
+            "body": "Keep ownership",
+            "headRefName": "research/operator-active",
+            "isCrossRepository": False,
+            "isDraft": False,
+            "author": {"login": "elgansayer"},
+            "labels": [],
+        },
+        {
+            "number": 42,
+            "title": "Ready bounded handoff",
+            "body": "Concrete acceptance",
+            "headRefName": "research/ready",
+            "isCrossRepository": False,
+            "isDraft": False,
+            "author": {"login": "elgansayer"},
+            "labels": [{"name": "factory-ready"}],
+        },
+    ]
+    runner = Runner([payload])
+    client = GitHubClient(
+        NEPTUNE_REPOSITORY,
+        tmp_path,
+        "secret",
+        runner,
+        require_trusted_intake=True,
+        trusted_github_actors=("elgansayer",),
+        require_ready_label=True,
+    )
+    assert [task.identifier for task in client.collect_open_pull_requests()] == ["42"]
