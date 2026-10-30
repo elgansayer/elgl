@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -489,7 +495,7 @@
       }
       .seg button[aria-checked='true'] {
         background: rgb(var(--primary) / 0.15);
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .range {
         appearance: none;
@@ -528,7 +534,7 @@
       .lang-tile.on {
         background: rgb(var(--primary) / 0.1);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .lang-tile .flag {
         font-size: 22px;
@@ -584,7 +590,7 @@
       }
       .side nav a[aria-current='page'] {
         background: rgb(var(--surface-100));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .side nav a .ico {
         font-size: 20px;
@@ -630,7 +636,7 @@
       }
       del.rem {
         background: rgb(var(--danger) / 0.15);
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-radius: 4px;
         padding-inline: 2px;
       }
@@ -686,7 +692,7 @@
               style="
                 padding: 0 16px 12px;
                 font-size: 18px;
-                color: rgb(var(--primary));
+                color: rgb(var(--primary-text));
                 font-weight: 800;
               "
               >HelloTalk</span
@@ -770,7 +776,7 @@
             <button class="btn secondary-btn block" type="button">Restore account</button>
           </div>
           <span class="state-label">Error</span>
-          <p style="margin: 0; font-size: 13px; color: rgb(var(--danger))" role="alert">
+          <p style="margin: 0; font-size: 13px; color: rgb(var(--danger-text))" role="alert">
             Something went wrong. Please try again.
           </p>
         </div>
@@ -806,7 +812,7 @@
             </p>
           </div>
           <div class="card stack" style="border-color: rgb(var(--danger) / 0.4)">
-            <span class="title" style="color: rgb(var(--danger))">Delete My Account</span>
+            <span class="title" style="color: rgb(var(--danger-text))">Delete My Account</span>
             <p class="muted" style="margin: 0">
               Permanently delete your account and all associated data. This action is irreversible
               after a 30-day grace period.
@@ -862,7 +868,7 @@
           <p role="status" style="margin: 0; color: rgb(var(--success)); font-size: 14px">
             Account transferred successfully!
           </p>
-          <p role="alert" style="margin: 0; color: rgb(var(--danger)); font-size: 14px">
+          <p role="alert" style="margin: 0; color: rgb(var(--danger-text)); font-size: 14px">
             This link has expired. Generate a new one on your other device.
           </p>
         </div>
@@ -970,7 +976,7 @@
                 <div class="grow">
                   <div id="alsTitle" class="title">Select App Language (Any Language)</div>
                   <div class="muted">
-                    Language: <strong style="color: rgb(var(--primary))">EN</strong>
+                    Language: <strong style="color: rgb(var(--primary-text))">EN</strong>
                   </div>
                 </div>
                 <button
@@ -1065,7 +1071,7 @@
                   ><strong style="font-size: 14px">English</strong><br /><span class="muted"
                     >English</span
                   ></span
-                ><span style="font-size: 12px; font-weight: 600; color: rgb(var(--primary))"
+                ><span style="font-size: 12px; font-weight: 600; color: rgb(var(--primary-text))"
                   >Selected</span
                 >
               </div>

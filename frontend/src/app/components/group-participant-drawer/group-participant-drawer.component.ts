@@ -115,7 +115,7 @@ export interface GroupParticipant {
                       d="M14 5l7 7m0 0l-7 7m7-7H3"
                     />
                   </svg>
-                  <span class="font-medium text-secondary">{{
+                  <span class="font-medium text-secondary-ink">{{
                     user.target_languages[0] || ''
                   }}</span>
                 </div>

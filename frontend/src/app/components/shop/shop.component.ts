@@ -30,12 +30,12 @@ interface CatalogItem {
         [text]="'tour.shopLinkDesc' | t"
         stepPosition="bottom"
       >
-        <a routerLink="/cart" class="mb-6 block text-sm font-medium text-primary underline">{{
+        <a routerLink="/cart" class="mb-6 block text-sm font-medium text-primary-ink underline">{{
           'cart.title' | t
         }}</a>
       </span>
       @if (message()) {
-        <p class="mb-4 text-sm text-primary" aria-live="polite">{{ message() }}</p>
+        <p class="mb-4 text-sm text-primary-ink" aria-live="polite">{{ message() }}</p>
       }
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" role="list">
         @for (item of items(); track item.id) {

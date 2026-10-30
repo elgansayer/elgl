@@ -43,7 +43,10 @@ test('relay tokens parse from styles.scss for both themes', () => {
       'surface-500',
       'text-primary',
       'primary',
+      'primary-text',
       'secondary',
+      'secondary-text',
+      'danger-text',
       'on-fill',
       'accent',
     ]) {

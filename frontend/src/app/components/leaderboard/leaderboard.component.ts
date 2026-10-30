@@ -26,13 +26,13 @@ interface Corrector {
       @if (isLoading()) {
         <p class="text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (error(); as err) {
-        <p class="text-danger">{{ 'common.error' | t }}: {{ err }}</p>
+        <p class="text-danger-ink">{{ 'common.error' | t }}: {{ err }}</p>
       } @else {
         <div class="space-y-3">
           @for (corrector of correctors(); track corrector.id; let i = $index) {
             <app-card variant="elevated" padding="md">
               <div class="flex items-center gap-4">
-                <span class="text-lg font-bold text-primary w-8">{{ i + 1 }}</span>
+                <span class="text-lg font-bold text-primary-ink w-8">{{ i + 1 }}</span>
                 <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden">
                   @if (corrector.avatar_url; as avatar) {
                     <img

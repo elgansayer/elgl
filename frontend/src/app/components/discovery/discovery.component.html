@@ -49,7 +49,7 @@
 
       <!-- Language Selection Pills -->
       <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
-        @for (lang of myTargetLangs(); track lang.code) {
+        @for (lang of targetLanguageChips(); track lang.code) {
           <button
             hlmBtn
             (click)="setLanguage(lang.code)"
@@ -58,9 +58,9 @@
             class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
             role="radio"
             [attr.aria-checked]="selectedTargetLanguage() === lang.code"
-            [attr.aria-label]="lang.labelKey | t"
+            [attr.aria-label]="lang.label"
           >
-            <span aria-hidden="true">{{ lang.flag }}</span> {{ lang.labelKey | t }}
+            <span aria-hidden="true">{{ lang.flag }}</span> {{ lang.label }}
           </button>
         }
         <button
@@ -255,12 +255,9 @@
             >
           }
           @if (seriousModeError()) {
-            <span
-              id="seriousModeError"
-              class="text-[9px] sm:text-[10px] text-error"
-              role="alert"
-              >{{ 'common.error' | t }}</span
-            >
+            <span id="seriousModeError" class="text-[9px] sm:text-[10px] text-error" role="alert">{{
+              'common.error' | t
+            }}</span>
           }
         </div>
 
@@ -369,7 +366,9 @@
           <section aria-live="assertive" class="content-state-enter" role="alert">
             <div class="flex flex-col items-center gap-3 py-16 text-center">
               <span aria-hidden="true" class="text-4xl">📍</span>
-              <h2 class="text-lg font-semibold text-text-primary">{{ 'discovery.filterNearMe' | t }}</h2>
+              <h2 class="text-lg font-semibold text-text-primary">
+                {{ 'discovery.filterNearMe' | t }}
+              </h2>
               <p class="max-w-prose text-sm text-text-secondary">
                 {{
                   nearbyLocationStatus() === 'offline'
@@ -399,9 +398,9 @@
             <app-empty-state
               icon="⚠️"
               [title]="'discovery.searchErrorTitle' | t"
-              [description]="'discovery.searchErrorDescription' | t"
-              [actionLabel]="'discovery.searchErrorAction' | t"
-              (actionClicked)="retrySearch()"
+              [description]="searchErrorDescriptionKey() | t"
+              [actionLabel]="searchErrorActionKey() | t"
+              (actionClicked)="resolveSearchError()"
               [customClass]="'py-16'"
             >
             </app-empty-state>
@@ -443,7 +442,8 @@
                   <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
                     <img
                       loading="lazy"
-                      [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
+                      [src]="partner.avatar_url || '/assets/default-avatar.png'"
+                      (error)="useDefaultAvatar($event)"
                       [attr.alt]="
                         'discovery.partnerAvatar'
                           | t: { name: partner.display_name || ('discovery.partnerFallback' | t) }

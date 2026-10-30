@@ -30,6 +30,9 @@
         --primary: 198 82 48;
         --secondary: 26 132 120;
         --danger: 217 58 58;
+        --primary-text: 178 74 43;
+        --secondary-text: 23 119 108;
+        --danger-text: 204 39 39;
         --success: 25 134 84;
         --warning: 161 108 9;
         --vip: 153 111 16;
@@ -59,6 +62,9 @@
         --primary: 255 122 82;
         --secondary: 53 214 192;
         --danger: 255 107 107;
+        --primary-text: 255 122 82;
+        --secondary-text: 53 214 192;
+        --danger-text: 255 107 107;
         --success: 52 211 153;
         --warning: 242 179 61;
         --vip: 232 184 75;
@@ -235,7 +241,7 @@
       }
       .btn.ghost {
         background: transparent;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .btn.vip {
         background: rgb(var(--vip));
@@ -285,7 +291,7 @@
       .field .error {
         font-weight: 400;
         font-size: 12px;
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .field.invalid input {
         border-color: rgb(var(--danger));
@@ -304,12 +310,12 @@
       .chip.on {
         background: rgb(var(--primary) / 0.14);
         border-color: rgb(var(--primary));
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
       }
       .chip.tide {
         background: rgb(var(--secondary) / 0.14);
         border-color: rgb(var(--secondary));
-        color: rgb(var(--secondary));
+        color: rgb(var(--secondary-text));
       }
       .badge {
         display: inline-flex;
@@ -399,7 +405,7 @@
         border: 1px solid;
       }
       .alert.error {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
         border-color: rgb(var(--danger) / 0.5);
         background: rgb(var(--danger) / 0.08);
       }
@@ -487,7 +493,7 @@
         border: 0;
         min-height: 44px;
         padding: 0 12px;
-        color: rgb(var(--primary));
+        color: rgb(var(--primary-text));
         font: 600 14px/1 inherit;
         text-decoration: underline;
         text-underline-offset: 3px;
@@ -502,7 +508,7 @@
         color: rgb(var(--success));
       }
       .msg.bad {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .rules {
         list-style: none;
@@ -522,7 +528,7 @@
         color: rgb(var(--success));
       }
       .rules .fail {
-        color: rgb(var(--danger));
+        color: rgb(var(--danger-text));
       }
       .rules b {
         inline-size: 1em;

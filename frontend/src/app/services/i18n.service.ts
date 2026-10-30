@@ -379,6 +379,11 @@ export class I18nService {
     'discovery.searchErrorTitle': 'Something went wrong',
     'discovery.searchErrorDescription':
       "We couldn't load partner results. Please check your connection and try again.",
+    'discovery.searchErrorUnauthorised':
+      "We couldn't verify your account. Refresh your session and try again.",
+    'discovery.searchErrorRateLimited': "You've searched too often. Wait a moment, then try again.",
+    'discovery.searchErrorInvalid':
+      "These filters couldn't be applied. Reset them and try a new search.",
     'discovery.searchErrorAction': 'Try Again',
     'discovery.searchError': 'Failed to load partners',
     'discovery.searchErrorHint':
@@ -1764,10 +1769,24 @@ export class I18nService {
     'context_menu.speak': 'Speak',
     'context_menu.correct': 'Correct',
     'context_menu.requestCorrection': 'Request correction',
+    'context_menu.explainThis': 'Explain this',
     'context_menu.favourite': 'Favourite',
     'context_menu.report': 'Report',
     'context_menu.block': 'Block',
     'context_menu.unblock': 'Unblock',
+    'context_menu.cancel': 'Cancel',
+
+    // Grammar explanation dialog (opened from the Explain this context menu action)
+    'grammarExplanation.title': 'Grammar explanation',
+    'grammarExplanation.description':
+      'An AI-generated breakdown of what changed and why. It may contain mistakes.',
+    'grammarExplanation.loading': 'Explaining this correction...',
+    'grammarExplanation.errorRateLimit':
+      'You have made too many explanation requests. Please wait and try again.',
+    'grammarExplanation.errorAuth': 'Sign in again to explain this correction.',
+    'grammarExplanation.errorEmpty': 'No explanation was returned. Please try again.',
+    'grammarExplanation.errorRequest':
+      'This correction could not be explained. Check your connection and try again.',
 
     // Report User Modal
     'report.button_label': 'Report',

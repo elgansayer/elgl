@@ -133,7 +133,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
               <span class="rounded-app bg-warning/20 px-2 py-0.5 font-bold text-warning">
                 {{ 'review.goodCount' | t: { count: sessionStats().good } }}
               </span>
-              <span class="rounded-app bg-danger/20 px-2 py-0.5 font-bold text-danger">
+              <span class="rounded-app bg-danger/20 px-2 py-0.5 font-bold text-danger-ink">
                 {{ 'review.againCount' | t: { count: sessionStats().again } }}
               </span>
             </div>
@@ -155,7 +155,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 <span class="rounded-app bg-warning/20 px-3 py-1 font-bold text-warning">
                   {{ 'review.goodCount' | t: { count: sessionStats().good } }}
                 </span>
-                <span class="rounded-app bg-danger/20 px-3 py-1 font-bold text-danger">
+                <span class="rounded-app bg-danger/20 px-3 py-1 font-bold text-danger-ink">
                   {{ 'review.againCount' | t: { count: sessionStats().again } }}
                 </span>
               </div>
@@ -186,7 +186,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   <div class="flip-card-inner">
                     <div class="flip-card-face flip-card-front" [attr.id]="'card-front-' + card.id">
                       <div class="mb-3 flex items-center justify-between text-xs font-bold">
-                        <span class="rounded-app bg-primary/20 px-2 py-0.5 text-primary">
+                        <span class="rounded-app bg-primary/20 px-2 py-0.5 text-primary-ink">
                           {{ 'review.levelBadge' | t: { level: card.srs_level } }}
                         </span>
                         @if (card.original_context) {
@@ -201,7 +201,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                           &ldquo;{{ card.original_context }}&rdquo;
                         </p>
                       }
-                      <p class="mt-4 text-xs font-bold text-primary">
+                      <p class="mt-4 text-xs font-bold text-primary-ink">
                         {{ 'review.tapToFlip' | t }}
                       </p>
                     </div>

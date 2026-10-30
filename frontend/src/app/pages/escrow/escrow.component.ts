@@ -105,7 +105,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
       @if (!loading() && error()) {
         <app-card variant="outlined" customClass="border-danger/40 bg-danger/10">
           <div class="flex flex-col items-start gap-3">
-            <p class="text-sm text-danger">{{ 'escrow.loadError' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'escrow.loadError' | t }}</p>
             <app-button-secondary size="sm" (clicked)="reload()">
               {{ 'escrow.retry' | t }}
             </app-button-secondary>
@@ -156,7 +156,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
                   </div>
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
-                      <span class="text-lg font-bold text-primary">
+                      <span class="text-lg font-bold text-primary-ink">
                         {{ escrow.amount }}
                       </span>
                       <span class="text-xs text-text-secondary">{{ 'escrow.coins' | t }}</span>

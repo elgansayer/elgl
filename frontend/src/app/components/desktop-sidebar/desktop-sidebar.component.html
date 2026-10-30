@@ -4,7 +4,7 @@
   [attr.aria-label]="'nav.mainNav' | t"
 >
   <div class="px-6 pb-4">
-    <span class="text-lg font-black text-primary tracking-tight">{{ 'app.title' | t }}</span>
+    <span class="text-lg font-black text-primary-ink tracking-tight">{{ 'app.title' | t }}</span>
   </div>
 
   <ul class="flex flex-col gap-1 px-3">
@@ -12,7 +12,7 @@
       <li>
         <a
           [routerLink]="item.path"
-          routerLinkActive="bg-surface-100 text-primary"
+          routerLinkActive="bg-surface-100 text-primary-ink"
           ariaCurrentWhenActive="page"
           [routerLinkActiveOptions]="{ exact: item.exact }"
           class="flex items-center gap-3 px-4 py-3 rounded-app text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
@@ -45,7 +45,7 @@
     <li>
       <a
         routerLink="/shop"
-        routerLinkActive="bg-surface-100 text-primary"
+        routerLinkActive="bg-surface-100 text-primary-ink"
         ariaCurrentWhenActive="page"
         class="flex items-center gap-3 px-4 py-3 rounded-app text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.shop' | t"
@@ -61,7 +61,7 @@
     <li>
       <a
         routerLink="/sticker-store"
-        routerLinkActive="bg-surface-100 text-primary"
+        routerLinkActive="bg-surface-100 text-primary-ink"
         ariaCurrentWhenActive="page"
         class="flex items-center gap-3 px-4 py-3 rounded-app text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.stickerStore' | t"
@@ -77,7 +77,7 @@
     <li>
       <a
         routerLink="/subscription"
-        routerLinkActive="bg-surface-100 text-primary"
+        routerLinkActive="bg-surface-100 text-primary-ink"
         ariaCurrentWhenActive="page"
         class="flex items-center gap-3 px-4 py-3 rounded-app text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.vip' | t"

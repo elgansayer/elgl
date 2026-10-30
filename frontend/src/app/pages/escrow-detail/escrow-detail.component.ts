@@ -70,7 +70,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
       @if (!loading() && error()) {
         <app-card variant="outlined" customClass="border-danger/40 bg-danger/10">
           <div class="flex flex-col items-start gap-3">
-            <p class="text-sm text-danger">{{ 'escrow.detailLoadError' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'escrow.detailLoadError' | t }}</p>
             <app-button-secondary size="sm" (clicked)="reload()">
               {{ 'escrow.retry' | t }}
             </app-button-secondary>
@@ -81,7 +81,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
       <!-- Action Error -->
       @if (actionError()) {
         <div
-          class="rounded-app border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+          class="rounded-app border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink"
           role="alert"
         >
           {{ actionError() }}
@@ -127,7 +127,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 
             <!-- Amount -->
             <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-bold text-primary">{{ detail.amount }}</span>
+              <span class="text-3xl font-bold text-primary-ink">{{ detail.amount }}</span>
               <span class="text-sm text-text-secondary">{{ 'escrow.coins' | t }}</span>
             </div>
 
@@ -166,10 +166,10 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
             <!-- Dispute Info -->
             @if (detail.dispute_reason) {
               <div class="rounded-app border border-danger/30 bg-danger/5 p-3">
-                <p class="text-xs font-semibold text-danger mb-1">
+                <p class="text-xs font-semibold text-danger-ink mb-1">
                   {{ 'escrow.disputeReason' | t }}
                 </p>
-                <p class="text-xs text-danger/80">{{ detail.dispute_reason }}</p>
+                <p class="text-xs text-danger-ink/80">{{ detail.dispute_reason }}</p>
                 @if (detail.dispute_evidence) {
                   <p class="text-xs text-text-secondary mt-1">
                     {{ 'escrow.disputeEvidence' | t }}: {{ detail.dispute_evidence }}
@@ -208,7 +208,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 
                   <app-button-secondary
                     [disabled]="isDisputing()"
-                    customClass="text-danger border-danger/40 hover:bg-danger/10"
+                    customClass="text-danger-ink border-danger/40 hover:bg-danger/10"
                     (clicked)="onDispute(detail.id)"
                   >
                     @if (isDisputing()) {

@@ -76,8 +76,17 @@ export class UsersService {
       .eq('id', userId)
       .single();
 
-    if (response.error || !response.data) {
-      return this.getMockProfile(userId);
+    if (response.error) {
+      if (response.error.code === 'PGRST116') {
+        throw new NotFoundException('User profile not found');
+      }
+      Logger.error('Failed to load user profile', {
+        code: response.error.code,
+      });
+      throw new InternalServerErrorException('Unable to load user profile');
+    }
+    if (!response.data) {
+      throw new NotFoundException('User profile not found');
     }
 
     const profile = response.data as UserProfile;
@@ -602,9 +611,10 @@ export class UsersService {
       .update(updatePayload as never)
       .eq('id', userId);
     if (updateError) {
-      Logger.warn(
-        `Supabase update failed, falling back to mock: ${updateError.message}`,
-      );
+      Logger.error('Failed to update user profile', {
+        code: updateError.code,
+      });
+      throw new InternalServerErrorException('Unable to update user profile');
     }
 
     // Invalidate matchmaking caches when profile fields that affect

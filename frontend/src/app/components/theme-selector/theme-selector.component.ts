@@ -22,7 +22,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
           [attr.aria-checked]="currentTheme() === theme.value"
           [attr.aria-label]="theme.label | t"
           [class.bg-primary/15]="currentTheme() === theme.value"
-          [class.text-primary]="currentTheme() === theme.value"
+          [class.text-primary-ink]="currentTheme() === theme.value"
           (click)="setTheme(theme.value)"
         >
           {{ theme.label | t }}

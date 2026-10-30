@@ -62,7 +62,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <div class="flex items-center justify-center h-full">
             <div class="text-center text-white/60 space-y-4 px-6">
               <span class="text-5xl" aria-hidden="true">&#9888;&#65039;</span>
-              <h3 class="text-lg font-bold text-danger">
+              <h3 class="text-lg font-bold text-danger-ink">
                 {{ 'videoClassroomErrorBoundary.title' | t }}
               </h3>
               <p class="text-sm text-white/50">

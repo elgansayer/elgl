@@ -26,7 +26,10 @@ import { TranslateBioDto } from './dto/translate-bio.dto';
 import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
 import { TransliterateDto } from './dto/transliterate.dto';
 import { GrammarCheckService } from './grammar-check.service';
-import { GrammarExplanationService } from './grammar-explanation.service';
+import {
+  GrammarExplanationResult,
+  GrammarExplanationService,
+} from './grammar-explanation.service';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -144,15 +147,11 @@ export class NlpController {
   async explainGrammar(
     @CurrentUser() user: User | null,
     @Body() dto: ExplainGrammarDto,
-  ): Promise<{
-    original: string;
-    corrected: string;
-    explanation: string;
-  } | null> {
+  ): Promise<GrammarExplanationResult | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
     await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
-    return await this.grammarExplanationService.explain(dto);
+    return await this.grammarExplanationService.explain(user.id, dto);
   }
 
   /**

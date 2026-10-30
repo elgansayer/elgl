@@ -372,8 +372,8 @@ describe('ChatPageComponent', () => {
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      // Check for the read-state checkmark (text-primary)
-      const readChecks = compiled.querySelectorAll('.text-primary');
+      // Check for the read-state checkmark (text-primary-ink)
+      const readChecks = compiled.querySelectorAll('.text-primary-ink');
       expect(readChecks.length).toBeGreaterThan(0);
     });
   });

@@ -41,7 +41,7 @@ const CHAT_ROOM_URL = /^\/chat\/([0-9a-f-]{36})(?:[/?#]|$)/i;
           </div>
         } @else if (catalogError()) {
           <div class="flex flex-wrap items-center justify-between gap-2" aria-live="polite">
-            <span class="text-sm text-danger">{{ 'common.error' | t }}</span>
+            <span class="text-sm text-danger-ink">{{ 'common.error' | t }}</span>
             <button hlmBtn variant="outline" type="button" (click)="loadCatalog()">
               {{ 'common.retry' | t }}
             </button>
@@ -54,7 +54,7 @@ const CHAT_ROOM_URL = /^\/chat\/([0-9a-f-]{36})(?:[/?#]|$)/i;
             </p>
           </div>
           @if (runError()) {
-            <p class="text-sm text-danger" role="status" aria-live="polite">
+            <p class="text-sm text-danger-ink" role="status" aria-live="polite">
               {{ 'common.error' | t }}
             </p>
           }
