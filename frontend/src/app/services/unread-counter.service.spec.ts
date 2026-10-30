@@ -141,6 +141,28 @@ describe('UnreadCounterService', () => {
     expect(service.tabCount('discovery')).toBe(3);
   });
 
+  it('preserves conflicting local changes when the response contains an intermediate count', () => {
+    service.set('moments', 4);
+    const snapshot = service.snapshot();
+    service.increment('moments');
+    service.decrement('moments');
+
+    service.reconcile('moments', 5, snapshot);
+
+    expect(service.tabCount('moments')).toBe(4);
+  });
+
+  it('preserves conflicting local changes when the response contains the opposite intermediate count', () => {
+    service.set('discovery', 4);
+    const snapshot = service.snapshot();
+    service.decrement('discovery');
+    service.increment('discovery');
+
+    service.reconcile('discovery', 3, snapshot);
+
+    expect(service.tabCount('discovery')).toBe(4);
+  });
+
   it('should normalise invalid and fractional counts before navigation renders them', () => {
     service.set('chat', Number.NaN);
     service.set('moments', Number.POSITIVE_INFINITY);
