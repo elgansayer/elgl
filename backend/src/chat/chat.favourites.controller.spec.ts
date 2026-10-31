@@ -52,13 +52,36 @@ describe('ChatController favourites contract', () => {
     expect(chatService.addFavourite).toHaveBeenCalledWith('user-1', dto);
   });
 
+  it('adds a favourite with note text for the authenticated user', async () => {
+    const dtoWithNote = {
+      message_id: '00000000-0000-4000-8000-000000000001',
+      note_text: 'Important grammar correction',
+    };
+    await expect(controller.addFavourite(user, dtoWithNote)).resolves.toEqual({
+      success: true,
+    });
+    expect(chatService.addFavourite).toHaveBeenCalledWith(
+      'user-1',
+      dtoWithNote,
+    );
+  });
+
   it('does not add a favourite without an authenticated user', async () => {
     await expect(controller.addFavourite(null, dto)).resolves.toBeNull();
     expect(chatService.addFavourite).not.toHaveBeenCalled();
   });
 
   it('returns only the authenticated user favourites', async () => {
-    const favourites = [{ id: 'fav-1' }] as FavouriteRecord[];
+    const favourites: FavouriteRecord[] = [
+      {
+        id: 'fav-1',
+        user_id: 'user-1',
+        item_type: 'message',
+        item_payload: { id: 'message-1' },
+        notes: null,
+        created_at: '2026-10-31T00:00:00.000Z',
+      },
+    ];
     favouritesService.getStarredMessages.mockResolvedValue({
       items: favourites,
       has_more: false,
@@ -71,6 +94,25 @@ describe('ChatController favourites contract', () => {
       100,
       0,
     );
+  });
+
+  it('filters out malformed items when returning favourites', async () => {
+    const validFav: FavouriteRecord = {
+      id: 'fav-1',
+      user_id: 'user-1',
+      item_type: 'message',
+      item_payload: { id: 'message-1' },
+      notes: null,
+      created_at: '2026-10-31T00:00:00.000Z',
+    };
+    const malformedFav = { other: 'invalid' };
+    favouritesService.getStarredMessages.mockResolvedValue({
+      items: [validFav, malformedFav],
+      has_more: false,
+      next_offset: null,
+    });
+
+    await expect(controller.getFavourites(user)).resolves.toEqual([validFav]);
   });
 
   it('returns an empty list without an authenticated user', async () => {

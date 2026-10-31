@@ -151,31 +151,24 @@ describe('FavouritesComponent', () => {
 
     expect(mockFavouriteService.getStarredMessages).toHaveBeenNthCalledWith(2, 100, 0);
     expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(100, 100);
-    expect(component.favourites().map((favourite) => favourite.id)).toEqual([
-      'fav-1',
-      'fav-2',
-    ]);
+    expect(component.favourites().map((favourite) => favourite.id)).toEqual(['fav-1', 'fav-2']);
   });
 
   it('bounds sparse page scans by inspected offsets', async () => {
     await fixture.whenStable();
     mockFavouriteService.getStarredMessages.mockClear();
-    mockFavouriteService.getStarredMessages.mockImplementation(
-      (_limit: number, offset: number) =>
-        Promise.resolve({
-          items: [],
-          has_more: true,
-          next_offset: offset + 100,
-        }),
+    mockFavouriteService.getStarredMessages.mockImplementation((_limit: number, offset: number) =>
+      Promise.resolve({
+        items: [],
+        has_more: true,
+        next_offset: offset + 100,
+      }),
     );
 
     await component.loadFavourites();
 
     expect(mockFavouriteService.getStarredMessages).toHaveBeenCalledTimes(5);
-    expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(
-      100,
-      400,
-    );
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(100, 400);
     expect(component.loadError()).toBe(false);
     expect(component.favourites()).toEqual([]);
   });
@@ -201,18 +194,31 @@ describe('FavouritesComponent', () => {
     expect(component.filteredFavourites().length).toBe(3);
   });
 
-  it('should filter to text messages only', async () => {
+  it('should filter to text messages only and render message text', async () => {
     await fixture.whenStable();
     component.setTab('messages');
+    fixture.detectChanges();
     expect(component.filteredFavourites().length).toBe(1);
     expect(component.filteredFavourites()[0].id).toBe('fav-1');
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('Hello world!');
+    expect(host.querySelector('app-visual-diff')).toBeNull();
   });
 
-  it('should filter to corrections only', async () => {
+  it('should filter to corrections only and render visual diff', async () => {
     await fixture.whenStable();
     component.setTab('corrections');
+    fixture.detectChanges();
     expect(component.filteredFavourites().length).toBe(1);
     expect(component.filteredFavourites()[0].id).toBe('fav-2');
+
+    const host = fixture.nativeElement as HTMLElement;
+    const visualDiff = host.querySelector('app-visual-diff');
+    expect(visualDiff).not.toBeNull();
+    expect(visualDiff?.querySelector('del')?.textContent?.trim()).toBe('goes');
+    expect(visualDiff?.querySelector('ins')?.textContent?.trim()).toBe('go');
+    expect(visualDiff?.textContent).toContain('Subject-verb agreement');
   });
 
   it('should filter to audio only', async () => {
