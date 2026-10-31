@@ -467,7 +467,7 @@
       "claudeDesignPath": "features/calls-live.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1195-e2ee-personal-messages (e2ee secured badge is conditionally rendered on connected calls; call controls and visual contract are unchanged); issue-1777-live-chat-overlay (additive Centrifugo listener and reduced-motion support for live chat overlay; visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1195-e2ee-personal-messages (e2ee secured badge is conditionally rendered on connected calls; call controls and visual contract are unchanged); issue-1777-live-chat-overlay (additive Centrifugo listener and reduced-motion support for live chat overlay; visual contract is unchanged); issue-1788-raise-hand-approve-speaker (consolidated approve speaker modal into standalone component matching existing preview specimen and added decline/dismiss stage handlers; visual contract is unchanged)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
