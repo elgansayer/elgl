@@ -99,4 +99,32 @@ describe('visitor logs privacy boundary', () => {
     ).toEqual([]);
     expect(normalizeVisitorLogs(validRows)).toHaveLength(MAX_VISITOR_LOGS);
   });
+
+  it('normalizes paginated API response shape containing items array', () => {
+    const paginatedPayload = {
+      items: [
+        {
+          id: 'visit-paginated',
+          created_at: '2026-08-24T09:00:00.000Z',
+          is_blurred: false,
+          visitor: {
+            id: 'visitor-page',
+            display_name: 'Kenji',
+            native_language: 'ja',
+            target_languages: ['en'],
+          },
+        },
+      ],
+      identity_visible: true,
+      limit: 20,
+      offset: 0,
+      has_more: false,
+      next_offset: null,
+    };
+
+    const results = normalizeVisitorLogs(paginatedPayload);
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe('visit-paginated');
+    expect(results[0].visitor.display_name).toBe('Kenji');
+  });
 });

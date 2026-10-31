@@ -2053,6 +2053,13 @@ export class I18nService {
     'vip.consumerFeature2': 'Global discovery',
     'vip.consumerFeature3': 'Location spoofing',
     'vip.consumerFeature4': 'Priority support',
+    'vip.proPlan': 'Pro',
+    'vip.proPrice': '12 UKP / $15 USD',
+    'vip.proFeature1': 'Unlimited AI translations',
+    'vip.proFeature2': 'Advanced visitor logs',
+    'vip.proFeature3': 'Nearby members visibility boost',
+    'vip.proFeature4': 'Ad-free experience',
+    'vip.proFeature5': 'Up to 5 target languages',
     'vip.developerPlan': 'Developer VIP',
     'vip.developerPrice': '20 UKP / $26 USD',
     'vip.developerFeature1': 'All Consumer features',
@@ -2199,6 +2206,19 @@ export class I18nService {
       'Your subscription will end at the close of the current billing period.',
     'subscription.resumeSuccess': 'Your subscription has been resumed.',
     'subscription.actionError': 'Something went wrong. Please try again.',
+    'subscription.page.title': 'Choose Your Subscription Plan',
+    'subscription.page.subtitle':
+      'Unlock unlimited translations, advanced visitor insight, and boosted discovery',
+    'subscription.page.loadError':
+      'Failed to load subscription plans. Please try again.',
+    'subscription.page.retry': 'Retry',
+    'subscription.page.mostPopular': 'Most Popular',
+    'subscription.page.redirecting': 'Redirecting to checkout...',
+    'subscription.page.subscribeMonthly': 'Subscribe Monthly',
+    'subscription.page.subscribeYearly': 'Subscribe Yearly',
+    'subscription.page.currentFreePlan': 'Current Plan',
+    'subscription.page.checkoutError':
+      'Failed to start checkout. Please try again.',
 
     // Report confirm
     'report.confirmMessage': 'Are you sure you want to report this message?',

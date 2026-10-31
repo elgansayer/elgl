@@ -1188,6 +1188,37 @@ describe('DiscoveryService', () => {
       ]);
     });
 
+    it('best_match: boosts Pro VIP partners in discovery match score', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+      const partners = [
+        {
+          id: 'standard-user',
+          study_streak_days: 0,
+          correction_ratio: 0.1,
+          is_vip: false,
+        },
+        {
+          id: 'pro-user',
+          study_streak_days: 0,
+          correction_ratio: 0.1,
+          is_vip: true,
+          vip_tier: 'pro',
+        },
+      ];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartners('user-1', null, {
+        sort: 'best_match',
+      });
+
+      expect(result[0].id).toBe('pro-user');
+      expect((result[0] as any).match_reasons).toContain(
+        'pro_visibility_boost',
+      );
+      expect(result[0]).not.toHaveProperty('vip_tier');
+      expect(result[1]).not.toHaveProperty('vip_tier');
+    });
+
     it('online_now: orders by most recent last_active_at first', async () => {
       const partners = [
         { id: 'a', last_active_at: '2026-07-01T00:00:00.000Z' },

@@ -46,4 +46,15 @@ export class ProfileVisitsController {
     if (!user) throw new UnauthorizedException();
     return this.profileVisitsService.getVisitors(user.id, limit, offset);
   }
+
+  @Get('count')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Header('Cache-Control', 'private, no-store')
+  async getVisitCount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ count: number }> {
+    if (!user) throw new UnauthorizedException();
+    const count = await this.profileVisitsService.getVisitCount(user.id);
+    return { count };
+  }
 }

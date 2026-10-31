@@ -10,12 +10,14 @@ describe('ProfileVisitsController', () => {
   let profileVisitsService: {
     recordVisit: Mock;
     getVisitors: Mock;
+    getVisitCount: Mock;
   };
 
   beforeEach(async () => {
     profileVisitsService = {
       recordVisit: vi.fn(),
       getVisitors: vi.fn(),
+      getVisitCount: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -43,8 +45,21 @@ describe('ProfileVisitsController', () => {
     await expect(controller.getMyVisitors(null, 20, 0)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+    await expect(controller.getVisitCount(null)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
     expect(profileVisitsService.recordVisit).not.toHaveBeenCalled();
     expect(profileVisitsService.getVisitors).not.toHaveBeenCalled();
+    expect(profileVisitsService.getVisitCount).not.toHaveBeenCalled();
+  });
+
+  it('retrieves the total visitor count for an authenticated user', async () => {
+    profileVisitsService.getVisitCount.mockResolvedValue(42);
+
+    const result = await controller.getVisitCount({ id: 'owner-1' } as any);
+
+    expect(result).toEqual({ count: 42 });
+    expect(profileVisitsService.getVisitCount).toHaveBeenCalledWith('owner-1');
   });
 
   it('records a visit without trusting client-side or mock VIP state', async () => {

@@ -647,8 +647,7 @@
                 </ul>
                 <button class="btn-secondary plan-cta">Continue free</button>
               </div>
-              <div class="plan-card popular">
-                <span class="plan-badge">Most popular</span>
+              <div class="plan-card">
                 <h3>Consumer</h3>
                 <p class="plan-price">8 UKP / $10</p>
                 <p class="plan-billed">Billed monthly</p>
@@ -659,20 +658,23 @@
                 </ul>
                 <button class="btn-primary plan-cta">Subscribe</button>
               </div>
-              <div class="plan-card">
+              <div class="plan-card popular">
+                <span class="plan-badge">Most popular</span>
                 <h3>Pro</h3>
-                <p class="plan-price">16 UKP / $20</p>
+                <p class="plan-price">12 UKP / $15</p>
                 <p class="plan-billed">Billed monthly</p>
                 <ul class="plan-features">
-                  <li>Everything in Consumer</li>
-                  <li>HD video rooms</li>
-                  <li>Advanced grammar check</li>
+                  <li>Unlimited AI translations</li>
+                  <li>Advanced visitor logs</li>
+                  <li>Nearby visibility boost</li>
+                  <li>Ad-free experience</li>
+                  <li>Up to 5 target languages</li>
                 </ul>
                 <button class="btn-primary plan-cta">Subscribe</button>
               </div>
               <div class="plan-card">
                 <h3>Developer</h3>
-                <p class="plan-price">40 UKP / $50</p>
+                <p class="plan-price">20 UKP / $26</p>
                 <p class="plan-billed">Billed monthly</p>
                 <ul class="plan-features">
                   <li>Everything in Pro</li>
@@ -706,9 +708,23 @@
                     <td class="yes">✓</td>
                   </tr>
                   <tr>
-                    <td>HD video rooms</td>
+                    <td>Advanced visitor logs</td>
                     <td class="no">−</td>
                     <td class="no">−</td>
+                    <td class="yes">✓</td>
+                    <td class="yes">✓</td>
+                  </tr>
+                  <tr>
+                    <td>Nearby visibility boost</td>
+                    <td class="no">−</td>
+                    <td class="no">−</td>
+                    <td class="yes">✓</td>
+                    <td class="yes">✓</td>
+                  </tr>
+                  <tr>
+                    <td>Ad-free experience</td>
+                    <td class="no">−</td>
+                    <td class="yes">✓</td>
                     <td class="yes">✓</td>
                     <td class="yes">✓</td>
                   </tr>
@@ -859,7 +875,7 @@
       VIP mirrors <code>vip.component.html</code> section-for-section (hero, plan cards, feature
       comparison table, FAQ accordion, closing CTA), collapsed to the mobile single-column layout
       the real page falls back to below its <code>md:</code> breakpoint; the comparison table is
-      trimmed to 3 representative feature rows and the FAQ to 2 items rather than the full set. Coin
+      trimmed to 5 representative feature rows and the FAQ to 2 items rather than the full set. Coin
       economy mirrors <code>coin-economy-dashboard.component.html</code>'s gold-gradient balance
       hero (the <code>vip</code> token's flagship usage), quick-actions grid trimmed from 6 actions
       to the 4 most representative, and the gift/sticker/transaction activity panels with a handful

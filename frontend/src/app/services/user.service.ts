@@ -298,9 +298,28 @@ export class UserService {
   }
 
   async getMyVisitors(): Promise<VisitorLog[]> {
-    return firstValueFrom(
-      this.http.get<VisitorLog[]>(`${this.visitsUrl}/my-visitors`, { headers: this.getHeaders() }),
+    const response = await firstValueFrom(
+      this.http.get<VisitorLog[] | { items: VisitorLog[] }>(
+        `${this.visitsUrl}/my-visitors`,
+        { headers: this.getHeaders() },
+      ),
     );
+    if (Array.isArray(response)) return response;
+    if (response && Array.isArray(response.items)) return response.items;
+    return [];
+  }
+
+  async getVisitCount(): Promise<number> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ count: number }>(`${this.visitsUrl}/count`, {
+          headers: this.getHeaders(),
+        }),
+      );
+      return response.count ?? 0;
+    } catch {
+      return 0;
+    }
   }
 
   async getProfileVisitors(): Promise<ProfileVisitor[]> {

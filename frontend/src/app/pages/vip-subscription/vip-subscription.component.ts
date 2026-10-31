@@ -88,7 +88,8 @@ export class VipSubscriptionComponent {
 
   getFeatureCategories(): Array<{ name: string; getValue: (plan: SubscriptionPlan) => boolean }> {
     const isVip = (p: SubscriptionPlan): boolean => p.id !== 'free';
-    const isPro = (p: SubscriptionPlan): boolean => p.id === 'pro_12_ukp_15_usd';
+    const isPro = (p: SubscriptionPlan): boolean =>
+      p.id === 'pro_12_ukp_15_usd' || p.id === 'developer_20_ukp_26_usd';
     const isDeveloper = (p: SubscriptionPlan): boolean => p.id === 'developer_20_ukp_26_usd';
     return [
       { name: 'Target Languages', getValue: (p) => p.id !== 'free' || true },

@@ -50,11 +50,21 @@ export function safeVisitorAvatarUrl(value: unknown): string | null {
   }
 }
 
+function getRawVisitorList(value: unknown): readonly unknown[] {
+  if (Array.isArray(value)) return value;
+  if (isRecord(value)) {
+    const items = value['items'];
+    if (Array.isArray(items)) return items;
+  }
+  return [];
+}
+
 export function normalizeVisitorLogs(value: unknown): VisitorLog[] {
-  if (!Array.isArray(value)) return [];
+  const list = getRawVisitorList(value);
+  if (list.length === 0) return [];
 
   const normalized: VisitorLog[] = [];
-  for (const raw of value.slice(0, MAX_VISITOR_LOGS)) {
+  for (const raw of list.slice(0, MAX_VISITOR_LOGS)) {
     if (!isRecord(raw) || !isRecord(raw['visitor'])) continue;
 
     const id = boundedString(raw['id'], 128);

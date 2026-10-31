@@ -48,12 +48,16 @@ Unknown or stale provider product IDs return `null`. Callers therefore do not ac
 
 ## Verification
 
-`backend/src/monetisation/services/subscription-plans.service.spec.ts` verifies:
-
-- the Pro catalogue contains the four core product benefits;
-- internal, Apple, catalogue Stripe and runtime-configured Stripe product IDs resolve to canonical tiers;
-- Consumer, Pro and Developer mappings remain distinct;
-- free and unknown products do not grant paid entitlement.
+- `backend/src/monetisation/pro-tier.contract.spec.ts` verifies the full Pro product contract across backend services, entitlements, and catalog benefits.
+- `backend/src/monetisation/services/subscription-plans.service.spec.ts` verifies:
+  - the Pro catalogue contains the four core product benefits;
+  - internal, Apple, catalogue Stripe and runtime-configured Stripe product IDs resolve to canonical tiers;
+  - Consumer, Pro and Developer mappings remain distinct;
+  - free and unknown products do not grant paid entitlement.
+- `backend/src/monetisation/guards/vip.guard.spec.ts` verifies Pro tier gating in `VipGuard`.
+- `backend/src/profile-visits/profile-visits.controller.spec.ts` verifies authenticated visitor count retrieval.
+- `backend/src/discovery/discovery.service.spec.ts` verifies Pro members receive the boosted discovery match score.
+- `frontend/src/app/pages/vip-subscription/vip-subscription.component.spec.ts` and `frontend/src/app/pages/subscription/subscription-page.component.spec.ts` verify the frontend subscription presentation and flows.
 
 The existing Apple, Google Play, Stripe and restore-purchase code paths all consume `getTierByProductId()`, so the canonical result is shared across acquisition and restoration flows.
 

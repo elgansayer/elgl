@@ -942,5 +942,22 @@
   "share.moments": "Moments",
   "share.copy": "Copy",
   "share.copied": "Copied!",
-  "share.linkInputAria": "Share link"
+  "share.linkInputAria": "Share link",
+  "vip.proPlan": "Pro",
+  "vip.proPrice": "12 UKP / $15 USD",
+  "vip.proFeature1": "Unlimited AI translations",
+  "vip.proFeature2": "Advanced visitor logs",
+  "vip.proFeature3": "Nearby members visibility boost",
+  "vip.proFeature4": "Ad-free experience",
+  "vip.proFeature5": "Up to 5 target languages",
+  "subscription.page.title": "Choose Your Subscription Plan",
+  "subscription.page.subtitle": "Unlock unlimited translations, advanced visitor insight, and boosted discovery",
+  "subscription.page.loadError": "Failed to load subscription plans. Please try again.",
+  "subscription.page.retry": "Retry",
+  "subscription.page.mostPopular": "Most Popular",
+  "subscription.page.redirecting": "Redirecting to checkout...",
+  "subscription.page.subscribeMonthly": "Subscribe Monthly",
+  "subscription.page.subscribeYearly": "Subscribe Yearly",
+  "subscription.page.currentFreePlan": "Current Plan",
+  "subscription.page.checkoutError": "Failed to start checkout. Please try again."
 }

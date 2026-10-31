@@ -422,7 +422,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, vip_tier, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -519,15 +519,21 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(
-        this.sortUsers(
-          enriched,
-          query.sort,
-          searchLat,
-          searchLon,
-          _currentUserProfile,
-        ),
+      const rankedUsers = this.sortUsers(
+        enriched,
+        query.sort,
+        searchLat,
+        searchLon,
+        _currentUserProfile,
       );
+      const publicUsers = rankedUsers.map((user) => {
+        const publicUser = { ...user };
+        // vip_tier is loaded only for server-side ranking. Exact entitlement
+        // metadata is not part of the public discovery profile contract.
+        Reflect.deleteProperty(publicUser, 'vip_tier');
+        return publicUser;
+      });
+      return sanitiseDiscoveryData(publicUsers);
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -1188,6 +1194,18 @@ export class DiscoveryService {
           score += 10;
           reasons.push('active_recently');
         }
+      }
+    }
+
+    // E. Pro / VIP Search & Nearby Visibility Boost
+    if (candidate.is_vip) {
+      const tier = candidate.vip_tier ?? '';
+      if (tier.startsWith('pro') || tier.startsWith('developer')) {
+        score += 30;
+        reasons.push('pro_visibility_boost');
+      } else {
+        score += 15;
+        reasons.push('vip_priority');
       }
     }
 

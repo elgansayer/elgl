@@ -9,7 +9,7 @@ function internals(instance: MySubscriptionComponent): any {
   return instance;
 }
 
-describe.skip('MySubscriptionComponent', () => {
+describe('MySubscriptionComponent', () => {
   let component: MySubscriptionComponent;
   let fixture: ComponentFixture<MySubscriptionComponent>;
   let httpTesting: HttpTestingController;
@@ -239,5 +239,38 @@ describe.skip('MySubscriptionComponent', () => {
 
     expect(internals(component).invoices().length).toBe(1);
     expect(fixture.nativeElement.textContent).toContain('8.00 GBP');
+  });
+
+  it('should match currentPlanId for Pro tier', async () => {
+    fixture.detectChanges();
+    httpTesting.expectOne(`${monetisationBase}/subscription`).flush({
+      isVip: true,
+      vipTier: 'pro',
+      email: 'pro@example.com',
+      billing: {
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: '2026-09-01T00:00:00.000Z',
+        nextBillingAmount: 15,
+        currency: 'usd',
+        interval: 'month',
+      },
+    });
+    httpTesting.expectOne(`${monetisationBase}/subscription/invoices`).flush([]);
+    httpTesting.expectOne(plansUrl).flush([
+      {
+        id: 'pro_12_ukp_15_usd',
+        name: 'Pro',
+        description: 'Unlimited translations, advanced visitor logs',
+        price_ukp: 12,
+        price_usd: 15,
+        currency: 'USD',
+        interval: 'month',
+        features: [],
+      },
+    ]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(internals(component).currentPlanId()).toBe('pro_12_ukp_15_usd');
   });
 });

@@ -97,9 +97,14 @@ export class MySubscriptionComponent {
   protected readonly plans = computed(() => this.plansResource.value() ?? EMPTY_PLANS);
 
   protected readonly currentPlanId = computed(() => {
-    const tier = this.details()?.vipTier;
+    const tier = this.details()?.vipTier?.toLowerCase();
     if (!tier) return null;
-    const matched = this.plans().find((p) => p.name.toLowerCase() === tier.toLowerCase());
+    const matched = this.plans().find(
+      (p) =>
+        p.id.toLowerCase().startsWith(tier) ||
+        p.name.toLowerCase().startsWith(tier) ||
+        p.name.toLowerCase() === tier,
+    );
     return matched ? matched.id : null;
   });
 
