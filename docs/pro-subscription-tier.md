@@ -30,7 +30,7 @@ Pro remains inside the authenticated VIP visitor-log boundary. Existing privacy 
 
 ### Nearby members visibility
 
-Pro participates in the existing VIP discovery behaviour and location controls. Location data remains subject to the existing privacy, block and distance-rounding rules. No new precise-location exposure is introduced by this tier mapping.
+Pro participates in the existing VIP discovery behaviour and receives a larger best-match visibility boost than Consumer VIP. Nearby PostGIS results are enriched with subscription tiers through one bounded server-side query before ranking. The tier is removed before the response leaves the API, and paid ranking uses the generic public `vip_priority` reason so the response cannot disclose a member's specific subscription tier. Location data remains subject to the existing privacy, block and distance-rounding rules. No new precise-location exposure is introduced by this tier mapping.
 
 ### Ad-free experience
 
@@ -40,6 +40,8 @@ The current product has no active advertising delivery surface. Pro nevertheless
 
 `is_vip` and `vip_tier` remain server-authoritative and are changed only by verified payment/webhook or purchase-restoration paths. Client-supplied plan labels do not grant paid capabilities. Unknown product IDs resolve to no tier and must not grant an entitlement.
 
+Apple and Google each have one registered webhook controller. The obsolete duplicate routes that accepted unverified entitlement data were removed, so Apple JWS verification and Google Pub/Sub OIDC plus Play API verification cannot be shadowed by controller order.
+
 The configured Stripe price IDs are read from server configuration only. They are compared in memory and are not logged or returned by the entitlement mapping.
 
 ## Failure behaviour
@@ -48,12 +50,18 @@ Unknown or stale provider product IDs return `null`. Callers therefore do not ac
 
 ## Verification
 
-`backend/src/monetisation/services/subscription-plans.service.spec.ts` verifies:
+- `backend/src/monetisation/services/subscription-plans.service.spec.ts` verifies:
 
-- the Pro catalogue contains the four core product benefits;
-- internal, Apple, catalogue Stripe and runtime-configured Stripe product IDs resolve to canonical tiers;
-- Consumer, Pro and Developer mappings remain distinct;
-- free and unknown products do not grant paid entitlement.
+  - the Pro catalogue contains the four core product benefits;
+  - internal, Apple, catalogue Stripe and runtime-configured Stripe product IDs resolve to canonical tiers;
+  - Consumer, Pro and Developer mappings remain distinct;
+  - free and unknown products do not grant paid entitlement.
+
+- `backend/src/monetisation/monetisation.service.spec.ts` verifies Pro checkout uses the configured server-side Stripe price and the verified webhook activates canonical `pro` entitlement.
+- `backend/src/monetisation/apple-notification.service.spec.ts` and `google-play-notification.service.spec.ts` verify canonical Pro mapping and fail-closed unknown products.
+- `backend/src/monetisation/guards/vip.guard.spec.ts` verifies active Pro and Developer members pass Pro-only authorization while Consumer and expired rows do not.
+- `backend/src/discovery/discovery.service.spec.ts` verifies Pro visibility ranking for global and nearby results and confirms `vip_tier` is never exposed publicly.
+- `frontend/src/app/pages/subscription/subscription-page.component.spec.ts` verifies Pro presentation, checkout handoff, free-plan handling and checkout failure recovery.
 
 The existing Apple, Google Play, Stripe and restore-purchase code paths all consume `getTierByProductId()`, so the canonical result is shared across acquisition and restoration flows.
 

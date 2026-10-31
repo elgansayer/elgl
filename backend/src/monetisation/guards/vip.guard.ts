@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 export const VIP_TIER_METADATA = 'require_vip_tier';
-export type VipRequirement = 'consumer' | 'developer' | 'any';
+export type VipRequirement = 'consumer' | 'pro' | 'developer' | 'any';
 
 @Injectable()
 export class VipGuard implements CanActivate {
@@ -52,11 +52,19 @@ export class VipGuard implements CanActivate {
       isVip &&
       (requiredTier === 'any' ||
         requiredTier === 'consumer' ||
+        (requiredTier === 'pro' &&
+          (tier.startsWith('pro') || tier.startsWith('developer'))) ||
         (requiredTier === 'developer' && tier.startsWith('developer')));
 
     if (!tierMatches) {
+      const tierLabel =
+        requiredTier === 'developer'
+          ? 'Developer'
+          : requiredTier === 'pro'
+            ? 'Pro'
+            : 'VIP';
       throw new ForbiddenException(
-        `Access requires ${requiredTier === 'developer' ? 'Developer' : 'VIP'} subscription plan`,
+        `Access requires ${tierLabel} subscription plan`,
       );
     }
 

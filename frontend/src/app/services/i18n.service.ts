@@ -2231,6 +2231,17 @@ export class I18nService {
       'Your subscription will end at the close of the current billing period.',
     'subscription.resumeSuccess': 'Your subscription has been resumed.',
     'subscription.actionError': 'Something went wrong. Please try again.',
+    'subscription.page.title': 'Choose your subscription plan',
+    'subscription.page.subtitle':
+      'Unlock unlimited translations, advanced visitor insight and boosted discovery',
+    'subscription.page.loadError': 'We could not load subscription plans. Please try again.',
+    'subscription.page.retry': 'Try again',
+    'subscription.page.mostPopular': 'Most popular',
+    'subscription.page.redirecting': 'Redirecting to checkout...',
+    'subscription.page.subscribeMonthly': 'Subscribe monthly',
+    'subscription.page.subscribeYearly': 'Subscribe yearly',
+    'subscription.page.currentFreePlan': 'Current plan',
+    'subscription.page.checkoutError': 'We could not start checkout. Please try again.',
 
     // Report confirm
     'report.confirmMessage': 'Are you sure you want to report this message?',

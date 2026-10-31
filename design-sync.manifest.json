@@ -511,7 +511,7 @@
       "claudeDesignPath": "features/profile-identity.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1195-favourites-merge (favourites component formatting and safe navigation preserve the existing review UI; the profile-identity visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1195-favourites-merge (favourites component formatting and safe navigation preserve the existing review UI; the profile-identity visual contract is unchanged); issue-1780-render-visual-charts (reactive chart signal options and screen-reader accessible fallback markup preserve the existing stats visual presentation; the profile-identity visual contract is unchanged); issue-1788-stats-audit (screen-reader accessible fallback list and reactive chart signals preserve existing stats visual presentation; visual contract is unchanged)",
       "requiredStates": ["light", "dark", "empty", "loading", "error", "390px", "rtl"]
     },
     {
@@ -552,7 +552,7 @@
       "claudeDesignPath": "features/discovery-community.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged); issue-1789-liked-by-runtime-hardening (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual states; the visual contract is unchanged); issue-1788-liked-by-audit (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual presentation; visual contract is unchanged)",
       "requiredStates": [
         "light",
         "dark",

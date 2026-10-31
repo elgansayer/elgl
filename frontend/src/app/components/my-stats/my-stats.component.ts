@@ -7,8 +7,8 @@ import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-type DayName = (typeof DAY_NAMES)[number];
+type DayName = 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
+const DAY_NAMES: readonly DayName[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface StudyHourDay {
   day: DayName;
@@ -26,22 +26,38 @@ function isNonNegativeSafeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
-function isStudyHourDay(value: unknown): value is StudyHourDay {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Record<string, unknown>;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isDayName(value: unknown): value is DayName {
   return (
-    typeof candidate['day'] === 'string' &&
-    DAY_NAMES.includes(candidate['day'] as DayName) &&
-    typeof candidate['hours'] === 'number' &&
-    Number.isFinite(candidate['hours']) &&
-    candidate['hours'] >= 0
+    typeof value === 'string' &&
+    (value === 'Sun' ||
+      value === 'Mon' ||
+      value === 'Tue' ||
+      value === 'Wed' ||
+      value === 'Thu' ||
+      value === 'Fri' ||
+      value === 'Sat')
+  );
+}
+
+function isStudyHourDay(value: unknown): value is StudyHourDay {
+  if (!isRecord(value)) return false;
+  const day = value['day'];
+  const hours = value['hours'];
+  return (
+    isDayName(day) &&
+    typeof hours === 'number' &&
+    Number.isFinite(hours) &&
+    hours >= 0
   );
 }
 
 function isMyStatsResponse(value: unknown): value is MyStatsResponse {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Record<string, unknown>;
-  const studyHours = candidate['study_hours'];
+  if (!isRecord(value)) return false;
+  const studyHours = value['study_hours'];
   if (!Array.isArray(studyHours) || studyHours.length !== DAY_NAMES.length) return false;
   if (!studyHours.every(isStudyHourDay)) return false;
 
@@ -49,9 +65,9 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
   if (returnedDays.size !== DAY_NAMES.length) return false;
 
   return (
-    isNonNegativeSafeInteger(candidate['messages_sent']) &&
-    isNonNegativeSafeInteger(candidate['corrections_count']) &&
-    isNonNegativeSafeInteger(candidate['moments_count'])
+    isNonNegativeSafeInteger(value['messages_sent']) &&
+    isNonNegativeSafeInteger(value['corrections_count']) &&
+    isNonNegativeSafeInteger(value['moments_count'])
   );
 }
 
@@ -92,7 +108,7 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
               baseChart
               aria-hidden="true"
               [data]="lineChartData()"
-              [options]="lineChartOptions"
+              [options]="lineChartOptions()"
               [type]="'line'"
             >
             </canvas>
@@ -120,10 +136,24 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
               baseChart
               aria-hidden="true"
               [data]="pieChartData()"
-              [options]="pieChartOptions"
+              [options]="pieChartOptions()"
               [type]="'pie'"
             >
             </canvas>
+            <ul class="sr-only">
+              <li>
+                {{ 'stats.myStats.messagesSent' | t }}:
+                {{ currentStats.messages_sent }}
+              </li>
+              <li>
+                {{ 'stats.myStats.correctionsMade' | t }}:
+                {{ currentStats.corrections_count }}
+              </li>
+              <li>
+                {{ 'stats.myStats.momentsPosted' | t }}:
+                {{ currentStats.moments_count }}
+              </li>
+            </ul>
           </section>
 
           <section
@@ -212,7 +242,7 @@ export class MyStatsComponent {
     };
   });
 
-  protected readonly lineChartOptions: ChartOptions<'line'> = {
+  protected readonly lineChartOptions = computed<ChartOptions<'line'>>(() => ({
     responsive: true,
     plugins: {
       legend: { display: false },
@@ -226,7 +256,7 @@ export class MyStatsComponent {
         },
       },
     },
-  };
+  }));
 
   protected readonly pieChartData = computed<ChartConfiguration<'pie'>['data']>(() => {
     const data = this.statsResource.value();
@@ -245,14 +275,14 @@ export class MyStatsComponent {
     };
   });
 
-  protected readonly pieChartOptions: ChartOptions<'pie'> = {
+  protected readonly pieChartOptions = computed<ChartOptions<'pie'>>(() => ({
     responsive: true,
     plugins: {
       legend: {
         position: 'bottom',
       },
     },
-  };
+  }));
 
   protected retry(): void {
     this.statsResource.reload();
