@@ -117,7 +117,7 @@ export function tokeniseText(
         class="w-full max-w-sm bg-surface-200 rounded-sheet shadow-lift border border-surface-100 p-5"
       >
         <hlm-dialog-header>
-          <h2 hlmDialogTitle>{{ i18n.translate('common.save') }}</h2>
+          <h2 hlmDialogTitle>{{ i18n.translate('context_menu.createFlashcard') }}</h2>
           @if (flashcardSelection(); as selection) {
             <p hlmDialogDescription class="break-words text-text-secondary">
               {{ selection.text }}
@@ -127,7 +127,7 @@ export function tokeniseText(
 
         @if (flashcardError()) {
           <p role="alert" class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger-ink">
-            {{ i18n.translate('common.error_generic') }}
+            {{ i18n.translate('context_menu.flashcardError') }}
           </p>
         }
 
@@ -153,8 +153,8 @@ export function tokeniseText(
           >
             {{
               flashcardCreating()
-                ? i18n.translate('common.saving')
-                : i18n.translate('common.save')
+                ? i18n.translate('context_menu.creatingFlashcard')
+                : i18n.translate('context_menu.createFlashcard')
             }}
           </button>
         </hlm-dialog-footer>
@@ -192,8 +192,8 @@ export class TokenisedTextComponent {
   );
   readonly flashcardActionLabel = computed(() => {
     const selection = this.flashcardSelection();
-    const save = this.i18n.translate('common.save');
-    return selection ? `${save}: ${selection.text}` : save;
+    const action = this.i18n.translate('context_menu.createFlashcard');
+    return selection ? `${action}: ${selection.text}` : action;
   });
 
   private readonly parsed = computed<ParsedTokens>(() => {
@@ -270,7 +270,7 @@ export class TokenisedTextComponent {
         translation,
       });
       showToast(
-        this.i18n.translate('chatRoom.savedLingqAlert', {
+        this.i18n.translate('context_menu.flashcardCreatedAlert', {
           text: selection.text,
         }),
         'success',
@@ -284,7 +284,7 @@ export class TokenisedTextComponent {
       if (error instanceof Error && error.stack) selectionError.stack = error.stack;
       this.errorHandler.handleError(selectionError);
       this.flashcardError.set(true);
-      showErrorToast(this.i18n.translate('common.error_generic'));
+      showErrorToast(this.i18n.translate('context_menu.flashcardError'));
     } finally {
       this.flashcardCreating.set(false);
     }

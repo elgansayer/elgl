@@ -324,6 +324,7 @@
                 @if (msg.message_type === 'text' && msg.text_content) {
                   <app-tokenised-text
                     [text]="msg.text_content ?? ''"
+                    [language]="partnerLanguage() || 'en'"
                     (wordClicked)="onWordClicked($event)"
                   ></app-tokenised-text>
                   @if (transliterations()[msg.id]) {

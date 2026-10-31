@@ -52,6 +52,12 @@ export class FlashcardContextMenuDirective implements OnDestroy {
       return;
     }
 
+    const selection = this.getOwnedSelection();
+    if (!selection) {
+      this.clearLongPressTimer();
+      return;
+    }
+
     // Selected-text long press is a separate interaction from the surrounding
     // whole-message menu. Do not preventDefault: native scrolling and text
     // selection must continue to work.
@@ -60,8 +66,8 @@ export class FlashcardContextMenuDirective implements OnDestroy {
     this.touchStartPoint = { x: touch.clientX, y: touch.clientY };
     this.clearLongPressTimer();
     this.longPressTimer = setTimeout(() => {
-      const selection = this.getOwnedSelection();
-      if (selection) this.flashcardSelection.emit(selection);
+      const owned = this.getOwnedSelection();
+      if (owned) this.flashcardSelection.emit(owned);
     }, LONG_PRESS_MS);
   }
 
