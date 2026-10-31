@@ -30,6 +30,7 @@ import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
 import { DisappearingMessagesCleanupService } from './disappearing-messages-cleanup.service';
 import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
+import { PersonalUnreadListener } from './listeners/personal-unread.listener';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     ChatSystemEventListener,
     DisappearingMessagesCleanupService,
     DisappearingMessagesInterceptor,
+    PersonalUnreadListener,
     {
       provide: APP_INTERCEPTOR,
       useExisting: DisappearingMessagesInterceptor,

@@ -169,6 +169,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
+- **Unread counts changed:** `{ "type": "unread_counts_changed", "source": "chat" | "notifications" }` on `user_{user_id}`. The payload is a count-only invalidation signal. The client refreshes the existing authenticated unread endpoint for the indicated source and never receives message, room, profile, or token data in this event.
 - **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
 
 ---

@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from '../notification-preferences/dto/update-notification-preferences.dto';
 import { NotificationDto } from './dto/notification.dto';
+import { UnreadCountsChangedEvent } from './events/notification.events';
 
 type FirebaseAdmin = any;
 
@@ -30,9 +32,12 @@ type UpdatePreferencesInput = Partial<
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getPreferences(userId: string): Promise<LegacyNotificationPreferences> {
@@ -277,7 +282,7 @@ export class NotificationsService {
 
     try {
       const supabase = this.supabaseService.getClient();
-      await supabase.from('notifications').insert({
+      const { error } = await supabase.from('notifications').insert({
         recipient_id: recipientId,
         actor_id: actorId,
         type,
@@ -285,6 +290,22 @@ export class NotificationsService {
         message,
         is_read: false,
       });
+      if (error) {
+        this.logger.warn(
+          { type },
+          'Notification persistence failed before unread invalidation',
+        );
+        return;
+      }
+
+      // Chat messages already invalidate the chat counter through the durable
+      // chat.message event, so their mirrored inbox row must not double count.
+      if (type !== 'mention_chat') {
+        this.eventEmitter.emit(
+          'unread.counts_changed',
+          new UnreadCountsChangedEvent(recipientId, 'notifications'),
+        );
+      }
 
       // Dispatch push alert as well
       const titleMap: Record<string, string> = {

@@ -278,6 +278,25 @@
         color: inherit;
         opacity: 0.75;
       }
+      .translation {
+        margin-top: 7px;
+        border-inline-start: 2px solid rgb(var(--primary) / 0.45);
+        padding-inline-start: 8px;
+        color: rgb(var(--primary));
+        font-size: 11px;
+        font-style: italic;
+      }
+      .message-action {
+        min-height: 44px;
+        margin-top: 4px;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: rgb(var(--primary));
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+      }
       .starter-wrap {
         flex: 1;
         display: flex;
@@ -482,6 +501,8 @@
             <div class="message">
               <div class="meta">Chén Wěi · 2:01 PM</div>
               你好! Ready to practise some English today?
+              <div class="translation">Hello! Ready to practise some English today?</div>
+              <button class="message-action" type="button">Hide translation</button>
             </div>
             <div class="message mine">
               <div class="meta">You · 2:02 PM ✓✓</div>
@@ -568,7 +589,8 @@
       existing composer; the user remains responsible for sending it. Each message's correction
       action now opens the shared <code>app-correction-modal</code> with that message as its
       read-only source, preserving its ghost-text edit, live diff, optional explanation,
-      cancellation and structured correction payload.
+      cancellation and structured correction payload. Text messages expose a translated state
+      beneath the source text with an RTL-safe logical border and an explicit hide action.
     </p>
 
     <script>

@@ -39,7 +39,10 @@ const initialNotifications = [
 
 const mockNotificationService = {
   getNotifications: vi.fn().mockResolvedValue(initialNotifications.map((item) => ({ ...item }))),
-  getUnreadCount: vi.fn().mockResolvedValue(5),
+  getUnreadCount: vi.fn().mockResolvedValue({
+    unreadCount: 5,
+    byTab: { moments: 2, discovery: 2, profile: 1 },
+  }),
   markAllAsRead: vi.fn().mockResolvedValue(undefined),
   markAsRead: vi.fn().mockResolvedValue(undefined),
 };
@@ -50,8 +53,16 @@ const mockI18nService = {
 };
 
 const mockUnreadCounter = {
-  setNotificationUnread: vi.fn(),
-  decrementNotificationUnread: vi.fn(),
+  snapshot: vi.fn().mockReturnValue({
+    chat: 0,
+    moments: 0,
+    discovery: 0,
+    audioRooms: 0,
+    profile: 0,
+  }),
+  reconcile: vi.fn(),
+  set: vi.fn(),
+  decrement: vi.fn(),
 };
 
 describe('NotificationsInboxComponent', () => {
@@ -63,7 +74,10 @@ describe('NotificationsInboxComponent', () => {
     mockNotificationService.getNotifications.mockResolvedValue(
       initialNotifications.map((item) => ({ ...item })),
     );
-    mockNotificationService.getUnreadCount.mockResolvedValue(5);
+    mockNotificationService.getUnreadCount.mockResolvedValue({
+      unreadCount: 5,
+      byTab: { moments: 2, discovery: 2, profile: 1 },
+    });
     mockNotificationService.markAllAsRead.mockResolvedValue(undefined);
     mockNotificationService.markAsRead.mockResolvedValue(undefined);
 
@@ -91,7 +105,9 @@ describe('NotificationsInboxComponent', () => {
     expect(component.notifications().length).toBe(3);
     expect(component.unreadCount()).toBe(5);
     expect(mockNotificationService.getNotifications).toHaveBeenCalledWith('all', { limit: 20 });
-    expect(mockUnreadCounter.setNotificationUnread).toHaveBeenCalledWith(5);
+    expect(mockUnreadCounter.reconcile).toHaveBeenCalledWith('moments', 2, expect.any(Object));
+    expect(mockUnreadCounter.reconcile).toHaveBeenCalledWith('discovery', 2, expect.any(Object));
+    expect(mockUnreadCounter.reconcile).toHaveBeenCalledWith('profile', 1, expect.any(Object));
   });
 
   it('changes tab and resets pagination state', () => {
@@ -107,7 +123,9 @@ describe('NotificationsInboxComponent', () => {
     await component.markAllAsRead();
     expect(component.unreadCount()).toBe(0);
     expect(component.notifications().every((item) => item.is_read)).toBe(true);
-    expect(mockUnreadCounter.setNotificationUnread).toHaveBeenCalledWith(0);
+    expect(mockUnreadCounter.set).toHaveBeenCalledWith('moments', 0);
+    expect(mockUnreadCounter.set).toHaveBeenCalledWith('discovery', 0);
+    expect(mockUnreadCounter.set).toHaveBeenCalledWith('profile', 0);
   });
 
   it('keeps unread state and exposes an error when mark-all fails', async () => {
@@ -142,6 +160,13 @@ describe('NotificationsInboxComponent', () => {
     await fixture.whenStable();
     expect(component.unreadCount()).toBe(5);
     expect(component.actionError()).toBe(true);
+  });
+
+  it('decrements the tab that owns a persisted notification after it is read', async () => {
+    component.onNotificationClick(component.notifications()[0]);
+    await fixture.whenStable();
+
+    expect(mockUnreadCounter.decrement).toHaveBeenCalledWith('moments');
   });
 
   it('navigates chat notifications to the bounded entity route', () => {

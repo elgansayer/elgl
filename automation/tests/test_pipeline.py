@@ -1,3 +1,4 @@
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -3717,6 +3718,7 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
     _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
 
@@ -3739,6 +3741,129 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
     assert (42, ("factory-quarantined",)) not in github.labels
     assert not any("manually requeue" in body.lower() for _, body in github.comments)
     assert not any("already satisfied" in body for _, body in github.comments)
+
+
+def _initialise_implementation_worktree(worktree: Path) -> Path:
+    worktree.mkdir(parents=True)
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ("git", *arguments),
+            cwd=worktree,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Factory Test")
+    git("config", "user.email", "factory-test@example.invalid")
+    tracked = worktree / "tracked.txt"
+    tracked.write_text("base\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-m", "test: seed implementation worktree")
+    return tracked
+
+
+@pytest.mark.parametrize("untracked", [False, True])
+def test_interrupted_implementation_with_leftover_edit_advances_after_no_op_provider(
+    tmp_path: Path, untracked: bool
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    if untracked:
+        (worktree / "untracked.txt").write_text("untracked leftover\n", encoding="utf-8")
+    else:
+        tracked.write_text("leftover implementation\n", encoding="utf-8")
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    advanced = pipeline.run_job("42")
+
+    assert advanced is not None
+    assert advanced.state is JobState.SECURITY_REVIEW
+    assert advanced.last_error is None
+
+
+def test_interrupted_implementation_leftover_edit_advances_under_tests_only_merging(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    monkeypatch.setattr(FactoryConfig, "tests_only_merging", property(lambda self: True))
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    tracked.write_text("leftover implementation\n", encoding="utf-8")
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    advanced = pipeline.run_job("42")
+
+    assert advanced is not None
+    assert advanced.state is JobState.VERIFYING
+    assert advanced.last_error is None
+
+
+def test_interrupted_implementation_cleaned_up_by_provider_still_fails(
+    tmp_path: Path,
+) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    tracked = _initialise_implementation_worktree(worktree)
+    tracked.write_text("leftover implementation\n", encoding="utf-8")
+
+    class RevertingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            tracked.write_text("base\n", encoding="utf-8")
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=RevertingConversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.IMPLEMENTING
+    assert "Implementation produced no changes" in (failed.last_error or "")
+
+
+def test_clean_implementation_still_rejects_no_op_provider(tmp_path: Path) -> None:
+    factory_config = config(tmp_path)
+    worktree = factory_config.worktree_dir / "issue-42"
+    _initialise_implementation_worktree(worktree)
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=GitHub(),  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(job)
+
+    failed = pipeline.run_job("42")
+
+    assert failed is not None
+    assert failed.state is JobState.IMPLEMENTING
+    assert "Implementation produced no changes" in (failed.last_error or "")
 
 
 def test_local_verification_failure_routes_into_quality_repair(
@@ -4546,6 +4671,7 @@ def test_refresh_preserves_backing_off_failed_job_whose_issue_is_still_open(
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
     _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
 
     for _ in range(4):

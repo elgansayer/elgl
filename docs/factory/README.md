@@ -116,6 +116,23 @@ External pull requests enter through discovery and local verification before `RE
 immediately loses `factory-reviewed` and `factory-review`; the old worktree is safely retired or archived, then
 the current remote head is verified and reviewed again. Reopened external PRs return to `DISCOVERED`.
 
+An interrupted `IMPLEMENTING` attempt can leave tracked or untracked changes in its claimed worktree. A retry
+may advance when those changes still differ from `HEAD`, even if the provider makes no additional edit. A clean
+implementation worktree still requires a new change, while quality-repair and CI-repair attempts always require
+a new fingerprint. Security review, verification, the quality gate and independent review remain unchanged.
+After 24 hours, the maintenance record reports each affected task's state, attempts, repeated failures and latest
+error alongside application merges and provider calls, failures and model time. It preserves cumulative baselines
+and calculates exact observation-interval deltas without claiming causal attribution. Rolling 24-hour merge totals
+remain contextual snapshots and are not subtracted because entries can age out between observations.
+
+For incident `ineffective-agent-repair`, observational measurement across the 24 hours following verified deployment assesses tasks 1195, 1746, and 1752 per task:
+- Task 1195: leaves `implementing` (advancing to `security-review`) after interrupted worktree changes are accepted without a superfluous new diff.
+- Task 1746: leaves `implementing` (advancing to `verifying` or `security-review`) with its existing uncommitted changes intact.
+- Task 1752: starts with a clean worktree and continues to record `Implementation produced no changes`, confirming clean worktree safety and falsifying the hypothesis that all stuck tasks held leftover edits.
+- Application merges: cumulative merge deltas (`merged_pr_count_delta`) measure verified throughput across the observation window.
+- Repeated failures: tracked per task through `repetitions_delta`.
+- Model time: tracked across lifetime provider calls (`model_calls_delta`), failures (`model_failures_delta`), and duration (`model_duration_seconds_delta`).
+
 If no PR review is already active, the scheduler submits the highest-priority runnable external pull request
 before issue work, including when only one worker is available. It also withholds one provider slot from new issue
 jobs until that review worker finishes. Pull requests default to priority 5, while trusted `guardian-alert`,

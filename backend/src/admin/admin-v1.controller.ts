@@ -6,6 +6,7 @@ import {
   Req,
   UnauthorizedException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -13,10 +14,15 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CACHE_NO_STORE,
+  CacheControlInterceptor,
+} from '../common/cache.interceptor';
 import {
   AdminAuditListResult,
   AdminAuditQueryService,
@@ -262,12 +268,17 @@ export class AdminV1Controller {
   @Get('users')
   @UseGuards(AdminCapabilityGuard)
   @RequireAdminCapabilities('users.read')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Search and list users for administrative investigation',
     description:
       'Returns the existing bounded admin user-list contract through the versioned admin API. Requires the users.read capability.',
   })
   @ApiOkResponse({ description: 'Paginated administrative user results' })
+  @ApiServiceUnavailableResponse({
+    description:
+      'User storage is unavailable. This is never reported as an empty result.',
+  })
   listUsers(@Query() query: AdminUserQueryDto): Promise<AdminUserListResult> {
     return this.adminService.listUsers(query);
   }
@@ -275,6 +286,7 @@ export class AdminV1Controller {
   @Get('users/:id/login-history')
   @UseGuards(AdminCapabilityGuard)
   @RequireAdminCapabilities('users.sessions.read')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Inspect bounded privacy-scrubbed login history for one user',
     description:
@@ -328,6 +340,7 @@ export class AdminV1Controller {
   @Get('users/:id')
   @UseGuards(AdminCapabilityGuard)
   @RequireAdminCapabilities('users.read')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Inspect bounded administrative metadata for one user',
     description:
@@ -335,7 +348,13 @@ export class AdminV1Controller {
   })
   @ApiParam({ name: 'id', description: 'Target user identifier' })
   @ApiOkResponse({ description: 'Administrative user summary returned' })
-  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiNotFoundResponse({
+    description: 'No user has this identifier, or it is not a UUID',
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'User storage is unavailable. This is never reported as a missing user.',
+  })
   getUser(@Param('id') id: string): Promise<AdminUserSummary> {
     return this.adminService.getUser(id);
   }

@@ -1,6 +1,6 @@
 # Daily language-partner recommendations
 
-Issue #456 introduced the job in `backend/src/recommendations/recommendations.service.ts`, wired through `RecommendationsModule`. Issues #1392 and #1740 hardened it for production. The full product contract, execution model, failure behaviour, observability and rollout notes live in [`docs/daily-partner-recommendations.md`](../daily-partner-recommendations.md); this page records the architecture and dependency wiring.
+Issue #456 introduced the job in `backend/src/recommendations/recommendations.service.ts`, wired through `RecommendationsModule`. Issues #1043, #1392, #1740, and Task #1763 established the canonical partner recommendations worker contract and hardened it for production, guaranteeing isolation from audio-room co-host logic. The full product contract, execution model, failure behaviour, observability and rollout notes live in [`docs/daily-partner-recommendations.md`](../daily-partner-recommendations.md); this page records the architecture and dependency wiring.
 
 ## Runtime contract
 

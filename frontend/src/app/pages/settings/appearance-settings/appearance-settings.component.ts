@@ -2,6 +2,7 @@ import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal, resource } from '@angular/core';
 import { Location } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import {
   ChatTextSizePreference,
@@ -13,20 +14,12 @@ import { UserService, UserProfile } from '../../../services/user.service';
 import { I18nService } from '../../../services/i18n.service';
 import { ChatSettingsService } from '../../../services/chat-settings.service';
 import { FormsModule } from '@angular/forms';
-import { AppSelectComponent } from '../../../components/primitives/select/select.component';
 import { AppButtonPrimaryComponent } from '../../../components/primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [
-    HlmInput,
-    HlmButton,
-    TranslatePipe,
-    FormsModule,
-    AppSelectComponent,
-    AppButtonPrimaryComponent,
-  ],
+  imports: [HlmInput, HlmButton, TranslatePipe, FormsModule, RouterLink, AppButtonPrimaryComponent],
   templateUrl: './appearance-settings.component.html',
 })
 export class AppearanceSettingsComponent {
@@ -35,7 +28,7 @@ export class AppearanceSettingsComponent {
   private userService = inject(UserService);
   private chatSettingsService = inject(ChatSettingsService);
   private location = inject(Location);
-  readonly i18nService = inject(I18nService);
+  private readonly i18nService = inject(I18nService);
 
   readonly isSaving = signal(false);
   readonly errorMessage = signal('');
@@ -43,6 +36,23 @@ export class AppearanceSettingsComponent {
 
   readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
   readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
+  /**
+   * Interface language is chosen on /settings/language, the single owner of that
+   * preference, so this page only reflects it. Offering a second picker here
+   * would bypass that page's fail-closed loading and rollback.
+   */
+  readonly currentLanguage = computed(() => {
+    const code = this.i18nService.currentLang();
+    return (
+      this.i18nService.availableLanguages.find((language) => language.code === code) ?? {
+        code,
+        name: code,
+        nativeName: code,
+        flag: '🌐',
+        isRtl: false,
+      }
+    );
+  });
   readonly currentTheme = this.themeService.currentTheme;
   readonly currentTextSize = this.fontScaleService.textSizePreference;
   readonly currentChatTextSize = this.fontScaleService.chatTextSize;
@@ -151,14 +161,6 @@ export class AppearanceSettingsComponent {
     } finally {
       this.isSaving.set(false);
     }
-  }
-
-  changeUiLanguage(lang: string): void {
-    this.i18nService.setLanguage(lang);
-  }
-
-  onLanguageValueChange(value: string): void {
-    this.i18nService.setLanguage(value);
   }
 
   goBack(): void {
