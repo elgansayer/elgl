@@ -159,6 +159,7 @@ export class I18nService {
     'app.navMe': 'Me',
 
     // Common Fallbacks
+    'common.user': 'User',
     'common.unknownUser': 'Unknown User',
     'common.unknownSender': 'Unknown',
     'common.languagePartner': 'Language Partner',
