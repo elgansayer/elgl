@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, from, map, switchMap, throwError } from 'rxjs';
 import { AdminLoginService } from './admin-login.service';
@@ -53,6 +53,46 @@ const MAX_LOGIN_HISTORY_ENTRIES = 50;
 const MAX_IP_ADDRESS_LENGTH = 64;
 const MAX_USER_AGENT_LENGTH = 512;
 const USER_DATA_UNAVAILABLE = 'Admin user data unavailable';
+
+/**
+ * Why a privileged user read failed, reduced to the states an operator can act
+ * on. Provider, database and transport detail never leaves this service.
+ */
+export type AdminUserDataFailure = 'unauthenticated' | 'forbidden' | 'not-found' | 'unavailable';
+
+const FAILURE_MESSAGES: Record<AdminUserDataFailure, string> = {
+  unauthenticated: 'Admin authentication required',
+  forbidden: 'Admin permission required',
+  'not-found': 'Admin user not found',
+  unavailable: USER_DATA_UNAVAILABLE,
+};
+
+export class AdminUserDataError extends Error {
+  readonly failure: AdminUserDataFailure;
+
+  constructor(failure: AdminUserDataFailure, message = FAILURE_MESSAGES[failure]) {
+    super(message);
+    this.name = 'AdminUserDataError';
+    this.failure = failure;
+  }
+}
+
+/** Maps anything thrown by this service to the failure state pages render. */
+export function failureOf(error: unknown): AdminUserDataFailure {
+  return error instanceof AdminUserDataError ? error.failure : 'unavailable';
+}
+
+function classifyFailure(error: unknown, missingMeansNotFound: boolean): AdminUserDataError {
+  if (error instanceof AdminUserDataError) return error;
+  if (error instanceof HttpErrorResponse) {
+    if (error.status === 401) return new AdminUserDataError('unauthenticated');
+    if (error.status === 403) return new AdminUserDataError('forbidden');
+    if (error.status === 404 && missingMeansNotFound) {
+      return new AdminUserDataError('not-found');
+    }
+  }
+  return new AdminUserDataError('unavailable');
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -243,7 +283,7 @@ function validateLoginHistory(value: unknown): AdminLoginHistoryEntry[] {
 function validateUserId(userId: string): string {
   const normalized = userId.trim();
   if (!normalized || normalized.length > MAX_USER_ID_LENGTH) {
-    throw new Error('Invalid admin user identifier');
+    throw new AdminUserDataError('not-found', 'Invalid admin user identifier');
   }
   return normalized;
 }
@@ -264,7 +304,7 @@ export class AdminUsersService {
   search(query: AdminUserSearchQuery): Observable<AdminUserListResult> {
     const token = this.login.accessToken();
     if (!token) {
-      return throwError(() => new Error('Admin authentication required'));
+      return throwError(() => new AdminUserDataError('unauthenticated'));
     }
 
     const page = normalizePage(query.page);
@@ -286,14 +326,14 @@ export class AdminUsersService {
         }),
       ),
       map(validateUserList),
-      catchError(() => throwError(() => new Error(USER_DATA_UNAVAILABLE))),
+      catchError((error: unknown) => throwError(() => this.toFailure(error))),
     );
   }
 
   getUser(userId: string): Observable<AdminUserSummary> {
     const token = this.login.accessToken();
     if (!token) {
-      return throwError(() => new Error('Admin authentication required'));
+      return throwError(() => new AdminUserDataError('unauthenticated'));
     }
 
     let normalizedUserId: string;
@@ -317,14 +357,14 @@ export class AdminUsersService {
         if (!user) throw new Error(USER_DATA_UNAVAILABLE);
         return user;
       }),
-      catchError(() => throwError(() => new Error(USER_DATA_UNAVAILABLE))),
+      catchError((error: unknown) => throwError(() => this.toFailure(error, true))),
     );
   }
 
   getLoginHistory(userId: string): Observable<AdminLoginHistoryEntry[]> {
     const token = this.login.accessToken();
     if (!token) {
-      return throwError(() => new Error('Admin authentication required'));
+      return throwError(() => new AdminUserDataError('unauthenticated'));
     }
 
     let normalizedUserId: string;
@@ -344,7 +384,20 @@ export class AdminUsersService {
         ),
       ),
       map(validateLoginHistory),
-      catchError(() => throwError(() => new Error(USER_DATA_UNAVAILABLE))),
+      catchError((error: unknown) => throwError(() => this.toFailure(error))),
     );
+  }
+
+  /**
+   * A 401 means the in-memory bearer token is no longer accepted. Dropping it
+   * makes the route guard send the operator to sign-in instead of leaving a
+   * dead session that retries can never fix.
+   */
+  private toFailure(error: unknown, missingMeansNotFound = false): AdminUserDataError {
+    const failure = classifyFailure(error, missingMeansNotFound);
+    if (failure.failure === 'unauthenticated') {
+      this.login.signOut();
+    }
+    return failure;
   }
 }

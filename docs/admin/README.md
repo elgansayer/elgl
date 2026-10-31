@@ -28,6 +28,7 @@ Build a production-grade administration system for a modern social/language-lear
 - [ADMIN_PORTAL.md](ADMIN_PORTAL.md): dedicated admin frontend specification.
 - [SECURITY.md](SECURITY.md): privileged-access security requirements.
 - [MODULES.md](MODULES.md): functional module map and expected administrative powers.
+- [USER_MANAGEMENT.md](USER_MANAGEMENT.md): supported user-management boundary, failure states and why account enforcement is not yet part of it.
 
 ## Implementation order
 

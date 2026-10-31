@@ -10,6 +10,8 @@ Administrative reads must fail closed. Neither Angular application may substitut
 
 This distinction is security-relevant because login history contains sensitive operational evidence such as IP-address and user-agent data and because fabricated user records could cause an administrator to make a privileged decision against the wrong apparent account. Global block-list reads follow the same fail-closed rule.
 
+The backend honours the same rule. A storage failure on the user list or detail read answers `503`, never an empty list or a missing-user `404`, so a genuine empty result stays distinguishable from an outage on the wire as well as in the UI. The status table and the portal's failure states are in [admin/USER_MANAGEMENT.md](admin/USER_MANAGEMENT.md).
+
 The dedicated admin portal already uses bounded pagination and authenticated versioned API calls. User identifiers are encoded before they are placed in detail/session-history URLs. The user list and login history remain bounded by their backend contracts. No new persistence, schema, cache, credential, or telemetry data is introduced by this change.
 
 ## Privileged mutations
