@@ -25,6 +25,7 @@ import {
   ApiUnauthorizedResponse,
   ApiForbiddenResponse,
   ApiTooManyRequestsResponse,
+  ApiServiceUnavailableResponse,
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
@@ -135,6 +136,10 @@ export class AdminController {
   @ApiForbiddenResponse({ description: 'User is not an admin' })
   @ApiTooManyRequestsResponse({
     description: 'Rate limit exceeded (30 req/min)',
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'User storage is unavailable. This is never reported as an empty result.',
   })
   async listUsers(
     @Query() query: AdminUserQueryDto,

@@ -64,7 +64,8 @@ function getTrackedFiles() {
         path.extname(file).toLowerCase(),
       ),
     )
-    .map((file) => path.join(ROOT_DIR, file));
+    .map((file) => path.join(ROOT_DIR, file))
+    .filter((filePath) => fs.existsSync(filePath));
 }
 
 function checkFile(filePath) {
