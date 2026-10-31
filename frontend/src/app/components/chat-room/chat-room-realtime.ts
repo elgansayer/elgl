@@ -17,7 +17,7 @@ const DELIVERY_STATUS_RANK: Record<DeliveryStatus, number> = {
   read: 2,
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -47,7 +47,7 @@ function isSystemEvent(value: unknown): value is NonNullable<ChatMessage['system
   });
 }
 
-function isChatMessage(value: unknown): value is ChatMessage {
+export function isChatMessage(value: unknown): value is ChatMessage {
   if (!isRecord(value)) return false;
 
   const senderId = value['sender_id'];

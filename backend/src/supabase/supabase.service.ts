@@ -693,6 +693,8 @@ export type ChatMessageRow = {
   delivery_status?: 'sent' | 'delivered' | 'read';
   expires_at?: string | null;
   deleted_for_user_ids?: string[] | null;
+  is_encrypted?: boolean;
+  encrypted_payload?: string | null;
 };
 
 type BlockRow = {

@@ -11,6 +11,8 @@ import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { ChatCacheService } from './chat-cache.service';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { I18nService } from './i18n.service';
 import { environment } from '../../environments/environment';
 
 const baseUrl = `${environment.apiUrl}/chat`;
@@ -28,6 +30,7 @@ describe('ChatService', () => {
   let removeMessageMock: ReturnType<typeof vi.fn>;
   let incrementRetryCountMock: ReturnType<typeof vi.fn>;
   let hapticTapMock: ReturnType<typeof vi.fn>;
+  let getCachedRoomsMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     currentUser = signal<{ id: string } | null>(null);
@@ -40,6 +43,7 @@ describe('ChatService', () => {
     removeMessageMock = vi.fn().mockResolvedValue(undefined);
     incrementRetryCountMock = vi.fn().mockResolvedValue(undefined);
     hapticTapMock = vi.fn();
+    getCachedRoomsMock = vi.fn().mockResolvedValue(null);
 
     TestBed.configureTestingModule({
       providers: [
@@ -80,7 +84,7 @@ describe('ChatService', () => {
           provide: ChatCacheService,
           useValue: {
             getCachedMessages: vi.fn().mockReturnValue(Promise.resolve(null)),
-            getCachedRooms: vi.fn().mockReturnValue(Promise.resolve(null)),
+            getCachedRooms: getCachedRoomsMock,
             getCachedFavourites: vi.fn().mockReturnValue(Promise.resolve(null)),
             cacheMessages: vi.fn().mockReturnValue(Promise.resolve()),
             cacheRooms: vi.fn().mockReturnValue(Promise.resolve()),
@@ -90,6 +94,36 @@ describe('ChatService', () => {
             invalidateRooms: vi.fn().mockReturnValue(Promise.resolve()),
             invalidateFavourites: vi.fn().mockReturnValue(Promise.resolve()),
           } as unknown as ChatCacheService,
+        },
+        {
+          provide: PersonalChatEncryptionService,
+          useValue: {
+            isRoomE2eeCapable: vi.fn().mockResolvedValue(false),
+            encryptMessage: vi.fn().mockImplementation((_r: string, text: string) =>
+              Promise.resolve({
+                ciphertext: text,
+                iv: 'iv',
+                payload: `e2ee:v1:iv:${text}`,
+              }),
+            ),
+            encryptCachedMessage: vi.fn().mockImplementation((_r: string, text: string) =>
+              Promise.resolve({
+                ciphertext: text,
+                iv: 'iv',
+                payload: `e2ee:v1:iv:${text}`,
+              }),
+            ),
+            decryptMessage: vi
+              .fn()
+              .mockImplementation((_r: string, env: string) => Promise.resolve(env)),
+            clearKey: vi.fn(),
+          },
+        },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: vi.fn((key: string) => key),
+          },
         },
       ],
     });
@@ -146,7 +180,9 @@ describe('ChatService', () => {
   it('preserves receipt request failures instead of reporting fabricated empty status', async () => {
     const request = service.getMessageReceipts('message-1');
     const assertion = expect(request).rejects.toMatchObject({ status: 503 });
-    httpMock.expectOne(`${baseUrl}/messages/message-1/receipts`).flush({}, { status: 503, statusText: 'Unavailable' });
+    httpMock
+      .expectOne(`${baseUrl}/messages/message-1/receipts`)
+      .flush({}, { status: 503, statusText: 'Unavailable' });
     await assertion;
   });
 
@@ -202,7 +238,13 @@ describe('ChatService', () => {
   describe('sendMessage', () => {
     it('should send a text message online', async () => {
       currentUser.set({ id: 'user-1' });
-      const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'hi',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
       membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
@@ -226,11 +268,59 @@ describe('ChatService', () => {
       expect(hapticTapMock).toHaveBeenCalled();
     });
 
+    it('should encrypt personal message when room is E2EE capable', async () => {
+      const encryption = TestBed.inject(PersonalChatEncryptionService);
+      vi.mocked(encryption.isRoomE2eeCapable).mockResolvedValueOnce(true);
+
+      currentUser.set({ id: 'user-1' });
+      const promise = service.sendMessage({
+        room_id: 'direct-room-1',
+        message_type: 'text',
+        text_content: 'Secret personal message',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const membersReq = httpMock.expectOne(`${baseUrl}/rooms/direct-room-1/members`);
+      membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const sendReq = httpMock.expectOne(`${baseUrl}/messages`);
+      expect(sendReq.request.method).toBe('POST');
+      expect(sendReq.request.body.is_encrypted).toBe(true);
+      expect(sendReq.request.body.encrypted_payload).toBe('e2ee:v1:iv:Secret personal message');
+
+      const serverResponse: ChatMessage = {
+        id: 'm-enc-1',
+        room_id: 'direct-room-1',
+        sender_id: 'user-1',
+        message_type: 'text',
+        text_content: 'e2ee:v1:iv:Secret personal message',
+        is_encrypted: true,
+        encrypted_payload: 'e2ee:v1:iv:Secret personal message',
+        is_read: false,
+        created_at: '2026-08-01T00:00:00.000Z',
+      };
+      sendReq.flush(serverResponse);
+
+      const result = await promise;
+      // Expect plaintext restored for display
+      expect(result.text_content).toBe('Secret personal message');
+      expect(result.is_encrypted).toBe(true);
+    });
+
     it('should reject sending to a blocked receiver', async () => {
       currentUser.set({ id: 'user-1' });
       getBlockedAndBlockerIdsMock.mockResolvedValue(['user-2']);
 
-      const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'hi',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
       membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
@@ -238,18 +328,63 @@ describe('ChatService', () => {
       await expect(promise).rejects.toThrow('You cannot send messages to this user.');
     });
 
+    it('fails closed when direct-room key retrieval is unavailable', async () => {
+      const encryption = TestBed.inject(PersonalChatEncryptionService);
+      vi.mocked(encryption.isRoomE2eeCapable).mockRejectedValueOnce(
+        new Error('key broker unavailable'),
+      );
+
+      await expect(
+        service.sendMessage({
+          room_id: 'direct-room-1',
+          message_type: 'text',
+          text_content: 'must stay private',
+        }),
+      ).rejects.toThrow('key broker unavailable');
+      httpMock.expectNone(`${baseUrl}/messages`);
+    });
+
     it('should queue the message when offline instead of calling the API', async () => {
       currentUser.set({ id: 'user-1' });
       vi.stubGlobal('navigator', { onLine: false });
+      getCachedRoomsMock.mockResolvedValueOnce([{ id: 'room-1', admin_id: 'group-admin' }]);
 
-      const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'hi',
+      });
 
       // Offline path short-circuits BEFORE any HTTP calls, including room members
       const queued = await promise;
       expect(queued.room_id).toBe('room-1');
       expect(queued.text_content).toBe('hi');
-      expect(enqueueMessageMock).toHaveBeenCalledWith(expect.objectContaining({ room_id: 'room-1' }));
+      expect(enqueueMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ room_id: 'room-1' }),
+      );
       expect(hapticTapMock).toHaveBeenCalled();
+
+      vi.unstubAllGlobals();
+    });
+
+    it('encrypts a direct message before persisting it to the offline queue', async () => {
+      vi.stubGlobal('navigator', { onLine: false });
+      getCachedRoomsMock.mockResolvedValueOnce([{ id: 'direct-room-1', admin_id: null }]);
+
+      const queued = await service.sendMessage({
+        room_id: 'direct-room-1',
+        message_type: 'text',
+        text_content: 'private offline text',
+      });
+
+      expect(enqueueMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text_content: 'e2ee:v1:iv:private offline text',
+          is_encrypted: true,
+          encrypted_payload: 'e2ee:v1:iv:private offline text',
+        }),
+      );
+      expect(queued.text_content).toBe('private offline text');
 
       vi.unstubAllGlobals();
     });
@@ -268,8 +403,22 @@ describe('ChatService', () => {
       const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1`);
       expect(req.request.method).toBe('GET');
       req.flush([
-        { id: '1', room_id: 'room-1', sender_id: 'blocked-sender', message_type: 'text', is_read: false, created_at: 'now' },
-        { id: '2', room_id: 'room-1', sender_id: 'user-2', message_type: 'text', is_read: false, created_at: 'now' },
+        {
+          id: '1',
+          room_id: 'room-1',
+          sender_id: 'blocked-sender',
+          message_type: 'text',
+          is_read: false,
+          created_at: 'now',
+        },
+        {
+          id: '2',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          is_read: false,
+          created_at: 'now',
+        },
       ]);
 
       const messages = await promise;
@@ -283,10 +432,44 @@ describe('ChatService', () => {
       // Allow microtask to settle
       await new Promise((r) => setTimeout(r, 0));
 
-      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1` && r.params.get('search') === 'hello');
+      const req = httpMock.expectOne(
+        (r) => r.url === `${baseUrl}/messages/room-1` && r.params.get('search') === 'hello',
+      );
       req.flush([]);
 
       await expect(promise).resolves.toEqual([]);
+    });
+  });
+
+  describe('syncOfflineMessages', () => {
+    it('preserves encrypted envelopes when flushing the offline queue', async () => {
+      getQueuedMessagesMock.mockResolvedValueOnce([
+        {
+          id: 'queued-1',
+          room_id: 'direct-room-1',
+          sender_id: 'user-1',
+          message_type: 'text',
+          text_content: 'e2ee:v1:iv:ciphertext',
+          is_encrypted: true,
+          encrypted_payload: 'e2ee:v1:iv:ciphertext',
+          is_read: false,
+          created_at: '2026-10-31T00:00:00.000Z',
+        },
+      ]);
+
+      const sync = service.syncOfflineMessages();
+      await Promise.resolve();
+      const request = httpMock.expectOne(`${baseUrl}/messages`);
+      expect(request.request.body).toEqual(
+        expect.objectContaining({
+          is_encrypted: true,
+          encrypted_payload: 'e2ee:v1:iv:ciphertext',
+        }),
+      );
+      request.flush({ id: 'server-message-1' });
+
+      await expect(sync).resolves.toEqual({ sent: 1, failed: 0 });
+      expect(removeMessageMock).toHaveBeenCalledWith('queued-1');
     });
   });
 
@@ -319,7 +502,17 @@ describe('ChatService', () => {
 
       const req = httpMock.expectOne(`${baseUrl}/rooms`);
       expect(req.request.method).toBe('GET');
-      req.flush([{ id: 'room-1', title: 'Room', subtitle: '', avatar: '', is_online: true, is_pinned: false, created_at: 'now' }]);
+      req.flush([
+        {
+          id: 'room-1',
+          title: 'Room',
+          subtitle: '',
+          avatar: '',
+          is_online: true,
+          is_pinned: false,
+          created_at: 'now',
+        },
+      ]);
 
       await expect(promise).resolves.toHaveLength(1);
     });
@@ -360,7 +553,9 @@ describe('ChatService', () => {
       const req = httpMock.expectOne(`${baseUrl}/messages/status-reply`);
       req.flush('error', { status: 500, statusText: 'Internal Server Error' });
 
-      await expect(promise).rejects.toThrow('Could not send reply to status update. Please try again.');
+      await expect(promise).rejects.toThrow(
+        'Could not send reply to status update. Please try again.',
+      );
     });
   });
 
@@ -397,7 +592,10 @@ describe('ChatService', () => {
       const promise = service.correctMessage('msg-1', 'corrected text', 'explanation');
       const req = httpMock.expectOne(`${baseUrl}/messages/msg-1/correct`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ correctedText: 'corrected text', explanation: 'explanation' });
+      expect(req.request.body).toEqual({
+        correctedText: 'corrected text',
+        explanation: 'explanation',
+      });
       req.flush({ id: 'msg-1' });
 
       await expect(promise).resolves.toEqual({ id: 'msg-1' });
@@ -484,12 +682,23 @@ describe('ChatService', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/chat/translate-voiceroom`);
       req.flush({ translated_text: 'bonjour', detected_language: 'en' });
 
-      await expect(promise).resolves.toEqual({ translated_text: 'bonjour', detected_language: 'en' });
+      await expect(promise).resolves.toEqual({
+        translated_text: 'bonjour',
+        detected_language: 'en',
+      });
     });
 
     it('should fetch suggested replies with mapped recent messages', async () => {
       const recentMessages: ChatMessage[] = [
-        { id: '1', room_id: 'room-1', sender_id: 'user-1', message_type: 'text', text_content: 'hi', is_read: true, created_at: 'now' },
+        {
+          id: '1',
+          room_id: 'room-1',
+          sender_id: 'user-1',
+          message_type: 'text',
+          text_content: 'hi',
+          is_read: true,
+          created_at: 'now',
+        },
       ];
       const promise = service.getSuggestedReplies('room-1', recentMessages);
 
@@ -590,7 +799,9 @@ describe('ChatService', () => {
       mockFetch.mockResolvedValue({ ok: false });
       vi.stubGlobal('window', { location: { href: 'https://example.com/chat/room-1' } });
 
-      await expect(service.reportMessage('msg-1', 'spam')).rejects.toThrow('Failed to report message');
+      await expect(service.reportMessage('msg-1', 'spam')).rejects.toThrow(
+        'Failed to report message',
+      );
     });
   });
 
