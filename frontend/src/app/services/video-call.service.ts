@@ -1,5 +1,14 @@
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
-import { Room, RoomEvent, Track, RemoteParticipant, RemoteTrack, RemoteTrackPublication, VideoPresets } from 'livekit-client';
+import {
+  Room,
+  RoomEvent,
+  Track,
+  RemoteParticipant,
+  RemoteTrack,
+  RemoteTrackPublication,
+  VideoPresets,
+  ExternalE2EEKeyProvider,
+} from 'livekit-client';
 import { firstValueFrom, interval, Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -24,6 +33,7 @@ export class VideoCallService {
   private destroyRef = inject(DestroyRef);
   private room: Room | null = null;
 private durationSubscription: Subscription | null = null;
+  private e2eeWorker: Worker | null = null;
   // Bound handlers for cleanup to prevent listener leaks
   private onParticipantConnectedBound: ((participant: RemoteParticipant) => void) | null = null;
   private onTrackSubscribedBound: ((track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => void) | null = null;
@@ -36,6 +46,7 @@ private durationSubscription: Subscription | null = null;
   readonly remoteVideoTrack = signal<MediaStreamTrack | null>(null);
   readonly remoteAudioTrack = signal<MediaStreamTrack | null>(null);
   readonly connectionError = signal<string | null>(null);
+  readonly isEncrypted = signal<boolean>(false);
 
   async startCall(remoteUserId: string): Promise<void> {
     try {
@@ -43,12 +54,22 @@ private durationSubscription: Subscription | null = null;
       if (!token) throw new Error('Not authenticated');
 
       const response = await firstValueFrom(
-        this.http.post<{ token: string; roomName: string }>(
+        this.http.post<{ token: string; roomName: string; e2eeKey: string }>(
           `${environment.apiUrl}/video-calls/start`,
           { remoteUserId },
           { headers: { Authorization: `Bearer ${token}` } },
         ),
       );
+
+      if (!response.e2eeKey) {
+        throw new Error('E2EE key material is missing from the authenticated call session.');
+      }
+
+      this.disposeE2eeWorker();
+      const keyProvider = new ExternalE2EEKeyProvider();
+      this.e2eeWorker = new Worker(new URL('./livekit-e2ee.worker', import.meta.url), {
+        type: 'module',
+      });
 
       this.room = new Room({
         adaptiveStream: true,
@@ -56,7 +77,14 @@ private durationSubscription: Subscription | null = null;
         videoCaptureDefaults: {
           resolution: VideoPresets.h720.resolution,
         },
+        e2ee: {
+          keyProvider,
+          worker: this.e2eeWorker,
+        },
       });
+
+      await keyProvider.setKey(response.e2eeKey);
+      this.isEncrypted.set(true);
 
       this.setupRoomListeners();
       await this.room.connect(environment.liveKitUrl, response.token);
@@ -80,23 +108,58 @@ private durationSubscription: Subscription | null = null;
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
     } catch (error: unknown) {
+      this.disposeE2eeWorker();
+      this.isEncrypted.set(false);
       this.connectionError.set('Failed to start video call');
       throw error;
     }
   }
 
-  async acceptCall(roomName: string, token: string): Promise<void> {
+  async acceptCall(roomName: string, token: string, e2eeKey?: string): Promise<void> {
     try {
+      let callKey = e2eeKey;
+      let callToken = token;
+
+      if (!callKey) {
+        const authToken = this.authService.getAccessToken();
+        const acceptResp = await firstValueFrom(
+          this.http.post<{ token: string; roomName: string; e2eeKey: string }>(
+            `${environment.apiUrl}/video-calls/accept`,
+            { roomName },
+            authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : {},
+          ),
+        );
+        callKey = acceptResp.e2eeKey;
+        callToken = acceptResp.token;
+      }
+
+      if (!callKey) {
+        throw new Error('E2EE key material is missing from the authenticated call session.');
+      }
+
+      this.disposeE2eeWorker();
+      const keyProvider = new ExternalE2EEKeyProvider();
+      this.e2eeWorker = new Worker(new URL('./livekit-e2ee.worker', import.meta.url), {
+        type: 'module',
+      });
+
       this.room = new Room({
         adaptiveStream: true,
         dynacast: true,
         videoCaptureDefaults: {
           resolution: VideoPresets.h720.resolution,
         },
+        e2ee: {
+          keyProvider,
+          worker: this.e2eeWorker,
+        },
       });
 
+      await keyProvider.setKey(callKey);
+      this.isEncrypted.set(true);
+
       this.setupRoomListeners();
-      await this.room.connect(environment.liveKitUrl, token);
+      await this.room.connect(environment.liveKitUrl, callToken);
       await this.room.localParticipant.enableCameraAndMicrophone();
 
       this.callState.set({
@@ -117,6 +180,8 @@ private durationSubscription: Subscription | null = null;
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
     } catch (error: unknown) {
+      this.disposeE2eeWorker();
+      this.isEncrypted.set(false);
       this.connectionError.set('Failed to accept video call');
       throw error;
     }
@@ -149,6 +214,8 @@ private durationSubscription: Subscription | null = null;
     }
 
     this.stopDurationTimer();
+    this.disposeE2eeWorker();
+    this.isEncrypted.set(false);
 
     // Stop MediaStreamTracks to free camera/mic resources
     this.localVideoTrack()?.stop();
@@ -160,6 +227,13 @@ private durationSubscription: Subscription | null = null;
     this.remoteAudioTrack.set(null);
     this.callState.set(null);
     this.connectionError.set(null);
+  }
+
+  private disposeE2eeWorker(): void {
+    if (this.e2eeWorker) {
+      this.e2eeWorker.terminate();
+      this.e2eeWorker = null;
+    }
   }
 
   async toggleMute(): Promise<void> {

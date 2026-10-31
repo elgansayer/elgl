@@ -81,6 +81,12 @@ export interface ChatMessage {
 
   /** Whether this message was forwarded from another conversation */
   is_forwarded?: boolean;
+
+  /** Whether this message payload is end-to-end encrypted between participants */
+  is_encrypted?: boolean;
+
+  /** Armoured ciphertext and IV envelope for end-to-end encrypted message */
+  encrypted_payload?: string | null;
 }
 
 export interface DeletedAwareMessage extends ChatMessage {

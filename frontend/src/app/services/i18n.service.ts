@@ -853,6 +853,10 @@ export class I18nService {
     'video_call.presenting_badge_aria': 'You are presenting your screen',
 
     // Split Screen Video Component
+    'splitScreen.streamErrorAria': 'Video stream error',
+    'splitScreen.splitScreenVideoAria': 'Split screen video',
+    'splitScreen.loadingHost': 'Loading host video...',
+    'splitScreen.loadingCoHost': 'Loading co-host video...',
     'splitScreen.hostVideoAria': 'Host video',
     'splitScreen.coHostVideoAria': 'Co-host video',
     'splitScreen.inviteCoHostAria': 'Invite a co-host to split screen',
@@ -871,6 +875,11 @@ export class I18nService {
     'liveChat.liveRegionAria': 'New messages appearing',
 
     // Chat Room Component
+    'chatRoom.e2eeBanner': 'Text messages in this chat are encrypted before storage and delivery.',
+    'chatRoom.e2eeBadge': 'Encrypted',
+    'chatRoom.e2eeMessageHint': 'Encrypted message',
+    'chatRoom.encryptedMessageUnavailable': 'Encrypted message unavailable',
+    'calls.e2eeSecured': 'Encrypted call',
     'chatRoom.liveNow': 'Live now',
     'chatRoom.connecting': 'Connecting...',
     'chatRoom.searchPlaceholder': 'Search messages',

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsNotEmpty,
   IsObject,
@@ -13,6 +14,7 @@ import {
   ValidationArguments,
   ValidationOptions,
 } from 'class-validator';
+import { IsEncryptedChatPayload } from './encrypted-chat-payload.validator';
 
 const MEDIA_MESSAGE_TYPES = [
   'voice',
@@ -168,6 +170,16 @@ export class SendMessageDto {
   @ValidateNested()
   @Type(() => StatusReplyPayloadDto)
   status_reply_payload?: StatusReplyPayloadDto;
+
+  @IsOptional()
+  @IsBoolean()
+  is_encrypted?: boolean;
+
+  @IsEncryptedChatPayload({
+    message:
+      'encrypted_payload must be a bounded e2ee:v1 envelope when is_encrypted is true and absent otherwise',
+  })
+  encrypted_payload?: string;
 }
 
 export class AiGenerateReplyDto {

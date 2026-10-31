@@ -109,6 +109,17 @@ describe('LanguagePairQueryDto', () => {
       expect(errors).toHaveLength(0);
     });
 
+    it('should normalise lowercase proficiency level to uppercase', () => {
+      const dto = buildDto({ level: 'b2' });
+      expect(dto.level).toBe('B2');
+    });
+
+    it('should reject an unsupported proficiency level', async () => {
+      const errors = await validateDto({ level: 'native' });
+      expect(errors).toHaveLength(1);
+      expect(errors[0].property).toBe('level');
+    });
+
     it('should reject non-string level', async () => {
       const errors = await validateDto({ level: 99 });
       expect(errors).toHaveLength(1);

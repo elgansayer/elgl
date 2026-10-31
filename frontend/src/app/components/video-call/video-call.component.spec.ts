@@ -112,6 +112,19 @@ describe('VideoCallComponent - screen sharing', () => {
     expect(component.isInPip()).toBe(false);
   });
 
+  it('shows the encryption indicator only after the call connects', () => {
+    vi.spyOn(component, 'ngOnInit').mockResolvedValue();
+
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+
+    component.connectionState.set('connected');
+    fixture.detectChanges();
+
+    const indicator = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement | null;
+    expect(indicator?.textContent).toContain('Encrypted call');
+  });
+
   it('starts screen sharing via LiveKit setScreenShareEnabled when not currently sharing', async () => {
     await component.toggleScreenShare();
 
@@ -223,9 +236,9 @@ describe('VideoCallComponent - screen sharing', () => {
       source: Track.Source.Microphone,
     } as unknown as RemoteTrack;
 
-    (
-      component as unknown as { onTrackSubscribed: (t: RemoteTrack) => void }
-    ).onTrackSubscribed(audioTrack);
+    (component as unknown as { onTrackSubscribed: (t: RemoteTrack) => void }).onTrackSubscribed(
+      audioTrack,
+    );
 
     expect(component.remoteCameraTrack()).toBeNull();
     expect(component.remoteScreenShareTrack()).toBeNull();

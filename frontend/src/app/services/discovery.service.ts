@@ -114,6 +114,12 @@ export class DiscoveryService {
     beginner: 'A1',
     intermediate: 'B1',
     advanced: 'C1',
+    a1: 'A1',
+    a2: 'A2',
+    b1: 'B1',
+    b2: 'B2',
+    c1: 'C1',
+    c2: 'C2',
   };
 
   private async getPartnerOfWeekIds(): Promise<string[]> {
@@ -154,9 +160,10 @@ export class DiscoveryService {
     if (filters.serious_learner_only !== undefined)
       params = params.set('serious_learner_only', filters.serious_learner_only.toString());
     if (filters.proficiency_level) {
+      const normalised = filters.proficiency_level.trim().toLowerCase();
       const mappedLevel =
-        this.PROFICIENCY_LEVEL_MAP[filters.proficiency_level.toLowerCase()] ??
-        filters.proficiency_level;
+        this.PROFICIENCY_LEVEL_MAP[normalised] ??
+        filters.proficiency_level.trim().toUpperCase();
       params = params.set('level', mappedLevel);
     }
     if (filters.gender) params = params.set('gender', filters.gender);
@@ -318,9 +325,10 @@ export class DiscoveryService {
       params = params.set('native_languages', filters.native_languages);
     if (filters?.target_language) params = params.set('target_language', filters.target_language);
     if (filters?.proficiency_level) {
+      const normalised = filters.proficiency_level.trim().toLowerCase();
       const mappedLevel =
-        this.PROFICIENCY_LEVEL_MAP[filters.proficiency_level.toLowerCase()] ??
-        filters.proficiency_level;
+        this.PROFICIENCY_LEVEL_MAP[normalised] ??
+        filters.proficiency_level.trim().toUpperCase();
       params = params.set('level', mappedLevel);
     }
     if (filters?.country !== undefined) params = params.set('country', filters.country);

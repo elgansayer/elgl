@@ -132,6 +132,22 @@ import { TranslatePipe } from '../../services/translate.pipe';
         }
 
         <!-- Local Camera Preview (PiP overlay) -->
+        @if (connectionState() === 'connected') {
+          <div
+            class="absolute top-3 sm:top-4 start-3 sm:start-4 z-10 inline-flex items-center gap-1.5 ps-2.5 pe-2.5 pt-1 pb-1 rounded-full bg-black/50 text-white text-xs backdrop-blur-sm"
+            role="status"
+          >
+            <svg class="w-3 h-3 text-success shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                fill-rule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <span>{{ 'calls.e2eeSecured' | t }}</span>
+          </div>
+        }
+
         <div
           class="absolute top-3 sm:top-4 end-3 sm:end-4 w-24 sm:w-32 h-36 sm:h-48 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-surface-50/30"
           role="region"

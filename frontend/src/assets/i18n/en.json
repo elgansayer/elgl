@@ -946,5 +946,16 @@
   "share.moments": "Moments",
   "share.copy": "Copy",
   "share.copied": "Copied!",
-  "share.linkInputAria": "Share link"
+  "share.linkInputAria": "Share link",
+  "splitScreen.streamErrorAria": "Video stream error",
+  "splitScreen.splitScreenVideoAria": "Split screen video",
+  "splitScreen.loadingHost": "Loading host video...",
+  "splitScreen.loadingCoHost": "Loading co-host video...",
+  "splitScreen.hostVideoAria": "Host video",
+  "splitScreen.coHostVideoAria": "Co-host video",
+  "splitScreen.inviteCoHostAria": "Invite a co-host to split screen",
+  "splitScreen.hostBadge": "(Host)",
+  "splitScreen.coHostBadge": "(Co-Host)",
+  "splitScreen.inviteCoHostBtn": "Invite Co-Host",
+  "splitScreen.invitePlaceholder": "Invite Co-Host"
 }

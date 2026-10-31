@@ -11,12 +11,18 @@ import {
   Query,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_NO_STORE,
+} from '../common/cache.interceptor';
 import { FavouritesService } from '../favourites/favourites.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { ConversationStarterDto } from './dto/conversation-starter.dto';
@@ -39,6 +45,7 @@ import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { Request, Response } from 'express';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -66,6 +73,7 @@ export class ChatController {
     private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
+    private readonly personalChatEncryptionService: PersonalChatEncryptionService,
   ) {}
 
   // Tighter than the app-wide default (10/60s, app.module.ts) - this mints a
@@ -388,6 +396,27 @@ export class ChatController {
         avatar_url: m.user?.avatar_url,
       }),
     );
+  }
+
+  @Get('rooms/:roomId/e2ee-key')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  async getRoomE2eeKey(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ e2ee_key: string; room_id: string; algorithm: string }> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    const result = await this.personalChatEncryptionService.getConversationKey(
+      roomId,
+      user.id,
+    );
+    return {
+      e2ee_key: result.e2eeKey,
+      room_id: result.roomId,
+      algorithm: result.algorithm,
+    };
   }
 
   // Chat Lock endpoints

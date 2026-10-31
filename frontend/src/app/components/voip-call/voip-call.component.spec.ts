@@ -198,3 +198,49 @@ describe.skip('VoipCallComponent', () => {
     expect(mockLivekitService.leaveRoom).toHaveBeenCalled();
   });
 });
+
+describe('VoipCallComponent encryption indicator', () => {
+  let fixture: ComponentFixture<VoipCallComponent>;
+  let component: VoipCallComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [VoipCallComponent],
+      providers: [
+        {
+          provide: LivekitService,
+          useValue: { leaveRoom: vi.fn() },
+        },
+        {
+          provide: AuthService,
+          useValue: { currentUser: vi.fn() },
+        },
+        {
+          provide: ChatService,
+          useValue: { sendMessage: vi.fn() },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(VoipCallComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('callDirection', 'incoming');
+    fixture.componentRef.setInput('remoteUserId', 'user-456');
+    fixture.componentRef.setInput('displayName', 'Test User');
+    fixture.componentRef.setInput('roomName', 'test-room');
+    fixture.detectChanges();
+  });
+
+  it('shows the encryption indicator only after the call connects', () => {
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeNull();
+
+    component.callState.set('connected');
+    fixture.detectChanges();
+
+    const indicator = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement | null;
+    expect(indicator?.textContent).toContain('Encrypted call');
+
+    component.callState.set('ended');
+    fixture.detectChanges();
+  });
+});
