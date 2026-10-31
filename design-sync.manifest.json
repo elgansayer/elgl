@@ -552,7 +552,7 @@
       "claudeDesignPath": "features/discovery-community.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1729-moment-draft-persistence (draft restoration and publish failure recovery reuse the existing composer UI; the visual contract is unchanged); issue-1663-notification-inbox-tab-reconciliation (per-tab notification unread reconciliation and decrement logic only; discovery and community visual contract is unchanged); issue-1789-liked-by-runtime-hardening (default-avatar URL resolution, image loading hints and safe language bindings do not alter the modal layout or visual states; the visual contract is unchanged)",
       "requiredStates": [
         "light",
         "dark",

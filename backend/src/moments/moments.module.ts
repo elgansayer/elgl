@@ -9,6 +9,7 @@ import { MomentsController } from './moments.controller';
 import { MomentsFeedService } from './moments-feed.service';
 import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService } from './moments.service';
+import { MomentLikesService } from './moment-likes.service';
 import { CorrectionQualityService } from './correction-quality.service';
 import { TimelineWorker } from './timeline.worker';
 
@@ -23,6 +24,7 @@ import { TimelineWorker } from './timeline.worker';
   controllers: [MomentsController],
   providers: [
     MomentsService,
+    MomentLikesService,
     MomentsFeedService,
     MomentsRankingService,
     CorrectionQualityService,
@@ -31,6 +33,7 @@ import { TimelineWorker } from './timeline.worker';
   ],
   exports: [
     MomentsService,
+    MomentLikesService,
     MomentsRankingService,
     TimelineWorker,
     MomentsCacheInvalidationService,
