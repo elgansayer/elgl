@@ -1,5 +1,15 @@
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
-import { Room, RoomEvent, Track, RemoteParticipant, RemoteTrack, RemoteTrackPublication, VideoPresets } from 'livekit-client';
+import {
+  ExternalE2EEKeyProvider,
+  Room,
+  RoomEvent,
+  RoomOptions,
+  Track,
+  RemoteParticipant,
+  RemoteTrack,
+  RemoteTrackPublication,
+  VideoPresets,
+} from 'livekit-client';
 import { firstValueFrom, interval, Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -36,6 +46,8 @@ private durationSubscription: Subscription | null = null;
   readonly remoteVideoTrack = signal<MediaStreamTrack | null>(null);
   readonly remoteAudioTrack = signal<MediaStreamTrack | null>(null);
   readonly connectionError = signal<string | null>(null);
+  readonly isEncrypted = signal<boolean>(false);
+  private e2eeWorker: Worker | null = null;
 
   async startCall(remoteUserId: string): Promise<void> {
     try {
@@ -43,20 +55,43 @@ private durationSubscription: Subscription | null = null;
       if (!token) throw new Error('Not authenticated');
 
       const response = await firstValueFrom(
-        this.http.post<{ token: string; roomName: string }>(
+        this.http.post<{ token: string; roomName: string; e2eeKey?: string }>(
           `${environment.apiUrl}/video-calls/start`,
           { remoteUserId },
           { headers: { Authorization: `Bearer ${token}` } },
         ),
       );
 
-      this.room = new Room({
+      let roomOptions: RoomOptions = {
         adaptiveStream: true,
         dynacast: true,
         videoCaptureDefaults: {
           resolution: VideoPresets.h720.resolution,
         },
-      });
+      };
+
+      if (response.e2eeKey) {
+        this.disposeE2eeWorker();
+        const keyProvider = new ExternalE2EEKeyProvider();
+        if (typeof Worker !== 'undefined') {
+          this.e2eeWorker = new Worker(new URL('./livekit-e2ee.worker', import.meta.url), {
+            type: 'module',
+          });
+          roomOptions = {
+            ...roomOptions,
+            e2ee: {
+              keyProvider,
+              worker: this.e2eeWorker,
+            },
+          };
+        }
+        await keyProvider.setKey(response.e2eeKey);
+        this.isEncrypted.set(true);
+      } else {
+        this.isEncrypted.set(false);
+      }
+
+      this.room = new Room(roomOptions);
 
       this.setupRoomListeners();
       await this.room.connect(environment.liveKitUrl, response.token);
@@ -85,15 +120,38 @@ private durationSubscription: Subscription | null = null;
     }
   }
 
-  async acceptCall(roomName: string, token: string): Promise<void> {
+  async acceptCall(roomName: string, token: string, e2eeKey?: string): Promise<void> {
     try {
-      this.room = new Room({
+      let roomOptions: RoomOptions = {
         adaptiveStream: true,
         dynacast: true,
         videoCaptureDefaults: {
           resolution: VideoPresets.h720.resolution,
         },
-      });
+      };
+
+      if (e2eeKey) {
+        this.disposeE2eeWorker();
+        const keyProvider = new ExternalE2EEKeyProvider();
+        if (typeof Worker !== 'undefined') {
+          this.e2eeWorker = new Worker(new URL('./livekit-e2ee.worker', import.meta.url), {
+            type: 'module',
+          });
+          roomOptions = {
+            ...roomOptions,
+            e2ee: {
+              keyProvider,
+              worker: this.e2eeWorker,
+            },
+          };
+        }
+        await keyProvider.setKey(e2eeKey);
+        this.isEncrypted.set(true);
+      } else {
+        this.isEncrypted.set(false);
+      }
+
+      this.room = new Room(roomOptions);
 
       this.setupRoomListeners();
       await this.room.connect(environment.liveKitUrl, token);
@@ -149,6 +207,8 @@ private durationSubscription: Subscription | null = null;
     }
 
     this.stopDurationTimer();
+    this.disposeE2eeWorker();
+    this.isEncrypted.set(false);
 
     // Stop MediaStreamTracks to free camera/mic resources
     this.localVideoTrack()?.stop();
@@ -282,6 +342,13 @@ private durationSubscription: Subscription | null = null;
     if (this.durationSubscription) {
       this.durationSubscription.unsubscribe();
       this.durationSubscription = null;
+    }
+  }
+
+  private disposeE2eeWorker(): void {
+    if (this.e2eeWorker) {
+      this.e2eeWorker.terminate();
+      this.e2eeWorker = null;
     }
   }
 }

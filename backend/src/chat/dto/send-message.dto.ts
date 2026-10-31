@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsNotEmpty,
   IsObject,
@@ -168,6 +169,26 @@ export class SendMessageDto {
   @ValidateNested()
   @Type(() => StatusReplyPayloadDto)
   status_reply_payload?: StatusReplyPayloadDto;
+
+  @IsOptional()
+  @IsBoolean()
+  is_encrypted?: boolean;
+
+  @ValidateIf(
+    (dto: SendMessageDto) =>
+      dto.is_encrypted === true || dto.encryption_iv !== undefined,
+  )
+  @IsNotEmpty({
+    message: 'encryption_iv is required when is_encrypted is true',
+  })
+  @IsString()
+  @MaxLength(1024)
+  encryption_iv?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  encryption_sender_key_id?: string;
 }
 
 export class AiGenerateReplyDto {

@@ -691,6 +691,9 @@ export type ChatMessageRow = {
   is_starred?: boolean;
   is_forwarded?: boolean;
   delivery_status?: 'sent' | 'delivered' | 'read';
+  is_encrypted?: boolean;
+  encryption_iv?: string | null;
+  encryption_sender_key_id?: string | null;
   expires_at?: string | null;
   deleted_for_user_ids?: string[] | null;
 };
@@ -1205,6 +1208,80 @@ export interface Database {
           {
             foreignKeyName: 'chat_messages_sender_id_fkey';
             columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_e2ee_keys: {
+        Row: {
+          id: string;
+          user_id: string;
+          device_id: string;
+          public_key: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          device_id?: string;
+          public_key: Record<string, unknown>;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          device_id: string;
+          public_key: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'user_e2ee_keys_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      chat_room_e2ee_keys: {
+        Row: {
+          id: string;
+          room_id: string;
+          user_id: string;
+          encrypted_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          room_id: string;
+          user_id: string;
+          encrypted_key: string;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          room_id: string;
+          user_id: string;
+          encrypted_key: string;
+          created_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'chat_room_e2ee_keys_room_id_fkey';
+            columns: ['room_id'];
+            isOneToOne: false;
+            referencedRelation: 'chat_rooms';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'chat_room_e2ee_keys_user_id_fkey';
+            columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'users';
             referencedColumns: ['id'];

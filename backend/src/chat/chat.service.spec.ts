@@ -17,7 +17,10 @@ vi.mock('dompurify', () => ({
   })),
 }));
 
-import { ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
@@ -299,12 +302,169 @@ describe('ChatService', () => {
         status_reply_payload: null,
         is_view_once: false,
         delivery_status: 'sent',
+        is_encrypted: false,
+        encryption_iv: null,
+        encryption_sender_key_id: null,
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
         message: savedMessage,
       });
       expect(result).toEqual(savedMessage);
     }, 15000);
+
+    it('persists and broadcasts end-to-end encrypted messages without leaking content', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'ciphertext-base64',
+        is_encrypted: true,
+        encryption_iv: 'iv-base64',
+        encryption_sender_key_id: 'device-1',
+      };
+
+      const savedMessage = {
+        id: 'msg-encrypted-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: 'ciphertext-base64',
+        is_encrypted: true,
+        encryption_iv: 'iv-base64',
+        encryption_sender_key_id: 'device-1',
+        created_at: new Date().toISOString(),
+      };
+
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+
+      const result = await service.sendMessage('sender-1', dto);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: 'ciphertext-base64',
+        media_url: null,
+        correction_payload: null,
+        reply_to_id: null,
+        correction_request_payload: null,
+        status_reply_payload: null,
+        is_view_once: false,
+        delivery_status: 'sent',
+        is_encrypted: true,
+        encryption_iv: 'iv-base64',
+        encryption_sender_key_id: 'device-1',
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
+        message: savedMessage,
+      });
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'chat.message',
+        expect.objectContaining({
+          preview: '🔒 Encrypted message',
+        }),
+      );
+      expect(result).toEqual(savedMessage);
+    }, 15000);
+
+    it('rejects encrypted message missing an initialisation vector', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'ciphertext',
+        is_encrypted: true,
+      };
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects encrypted message with non-text message type', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }],
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'voice',
+        text_content: 'ciphertext',
+        is_encrypted: true,
+        encryption_iv: 'iv-123',
+      };
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects encrypted message sent to group rooms with multiple members', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'chat_room_members') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'receiver-1' }, { user_id: 'receiver-2' }],
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const dto: any = {
+        room_id: 'group-room-1',
+        message_type: 'text',
+        text_content: 'ciphertext',
+        is_encrypted: true,
+        encryption_iv: 'iv-123',
+      };
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
 
     it('should throw Error when insert fails with error message', async () => {
       const dto: any = { room_id: 'room-1', message_type: 'TEXT' };

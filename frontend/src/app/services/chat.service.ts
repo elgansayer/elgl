@@ -7,6 +7,7 @@ import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { ChatCacheService } from './chat-cache.service';
+import { E2eeService } from './e2ee.service';
 import { Router } from '@angular/router';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -102,6 +103,15 @@ export interface ChatMessage {
 
   /** Whether this message was forwarded from another conversation */
   is_forwarded?: boolean;
+
+  /** Whether the message content is end-to-end encrypted */
+  is_encrypted?: boolean;
+
+  /** Base64-encoded initialisation vector for AES-GCM decryption */
+  encryption_iv?: string;
+
+  /** Sender key or device identifier used to encrypt this message */
+  encryption_sender_key_id?: string;
 }
 
 export interface ReadReceiptUser {
@@ -193,6 +203,7 @@ export class ChatService {
   private offlineQueue = inject(OfflineQueueService);
   private hapticFeedback = inject(HapticFeedbackService);
   private chatCache = inject(ChatCacheService);
+  private e2eeService = inject(E2eeService);
   private router = inject(Router);
   private baseUrl = `${environment.apiUrl}/chat`;
 
@@ -269,6 +280,8 @@ export class ChatService {
       status_update_id: string;
       status_text: string;
     };
+    is_encrypted?: boolean;
+    encryption_iv?: string;
   }): Promise<ChatMessage> {
     const currentUser = this.authService.currentUser();
 
@@ -293,6 +306,7 @@ export class ChatService {
       return queuedMsg;
     }
 
+    let receiverId: string | undefined;
     // Check if the receiver is blocked before sending
     if (currentUser?.id) {
       // Get room members to find the receiver
@@ -302,7 +316,7 @@ export class ChatService {
         }),
       ).catch(() => []);
       if (roomMembers && roomMembers.length > 0) {
-        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
+        receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
         if (receiverId) {
           const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
           if (blockedIds.includes(receiverId)) {
@@ -312,11 +326,42 @@ export class ChatService {
       }
     }
 
+    let outgoingText = payload.text_content;
+    let isEncrypted = payload.is_encrypted ?? false;
+    let encryptionIv = payload.encryption_iv;
+
+    if (receiverId && payload.message_type === 'text' && outgoingText && !isEncrypted) {
+      try {
+        const encrypted = await this.e2eeService.encryptMessage(
+          outgoingText,
+          receiverId,
+          payload.room_id,
+        );
+        if (encrypted) {
+          outgoingText = encrypted.ciphertext;
+          isEncrypted = true;
+          encryptionIv = encrypted.iv;
+        }
+      } catch {
+        // Fall back to original payload if encryption negotiation fails
+      }
+    }
+
+    const sendPayload = {
+      ...payload,
+      text_content: outgoingText,
+      is_encrypted: isEncrypted,
+      encryption_iv: encryptionIv,
+    };
+
     const message = await firstValueFrom(
-      this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+      this.http.post<ChatMessage>(`${this.baseUrl}/messages`, sendPayload, {
         headers: this.getHeaders(),
       }),
     );
+    if (message.is_encrypted && payload.text_content) {
+      message.text_content = payload.text_content;
+    }
     this.hapticFeedback.tap();
     // Append the new message to the room's cached messages so the cache stays warm
     void this.chatCache.appendCachedMessage(payload.room_id, message);
@@ -397,13 +442,35 @@ export class ChatService {
       }),
     );
 
+    const currentUser = this.authService.currentUser();
+
+    // Decrypt end-to-end encrypted messages
+    for (const msg of messages) {
+      if (msg.is_encrypted) {
+        if (!msg.text_content || !msg.encryption_iv) {
+          msg.text_content = '[Encrypted message]';
+        } else {
+          try {
+            const peerUserId = msg.sender_id === currentUser?.id ? undefined : msg.sender_id;
+            msg.text_content = await this.e2eeService.decryptMessage(
+              msg.text_content,
+              msg.encryption_iv,
+              peerUserId,
+              roomId,
+            );
+          } catch {
+            msg.text_content = '[Encrypted message]';
+          }
+        }
+      }
+    }
+
     // Cache the result for non-search loads
     if (!hasSearch) {
       void this.chatCache.cacheMessages(roomId, messages);
     }
 
     // Filter out messages from blocked users
-    const currentUser = this.authService.currentUser();
     if (currentUser?.id) {
       const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
       if (blockedIds.length > 0) {

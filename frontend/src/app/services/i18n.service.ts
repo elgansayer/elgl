@@ -939,6 +939,11 @@ export class I18nService {
     'chatRoom.userIdRemovePlaceholder': 'User ID to Remove',
     'chatRoom.removeMemberBtn': 'Remove Member',
     'chatRoom.adminBtn': 'Admin',
+    'chatRoom.endToEndEncrypted': 'End-to-end encrypted',
+    'chatRoom.endToEndEncryptedNotice':
+      'Messages and calls in this conversation are secured with end-to-end encryption. Nobody outside of this chat can read or listen to them.',
+    'chatRoom.encryptedMessageFallback': '[Encrypted message]',
+    'chatRoom.e2eeBadge': 'Encrypted',
     'wordDef.lingqTitle': 'LingQ Interactive Reader',
     'wordDef.translationLabel': 'Translation',
     'wordDef.dictionaryLabel': 'Dictionary definition',
@@ -1831,6 +1836,11 @@ export class I18nService {
     'voip.decline': 'Decline',
     'voip.accept': 'Accept',
     'voip.callerAvatar': 'Caller avatar',
+    'voip.endToEndEncrypted': 'End-to-end encrypted',
+    'voip.endToEndEncryptedIcon': '🔒',
+    'voip.avatarPlaceholder': '👤',
+    'voip.rejectIcon': '✕',
+    'voip.acceptIcon': '📞',
     'common.unknownCaller': 'Unknown Caller',
 
     // Admin Portal (User Management)

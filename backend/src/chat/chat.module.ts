@@ -14,6 +14,8 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatE2eeController } from './chat-e2ee.controller';
+import { ChatE2eeService } from './chat-e2ee.service';
 import { ChatService } from './chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
@@ -46,6 +48,7 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
   ],
   controllers: [
     ChatController,
+    ChatE2eeController,
     DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
@@ -58,6 +61,7 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatE2eeService,
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,
@@ -78,6 +82,7 @@ import { DisappearingMessagesInterceptor } from './disappearing-messages.interce
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatE2eeService,
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,

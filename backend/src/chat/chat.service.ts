@@ -439,12 +439,35 @@ export class ChatService {
       await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
-    // Spam detection for text messages
-    if (dto.message_type === 'text' && dto.text_content) {
+    // Spam detection for text messages (skipped for client-side encrypted payloads)
+    if (dto.message_type === 'text' && dto.text_content && !dto.is_encrypted) {
       const isSpam = this.spamDetectionService.isSpam(dto.text_content);
       if (isSpam) {
         throw new BadRequestException(
           'Your message appears to be a duplicate or spam content.',
+        );
+      }
+    }
+
+    if (dto.is_encrypted) {
+      if (!dto.encryption_iv || dto.encryption_iv.trim().length === 0) {
+        throw new BadRequestException(
+          'Encrypted messages must include an initialisation vector (encryption_iv)',
+        );
+      }
+      if (!dto.text_content || dto.text_content.trim().length === 0) {
+        throw new BadRequestException(
+          'Encrypted messages must include ciphertext content',
+        );
+      }
+      if (dto.message_type !== 'text') {
+        throw new BadRequestException(
+          'End-to-end encryption is currently supported for text messages only',
+        );
+      }
+      if (roomMembers && roomMembers.length > 1) {
+        throw new BadRequestException(
+          'End-to-end encryption is currently supported for personal 1-to-1 chats only',
         );
       }
     }
@@ -463,6 +486,9 @@ export class ChatService {
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media' ? true : false,
         delivery_status: 'sent',
+        is_encrypted: dto.is_encrypted ?? false,
+        encryption_iv: dto.encryption_iv ?? null,
+        encryption_sender_key_id: dto.encryption_sender_key_id ?? null,
       })
       .select(
         `
@@ -488,7 +514,7 @@ export class ChatService {
 
     // ---------- Link preview scraping ----------
     const linkPreview =
-      dto.message_type === 'text'
+      dto.message_type === 'text' && !dto.is_encrypted
         ? await this.resolveLinkPreview(dto.text_content)
         : null;
 
@@ -497,10 +523,11 @@ export class ChatService {
       ? { ...savedMessage, link_preview: linkPreview }
       : savedMessage;
 
-    const enrichedCorrectionPayload =
-      await this.generateCorrectionPayloadIfNeeded(
-        savedMessage.correction_payload,
-      );
+    const enrichedCorrectionPayload = !dto.is_encrypted
+      ? await this.generateCorrectionPayloadIfNeeded(
+          savedMessage.correction_payload,
+        )
+      : null;
     if (enrichedCorrectionPayload) {
       const { error: updateError } = await this.supabaseService
         .getClient()
@@ -522,19 +549,21 @@ export class ChatService {
       message: messageForPublish,
     });
 
-    const preview = dto.text_content
-      ? dto.text_content.substring(0, 120)
-      : dto.message_type === 'voice'
-        ? '🎤 Voice message'
-        : dto.message_type === 'correction'
-          ? '📝 Correction'
-          : dto.message_type === 'doodle'
-            ? '🎨 Doodle'
-            : dto.message_type === 'correction_request'
-              ? '✏️ Correction request'
-              : dto.message_type === 'status_reply'
-                ? '✉️ Status reply'
-                : '';
+    const preview = dto.is_encrypted
+      ? '🔒 Encrypted message'
+      : dto.text_content
+        ? dto.text_content.substring(0, 120)
+        : dto.message_type === 'voice'
+          ? '🎤 Voice message'
+          : dto.message_type === 'correction'
+            ? '📝 Correction'
+            : dto.message_type === 'doodle'
+              ? '🎨 Doodle'
+              : dto.message_type === 'correction_request'
+                ? '✏️ Correction request'
+                : dto.message_type === 'status_reply'
+                  ? '✉️ Status reply'
+                  : '';
 
     // Emit push notification event
     if (receiverId) {
@@ -555,7 +584,7 @@ export class ChatService {
     this.eventEmitter.emit('message.sent', { userId: senderId });
 
     // ---------- Parse @mentions and emit notifications ----------
-    if (dto.message_type === 'text' && dto.text_content) {
+    if (dto.message_type === 'text' && dto.text_content && !dto.is_encrypted) {
       const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
       const mentionedNames = [...dto.text_content.matchAll(mentionRegex)].map(
         (m) => m[1],
@@ -2342,7 +2371,7 @@ export class ChatService {
           );
         }
       }
-    } catch (error) {
+    } catch {
       // Ignore errors fetching learner knowledge to allow the reply to still be generated
     }
 

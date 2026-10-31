@@ -13,6 +13,7 @@ import { TypingService } from '../../services/typing.service';
 import { TypingIndicatorComponent } from '../primitives/typing-indicator/typing-indicator.component';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { TranslationCacheService } from '../../services/translation-cache.service';
+import { E2eeService } from '../../services/e2ee.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
@@ -40,6 +41,10 @@ import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
+
+function isGroupMember(value: unknown): value is GroupMember {
+  return typeof value === 'object' && value !== null && 'user_id' in value;
+}
 
 @Component({
   selector: 'app-chat-room',
@@ -85,6 +90,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
+  private readonly e2eeService = inject(E2eeService);
 
   id = input.required<string>();
 
@@ -125,6 +131,7 @@ export class ChatRoomComponent implements OnDestroy {
       is_vip: m.user?.is_vip ?? false,
     })),
   );
+  readonly isGroupRoom = computed(() => this.participants().length > 2);
   readonly blockedUserIds = signal<string[]>([]);
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
@@ -160,9 +167,8 @@ export class ChatRoomComponent implements OnDestroy {
   private mentionRangeEnd = 0;
 
   readonly mentionItemToString = (value: unknown): string => {
-    if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
-    const member = value as GroupMember;
-    const displayName = member.user?.display_name;
+    if (!isGroupMember(value)) return this.textInput;
+    const displayName = value.user?.display_name;
     if (!displayName) return this.textInput;
     return (
       this.textInput.slice(0, this.mentionRangeStart) +
@@ -375,20 +381,46 @@ export class ChatRoomComponent implements OnDestroy {
 
     const currentUserId = this.authService.currentUser()?.id;
     const currentMessages = this.messages();
-    const result = applyChatRoomRealtimeEvent(
-      currentMessages,
-      data,
-      eventRoomId,
-      currentUserId,
-    );
+    const result = applyChatRoomRealtimeEvent(currentMessages, data, eventRoomId, currentUserId);
 
     if (result.messages !== currentMessages) {
       this.messages.set(result.messages);
+      if (result.incomingMessageToMarkRead?.is_encrypted) {
+        void this.decryptIncomingRealtimeMessage(result.incomingMessageToMarkRead, eventRoomId);
+      }
     }
 
     if (result.incomingMessageToMarkRead) {
       void this.markMessageRead(result.incomingMessageToMarkRead);
     }
+  }
+
+  private async decryptIncomingRealtimeMessage(msg: ChatMessage, roomId: string): Promise<void> {
+    if (!msg.text_content || !msg.encryption_iv) {
+      this.replaceMessageText(msg.id, this.i18n.translate('chatRoom.encryptedMessageFallback'));
+      return;
+    }
+    try {
+      const peerUserId =
+        msg.sender_id === this.authService.currentUser()?.id ? undefined : msg.sender_id;
+      const decrypted = await this.e2eeService.decryptMessage(
+        msg.text_content,
+        msg.encryption_iv,
+        peerUserId,
+        roomId,
+      );
+      this.replaceMessageText(msg.id, decrypted);
+    } catch {
+      this.replaceMessageText(msg.id, this.i18n.translate('chatRoom.encryptedMessageFallback'));
+    }
+  }
+
+  private replaceMessageText(messageId: string, textContent: string): void {
+    this.messages.update((messages) =>
+      messages.map((message) =>
+        message.id === messageId ? { ...message, text_content: textContent } : message,
+      ),
+    );
   }
 
   private async markUnreadMessagesRead(messages: ChatMessage[]): Promise<void> {
@@ -476,10 +508,7 @@ export class ChatRoomComponent implements OnDestroy {
 
     this.isCheckingGrammar.set(true);
     try {
-      const grammar = await this.vocabStore.checkGrammar(
-        text,
-        this.partnerLanguage() ?? undefined,
-      );
+      const grammar = await this.vocabStore.checkGrammar(text, this.partnerLanguage() ?? undefined);
       const corrected = grammar.corrected.trim();
       if (grammar.errors_found > 0 && corrected && corrected !== text) {
         this.textInput = corrected;

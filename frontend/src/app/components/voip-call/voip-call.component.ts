@@ -39,6 +39,10 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
             </div>
             <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
             <p class="text-text-muted text-sm mt-1">{{ callStatusText() }}</p>
+            <p class="text-xs text-success mt-2 flex items-center justify-center gap-1">
+              <span aria-hidden="true">{{ 'voip.endToEndEncryptedIcon' | t }}</span>
+              <span>{{ 'voip.endToEndEncrypted' | t }}</span>
+            </p>
           </div>
 
           <!-- Call Timer (when connected) -->

@@ -81,6 +81,15 @@ export interface ChatMessage {
 
   /** Whether this message was forwarded from another conversation */
   is_forwarded?: boolean;
+
+  /** Whether the message content is end-to-end encrypted */
+  is_encrypted?: boolean;
+
+  /** Base64-encoded initialisation vector for AES-GCM decryption */
+  encryption_iv?: string | null;
+
+  /** Sender key or device identifier used to encrypt this message */
+  encryption_sender_key_id?: string | null;
 }
 
 export interface DeletedAwareMessage extends ChatMessage {

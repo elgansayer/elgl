@@ -13,6 +13,7 @@ import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
+import { E2eeService } from '../../services/e2ee.service';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -48,6 +49,8 @@ describe('ChatRoomComponent (threaded replies)', () => {
     appLocked: ReturnType<typeof signal>;
   };
   let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
+  let decryptMessageMock: ReturnType<typeof vi.fn>;
+  let realtimeHandler: ((data: unknown) => void) | undefined;
 
   beforeEach(async () => {
     mockChatService = {
@@ -64,7 +67,12 @@ describe('ChatRoomComponent (threaded replies)', () => {
     const mockCentrifugeService = {
       isConnected: signal(false),
       connect: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn().mockReturnValue({}),
+      subscribe: vi
+        .fn()
+        .mockImplementation((_channel: string, handler: (data: unknown) => void) => {
+          realtimeHandler = handler;
+          return {};
+        }),
       unsubscribe: vi.fn(),
       listen: vi.fn().mockReturnValue(() => undefined),
     };
@@ -116,6 +124,13 @@ describe('ChatRoomComponent (threaded replies)', () => {
       speak: vi.fn(),
     };
 
+    decryptMessageMock = vi.fn().mockImplementation((text: string) => Promise.resolve(text));
+    const mockE2eeService = {
+      decryptMessage: decryptMessageMock,
+      encryptMessage: vi.fn().mockResolvedValue(null),
+      isE2eeSupported: vi.fn().mockReturnValue(true),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
       providers: [
@@ -128,6 +143,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: VocabularyStore, useValue: mockVocabularyStore },
         { provide: NetworkStatusService, useValue: mockNetworkStatusService },
         { provide: TextToSpeechService, useValue: mockTextToSpeechService },
+        { provide: E2eeService, useValue: mockE2eeService },
         I18nService,
       ],
     }).compileComponents();
@@ -642,6 +658,103 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
       expect(renderedCards()).toHaveLength(0);
       expect(bubbleText()).toContain('example.com/post');
+    });
+  });
+
+  describe('End-to-End Encryption UI', () => {
+    it('decrypts an incoming encrypted realtime message before displaying it', async () => {
+      decryptMessageMock.mockResolvedValue('Decrypted realtime message');
+      await component.setupRealTime();
+
+      realtimeHandler?.({
+        message: makeMessage({
+          id: 'enc-realtime-1',
+          text_content: 'ciphertext',
+          is_encrypted: true,
+          encryption_iv: 'iv123',
+        }),
+      });
+      await fixture.whenStable();
+
+      expect(decryptMessageMock).toHaveBeenCalledWith('ciphertext', 'iv123', 'user-2', 'room-1');
+      expect(
+        component.messages().find((message) => message.id === 'enc-realtime-1')?.text_content,
+      ).toBe('Decrypted realtime message');
+    });
+
+    it('hides ciphertext when realtime message decryption fails', async () => {
+      decryptMessageMock.mockRejectedValue(new Error('Unable to decrypt'));
+      await component.setupRealTime();
+
+      realtimeHandler?.({
+        message: makeMessage({
+          id: 'enc-realtime-2',
+          text_content: 'ciphertext',
+          is_encrypted: true,
+          encryption_iv: 'iv123',
+        }),
+      });
+      await fixture.whenStable();
+
+      expect(
+        component.messages().find((message) => message.id === 'enc-realtime-2')?.text_content,
+      ).toBe(TestBed.inject(I18nService).translate('chatRoom.encryptedMessageFallback'));
+    });
+
+    it('shows the translated unavailable state when realtime encryption metadata is incomplete', async () => {
+      await component.setupRealTime();
+
+      realtimeHandler?.({
+        message: makeMessage({
+          id: 'enc-realtime-3',
+          text_content: 'ciphertext',
+          is_encrypted: true,
+          encryption_iv: undefined,
+        }),
+      });
+      await fixture.whenStable();
+
+      expect(decryptMessageMock).not.toHaveBeenCalled();
+      expect(
+        component.messages().find((message) => message.id === 'enc-realtime-3')?.text_content,
+      ).toBe(TestBed.inject(I18nService).translate('chatRoom.encryptedMessageFallback'));
+    });
+
+    it('displays E2EE badge in header for direct 1:1 chat rooms', async () => {
+      component.participants.set([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
+      fixture.detectChanges();
+
+      const indicator = fixture.debugElement.query(By.css('[data-testid="e2ee-room-indicator"]'));
+      expect(indicator).not.toBeNull();
+      expect(indicator.nativeElement.textContent).toContain('🔒');
+    });
+
+    it('hides E2EE header badge for group conversations with more than two members', async () => {
+      component.participants.set([
+        { user_id: 'user-1' },
+        { user_id: 'user-2' },
+        { user_id: 'user-3' },
+      ]);
+      fixture.detectChanges();
+
+      const indicator = fixture.debugElement.query(By.css('[data-testid="e2ee-room-indicator"]'));
+      expect(indicator).toBeNull();
+    });
+
+    it('renders a lock badge on encrypted messages', async () => {
+      component.messages.set([
+        makeMessage({
+          id: 'enc-msg-1',
+          text_content: 'Secret message',
+          is_encrypted: true,
+          encryption_iv: 'iv123',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const badge = fixture.debugElement.query(By.css('[data-testid="e2ee-message-badge"]'));
+      expect(badge).not.toBeNull();
+      expect(badge.nativeElement.textContent).toContain('🔒');
     });
   });
 });

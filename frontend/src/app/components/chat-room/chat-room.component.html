@@ -7,9 +7,21 @@
         💬
       </div>
       <div>
-        <h1 class="text-base font-black text-text-primary sm:text-lg">
-          {{ roomDetails?.title || roomId }}
-        </h1>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <h1 class="text-base font-black text-text-primary sm:text-lg">
+            {{ roomDetails?.title || roomId }}
+          </h1>
+          @if (!isGroupRoom()) {
+            <span
+              class="inline-flex items-center gap-0.5 text-[11px] text-success font-medium"
+              [attr.title]="'chatRoom.endToEndEncryptedNotice' | t"
+              data-testid="e2ee-room-indicator"
+            >
+              <span aria-hidden="true">🔒</span>
+              <span>{{ 'chatRoom.endToEndEncrypted' | t }}</span>
+            </span>
+          }
+        </div>
         <p
           class="text-xs"
           [class]="
@@ -193,6 +205,16 @@
                     {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
                     {{ msg.created_at | date: 'shortTime' }}
                   </span>
+                  @if (msg.is_encrypted) {
+                    <span
+                      class="inline-flex items-center text-xs text-success"
+                      [attr.title]="'chatRoom.e2eeBadge' | t"
+                      [attr.aria-label]="'chatRoom.e2eeBadge' | t"
+                      data-testid="e2ee-message-badge"
+                    >
+                      🔒
+                    </span>
+                  }
                   @if (isOwnMessage(msg) && (msg.delivery_status || msg.is_read)) {
                     <span class="inline-flex items-center flex-shrink-0">
                       @if (

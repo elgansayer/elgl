@@ -157,4 +157,41 @@ describe('SendMessageDto', () => {
     expect(hasError(errors, 'room_id')).toBe(true);
     expect(hasError(errors, 'reply_to_id')).toBe(true);
   });
+
+  it('accepts encrypted messages with iv and key identifiers', async () => {
+    const errors = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'dGVzdC1jaXBoZXJ0ZXh0',
+      is_encrypted: true,
+      encryption_iv: 'YWJjZGVmZ2hpamts',
+      encryption_sender_key_id: 'key-123',
+    });
+
+    expect(errors).toHaveLength(0);
+  });
+
+  it('validates types of encryption metadata', async () => {
+    const errors = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'ciphertext',
+      is_encrypted: 'yes',
+      encryption_iv: 12345,
+    });
+
+    expect(hasError(errors, 'is_encrypted')).toBe(true);
+    expect(hasError(errors, 'encryption_iv')).toBe(true);
+  });
+
+  it('requires encryption_iv when is_encrypted is true', async () => {
+    const errors = await validateMessage({
+      room_id: 'room-1',
+      message_type: 'text',
+      text_content: 'ciphertext',
+      is_encrypted: true,
+    });
+
+    expect(hasError(errors, 'encryption_iv')).toBe(true);
+  });
 });

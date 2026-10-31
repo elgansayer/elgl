@@ -11,6 +11,7 @@ import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { ChatCacheService } from './chat-cache.service';
+import { E2eeService } from './e2ee.service';
 import { environment } from '../../environments/environment';
 
 const baseUrl = `${environment.apiUrl}/chat`;
@@ -28,6 +29,8 @@ describe('ChatService', () => {
   let removeMessageMock: ReturnType<typeof vi.fn>;
   let incrementRetryCountMock: ReturnType<typeof vi.fn>;
   let hapticTapMock: ReturnType<typeof vi.fn>;
+  let encryptMessageMock: ReturnType<typeof vi.fn>;
+  let decryptMessageMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     currentUser = signal<{ id: string } | null>(null);
@@ -40,6 +43,8 @@ describe('ChatService', () => {
     removeMessageMock = vi.fn().mockResolvedValue(undefined);
     incrementRetryCountMock = vi.fn().mockResolvedValue(undefined);
     hapticTapMock = vi.fn();
+    encryptMessageMock = vi.fn().mockResolvedValue(null);
+    decryptMessageMock = vi.fn().mockImplementation((text: string) => Promise.resolve(text));
 
     TestBed.configureTestingModule({
       providers: [
@@ -90,6 +95,17 @@ describe('ChatService', () => {
             invalidateRooms: vi.fn().mockReturnValue(Promise.resolve()),
             invalidateFavourites: vi.fn().mockReturnValue(Promise.resolve()),
           } as unknown as ChatCacheService,
+        },
+        {
+          provide: E2eeService,
+          useValue: {
+            encryptMessage: encryptMessageMock,
+            decryptMessage: decryptMessageMock,
+            initialiseUserKeys: vi.fn().mockResolvedValue(undefined),
+            getUserPublicKey: vi.fn().mockResolvedValue(null),
+            isE2eeSupported: vi.fn().mockReturnValue(true),
+            hasKey: vi.fn().mockReturnValue(true),
+          } as unknown as E2eeService,
         },
       ],
     });
@@ -253,6 +269,51 @@ describe('ChatService', () => {
 
       vi.unstubAllGlobals();
     });
+
+    it('should send an encrypted message when encryption succeeds', async () => {
+      currentUser.set({ id: 'user-1' });
+      encryptMessageMock.mockResolvedValue({
+        ciphertext: 'encrypted-secret-text',
+        iv: 'base64-iv-value',
+      });
+
+      const promise = service.sendMessage({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'secret message',
+      });
+
+      const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
+      membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const sendReq = httpMock.expectOne(`${baseUrl}/messages`);
+      expect(sendReq.request.method).toBe('POST');
+      expect(sendReq.request.body).toMatchObject({
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'encrypted-secret-text',
+        is_encrypted: true,
+        encryption_iv: 'base64-iv-value',
+      });
+
+      sendReq.flush({
+        id: 'm1',
+        room_id: 'room-1',
+        sender_id: 'user-1',
+        message_type: 'text',
+        text_content: 'encrypted-secret-text',
+        is_encrypted: true,
+        encryption_iv: 'base64-iv-value',
+        is_read: false,
+        created_at: '2026-08-01T00:00:00.000Z',
+      });
+
+      const result = await promise;
+      expect(result.text_content).toBe('secret message');
+      expect(result.is_encrypted).toBe(true);
+    });
   });
 
   describe('getMessages', () => {
@@ -287,6 +348,59 @@ describe('ChatService', () => {
       req.flush([]);
 
       await expect(promise).resolves.toEqual([]);
+    });
+
+    it('should decrypt end-to-end encrypted messages', async () => {
+      currentUser.set({ id: 'user-1' });
+      decryptMessageMock.mockResolvedValue('decrypted plain text');
+
+      const promise = service.getMessages('room-1');
+      await new Promise((r) => setTimeout(r, 0));
+
+      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1`);
+      req.flush([
+        {
+          id: 'enc-1',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          text_content: 'ciphertext-data',
+          is_encrypted: true,
+          encryption_iv: 'iv-data',
+          is_read: false,
+          created_at: 'now',
+        },
+      ]);
+
+      const messages = await promise;
+      expect(decryptMessageMock).toHaveBeenCalledWith('ciphertext-data', 'iv-data', 'user-2', 'room-1');
+      expect(messages[0].text_content).toBe('decrypted plain text');
+    });
+
+    it('should fall back gracefully to placeholder if decryption fails', async () => {
+      currentUser.set({ id: 'user-1' });
+      decryptMessageMock.mockRejectedValue(new Error('Decryption failure'));
+
+      const promise = service.getMessages('room-1');
+      await new Promise((r) => setTimeout(r, 0));
+
+      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1`);
+      req.flush([
+        {
+          id: 'enc-2',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          text_content: 'ciphertext-data',
+          is_encrypted: true,
+          encryption_iv: 'invalid-iv',
+          is_read: false,
+          created_at: 'now',
+        },
+      ]);
+
+      const messages = await promise;
+      expect(messages[0].text_content).toBe('[Encrypted message]');
     });
   });
 

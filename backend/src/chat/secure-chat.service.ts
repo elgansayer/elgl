@@ -144,11 +144,18 @@ export class SecureChatService extends ChatService {
       return super.sendMessage(senderId, dto);
     }
 
+    if (dto.is_encrypted) {
+      throw new BadRequestException(
+        'End-to-end encryption is currently supported for personal 1-to-1 chats only',
+      );
+    }
+
     // Message filters and automatic away replies are direct-conversation
     // concepts. Group messages instead fan out to every current member.
     if (
       dto.message_type === 'text' &&
       dto.text_content &&
+      !dto.is_encrypted &&
       this.secureSpam.isSpam(dto.text_content)
     ) {
       throw new BadRequestException(
@@ -182,6 +189,9 @@ export class SecureChatService extends ChatService {
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media',
         delivery_status: 'sent',
+        is_encrypted: dto.is_encrypted ?? false,
+        encryption_iv: dto.encryption_iv ?? null,
+        encryption_sender_key_id: dto.encryption_sender_key_id ?? null,
       })
       .select(
         `*, sender:users!chat_messages_sender_id_fkey (id, display_name, avatar_url)`,
@@ -197,7 +207,7 @@ export class SecureChatService extends ChatService {
     let message: ChatMessage = insertResponse.data;
     // Link previews are enrichment only and must never block a group send.
     const linkPreview =
-      dto.message_type === 'text'
+      dto.message_type === 'text' && !dto.is_encrypted
         ? await this.resolveLinkPreview(dto.text_content)
         : null;
     if (linkPreview) {
@@ -207,7 +217,9 @@ export class SecureChatService extends ChatService {
     void this.secureXp.awardXpForActivity(senderId, 'send_message');
     await this.secureCentrifugo.publish(`chat:${dto.room_id}`, { message });
 
-    const preview = dto.text_content?.slice(0, 120) ?? dto.message_type;
+    const preview = dto.is_encrypted
+      ? '🔒 Encrypted message'
+      : (dto.text_content?.slice(0, 120) ?? dto.message_type);
     for (const receiverId of otherMemberIds) {
       this.secureEvents.emit(
         'chat.message',
@@ -228,7 +240,7 @@ export class SecureChatService extends ChatService {
     void this.secureReadReceipts?.setInitialSent(message.id);
     this.secureEvents.emit('message.sent', { userId: senderId });
 
-    if (dto.message_type === 'text' && dto.text_content) {
+    if (dto.message_type === 'text' && dto.text_content && !dto.is_encrypted) {
       const mentionedNames = [
         ...dto.text_content.matchAll(/@([\wÀ-ɏ؀-ۿ]+)/g),
       ].map((match) => match[1]);
