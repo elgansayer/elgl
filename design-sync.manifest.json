@@ -601,7 +601,7 @@
       "claudeDesignPath": "features/learning.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1792-flashcard-review-interactions (in-flight save disabling, accessibility attributes, and audio lifecycle cleanup preserve the existing review layout; the visual contract is unchanged); issue-1790-flashcard-review (in-flight save disabling and audio lifecycle from main preserve the existing layout; visual contract is unchanged)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
