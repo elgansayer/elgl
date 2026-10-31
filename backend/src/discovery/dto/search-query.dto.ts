@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -11,6 +12,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PROFICIENCY_LEVELS } from '../../users/proficiency-level';
 
 const transformOptionalBoolean = ({ value }: { value: unknown }): unknown => {
   if (value === true || value === false) return value;
@@ -112,7 +114,11 @@ export class SearchQueryDto {
     example: 'B1',
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   @IsString()
+  @IsIn(PROFICIENCY_LEVELS)
   level?: string;
 
   @ApiPropertyOptional({

@@ -4,9 +4,11 @@ import {
   IsNumber,
   Min,
   IsBoolean,
+  IsIn,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
+import { PROFICIENCY_LEVELS } from '../../users/proficiency-level';
 
 export class LanguagePairQueryDto {
   @ApiPropertyOptional({
@@ -69,7 +71,11 @@ export class LanguagePairQueryDto {
     example: 'B1',
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   @IsString()
+  @IsIn(PROFICIENCY_LEVELS)
   level?: string;
 
   @ApiPropertyOptional({
