@@ -71,6 +71,87 @@ export class NlpService {
     return fetch(url, { ...init, signal: combinedSignal });
   }
 
+  private static isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private static isUnknownArray(value: unknown): value is unknown[] {
+    return Array.isArray(value);
+  }
+
+  private static readDeepLTranslation(payload: unknown): string | null {
+    if (
+      !NlpService.isRecord(payload) ||
+      !NlpService.isUnknownArray(payload.translations)
+    ) {
+      return null;
+    }
+
+    const translation = payload.translations[0];
+    if (
+      !NlpService.isRecord(translation) ||
+      typeof translation.text !== 'string'
+    ) {
+      return null;
+    }
+
+    const text = translation.text.trim();
+    return text || null;
+  }
+
+  private static readAzureDetectedLanguage(payload: unknown): string | null {
+    if (!NlpService.isUnknownArray(payload)) return null;
+
+    const detection = payload[0];
+    if (
+      !NlpService.isRecord(detection) ||
+      typeof detection.language !== 'string'
+    ) {
+      return null;
+    }
+
+    const language = detection.language.trim();
+    return language || null;
+  }
+
+  private static readAzureDictionaryTarget(payload: unknown): string | null {
+    if (!NlpService.isUnknownArray(payload)) return null;
+
+    const lookup = payload[0];
+    if (
+      !NlpService.isRecord(lookup) ||
+      typeof lookup.displayTarget !== 'string'
+    ) {
+      return null;
+    }
+
+    const target = lookup.displayTarget.trim();
+    return target || null;
+  }
+
+  private static readAzureExplanation(payload: unknown): string | null {
+    if (!NlpService.isUnknownArray(payload)) return null;
+
+    const result = payload[0];
+    if (
+      !NlpService.isRecord(result) ||
+      !NlpService.isUnknownArray(result.translations)
+    ) {
+      return null;
+    }
+
+    const translation = result.translations[0];
+    if (
+      !NlpService.isRecord(translation) ||
+      typeof translation.text !== 'string'
+    ) {
+      return null;
+    }
+
+    const text = translation.text.trim();
+    return text || null;
+  }
+
   detectLanguage(text: string): { language: string; confidence: number } {
     const guesses = this.nlpLanguage.guess(text, undefined, 3);
     if (!guesses || guesses.length === 0) {
@@ -144,15 +225,9 @@ export class NlpService {
         );
 
         if (res.ok) {
-          const jsonResponse = (await res.json()) as unknown as {
-            translations: Array<{ text: string }>;
-          };
-          if (
-            jsonResponse?.translations &&
-            jsonResponse.translations.length > 0
-          ) {
-            const translatedText = jsonResponse.translations[0].text;
-
+          const payload: unknown = await res.json();
+          const translatedText = NlpService.readDeepLTranslation(payload);
+          if (translatedText) {
             // Generate transliteration via reverse look-up from DeepL
             let transliteration = translatedText;
             try {
@@ -172,10 +247,11 @@ export class NlpService {
                 },
               );
               if (translitRes.ok) {
-                const translitData = (await translitRes.json()) as {
-                  translations: Array<{ text: string }>;
-                };
-                transliteration = translitData.translations[0].text;
+                const transliterationPayload: unknown =
+                  await translitRes.json();
+                transliteration =
+                  NlpService.readDeepLTranslation(transliterationPayload) ??
+                  transliteration;
               }
             } catch {
               // Keep the translated text as transliteration fallback
@@ -238,10 +314,9 @@ export class NlpService {
         );
 
         if (detectRes.ok) {
-          const detectData = (await detectRes.json()) as unknown as Array<{
-            language: string;
-          }>;
-          const detectedLang = detectData?.[0]?.language || 'en';
+          const detectionPayload: unknown = await detectRes.json();
+          const detectedLang =
+            NlpService.readAzureDetectedLanguage(detectionPayload) ?? 'en';
 
           // Use Azure's dictionary lookup for grammar correction (works best for common languages)
           const dictRes = await NlpService.fetchWithTimeout(
@@ -257,10 +332,9 @@ export class NlpService {
           );
 
           if (dictRes.ok) {
-            const dictData = (await dictRes.json()) as unknown as Array<{
-              displayTarget?: string;
-            }>;
-            const correctedText = dictData?.[0]?.displayTarget || orig;
+            const dictionaryPayload: unknown = await dictRes.json();
+            const correctedText =
+              NlpService.readAzureDictionaryTarget(dictionaryPayload) ?? orig;
             const errorsFound = orig === correctedText ? 0 : 1;
 
             // Generate explanation using Azure's translation
@@ -282,11 +356,9 @@ export class NlpService {
                 },
               );
               if (explainRes.ok) {
-                const explainData = (await explainRes.json()) as Array<{
-                  translations: Array<{ text: string }>;
-                }>;
+                const explanationPayload: unknown = await explainRes.json();
                 explanation =
-                  explainData[0]?.translations[0]?.text ||
+                  NlpService.readAzureExplanation(explanationPayload) ??
                   'Corrected via Azure AI';
               }
             } catch {
@@ -716,113 +788,122 @@ export class NlpService {
     await this.checkRateLimit(userId, isVip);
 
     // Detect source language if not provided
-    const detected =
-      dto.source_language || this.detectLanguage(dto.text).language;
     const cleanWord = dto.text.trim();
+    const detected =
+      dto.source_language || this.detectLanguage(cleanWord).language;
 
+    let translatedText = cleanWord;
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
-    if (!deepLKey) {
-      throw new BadRequestException('DeepL API key not configured');
+
+    // Translate the original text via DeepL if available, else graceful degradation
+    if (deepLKey) {
+      try {
+        const res = await NlpService.fetchWithTimeout(
+          'https://api-free.deepl.com/v2/translate',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `DeepL-Auth-Key ${deepLKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: [cleanWord],
+              target_lang: dto.target_language.toUpperCase(),
+              source_lang: detected.toUpperCase(),
+              tag_handling: 'xml',
+            }),
+          },
+        );
+
+        if (res.ok) {
+          const payload: unknown = await res.json();
+          translatedText =
+            NlpService.readDeepLTranslation(payload) ?? translatedText;
+        }
+      } catch {
+        // Fallback to source text on network failure
+      }
     }
-
-    // Translate the original text via DeepL
-    const res = await NlpService.fetchWithTimeout(
-      'https://api-free.deepl.com/v2/translate',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${deepLKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: [cleanWord],
-          target_lang: dto.target_language.toUpperCase(),
-          source_lang: detected.toUpperCase(),
-          tag_handling: 'xml',
-        }),
-      },
-    );
-
-    if (!res.ok) {
-      const errorBody = await res.text();
-      throw new BadRequestException(
-        `DeepL API error: ${res.status} ${errorBody}`,
-      );
-    }
-
-    const jsonResponse = (await res.json()) as unknown as {
-      translations: Array<{ text: string }>;
-    };
-    const translatedText = jsonResponse.translations[0].text;
 
     let correctedText = cleanWord;
     let explanation = '';
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
 
-    // Obtain grammar‑style correction via Azure (mirrors the way
-    // grammarCheck works but does not count a second API call)
+    // Obtain grammar-style correction via Azure if configured
     if (azureKey) {
-      const detectRes = await NlpService.fetchWithTimeout(
-        'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([{ Text: cleanWord }]),
-        },
-      );
-      const detectData = (await detectRes.json()) as Array<{
-        language: string;
-      }>;
-      const detectedLang = detectData?.[0]?.language || 'en';
-
-      const dictRes = await NlpService.fetchWithTimeout(
-        `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([{ Text: cleanWord }]),
-        },
-      );
-      const dictData = (await dictRes.json()) as Array<{
-        displayTarget?: string;
-      }>;
-      correctedText = dictData?.[0]?.displayTarget || cleanWord;
-
-      const explainRes = await NlpService.fetchWithTimeout(
-        `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
-        {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify([
-            {
-              Text: `Grammar correction: "${cleanWord}" → "${correctedText}"`,
+      try {
+        const detectRes = await NlpService.fetchWithTimeout(
+          'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
+          {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': azureKey,
+              'Content-Type': 'application/json',
             },
-          ]),
-        },
-      );
-      if (explainRes.ok) {
-        const explainData = (await explainRes.json()) as Array<{
-          translations: Array<{ text: string }>;
-        }>;
-        explanation =
-          explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
-      } else {
-        explanation = 'Corrected via Azure AI';
+            body: JSON.stringify([{ Text: cleanWord }]),
+          },
+        );
+        if (detectRes.ok) {
+          const detectPayload: unknown = await detectRes.json();
+          const detectedLang =
+            NlpService.readAzureDetectedLanguage(detectPayload) ?? detected;
+
+          const dictRes = await NlpService.fetchWithTimeout(
+            `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
+            {
+              method: 'POST',
+              headers: {
+                'Ocp-Apim-Subscription-Key': azureKey,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify([{ Text: cleanWord }]),
+            },
+          );
+          if (dictRes.ok) {
+            const dictionaryPayload: unknown = await dictRes.json();
+            correctedText =
+              NlpService.readAzureDictionaryTarget(dictionaryPayload) ??
+              cleanWord;
+          }
+
+          const explainRes = await NlpService.fetchWithTimeout(
+            `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
+            {
+              method: 'POST',
+              headers: {
+                'Ocp-Apim-Subscription-Key': azureKey,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify([
+                {
+                  Text: `Grammar correction: "${cleanWord}" → "${correctedText}"`,
+                },
+              ]),
+            },
+          );
+          if (explainRes.ok) {
+            const explanationPayload: unknown = await explainRes.json();
+            explanation =
+              NlpService.readAzureExplanation(explanationPayload) ??
+              'Corrected via Azure AI';
+          }
+        }
+      } catch {
+        // Fallback gracefully on Azure API failure
       }
     }
 
-    // Build word‑level corrections to match Tandem‑style structured UI (every word)
-    const originalWords = cleanWord.split(/\s+/);
-    const correctedWords = correctedText.split(/\s+/);
+    // Build word-level structured corrections using Intl.Segmenter
+    const segmenter = new Intl.Segmenter(detected || 'en', {
+      granularity: 'word',
+    });
+    const originalSegments = Array.from(segmenter.segment(cleanWord)).filter(
+      (s) => s.isWordLike,
+    );
+    const correctedSegments = Array.from(
+      segmenter.segment(correctedText),
+    ).filter((s) => s.isWordLike);
+
     const wordCorrections: Array<{
       original: string;
       corrected: string;
@@ -830,23 +911,21 @@ export class NlpService {
       offset: number;
       isCorrect: boolean;
     }> = [];
-    let currentPos = 0;
-    for (let i = 0; i < originalWords.length; i++) {
-      const origWord = originalWords[i];
-      const startIndex = cleanWord.indexOf(origWord, currentPos);
-      const corrWord = correctedWords[i] ?? origWord;
+
+    for (let i = 0; i < originalSegments.length; i++) {
+      const origSeg = originalSegments[i];
+      const corrSeg = correctedSegments[i];
+      const origWord = origSeg.segment;
+      const corrWord = corrSeg?.segment ?? origWord;
       const isCorrect = origWord === corrWord;
+
       wordCorrections.push({
         original: origWord,
         corrected: corrWord,
         explanation: isCorrect ? '' : explanation,
-        offset: startIndex >= 0 ? startIndex : currentPos,
+        offset: origSeg.index,
         isCorrect,
       });
-      currentPos =
-        startIndex >= 0
-          ? startIndex + origWord.length
-          : currentPos + origWord.length;
     }
 
     return {

@@ -8,9 +8,11 @@ import { AuthService } from '../../services/auth.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
+import { CorrectionModalComponent } from '../../components/correction-modal/correction-modal.component';
 
 interface AiChatMessage {
   id: string;
@@ -29,6 +31,7 @@ interface AiChatMessage {
     TranslatePipe,
     A11yClickableDirective,
     VisualDiffComponent,
+    CorrectionModalComponent,
   ],
   template: `
     <div class="flex h-full">
@@ -168,13 +171,16 @@ interface AiChatMessage {
 
               <!-- AI input -->
               <div class="p-4 border-t border-surface-100">
+                <label for="ai-chat-message" class="sr-only">
+                  {{ 'aiPartner.messageInput' | t }}
+                </label>
                 <div class="flex gap-2">
                   <input
                     hlmInput
+                    id="ai-chat-message"
                     [ngModel]="aiInput()"
                     (ngModelChange)="aiInput.set($event)"
                     (keyup.enter)="sendAiMessage()"
-                    [placeholder]="'aiPartner.inputPlaceholder' | t"
                     class="flex-1 ps-3 pe-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <button
@@ -265,10 +271,26 @@ interface AiChatMessage {
                       ) {
                         <div>
                           <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
-                          <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
+                          <p class="text-xs text-warning">
+                            ✏️ {{ 'chatRoom.correctionRequested' | t }}
+                          </p>
                         </div>
                       } @else {
                         <p>{{ msg.text_content }}</p>
+                      }
+
+                      <!-- In-app translation -->
+                      @if (translating()[msg.id]) {
+                        <p class="mt-1 text-xs text-text-muted italic animate-pulse">
+                          {{ 'chat.translating' | t }}
+                        </p>
+                      }
+                      @if (showTranslation()[msg.id] && translations()[msg.id]) {
+                        <p
+                          class="mt-1 text-xs text-primary-ink italic border-s-2 border-primary-ink/40 ps-2"
+                        >
+                          {{ translations()[msg.id] }}
+                        </p>
                       }
 
                       <!-- media -->
@@ -283,40 +305,68 @@ interface AiChatMessage {
                       @if (msg.is_view_once && !msg.viewed_at) {
                         <button
                           hlmBtn
+                          type="button"
                           (click)="viewMedia(msg)"
                           class="text-sm text-primary-ink underline mt-1"
                         >
-                          Tap to view
+                          {{ 'chat.tapToView' | t }}
                         </button>
                       }
 
-                      <!-- action button: correct / fix / request correction -->
+                      <!-- action button: translate / correct / fix / request correction -->
                       <div
-                        class="mt-1 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        class="mt-1 flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
+                        @if (msg.text_content) {
+                          <button
+                            hlmBtn
+                            type="button"
+                            (click)="toggleTranslation(msg)"
+                            class="text-xs text-primary-ink hover:underline"
+                            [attr.aria-label]="
+                              (showTranslation()[msg.id]
+                                ? 'chat.hideTranslation'
+                                : 'chat.translate'
+                              ) | t
+                            "
+                          >
+                            {{
+                              (showTranslation()[msg.id]
+                                ? 'chat.hideTranslation'
+                                : 'chat.translate'
+                              ) | t
+                            }}
+                          </button>
+                        }
                         @if (msg.sender_id !== currentUserId()) {
                           <button
                             hlmBtn
+                            type="button"
                             (click)="openCorrection(msg)"
                             class="text-xs text-warning hover:underline"
+                            [attr.aria-label]="'chat.correct' | t"
                           >
-                            Correct
+                            {{ 'chat.correct' | t }}
                           </button>
                           <button
                             hlmBtn
+                            type="button"
                             (click)="requestCorrection(msg)"
                             class="text-xs text-primary-ink hover:underline"
+                            [attr.aria-label]="'chat.requestCorrection' | t"
                           >
-                            Ask for correction
+                            {{ 'chat.requestCorrection' | t }}
                           </button>
                         }
                         @if (msg.sender_id === currentUserId() && msg.message_type === 'text') {
                           <button
                             hlmBtn
+                            type="button"
                             (click)="openFix(msg)"
                             class="text-xs text-secondary-ink hover:underline"
+                            [attr.aria-label]="'chat.fix' | t"
                           >
-                            Fix
+                            {{ 'chat.fix' | t }}
                           </button>
                         }
                       </div>
@@ -405,107 +455,46 @@ interface AiChatMessage {
                 }
               </div>
 
-              <!-- Correction panel (when active) -->
-              @if (correctionTargetMessage()) {
-                <div class="p-4 border-t border-surface-100 bg-surface-200/50">
-                  <div class="space-y-2">
-                    <p class="text-sm font-semibold">
-                      Correcting message from
-                      {{ correctionTargetMessage()?.sender?.display_name ?? 'User' }}
-                    </p>
-                    <p class="text-xs text-text-muted line-through">
-                      {{ correctionTargetMessage()?.text_content }}
-                    </p>
-                    <input
-                      hlmInput
-                      [ngModel]="correctionText()"
-                      (ngModelChange)="correctionText.set($event)"
-                      placeholder="Corrected text..."
-                      class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
-                    />
-                    <input
-                      hlmInput
-                      [ngModel]="correctionExplanation()"
-                      (ngModelChange)="correctionExplanation.set($event)"
-                      placeholder="Explanation (optional)"
-                      class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
-                    />
-                    <div class="flex gap-2">
-                      <button
-                        hlmBtn
-                        (click)="submitCorrection()"
-                        class="px-4 py-2 bg-success text-on-fill rounded-lg hover:bg-success/80 transition-colors text-sm"
-                      >
-                        Send Correction
-                      </button>
-                      <button
-                        hlmBtn
-                        (click)="cancelCorrection()"
-                        class="px-4 py-2 bg-surface-300 text-text-muted rounded-lg hover:bg-surface-400 transition-colors text-sm"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <!-- Structured correction modals mirroring Tandem UI -->
+              @if (correctionTargetMessage(); as target) {
+                <app-correction-modal
+                  [originalText]="target.text_content ?? ''"
+                  [authorName]="target.sender?.display_name ?? ''"
+                  (submitted)="onCorrectionSubmitted($event)"
+                  (cancelled)="cancelCorrection()"
+                ></app-correction-modal>
               }
 
-              <!-- Fix Message panel (when editing own message) -->
-              @if (fixTargetMessage()) {
-                <div class="p-4 border-t border-surface-100 bg-surface-200/50">
-                  <div class="space-y-2">
-                    <p class="text-sm font-semibold">Fix your message</p>
-                    <input
-                      hlmInput
-                      [ngModel]="fixText()"
-                      (ngModelChange)="fixText.set($event)"
-                      placeholder="Corrected text..."
-                      class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
-                    />
-                    <input
-                      hlmInput
-                      [ngModel]="fixExplanation()"
-                      (ngModelChange)="fixExplanation.set($event)"
-                      placeholder="Explanation (optional)"
-                      class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
-                    />
-                    <div class="flex gap-2">
-                      <button
-                        hlmBtn
-                        (click)="submitFix()"
-                        class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors text-sm"
-                      >
-                        Fix Message
-                      </button>
-                      <button
-                        hlmBtn
-                        (click)="cancelFix()"
-                        class="px-4 py-2 bg-surface-300 text-text-muted rounded-lg hover:bg-surface-400 transition-colors text-sm"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              @if (fixTargetMessage(); as fixTarget) {
+                <app-correction-modal
+                  [originalText]="fixTarget.text_content ?? ''"
+                  [authorName]="'chat.fixYourMessage' | t"
+                  (submitted)="onFixSubmitted($event)"
+                  (cancelled)="cancelFix()"
+                ></app-correction-modal>
               }
 
               <!-- Input -->
-              <div class="p-4 border-t border-surface-100 ">
+              <div class="p-4 border-t border-surface-100">
+                <label for="room-chat-message" class="sr-only">
+                  {{ 'chatRoom.messageInput' | t }}
+                </label>
                 <div class="flex gap-2">
                   <input
                     hlmInput
+                    id="room-chat-message"
                     [ngModel]="newMessageText()"
                     (ngModelChange)="newMessageText.set($event)"
                     (keyup.enter)="sendMessage()"
-                    placeholder="Type a message..."
-                    class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary  "
+                    class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <button
                     hlmBtn
+                    type="button"
                     (click)="sendMessage()"
                     class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors"
                   >
-                    Send
+                    {{ 'chatRoom.sendBtn' | t }}
                   </button>
                 </div>
               </div>
@@ -537,6 +526,7 @@ export class ChatPageComponent implements OnInit {
   private aiConversationService = inject(AiConversationService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private translationCache = inject(TranslationCacheService);
   private destroyRef = inject(DestroyRef);
 
   rooms = signal<ChatRoom[]>([]);
@@ -544,6 +534,11 @@ export class ChatPageComponent implements OnInit {
   messages = signal<ChatMessage[]>([]);
   newMessageText = signal('');
   private subscribedRoomId: string | null = null;
+
+  // in-app translation state
+  readonly translations = signal<Record<string, string>>({});
+  readonly showTranslation = signal<Record<string, boolean>>({});
+  readonly translating = signal<Record<string, boolean>>({});
 
   // correction state
   correctionTargetMessage = signal<ChatMessage | null>(null);
@@ -591,6 +586,10 @@ export class ChatPageComponent implements OnInit {
 
     this.selectedRoom.set(room);
     this.correctionTargetMessage.set(null);
+    this.fixTargetMessage.set(null);
+    this.translations.set({});
+    this.showTranslation.set({});
+    this.translating.set({});
     try {
       const messages = await this.chatService.getMessages(room.id);
       this.messages.set(messages);
@@ -697,6 +696,64 @@ export class ChatPageComponent implements OnInit {
   }
 
   // ---------- Correction actions ----------
+
+  async toggleTranslation(msg: ChatMessage): Promise<void> {
+    if (!msg.text_content) return;
+    const msgId = msg.id;
+
+    if (this.showTranslation()[msgId]) {
+      this.showTranslation.update((state) => ({ ...state, [msgId]: false }));
+      return;
+    }
+
+    if (this.translations()[msgId]) {
+      this.showTranslation.update((state) => ({ ...state, [msgId]: true }));
+      return;
+    }
+
+    const targetLang = this.i18n.currentLang() || 'en-GB';
+
+    const cached = this.translationCache.get(msg.text_content, targetLang);
+    if (cached) {
+      this.translations.update((prev) => ({ ...prev, [msgId]: cached }));
+      this.showTranslation.update((state) => ({ ...state, [msgId]: true }));
+      return;
+    }
+
+    this.translating.update((state) => ({ ...state, [msgId]: true }));
+    try {
+      const res = await this.chatService.translateText(msg.text_content, targetLang);
+      if (res && res.translated_text) {
+        this.translationCache.set(msg.text_content, targetLang, res.translated_text);
+        this.translations.update((prev) => ({ ...prev, [msgId]: res.translated_text }));
+        this.showTranslation.update((state) => ({ ...state, [msgId]: true }));
+      }
+    } catch (err) {
+      console.error('Translation error:', err);
+    } finally {
+      this.translating.update((state) => ({ ...state, [msgId]: false }));
+    }
+  }
+
+  async onCorrectionSubmitted(payload: {
+    original: string;
+    corrected: string;
+    explanation?: string;
+  }): Promise<void> {
+    this.correctionText.set(payload.corrected);
+    this.correctionExplanation.set(payload.explanation ?? '');
+    await this.submitCorrection();
+  }
+
+  async onFixSubmitted(payload: {
+    original: string;
+    corrected: string;
+    explanation?: string;
+  }): Promise<void> {
+    this.fixText.set(payload.corrected);
+    this.fixExplanation.set(payload.explanation ?? '');
+    await this.submitFix();
+  }
 
   openCorrection(msg: ChatMessage): void {
     this.correctionTargetMessage.set(msg);

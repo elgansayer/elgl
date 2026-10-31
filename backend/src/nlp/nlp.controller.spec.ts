@@ -28,6 +28,7 @@ describe('NlpController', () => {
           useValue: {
             detectLanguage: vi.fn(),
             translateUi: vi.fn(),
+            translateAndCorrect: vi.fn(),
             grammarCheck: vi.fn(),
             pronunciationScore: vi.fn(),
             checkRateLimit: vi.fn().mockResolvedValue(undefined),
@@ -242,6 +243,51 @@ describe('NlpController', () => {
       );
       expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', true);
       expect(pronunciationScoringService.score).toHaveBeenCalledWith(dto);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('translateAndCorrect', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.translateAndCorrect(null, {} as any);
+      expect(result).toBeNull();
+      expect(nlpService.translateAndCorrect).not.toHaveBeenCalled();
+    });
+
+    it('should call service translateAndCorrect when user is provided', async () => {
+      const dto: any = { text: 'Hello', target_language: 'es' };
+      const profile: any = { id: 'user-1', is_vip: true };
+      const response: any = {
+        original_text: 'Hello',
+        translated_text: 'Hola',
+        detected_language: 'en',
+        transliteration: '',
+        definition: 'Translation of "Hello" in es',
+        pronunciation_url: 'https://example.com/pronunciation.mp3',
+        wordCorrections: [
+          {
+            original: 'Hello',
+            corrected: 'Hello',
+            explanation: '',
+            offset: 0,
+            isCorrect: true,
+          },
+        ],
+      };
+
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
+      (nlpService.translateAndCorrect as Mock).mockResolvedValue(response);
+
+      const result = await controller.translateAndCorrect(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
+      expect(nlpService.translateAndCorrect).toHaveBeenCalledWith(
+        'user-1',
+        true,
+        dto,
+      );
       expect(result).toEqual(response);
     });
   });

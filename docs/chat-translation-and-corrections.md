@@ -23,10 +23,12 @@ ELGL exposes language-learning actions from each text message through the existi
 - Correction fields are cleared only after the message has been persisted successfully. A failed send leaves the complete draft available for retry.
 - **Request correction** creates a `correction_request` message linked to the source through `reply_to_id`, preserving the original text in the bounded correction-request payload.
 - Existing group-chat correction behavior uses the same message contract and room authorization path.
+- In desktop web chat (`ChatPageComponent`), the structured correction interface mirrors Tandem's correction UI using `CorrectionModalComponent`, providing original ghost text reset, editable correction buffer, live visual diff preview (`VisualDiffComponent`), quick tutor tags, and memory-only in-app translation toggling.
+- The room and AI message composers use explicit translated labels, preserving accessible names for assistive technology while the fields are empty or contain text.
 
 ## API and authorization boundary
 
-Chat APIs are guarded by `SupabaseAuthGuard`; the authenticated user identity is derived from the verified Supabase session rather than supplied by the request body. Translation uses the existing `/chat/translate-real-time` route and correction messages use the existing `/chat/messages` path. Existing room-membership, block, first-contact filtering, message validation, and Centrifugo publication behavior remain authoritative.
+Chat APIs are guarded by `SupabaseAuthGuard`; the authenticated user identity is derived from the verified Supabase session rather than supplied by the request body. Translation uses the existing `/chat/translate-real-time` and `/nlp/translate` routes, and correction messages use the existing `/chat/messages` path. The combined `/nlp/translate-and-correct` endpoint provides simultaneous translation and word-level structured corrections tokenised via `Intl.Segmenter`, bounded by rate-limiting. Existing room-membership, block, first-contact filtering, message validation, and Centrifugo publication behavior remain authoritative.
 
 The translation route is rate limited and delegates language detection/translation to the configured translation service. This change does not add a new provider, credential, anonymous endpoint, database table, or direct browser write path.
 

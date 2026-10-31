@@ -712,4 +712,159 @@ describe('NlpService', () => {
       expect(result.vocabulary.length).toBeGreaterThan(0);
     });
   });
+
+  describe('translateAndCorrect', () => {
+    it('should translate text and compute wordCorrections using Intl.Segmenter', async () => {
+      mockGuess.mockReturnValue([{ alpha2: 'en', score: 0.99 }]);
+      (global.fetch as Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          translations: [{ text: 'Bonjour le monde' }],
+        }),
+      });
+
+      const result = await service.translateAndCorrect('user-1', false, {
+        text: 'Hello world',
+        target_language: 'fr',
+      });
+
+      expect(result.original_text).toBe('Hello world');
+      expect(result.translated_text).toBe('Bonjour le monde');
+      expect(result.detected_language).toBe('en');
+      expect(result.wordCorrections).toHaveLength(2);
+      expect(result.wordCorrections[0]).toEqual({
+        original: 'Hello',
+        corrected: 'Hello',
+        explanation: '',
+        offset: 0,
+        isCorrect: true,
+      });
+      expect(result.wordCorrections[1]).toEqual({
+        original: 'world',
+        corrected: 'world',
+        explanation: '',
+        offset: 6,
+        isCorrect: true,
+      });
+    });
+
+    it('should mark modified words as isCorrect: false when Azure corrects grammar', async () => {
+      mockGuess.mockReturnValue([{ alpha2: 'en', score: 0.99 }]);
+      (global.fetch as Mock)
+        // DeepL translation
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            translations: [{ text: 'Elle va à l école' }],
+          }),
+        })
+        // Azure detect
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [{ language: 'en' }],
+        })
+        // Azure dict lookup
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [{ displayTarget: 'She goes to school' }],
+        })
+        // Azure explain
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [
+            {
+              translations: [{ text: 'Third person singular agreement' }],
+            },
+          ],
+        });
+
+      const result = await service.translateAndCorrect('user-1', true, {
+        text: 'She go to school',
+        target_language: 'fr',
+      });
+
+      expect(result.original_text).toBe('She go to school');
+      expect(result.translated_text).toBe('Elle va à l école');
+      expect(result.wordCorrections).toEqual([
+        {
+          original: 'She',
+          corrected: 'She',
+          explanation: '',
+          offset: 0,
+          isCorrect: true,
+        },
+        {
+          original: 'go',
+          corrected: 'goes',
+          explanation: 'Third person singular agreement',
+          offset: 4,
+          isCorrect: false,
+        },
+        {
+          original: 'to',
+          corrected: 'to',
+          explanation: '',
+          offset: 7,
+          isCorrect: true,
+        },
+        {
+          original: 'school',
+          corrected: 'school',
+          explanation: '',
+          offset: 10,
+          isCorrect: true,
+        },
+      ]);
+    });
+
+    it('should degrade gracefully when external translation APIs fail', async () => {
+      mockGuess.mockReturnValue([{ alpha2: 'en', score: 0.99 }]);
+      (global.fetch as Mock).mockRejectedValueOnce(
+        new Error('Network connection timeout'),
+      );
+
+      const result = await service.translateAndCorrect('user-1', false, {
+        text: 'Hello friend',
+        target_language: 'es',
+      });
+
+      expect(result.original_text).toBe('Hello friend');
+      expect(result.translated_text).toBe('Hello friend');
+      expect(result.wordCorrections).toHaveLength(2);
+      expect(result.wordCorrections[0].isCorrect).toBe(true);
+      expect(result.wordCorrections[1].isCorrect).toBe(true);
+    });
+
+    it('should reject malformed provider payloads without trusting their shapes', async () => {
+      mockGuess.mockReturnValue([{ alpha2: 'en', score: 0.99 }]);
+      (global.fetch as Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ translations: [{ text: 42 }] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [{ language: { code: 'en' } }],
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [{ displayTarget: false }],
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [{ translations: [{ text: null }] }],
+        });
+
+      const result = await service.translateAndCorrect('user-1', true, {
+        text: 'Hello friend',
+        target_language: 'es',
+      });
+
+      expect(result.translated_text).toBe('Hello friend');
+      expect(result.wordCorrections).toEqual([
+        expect.objectContaining({ original: 'Hello', isCorrect: true }),
+        expect.objectContaining({ original: 'friend', isCorrect: true }),
+      ]);
+    });
+  });
 });
