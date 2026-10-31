@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -730,4 +734,123 @@ test('reads tracked scripts and every Playwright test-file suffix', () => {
   for (const path of ['docs/playwright-test-boundary.md', 'e2e/tests/fixtures/avatar.png']) {
     assert.equal(shouldReadTrackedFile(path), false, path);
   }
+});
+
+const verifier = resolve(import.meta.dirname, 'verify-playwright-test-boundary.mjs');
+const bareDescribeSpec = [
+  "import { expect, test } from '@playwright/test';",
+  '',
+  "describe('written by a QA run', () => {",
+  "  test('valid sibling', async () => {",
+  '    expect(true).toBe(true);',
+  '  });',
+  '});',
+].join('\n');
+const playwrightSpec = [
+  "import { expect, test } from '@playwright/test';",
+  '',
+  "test.describe('written by a QA run', () => {",
+  "  test('runs', async () => {",
+  '    expect(true).toBe(true);',
+  '  });',
+  '});',
+].join('\n');
+
+// A real repository, because the point of these tests is which files Git lists, not how they are
+// analysed. GIT_* variables are dropped so a run inside a git hook cannot reach the outer repo.
+function workingTreeFixture(t) {
+  const root = mkdtempSync(resolve(tmpdir(), 'playwright-boundary-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const environment = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')),
+  );
+
+  function git(...args) {
+    const result = spawnSync('git', args, { cwd: root, encoding: 'utf8', env: environment });
+    assert.equal(result.status, 0, result.stderr);
+  }
+  function write(path, content) {
+    mkdirSync(dirname(resolve(root, path)), { recursive: true });
+    writeFileSync(resolve(root, path), content);
+  }
+
+  git('init', '-q');
+  mkdirSync(resolve(root, 'scripts'));
+  copyFileSync(verifier, resolve(root, 'scripts/verify-playwright-test-boundary.mjs'));
+  write('e2e/package.json', validPackage);
+  write('e2e/playwright.config.ts', validConfig);
+  write('e2e/tests/tracked.spec.ts', playwrightSpec);
+  git('add', '.');
+
+  function run() {
+    return spawnSync(process.execPath, ['scripts/verify-playwright-test-boundary.mjs'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: environment,
+    });
+  }
+  return { git, run, write, root };
+}
+
+test('rejects a bare describe in a spec that is not tracked yet', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('e2e/tests/untracked-bare-describe.spec.ts', bareDescribeSpec);
+
+  const result = run();
+
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /Playwright test-boundary verification failed/);
+  assert.match(
+    result.stderr,
+    /- e2e\/tests\/untracked-bare-describe\.spec\.ts:3 calls describe\(\) as a bare runner global; .*Use test\.describe\(\) from @playwright\/test/,
+  );
+});
+
+test('accepts untracked specs that use only the Playwright runner API', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('e2e/tests/untracked.spec.ts', playwrightSpec);
+
+  const result = run();
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Playwright test boundary verified/);
+});
+
+test('checks untracked automation commands as well as untracked specs', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('scripts/qa-run.sh', 'npx playwright test\n');
+
+  const result = run();
+
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(
+    result.stderr,
+    /scripts\/qa-run\.sh:1 invokes Playwright without the e2e working directory or explicit e2e config/,
+  );
+});
+
+test('skips a tracked spec that was deleted from disk instead of crashing', (t) => {
+  const { git, run, write, root } = workingTreeFixture(t);
+  write('e2e/tests/broken.spec.ts', bareDescribeSpec);
+  git('add', '.');
+  rmSync(resolve(root, 'e2e/tests/broken.spec.ts'));
+
+  const result = run();
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, /ENOENT/);
+  assert.match(result.stdout, /Playwright test boundary verified/);
+});
+
+test('does not scan dependency trees that Git ignores', (t) => {
+  const { run, write } = workingTreeFixture(t);
+  write('.gitignore', 'node_modules/\n');
+  write(
+    'node_modules/some-package/package.json',
+    JSON.stringify({ scripts: { test: 'playwright test' } }),
+  );
+
+  const result = run();
+
+  assert.equal(result.status, 0, result.stderr);
 });

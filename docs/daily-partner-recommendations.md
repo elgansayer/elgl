@@ -1,10 +1,12 @@
 # Daily partner recommendations
 
-Issues: #1392, #1740
+Issues: #1043, #1392, #1740, Task: #1763
 
 ## Product contract
 
-`RecommendationsService.calculateDailyRecommendations()` is the single canonical background job for the daily language-partner cache. NestJS Schedule runs it every day at midnight (server time) under the scheduler name `daily-partner-recommendations`. For every eligible learner it caches up to 10 recommended language partners in Redis. `GET /recommendations/daily` and the Discovery "Recommended for you" carousel (`GET /recommendations/discovery`) read that cache.
+`RecommendationsService.calculateDailyRecommendations()` is the single canonical background job for the daily language-partner cache. Task #1763 and Issue #1043 track ensuring that the background job genuinely implements partner recommendations rather than unrelated audio-room co-host modifications (`inviteCoHost`/`removeCoHost`). The job is strictly scoped to language partner matchmaking and runs independently of audio-room services.
+
+NestJS Schedule runs it every day at midnight (server time) under the scheduler name `daily-partner-recommendations`. For every eligible learner it caches up to 10 recommended language partners in Redis. `GET /recommendations/daily` and the Discovery "Recommended for you" carousel (`GET /recommendations/discovery`) read that cache.
 
 - **Eligible learner:** not deleted, not hidden from search, not pending deletion, and with a primary native and target language (`native_languages[0]`, `target_languages[0]`).
 - **Recommended partner:** an eligible user whose native languages include the learner's target language and whose target languages include the learner's native language, ranked by study streak (highest first) and then by id, so the order is stable between runs. The learner is never recommended to themself.
