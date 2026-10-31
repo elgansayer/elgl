@@ -386,35 +386,75 @@
                     class="w-full min-w-52"
                     (ended)="playNextVoiceNote(msg.id)"
                   ></audio>
-                  <div class="mt-2 flex items-center gap-2">
-                    <button
-                      hlmBtn
-                      (click)="onTranscribeVoice(msg)"
-                      [disabled]="transcribingIds().has(msg.id)"
-                      class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
-                      [attr.aria-label]="
-                        (transcribingIds().has(msg.id)
-                          ? 'chatRoom.transcribingBtn'
-                          : 'chatRoom.transcribeBtn'
-                        ) | t
-                      "
-                    >
-                      {{
-                        (transcribingIds().has(msg.id)
-                          ? 'chatRoom.transcribingBtn'
-                          : 'chatRoom.transcribeBtn'
-                        ) | t
-                      }}
-                    </button>
-                  </div>
-                  @if (transcriptions()[msg.id]; as transcript) {
+                  @if (
+                    msg.voice_transcription_status !== 'ready' &&
+                    msg.voice_transcription_status !== 'empty'
+                  ) {
+                    <div class="mt-2 flex items-center gap-2">
+                      <button
+                        hlmBtn
+                        (click)="onTranscribeVoice(msg)"
+                        [disabled]="isTranscribing(msg)"
+                        class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
+                        [attr.aria-label]="
+                          (isTranscribing(msg)
+                            ? 'chatRoom.transcribingBtn'
+                            : msg.voice_transcription_status === 'failed' ||
+                                msg.voice_transcription_status === 'unavailable'
+                              ? 'chatRoom.transcribeRetryBtn'
+                              : 'chatRoom.transcribeBtn'
+                          ) | t
+                        "
+                      >
+                        {{
+                          (isTranscribing(msg)
+                            ? 'chatRoom.transcribingBtn'
+                            : msg.voice_transcription_status === 'failed' ||
+                                msg.voice_transcription_status === 'unavailable'
+                              ? 'chatRoom.transcribeRetryBtn'
+                              : 'chatRoom.transcribeBtn'
+                          ) | t
+                        }}
+                      </button>
+                    </div>
+                  }
+                  @if (isTranscribing(msg)) {
+                    <p class="mt-2 text-xs text-text-secondary" role="status" aria-live="polite">
+                      {{ 'chatRoom.transcribing' | t }}
+                    </p>
+                  }
+                  @if (msg.voice_transcription_status === 'failed') {
+                    <p class="mt-2 text-xs text-text-secondary" role="alert">
+                      {{ 'chatRoom.transcriptionFailed' | t }}
+                    </p>
+                  }
+                  @if (msg.voice_transcription_status === 'unavailable') {
+                    <p class="mt-2 text-xs text-text-secondary" role="status">
+                      {{ 'chatRoom.transcriptionUnavailable' | t }}
+                    </p>
+                  }
+                  @if (
+                    msg.voice_transcription_status === 'ready' && msg.voice_transcript;
+                    as transcript
+                  ) {
                     <div
                       class="mt-2 rounded-lg bg-secondary/10 border-s-2 border-secondary ps-2 pe-2 pt-2 pb-2"
+                      [attr.aria-label]="'chatRoom.transcriptLabel' | t"
                     >
                       <p class="text-xs text-text-primary font-medium">
                         {{ 'chatRoom.transcriptLabel' | t }}
                       </p>
                       <p class="text-sm text-text-primary mt-0.5">{{ transcript }}</p>
+                    </div>
+                  }
+                  @if (msg.voice_transcription_status === 'empty') {
+                    <div
+                      class="mt-2 rounded-lg bg-secondary/10 border-s-2 border-secondary ps-2 pe-2 pt-2 pb-2"
+                      role="status"
+                    >
+                      <p class="text-sm text-text-primary">
+                        {{ 'chatRoom.transcriptEmpty' | t }}
+                      </p>
                     </div>
                   }
                 }

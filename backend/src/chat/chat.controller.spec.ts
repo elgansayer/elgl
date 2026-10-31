@@ -27,6 +27,7 @@ import { FavouritesService } from '../favourites/favourites.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { ChatVoiceTranscriptionService } from './chat-voice-transcription.service';
 import type { User } from '@supabase/supabase-js';
 import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
@@ -46,6 +47,7 @@ describe('ChatController', () => {
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
   let personalChatEncryptionService: PersonalChatEncryptionService;
+  let voiceTranscriptionService: ChatVoiceTranscriptionService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -117,6 +119,12 @@ describe('ChatController', () => {
             getConversationKey: vi.fn(),
           },
         },
+        {
+          provide: ChatVoiceTranscriptionService,
+          useValue: {
+            requestTranscription: vi.fn(),
+          },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
@@ -133,6 +141,9 @@ describe('ChatController', () => {
     translationService = module.get<TranslationService>(TranslationService);
     personalChatEncryptionService = module.get<PersonalChatEncryptionService>(
       PersonalChatEncryptionService,
+    );
+    voiceTranscriptionService = module.get<ChatVoiceTranscriptionService>(
+      ChatVoiceTranscriptionService,
     );
   });
 
@@ -313,6 +324,39 @@ describe('ChatController', () => {
         'user-1',
       );
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('transcribeVoiceMessage', () => {
+    it('does not queue work without an authenticated user', async () => {
+      await expect(
+        controller.transcribeVoiceMessage(null, 'message-1'),
+      ).resolves.toBeNull();
+      expect(
+        voiceTranscriptionService.requestTranscription,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('queues the authenticated message transcription', async () => {
+      const message = {
+        id: 'message-1',
+        room_id: 'room-1',
+        sender_id: 'user-2',
+        message_type: 'voice',
+        is_read: true,
+        created_at: '2026-10-31T10:00:00.000Z',
+        voice_transcription_status: 'pending',
+      };
+      (
+        voiceTranscriptionService.requestTranscription as Mock
+      ).mockResolvedValue(message);
+
+      await expect(
+        controller.transcribeVoiceMessage(mockUser(), 'message-1'),
+      ).resolves.toEqual(message);
+      expect(
+        voiceTranscriptionService.requestTranscription,
+      ).toHaveBeenCalledWith('user-1', 'message-1');
     });
   });
 

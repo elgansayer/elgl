@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   HttpException,
   HttpStatus,
   Param,
@@ -46,6 +47,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { ChatVoiceTranscriptionService } from './chat-voice-transcription.service';
 import type { Request, Response } from 'express';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -74,6 +76,7 @@ export class ChatController {
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
     private readonly personalChatEncryptionService: PersonalChatEncryptionService,
+    private readonly voiceTranscriptionService: ChatVoiceTranscriptionService,
   ) {}
 
   // Tighter than the app-wide default (10/60s, app.module.ts) - this mints a
@@ -364,6 +367,20 @@ export class ChatController {
     if (!user) return null;
     await this.chatService.viewMessageMedia(user.id, messageId);
     return { success: true };
+  }
+
+  @Post('messages/:messageId/transcription')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async transcribeVoiceMessage(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+  ): Promise<ChatMessage | null> {
+    if (!user) return null;
+    return this.voiceTranscriptionService.requestTranscription(
+      user.id,
+      messageId,
+    );
   }
 
   @Delete('messages/:messageId')

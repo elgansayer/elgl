@@ -40,6 +40,9 @@ export interface GiftPayload {
   receiver_name?: string;
 }
 
+export type VoiceTranscriptionStatus =
+  'not_requested' | 'pending' | 'processing' | 'ready' | 'empty' | 'failed' | 'unavailable';
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -110,6 +113,15 @@ export interface ChatMessage {
 
   /** Armoured ciphertext and IV envelope for encrypted message content */
   encrypted_payload?: string | null;
+
+  voice_transcript?: string | null;
+  voice_transcription_status?: VoiceTranscriptionStatus;
+  voice_transcription_attempts?: number;
+  voice_transcription_requested_at?: string | null;
+  voice_transcription_last_attempt_at?: string | null;
+  voice_transcription_next_retry_at?: string | null;
+  voice_transcribed_at?: string | null;
+  voice_transcription_error_code?: string | null;
 }
 
 export interface ReadReceiptUser {
@@ -841,13 +853,11 @@ export class ChatService {
     );
   }
 
-  async transcribeVoice(
-    audioUrl: string,
-  ): Promise<{ original_text: string; detected_language: string; confidence: number }> {
+  async transcribeVoice(messageId: string): Promise<ChatMessage> {
     return firstValueFrom(
-      this.http.post<{ original_text: string; detected_language: string; confidence: number }>(
-        `${environment.apiUrl}/nlp/transcribe-voice`,
-        { audio_url: audioUrl },
+      this.http.post<ChatMessage>(
+        `${this.baseUrl}/messages/${encodeURIComponent(messageId)}/transcription`,
+        {},
         { headers: this.getHeaders() },
       ),
     );
