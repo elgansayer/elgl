@@ -42,6 +42,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
     lockChat: ReturnType<typeof vi.fn>;
     unlockChat: ReturnType<typeof vi.fn>;
     translateText: ReturnType<typeof vi.fn>;
+    transcribeVoice: ReturnType<typeof vi.fn>;
     markMessageStatus: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
@@ -64,6 +65,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
+      transcribeVoice: vi.fn(),
       markMessageStatus: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -478,6 +480,110 @@ describe('ChatRoomComponent (threaded replies)', () => {
         correction_request_payload: { original_text: 'I goed to school' },
         reply_to_id: 'm1',
       });
+    });
+  });
+
+  describe('voice transcription', () => {
+    beforeEach(async () => {
+      await fixture.whenStable();
+    });
+
+    it('queues by message id and merges the persisted pending state', async () => {
+      const voice = makeMessage({
+        id: 'voice-1',
+        message_type: 'voice',
+        media_url: 'https://media.example/voice.webm',
+        voice_transcription_status: 'not_requested',
+      });
+      const pending = {
+        ...voice,
+        voice_transcription_status: 'pending' as const,
+      };
+      component.messages.set([voice]);
+      mockChatService.transcribeVoice.mockResolvedValue(pending);
+
+      await component.onTranscribeVoice(voice);
+
+      expect(mockChatService.transcribeVoice).toHaveBeenCalledWith('voice-1');
+      expect(component.messages()[0]?.voice_transcription_status).toBe('pending');
+      expect(component.isTranscribing(component.messages()[0]!)).toBe(true);
+    });
+
+    it('renders a transcript returned with message history without another request', () => {
+      component.messages.set([
+        makeMessage({
+          id: 'voice-ready',
+          message_type: 'voice',
+          media_url: 'https://media.example/voice.webm',
+          voice_transcription_status: 'ready',
+          voice_transcript: 'Persisted transcript',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.textContent).toContain('Persisted transcript');
+      expect(
+        Array.from(host.querySelectorAll('button')).some((button) =>
+          button.textContent?.includes('Transcribe'),
+        ),
+      ).toBe(false);
+      expect(mockChatService.transcribeVoice).not.toHaveBeenCalled();
+    });
+
+    it('exposes pending and retryable failure states without colour-only meaning', () => {
+      component.messages.set([
+        makeMessage({
+          id: 'voice-pending',
+          message_type: 'voice',
+          media_url: 'https://media.example/pending.webm',
+          voice_transcription_status: 'processing',
+        }),
+        makeMessage({
+          id: 'voice-failed',
+          message_type: 'voice',
+          media_url: 'https://media.example/failed.webm',
+          voice_transcription_status: 'failed',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      const status = host.querySelector('[role="status"]');
+      const alert = host.querySelector('[role="alert"]');
+      const retry = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Retry transcription'),
+      );
+      expect(status?.textContent).toContain('Transcribing');
+      expect(alert?.textContent).toContain('Transcription could not be completed');
+      expect(retry).toBeTruthy();
+    });
+
+    it('renders empty and unavailable results with an actionable retry', () => {
+      component.messages.set([
+        makeMessage({
+          id: 'voice-empty',
+          message_type: 'voice',
+          media_url: 'https://media.example/empty.webm',
+          voice_transcription_status: 'empty',
+        }),
+        makeMessage({
+          id: 'voice-unavailable',
+          message_type: 'voice',
+          media_url: 'https://media.example/unavailable.webm',
+          voice_transcription_status: 'unavailable',
+        }),
+      ]);
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.textContent).toContain('No speech detected in this voice message.');
+      expect(host.textContent).toContain('Transcription is currently unavailable.');
+      expect(
+        Array.from(host.querySelectorAll('button')).some((button) =>
+          button.textContent?.includes('Retry transcription'),
+        ),
+      ).toBe(true);
     });
   });
 

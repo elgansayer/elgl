@@ -186,6 +186,29 @@ describe('ChatService', () => {
     await assertion;
   });
 
+  it('requests voice transcription by message id without sending a media URL', async () => {
+    const response: ChatMessage = {
+      id: 'voice-1',
+      room_id: 'room-1',
+      sender_id: 'user-2',
+      message_type: 'voice',
+      media_url: 'https://media.example/voice.webm',
+      is_read: true,
+      created_at: '2026-10-31T10:00:00.000Z',
+      voice_transcription_status: 'pending',
+    };
+
+    const promise = service.transcribeVoice('voice-1');
+    const req = httpMock.expectOne(`${baseUrl}/messages/voice-1/transcription`);
+
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+    req.flush(response);
+
+    await expect(promise).resolves.toEqual(response);
+  });
+
   describe('blocked users', () => {
     it('should track blocked users locally', () => {
       expect(service.isUserBlocked()('user-1')).toBe(false);

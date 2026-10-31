@@ -8,6 +8,7 @@ import { NlpService } from './nlp.service';
 import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
 import { TranslationRouterService } from './translation-router.service';
 import { PronunciationScoringService } from './pronunciation-scoring.service';
+import { SpeechTranscriptionService } from './speech-transcription.service';
 
 @Module({
   imports: [UsersModule, LlmProxyModule],
@@ -17,9 +18,10 @@ import { PronunciationScoringService } from './pronunciation-scoring.service';
     GrammarCheckService,
     GrammarExplanationService,
     PronunciationScoringService,
+    SpeechTranscriptionService,
     NlpRateLimiterGuard,
     TranslationRouterService,
   ],
-  exports: [NlpService, TranslationRouterService],
+  exports: [NlpService, SpeechTranscriptionService, TranslationRouterService],
 })
 export class NlpModule {}

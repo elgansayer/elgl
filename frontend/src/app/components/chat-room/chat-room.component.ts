@@ -186,7 +186,6 @@ export class ChatRoomComponent implements OnDestroy {
   readonly transliterations = signal<Record<string, string>>({});
   readonly translations = signal<Record<string, string>>({});
   readonly showTranslation = signal<Record<string, boolean>>({});
-  readonly transcriptions = signal<Record<string, string>>({});
   readonly transcribingIds = signal<Set<string>>(new Set());
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
@@ -804,7 +803,14 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async onTranscribeVoice(msg: ChatMessage): Promise<void> {
-    if (!msg.media_url || this.transcriptions()[msg.id]) return;
+    if (
+      !msg.media_url ||
+      msg.voice_transcription_status === 'ready' ||
+      msg.voice_transcription_status === 'empty' ||
+      this.isTranscribing(msg)
+    ) {
+      return;
+    }
     this.transcribingIds.update((s) => {
       const next = new Set(s);
       next.add(msg.id);
@@ -812,11 +818,12 @@ export class ChatRoomComponent implements OnDestroy {
     });
 
     try {
-      const result = await this.chatService.transcribeVoice(msg.media_url);
-      this.transcriptions.update((prev) => ({
-        ...prev,
-        [msg.id]: result.original_text || this.i18n.translate('chatRoom.transcriptEmpty'),
-      }));
+      const updated = await this.chatService.transcribeVoice(msg.id);
+      this.messages.update((messages) =>
+        messages.map((candidate) =>
+          candidate.id === updated.id ? { ...candidate, ...updated } : candidate,
+        ),
+      );
     } catch (e) {
       console.error('Failed to transcribe voice message:', e);
       showToast(this.i18n.translate('chatRoom.transcribeError'));
@@ -827,6 +834,14 @@ export class ChatRoomComponent implements OnDestroy {
         return next;
       });
     }
+  }
+
+  isTranscribing(msg: ChatMessage): boolean {
+    return (
+      this.transcribingIds().has(msg.id) ||
+      msg.voice_transcription_status === 'pending' ||
+      msg.voice_transcription_status === 'processing'
+    );
   }
 
   onSearch(): void {
