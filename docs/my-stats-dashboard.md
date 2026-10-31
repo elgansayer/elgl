@@ -45,7 +45,7 @@ No placeholder or synthetic statistics are used in production failure paths.
 
 ## Accessibility and responsive behavior
 
-Chart.js canvases are treated as visual enhancements. The weekly study-hours chart has a screen-reader text equivalent containing all seven daily values, while the pie-chart values are duplicated in semantic summary data. Loading uses a polite status region, failures use an alert region, and the Retry control uses the shared Spartan button primitive.
+Chart.js canvases are treated as visual enhancements. Both the weekly study-hours chart and the activity-breakdown pie chart have screen-reader text equivalents right within their sections, while the pie-chart values are also duplicated in the semantic summary data list. Chart options and data are reactive computed signals ensuring locale updates reflect immediately. Loading uses a polite status region, failures use an alert region, and the Retry control uses the shared Spartan button primitive.
 
 The existing one-column mobile layout expands to two columns at the established medium breakpoint, with the summary spanning the available desktop width. Text remains normal document content so browser zoom and reflow continue to work without a separate viewport-specific data path.
 
