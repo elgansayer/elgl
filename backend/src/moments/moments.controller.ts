@@ -2,8 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  DefaultValuePipe,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -25,6 +27,7 @@ import { StoryResponse } from './interfaces/story.interface';
 import { MomentsFeedService, MomentFeedFilter } from './moments-feed.service';
 import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService, MomentLikeUser } from './moments.service';
+import { MomentLikesService } from './moment-likes.service';
 import { CorrectionQualityService } from './correction-quality.service';
 
 const MOMENT_FEED_FILTERS: readonly MomentFeedFilter[] = [
@@ -44,6 +47,7 @@ export class MomentsController {
     private readonly r2Service: R2Service,
     private readonly momentsRankingService: MomentsRankingService,
     private readonly correctionQualityService: CorrectionQualityService,
+    private readonly momentLikesService: MomentLikesService,
   ) {}
 
   @Post()
@@ -216,8 +220,19 @@ export class MomentsController {
   async getMomentLikes(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query(
+      'limit',
+      new DefaultValuePipe(MomentLikesService.DEFAULT_LIMIT),
+      ParseIntPipe,
+    )
+    limit: number,
   ): Promise<MomentLikeUser[]> {
-    return await this.momentsService.getMomentLikes(id, user?.id);
+    if (!user) return [];
+    return await this.momentLikesService.listMomentLikes(id, user.id, {
+      offset,
+      limit,
+    });
   }
 
   @Post(':id/comments')
