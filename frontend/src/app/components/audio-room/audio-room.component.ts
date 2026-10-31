@@ -237,6 +237,10 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async kick(targetUserId: string): Promise<void> {
+    const confirmed = await this.confirmService.confirm(
+      this.i18n.translate('audioRoom.kickConfirm'),
+    );
+    if (!confirmed) return;
     await this.store.kickSpeaker(targetUserId);
   }
 

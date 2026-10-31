@@ -547,7 +547,7 @@ export class AudioRoomsController {
   @ApiOperation({
     summary: 'Mute a speaker on the stage',
     description:
-      'A host or co-host mutes a speaker currently on stage without removing them.',
+      'A host mutes a speaker currently on stage without removing them.',
   })
   @ApiResponse({
     status: 201,
@@ -563,6 +563,17 @@ export class AudioRoomsController {
   }
 
   @Post('kick-speaker')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Kick a speaker off the stage',
+    description:
+      'A host kicks a speaker off the stage, removing them from speakers and returning them to listener status.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Speaker kicked off stage successfully.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async kickSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,

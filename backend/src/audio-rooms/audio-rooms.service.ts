@@ -968,6 +968,14 @@ export class AudioRoomsService implements OnModuleInit {
       throw new ForbiddenException('The host cannot be muted.');
     }
 
+    this.logger.log({
+      event: 'audio_room_speaker_mute_authorised',
+      actor_id: hostId,
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+      outcome: 'authorised',
+    });
+
     // Notify user via Centrifugo to mute their microphone locally
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'force_mute',
@@ -1036,6 +1044,13 @@ export class AudioRoomsService implements OnModuleInit {
       );
     if (room.host_id === dto.target_user_id)
       throw new ForbiddenException('The host cannot kick themselves.');
+    this.logger.log({
+      event: 'audio_room_speaker_kick_authorised',
+      actor_id: hostId,
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+      outcome: 'authorised',
+    });
     const update: { speakers: string[]; co_host_id?: null } = {
       speakers: room.speakers.filter((id) => id !== dto.target_user_id),
     };

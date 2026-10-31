@@ -37,6 +37,10 @@ This change adds no API endpoint, schema, storage, credential, logging, analytic
 
 No private room content, access tokens, LiveKit credentials, user IDs, or room payloads are added to logs by this UI normalization layer.
 
+Host moderation may mute a speaker or remove them from the stage, but it never remotely unmutes a participant. Restoring microphone capture always requires an action by that participant. The authenticated API and audio-room service intentionally expose no remote-unmute operation.
+
+Moderation audit records use structured actor, target, room, event, and outcome fields. Identifiers remain data fields and are never interpolated into log messages.
+
 ## Verification
 
 `audio-room-view-model.spec.ts` covers:

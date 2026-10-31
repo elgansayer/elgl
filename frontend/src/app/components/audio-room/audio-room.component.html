@@ -218,7 +218,7 @@
                       </span>
                     }
                     @if (participant.isMuted) {
-                      <span class="sr-only">{{ 'audioRoom.muteBtn' | t }}</span>
+                      <span class="sr-only">{{ 'audioRoom.mutedLabel' | t }}</span>
                     }
                   </div>
 
@@ -245,6 +245,14 @@
                       >
                         {{ 'audioRoom.demoteBtn' | t }}
                       </button>
+                      <button
+                        hlmBtn
+                        (click)="kick(participant.user_id)"
+                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-danger hover:bg-danger/20"
+                        [attr.aria-label]="'audioRoom.kickBtn' | t"
+                      >
+                        {{ 'audioRoom.kickBtn' | t }}
+                      </button>
                     </div>
                   }
                 </div>
@@ -257,9 +265,7 @@
                 <div
                   class="rounded-card border border-surface-200 bg-surface-100 p-3 text-center text-xs font-bold text-text-secondary"
                   role="listitem"
-                  [attr.aria-label]="
-                    'audioRoom.speakerCount' | t: { count: stageOverflowCount() }
-                  "
+                  [attr.aria-label]="'audioRoom.speakerCount' | t: { count: stageOverflowCount() }"
                 >
                   +{{ stageOverflowCount() }}
                 </div>

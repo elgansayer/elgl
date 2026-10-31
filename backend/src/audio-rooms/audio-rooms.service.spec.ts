@@ -809,6 +809,12 @@ describe('AudioRoomsService', () => {
     });
 
     it('should publish force_mute event via Centrifugo', async () => {
+      const logger = (
+        service as unknown as { logger: { log: ReturnType<typeof vi.fn> } }
+      ).logger;
+      const logSpy = vi
+        .spyOn(logger, 'log')
+        .mockImplementation(() => undefined);
       const roomRow: any = {
         id: 'room-1',
         host_id: 'host-1',
@@ -829,8 +835,52 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-2',
         room_id: 'room-1',
       });
+      expect(logSpy).toHaveBeenCalledWith({
+        event: 'audio_room_speaker_mute_authorised',
+        actor_id: 'host-1',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+        outcome: 'authorised',
+      });
       expect(result.id).toBe('room-1');
     });
+
+    it('keeps untrusted identifiers in structured log fields', async () => {
+      const logger = (
+        service as unknown as { logger: { log: ReturnType<typeof vi.fn> } }
+      ).logger;
+      const logSpy = vi
+        .spyOn(logger, 'log')
+        .mockImplementation(() => undefined);
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: 'room-1',
+          host_id: 'host-1',
+          speakers: ['host-1', 'speaker\nforged-entry'],
+        },
+        error: null,
+      });
+
+      await service.muteSpeaker('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'speaker\nforged-entry',
+      });
+
+      expect(logSpy).toHaveBeenCalledWith({
+        event: 'audio_room_speaker_mute_authorised',
+        actor_id: 'host-1',
+        target_user_id: 'speaker\nforged-entry',
+        room_id: 'room-1',
+        outcome: 'authorised',
+      });
+      expect(logSpy.mock.calls[0]?.[0]).not.toEqual(expect.any(String));
+    });
+  });
+
+  it('does not expose a remote-unmute service action', () => {
+    expect(
+      Object.getOwnPropertyNames(AudioRoomsService.prototype),
+    ).not.toContain('unmuteSpeaker');
   });
 
   describe('kickSpeaker', () => {
@@ -907,6 +957,12 @@ describe('AudioRoomsService', () => {
     });
 
     it('should remove speaker without co-host events when target is not co-host', async () => {
+      const logger = (
+        service as unknown as { logger: { log: ReturnType<typeof vi.fn> } }
+      ).logger;
+      const logSpy = vi
+        .spyOn(logger, 'log')
+        .mockImplementation(() => undefined);
       const roomRow: any = {
         id: 'room-1',
         host_id: 'host-1',
@@ -930,6 +986,13 @@ describe('AudioRoomsService', () => {
         type: 'force_kick',
         target_user_id: 'user-2',
         room_id: 'room-1',
+      });
+      expect(logSpy).toHaveBeenCalledWith({
+        event: 'audio_room_speaker_kick_authorised',
+        actor_id: 'host-1',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+        outcome: 'authorised',
       });
       expect(centrifugoService.publish).toHaveBeenCalledTimes(1);
       expect(result.id).toBe('room-1');
