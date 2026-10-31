@@ -1524,4 +1524,315 @@ describe('AudioRoomsService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('notes', () => {
+    const activeRoomRow: Partial<AudioRoomRecord> = {
+      id: 'room-1',
+      host_id: 'host-1',
+      co_host_id: 'cohost-1',
+      speakers: ['speaker-1'],
+      is_active: true,
+    };
+
+    describe('addNote', () => {
+      it('should throw BadRequestException if content is empty or whitespace', async () => {
+        await expect(
+          service.addNote('room-1', 'host-1', { content: '   ' }),
+        ).rejects.toThrow(
+          new BadRequestException('Note content cannot be empty'),
+        );
+      });
+
+      it('should throw BadRequestException if room is not active', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: { ...activeRoomRow, is_active: false },
+          error: null,
+        });
+
+        await expect(
+          service.addNote('room-1', 'host-1', {
+            content: 'Valid note content',
+          }),
+        ).rejects.toThrow(new BadRequestException('Room is not active'));
+      });
+
+      it('should throw ForbiddenException if user is neither host nor speaker', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await expect(
+          service.addNote('room-1', 'listener-1', {
+            content: 'Valid note content',
+          }),
+        ).rejects.toThrow(
+          new ForbiddenException('Only host or speakers can post notes.'),
+        );
+      });
+
+      it('should allow host to add note and publish centrifugo event', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        const createdNote = {
+          id: 'note-1',
+          room_id: 'room-1',
+          author_id: 'host-1',
+          author_name: 'Host User',
+          content: 'Grammar discussion topic',
+          vocabulary: null,
+          created_at: '2026-08-07T00:00:00Z',
+        };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: createdNote,
+          error: null,
+        });
+
+        const result = await service.addNote('room-1', 'host-1', {
+          content: '  Grammar discussion topic  ',
+        });
+
+        expect(result.content).toBe('Grammar discussion topic');
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note',
+          note: createdNote,
+        });
+      });
+
+      it('should allow speaker to add note with vocabulary', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        const createdNote = {
+          id: 'note-2',
+          room_id: 'room-1',
+          author_id: 'speaker-1',
+          author_name: 'Speaker One',
+          content: 'Subjunctive mood examples',
+          vocabulary: 'tenga, sea, vaya',
+          created_at: '2026-08-07T00:00:00Z',
+        };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: createdNote,
+          error: null,
+        });
+
+        const result = await service.addNote('room-1', 'speaker-1', {
+          content: 'Subjunctive mood examples',
+          vocabulary: ' tenga, sea, vaya ',
+        });
+
+        expect(result.vocabulary).toBe('tenga, sea, vaya');
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note',
+          note: createdNote,
+        });
+      });
+
+      it('should allow co-host to add note', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        const createdNote = {
+          id: 'note-3',
+          room_id: 'room-1',
+          author_id: 'cohost-1',
+          author_name: 'Co Host',
+          content: 'Vocabulary list',
+          vocabulary: 'palabra',
+          created_at: '2026-08-07T00:00:00Z',
+        };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: createdNote,
+          error: null,
+        });
+
+        const result = await service.addNote('room-1', 'cohost-1', {
+          content: 'Vocabulary list',
+          vocabulary: 'palabra',
+        });
+
+        expect(result.author_id).toBe('cohost-1');
+      });
+
+      it('should throw Error if database insertion fails', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Database insert failure' },
+        });
+
+        await expect(
+          service.addNote('room-1', 'host-1', { content: 'Test note' }),
+        ).rejects.toThrow('Failed to add note: Database insert failure');
+      });
+    });
+
+    describe('getNotes', () => {
+      it('should fetch notes for room with bounded limit', async () => {
+        const notes = [
+          {
+            id: 'note-1',
+            room_id: 'room-1',
+            author_id: 'host-1',
+            author_name: 'Host User',
+            content: 'Note 1',
+            created_at: '2026-08-07T00:00:00Z',
+          },
+        ];
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: notes,
+          error: null,
+        });
+
+        const result = await service.getNotes('room-1', 200);
+        expect(mockQueryBuilder.limit).toHaveBeenCalledWith(100);
+        expect(result).toHaveLength(1);
+        expect(result[0].content).toBe('Note 1');
+      });
+
+      it('should throw Error when fetching notes fails', async () => {
+        mockQueryBuilder.limit.mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Fetch error' },
+        });
+
+        await expect(service.getNotes('room-1')).rejects.toThrow(
+          'Failed to fetch notes: Fetch error',
+        );
+      });
+    });
+
+    describe('deleteNote', () => {
+      const existingNote = {
+        id: 'note-1',
+        room_id: 'room-1',
+        author_id: 'author-1',
+        content: 'To be deleted',
+      };
+
+      it('should throw NotFoundException if note does not exist', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: null,
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-nonexistent', 'author-1'),
+        ).rejects.toThrow(new NotFoundException('Note not found'));
+      });
+
+      it('should throw NotFoundException if note belongs to another room', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: { ...existingNote, room_id: 'other-room' },
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-1', 'author-1'),
+        ).rejects.toThrow(new NotFoundException('Note not found in this room'));
+      });
+
+      it('should throw ForbiddenException if user is neither author, host, nor cohost', async () => {
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-1', 'other-user'),
+        ).rejects.toThrow(
+          new ForbiddenException('Not authorised to delete this note.'),
+        );
+      });
+
+      it('should allow note author to delete note and broadcast', async () => {
+        mockQueryBuilder.error = null;
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await service.deleteNote('room-1', 'note-1', 'author-1');
+
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note_deleted',
+          note_id: 'note-1',
+          room_id: 'room-1',
+        });
+      });
+
+      it('should allow host to delete note created by another user', async () => {
+        mockQueryBuilder.error = null;
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await service.deleteNote('room-1', 'note-1', 'host-1');
+
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note_deleted',
+          note_id: 'note-1',
+          room_id: 'room-1',
+        });
+      });
+
+      it('should allow co-host to delete note created by another user', async () => {
+        mockQueryBuilder.error = null;
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await service.deleteNote('room-1', 'note-1', 'cohost-1');
+
+        expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+          type: 'voice_room_note_deleted',
+          note_id: 'note-1',
+          room_id: 'room-1',
+        });
+      });
+
+      it('should throw Error if database deletion fails', async () => {
+        mockQueryBuilder.error = { message: 'Database delete failed' };
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: existingNote,
+          error: null,
+        });
+        mockQueryBuilder.single.mockResolvedValueOnce({
+          data: activeRoomRow,
+          error: null,
+        });
+
+        await expect(
+          service.deleteNote('room-1', 'note-1', 'author-1'),
+        ).rejects.toThrow('Failed to delete note: Database delete failed');
+        mockQueryBuilder.error = null;
+      });
+    });
+  });
 });

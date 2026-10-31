@@ -350,7 +350,12 @@
         <div class="flex flex-col gap-4">
           <app-room-chat></app-room-chat>
           @if (showNotesPanel()) {
-            <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
+            <app-voiceroom-notes
+              [roomId]="room.id"
+              [canPost]="room.host_id === authService.currentUser()?.id || room.co_host_id === authService.currentUser()?.id || store.isSpeaker()"
+              [isHost]="room.host_id === authService.currentUser()?.id || room.co_host_id === authService.currentUser()?.id"
+              [currentUserId]="authService.currentUser()?.id"
+            ></app-voiceroom-notes>
           }
         </div>
       </div>

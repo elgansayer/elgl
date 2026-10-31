@@ -35,10 +35,21 @@ class MockCentrifugeService {
 const notesUrl = (roomId: string): string => `${environment.apiUrl}/audio-rooms/${roomId}/notes`;
 
 @Component({
-  template: `<app-voiceroom-notes [roomId]="'room-1'" />`,
+  template: `
+    <app-voiceroom-notes
+      [roomId]="'room-1'"
+      [canPost]="canPost()"
+      [isHost]="isHost()"
+      [currentUserId]="currentUserId()"
+    />
+  `,
   imports: [VoiceroomNotesComponent],
 })
-class HostComponent {}
+class HostComponent {
+  readonly canPost = signal(false);
+  readonly isHost = signal(false);
+  readonly currentUserId = signal<string | undefined>(undefined);
+}
 
 describe('VoiceroomNotesComponent', () => {
   let fixture: ComponentFixture<HostComponent>;
@@ -196,5 +207,110 @@ describe('VoiceroomNotesComponent', () => {
     void component.addNote();
 
     httpMock.expectNone(notesUrl('room-1'));
+  });
+
+  it('sets error message when addNote request fails', async () => {
+    fixture.detectChanges();
+    httpMock.expectOne(notesUrl('room-1')).flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.content.set('Failed note attempt');
+    void component.addNote();
+
+    const postReq = httpMock.expectOne(notesUrl('room-1'));
+    postReq.error(new ProgressEvent('Network error'), { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.isPosting()).toBe(false);
+    expect(component.errorMessage()).toBe('voices.notes.errorPosting');
+  });
+
+  it('sets error message when deleteNote request fails', async () => {
+    fixture.detectChanges();
+    httpMock.expectOne(notesUrl('room-1')).flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    void component.deleteNote('note-123');
+
+    const deleteReq = httpMock.expectOne(`${notesUrl('room-1')}/note-123`);
+    deleteReq.error(new ProgressEvent('Network error'), { status: 403, statusText: 'Forbidden' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.deletingNoteId()).toBeNull();
+    expect(component.errorMessage()).toBe('voices.notes.errorDeleting');
+  });
+
+  it('correctly determines whether user can delete a note', () => {
+    const note = {
+      id: 'n1',
+      room_id: 'room-1',
+      author_id: 'user-author',
+      author_name: 'Author User',
+      content: 'Sample content',
+      created_at: '2026-01-01T00:00:00Z',
+    };
+
+    // If currentUserId matches note.author_id, can delete
+    fixture.componentInstance.currentUserId.set('user-author');
+    fixture.componentInstance.isHost.set(false);
+    fixture.detectChanges();
+    httpMock.expectOne(notesUrl('room-1')).flush([]);
+    expect(component.canDeleteNote(note)).toBe(true);
+
+    // If currentUserId is another user and not host, cannot delete
+    fixture.componentInstance.currentUserId.set('user-listener');
+    fixture.componentInstance.isHost.set(false);
+    fixture.detectChanges();
+    expect(component.canDeleteNote(note)).toBe(false);
+
+    // If isHost is true, can delete any note
+    fixture.componentInstance.currentUserId.set('user-listener');
+    fixture.componentInstance.isHost.set(true);
+    fixture.detectChanges();
+    expect(component.canDeleteNote(note)).toBe(true);
+  });
+
+  it('denies privileged controls when permissions or user identity are unavailable', () => {
+    const note = {
+      id: 'n1',
+      room_id: 'room-1',
+      author_id: 'user-author',
+      author_name: 'Author User',
+      content: 'Sample content',
+      created_at: '2026-01-01T00:00:00Z',
+    };
+
+    expect(component.canPost()).toBe(false);
+    expect(component.canDeleteNote(note)).toBe(false);
+  });
+
+  it('associates persistent guidance with both note fields', async () => {
+    fixture.componentInstance.canPost.set(true);
+    fixture.detectChanges();
+    httpMock.expectOne(notesUrl('room-1')).flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const content = fixture.nativeElement.querySelector('#voiceroom-note-content');
+    const vocabulary = fixture.nativeElement.querySelector('#voiceroom-note-vocabulary');
+
+    expect(content.getAttribute('aria-describedby')).toBe('voiceroom-note-content-help');
+    expect(vocabulary.getAttribute('aria-describedby')).toBe('voiceroom-note-vocabulary-help');
+    expect(content.hasAttribute('placeholder')).toBe(false);
+    expect(vocabulary.hasAttribute('placeholder')).toBe(false);
+  });
+
+  it('parses comma-separated vocabulary list into trimmed array', () => {
+    expect(component.parseVocabulary(null)).toEqual([]);
+    expect(component.parseVocabulary('')).toEqual([]);
+    expect(component.parseVocabulary('  hola ,  buenos días ,  gracias  ')).toEqual([
+      'hola',
+      'buenos días',
+      'gracias',
+    ]);
   });
 });

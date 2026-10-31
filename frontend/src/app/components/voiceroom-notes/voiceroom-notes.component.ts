@@ -9,16 +9,15 @@ import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { environment } from '../../../environments/environment';
 
-interface VoiceRoomNote {
+export interface VoiceRoomNote {
   id: string;
   room_id: string;
   author_id: string;
   author_name: string;
   content: string;
-  vocabulary?: string;
+  vocabulary?: string | null;
   created_at: string;
 }
-
 @Component({
   selector: 'app-voiceroom-notes',
   imports: [HlmTextarea, HlmInput, HlmButton, TranslatePipe],
@@ -34,10 +33,15 @@ export class VoiceroomNotesComponent {
   private subscribedRoomId?: string;
 
   roomId = input.required<string>();
+  canPost = input<boolean>(false);
+  isHost = input<boolean>(false);
+  currentUserId = input<string | undefined>();
 
   content = signal('');
   vocabulary = signal('');
   isPosting = signal(false);
+  errorMessage = signal<string | null>(null);
+  deletingNoteId = signal<string | null>(null);
 
   private readonly refreshCounter = signal(0);
 
@@ -81,6 +85,20 @@ export class VoiceroomNotesComponent {
     });
   }
 
+  canDeleteNote(note: VoiceRoomNote): boolean {
+    const uid = this.currentUserId();
+    if (!uid) return false;
+    return note.author_id === uid || this.isHost();
+  }
+
+  parseVocabulary(rawVocab?: string | null): string[] {
+    if (!rawVocab) return [];
+    return rawVocab
+      .split(',')
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0);
+  }
+
   onContentInput(event: Event): void {
     const target = event.target;
     if (target instanceof HTMLTextAreaElement) {
@@ -98,6 +116,7 @@ export class VoiceroomNotesComponent {
   async addNote(): Promise<void> {
     const c = this.content().trim();
     if (!c) return;
+    this.errorMessage.set(null);
     this.isPosting.set(true);
     try {
       await firstValueFrom(
@@ -110,20 +129,24 @@ export class VoiceroomNotesComponent {
       this.vocabulary.set('');
       this.refreshCounter.update((value) => value + 1);
     } catch {
-      // handled by UI error display
+      this.errorMessage.set(this.i18n.translate('voices.notes.errorPosting'));
     } finally {
       this.isPosting.set(false);
     }
   }
 
   async deleteNote(noteId: string): Promise<void> {
+    this.errorMessage.set(null);
+    this.deletingNoteId.set(noteId);
     try {
       await firstValueFrom(
         this.http.delete(`${this.apiBase}/audio-rooms/${this.roomId()}/notes/${noteId}`),
       );
       this.refreshCounter.update((value) => value + 1);
     } catch {
-      // handled by UI error display
+      this.errorMessage.set(this.i18n.translate('voices.notes.errorDeleting'));
+    } finally {
+      this.deletingNoteId.set(null);
     }
   }
 }
