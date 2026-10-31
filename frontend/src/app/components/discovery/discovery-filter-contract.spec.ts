@@ -133,6 +133,38 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
     );
   });
 
+  it('applies and clears every global search filter before re-searching', async () => {
+    findPartners.mockClear();
+
+    component.onGlobalSearch({
+      native_languages: 'es',
+      target_language: 'ja',
+      proficiency_level: 'b2',
+      has_audio_intro: true,
+    });
+    await flushPromises();
+
+    expect(component.selectedNativeLanguage()).toBe('es');
+    expect(component.selectedTargetLanguage()).toBe('ja');
+    expect(component.selectedProficiencyLevel()).toBe('b2');
+    expect(component.hasAudioIntroOnly()).toBe(true);
+    expect(findPartners).toHaveBeenCalledTimes(1);
+
+    component.onGlobalSearch({
+      native_languages: '',
+      target_language: '',
+      proficiency_level: '',
+      has_audio_intro: false,
+    });
+    await flushPromises();
+
+    expect(component.selectedNativeLanguage()).toBe('');
+    expect(component.selectedTargetLanguage()).toBe('');
+    expect(component.selectedProficiencyLevel()).toBe('');
+    expect(component.hasAudioIntroOnly()).toBe(false);
+    expect(findPartners).toHaveBeenCalledTimes(2);
+  });
+
   it('does not apply the disabled VIP radius to ordinary free discovery', async () => {
     await component.searchPartners();
 

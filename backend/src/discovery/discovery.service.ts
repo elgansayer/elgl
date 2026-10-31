@@ -458,7 +458,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
@@ -541,7 +544,7 @@ export class DiscoveryService {
           : null,
         filter_target: query.target_language || null,
         serious_only: seriousLearnerOnly,
-        filter_level: query.level || null,
+        filter_level: query.level ? query.level.toUpperCase() : null,
         filter_gender:
           _currentUserProfile?.is_vip && query.gender ? query.gender : null,
         filter_age_min: query.age_min ?? null,
@@ -625,11 +628,11 @@ export class DiscoveryService {
     // When a proficiency level is requested, keep users that either have the
     // matching level or do not yet have a level recorded (fresh profiles).
     if (query.level) {
-      const requestedLevel = query.level;
+      const requestedLevel = query.level.toUpperCase();
       results = results.filter(
         (u) =>
           u.proficiency_level === undefined ||
-          u.proficiency_level === requestedLevel,
+          u.proficiency_level?.toUpperCase() === requestedLevel,
       );
     }
     const filtered = await this.filterByVoiceRoomActive(
@@ -773,7 +776,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     if (query.age_min !== undefined) {
@@ -953,7 +959,10 @@ export class DiscoveryService {
     }
 
     if (query.level) {
-      queryBuilder = queryBuilder.eq('proficiency_level', query.level);
+      queryBuilder = queryBuilder.eq(
+        'proficiency_level',
+        query.level.toUpperCase(),
+      );
     }
 
     const nativeLang = native_language;
