@@ -33,14 +33,8 @@ test('appearance settings remains a lazy-loaded settings route', () => {
 
 test('theme, app text size, and chat text size remain independent controls', () => {
   assert.match(component, /themeOptions:\s*Theme\[\]\s*=\s*\['light', 'dark', 'system'\]/);
-  assert.match(
-    component,
-    /textSizeOptions:[\s\S]*\['small', 'normal', 'large'\]/,
-  );
-  assert.match(
-    component,
-    /chatTextSizeOptions:[\s\S]*\['small', 'medium', 'large'\]/,
-  );
+  assert.match(component, /textSizeOptions:[\s\S]*\['small', 'normal', 'large'\]/);
+  assert.match(component, /chatTextSizeOptions:[\s\S]*\['small', 'medium', 'large'\]/);
   assert.match(component, /setTheme\(theme: Theme\)[\s\S]*setTheme\(theme\)/);
   assert.match(
     component,
@@ -56,10 +50,7 @@ test('profile accent and chat text preferences are loaded and persisted through 
   assert.match(component, /userService\.getMyProfile\(\)/);
   assert.match(component, /chatSettingsService\.loadSettings\(\)/);
   assert.match(component, /userService\.updateMyProfile\(\{[\s\S]*primary_accent_color:/);
-  assert.match(
-    component,
-    /chatSettingsService\.updateSetting\('textSize', chatTextSize\)/,
-  );
+  assert.match(component, /chatSettingsService\.updateSetting\('textSize', chatTextSize\)/);
   assert.match(component, /successMessage\.set\('settings\.saved'\)/);
   assert.match(component, /errorMessage\.set\('Failed to save settings'\)/);
 });
@@ -72,10 +63,14 @@ test('custom primary accents stay guarded by the VIP entitlement', () => {
   assert.match(template, /type="color"/);
 });
 
-test('UI language switching is owned by I18nService, not study-profile mutation', () => {
-  assert.match(component, /onLanguageValueChange\(value: string\)[\s\S]*setLanguage\(value\)/);
-  assert.match(template, /<app-select[\s\S]*i18nService\.currentLang\(\)/);
-  assert.match(template, /i18nService\.availableLanguages/);
+test('UI language switching is delegated to the dedicated settings owner', () => {
+  assert.match(component, /readonly currentLanguage = computed\(\(\) =>/);
+  assert.match(component, /this\.i18nService\.currentLang\(\)/);
+  assert.match(component, /this\.i18nService\.availableLanguages\.find/);
+  assert.match(template, /routerLink="\/settings\/language"/);
+  assert.match(template, /currentLanguage\(\)\.nativeName/);
+  assert.doesNotMatch(component, /setLanguage\(/);
+  assert.doesNotMatch(template, /<app-select/);
   assert.doesNotMatch(
     component,
     /updateMyProfile\(\{[\s\S]{0,250}(?:native_languages|target_languages)/,

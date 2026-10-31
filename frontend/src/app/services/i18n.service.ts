@@ -2326,6 +2326,8 @@ export class I18nService {
     'languageSettings.saveError': 'Failed to save changes. Please try again.',
     'languageSettings.maxLanguagesError': 'Maximum of {{count}} languages allowed.',
     'languageSettings.uiLangChanged': 'UI language changed to {{name}}',
+    'languageSettings.loadError':
+      'That language could not be loaded, so your current language has been kept. Try again later or choose another language.',
     'languageSettings.searchLanguages': 'Search languages...',
     'languageSettings.noResults': 'No results',
     'settings.changeLanguage': 'Change language',
