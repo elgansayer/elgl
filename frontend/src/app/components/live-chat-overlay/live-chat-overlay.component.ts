@@ -4,6 +4,7 @@ import {
   DestroyRef,
   Injector,
   afterNextRender,
+  effect,
   inject,
   input,
   signal,
@@ -14,18 +15,74 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-interface LiveMessage {
+export interface LiveMessage {
   id: string;
   senderName: string;
   text: string;
   timestamp: number;
 }
 
-interface CentrifugoMessageData {
-  type?: string;
-  id?: string;
-  senderName?: string;
-  content: string;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseIncomingLiveMessage(data: unknown, fallbackUserName: string): LiveMessage | null {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  const type = typeof data['type'] === 'string' ? data['type'] : '';
+
+  // Centrifugo room messages are broadcast as either 'chat_message' or 'text'
+  if (type !== 'text' && type !== 'chat_message') {
+    return null;
+  }
+
+  const innerMessage = isRecord(data['message']) ? data['message'] : null;
+
+  // Extract message body from nested message payload or root payload
+  const rawText =
+    (innerMessage && typeof innerMessage['text_content'] === 'string' && innerMessage['text_content']) ||
+    (innerMessage && typeof innerMessage['content'] === 'string' && innerMessage['content']) ||
+    (innerMessage && typeof innerMessage['text'] === 'string' && innerMessage['text']) ||
+    (typeof data['content'] === 'string' && data['content']) ||
+    (typeof data['text'] === 'string' && data['text']) ||
+    '';
+
+  const text = rawText.trim();
+  if (!text) {
+    return null;
+  }
+
+  // Extract sender name
+  const rawSender =
+    (innerMessage && typeof innerMessage['sender_name'] === 'string' && innerMessage['sender_name'].trim()) ||
+    (innerMessage && typeof innerMessage['senderName'] === 'string' && innerMessage['senderName'].trim()) ||
+    (typeof data['sender_name'] === 'string' && data['sender_name'].trim()) ||
+    (typeof data['senderName'] === 'string' && data['senderName'].trim()) ||
+    fallbackUserName;
+
+  // Extract ID or generate a secure fallback UUID
+  const rawId =
+    (innerMessage && typeof innerMessage['id'] === 'string' && innerMessage['id'].trim()) ||
+    (typeof data['id'] === 'string' && data['id'].trim()) ||
+    crypto.randomUUID();
+
+  // Extract timestamp
+  let timestamp = Date.now();
+  if (innerMessage && typeof innerMessage['created_at'] === 'string') {
+    const parsedTime = Date.parse(innerMessage['created_at']);
+    if (!Number.isNaN(parsedTime)) {
+      timestamp = parsedTime;
+    }
+  }
+
+  return {
+    id: rawId,
+    senderName: rawSender,
+    text,
+    timestamp,
+  };
 }
 
 @Component({
@@ -50,10 +107,10 @@ interface CentrifugoMessageData {
           <div
             class="flex flex-col bg-black/40 rounded-xl p-2 sm:p-2.5 max-w-[90%] sm:max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
           >
-            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{
+            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5" dir="auto">{{
               msg.senderName
             }}</span>
-            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{
+            <span class="text-white text-xs sm:text-sm leading-snug break-words" dir="auto">{{
               msg.text
             }}</span>
           </div>
@@ -87,63 +144,77 @@ interface CentrifugoMessageData {
       .animate-fade-in {
         animation: fadeInSlideUp 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
       }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-fade-in {
+          animation: none !important;
+        }
+      }
     `,
   ],
 })
 export class LiveChatOverlayComponent implements OnInit {
-  roomId = input<string>('');
+  readonly roomId = input<string>('');
 
-  private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
+  private readonly scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
-  centrifugo = inject(CentrifugeService);
-  i18n = inject(I18nService);
-  destroyRef = inject(DestroyRef);
-  private injector = inject(Injector);
+  readonly centrifugo = inject(CentrifugeService);
+  readonly i18n = inject(I18nService);
+  readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
-  messages = signal<LiveMessage[]>([]);
+  readonly messages = signal<LiveMessage[]>([]);
   channelName = '';
-  subscription: unknown = null;
-
-  // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
-  ngOnInit() {
-    const id = this.roomId();
-    if (!id) return;
-
-    this.channelName = `room_${id}`;
-
-    this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
-      const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
-        if (typeof value !== 'object' || value === null) return false;
-        if (!('type' in value) || !('content' in value)) return false;
-        const type = value.type;
-        const content = value.content;
-        return typeof type === 'string' && typeof content === 'string';
-      };
-
-      if (!isCentrifugoMessageData(data)) return;
-
-      const event = data;
-
-      if (event.type === 'text') {
-        this.addMessage({
-          id: event.id || crypto.randomUUID(),
-          senderName: event.senderName || this.i18n.translate('common.user'),
-          text: event.content,
-          timestamp: Date.now(),
-        });
-      }
-    });
-  }
+  private releaseListener: (() => void) | null = null;
 
   constructor() {
+    effect(() => {
+      const id = this.roomId();
+      if (!id) {
+        this.teardownSubscription();
+        return;
+      }
+      this.setupSubscription(id);
+    });
+
     this.destroyRef.onDestroy(() => {
-      if (this.channelName) {
-        this.centrifugo.unsubscribe(this.channelName);
+      this.teardownSubscription();
+    });
+  }
+
+  // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md
+  ngOnInit(): void {
+    const id = this.roomId();
+    if (id) {
+      this.setupSubscription(id);
+    }
+  }
+
+  setupSubscription(id: string): void {
+    const targetChannel = `room_${id}`;
+    if (this.channelName === targetChannel && this.releaseListener) {
+      return;
+    }
+
+    this.teardownSubscription();
+    this.channelName = targetChannel;
+
+    // Keep the store's primary room lifecycle and moderation-event handler intact.
+    this.releaseListener = this.centrifugo.listen(this.channelName, (data: unknown) => {
+      const fallbackUser = this.i18n.translate('common.user');
+      const parsed = parseIncomingLiveMessage(data, fallbackUser);
+      if (parsed) {
+        this.addMessage(parsed);
       }
     });
   }
 
-  addMessage(msg: LiveMessage) {
+  teardownSubscription(): void {
+    this.releaseListener?.();
+    this.releaseListener = null;
+    this.channelName = '';
+  }
+
+  addMessage(msg: LiveMessage): void {
     this.messages.update((msgs) => {
       const newMsgs = [...msgs, msg];
       // Cap at 50 messages to maintain 60 FPS rendering performance
@@ -155,7 +226,7 @@ export class LiveChatOverlayComponent implements OnInit {
     this.scrollToBottom();
   }
 
-  scrollToBottom() {
+  scrollToBottom(): void {
     afterNextRender(
       () => {
         const el = this.scrollContainer()?.nativeElement;
