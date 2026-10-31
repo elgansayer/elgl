@@ -48,13 +48,34 @@ describe('daily recommendation worker contract', () => {
     expect(discoverySchedules).toEqual(['0 0 * * 0']);
   });
 
-  it('keeps the worker recommendation-specific instead of audio-room control logic', () => {
-    const source = readFileSync(
+  it('keeps the worker recommendation-specific instead of audio-room control logic (Task #1763, Issue #1043)', () => {
+    const serviceSource = readFileSync(
       join(__dirname, 'recommendations.service.ts'),
       'utf8',
     );
+    const controllerSource = readFileSync(
+      join(__dirname, 'recommendations.controller.ts'),
+      'utf8',
+    );
+    const moduleSource = readFileSync(
+      join(__dirname, 'recommendations.module.ts'),
+      'utf8',
+    );
 
-    expect(source).not.toContain('inviteCoHost');
-    expect(source).not.toContain('removeCoHost');
+    // Ensure audio-room co-host primitives are not present in recommendations
+    for (const source of [serviceSource, controllerSource, moduleSource]) {
+      expect(source).not.toContain('inviteCoHost');
+      expect(source).not.toContain('removeCoHost');
+      expect(source).not.toContain('co_host_id');
+      expect(source).not.toContain('AudioRoomsService');
+      expect(source).not.toContain('AudioRoomsModule');
+    }
+
+    // Ensure the actual background job logic is implemented for partner recommendations
+    expect(serviceSource).toContain('calculateDailyRecommendations');
+    expect(serviceSource).toContain('acquireRedisLock');
+    expect(serviceSource).toContain('recommendations:daily:');
+    expect(serviceSource).toContain('native_languages');
+    expect(serviceSource).toContain('target_languages');
   });
 });
