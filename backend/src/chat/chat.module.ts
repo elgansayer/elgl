@@ -10,6 +10,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { FavouritesModule } from '../favourites/favourites.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
+import { NlpModule } from '../nlp/nlp.module';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
@@ -32,6 +33,7 @@ import { DisappearingMessagesCleanupService } from './disappearing-messages-clea
 import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
 import { PersonalUnreadListener } from './listeners/personal-unread.listener';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { ChatVoiceTranscriptionService } from './chat-voice-transcription.service';
 
 @Module({
   imports: [
@@ -44,6 +46,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     FavouritesModule,
     CloudflareR2Module,
     LearnerKnowledgeModule,
+    NlpModule,
     forwardRef(() => UsersModule),
   ],
   controllers: [
@@ -71,6 +74,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     DisappearingMessagesInterceptor,
     PersonalUnreadListener,
     PersonalChatEncryptionService,
+    ChatVoiceTranscriptionService,
     {
       provide: APP_INTERCEPTOR,
       useExisting: DisappearingMessagesInterceptor,
