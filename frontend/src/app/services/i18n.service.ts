@@ -638,6 +638,7 @@ export class I18nService {
     'audioRoom.hostFallback': 'Room Host',
     'audioRoom.listenersCount': '{{count}} listening',
     'audioRoom.raiseHandBtn': '✋ Raise hand',
+    'audioRoom.handRaisedBtn': '✋ Hand raised',
     'audioRoom.giftHostBtn': '🎁 Gift host',
     'audioRoom.tipHostBtn': '🪙 Tip host',
     'audioRoom.tipSentToast': '🪙 Sent {{amount}} coins to the host!',

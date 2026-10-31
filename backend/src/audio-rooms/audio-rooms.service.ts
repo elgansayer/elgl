@@ -920,7 +920,7 @@ export class AudioRoomsService implements OnModuleInit {
     if (!response.data) throw new NotFoundException('Room not found');
     const room = response.data as AudioRoomRow;
 
-    if (room.host_id !== hostId) {
+    if (room.host_id !== hostId && room.co_host_id !== hostId) {
       throw new ForbiddenException(
         'Only the host can approve stage speaker requests.',
       );
@@ -1068,7 +1068,7 @@ export class AudioRoomsService implements OnModuleInit {
       .single();
     if (!response.data) throw new NotFoundException('Room not found');
     const room = response.data as AudioRoomRow;
-    if (room.host_id !== hostId)
+    if (room.host_id !== hostId && room.co_host_id !== hostId)
       throw new ForbiddenException('Only the host can dismiss raised hands.');
     await supabase
       .from('audio_rooms')
@@ -1078,6 +1078,12 @@ export class AudioRoomsService implements OnModuleInit {
         ),
       })
       .eq('id', room.id);
+
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'raise_hand_dismissed',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
   }
 
   async inviteCoHost(
