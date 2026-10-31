@@ -853,6 +853,10 @@ export class I18nService {
     'video_call.presenting_badge_aria': 'You are presenting your screen',
 
     // Split Screen Video Component
+    'splitScreen.streamErrorAria': 'Video stream error',
+    'splitScreen.splitScreenVideoAria': 'Split screen video',
+    'splitScreen.loadingHost': 'Loading host video...',
+    'splitScreen.loadingCoHost': 'Loading co-host video...',
     'splitScreen.hostVideoAria': 'Host video',
     'splitScreen.coHostVideoAria': 'Co-host video',
     'splitScreen.inviteCoHostAria': 'Invite a co-host to split screen',
