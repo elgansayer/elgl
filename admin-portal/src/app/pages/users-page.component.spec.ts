@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { type MockInstance, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AdminUserDataError,
   AdminUserListResult,
   AdminUserSummary,
   AdminUsersService,
@@ -143,5 +144,154 @@ describe('UsersPageComponent', () => {
     expect(search).toHaveBeenLastCalledWith({ page: 1, pageSize: 20, search: 'Alice' });
     expect(component.users()).toEqual([user]);
     expect(component.error()).toBeNull();
+  });
+
+  it('renders a single link per user so link names stay unambiguous', async () => {
+    await createComponent({ users: [user], total: 1, page: 1, pageSize: 20 });
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('a[href="/users/user-1"]')).toHaveLength(1);
+    expect(element.textContent).not.toContain('Inspect user');
+  });
+
+  it('keeps the result summary in a status region that exists before results load', async () => {
+    await createComponent({ users: [user], total: 1, page: 1, pageSize: 20 });
+
+    const status = (fixture.nativeElement as HTMLElement).querySelector('[role="status"]');
+    expect(status?.textContent).toContain('1 matching user.');
+    expect(status?.textContent).toContain('Page 1.');
+
+    search.mockReturnValue(throwError(() => new AdminUserDataError('unavailable')));
+    await component.searchUsers();
+    fixture.detectChanges();
+
+    const sameStatus = (fixture.nativeElement as HTMLElement).querySelector('[role="status"]');
+    expect(sameStatus).toBe(status);
+    expect(sameStatus?.textContent?.trim()).toBe('');
+  });
+
+  describe('failure states', () => {
+    async function createFailing(failure: ConstructorParameters<typeof AdminUserDataError>[0]) {
+      search.mockReturnValue(throwError(() => new AdminUserDataError(failure)));
+      TestBed.configureTestingModule({
+        imports: [UsersPageComponent],
+        providers: [provideRouter([]), { provide: AdminUsersService, useValue: { search } }],
+      });
+      fixture = TestBed.createComponent(UsersPageComponent);
+      component = fixture.componentInstance;
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('sends the operator back to sign-in, with no futile retry, when the session expired', async () => {
+      const element = await createFailing('unauthenticated');
+
+      expect(component.failure()).toBe('unauthenticated');
+      expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+        'Your admin session has expired. Sign in again to continue.',
+      );
+      expect(element.querySelector('[role="alert"] a[href="/login"]')?.textContent).toContain(
+        'Sign in again',
+      );
+      expect(element.textContent).not.toContain('Retry search');
+      expect(element.textContent).not.toContain('temporarily unavailable');
+    });
+
+    it('explains a refused capability instead of offering a retry', async () => {
+      const element = await createFailing('forbidden');
+
+      expect(component.failure()).toBe('forbidden');
+      expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+        'Your admin account is not permitted to search users.',
+      );
+      expect(element.querySelector('[role="alert"] a[href="/"]')).not.toBeNull();
+      expect(element.textContent).not.toContain('Retry search');
+    });
+
+    it('keeps an explicit retry for outages', async () => {
+      const element = await createFailing('unavailable');
+
+      expect(component.failure()).toBe('unavailable');
+      expect(element.querySelector('[role="alert"] button')?.textContent).toContain('Retry search');
+      expect(element.querySelector('[role="alert"] a')).toBeNull();
+    });
+
+    it('clears the previous failure when a later search succeeds', async () => {
+      await createFailing('unauthenticated');
+      search.mockReturnValue(
+        of({ users: [user], total: 1, page: 1, pageSize: 20 } satisfies AdminUserListResult),
+      );
+
+      await component.searchUsers(true);
+      fixture.detectChanges();
+
+      expect(component.failure()).toBeNull();
+      expect(component.error()).toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')).toBeNull();
+    });
+  });
+
+  describe('open by user ID', () => {
+    const userId = '0b6f6a0e-5f1c-4c8e-9d52-0f4d5d8d9a11';
+    let navigate: MockInstance<Router['navigate']>;
+
+    beforeEach(async () => {
+      await createComponent({ users: [user], total: 1, page: 1, pageSize: 20 });
+      navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    });
+
+    it('opens the investigation view for a valid ID, normalised, without searching or calling the API', async () => {
+      search.mockClear();
+      component.userIdQuery.set(`  ${userId.toUpperCase()}  `);
+
+      await component.openUserById();
+
+      expect(navigate).toHaveBeenCalledWith(['/users', userId]);
+      expect(component.idError()).toBeNull();
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it.each(['', '   ', 'user-1', `${userId}0`, `${userId.slice(0, -1)}g`, '../users', `${userId}/login-history`])(
+      'rejects %j with a field error and does not navigate',
+      async (value) => {
+        component.userIdQuery.set(value);
+
+        await component.openUserById();
+        fixture.detectChanges();
+
+        expect(navigate).not.toHaveBeenCalled();
+        const element = fixture.nativeElement as HTMLElement;
+        const input = element.querySelector<HTMLInputElement>('#user-id-lookup');
+        expect(element.querySelector('#user-id-lookup-error')?.textContent).toContain(
+          'Enter a valid user ID',
+        );
+        expect(element.querySelector('#user-id-lookup-error')?.getAttribute('role')).toBe('alert');
+        expect(input?.getAttribute('aria-invalid')).toBe('true');
+        expect(input?.getAttribute('aria-describedby')).toBe('user-id-lookup-error');
+      },
+    );
+
+    it('clears a previous validation error once a valid ID is submitted', async () => {
+      component.userIdQuery.set('nope');
+      await component.openUserById();
+      expect(component.idError()).not.toBeNull();
+
+      component.userIdQuery.set(userId);
+      await component.openUserById();
+      fixture.detectChanges();
+
+      expect(component.idError()).toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('#user-id-lookup-error')).toBeNull();
+      expect(navigate).toHaveBeenCalledWith(['/users', userId]);
+    });
+
+    it('exposes a labelled ID field that is separate from the display-name search', () => {
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelector('label[for="user-id-lookup"]')?.textContent).toContain('User ID');
+      expect(element.querySelector('label[for="user-search"]')?.textContent).toContain('Display name');
+      expect(element.querySelectorAll('form')).toHaveLength(2);
+    });
   });
 });

@@ -1,13 +1,15 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminLoginService } from './admin-login.service';
 import {
   AdminLoginHistoryEntry,
+  AdminUserDataError,
   AdminUserListResult,
   AdminUserSummary,
   AdminUsersService,
+  failureOf,
 } from './admin-users.service';
 
 describe('AdminUsersService', () => {
@@ -17,6 +19,7 @@ describe('AdminUsersService', () => {
   let login: {
     accessToken: ReturnType<typeof vi.fn>;
     apiBaseUrl: ReturnType<typeof vi.fn>;
+    signOut: ReturnType<typeof vi.fn>;
   };
 
   const user: AdminUserSummary = {
@@ -40,6 +43,7 @@ describe('AdminUsersService', () => {
     login = {
       accessToken: vi.fn(() => token),
       apiBaseUrl: vi.fn(async () => 'https://api.example.test'),
+      signOut: vi.fn(),
     };
 
     TestBed.configureTestingModule({
@@ -223,5 +227,121 @@ describe('AdminUsersService', () => {
 
     expect(login.apiBaseUrl).not.toHaveBeenCalled();
     expect(httpGet).not.toHaveBeenCalled();
+  });
+
+  describe('failure states', () => {
+    const rejectedWith = async (operation: Promise<unknown>): Promise<unknown> => {
+      try {
+        await operation;
+      } catch (error) {
+        return error;
+      }
+      throw new Error('Expected the operation to fail');
+    };
+    const httpFailure = (status: number) =>
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status,
+            statusText: 'provider detail',
+            url: 'https://internal.example/rest/v1/users',
+            error: 'postgres://operator:secret@internal.example failed',
+          }),
+      );
+
+    it('drops the dead token and reports an expired session when the API answers 401', async () => {
+      httpGet.mockReturnValue(httpFailure(401));
+
+      for (const operation of [
+        () => firstValueFrom(service.search({})),
+        () => firstValueFrom(service.getUser('user-1')),
+        () => firstValueFrom(service.getLoginHistory('user-1')),
+      ]) {
+        login.signOut.mockClear();
+        const error = await rejectedWith(operation());
+
+        expect(error).toBeInstanceOf(AdminUserDataError);
+        expect(failureOf(error)).toBe('unauthenticated');
+        expect((error as Error).message).toBe('Admin authentication required');
+        expect(login.signOut).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('reports a refused capability as forbidden without ending the session', async () => {
+      httpGet.mockReturnValue(httpFailure(403));
+
+      for (const operation of [
+        () => firstValueFrom(service.search({})),
+        () => firstValueFrom(service.getUser('user-1')),
+        () => firstValueFrom(service.getLoginHistory('user-1')),
+      ]) {
+        const error = await rejectedWith(operation());
+
+        expect(failureOf(error)).toBe('forbidden');
+        expect((error as Error).message).toBe('Admin permission required');
+      }
+      expect(login.signOut).not.toHaveBeenCalled();
+    });
+
+    it('reports a missing user as not found only for the user detail lookup', async () => {
+      httpGet.mockReturnValue(httpFailure(404));
+
+      expect(failureOf(await rejectedWith(firstValueFrom(service.getUser('user-1'))))).toBe(
+        'not-found',
+      );
+      // A 404 on a collection or sub-resource means the API is misdeployed, not that a
+      // person is missing, so it must stay a retryable outage.
+      expect(failureOf(await rejectedWith(firstValueFrom(service.search({}))))).toBe('unavailable');
+      expect(failureOf(await rejectedWith(firstValueFrom(service.getLoginHistory('user-1'))))).toBe(
+        'unavailable',
+      );
+    });
+
+    it.each([0, 429, 500, 502, 503])(
+      'reports HTTP %s as unavailable without exposing provider detail',
+      async (status) => {
+        httpGet.mockReturnValue(httpFailure(status));
+
+        for (const operation of [
+          () => firstValueFrom(service.search({})),
+          () => firstValueFrom(service.getUser('user-1')),
+          () => firstValueFrom(service.getLoginHistory('user-1')),
+        ]) {
+          const error = await rejectedWith(operation());
+
+          expect(failureOf(error)).toBe('unavailable');
+          expect((error as Error).message).toBe('Admin user data unavailable');
+          expect(String(error)).not.toContain('secret');
+          expect((error as Error).cause).toBeUndefined();
+        }
+        expect(login.signOut).not.toHaveBeenCalled();
+      },
+    );
+
+    it('reports a failed runtime-configuration lookup as unavailable', async () => {
+      login.apiBaseUrl.mockRejectedValue(new Error('Admin runtime configuration is unavailable'));
+
+      expect(failureOf(await rejectedWith(firstValueFrom(service.search({}))))).toBe('unavailable');
+    });
+
+    it('reports a missing token and a malformed identifier as distinct failures before any request', async () => {
+      const malformed = await rejectedWith(firstValueFrom(service.getUser('   ')));
+      expect(failureOf(malformed)).toBe('not-found');
+      expect((malformed as Error).message).toBe('Invalid admin user identifier');
+
+      token = null;
+      expect(failureOf(await rejectedWith(firstValueFrom(service.search({}))))).toBe(
+        'unauthenticated',
+      );
+
+      expect(httpGet).not.toHaveBeenCalled();
+      expect(login.signOut).not.toHaveBeenCalled();
+    });
+
+    it('treats anything that is not a typed failure as unavailable', () => {
+      expect(failureOf(new Error('boom'))).toBe('unavailable');
+      expect(failureOf('boom')).toBe('unavailable');
+      expect(failureOf(undefined)).toBe('unavailable');
+    });
   });
 });
