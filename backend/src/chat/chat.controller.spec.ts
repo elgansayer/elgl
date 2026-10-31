@@ -18,6 +18,7 @@ vi.mock('dompurify', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { UnauthorizedException } from '@nestjs/common';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
@@ -25,6 +26,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { FavouritesService } from '../favourites/favourites.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { User } from '@supabase/supabase-js';
 import { AiGenerateReplyDto, SendMessageDto } from './dto/send-message.dto';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
@@ -42,6 +44,7 @@ describe('ChatController', () => {
   let centrifugoService: CentrifugoService;
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
+  let personalChatEncryptionService: PersonalChatEncryptionService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -107,6 +110,12 @@ describe('ChatController', () => {
             translateWithDetection: vi.fn(),
           },
         },
+        {
+          provide: PersonalChatEncryptionService,
+          useValue: {
+            getConversationKey: vi.fn(),
+          },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
@@ -121,6 +130,9 @@ describe('ChatController', () => {
       ConversationStarterService,
     );
     translationService = module.get<TranslationService>(TranslationService);
+    personalChatEncryptionService = module.get<PersonalChatEncryptionService>(
+      PersonalChatEncryptionService,
+    );
   });
 
   afterEach(() => {
@@ -878,6 +890,45 @@ describe('ChatController', () => {
         'user-1',
       );
       expect(result).toEqual(greeting);
+    });
+  });
+
+  describe('getRoomE2eeKey', () => {
+    it('rate-limits key material retrieval', () => {
+      expect(
+        Reflect.getMetadata(
+          'THROTTLER:LIMITdefault',
+          ChatController.prototype.getRoomE2eeKey,
+        ),
+      ).toBe(5);
+    });
+
+    it('throws UnauthorizedException if user is not authenticated', async () => {
+      await expect(controller.getRoomE2eeKey(null, 'room-1')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('returns E2EE key material for authenticated direct room member', async () => {
+      (
+        personalChatEncryptionService.getConversationKey as Mock
+      ).mockResolvedValueOnce({
+        e2eeKey: 'test-e2ee-key-material-32-chars-base64url',
+        roomId: 'room-1',
+        algorithm: 'AES-GCM-256',
+      });
+
+      const user = mockUser();
+      const result = await controller.getRoomE2eeKey(user, 'room-1');
+
+      expect(
+        personalChatEncryptionService.getConversationKey,
+      ).toHaveBeenCalledWith('room-1', 'user-1');
+      expect(result).toEqual({
+        e2ee_key: 'test-e2ee-key-material-32-chars-base64url',
+        room_id: 'room-1',
+        algorithm: 'AES-GCM-256',
+      });
     });
   });
 });

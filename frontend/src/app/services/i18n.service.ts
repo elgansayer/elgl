@@ -871,6 +871,11 @@ export class I18nService {
     'liveChat.liveRegionAria': 'New messages appearing',
 
     // Chat Room Component
+    'chatRoom.e2eeBanner': 'Text messages in this chat are encrypted before storage and delivery.',
+    'chatRoom.e2eeBadge': 'Encrypted',
+    'chatRoom.e2eeMessageHint': 'Encrypted message',
+    'chatRoom.encryptedMessageUnavailable': 'Encrypted message unavailable',
+    'calls.e2eeSecured': 'Encrypted call',
     'chatRoom.liveNow': 'Live now',
     'chatRoom.connecting': 'Connecting...',
     'chatRoom.searchPlaceholder': 'Search messages',

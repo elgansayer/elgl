@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SupabaseService } from '../supabase/supabase.service';
+import { SupabaseService, ChatMessageRow } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { SafetyService } from '../safety/safety.service';
@@ -440,7 +440,7 @@ export class ChatService {
     }
 
     // Spam detection for text messages
-    if (dto.message_type === 'text' && dto.text_content) {
+    if (!dto.is_encrypted && dto.message_type === 'text' && dto.text_content) {
       const isSpam = this.spamDetectionService.isSpam(dto.text_content);
       if (isSpam) {
         throw new BadRequestException(
@@ -463,6 +463,8 @@ export class ChatService {
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media' ? true : false,
         delivery_status: 'sent',
+        is_encrypted: dto.is_encrypted ?? false,
+        encrypted_payload: dto.encrypted_payload ?? null,
       })
       .select(
         `
@@ -488,7 +490,7 @@ export class ChatService {
 
     // ---------- Link preview scraping ----------
     const linkPreview =
-      dto.message_type === 'text'
+      !dto.is_encrypted && dto.message_type === 'text'
         ? await this.resolveLinkPreview(dto.text_content)
         : null;
 
@@ -522,19 +524,21 @@ export class ChatService {
       message: messageForPublish,
     });
 
-    const preview = dto.text_content
-      ? dto.text_content.substring(0, 120)
-      : dto.message_type === 'voice'
-        ? '🎤 Voice message'
-        : dto.message_type === 'correction'
-          ? '📝 Correction'
-          : dto.message_type === 'doodle'
-            ? '🎨 Doodle'
-            : dto.message_type === 'correction_request'
-              ? '✏️ Correction request'
-              : dto.message_type === 'status_reply'
-                ? '✉️ Status reply'
-                : '';
+    const preview = dto.is_encrypted
+      ? '🔒 Encrypted message'
+      : dto.text_content
+        ? dto.text_content.substring(0, 120)
+        : dto.message_type === 'voice'
+          ? '🎤 Voice message'
+          : dto.message_type === 'correction'
+            ? '📝 Correction'
+            : dto.message_type === 'doodle'
+              ? '🎨 Doodle'
+              : dto.message_type === 'correction_request'
+                ? '✏️ Correction request'
+                : dto.message_type === 'status_reply'
+                  ? '✉️ Status reply'
+                  : '';
 
     // Emit push notification event
     if (receiverId) {
@@ -555,7 +559,7 @@ export class ChatService {
     this.eventEmitter.emit('message.sent', { userId: senderId });
 
     // ---------- Parse @mentions and emit notifications ----------
-    if (dto.message_type === 'text' && dto.text_content) {
+    if (!dto.is_encrypted && dto.message_type === 'text' && dto.text_content) {
       const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
       const mentionedNames = [...dto.text_content.matchAll(mentionRegex)].map(
         (m) => m[1],
@@ -1594,6 +1598,13 @@ export class ChatService {
       throw new BadRequestException('Only text messages can be edited');
     }
 
+    const wasEncrypted = originalMsg.is_encrypted === true;
+    if (wasEncrypted && dto.is_encrypted !== true) {
+      throw new BadRequestException(
+        'An encrypted message cannot be downgraded to plaintext.',
+      );
+    }
+
     // Check edit time window
     if (createdAt) {
       const editWindowMinutes = this.configService.get<number>(
@@ -1622,13 +1633,21 @@ export class ChatService {
       throw new ForbiddenException('You are not a member of this room');
     }
 
+    const updatePayload: Partial<ChatMessageRow> = {
+      text_content: dto.text_content,
+      is_edited: true,
+      edited_at: new Date().toISOString(),
+    };
+    if (dto.is_encrypted !== undefined) {
+      updatePayload.is_encrypted = dto.is_encrypted;
+    }
+    if (dto.encrypted_payload !== undefined) {
+      updatePayload.encrypted_payload = dto.encrypted_payload;
+    }
+
     const { data: updatedMsg, error: updateErr } = await supabase
       .from('chat_messages')
-      .update({
-        text_content: dto.text_content,
-        is_edited: true,
-        edited_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', messageId)
       .select(
         `
@@ -1652,7 +1671,9 @@ export class ChatService {
     // merge this event over their local copy of the message, so the field is
     // always published explicitly: `null` clears a card whose link was removed
     // or failed to resolve, instead of leaving the previous preview on screen.
-    const linkPreview = await this.resolveLinkPreview(dto.text_content);
+    const linkPreview = dto.is_encrypted
+      ? null
+      : await this.resolveLinkPreview(dto.text_content);
     const editedMessage: ChatMessage = {
       ...updatedMsg,
       link_preview: linkPreview,

@@ -31,6 +31,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
 import { DisappearingMessagesCleanupService } from './disappearing-messages-cleanup.service';
 import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
 import { PersonalUnreadListener } from './listeners/personal-unread.listener';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { PersonalUnreadListener } from './listeners/personal-unread.listener';
     DisappearingMessagesCleanupService,
     DisappearingMessagesInterceptor,
     PersonalUnreadListener,
+    PersonalChatEncryptionService,
     {
       provide: APP_INTERCEPTOR,
       useExisting: DisappearingMessagesInterceptor,
@@ -84,6 +86,7 @@ import { PersonalUnreadListener } from './listeners/personal-unread.listener';
     DirectConversationService,
     SystemMessageService,
     ChatSettingsService,
+    PersonalChatEncryptionService,
   ],
 })
 export class ChatModule {}
