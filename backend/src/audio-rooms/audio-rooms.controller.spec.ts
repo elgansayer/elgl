@@ -215,8 +215,14 @@ describe('AudioRoomsController', () => {
       const room: any = { id: 'room-1' };
       (audioRoomsService.muteSpeaker as Mock).mockResolvedValue(room);
 
-      const result = await controller.muteSpeaker({ id: 'user-1' }, dto);
-      expect(audioRoomsService.muteSpeaker).toHaveBeenCalledWith('user-1', dto);
+      const result = await controller.muteSpeaker({ id: 'user-1' }, dto, {
+        headers: { 'x-request-id': 'request-mute-1' },
+      } as never);
+      expect(audioRoomsService.muteSpeaker).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+        'request-mute-1',
+      );
       expect(result).toEqual(room);
     });
   });
@@ -240,7 +246,11 @@ describe('AudioRoomsController', () => {
       (audioRoomsService.kickSpeaker as Mock).mockResolvedValue(room);
 
       const result = await controller.kickSpeaker({ id: 'user-1' }, dto);
-      expect(audioRoomsService.kickSpeaker).toHaveBeenCalledWith('user-1', dto);
+      expect(audioRoomsService.kickSpeaker).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+        undefined,
+      );
       expect(result).toEqual(room);
     });
   });

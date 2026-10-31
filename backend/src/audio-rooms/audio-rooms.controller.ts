@@ -8,9 +8,11 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -557,9 +559,14 @@ export class AudioRoomsController {
   async muteSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
+    @Req() request?: Request,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
-    return await this.audioRoomsService.muteSpeaker(user.id, dto);
+    return await this.audioRoomsService.muteSpeaker(
+      user.id,
+      dto,
+      this.correlationId(request),
+    );
   }
 
   @Post('kick-speaker')
@@ -577,9 +584,19 @@ export class AudioRoomsController {
   async kickSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
+    @Req() request?: Request,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
-    return await this.audioRoomsService.kickSpeaker(user.id, dto);
+    return await this.audioRoomsService.kickSpeaker(
+      user.id,
+      dto,
+      this.correlationId(request),
+    );
+  }
+
+  private correlationId(request: Request | undefined): string | undefined {
+    const requestId = request?.headers['x-request-id'];
+    return Array.isArray(requestId) ? requestId[0] : requestId;
   }
 
   @Post('demote-speaker')
