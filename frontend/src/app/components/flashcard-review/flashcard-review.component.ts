@@ -9,6 +9,7 @@ import {
   ElementRef,
   effect,
   ErrorHandler,
+  DestroyRef,
 } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
@@ -122,7 +123,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
               [attr.aria-label]="'review.progressPercent' | t: { percent: progressPercent() }"
             >
               <div
-                class="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+                class="h-full rounded-full bg-primary transition-all duration-slow ease-app"
                 [style.width]="progressPercent() + '%'"
               ></div>
             </div>
@@ -181,10 +182,16 @@ type ReviewGrade = 'again' | 'good' | 'known';
                       | t: { word: card.word_token }
                   "
                   [attr.aria-pressed]="isFlipped()"
-                  [attr.aria-describedby]="'card-front-' + card.id + ' card-back-' + card.id"
+                  [attr.aria-describedby]="
+                    isFlipped() ? 'card-back-' + card.id : 'card-front-' + card.id
+                  "
                 >
                   <div class="flip-card-inner">
-                    <div class="flip-card-face flip-card-front" [attr.id]="'card-front-' + card.id">
+                    <div
+                      class="flip-card-face flip-card-front"
+                      [attr.id]="'card-front-' + card.id"
+                      [attr.aria-hidden]="isFlipped() ? 'true' : null"
+                    >
                       <div class="mb-3 flex items-center justify-between text-xs font-bold">
                         <span class="rounded-app bg-primary/20 px-2 py-0.5 text-primary-ink">
                           {{ 'review.levelBadge' | t: { level: card.srs_level } }}
@@ -205,7 +212,11 @@ type ReviewGrade = 'again' | 'good' | 'known';
                         {{ 'review.tapToFlip' | t }}
                       </p>
                     </div>
-                    <div class="flip-card-face flip-card-back" [attr.id]="'card-back-' + card.id">
+                    <div
+                      class="flip-card-face flip-card-back"
+                      [attr.id]="'card-back-' + card.id"
+                      [attr.aria-hidden]="isFlipped() ? null : 'true'"
+                    >
                       <div class="mb-3 flex items-center justify-between text-xs font-bold">
                         <span class="rounded-app bg-success/20 px-2 py-0.5 text-success">
                           {{ 'review.answerLabel' | t }}
@@ -220,6 +231,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                           hlmBtn
                           type="button"
                           class="mt-3 rounded-app border border-surface-100 px-3 py-1 text-xs font-bold text-text-secondary hover:bg-surface-300"
+                          [disabled]="!isFlipped()"
                           (click)="playAudio(card.pronunciation_url, $event)"
                           [attr.aria-label]="
                             'review.playAudioAriaLabel' | t: { word: card.word_token }
@@ -249,6 +261,8 @@ type ReviewGrade = 'again' | 'good' | 'known';
                     <button
                       hlmBtn
                       type="button"
+                      [disabled]="isSaving()"
+                      [attr.aria-busy]="isSaving()"
                       (click)="gradeReview('again')"
                       class="btn-grade btn-grade-again"
                       [attr.aria-label]="'review.againAriaLabel' | t"
@@ -260,6 +274,8 @@ type ReviewGrade = 'again' | 'good' | 'known';
                     <button
                       hlmBtn
                       type="button"
+                      [disabled]="isSaving()"
+                      [attr.aria-busy]="isSaving()"
                       (click)="gradeReview('good')"
                       class="btn-grade btn-grade-good col-span-2"
                       [attr.aria-label]="'review.goodAriaLabel' | t"
@@ -271,6 +287,8 @@ type ReviewGrade = 'again' | 'good' | 'known';
                     <button
                       hlmBtn
                       type="button"
+                      [disabled]="isSaving()"
+                      [attr.aria-busy]="isSaving()"
                       (click)="gradeReview('known')"
                       class="btn-grade btn-grade-known"
                       [attr.aria-label]="'review.knownAriaLabel' | t"
@@ -303,7 +321,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
         width: 100%;
         min-height: 14rem;
         transform-style: preserve-3d;
-        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
       }
 
       .flip-card.is-flipped .flip-card-inner {
@@ -324,19 +342,21 @@ type ReviewGrade = 'again' | 'good' | 'known';
         justify-content: center;
         align-items: center;
         text-align: center;
-        background-color: rgb(var(--surface-800-rgb));
+        background-color: rgb(var(--surface-200-rgb));
         border: 1px solid rgb(var(--surface-100-rgb));
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        box-shadow:
+          0 1px 2px rgb(var(--shadow-color-rgb) / 0.04),
+          0 4px 14px rgb(var(--shadow-color-rgb) / 0.08);
       }
 
       .flip-card-back {
         transform: rotateY(180deg);
-        background-color: rgb(var(--surface-700-rgb));
-        border-color: rgb(var(--color-success-rgb) / 0.2);
+        background-color: rgb(var(--surface-200-rgb));
+        border-color: rgb(var(--color-success-rgb) / 0.3);
       }
 
       .flip-card-front {
-        border-color: rgb(var(--color-primary-rgb) / 0.2);
+        border-color: rgb(var(--color-primary-rgb) / 0.3);
       }
 
       .btn-grade {
@@ -355,8 +375,14 @@ type ReviewGrade = 'again' | 'good' | 'known';
           opacity 0.15s;
       }
 
-      .btn-grade:active {
+      .btn-grade:active:not(:disabled) {
         transform: scale(0.95);
+      }
+
+      .btn-grade:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
       }
 
       .btn-grade-again {
@@ -400,6 +426,20 @@ type ReviewGrade = 'again' | 'good' | 'known';
       .animate-fadeIn {
         animation: fadeIn 0.3s ease-out;
       }
+
+      @media (prefers-reduced-motion: reduce) {
+        .flip-card-inner {
+          transition: none !important;
+        }
+
+        .animate-fadeIn {
+          animation: none !important;
+        }
+
+        .btn-grade {
+          transition: none !important;
+        }
+      }
     `,
   ],
 })
@@ -408,6 +448,8 @@ export class FlashcardReviewComponent {
   private i18n = inject(I18nService);
   private errorHandler = inject(ErrorHandler);
   private haptic = inject(HapticFeedbackService);
+  private destroyRef = inject(DestroyRef);
+  private activeAudio: HTMLAudioElement | null = null;
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
   readonly cards = input<Flashcard[]>([]);
@@ -468,6 +510,13 @@ export class FlashcardReviewComponent {
         }
       }
     });
+    this.destroyRef.onDestroy(() => {
+      if (this.activeAudio) {
+        this.activeAudio.pause();
+        this.activeAudio.src = '';
+        this.activeAudio = null;
+      }
+    });
   }
 
   private async loadReviewData(): Promise<void> {
@@ -525,13 +574,22 @@ export class FlashcardReviewComponent {
 
   playAudio(url: string, event: MouseEvent): void {
     event.stopPropagation();
+    if (this.activeAudio) {
+      this.activeAudio.pause();
+      this.activeAudio.src = '';
+      this.activeAudio = null;
+    }
     const audio = new Audio(url);
+    this.activeAudio = audio;
     audio.play().catch(() => {
       // Audio playback remains best effort.
     });
     audio.addEventListener(
       'ended',
       () => {
+        if (this.activeAudio === audio) {
+          this.activeAudio = null;
+        }
         audio.src = '';
         audio.load();
       },
