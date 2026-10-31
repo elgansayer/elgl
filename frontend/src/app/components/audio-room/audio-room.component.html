@@ -503,6 +503,7 @@
         @for (group of store.roomsByLanguage(); track group.language_pair) {
           <button
             hlmBtn
+            size="touch"
             (click)="selectLanguageGroup(group.language_pair)"
             class="rounded-card border px-3 py-2 text-xs font-bold transition-colors"
             [class.border-primary]="store.selectedLanguageGroup() === group.language_pair"

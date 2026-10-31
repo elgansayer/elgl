@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       (click)="closed.emit()"
       (keydown.escape)="closed.emit()"
       tabindex="-1"
+      data-touch-target-exception="modal backdrop dismissal area"
     >
       <div
         role="dialog"
@@ -18,6 +19,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         aria-labelledby="approve-speaker-title"
         (click)="$event.stopPropagation()"
         (keydown)="$event.stopPropagation()"
+        data-touch-target-exception="modal content container event suppression"
         class="w-full max-w-md bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
         <!-- Header -->
@@ -28,6 +30,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <button
             hlmBtn
             type="button"
+            size="icon-touch"
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100"
             [attr.aria-label]="'common.close' | t"
@@ -65,6 +68,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   <button
                     hlmBtn
                     type="button"
+                    size="touch"
                     (click)="approved.emit(requestId)"
                     class="rounded-lg bg-success hover:bg-success/90 ps-4 pe-4 pt-2 pb-2 text-sm font-bold text-on-fill transition-colors"
                   >
@@ -73,6 +77,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   <button
                     hlmBtn
                     type="button"
+                    size="touch"
                     (click)="declined.emit(requestId)"
                     class="rounded-lg bg-surface-100 hover:bg-surface-50 ps-4 pe-4 pt-2 pb-2 text-sm font-bold text-text-secondary transition-colors"
                   >
@@ -89,6 +94,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <button
             hlmBtn
             type="button"
+            size="touch"
             (click)="closed.emit()"
             class="ps-5 pe-5 pt-2.5 pb-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors"
           >
