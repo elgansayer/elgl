@@ -113,7 +113,9 @@
                 {{ 'favourites.momentCard' | t }}
               </span>
             }
-            @if (fav.item_type === 'correction' || fav.item_payload?.message_type === 'correction') {
+            @if (
+              fav.item_type === 'correction' || fav.item_payload?.message_type === 'correction'
+            ) {
               <span
                 class="inline-flex items-center rounded-pill bg-warning px-2 py-0.5 text-xs font-extrabold text-on-fill"
               >
@@ -137,9 +139,9 @@
           ) {
             <div class="mt-3 min-w-0">
               <app-visual-diff
-                [original]="fav.item_payload!.correction_payload!.original"
-                [corrected]="fav.item_payload!.correction_payload!.corrected"
-                [explanation]="fav.item_payload!.correction_payload!.explanation"
+                [original]="fav.item_payload?.correction_payload?.original ?? ''"
+                [corrected]="fav.item_payload?.correction_payload?.corrected ?? ''"
+                [explanation]="fav.item_payload?.correction_payload?.explanation ?? ''"
                 [showActions]="true"
               ></app-visual-diff>
             </div>
@@ -163,7 +165,9 @@
                     : ('favourites.audioPlay' | t)
                 "
               >
-                <span aria-hidden="true">{{ audioPlayingId() === fav.id ? '\u23F8' : '\u25B6' }}</span>
+                <span aria-hidden="true">{{
+                  audioPlayingId() === fav.id ? '\u23F8' : '\u25B6'
+                }}</span>
                 <span>{{
                   audioPlayingId() === fav.id
                     ? ('favourites.audioPause' | t)
@@ -171,7 +175,9 @@
                 }}</span>
               </button>
               @if (fav.item_payload?.text_content) {
-                <span class="min-w-0 break-words text-xs text-text-muted">{{ fav.item_payload.text_content }}</span>
+                <span class="min-w-0 break-words text-xs text-text-muted">{{
+                  fav.item_payload.text_content
+                }}</span>
               }
             </div>
           }
