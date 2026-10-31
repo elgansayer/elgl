@@ -255,19 +255,18 @@ export class AudioRoomsService implements OnModuleInit {
     userId: string,
   ): Promise<void> {
     const client = this.roomServiceClient;
-    if (!client || this.livekitUrl.includes('mock')) return;
 
-    // Real RoomServiceClient instances expose both methods. Keep this runtime
-    // guard for legacy/local SDK test doubles so a missing optional integration
-    // degrades to the awaited client demotion event rather than crashing.
     if (
+      !client ||
       typeof client.listParticipants !== 'function' ||
       typeof client.updateParticipant !== 'function'
     ) {
       this.logger.warn(
         'LiveKit participant controls unavailable during co-host replacement',
       );
-      return;
+      throw new ServiceUnavailableException(
+        'Could not safely replace the current co-host. Please retry.',
+      );
     }
 
     try {
@@ -1135,9 +1134,11 @@ export class AudioRoomsService implements OnModuleInit {
           speakers: speakersWithoutPreviousCoHost,
         })
         .eq('id', room.id)
-        .eq('co_host_id', previousCoHostId);
+        .eq('co_host_id', previousCoHostId)
+        .select('id')
+        .maybeSingle();
 
-      if (demotionResponse.error) {
+      if (demotionResponse.error || !demotionResponse.data) {
         this.logger.warn('Failed to persist outgoing co-host demotion');
         throw new ServiceUnavailableException(
           'Could not safely replace the current co-host. Please retry.',
@@ -1147,11 +1148,17 @@ export class AudioRoomsService implements OnModuleInit {
       try {
         // Await the removal notification so the outgoing client observes its
         // demotion before any replacement event can be emitted.
-        await this.centrifugoService.publish(`room_${room.id}`, {
-          type: 'co_host_removed',
-          target_user_id: previousCoHostId,
-          room_id: room.id,
-        });
+        const removalPublished = await this.centrifugoService.publish(
+          `room_${room.id}`,
+          {
+            type: 'co_host_removed',
+            target_user_id: previousCoHostId,
+            room_id: room.id,
+          },
+        );
+        if (!removalPublished) {
+          throw new Error('Centrifugo rejected outgoing co-host notification');
+        }
       } catch {
         this.logger.warn('Failed to notify outgoing co-host of demotion');
         throw new ServiceUnavailableException(
@@ -1160,7 +1167,7 @@ export class AudioRoomsService implements OnModuleInit {
       }
     }
 
-    const assignmentResponse = await supabase
+    const assignmentUpdate = supabase
       .from('audio_rooms')
       .update({
         co_host_id: dto.target_user_id,
@@ -1168,8 +1175,15 @@ export class AudioRoomsService implements OnModuleInit {
         raised_hands: updatedHands,
       })
       .eq('id', room.id);
+    const guardedAssignment =
+      room.co_host_id === dto.target_user_id
+        ? assignmentUpdate.eq('co_host_id', dto.target_user_id)
+        : assignmentUpdate.is('co_host_id', null);
+    const assignmentResponse = await guardedAssignment
+      .select('id')
+      .maybeSingle();
 
-    if (assignmentResponse.error) {
+    if (assignmentResponse.error || !assignmentResponse.data) {
       this.logger.warn('Failed to persist incoming co-host assignment');
       throw new ServiceUnavailableException(
         'Could not assign the new co-host. Please retry.',
@@ -1179,12 +1193,18 @@ export class AudioRoomsService implements OnModuleInit {
     try {
       // Notify the invited user only after the outgoing co-host has been fully
       // demoted and the replacement is persisted.
-      await this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_changed',
-        target_user_id: dto.target_user_id,
-        room_id: room.id,
-        previous_co_host_id: previousCoHostId,
-      });
+      const assignmentPublished = await this.centrifugoService.publish(
+        `room_${room.id}`,
+        {
+          type: 'co_host_changed',
+          target_user_id: dto.target_user_id,
+          room_id: room.id,
+          previous_co_host_id: previousCoHostId,
+        },
+      );
+      if (!assignmentPublished) {
+        throw new Error('Centrifugo rejected incoming co-host notification');
+      }
     } catch {
       this.logger.warn('Failed to notify incoming co-host of assignment');
       throw new ServiceUnavailableException(

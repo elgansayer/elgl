@@ -18,6 +18,10 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
 const mockCreateRoom = vi.fn().mockResolvedValue({});
+const mockListParticipants = vi
+  .fn()
+  .mockResolvedValue([{ identity: 'Co Host_user-2' }]);
+const mockUpdateParticipant = vi.fn().mockResolvedValue({});
 const mockAddGrant = vi.fn();
 const mockToJwt = vi.fn().mockResolvedValue('mock-livekit-jwt');
 
@@ -25,6 +29,8 @@ vi.mock('livekit-server-sdk', () => ({
   RoomServiceClient: vi.fn().mockImplementation(function () {
     return {
       createRoom: mockCreateRoom,
+      listParticipants: mockListParticipants,
+      updateParticipant: mockUpdateParticipant,
     };
   }),
   AccessToken: vi.fn().mockImplementation(function () {
@@ -45,6 +51,10 @@ describe('AudioRoomsService', () => {
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
+    mockListParticipants
+      .mockClear()
+      .mockResolvedValue([{ identity: 'Co Host_user-2' }]);
+    mockUpdateParticipant.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
     mockGenerateTranscriptFromAudioUrl = vi.fn();
@@ -55,12 +65,16 @@ describe('AudioRoomsService', () => {
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
       or: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       range: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: 'room-1' },
+        error: null,
+      }),
       single: vi.fn(),
     };
 
@@ -1061,13 +1075,9 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-3',
       });
 
-      // Flush microtasks so the room lookup and DB update settle and the first
-      // publish (co_host_removed) has been initiated but not yet completed.
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-
-      expect(publishMock).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => {
+        expect(publishMock).toHaveBeenCalledTimes(1);
+      });
       expect(publishMock).toHaveBeenCalledWith('room_room-1', {
         type: 'co_host_removed',
         target_user_id: 'user-2',
