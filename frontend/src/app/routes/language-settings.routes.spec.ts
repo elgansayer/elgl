@@ -11,6 +11,14 @@ describe('language settings route ownership', () => {
     expect(route?.title).toBe('Language Settings - HelloTalk');
   });
 
+  it('redirects the legacy language route to settings/language', () => {
+    const route = settingsRoutes.find((candidate) => candidate.path === 'language');
+
+    expect(route).toBeDefined();
+    expect(route?.redirectTo).toBe('settings/language');
+    expect(route?.pathMatch).toBe('full');
+  });
+
   it('does not couple interface-language settings to study routes', () => {
     expect(learningRoutes.some((route) => route.path === 'language')).toBe(false);
     expect(learningRoutes.some((route) => route.path === 'settings/language')).toBe(false);

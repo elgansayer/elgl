@@ -988,8 +988,12 @@
                   ✕
                 </button>
               </div>
+              <div class="alert error" role="alert" style="margin: 12px 16px 0">
+                That language could not be loaded, so your current language has been kept. Try again
+                later or choose another language.
+              </div>
               <div class="lang-grid" style="padding: 12px 16px">
-                <button class="lang-tile on" type="button">
+                <button class="lang-tile on" type="button" aria-current="true">
                   <span class="flag">🇬🇧</span
                   ><span class="stack" style="gap: 0"
                     ><strong style="font-size: 13px">English</strong
@@ -1032,8 +1036,9 @@
           </div>
         </div>
         <footer>
-          States: trigger (current code) · open modal with selected tile. Grid 2 → 3 → 4 columns at
-          sm/md.
+          States: trigger (current code) · open modal with selected tile (<code>aria-current</code>)
+          · change rejected: previous language kept, modal stays open with an alert and a retry is
+          possible · options disabled while a change is pending. Grid 2 → 3 → 4 columns at sm/md.
         </footer>
       </section>
 
@@ -1054,6 +1059,10 @@
             ><span class="muted" style="text-transform: uppercase">Change language ▲</span>
           </button>
           <div class="card" style="padding: 0; overflow: hidden" role="listbox">
+            <div class="alert error" role="alert" style="margin: 10px">
+              That language could not be loaded, so your current language has been kept. Try again
+              later or choose another language.
+            </div>
             <div style="padding: 10px; border-block-end: 1px solid rgb(var(--surface-100))">
               <div class="field">
                 <input
@@ -1095,7 +1104,8 @@
           </div>
         </div>
         <footer>
-          States: open listbox · search · selected marker with accessible name and selection state.
+          States: open listbox · search · selected marker with accessible name and selection state ·
+          change rejected: previous language kept and an alert shown above the search field.
         </footer>
       </section>
 

@@ -9,7 +9,10 @@ import { GrammarExplanationService } from './grammar-explanation.service';
 import { PronunciationScoringService } from './pronunciation-scoring.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
+import {
+  NLP_RATE_LIMIT_KEY,
+  NlpRateLimiterGuard,
+} from './nlp-rate-limiter.guard';
 
 describe('NlpController', () => {
   let controller: NlpController;
@@ -192,6 +195,29 @@ describe('NlpController', () => {
       const result = await controller.translateUi(dto);
       expect(nlpService.translateUi).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
+    });
+
+    it('limits each user to ten provider-backed requests per ten minutes', () => {
+      expect(
+        Reflect.getMetadata(
+          NLP_RATE_LIMIT_KEY,
+          NlpController.prototype.translateUi,
+        ),
+      ).toEqual({ maxRequests: 10, windowSeconds: 600 });
+    });
+
+    it('propagates provider failures unchanged so the client sees a typed error', async () => {
+      const failure = new Error(
+        'Interface translation is temporarily unavailable',
+      );
+      (nlpService.translateUi as Mock).mockRejectedValue(failure);
+
+      await expect(
+        controller.translateUi({
+          target_language: 'es',
+          dictionary: { a: 'b' },
+        }),
+      ).rejects.toBe(failure);
     });
   });
 
