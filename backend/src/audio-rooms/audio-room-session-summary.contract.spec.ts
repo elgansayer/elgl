@@ -99,6 +99,7 @@ function createSummaryHarness(options: SummaryHarnessOptions = {}) {
     { generateSessionSummary } as unknown as NlpService,
     {} as R2Service,
     { chatCompletion } as unknown as ChatLlmService,
+    { record: vi.fn().mockResolvedValue(undefined) } as never,
   );
   vi.spyOn(service, 'getRoom').mockResolvedValue(room);
 
@@ -203,6 +204,7 @@ describe('Audio room archived session summary contract', () => {
       {} as NlpService,
       {} as R2Service,
       {} as ChatLlmService,
+      { record: vi.fn().mockResolvedValue(undefined) } as never,
     );
 
     await expect(service.getTranscript('room-1')).resolves.toEqual({

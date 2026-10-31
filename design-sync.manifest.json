@@ -467,7 +467,7 @@
       "claudeDesignPath": "features/calls-live.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1759-host-moderation-controls (host speaker kick and mute moderation controls on stage participant tiles; preview specimen depicts static stage seats and its visual contract is unchanged)",
       "nonVisualMaintenanceAudit": {
         "commit": "d9380cdcd54bf7f823a3ed49374712b460676826",
         "designSync": "not-required",
@@ -511,7 +511,7 @@
       "claudeDesignPath": "features/profile-identity.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1759-favourites-preservation (favourites bookmarking safe navigation and correction bindings preserve existing favourites review UI; visual contract unchanged)",
       "requiredStates": ["light", "dark", "empty", "loading", "error", "390px", "rtl"]
     },
     {

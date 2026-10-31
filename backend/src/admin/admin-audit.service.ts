@@ -30,6 +30,8 @@ const ALLOWED_METADATA_KEYS = new Set([
   'page',
   'pageSize',
   'total',
+  'roomId',
+  'targetUserId',
 ]);
 const MAX_CORRELATION_ID_LENGTH = 128;
 const MAX_METADATA_STRING_LENGTH = 128;

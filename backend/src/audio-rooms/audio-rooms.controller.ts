@@ -8,9 +8,11 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -547,7 +549,7 @@ export class AudioRoomsController {
   @ApiOperation({
     summary: 'Mute a speaker on the stage',
     description:
-      'A host or co-host mutes a speaker currently on stage without removing them.',
+      'A host mutes a speaker currently on stage without removing them.',
   })
   @ApiResponse({
     status: 201,
@@ -557,18 +559,44 @@ export class AudioRoomsController {
   async muteSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
+    @Req() request?: Request,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
-    return await this.audioRoomsService.muteSpeaker(user.id, dto);
+    return await this.audioRoomsService.muteSpeaker(
+      user.id,
+      dto,
+      this.correlationId(request),
+    );
   }
 
   @Post('kick-speaker')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Kick a speaker off the stage',
+    description:
+      'A host kicks a speaker off the stage, removing them from speakers and returning them to listener status.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Speaker kicked off stage successfully.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async kickSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
+    @Req() request?: Request,
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
-    return await this.audioRoomsService.kickSpeaker(user.id, dto);
+    return await this.audioRoomsService.kickSpeaker(
+      user.id,
+      dto,
+      this.correlationId(request),
+    );
+  }
+
+  private correlationId(request: Request | undefined): string | undefined {
+    const requestId = request?.headers['x-request-id'];
+    return Array.isArray(requestId) ? requestId[0] : requestId;
   }
 
   @Post('demote-speaker')

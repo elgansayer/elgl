@@ -9,7 +9,12 @@ import {
 } from '@nestjs/common';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
-import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
+import {
+  AccessToken,
+  ParticipantInfo,
+  RoomServiceClient,
+  TrackSource,
+} from 'livekit-server-sdk';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
@@ -21,6 +26,10 @@ import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
+import {
+  AdminAuditService,
+  AdminAuditOutcome,
+} from '../admin/admin-audit.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -124,6 +133,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly nlpService: NlpService,
     private readonly r2Service: R2Service,
     private readonly chatLlmService: ChatLlmService,
+    private readonly adminAuditService: AdminAuditService,
   ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
@@ -306,6 +316,60 @@ export class AudioRoomsService implements OnModuleInit {
         'Could not safely replace the current co-host. Please retry.',
       );
     }
+  }
+
+  private async findLiveKitParticipant(
+    room: AudioRoomRow,
+    userId: string,
+  ): Promise<ParticipantInfo | undefined> {
+    const client = this.roomServiceClient;
+    if (!client || typeof client.listParticipants !== 'function') {
+      throw new ServiceUnavailableException(
+        'Could not safely moderate this speaker. Please retry.',
+      );
+    }
+
+    try {
+      const participants = await client.listParticipants(room.room_name);
+      const identitySuffix = `_${userId.slice(0, 6)}`;
+      const matches = participants.filter(
+        (participant) =>
+          participant.identity === userId ||
+          participant.identity.endsWith(identitySuffix),
+      );
+      if (matches.length > 1) {
+        throw new Error('Ambiguous LiveKit participant identity');
+      }
+      return matches[0];
+    } catch (error: unknown) {
+      const errorName = error instanceof Error ? error.name : 'UnknownError';
+      this.logger.warn(
+        `Failed to resolve moderated LiveKit participant (${errorName})`,
+      );
+      throw new ServiceUnavailableException(
+        'Could not safely moderate this speaker. Please retry.',
+      );
+    }
+  }
+
+  private async recordSpeakerModeration(
+    action: 'mute' | 'kick',
+    outcome: AdminAuditOutcome,
+    actorUserId: string,
+    roomId: string,
+    targetUserId: string,
+    correlationId?: string,
+  ): Promise<void> {
+    await this.adminAuditService.record({
+      actorUserId,
+      action: `audio-room.speaker.${action}`,
+      targetType: 'audio-room-speaker',
+      targetId: targetUserId,
+      reasonCode: 'moderation_enforcement',
+      outcome,
+      correlationId,
+      metadata: { roomId, targetUserId },
+    });
   }
 
   async disableBiometricLock(
@@ -951,31 +1015,91 @@ export class AudioRoomsService implements OnModuleInit {
   async muteSpeaker(
     hostId: string,
     dto: DemoteSpeakerDto,
+    correlationId?: string,
   ): Promise<AudioRoomRecord> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
-    if (!response.data) throw new NotFoundException('Room not found');
-    const room = response.data as AudioRoomRow;
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await supabase
+        .from('audio_rooms')
+        .select('*')
+        .eq('id', dto.room_id)
+        .single();
+      if (!response.data) throw new NotFoundException('Room not found');
+      const room = response.data as AudioRoomRow;
 
-    if (room.host_id !== hostId) {
-      throw new ForbiddenException('Only the host can mute a speaker.');
+      if (room.host_id !== hostId) {
+        throw new ForbiddenException('Only the host can mute a speaker.');
+      }
+      if (room.host_id === dto.target_user_id) {
+        throw new ForbiddenException('The host cannot be muted.');
+      }
+
+      const participant = await this.findLiveKitParticipant(
+        room,
+        dto.target_user_id,
+      );
+      if (participant) {
+        const client = this.roomServiceClient;
+        if (!client || typeof client.mutePublishedTrack !== 'function') {
+          throw new ServiceUnavailableException(
+            'Could not safely moderate this speaker. Please retry.',
+          );
+        }
+        const microphoneTracks = participant.tracks.filter(
+          (track) => track.source === TrackSource.MICROPHONE && !track.muted,
+        );
+        try {
+          for (const track of microphoneTracks) {
+            await client.mutePublishedTrack(
+              room.room_name,
+              participant.identity,
+              track.sid,
+              true,
+            );
+          }
+        } catch (error: unknown) {
+          throw new ServiceUnavailableException(
+            'Could not safely moderate this speaker. Please retry.',
+            { cause: error },
+          );
+        }
+      }
+
+      const published = await this.centrifugoService.publish(
+        `room_${room.id}`,
+        {
+          type: 'force_mute',
+          target_user_id: dto.target_user_id,
+          room_id: room.id,
+        },
+      );
+      if (!published) {
+        throw new ServiceUnavailableException(
+          'Could not notify the moderated speaker. Please retry.',
+        );
+      }
+
+      const result = await this.getRoom(room.id);
+      await this.recordSpeakerModeration(
+        'mute',
+        'success',
+        hostId,
+        room.id,
+        dto.target_user_id,
+        correlationId,
+      );
+      return result;
+    } catch (error: unknown) {
+      await this.recordSpeakerModeration(
+        'mute',
+        error instanceof ForbiddenException ? 'denied' : 'failed',
+        hostId,
+        dto.room_id,
+        dto.target_user_id,
+        correlationId,
+      );
+      throw error;
     }
-    if (room.host_id === dto.target_user_id) {
-      throw new ForbiddenException('The host cannot be muted.');
-    }
-
-    // Notify user via Centrifugo to mute their microphone locally
-    void this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'force_mute',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-    });
-
-    return this.getRoom(room.id);
   }
 
   async demoteSpeaker(
@@ -1021,39 +1145,113 @@ export class AudioRoomsService implements OnModuleInit {
   async kickSpeaker(
     hostId: string,
     dto: DemoteSpeakerDto,
+    correlationId?: string,
   ): Promise<AudioRoomRecord> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
-    if (!response.data) throw new NotFoundException('Room not found');
-    const room = response.data as AudioRoomRow;
-    if (room.host_id !== hostId)
-      throw new ForbiddenException(
-        'Only the host can kick a speaker off stage.',
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await supabase
+        .from('audio_rooms')
+        .select('*')
+        .eq('id', dto.room_id)
+        .single();
+      if (!response.data) throw new NotFoundException('Room not found');
+      const room = response.data as AudioRoomRow;
+      if (room.host_id !== hostId)
+        throw new ForbiddenException(
+          'Only the host can kick a speaker off stage.',
+        );
+      if (room.host_id === dto.target_user_id)
+        throw new ForbiddenException('The host cannot kick themselves.');
+
+      const participant = await this.findLiveKitParticipant(
+        room,
+        dto.target_user_id,
       );
-    if (room.host_id === dto.target_user_id)
-      throw new ForbiddenException('The host cannot kick themselves.');
-    const update: { speakers: string[]; co_host_id?: null } = {
-      speakers: room.speakers.filter((id) => id !== dto.target_user_id),
-    };
-    if (room.co_host_id === dto.target_user_id) update.co_host_id = null;
-    await supabase.from('audio_rooms').update(update).eq('id', room.id);
-    if (room.co_host_id === dto.target_user_id) {
-      void this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_removed',
-        target_user_id: dto.target_user_id,
-        room_id: room.id,
-      });
+      if (participant) {
+        const client = this.roomServiceClient;
+        if (!client || typeof client.updateParticipant !== 'function') {
+          throw new ServiceUnavailableException(
+            'Could not safely moderate this speaker. Please retry.',
+          );
+        }
+        try {
+          await client.updateParticipant(room.room_name, participant.identity, {
+            permission: {
+              canSubscribe: true,
+              canPublish: false,
+              canPublishData: true,
+            },
+          });
+        } catch (error: unknown) {
+          throw new ServiceUnavailableException(
+            'Could not safely moderate this speaker. Please retry.',
+            { cause: error },
+          );
+        }
+      }
+
+      const update: { speakers: string[]; co_host_id?: null } = {
+        speakers: room.speakers.filter((id) => id !== dto.target_user_id),
+      };
+      if (room.co_host_id === dto.target_user_id) update.co_host_id = null;
+      const { error: updateError } = await supabase
+        .from('audio_rooms')
+        .update(update)
+        .eq('id', room.id);
+      if (updateError) {
+        throw new ServiceUnavailableException(
+          'Could not update the speaker stage state. Please retry.',
+        );
+      }
+      if (room.co_host_id === dto.target_user_id) {
+        const coHostPublished = await this.centrifugoService.publish(
+          `room_${room.id}`,
+          {
+            type: 'co_host_removed',
+            target_user_id: dto.target_user_id,
+            room_id: room.id,
+          },
+        );
+        if (!coHostPublished) {
+          throw new ServiceUnavailableException(
+            'Could not notify the moderated speaker. Please retry.',
+          );
+        }
+      }
+      const kickPublished = await this.centrifugoService.publish(
+        `room_${room.id}`,
+        {
+          type: 'force_kick',
+          target_user_id: dto.target_user_id,
+          room_id: room.id,
+        },
+      );
+      if (!kickPublished) {
+        throw new ServiceUnavailableException(
+          'Could not notify the moderated speaker. Please retry.',
+        );
+      }
+      const result = await this.getRoom(room.id);
+      await this.recordSpeakerModeration(
+        'kick',
+        'success',
+        hostId,
+        room.id,
+        dto.target_user_id,
+        correlationId,
+      );
+      return result;
+    } catch (error: unknown) {
+      await this.recordSpeakerModeration(
+        'kick',
+        error instanceof ForbiddenException ? 'denied' : 'failed',
+        hostId,
+        dto.room_id,
+        dto.target_user_id,
+        correlationId,
+      );
+      throw error;
     }
-    void this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'force_kick',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-    });
-    return this.getRoom(room.id);
   }
 
   async dismissRaisedHand(
