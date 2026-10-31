@@ -1188,6 +1188,83 @@ describe('DiscoveryService', () => {
       ]);
     });
 
+    it('best_match: boosts active Pro members without exposing tier-specific metadata or reasons', async () => {
+      const partners = [
+        {
+          id: 'consumer-user',
+          is_vip: true,
+          vip_tier: 'consumer',
+          correction_ratio: 0,
+        },
+        {
+          id: 'pro-user',
+          is_vip: true,
+          vip_tier: 'pro',
+          correction_ratio: 0,
+        },
+      ];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartners('user-1', null, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((user) => user.id)).toEqual([
+        'pro-user',
+        'consumer-user',
+      ]);
+      expect(result[0]).toMatchObject({
+        match_reasons: expect.arrayContaining(['vip_priority']),
+      });
+      expect(result[1]).toMatchObject({
+        match_reasons: expect.arrayContaining(['vip_priority']),
+      });
+      expect(result[0].match_reasons).not.toContain('pro_visibility_boost');
+      expect(result[0]).not.toHaveProperty('vip_tier');
+      expect(result[1]).not.toHaveProperty('vip_tier');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        expect.stringContaining('is_vip, vip_tier'),
+      );
+    });
+
+    it('best_match: hydrates bounded tier data for nearby Pro members before ranking', async () => {
+      const tierBuilder = createMockQueryBuilder();
+      tierBuilder.limit.mockResolvedValue({
+        data: [
+          { id: 'consumer-nearby', vip_tier: 'consumer' },
+          { id: 'pro-nearby', vip_tier: 'pro' },
+        ],
+        error: null,
+      });
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockQueryBuilder)
+        .mockReturnValueOnce(tierBuilder);
+      stubRpcResponse([
+        { id: 'consumer-nearby', is_vip: true, correction_ratio: 0 },
+        { id: 'pro-nearby', is_vip: true, correction_ratio: 0 },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        sort: 'best_match',
+      });
+
+      expect(tierBuilder.select).toHaveBeenCalledWith('id, vip_tier');
+      expect(tierBuilder.in).toHaveBeenCalledWith('id', [
+        'consumer-nearby',
+        'pro-nearby',
+      ]);
+      expect(tierBuilder.limit).toHaveBeenCalledWith(2);
+      expect(result.map((user) => user.id)).toEqual([
+        'pro-nearby',
+        'consumer-nearby',
+      ]);
+      expect(result[0].match_reasons).toContain('vip_priority');
+      expect(result[0].match_reasons).not.toContain('pro_visibility_boost');
+      expect(result[0]).not.toHaveProperty('vip_tier');
+    });
+
     it('online_now: orders by most recent last_active_at first', async () => {
       const partners = [
         { id: 'a', last_active_at: '2026-07-01T00:00:00.000Z' },

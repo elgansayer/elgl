@@ -122,6 +122,27 @@ describe('VipGuard', () => {
     ).resolves.toBe(true);
   });
 
+  it('requires an active Pro or Developer entitlement for Pro access', async () => {
+    requireTier('pro');
+
+    mockEntitlement({ is_vip: true, vip_tier: 'consumer' });
+    await expect(
+      guard.canActivate(buildContext({ id: 'consumer-user' })),
+    ).rejects.toThrow('Access requires Pro subscription plan');
+
+    mockEntitlement({ is_vip: false, vip_tier: 'pro' });
+    await expect(
+      guard.canActivate(buildContext({ id: 'expired-pro-user' })),
+    ).rejects.toThrow(ForbiddenException);
+
+    for (const vip_tier of ['pro', 'pro_12_ukp_15_usd', 'developer']) {
+      mockEntitlement({ is_vip: true, vip_tier });
+      await expect(
+        guard.canActivate(buildContext({ id: `${vip_tier}-user` })),
+      ).resolves.toBe(true);
+    }
+  });
+
   it.each([
     ['lookup error', null, { message: 'provider unavailable' }],
     ['missing entitlement row', null, null],
