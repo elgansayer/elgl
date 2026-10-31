@@ -1627,22 +1627,30 @@ export class AudioRoomsService implements OnModuleInit {
     userId: string,
     dto: CreateVoiceRoomNoteDto,
   ): Promise<VoiceRoomNote> {
-    const supabase = this.supabaseService.getClient();
+    const trimmedContent = dto.content ? dto.content.trim() : '';
+    if (!trimmedContent) {
+      throw new BadRequestException('Note content cannot be empty');
+    }
+
     const room = await this.getRoom(roomId);
+    if (!room.is_active) {
+      throw new BadRequestException('Room is not active');
+    }
     if (!this.isAuthorizedInRoom(room, userId)) {
       throw new ForbiddenException('Only host or speakers can post notes.');
     }
     const profile = await this.usersService.getProfile(userId);
     const authorName = profile?.display_name ?? 'Unknown';
 
+    const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('audio_room_notes')
       .insert({
         room_id: room.id,
         author_id: userId,
         author_name: authorName,
-        content: dto.content,
-        vocabulary: dto.vocabulary ?? null,
+        content: trimmedContent,
+        vocabulary: dto.vocabulary?.trim() || null,
       })
       .select()
       .single();
@@ -1659,17 +1667,22 @@ export class AudioRoomsService implements OnModuleInit {
       note: noteRow,
     });
 
-    return { ...noteRow, author_name: noteRow.author_name ?? 'Unknown' };
+    this.logger.log(
+      `Voiceroom note added in room ${room.id} by user ${userId}`,
+    );
+
+    return { ...noteRow, author_name: noteRow.author_name ?? authorName };
   }
 
   async getNotes(roomId: string, limit = 50): Promise<VoiceRoomNote[]> {
+    const safeLimit = Math.max(1, Math.min(limit, 100));
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('audio_room_notes')
       .select('*')
       .eq('room_id', roomId)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(safeLimit);
     if (response.error) {
       throw new Error(`Failed to fetch notes: ${response.error.message}`);
     }
@@ -1679,7 +1692,11 @@ export class AudioRoomsService implements OnModuleInit {
     }));
   }
 
-  async deleteNote(noteId: string, userId: string): Promise<void> {
+  async deleteNote(
+    roomId: string,
+    noteId: string,
+    userId: string,
+  ): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const noteResponse = await supabase
       .from('audio_room_notes')
@@ -1690,9 +1707,16 @@ export class AudioRoomsService implements OnModuleInit {
       throw new NotFoundException('Note not found');
     }
     const note = noteResponse.data;
+    if (note.room_id !== roomId) {
+      throw new NotFoundException('Note not found in this room');
+    }
     const room = await this.getRoom(note.room_id);
-    // Only note author or host can delete
-    if (note.author_id !== userId && room.host_id !== userId) {
+    // Only note author, host, or co-host can delete
+    if (
+      note.author_id !== userId &&
+      room.host_id !== userId &&
+      room.co_host_id !== userId
+    ) {
       throw new ForbiddenException('Not authorised to delete this note.');
     }
     const { error } = await supabase
@@ -1708,6 +1732,10 @@ export class AudioRoomsService implements OnModuleInit {
       note_id: noteId,
       room_id: room.id,
     });
+
+    this.logger.log(
+      `Voiceroom note ${noteId} deleted in room ${room.id} by user ${userId}`,
+    );
   }
 
   /**

@@ -1795,10 +1795,11 @@
             </li>
           </ul>
           <form class="stack" onsubmit="return false;">
+            <label class="field" for="shared-note-content">Note content</label>
             <textarea
+              id="shared-note-content"
               rows="2"
-              aria-label="Note"
-              placeholder="Write a note for the room…"
+              aria-describedby="shared-note-content-help"
               style="
                 border-radius: 12px;
                 border: 1px solid rgb(var(--surface-700));
@@ -1808,18 +1809,28 @@
                 font: inherit;
               "
             ></textarea>
-            <label class="field">Vocabulary<input placeholder="Comma-separated words" /></label>
+            <span id="shared-note-content-help" class="muted"
+              >Type key vocabulary or discussion topics.</span
+            >
+            <label class="field" for="shared-note-vocabulary"
+              >Key vocabulary (optional)<input
+                id="shared-note-vocabulary"
+                aria-describedby="shared-note-vocabulary-help"
+            /></label>
+            <span id="shared-note-vocabulary-help" class="muted"
+              >Separate words or phrases with commas, for example hello, good morning.</span
+            >
             <button class="btn" disabled>Post</button>
           </form>
+          <p class="muted" style="margin: 0">
+            Listener state: Only hosts and speakers can post notes in this room.
+          </p>
           <span class="state-label">Loading · error · empty</span>
           <p class="muted" style="margin: 0">Loading… · Something went wrong · No notes yet.</p>
         </div>
         <footer>
-          States: list with vocabulary chips · loading · error · empty · posting (disabled)<br /><span
-            class="note-flag"
-            >i18n gap: all voices.notes.* and global.* keys are missing from every locale - copy
-            shown is proposed.</span
-          >
+          States: host/speaker form · listener read-only · author/host delete · loading · error ·
+          empty · posting (disabled)
         </footer>
       </section>
 

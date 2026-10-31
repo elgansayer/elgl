@@ -1604,6 +1604,23 @@ export class I18nService {
     'voiceRecorder.uploadError':
       'Voice note upload failed. Your recording is still available to retry.',
 
+    // Voiceroom Notes
+    'voices.notes.title': 'Voiceroom Notes',
+    'voices.notes.subtitle': 'Shared panel for hosts & speakers',
+    'voices.notes.empty':
+      'No notes yet. Hosts and speakers can post vocabulary and discussion topics.',
+    'voices.notes.content_label': 'Note content',
+    'voices.notes.content_help': 'Type key vocabulary or discussion topics.',
+    'voices.notes.vocabulary_label': 'Key vocabulary (optional)',
+    'voices.notes.vocabulary_help':
+      'Separate words or phrases with commas, for example hello, good morning.',
+    'voices.notes.post': 'Post note',
+    'voices.notes.posting': 'Posting...',
+    'voices.notes.delete': 'Delete note',
+    'voices.notes.listenersCannotPost': 'Only hosts and speakers can post notes in this room.',
+    'voices.notes.errorPosting': 'Unable to post note. Please try again.',
+    'voices.notes.errorDeleting': 'Unable to delete note. Please try again.',
+
     // Audio Player
     'audioPlayer.groupLabel': 'Audio player',
     'audioPlayer.play': 'Play',
