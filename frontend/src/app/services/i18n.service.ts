@@ -1775,6 +1775,10 @@ export class I18nService {
     'context_menu.report': 'Report',
     'context_menu.block': 'Block',
     'context_menu.unblock': 'Unblock',
+    'context_menu.createFlashcard': 'Create Flashcard',
+    'context_menu.creatingFlashcard': 'Creating flashcard...',
+    'context_menu.flashcardCreatedAlert': 'Flashcard created for "{{text}}"',
+    'context_menu.flashcardError': 'Failed to create flashcard. Please try again.',
     'context_menu.cancel': 'Cancel',
 
     // Grammar explanation dialog (opened from the Explain this context menu action)

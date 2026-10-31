@@ -1,14 +1,15 @@
 # Selected-text flashcards
 
-Issue #1134 is implemented through the shared `TokenisedTextComponent` used by chat messages and Moment posts. The feature deliberately reuses the existing authenticated translation and flashcard APIs rather than introducing a parallel persistence path.
+Issue #1134 and #1776 are implemented through the shared `TokenisedTextComponent` used by chat messages and Moment posts. The feature deliberately reuses the existing authenticated translation and flashcard APIs rather than introducing a parallel persistence path.
 
 ## User-facing behavior
 
-- Selecting text inside a tokenised chat message or Moment post and opening the context action requests a flashcard create flow.
+- Selecting text inside a tokenised chat message or Moment post and opening the context action requests the "Create Flashcard" flow.
+- The context menu action dialog is titled and labeled with the dedicated `context_menu.createFlashcard` translation key ("Create Flashcard"), displaying "Creating flashcard..." while in flight.
 - Desktop keeps the browser context menu untouched when there is no eligible selection. An eligible selection is intercepted only when it belongs entirely to the rendered message/post and fits the flashcard API contract.
-- Touch users can invoke the same action with a 650 ms long press after selecting text. Moving more than 12 px cancels the long-press action so scrolling remains usable.
-- The selected phrase and surrounding source context are shown/preserved through the existing Spartan dialog flow.
-- Saving translates the selection into the current app language, then persists the selected phrase, translation, and source context through `VocabularyStore`.
+- Touch users can invoke the same action with a 650 ms long press after selecting text. If no selection is active, touch events bubble without interception so outer message gestures remain functional. Moving more than 12 px cancels the long-press action so scrolling remains usable.
+- The selected phrase and surrounding source context are shown and preserved through the accessible Spartan dialog flow.
+- Saving translates the selection into the current app language, then persists the selected phrase, translation, and source context through `VocabularyStore`, presenting a `context_menu.flashcardCreatedAlert` success notification.
 - Duplicate Save actions are ignored while translation or persistence is in flight.
 - Translation or persistence failure leaves the dialog open and retryable; no partial success is presented as a completed save.
 
@@ -30,7 +31,7 @@ These frontend checks are usability and bandwidth protections only. The NestJS D
 
 Both current product surfaces route text through the same component:
 
-- `ChatRoomComponent` renders text messages with `app-tokenised-text`;
+- `ChatRoomComponent` renders text messages with `app-tokenised-text` and supplies the chat partner language hint;
 - `MomentsFeedComponent` renders Moment text with `app-tokenised-text` and supplies the Moment language hint.
 
 This keeps behavior consistent and prevents chat and Moments from developing separate selection implementations.

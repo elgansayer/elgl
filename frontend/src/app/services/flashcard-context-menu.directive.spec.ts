@@ -178,4 +178,23 @@ describe('FlashcardContextMenuDirective', () => {
 
     expect(fixture.componentInstance.requests).toEqual([]);
   });
+
+  it('does not stop touch propagation or emit when there is no text selection', async () => {
+    vi.useFakeTimers();
+    await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const sourceDebug = fixture.debugElement.query(By.directive(FlashcardContextMenuDirective));
+    const directive = sourceDebug.injector.get(FlashcardContextMenuDirective);
+
+    const stopPropagation = vi.fn();
+    directive.onTouchStart({
+      touches: [{ clientX: 20, clientY: 30 }],
+      stopPropagation,
+    } as unknown as TouchEvent);
+    vi.advanceTimersByTime(650);
+
+    expect(stopPropagation).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.requests).toEqual([]);
+  });
 });
