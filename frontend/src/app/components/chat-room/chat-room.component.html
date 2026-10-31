@@ -142,7 +142,7 @@
       }
 
       @for (msg of filteredMessages(); track msg.id) {
-        @if (msg.message_type === 'system' && msg.system_event) {
+        @if (msg.message_type === 'system') {
           <app-chat-system-bubble
             [eventType]="msg.system_event?.type ?? ''"
             [params]="msg.system_event ?? {}"
