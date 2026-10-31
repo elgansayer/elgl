@@ -93,9 +93,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   class="flex min-h-16 items-center gap-3 rounded-xl p-3 transition-colors hover:bg-surface-100/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <img
-                    [src]="user.avatar_url || 'assets/default-avatar.png'"
+                    [src]="user.avatar_url || '/assets/default-avatar.png'"
                     class="h-12 w-12 shrink-0 rounded-full border border-surface-100 object-cover"
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div class="min-w-0">
                     <div class="truncate font-bold text-text-primary">
@@ -103,9 +105,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
                     </div>
                     @if (hasLanguagePair(user)) {
                       <div class="mt-0.5 text-xs font-medium text-text-secondary">
-                        {{ user.native_languages?.[0] || '' | uppercase }}
+                        {{ user.native_languages?.[0] | uppercase }}
                         <span aria-hidden="true"> → </span>
-                        {{ user.target_languages[0] || '' | uppercase }}
+                        {{ user.target_languages[0] | uppercase }}
                       </div>
                     }
                   </div>

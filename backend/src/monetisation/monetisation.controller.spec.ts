@@ -21,8 +21,6 @@ describe('MonetisationController', () => {
           provide: MonetisationService,
           useValue: {
             handleStripeWebhook: vi.fn(),
-            handleAppleNotification: vi.fn(),
-            handleGoogleNotification: vi.fn(),
             generateApiKey: vi.fn(),
             getDeveloperAnalytics: vi.fn(),
             getDiagnosticLogs: vi.fn(),
@@ -85,38 +83,6 @@ describe('MonetisationController', () => {
       expect(monetisationService.handleStripeWebhook).toHaveBeenCalledWith(
         rawBody,
         'sig',
-      );
-      expect(result).toEqual(response);
-    });
-  });
-
-  describe('handleAppleWebhook', () => {
-    it('should pass webhook payload to service', async () => {
-      const payload = { notificationType: 'test' };
-      const response = { received: true, status: 'processed' };
-      (monetisationService.handleAppleNotification as Mock).mockResolvedValue(
-        response,
-      );
-
-      const result = await controller.handleAppleWebhook(payload);
-      expect(monetisationService.handleAppleNotification).toHaveBeenCalledWith(
-        payload,
-      );
-      expect(result).toEqual(response);
-    });
-  });
-
-  describe('handleGoogleWebhook', () => {
-    it('should pass webhook payload to service', async () => {
-      const payload = { version: '1.0' };
-      const response = { received: true, status: 'processed' };
-      (monetisationService.handleGoogleNotification as Mock).mockResolvedValue(
-        response,
-      );
-
-      const result = await controller.handleGoogleWebhook(payload);
-      expect(monetisationService.handleGoogleNotification).toHaveBeenCalledWith(
-        payload,
       );
       expect(result).toEqual(response);
     });
@@ -563,10 +529,8 @@ describe('MonetisationController', () => {
 });
 
 describe('MonetisationController VIP upgrade lockdown (regression guard)', () => {
-  it('should never register a route path named "upgrade": VIP status must only change via verified payment webhooks', () => {
-    const routePaths = Object.getOwnPropertyNames(
-      MonetisationController.prototype,
-    )
+  const routePaths = (): unknown[] =>
+    Object.getOwnPropertyNames(MonetisationController.prototype)
       .filter((name) => name !== 'constructor')
       .map((name) =>
         Reflect.getMetadata(
@@ -577,9 +541,20 @@ describe('MonetisationController VIP upgrade lockdown (regression guard)', () =>
         ),
       );
 
-    expect(routePaths).not.toContain('upgrade');
+  it('should never register a route path named "upgrade": VIP status must only change via verified payment webhooks', () => {
+    expect(routePaths()).not.toContain('upgrade');
     expect(
       Object.getOwnPropertyNames(MonetisationController.prototype),
     ).not.toContain('upgrade');
+  });
+
+  it('leaves Apple and Google webhook paths exclusively to their verified controllers', () => {
+    expect(routePaths()).not.toContain('webhooks/apple');
+    expect(routePaths()).not.toContain('webhooks/google');
+    expect(
+      Object.getOwnPropertyNames(MonetisationController.prototype),
+    ).not.toEqual(
+      expect.arrayContaining(['handleAppleWebhook', 'handleGoogleWebhook']),
+    );
   });
 });

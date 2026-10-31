@@ -704,6 +704,90 @@ describe('AudioRoomsService', () => {
       });
       expect(result.id).toBe('room-1');
     });
+
+    it('should allow co-host to approve speaker', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: 'co-host-1',
+        raised_hands: ['user-2'],
+        speakers: ['host-1'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.approveSpeaker('co-host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        raised_hands: [],
+        speakers: ['host-1', 'user-2'],
+      });
+      expect(result.id).toBe('room-1');
+    });
+  });
+
+  describe('dismissRaisedHand', () => {
+    it('should throw NotFoundException if room not found', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: null,
+      });
+
+      await expect(
+        service.dismissRaisedHand('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(new NotFoundException('Room not found'));
+    });
+
+    it('should throw ForbiddenException if user is not host or co-host', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.dismissRaisedHand('other-user', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can dismiss raised hands.'),
+      );
+    });
+
+    it('should remove user from raised_hands and publish event', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        raised_hands: ['user-2', 'user-3'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await service.dismissRaisedHand('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        raised_hands: ['user-3'],
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'raise_hand_dismissed',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+    });
   });
 
   describe('demoteSpeaker', () => {

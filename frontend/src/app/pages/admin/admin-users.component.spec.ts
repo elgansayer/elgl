@@ -103,4 +103,66 @@ describe('AdminUsersComponent', () => {
     expect(component.loginHistory()).toEqual([]);
     expect(fixture.nativeElement.querySelector('[role="dialog"] [role="alert"]')).toBeTruthy();
   });
+
+  it('executes banUser and resets isBanning on completion', async () => {
+    let resolveBan!: (value: { message: string }) => void;
+    adminService.banUser.mockReturnValueOnce(
+      new Promise<{ message: string }>((resolve) => {
+        resolveBan = resolve;
+      }),
+    );
+
+    const banPromise = component.banUser(user);
+    expect(component.isBanning()).toBe(user.id);
+
+    // Duplicate call while in flight is ignored
+    await component.banUser(user);
+    expect(adminService.banUser).toHaveBeenCalledTimes(1);
+
+    resolveBan({ message: 'User banned' });
+    await banPromise;
+
+    expect(component.isBanning()).toBeNull();
+    expect(adminService.banUser).toHaveBeenCalledWith(user.id);
+  });
+
+  it('resets isBanning when banUser throws an error', async () => {
+    adminService.banUser.mockRejectedValueOnce(new Error('Ban failed'));
+
+    await component.banUser(user);
+
+    expect(component.isBanning()).toBeNull();
+    expect(adminService.banUser).toHaveBeenCalledWith(user.id);
+  });
+
+  it('executes warnUser and resets isWarning on completion', async () => {
+    let resolveWarn!: (value: { message: string }) => void;
+    adminService.warnUser.mockReturnValueOnce(
+      new Promise<{ message: string }>((resolve) => {
+        resolveWarn = resolve;
+      }),
+    );
+
+    const warnPromise = component.warnUser(user);
+    expect(component.isWarning()).toBe(user.id);
+
+    // Duplicate call while in flight is ignored
+    await component.warnUser(user);
+    expect(adminService.warnUser).toHaveBeenCalledTimes(1);
+
+    resolveWarn({ message: 'User warned' });
+    await warnPromise;
+
+    expect(component.isWarning()).toBeNull();
+    expect(adminService.warnUser).toHaveBeenCalledWith(user.id);
+  });
+
+  it('resets isWarning when warnUser throws an error', async () => {
+    adminService.warnUser.mockRejectedValueOnce(new Error('Warn failed'));
+
+    await component.warnUser(user);
+
+    expect(component.isWarning()).toBeNull();
+    expect(adminService.warnUser).toHaveBeenCalledWith(user.id);
+  });
 });

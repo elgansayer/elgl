@@ -18,9 +18,10 @@ import {
 } from './dto/monetisation.dto';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
-import { SubscriptionPlansService } from './services/subscription-plans.service';
-import { AppleNotificationDto } from './dto/apple-notification.dto';
-import { GoogleNotificationDto } from './dto/google-notification.dto';
+import {
+  SubscriptionPlansService,
+  type VipTier,
+} from './services/subscription-plans.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 export interface UserVipRow {
@@ -239,17 +240,6 @@ export class MonetisationService {
 
     this.logger.info(`Received verified Stripe Webhook event: ${event.type}`);
 
-    // Helper to determine tier based on planId metadata (or fallback to interval)
-    const tierForPlan = (planId?: string, interval?: string): string => {
-      if (!planId) {
-        return interval === 'year' ? 'developer' : 'consumer';
-      }
-      if (planId.startsWith('consumer_')) return 'consumer';
-      if (planId.startsWith('pro_')) return 'pro';
-      if (planId.startsWith('developer_')) return 'developer';
-      return interval === 'year' ? 'developer' : 'consumer';
-    };
-
     if (
       event.type === 'checkout.session.completed' ||
       event.type === 'customer.subscription.created' ||
@@ -261,15 +251,20 @@ export class MonetisationService {
       };
       const metadata = obj.metadata;
       if (metadata?.userId) {
-        const tier =
-          metadata.tier ?? tierForPlan(metadata.planId, metadata.interval);
         const isActive =
           !obj.status || obj.status === 'active' || obj.status === 'trialing';
-        await this.updateVipStatusFromWebhook(
-          metadata.userId,
-          isActive,
-          isActive ? tier : null,
-        );
+        if (!isActive) {
+          await this.updateVipStatusFromWebhook(metadata.userId, false, null);
+        } else {
+          const tier = this.resolveStripeTier(metadata);
+          if (!tier) {
+            this.logger.warn(
+              'Verified Stripe subscription ignored because its product could not be mapped',
+            );
+          } else {
+            await this.updateVipStatusFromWebhook(metadata.userId, true, tier);
+          }
+        }
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as {
@@ -284,57 +279,14 @@ export class MonetisationService {
     return { received: true, status: 'processed' };
   }
 
-  async handleAppleNotification(
-    dto: AppleNotificationDto,
-  ): Promise<{ received: boolean; status: string }> {
-    this.logger.info(
-      `Processing Apple Notification: ${dto.notificationType}, ${dto.subtype}`,
-    );
-
-    if (dto.receiptData) {
-      const validationResult =
-        await this.appleReceiptValidatorService.validateReceipt(
-          'userId-placeholder', // Replace with actual user ID resolution logic
-          dto.receiptData,
-          false,
-        );
-
-      if (validationResult.valid) {
-        await this.updateVipStatusFromWebhook(
-          'userId-placeholder', // Replace with actual user ID resolution logic
-          true,
-          'tier-placeholder', // Replace with actual tier resolution logic
-        );
-        return { received: true, status: 'processed' };
-      }
+  private resolveStripeTier(metadata: Record<string, string>): VipTier | null {
+    if (metadata.planId) {
+      return this.subscriptionPlansService.getTierByProductId(metadata.planId);
     }
-
-    return { received: true, status: 'ignored' };
-  }
-
-  async handleGoogleNotification(
-    dto: GoogleNotificationDto,
-  ): Promise<{ received: boolean; status: string }> {
-    this.logger.info(
-      `Processing Google Notification: ${dto.productId}, ${dto.purchaseToken}`,
-    );
-
-    const purchaseDetails =
-      await this.googlePlayNotificationService.getSubscriptionPurchaseDetails(
-        dto.productId,
-        dto.purchaseToken,
-      );
-
-    if (purchaseDetails) {
-      await this.updateVipStatusFromWebhook(
-        dto.userId || 'userId-placeholder', // Replace with actual user ID resolution logic
-        true,
-        'tier-placeholder', // Replace with actual tier resolution logic
-      );
-      return { received: true, status: 'processed' };
+    if (metadata.tier) {
+      return this.subscriptionPlansService.getTierByProductId(metadata.tier);
     }
-
-    return { received: true, status: 'ignored' };
+    return null;
   }
 
   async generateApiKey(
@@ -541,8 +493,12 @@ export class MonetisationService {
       let purchaseToken: string;
       let productId: string | undefined;
       try {
-        const parsed: Record<string, unknown> = JSON.parse(receiptData);
+        const parsed: unknown = JSON.parse(receiptData);
         if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'purchaseToken' in parsed &&
+          'productId' in parsed &&
           typeof parsed.purchaseToken === 'string' &&
           typeof parsed.productId === 'string'
         ) {

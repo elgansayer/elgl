@@ -291,6 +291,10 @@
       .plan-cta {
         width: 100%;
       }
+      .plan-cta:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
 
       .compare-section {
         background: rgb(var(--surface-300));
@@ -645,7 +649,7 @@
                   <li>5 translations / day</li>
                   <li>Standard matching</li>
                 </ul>
-                <button class="btn-secondary plan-cta">Continue free</button>
+                <button class="btn-secondary plan-cta" disabled>Current free plan</button>
               </div>
               <div class="plan-card popular">
                 <span class="plan-badge">Most popular</span>
@@ -661,12 +665,13 @@
               </div>
               <div class="plan-card">
                 <h3>Pro</h3>
-                <p class="plan-price">16 UKP / $20</p>
+                <p class="plan-price">12 UKP / $15</p>
                 <p class="plan-billed">Billed monthly</p>
                 <ul class="plan-features">
-                  <li>Everything in Consumer</li>
-                  <li>HD video rooms</li>
-                  <li>Advanced grammar check</li>
+                  <li>Unlimited AI translations</li>
+                  <li>Advanced visitor logs</li>
+                  <li>Nearby members visibility boost</li>
+                  <li>Ad-free experience</li>
                 </ul>
                 <button class="btn-primary plan-cta">Subscribe</button>
               </div>

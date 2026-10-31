@@ -218,6 +218,9 @@ export class SubscriptionPlansService {
     if (plan) return this.getCanonicalTierForPlanId(plan.id);
 
     const productTierMap: Record<string, VipTier> = {
+      consumer: 'consumer',
+      pro: 'pro',
+      developer: 'developer',
       'com.hellotalk.vip.monthly': 'consumer',
       'com.hellotalk.vip.yearly': 'consumer',
       'com.hellotalk.consumer.monthly': 'consumer',

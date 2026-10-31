@@ -29,7 +29,7 @@ import {
 import { PrivatePartyCreatePayload } from '../private-party-create-modal/private-party-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
-import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
+import { ApproveSpeakerModalComponent } from '../approve-speaker-modal/approve-speaker-modal.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
@@ -86,6 +86,13 @@ export class AudioRoomComponent implements OnInit {
   readonly showNotesPanel = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
   readonly sidebarTab = signal<'chat' | 'notes'>('chat');
+
+  readonly hasRaisedHand = computed(() => {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return false;
+    const room = this.store.currentRoom();
+    return !!room?.raised_hands?.includes(currentUserId);
+  });
 
   readonly stageViewModel = computed(() =>
     buildStageViewModel(
@@ -225,7 +232,10 @@ export class AudioRoomComponent implements OnInit {
 
   async handleApproveSpeaker(targetUserId: string): Promise<void> {
     await this.approve(targetUserId);
-    this.showApprovalModal.set(false);
+  }
+
+  async handleDeclineSpeaker(targetUserId: string): Promise<void> {
+    await this.store.dismissRaisedHand(targetUserId);
   }
 
   async demote(targetUserId: string): Promise<void> {
