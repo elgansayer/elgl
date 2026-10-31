@@ -19,6 +19,17 @@ interface NestCliConfig {
   };
 }
 
+interface TsConfig {
+  compilerOptions?: {
+    outDir?: string;
+  };
+}
+
+interface TsConfigBuild {
+  extends?: string;
+  include?: string[];
+}
+
 const backendRoot = fileURLToPath(new URL('..', import.meta.url));
 
 function readJson<T>(relativePath: string): T {
@@ -98,6 +109,35 @@ describe('NestJS backend bootstrap contract', () => {
     expect(mainSource).toContain("import { AppModule } from './app.module'");
     expect(mainSource).toMatch(/NestFactory\.create\(AppModule\b/);
     expect(mainSource).toMatch(/app\.listen\(process\.env\.PORT \?\? 3000\)/);
+  });
+
+  it('retains TypeScript compiler configurations with expected build output directory', () => {
+    const tsconfig = readJson<TsConfig>('../tsconfig.json');
+    const tsconfigBuild = readJson<TsConfigBuild>('../tsconfig.build.json');
+
+    expect(tsconfig.compilerOptions?.outDir).toBe('./dist');
+    expect(tsconfigBuild.extends).toBe('./tsconfig.json');
+    expect(tsconfigBuild.include).toContain('src/**/*.ts');
+  });
+
+  it('wires the canonical root AppModule with AppController and AppService', () => {
+    const appModuleSource = readFileSync(
+      new URL('./app.module.ts', import.meta.url),
+      'utf8',
+    );
+
+    expect(appModuleSource).toContain(
+      "import { AppController } from './app.controller'",
+    );
+    expect(appModuleSource).toContain(
+      "import { AppService } from './app.service'",
+    );
+    expect(appModuleSource).toMatch(
+      /controllers:\s*\[[\s\S]*?AppController[\s\S]*?\]/,
+    );
+    expect(appModuleSource).toMatch(
+      /providers:\s*\[[\s\S]*?AppService[\s\S]*?\]/,
+    );
   });
 
   it('keeps the contract rooted in the backend package instead of a generated sibling project', () => {
