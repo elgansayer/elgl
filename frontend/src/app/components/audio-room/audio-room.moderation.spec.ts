@@ -2,6 +2,8 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../services/confirm.service';
@@ -10,6 +12,10 @@ import { QuickPollService } from '../../services/quick-poll.service';
 import { AudioRoomComponent } from './audio-room.component';
 
 describe('AudioRoomComponent Host Moderation Controls', () => {
+  const template = readFileSync(
+    resolve(process.cwd(), 'src/app/components/audio-room/audio-room.component.html'),
+    'utf8',
+  );
   let component: AudioRoomComponent;
   let confirmMock: { confirm: ReturnType<typeof vi.fn> };
   let storeMock: {
@@ -96,5 +102,12 @@ describe('AudioRoomComponent Host Moderation Controls', () => {
 
     expect(confirmMock.confirm).toHaveBeenCalledWith('audioRoom.kickConfirm');
     expect(storeMock.kickSpeaker).not.toHaveBeenCalled();
+  });
+
+  it('uses accessible semantic colour and touch-target contracts for host controls', () => {
+    expect(template).toMatch(/class="[^"]*text-danger-ink[^"]*"\s+\[attr\.aria-label\]="'audioRoom\.kickBtn'/);
+    expect(template).toMatch(
+      /<button\s+hlmBtn\s+size="touch"\s+\(click\)="selectLanguageGroup\(group\.language_pair\)"/,
+    );
   });
 });

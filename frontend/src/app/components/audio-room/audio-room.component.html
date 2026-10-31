@@ -248,7 +248,7 @@
                       <button
                         hlmBtn
                         (click)="kick(participant.user_id)"
-                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-danger hover:bg-danger/20"
+                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-danger-ink hover:bg-danger/20"
                         [attr.aria-label]="'audioRoom.kickBtn' | t"
                       >
                         {{ 'audioRoom.kickBtn' | t }}
@@ -476,6 +476,7 @@
         @for (group of store.roomsByLanguage(); track group.language_pair) {
           <button
             hlmBtn
+            size="touch"
             (click)="selectLanguageGroup(group.language_pair)"
             class="rounded-card border px-3 py-2 text-xs font-bold transition-colors"
             [class.border-primary]="store.selectedLanguageGroup() === group.language_pair"
