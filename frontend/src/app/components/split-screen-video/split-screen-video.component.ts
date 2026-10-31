@@ -17,8 +17,12 @@ export class SplitScreenVideoComponent {
   readonly coHostName = input<string>('Co-Host');
   readonly isLoading = input(false);
   readonly hasError = input(false);
+  readonly hasCoHostOverride = input<boolean | undefined>(undefined);
 
-  readonly hasCoHost = computed(() => !!this.coHostVideoUrl());
+  readonly hasCoHost = computed(() => {
+    const override = this.hasCoHostOverride();
+    return override !== undefined ? override : !!this.coHostVideoUrl();
+  });
 
   readonly invite = output<void>();
   readonly retry = output<void>();

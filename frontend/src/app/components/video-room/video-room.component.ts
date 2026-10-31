@@ -30,6 +30,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
                 <span>
                   <button
                     hlmBtn
+                    type="button"
                     (click)="showInvitePicker.set(!showInvitePicker())"
                     [attr.aria-label]="'videoRoom.inviteCoHostAria' | t"
                     [attr.aria-expanded]="showInvitePicker()"
@@ -66,6 +67,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
             @for (speakerId of eligibleSpeakers(); track speakerId) {
               <button
                 hlmBtn
+                type="button"
                 (click)="selectCoHost(speakerId)"
                 role="option"
                 [attr.aria-selected]="false"
@@ -157,6 +159,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
               @if (isHost()) {
                 <button
                   hlmBtn
+                  type="button"
                   (click)="removeCoHost()"
                   [attr.aria-label]="'videoRoom.removeCoHostAria' | t"
                   class="absolute top-3 sm:top-4 end-3 sm:end-4 bg-danger/80 hover:bg-danger text-on-fill p-1.5 sm:p-2 rounded-full backdrop-blur-sm transition-colors focus-visible:outline-2 focus-visible:outline-white"
