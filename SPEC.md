@@ -170,6 +170,9 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
 - **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
+- **Audio room force mute:** `{ "type": "force_mute", "room_id": "room_uuid", "target_user_id": "user_uuid" }`
+- **Audio room stage removal:** `{ "type": "speaker_demoted", "room_id": "room_uuid", "target_user_id": "user_uuid" }`
+- **Audio room co-host removal:** `{ "type": "co_host_removed", "room_id": "room_uuid", "target_user_id": "user_uuid" }`
 
 ---
 
@@ -180,6 +183,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
   1. Listener emits `/audio-rooms/raise-hand` payload via REST or Centrifugo.
   2. Room Host receives notification and calls `POST /audio-rooms/approve-speaker`.
   3. NestJS calls `AccessToken` API to issue refreshed JWT with `canPublish: true` (`canPublishData: true`).
+- **Host Moderation:** `POST /audio-rooms/mute-speaker` mutes the target's published microphone track through `RoomServiceClient` before publishing `force_mute`. `POST /audio-rooms/demote-speaker` revokes LiveKit publishing before removing the target from `audio_rooms.speakers` and publishing `speaker_demoted`. `POST /audio-rooms/kick-speaker` remains a backward-compatible alias for stage removal.
 - **Subtitles & Speech-to-Text:** Audio tracks published to LiveKit are forwarded to STT worker, broadcasting closed captions onto Centrifugo `room_{id}` channel.
 
 ---

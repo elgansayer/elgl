@@ -547,13 +547,22 @@ export class AudioRoomsController {
   @ApiOperation({
     summary: 'Mute a speaker on the stage',
     description:
-      'A host or co-host mutes a speaker currently on stage without removing them.',
+      'The room host mutes a speaker currently on stage without removing them.',
   })
   @ApiResponse({
     status: 201,
     description: 'Speaker muted successfully.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 400, description: 'Target is not a stage speaker.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the room host may mute speakers.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Live media moderation is unavailable.',
+  })
   async muteSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
@@ -563,6 +572,25 @@ export class AudioRoomsController {
   }
 
   @Post('kick-speaker')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Remove a speaker from the stage',
+    description:
+      'Backward-compatible alias for demoting a speaker to the listener audience. Only the room host may perform this action.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Speaker removed from the stage successfully.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the room host may remove speakers.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Stage removal could not be applied safely.',
+  })
   async kickSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,
@@ -583,6 +611,14 @@ export class AudioRoomsController {
     description: 'Speaker demoted successfully.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the room host may remove speakers.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Stage removal could not be applied safely.',
+  })
   async demoteSpeaker(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: DemoteSpeakerDto,

@@ -18,6 +18,9 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
 const mockCreateRoom = vi.fn().mockResolvedValue({});
+const mockListParticipants = vi.fn().mockResolvedValue([]);
+const mockUpdateParticipant = vi.fn().mockResolvedValue({});
+const mockMutePublishedTrack = vi.fn().mockResolvedValue({});
 const mockAddGrant = vi.fn();
 const mockToJwt = vi.fn().mockResolvedValue('mock-livekit-jwt');
 
@@ -25,8 +28,12 @@ vi.mock('livekit-server-sdk', () => ({
   RoomServiceClient: vi.fn().mockImplementation(function () {
     return {
       createRoom: mockCreateRoom,
+      listParticipants: mockListParticipants,
+      updateParticipant: mockUpdateParticipant,
+      mutePublishedTrack: mockMutePublishedTrack,
     };
   }),
+  TrackSource: { MICROPHONE: 2 },
   AccessToken: vi.fn().mockImplementation(function () {
     return {
       addGrant: mockAddGrant,
@@ -45,6 +52,9 @@ describe('AudioRoomsService', () => {
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
+    mockListParticipants.mockClear().mockResolvedValue([]);
+    mockUpdateParticipant.mockClear().mockResolvedValue({});
+    mockMutePublishedTrack.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
     mockGenerateTranscriptFromAudioUrl = vi.fn();
@@ -732,9 +742,13 @@ describe('AudioRoomsService', () => {
     it('should remove user from speakers and publish speaker_demoted event', async () => {
       const roomRow: any = {
         id: 'room-1',
+        room_name: 'language-room-1',
         host_id: 'host-1',
         speakers: ['host-1', 'user-2'],
       };
+      mockListParticipants.mockResolvedValueOnce([
+        { identity: 'Speaker_user-2', tracks: [] },
+      ]);
       mockQueryBuilder.single.mockResolvedValue({
         data: roomRow,
         error: null,
@@ -753,6 +767,17 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-2',
         room_id: 'room-1',
       });
+      expect(mockUpdateParticipant).toHaveBeenCalledWith(
+        'language-room-1',
+        'Speaker_user-2',
+        {
+          permission: {
+            canSubscribe: true,
+            canPublish: false,
+            canPublishData: true,
+          },
+        },
+      );
       expect(result.id).toBe('room-1');
     });
   });
@@ -794,12 +819,46 @@ describe('AudioRoomsService', () => {
       ).rejects.toThrow(new ForbiddenException('The host cannot be muted.'));
     });
 
+    it('should reject a mute target who is not on the stage', async () => {
+      const roomRow = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.muteSpeaker('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new BadRequestException('The target user is not a stage speaker.'),
+      );
+
+      expect(mockListParticipants).not.toHaveBeenCalled();
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
     it('should publish force_mute event via Centrifugo', async () => {
       const roomRow: any = {
         id: 'room-1',
+        room_name: 'language-room-1',
         host_id: 'host-1',
         speakers: ['host-1', 'user-2'],
       };
+      mockListParticipants.mockResolvedValueOnce([
+        {
+          identity: 'Speaker_user-2',
+          tracks: [
+            { sid: 'microphone-track', source: 2, muted: false },
+            { sid: 'camera-track', source: 1, muted: false },
+          ],
+        },
+      ]);
       mockQueryBuilder.single.mockResolvedValue({
         data: roomRow,
         error: null,
@@ -815,12 +874,106 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-2',
         room_id: 'room-1',
       });
+      expect(mockMutePublishedTrack).toHaveBeenCalledWith(
+        'language-room-1',
+        'Speaker_user-2',
+        'microphone-track',
+        true,
+      );
+      expect(mockMutePublishedTrack).toHaveBeenCalledTimes(1);
       expect(result.id).toBe('room-1');
+    });
+
+    it('should enforce the mute when the configured hostname contains mock', async () => {
+      const roomRow = {
+        id: 'room-1',
+        room_name: 'language-room-1',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2'],
+      };
+      Reflect.set(service, 'livekitUrl', 'https://mock-livekit.example.com');
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+      mockListParticipants.mockResolvedValueOnce([
+        {
+          identity: 'Speaker_user-2',
+          tracks: [{ sid: 'microphone-track', source: 2, muted: false }],
+        },
+      ]);
+
+      await service.muteSpeaker('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockListParticipants).toHaveBeenCalledWith('language-room-1');
+      expect(mockMutePublishedTrack).toHaveBeenCalledWith(
+        'language-room-1',
+        'Speaker_user-2',
+        'microphone-track',
+        true,
+      );
+    });
+
+    it('should fail closed before notifying clients when LiveKit cannot mute the track', async () => {
+      const roomRow = {
+        id: 'room-1',
+        room_name: 'language-room-1',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+      mockListParticipants.mockResolvedValueOnce([
+        {
+          identity: 'Speaker_user-2',
+          tracks: [{ sid: 'microphone-track', source: 2, muted: false }],
+        },
+      ]);
+      mockMutePublishedTrack.mockRejectedValueOnce(
+        new Error('media plane unavailable'),
+      );
+
+      await expect(
+        service.muteSpeaker('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow('Could not mute the speaker safely. Please retry.');
+
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('should fail closed when the LiveKit administration client is unavailable', async () => {
+      const roomRow = {
+        id: 'room-1',
+        room_name: 'language-room-1',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+      Reflect.set(service, 'roomServiceClient', undefined);
+
+      await expect(
+        service.muteSpeaker('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow('Could not mute the speaker safely. Please retry.');
+
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
     });
   });
 
   describe('kickSpeaker', () => {
-    it('should throw ForbiddenException if user is not host', async () => {
+    it('should preserve host authorization through the route alias', async () => {
       const roomRow: any = { id: 'room-1', host_id: 'host-1' };
       mockQueryBuilder.single.mockResolvedValue({
         data: roomRow,
@@ -833,7 +986,7 @@ describe('AudioRoomsService', () => {
           target_user_id: 'user-2',
         }),
       ).rejects.toThrow(
-        new ForbiddenException('Only the host can kick a speaker off stage.'),
+        new ForbiddenException('Only the host can demote a stage speaker.'),
       );
     });
 
@@ -853,12 +1006,10 @@ describe('AudioRoomsService', () => {
           room_id: 'room-1',
           target_user_id: 'host-1',
         }),
-      ).rejects.toThrow(
-        new ForbiddenException('The host cannot kick themselves.'),
-      );
+      ).rejects.toThrow(new ForbiddenException('The host cannot be demoted.'));
     });
 
-    it('should remove from speakers, clear co-host if applicable, and publish force_kick event', async () => {
+    it('should remove from speakers, clear co-host if applicable, and publish the canonical events', async () => {
       const roomRow: any = {
         id: 'room-1',
         host_id: 'host-1',
@@ -880,7 +1031,7 @@ describe('AudioRoomsService', () => {
         co_host_id: null,
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'force_kick',
+        type: 'speaker_demoted',
         target_user_id: 'user-2',
         room_id: 'room-1',
       });
@@ -910,10 +1061,9 @@ describe('AudioRoomsService', () => {
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         speakers: ['host-1', 'user-3'],
-        co_host_id: undefined,
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'force_kick',
+        type: 'speaker_demoted',
         target_user_id: 'user-2',
         room_id: 'room-1',
       });
@@ -1061,13 +1211,9 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-3',
       });
 
-      // Flush microtasks so the room lookup and DB update settle and the first
-      // publish (co_host_removed) has been initiated but not yet completed.
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-
-      expect(publishMock).toHaveBeenCalledTimes(1);
+      // Wait until the LiveKit lookup and DB demotion settle and the first
+      // publish has started, while its promise remains deliberately pending.
+      await vi.waitFor(() => expect(publishMock).toHaveBeenCalledTimes(1));
       expect(publishMock).toHaveBeenCalledWith('room_room-1', {
         type: 'co_host_removed',
         target_user_id: 'user-2',

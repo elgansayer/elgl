@@ -1156,6 +1156,22 @@
               <div>
                 <div class="avatar">A</div>
                 Ana
+                <div class="row" style="justify-content: center; gap: 4px; margin-block-start: 6px">
+                  <button
+                    class="btn secondary-btn"
+                    style="min-height: 28px; padding: 4px 8px"
+                    aria-label="Mute Ana"
+                  >
+                    Mute
+                  </button>
+                  <button
+                    class="btn ghost"
+                    style="min-height: 28px; padding: 4px 8px"
+                    aria-label="Remove Ana from the stage"
+                  >
+                    Remove from stage
+                  </button>
+                </div>
               </div>
               <div><div class="avatar" style="background: rgb(var(--surface-700))">+2</div></div>
             </div>
@@ -1198,7 +1214,8 @@
         </div>
         <footer>
           States: room list (grouped/flat) · loading · empty · in-room stage/audience · host
-          controls (demote, end and archive) · quick poll form/results · speaker requests
+          moderation controls (mute and remove from stage) · end and archive · quick poll
+          form/results · speaker requests
         </footer>
       </section>
 

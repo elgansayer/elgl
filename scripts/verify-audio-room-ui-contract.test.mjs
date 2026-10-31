@@ -78,3 +78,17 @@ test('important room actions remain labelled Spartan or Relay controls', () => {
   assert.match(template, /audioRoom\.endArchiveBtn/);
   assert.match(template, /\[attr\.aria-label\]/);
 });
+
+test('host moderation is labelled, guarded, confirmed, and retry-safe', () => {
+  assert.match(template, /room\.host_id === authService\.currentUser\(\)\?\.id/);
+  assert.match(template, /audioRoom\.muteSpeakerAria/);
+  assert.match(template, /audioRoom\.removeFromStageAria/);
+  assert.match(template, /\[disabled\]="moderationTargetId\(\) !== null"/);
+  assert.match(template, /\[attr\.aria-busy\]/);
+
+  assert.match(component, /async mute\(targetUserId: string, displayName: string\)/);
+  assert.match(component, /async removeFromStage/);
+  assert.match(component, /audioRoom\.removeFromStageConfirm/);
+  assert.match(component, /this\.store\.demoteSpeaker\(targetUserId\)/);
+  assert.match(component, /succeeded \? 'success' : 'error'/);
+});

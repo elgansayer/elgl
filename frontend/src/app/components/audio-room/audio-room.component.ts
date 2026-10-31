@@ -84,6 +84,7 @@ export class AudioRoomComponent implements OnInit {
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
   readonly showNotesPanel = signal<boolean>(false);
+  readonly moderationTargetId = signal<string | null>(null);
   readonly currentPollId = signal<string | null>(null);
   readonly sidebarTab = signal<'chat' | 'notes'>('chat');
 
@@ -228,16 +229,55 @@ export class AudioRoomComponent implements OnInit {
     this.showApprovalModal.set(false);
   }
 
-  async demote(targetUserId: string): Promise<void> {
-    await this.store.demoteSpeaker(targetUserId);
+  async mute(targetUserId: string, displayName: string): Promise<void> {
+    if (this.moderationTargetId()) return;
+    this.moderationTargetId.set(targetUserId);
+
+    try {
+      const succeeded = await this.store.muteSpeaker(targetUserId);
+      showToast(
+        this.i18n.translate(succeeded ? 'audioRoom.muteSuccess' : 'audioRoom.muteError', {
+          name: displayName,
+        }),
+        succeeded ? 'success' : 'error',
+      );
+    } catch {
+      showToast(this.i18n.translate('audioRoom.muteError', { name: displayName }), 'error');
+    } finally {
+      this.moderationTargetId.set(null);
+    }
   }
 
-  async mute(targetUserId: string): Promise<void> {
-    await this.store.muteSpeaker(targetUserId);
-  }
+  async removeFromStage(targetUserId: string, displayName: string): Promise<void> {
+    if (this.moderationTargetId()) return;
+    this.moderationTargetId.set(targetUserId);
 
-  async kick(targetUserId: string): Promise<void> {
-    await this.store.kickSpeaker(targetUserId);
+    try {
+      const confirmed = await this.confirmService.confirm(
+        this.i18n.translate('audioRoom.removeFromStageConfirm', {
+          name: displayName,
+        }),
+      );
+      if (!confirmed) return;
+
+      const succeeded = await this.store.demoteSpeaker(targetUserId);
+      showToast(
+        this.i18n.translate(
+          succeeded ? 'audioRoom.removeFromStageSuccess' : 'audioRoom.removeFromStageError',
+          { name: displayName },
+        ),
+        succeeded ? 'success' : 'error',
+      );
+    } catch {
+      showToast(
+        this.i18n.translate('audioRoom.removeFromStageError', {
+          name: displayName,
+        }),
+        'error',
+      );
+    } finally {
+      this.moderationTargetId.set(null);
+    }
   }
 
   async archive(): Promise<void> {

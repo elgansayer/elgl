@@ -230,20 +230,28 @@
                       @if (!participant.isMuted) {
                         <button
                           hlmBtn
-                          (click)="mute(participant.user_id)"
+                          (click)="mute(participant.user_id, participant.display_name)"
+                          [disabled]="moderationTargetId() !== null"
                           class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-warning/20"
-                          [attr.aria-label]="'audioRoom.muteBtn' | t"
+                          [attr.aria-busy]="moderationTargetId() === participant.user_id"
+                          [attr.aria-label]="
+                            'audioRoom.muteSpeakerAria' | t: { name: participant.display_name }
+                          "
                         >
                           {{ 'audioRoom.muteBtn' | t }}
                         </button>
                       }
                       <button
                         hlmBtn
-                        (click)="demote(participant.user_id)"
+                        (click)="removeFromStage(participant.user_id, participant.display_name)"
+                        [disabled]="moderationTargetId() !== null"
                         class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-danger/20"
-                        [attr.aria-label]="'audioRoom.demoteBtn' | t"
+                        [attr.aria-busy]="moderationTargetId() === participant.user_id"
+                        [attr.aria-label]="
+                          'audioRoom.removeFromStageAria' | t: { name: participant.display_name }
+                        "
                       >
-                        {{ 'audioRoom.demoteBtn' | t }}
+                        {{ 'audioRoom.removeFromStageBtn' | t }}
                       </button>
                     </div>
                   }
@@ -257,9 +265,7 @@
                 <div
                   class="rounded-card border border-surface-200 bg-surface-100 p-3 text-center text-xs font-bold text-text-secondary"
                   role="listitem"
-                  [attr.aria-label]="
-                    'audioRoom.speakerCount' | t: { count: stageOverflowCount() }
-                  "
+                  [attr.aria-label]="'audioRoom.speakerCount' | t: { count: stageOverflowCount() }"
                 >
                   +{{ stageOverflowCount() }}
                 </div>

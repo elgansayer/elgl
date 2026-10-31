@@ -656,7 +656,15 @@ export class I18nService {
     'audioRoom.speakerCount': '{{count}} speaker(s)',
     'audioRoom.speakerPrefix': 'Speaker {{id}}',
     'audioRoom.muteBtn': 'Mute',
-    'audioRoom.demoteBtn': 'Demote',
+    'audioRoom.muteSpeakerAria': 'Mute {{name}}',
+    'audioRoom.muteSuccess': '{{name}} is now muted.',
+    'audioRoom.muteError': 'Could not mute {{name}}. Please try again.',
+    'audioRoom.removeFromStageBtn': 'Remove from stage',
+    'audioRoom.removeFromStageAria': 'Remove {{name}} from the stage',
+    'audioRoom.removeFromStageConfirm':
+      'Remove {{name}} from the stage? They will return to the listener audience and cannot keep broadcasting.',
+    'audioRoom.removeFromStageSuccess': '{{name}} was moved to the listener audience.',
+    'audioRoom.removeFromStageError': 'Could not remove {{name}} from the stage. Please try again.',
     'audioRoom.raisedHandsTitle': '✋ Raised hands',
     'audioRoom.approveSpeakerModalTitle': '✋ Speaker requests',
     'audioRoom.approveSpeakerModalDesc':

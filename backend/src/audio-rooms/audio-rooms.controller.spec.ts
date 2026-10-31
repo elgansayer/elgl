@@ -42,6 +42,7 @@ describe('AudioRoomsController', () => {
             approveSpeaker: vi.fn(),
             muteSpeaker: vi.fn(),
             demoteSpeaker: vi.fn(),
+            kickSpeaker: vi.fn(),
             inviteCoHost: vi.fn(),
             removeCoHost: vi.fn(),
             sendCaption: vi.fn(),
@@ -198,6 +199,46 @@ describe('AudioRoomsController', () => {
         'user-1',
         dto,
       );
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('muteSpeaker', () => {
+    it('should return null if user is not provided', async () => {
+      const dto = { room_id: 'room-1', target_user_id: 'user-2' };
+      const result = await controller.muteSpeaker(null, dto);
+      expect(result).toBeNull();
+      expect(audioRoomsService.muteSpeaker).not.toHaveBeenCalled();
+    });
+
+    it('should call service muteSpeaker when user is provided', async () => {
+      const dto = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room = { id: 'room-1' };
+      (audioRoomsService.muteSpeaker as Mock).mockResolvedValue(room);
+
+      const result = await controller.muteSpeaker({ id: 'user-1' }, dto);
+
+      expect(audioRoomsService.muteSpeaker).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(room);
+    });
+  });
+
+  describe('kickSpeaker', () => {
+    it('should return null if user is not provided', async () => {
+      const dto = { room_id: 'room-1', target_user_id: 'user-2' };
+      const result = await controller.kickSpeaker(null, dto);
+      expect(result).toBeNull();
+      expect(audioRoomsService.kickSpeaker).not.toHaveBeenCalled();
+    });
+
+    it('should call the backward-compatible service alias when user is provided', async () => {
+      const dto = { room_id: 'room-1', target_user_id: 'user-2' };
+      const room = { id: 'room-1' };
+      (audioRoomsService.kickSpeaker as Mock).mockResolvedValue(room);
+
+      const result = await controller.kickSpeaker({ id: 'user-1' }, dto);
+
+      expect(audioRoomsService.kickSpeaker).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(room);
     });
   });

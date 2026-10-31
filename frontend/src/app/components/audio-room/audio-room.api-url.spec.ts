@@ -25,7 +25,10 @@ describe('AudioRoomComponent API URLs', () => {
     loadActiveRooms: vi.fn().mockResolvedValue(undefined),
     loadRoomsByLanguage: vi.fn().mockResolvedValue(undefined),
     loadPrivateRooms: vi.fn().mockResolvedValue(undefined),
+    muteSpeaker: vi.fn().mockResolvedValue(true),
+    demoteSpeaker: vi.fn().mockResolvedValue(true),
   };
+  const confirmService = { confirm: vi.fn().mockResolvedValue(true) };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,7 +38,7 @@ describe('AudioRoomComponent API URLs', () => {
         provideHttpClientTesting(),
         { provide: AudioRoomsStore, useValue: store },
         { provide: AuthService, useValue: {} },
-        { provide: ConfirmService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
+        { provide: ConfirmService, useValue: confirmService },
         { provide: I18nService, useValue: { translate: (key: string) => key } },
         { provide: QuickPollService, useValue: {} },
       ],
@@ -72,5 +75,29 @@ describe('AudioRoomComponent API URLs', () => {
     request.flush({ emojiId: 'heart', animationUrl: 'https://example.test/heart.json' });
 
     await reactionPromise;
+  });
+
+  it('mutes a speaker through the shared room store', async () => {
+    await component.mute('speaker-2', 'Speaker Two');
+
+    expect(store.muteSpeaker).toHaveBeenCalledWith('speaker-2');
+    expect(component.moderationTargetId()).toBeNull();
+  });
+
+  it('confirms the consequence before removing a speaker from the stage', async () => {
+    await component.removeFromStage('speaker-2', 'Speaker Two');
+
+    expect(confirmService.confirm).toHaveBeenCalledWith('audioRoom.removeFromStageConfirm');
+    expect(store.demoteSpeaker).toHaveBeenCalledWith('speaker-2');
+    expect(component.moderationTargetId()).toBeNull();
+  });
+
+  it('does not remove a speaker when the host cancels confirmation', async () => {
+    confirmService.confirm.mockResolvedValueOnce(false);
+
+    await component.removeFromStage('speaker-2', 'Speaker Two');
+
+    expect(store.demoteSpeaker).not.toHaveBeenCalled();
+    expect(component.moderationTargetId()).toBeNull();
   });
 });
