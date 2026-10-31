@@ -48,6 +48,22 @@ import { TranslationService } from './translation.service';
 import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
 import type { Request, Response } from 'express';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isFavouriteRecord(
+  item: Record<string, unknown>,
+): item is Record<string, unknown> & FavouriteRecord {
+  return (
+    typeof item['id'] === 'string' &&
+    typeof item['user_id'] === 'string' &&
+    typeof item['item_type'] === 'string' &&
+    isRecord(item['item_payload']) &&
+    typeof item['created_at'] === 'string'
+  );
+}
+
 @Controller('chat')
 @UseGuards(SupabaseAuthGuard)
 export class ChatController {
@@ -193,7 +209,7 @@ export class ChatController {
       100,
       0,
     );
-    return page.items as unknown as FavouriteRecord[];
+    return page.items.filter(isFavouriteRecord);
   }
 
   @Delete('favourites/:id')

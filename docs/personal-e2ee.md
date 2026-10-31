@@ -52,7 +52,7 @@ e2ee:v1:<base64-iv>:<base64-ciphertext>
 
 - When sending a message in a direct room, the frontend encrypts the plaintext using AES-256-GCM and sends `is_encrypted: true`, `encrypted_payload: "e2ee:v1:..."`, and a generic sanitised `text_content`.
 - When receiving messages via REST or Centrifugo WebSocket channels, the frontend decrypts `encrypted_payload` in-place using WebCrypto.
-- If decryption fails (for example tampering or payload corruption), the client displays a localised encrypted-message placeholder rather than crashing or revealing corrupted state.
+- If decryption fails (for example tampering or payload corruption), the client displays a localised encrypted-message fallback notice rather than crashing or revealing corrupted state.
 - Push notifications for encrypted messages use the generic redacted string `'🔒 Encrypted message'`, ensuring APNs and FCM transport servers never inspect personal chat plaintext.
 - Plaintext parsing features (server-side link preview extraction and @-mention notifications) are cleanly bypassed for encrypted messages.
 

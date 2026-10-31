@@ -36,6 +36,7 @@ import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto'
 import { FixMessageDto } from './dto/fix-message.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { LlmProxyDto } from './dto/llm-proxy.dto';
+import type { FavouriteRecord } from './interfaces/chat-message.interface';
 
 describe('ChatController', () => {
   let controller: ChatController;
@@ -343,7 +344,16 @@ describe('ChatController', () => {
     });
 
     it('should filter compatibility reads through current visibility', async () => {
-      const favourites = [{ id: 'fav-1' }];
+      const favourites: FavouriteRecord[] = [
+        {
+          id: 'fav-1',
+          user_id: 'user-1',
+          item_type: 'message',
+          item_payload: { id: 'message-1' },
+          notes: null,
+          created_at: '2026-10-31T00:00:00.000Z',
+        },
+      ];
       (favouritesService.getStarredMessages as Mock).mockResolvedValue({
         items: favourites,
         has_more: false,
