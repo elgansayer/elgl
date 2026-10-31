@@ -1,6 +1,6 @@
 # NestJS backend bootstrap contract
 
-Issue #1279 originally requested initialising the `backend/` package with the Nest CLI and npm. The repository has since evolved into a large production NestJS application, so regenerating the directory with `nest new` would destroy working feature modules and configuration. The durable requirement is that the existing backend continues to satisfy the NestJS/npm bootstrap contract.
+Issue #941, Issue #1279, and Task #1758 track initialising the `backend/` package with the Nest CLI and npm (`nest new backend --package-manager npm`). The repository has since evolved into a large production NestJS application, so regenerating the directory with `nest new` would destroy working feature modules and configuration. The durable requirement is that the existing backend continues to satisfy the NestJS/npm bootstrap contract.
 
 ## Canonical package boundary
 
@@ -35,9 +35,11 @@ The repository CI remains authoritative for clean-environment validation.
 - the package is private and npm-managed;
 - the required NestJS runtime and development packages remain declared;
 - the Nest CLI source-root/build-output configuration remains intact;
+- TypeScript configuration files (`tsconfig.json`, `tsconfig.build.json`) compile sources under `src/` to `./dist`;
 - build, development, production, lint and test entry points remain available;
 - `package-lock.json` remains present;
 - `src/main.ts` still boots `AppModule` through `NestFactory` and listens on the configured port;
+- `src/app.module.ts` retains canonical root module wiring with `AppController` and `AppService`;
 - the test is rooted in the existing `backend/` package, preventing a generated sibling backend from silently becoming the new application.
 
 ## Security and operations
