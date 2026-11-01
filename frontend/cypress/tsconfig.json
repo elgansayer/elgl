@@ -5,6 +5,7 @@
     "types": ["cypress"],
     "strict": true,
     "esModuleInterop": true,
+    "moduleDetection": "force",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
