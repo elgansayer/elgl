@@ -268,20 +268,7 @@ export class UserService {
     },
   ): Promise<UserProfile> {
     return firstValueFrom(
-      this.http
-        .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
-        .pipe(
-          catchError(() => {
-            const updated: UserProfile = {
-              ...MOCK_USER_PROFILE,
-              status_text: 'Learning new languages!',
-              ...update,
-              auto_download_wifi_only: update.auto_download_wifi_only ?? false,
-              last_active_at: new Date().toISOString(),
-            };
-            return of(updated);
-          }),
-        ),
+      this.http.patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() }),
     );
   }
 

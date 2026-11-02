@@ -162,6 +162,33 @@ describe('AppearanceSettingsComponent', () => {
     expect(component.currentTextSize()).toBe('normal');
   });
 
+  it('should report profile unavailability when no authoritative profile is loaded', async () => {
+    vi.mocked(userServiceMock.getMyProfile!).mockResolvedValueOnce(null);
+
+    const unavailableFixture = TestBed.createComponent(AppearanceSettingsComponent);
+    unavailableFixture.detectChanges();
+    await unavailableFixture.whenStable();
+
+    expect(unavailableFixture.componentInstance.errorMessage()).toBe(
+      'settings.appearanceLoadError',
+    );
+  });
+
+  it('should not mutate either server owner when chat settings are unavailable', async () => {
+    vi.mocked(chatSettingsServiceMock.loadSettings!).mockResolvedValueOnce(false);
+
+    const unavailableFixture = TestBed.createComponent(AppearanceSettingsComponent);
+    unavailableFixture.detectChanges();
+    await unavailableFixture.whenStable();
+    await unavailableFixture.componentInstance.saveSettings();
+
+    expect(userServiceMock.updateMyProfile).not.toHaveBeenCalled();
+    expect(chatSettingsServiceMock.updateSetting).not.toHaveBeenCalled();
+    expect(unavailableFixture.componentInstance.errorMessage()).toBe(
+      'settings.appearanceLoadError',
+    );
+  });
+
   it('should navigate back', () => {
     component.goBack();
     expect(locationMock.back).toHaveBeenCalled();
@@ -261,6 +288,21 @@ describe('AppearanceSettingsComponent', () => {
 
     expect(fontScaleServiceMock.setChatTextSize).toHaveBeenLastCalledWith('medium');
     expect(component.currentChatTextSize()).toBe('medium');
+    expect(component.errorMessage()).toBe('settings.appearanceSaveError');
+    expect(component.successMessage()).toBe('');
+  });
+
+  it('should expose an error and stop when the profile accent cannot be persisted', async () => {
+    component.isVip.set(true);
+    component.primaryAccentColor.set('#e11d48');
+    vi.mocked(userServiceMock.updateMyProfile!).mockRejectedValueOnce(
+      new Error('profile write failed'),
+    );
+
+    await component.saveSettings();
+
+    expect(chatSettingsServiceMock.updateSetting).not.toHaveBeenCalled();
+    expect(themeServiceMock.setPrimaryAccentColor).not.toHaveBeenCalled();
     expect(component.errorMessage()).toBe('settings.appearanceSaveError');
     expect(component.successMessage()).toBe('');
   });

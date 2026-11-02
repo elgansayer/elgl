@@ -33,6 +33,8 @@ export class AppearanceSettingsComponent {
   readonly isSaving = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
+  private readonly profileAvailable = signal(false);
+  private readonly chatSettingsAvailable = signal(false);
 
   readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
   readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
@@ -76,24 +78,32 @@ export class AppearanceSettingsComponent {
 
   private profileResource = resource<UserProfile | null, void>({
     loader: async () => {
-      await this.loadChatTextPreference();
+      const chatSettingsAvailable = await this.loadChatTextPreference();
+      this.chatSettingsAvailable.set(chatSettingsAvailable);
+      if (!chatSettingsAvailable) {
+        this.errorMessage.set('settings.appearanceLoadError');
+      }
 
       try {
         const profile = await this.userService.getMyProfile();
-        if (profile) {
-          const isVip = Boolean(profile.is_vip);
-          this.isVip.set(isVip);
-
-          // Custom accents are a VIP entitlement. A user who previously had
-          // VIP may still have a stored preference after downgrading, but the
-          // UI must not apply or resubmit that preference while the entitlement
-          // is inactive.
-          const accent = isVip ? (profile.primary_accent_color ?? null) : null;
-          this.primaryAccentColor.set(accent);
-          this.themeService.loadFromProfile({
-            primary_accent_color: accent ?? undefined,
-          });
+        if (!profile) {
+          this.errorMessage.set('settings.appearanceLoadError');
+          return null;
         }
+
+        this.profileAvailable.set(true);
+        const isVip = Boolean(profile.is_vip);
+        this.isVip.set(isVip);
+
+        // Custom accents are a VIP entitlement. A user who previously had
+        // VIP may still have a stored preference after downgrading, but the
+        // UI must not apply or resubmit that preference while the entitlement
+        // is inactive.
+        const accent = isVip ? (profile.primary_accent_color ?? null) : null;
+        this.primaryAccentColor.set(accent);
+        this.themeService.loadFromProfile({
+          primary_accent_color: accent ?? undefined,
+        });
         return profile;
       } catch {
         this.errorMessage.set('settings.appearanceLoadError');
@@ -131,6 +141,12 @@ export class AppearanceSettingsComponent {
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
+
+    if (!this.profileAvailable() || !this.chatSettingsAvailable()) {
+      this.errorMessage.set('settings.appearanceLoadError');
+      return;
+    }
+
     this.isSaving.set(true);
 
     try {
@@ -167,10 +183,11 @@ export class AppearanceSettingsComponent {
     this.location.back();
   }
 
-  private async loadChatTextPreference(): Promise<void> {
+  private async loadChatTextPreference(): Promise<boolean> {
     const loaded = await this.chatSettingsService.loadSettings();
     if (loaded) {
       this.fontScaleService.setChatTextSize(this.chatSettingsService.textSize());
     }
+    return loaded;
   }
 }
