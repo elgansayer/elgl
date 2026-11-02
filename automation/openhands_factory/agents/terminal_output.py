@@ -87,7 +87,7 @@ def codex_outcome(result: ProcessResult) -> tuple[str | None, AgentFailure | Non
         started = False
         terminal: str | None = None
         failure_message: str | None = None
-        fatal_message: str | None = None
+        last_error_message: str | None = None
         summary: str | None = None
         for line in lines:
             if terminal is not None:
@@ -101,8 +101,8 @@ def codex_outcome(result: ProcessResult) -> tuple[str | None, AgentFailure | Non
                     raise ValueError("duplicate turn start")
                 started = True
             elif kind == "turn.completed":
-                if not started or fatal_message is not None:
-                    raise ValueError("completion lacks a start or follows an unrecoverable error")
+                if not started:
+                    raise ValueError("completion lacks a turn start")
                 terminal = kind
             elif kind == "turn.failed":
                 error = event.get("error")
@@ -111,7 +111,7 @@ def codex_outcome(result: ProcessResult) -> tuple[str | None, AgentFailure | Non
                 )
                 terminal = kind
             elif kind == "error":
-                fatal_message = _message(event.get("message"))
+                last_error_message = _message(event.get("message"))
             elif kind == "item.completed":
                 item = event.get("item")
                 if isinstance(item, dict) and item.get("type") == "agent_message":
@@ -126,8 +126,10 @@ def codex_outcome(result: ProcessResult) -> tuple[str | None, AgentFailure | Non
         if terminal == "turn.completed":
             raise ValueError("failed process claims successful completion")
         # A final turn.failed owns its diagnosis; previous tool/retry text cannot
-        # override it. Top-level `error` is also unrecoverable in the exec schema.
-        message = failure_message or fatal_message
+        # override it. The pinned event processor permits an error notification
+        # followed by a completed turn, so only a failed process may use an
+        # otherwise-final error notification as its failure diagnosis.
+        message = failure_message or last_error_message
         if message is None:
             raise ValueError("failed process lacks a provider terminal error")
         if terminal is None and kind != "error":

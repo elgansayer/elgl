@@ -15,12 +15,15 @@ output and model-authored text are not account-health evidence.
 
 | Adapter | Success evidence | Failure evidence |
 | --- | --- | --- |
-| Codex | Zero process exit and a complete JSONL turn ending in `turn.completed` | Typed outer `turn.failed` or unrecoverable `error`; startup stderr before JSONL |
+| Codex | Zero process exit and a complete JSONL turn ending in `turn.completed` | Typed outer `turn.failed`, or an otherwise-final `error` with failed process exit; startup stderr before JSONL |
 | Claude | Zero exit and a typed JSON success result with `is_error=false` | Typed error result, execution errors or bounded recognised startup quota diagnostic |
 
 Codex uses `exec --json`. The parser follows the
 [official non-interactive interface](https://learn.chatgpt.com/docs/non-interactive-mode)
 and the inspected [0.166.0 event definitions](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/exec/src/exec_events.rs).
+The pinned [JSONL event processor](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/exec/src/event_processor_with_jsonl_output.rs)
+can emit an error notification before a later completed turn. The final turn
+status owns the outcome; a recovered earlier error does not poison account health.
 Claude uses `--output-format json`, following its
 [headless interface](https://code.claude.com/docs/en/headless) and
 [result-message reference](https://code.claude.com/docs/en/agent-sdk/typescript#sdkresultmessage).

@@ -111,6 +111,23 @@ def test_codex_success_ignores_agent_and_tool_error_words_and_keeps_redaction():
     assert "[redacted]" in summary
 
 
+def test_codex_completed_turn_owns_recovered_error_diagnostics():
+    # The pinned upstream JSONL processor emits error notifications separately
+    # and accepts a later Completed status. An earlier auth/retry error cannot
+    # override that authoritative successful terminal result.
+    result = process(
+        stream(
+            START,
+            {"type": "error", "message": "authentication failed during recovered request"},
+            {"type": "item.completed", "item": {"type": "agent_message", "text": "finished"}},
+            COMPLETE,
+        ),
+        exit_code=0,
+    )
+    summary, failure = codex_outcome(result)
+    assert summary == "finished" and failure is None
+
+
 @pytest.mark.parametrize(
     "output,exit_code",
     [
@@ -123,7 +140,6 @@ def test_codex_success_ignores_agent_and_tool_error_words_and_keeps_redaction():
         (stream(START, failed(CAPACITY)), 0),
         (stream(START, COMPLETE), 1),
         (stream(START), 1),
-        (stream(START, {"type": "error", "message": CAPACITY}, COMPLETE), 0),
         (stream(START, failed(CAPACITY), {"type": "item.completed"}), 1),
         (
             stream(
