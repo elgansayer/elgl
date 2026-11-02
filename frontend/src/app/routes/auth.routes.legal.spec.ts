@@ -13,6 +13,7 @@ describe('public legal routes', () => {
   it.each([
     ['terms', 'Terms of Service - HelloTalk'],
     ['privacy', 'Privacy Policy - HelloTalk'],
+    ['legal/:type', 'Legal - HelloTalk'],
   ])('keeps /%s lazy-loaded and available before authentication', (path, title) => {
     const route = getRoute(path);
 

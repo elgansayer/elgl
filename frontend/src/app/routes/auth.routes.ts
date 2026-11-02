@@ -53,6 +53,12 @@ export const authRoutes: Routes = [
     title: 'Privacy Policy - HelloTalk',
   },
   {
+    path: 'legal/:type',
+    loadComponent: () =>
+      import('../pages/legal/dynamic-legal.component').then((m) => m.DynamicLegalComponent),
+    title: 'Legal - HelloTalk',
+  },
+  {
     path: 'support',
     loadComponent: () =>
       import('../pages/support-centre/support-centre.component').then(

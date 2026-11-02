@@ -37,4 +37,24 @@ describe('LegalController', () => {
       expect(doc.lastUpdated).toBeDefined();
     });
   });
+
+  describe('getDocumentByType', () => {
+    it('should return document by type param', () => {
+      const termsDoc = controller.getDocumentByType('terms');
+      expect(termsDoc.title).toBe('Terms of Service');
+
+      const privacyDoc = controller.getDocumentByType('privacy');
+      expect(privacyDoc.title).toBe('Privacy Policy');
+    });
+  });
+
+  describe('getDocument', () => {
+    it('should return document by parameterized route', () => {
+      const termsDoc = controller.getDocument('terms-of-service');
+      expect(termsDoc.title).toBe('Terms of Service');
+
+      const privacyDoc = controller.getDocument('privacy-policy');
+      expect(privacyDoc.title).toBe('Privacy Policy');
+    });
+  });
 });

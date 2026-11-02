@@ -2505,6 +2505,9 @@ export class I18nService {
     'legal.loadingPrivacy': 'Loading Privacy Policy...',
     'legal.errorTerms': 'We could not load the Terms of Service. Please try again.',
     'legal.errorPrivacy': 'We could not load the Privacy Policy. Please try again.',
+    'legal.loadingDocument': 'Loading legal document...',
+    'legal.errorDocument': 'We could not load the legal document. Please try again.',
+    'legal.document': 'Legal Document',
     'legal.retry': 'Try again',
     'settings.messageFiltersSection': 'Message Filters',
     'settings.messageFiltersDescription':
