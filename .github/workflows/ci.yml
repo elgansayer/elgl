@@ -519,20 +519,9 @@ jobs:
           fi
       - run: uv run --frozen pytest
         working-directory: automation
-      - name: Checkout pinned Neptune parser/comparer for real integration checks
-        uses: actions/checkout@v7
-        with:
-          repository: elgansayer/Neptune-Bomberman
-          ref: 8e94003417435ef396192dbf25ee6882fc3567a2
-          path: .neptune-accepted-source
-          persist-credentials: false
-          submodules: false
-          sparse-checkout: |
-            tools
-            docs/restart
       - name: Require actual provider and preparation namespace containment
         env:
-          NEPTUNE_ACCEPTED_SOURCE: ${{ github.workspace }}/.neptune-accepted-source
+          NEPTUNE_ACCEPTED_SOURCE: ''
           NEPTUNE_INTAKE_EVIDENCE: ${{ runner.temp }}/neptune-intake-evidence
         run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py runtime_checks/test_supervised_routing_namespace.py runtime_checks/test_preparation_namespace.py runtime_checks/test_neptune_intake_namespace.py
         working-directory: automation

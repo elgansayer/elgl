@@ -67,12 +67,18 @@ and can be regenerated in a fresh attempt. The existing publication path reuses
 the tested checkpoint rather than creating an empty or untested commit afterward.
 
 Unit fixtures test real Git commits/JobStore recovery and failure classification.
-Mandatory namespace checks use pinned accepted Neptune code at
-`8e94003417435ef396192dbf25ee6882fc3567a2`, with matching and deliberately divergent
-role-labelled **synthetic** traces. They execute the actual parser/comparer and
-prove read-only inputs and hidden authority/credentials. The small metadata
-fixture replaces only its unused native-addon lock with a labelled non-native
-marker; parser/comparer source identities are checked against the pin.
-These checks prove wiring only, not authentic Saturn captures, production Godot
-parity, effective account-wide admission or continuous restart recovery. Those
-remain explicit operational acceptance under Neptune #518/#536/#510/#76.
+Mandatory public CI namespace checks use explicitly labelled owned protocol
+fixtures, matching/divergent synthetic traces, read-only inputs and hidden
+credentials/authority. They do not establish compatibility with private Neptune
+algorithms. Elgl's repository-scoped token cannot fetch private Neptune; no
+cross-repository secret or private source is added to the public repository.
+
+Private completion evidence must additionally run the same namespace test with
+`NEPTUNE_ACCEPTED_SOURCE` pointing to a clean accepted Neptune checkout at
+`8e94003417435ef396192dbf25ee6882fc3567a2`. This invokes the actual parser/comparer,
+whose source identities are checked against the pin. Keep this PR draft until
+that experiment passes. Private logs stay private; publish only result identities.
+The small metadata fixture replaces only its unused native-addon lock with a
+labelled non-native marker. These checks prove wiring, not authentic Saturn
+captures, production Godot parity, effective account-wide admission or continuous
+restart recovery. Those remain operational acceptance under #518/#536/#510/#76.

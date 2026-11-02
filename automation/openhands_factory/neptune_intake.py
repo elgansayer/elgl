@@ -272,17 +272,25 @@ print(json.dumps(feature_contracts.requirements(snapshot['task']),sort_keys=True
         report.update(status="verifying", binding=binding, features=features)
         atomic_write_json(journal, report)
         job.neptune_contract_sha = target
+
+        def unchanged() -> None:
+            if not 0 <= time.time() - snapshot["captured_at"] <= 900:
+                raise ValueError("coordinator freshness expired during verification")
+            if _git(workspace, "rev-parse", "HEAD").decode().strip() != head:
+                raise ValueError("candidate advanced during verification")
+            if _plain(issue / "intake.json", MAX_INTAKE) != raw:
+                raise ValueError("coordinator intake changed while verifying")
+            for role in ("reference", "candidate") if features else ():
+                if (
+                    hashlib.sha256(
+                        _plain(issue / "artifacts" / NAME / (role + ".json"), MAX_TRACE)
+                    ).hexdigest()
+                    != features[NAME][role + "-file"]
+                ):
+                    raise ValueError("coordinator artifacts changed while verifying")
+
         yield AcceptedVerification(work, canonical(binding), canonical(features))
-        if _plain(issue / "intake.json", MAX_INTAKE) != raw:
-            raise ValueError("coordinator intake changed while verifying")
-        for role in ("reference", "candidate") if features else ():
-            if (
-                hashlib.sha256(
-                    _plain(issue / "artifacts" / NAME / (role + ".json"), MAX_TRACE)
-                ).hexdigest()
-                != features[NAME][role + "-file"]
-            ):
-                raise ValueError("coordinator artifacts changed while verifying")
+        unchanged()
         report["status"] = "verified"
     except (
         ValueError,
@@ -292,8 +300,14 @@ print(json.dumps(feature_contracts.requirements(snapshot['task']),sort_keys=True
         subprocess.SubprocessError,
         VerificationFailed,
     ) as error:
+        was_verifying = report.get("status") == "verifying"
         report.update(status="failed", error=type(error).__name__)
         if isinstance(error, VerificationFailed):
+            if was_verifying:
+                try:
+                    unchanged()
+                except (ValueError, OSError, subprocess.SubprocessError) as dependency:
+                    raise NeptuneIntakeUnavailable(str(dependency)[:600]) from error
             raise
         raise NeptuneIntakeUnavailable(str(error)[:600]) from error
     finally:

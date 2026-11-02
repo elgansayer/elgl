@@ -310,3 +310,23 @@ def test_missing_input_keeps_same_job_out_of_paid_repair(owned):
     assert job.state is JobState.VERIFYING
     assert job.quality_repairs == job.repair_attempts == 0
     assert controller.jobs.load()[job.task.identifier].verification_candidate_sha
+
+
+@pytest.mark.parametrize("change", ["stale", "registry", "head"])
+def test_coordinator_or_identity_changes_take_precedence_over_paid_repair(
+    owned, monkeypatch, change
+):
+    checkpoint(owned)
+    config, workspace, job, _, _ = owned
+    path, snapshot = publish(owned)
+    with (
+        pytest.raises(NeptuneIntakeUnavailable),
+        accepted_verification(config, job, workspace, {Path("docs/case.md")}),
+    ):
+        if change == "stale":
+            monkeypatch.setattr(module.time, "time", lambda: snapshot["captured_at"] + 901)
+        elif change == "registry":
+            path.write_text("{}")
+        else:
+            git(workspace, "commit", "--allow-empty", "-qm", "fixture: concurrent candidate")
+        raise VerificationFailed("child failed while acceptance inputs changed")
