@@ -31,7 +31,7 @@ jobs:
         working-directory: factory-dashboard
         run: npm test
       - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -39,7 +39,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: factory-dashboard
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
           tags: |
             ghcr.io/elgansayer/factory-dashboard:latest
             ghcr.io/elgansayer/factory-dashboard:sha-${{ github.sha }}
