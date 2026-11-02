@@ -92,6 +92,35 @@ describe('ChatSearchComponent', () => {
     expect(input.getAttribute('placeholder')).toBeNull();
   });
 
+  it('uses named Spartan groups with native radio keyboard semantics', () => {
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const groups = Array.from(
+      host.querySelectorAll<HTMLElement>('[role="radiogroup"]'),
+    );
+    expect(groups.map((group) => group.getAttribute('aria-label'))).toEqual([
+      'chatSearch.scopeLabel',
+      'chatSearch.messageTypeLabel',
+    ]);
+
+    const scopeRadios = Array.from(
+      groups[0].querySelectorAll<HTMLInputElement>('input[type="radio"]'),
+    );
+    expect(scopeRadios).toHaveLength(2);
+    expect(scopeRadios.map((radio) => radio.name)).toEqual([
+      'chat-search-scope',
+      'chat-search-scope',
+    ]);
+    expect(scopeRadios.map((radio) => radio.checked)).toEqual([true, false]);
+
+    scopeRadios[1].click();
+    fixture.detectChanges();
+
+    expect(component.searchMode()).toBe('global');
+    expect(scopeRadios.map((radio) => radio.checked)).toEqual([false, true]);
+  });
+
   it('re-runs an existing query when switching between room and global search', async () => {
     searchMessages.mockResolvedValue([]);
     component.query.set('bonjour');

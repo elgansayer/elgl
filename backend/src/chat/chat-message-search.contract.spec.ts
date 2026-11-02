@@ -47,12 +47,15 @@ describe('chat message search production contract', () => {
       /const escapedTerm = escapeLikePattern\(trimmedTerm\)/,
     );
     expect(chatService).toMatch(
-      /\.or\(`text_content\.ilike\."%\$\{escapedTerm\}%",is_encrypted\.eq\.true`\)/,
+      /\.ilike\('text_content', `%\$\{escapedTerm\}%`\)/,
     );
+    expect(chatService).toMatch(/\.eq\('is_encrypted', false\)/);
+    expect(chatService).toMatch(/\.eq\('is_encrypted', true\)/);
     expect(chatService).toMatch(
       /\.order\('created_at', \{ ascending: false \}\)/,
     );
     expect(chatService).toMatch(/\.limit\(limit\)/);
+    expect(chatService).toMatch(/Math\.min\(limit \* 4, 200\)/);
     expect(searchDto).toMatch(/@MinLength\(2\)/);
     expect(searchDto).toMatch(/@MaxLength\(200\)/);
     expect(searchDto).toMatch(/@Max\(100\)/);
@@ -68,7 +71,7 @@ describe('chat message search production contract', () => {
       /\.not\('deleted_for_user_ids', 'cs', `\{\$\{userId\}\}`\)/,
     );
     expect(chatService).toMatch(
-      /async searchAllMessages\([\s\S]*?\.select\(\s*`\s*id,\s*room_id,\s*sender_id,\s*message_type,\s*text_content,\s*is_encrypted,\s*encrypted_payload,/,
+      /async searchAllMessages\([\s\S]*?const projection = `\s*id,\s*room_id,\s*sender_id,\s*message_type,\s*text_content,\s*is_encrypted,\s*encrypted_payload,/,
     );
   });
 

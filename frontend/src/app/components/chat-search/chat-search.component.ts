@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { ChatMessage, ChatService } from '../../services/chat.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -14,7 +15,14 @@ interface MessageTypeFilter {
 
 @Component({
   selector: 'app-chat-search',
-  imports: [CommonModule, FormsModule, TranslatePipe, ...HlmButtonImports, ...HlmInputImports],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    ...HlmButtonImports,
+    ...HlmInputImports,
+    ...HlmRadioGroupImports,
+  ],
   template: `
     <div
       class="max-h-96 w-full min-w-0 overflow-hidden rounded-xl border border-surface-100 bg-surface-200 shadow-2xl sm:w-80"
@@ -38,55 +46,49 @@ interface MessageTypeFilter {
         </div>
       </div>
 
-      <div class="flex flex-wrap gap-1 border-b border-surface-100 p-2" role="radiogroup">
-        <button
-          hlmBtn
-          type="button"
-          variant="ghost"
-          size="sm"
+      <hlm-radio-group
+        name="chat-search-scope"
+        [value]="searchMode()"
+        (valueChange)="setSearchMode($event)"
+        [attr.aria-label]="'chatSearch.scopeLabel' | t"
+        class="flex flex-wrap gap-1 border-b border-surface-100 p-2"
+      >
+        <hlm-radio
+          value="within"
           class="rounded-full whitespace-nowrap"
-          role="radio"
-          [attr.aria-checked]="searchMode() === 'within'"
           [class.bg-primary]="searchMode() === 'within'"
           [class.text-on-fill]="searchMode() === 'within'"
-          (click)="setSearchMode('within')"
         >
           {{ 'chatSearch.thisChat' | t }}
-        </button>
-        <button
-          hlmBtn
-          type="button"
-          variant="ghost"
-          size="sm"
+        </hlm-radio>
+        <hlm-radio
+          value="global"
           class="rounded-full whitespace-nowrap"
-          role="radio"
-          [attr.aria-checked]="searchMode() === 'global'"
           [class.bg-primary]="searchMode() === 'global'"
           [class.text-on-fill]="searchMode() === 'global'"
-          (click)="setSearchMode('global')"
         >
           {{ 'chatSearch.allChats' | t }}
-        </button>
-      </div>
+        </hlm-radio>
+      </hlm-radio-group>
 
-      <div class="flex gap-1 overflow-x-auto border-b border-surface-100 p-2" role="radiogroup">
+      <hlm-radio-group
+        name="chat-search-message-type"
+        [value]="selectedType()"
+        (valueChange)="setSelectedType($event)"
+        [attr.aria-label]="'chatSearch.messageTypeLabel' | t"
+        class="flex gap-1 overflow-x-auto border-b border-surface-100 p-2"
+      >
         @for (type of messageTypes; track type.value) {
-          <button
-            hlmBtn
-            type="button"
-            variant="ghost"
-            size="sm"
+          <hlm-radio
+            [value]="type.value"
             class="rounded-full whitespace-nowrap"
-            role="radio"
-            [attr.aria-checked]="selectedType() === type.value"
             [class.bg-primary]="selectedType() === type.value"
             [class.text-on-fill]="selectedType() === type.value"
-            (click)="setSelectedType(type.value)"
           >
             {{ type.labelKey | t }}
-          </button>
+          </hlm-radio>
         }
-      </div>
+      </hlm-radio-group>
 
       <div class="max-h-64 overflow-y-auto" aria-live="polite">
         @if (isSearching()) {

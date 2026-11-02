@@ -986,6 +986,7 @@ describe('ChatService', () => {
         select: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
+        ilike: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
@@ -1067,9 +1068,9 @@ describe('ChatService', () => {
       expect(projection).toContain('encrypted_payload');
       expect(memberships.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(messages.in).toHaveBeenCalledWith('room_id', ['room-1', 'room-2']);
-      expect(messages.or).toHaveBeenCalledWith(
-        'text_content.ilike."%hello%",is_encrypted.eq.true',
-      );
+      expect(messages.ilike).toHaveBeenCalledWith('text_content', '%hello%');
+      expect(messages.eq).toHaveBeenCalledWith('is_encrypted', false);
+      expect(messages.eq).toHaveBeenCalledWith('is_encrypted', true);
       expect(messages.eq).toHaveBeenCalledWith(
         'is_deleted_for_everyone',
         false,
@@ -1089,6 +1090,7 @@ describe('ChatService', () => {
         ascending: false,
       });
       expect(messages.limit).toHaveBeenCalledWith(25);
+      expect(messages.limit).toHaveBeenCalledWith(100);
       expect(messages.not).toHaveBeenCalledWith(
         'sender_id',
         'in',
@@ -1122,9 +1124,50 @@ describe('ChatService', () => {
 
       await service.searchAllMessages('user-1', '**100%_\\"ready,now');
 
-      expect(messages.or).toHaveBeenCalledWith(
-        'text_content.ilike."%\\*\\*100\\%\\_\\\\\\"ready,now%",is_encrypted.eq.true',
+      expect(messages.ilike).toHaveBeenCalledWith(
+        'text_content',
+        '%\\*\\*100\\%\\_\\\\\\"ready,now%',
       );
+    });
+
+    it('does not let newer encrypted candidates consume the plaintext match limit', async () => {
+      const memberships = membershipBuilder({
+        data: [{ room_id: 'room-1' }],
+        error: null,
+      });
+      const plaintextMatch = {
+        id: 'plaintext-match',
+        room_id: 'room-1',
+        sender_id: 'user-2',
+        message_type: 'text',
+        text_content: 'Older genuine match',
+        is_encrypted: false,
+        created_at: '2026-11-01T00:00:00.000Z',
+      };
+      const encryptedCandidate = {
+        id: 'encrypted-candidate',
+        room_id: 'room-1',
+        sender_id: 'user-2',
+        message_type: 'text',
+        text_content: null,
+        is_encrypted: true,
+        encrypted_payload: 'ciphertext',
+        created_at: '2026-11-02T00:00:00.000Z',
+      };
+      const messageBuilders = [
+        messagesBuilder({ data: [plaintextMatch], error: null }),
+        messagesBuilder({ data: [encryptedCandidate], error: null }),
+      ];
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'chat_room_members' ? memberships : messageBuilders.shift(),
+      );
+
+      await expect(
+        service.searchAllMessages('user-1', 'match', 1),
+      ).resolves.toEqual([
+        expect.objectContaining({ id: 'encrypted-candidate' }),
+        expect.objectContaining({ id: 'plaintext-match' }),
+      ]);
     });
 
     it('reports membership lookup failures as unavailable rather than empty results', async () => {

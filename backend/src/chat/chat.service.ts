@@ -809,10 +809,7 @@ export class ChatService {
     if (trimmedTerm.length < 2) return [];
     const escapedTerm = escapeLikePattern(trimmedTerm);
 
-    let query = supabase
-      .from('chat_messages')
-      .select(
-        `
+    const projection = `
         id,
         room_id,
         sender_id,
@@ -829,32 +826,53 @@ export class ChatService {
           id,
           display_name
         )
-      `,
-      )
-      .in('room_id', roomIds)
-      .or(`text_content.ilike."%${escapedTerm}%",is_encrypted.eq.true`)
-      .eq('is_deleted_for_everyone', false)
-      .not('deleted_for_user_ids', 'cs', `{${userId}}`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      `;
+    const buildVisibleQuery = () => {
+      let query = supabase
+        .from('chat_messages')
+        .select(projection)
+        .in('room_id', roomIds)
+        .eq('is_deleted_for_everyone', false)
+        .not('deleted_for_user_ids', 'cs', `{${userId}}`);
 
-    if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
-    }
+      if (blockedIds.length > 0) {
+        query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
+      }
+      return query;
+    };
 
-    const response = await query;
-    if (response.error) {
+    const encryptedCandidateLimit = Math.min(limit * 4, 200);
+    const [plaintextResponse, encryptedResponse] = await Promise.all([
+      buildVisibleQuery()
+        .eq('is_encrypted', false)
+        .ilike('text_content', `%${escapedTerm}%`)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      buildVisibleQuery()
+        .eq('is_encrypted', true)
+        .order('created_at', { ascending: false })
+        .limit(encryptedCandidateLimit),
+    ]);
+
+    if (plaintextResponse.error || encryptedResponse.error) {
       this.logger.error('chat.message_search_query_failed');
       throw new ServiceUnavailableException();
     }
 
-    if (!response.data) {
+    if (!plaintextResponse.data && !encryptedResponse.data) {
       return [];
     }
 
-    const messages: SearchMessageRow[] = response.data;
+    const messages = new Map<string, SearchMessageRow>();
+    for (const message of [
+      ...(plaintextResponse.data ?? []),
+      ...(encryptedResponse.data ?? []),
+    ]) {
+      messages.set(message.id, message);
+    }
 
-    return messages
+    return [...messages.values()]
+      .sort((left, right) => right.created_at.localeCompare(left.created_at))
       .filter(
         (msg) =>
           !msg.is_deleted_for_everyone &&

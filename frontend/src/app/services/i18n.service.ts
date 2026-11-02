@@ -887,6 +887,8 @@ export class I18nService {
     'chatRoom.searchBtn': 'Search',
     'chatSearch.thisChat': 'This chat',
     'chatSearch.allChats': 'All chats',
+    'chatSearch.scopeLabel': 'Search scope',
+    'chatSearch.messageTypeLabel': 'Message type',
     'chatSearch.searching': 'Searching...',
     'chatSearch.noResults': 'No messages found.',
     'chatSearch.unavailable': 'Search is unavailable. Try again.',
