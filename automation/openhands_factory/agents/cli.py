@@ -50,6 +50,8 @@ _AUTH_MARKERS = (
     "invalid credentials",
 )
 _QUOTA_MARKERS = (
+    "you've hit your session limit",
+    "you have hit your session limit",
     "you've hit your weekly limit",
     "you have hit your weekly limit",
     "quota exhausted",
