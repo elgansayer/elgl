@@ -456,8 +456,9 @@ type XpEventRow = {
   created_at: string;
 };
 
+// user_follows has the composite primary key (follower_id, following_id) and no
+// id column (supabase/migrations/005_moments.sql).
 type UserFollowRow = {
-  id: string;
   follower_id: string;
   following_id: string;
   created_at: string;
@@ -541,16 +542,24 @@ type UserStickerPackRow = {
   created_at?: string;
 };
 
+// public.moments is owned through user_id and stores text in text_content and
+// the language community in target_language (supabase/migrations/005_moments.sql).
+// author_id, content_text and detected_language are NOT columns: they remain
+// declared only so the unreachable legacy src/feed/feed.service.ts still
+// compiles. Never use them in new code; the schema contract spec fails when a
+// reachable query names them.
 type MomentRow = {
   id: string;
+  /** @deprecated not a column; see the note above */
   author_id?: string | null;
   user_id?: string | null;
   text_content?: string | null;
-  /** @deprecated legacy alias for text_content used by some older call sites */
+  /** @deprecated not a column; see the note above */
   content_text?: string | null;
   media_urls?: string[] | null;
   media_type?: string | null;
   voice_note_url?: string | null;
+  /** @deprecated not a column; see the note above */
   detected_language?: string | null;
   target_language?: string | null;
   post_type?: string | null;
@@ -570,6 +579,7 @@ type MomentRow = {
 type MomentCommentRow = {
   id: string;
   user_id: string;
+  /** @deprecated not a column of public.moment_comments; use user_id */
   author_id?: string;
   moment_id: string;
   text_content: string | null;
@@ -602,7 +612,8 @@ type MomentQuestionAnswersRow = {
   id?: string;
   moment_id: string;
   user_id: string;
-  answer: string;
+  /** Column name from 005_moments.sql (VARCHAR(255) NOT NULL). */
+  selected_answer: string;
   is_correct: boolean;
   created_at?: string;
 };

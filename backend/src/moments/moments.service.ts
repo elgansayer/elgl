@@ -158,7 +158,12 @@ export class MomentsService {
         text_content: dto.text_content ?? null,
         media_urls: dto.media_urls ?? [],
         media_type: mediaType,
-        target_language: dto.target_language ?? null,
+        // moments.target_language is NOT NULL DEFAULT 'en' (005_moments.sql).
+        // An explicit null bypasses the column default and fails the insert,
+        // so the key is omitted when the client does not choose a language.
+        ...(dto.target_language
+          ? { target_language: dto.target_language }
+          : {}),
         voice_note_url: dto.voice_note_url ?? null,
         is_ephemeral: true,
         expires_at: expiresAt,
@@ -844,11 +849,13 @@ export class MomentsService {
         .insert({
           moment_id: momentId,
           user_id: userId,
-          answer,
+          selected_answer: answer,
           is_correct: correct,
         });
       if (insertError) {
-        // ignore; table may not exist in some environments
+        // ignore; a repeat answer violates unique_moment_question_answer
+        // (moment_id, user_id), so the first recorded answer is kept and the
+        // aggregate counts below stay stable when the request is retried
       }
     } catch {
       // ignore

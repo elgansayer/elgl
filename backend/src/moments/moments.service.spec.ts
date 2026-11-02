@@ -803,6 +803,59 @@ describe('MomentsService', () => {
         service.createStory('user-1', { text_content: 'Hello' }),
       ).rejects.toThrow('Failed to create story: insert failed');
     });
+
+    it('should omit target_language when none is chosen so the NOT NULL column default applies', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: 'story-1',
+          user_id: 'user-1',
+          text_content: 'Hello',
+          media_urls: [],
+          media_type: 'none',
+          voice_note_url: null,
+          target_language: 'en',
+          expires_at: '2026-08-02T00:00:00.000Z',
+          created_at: '2026-08-01T00:00:00.000Z',
+        },
+        error: null,
+      });
+
+      const result = await service.createStory('user-1', {
+        text_content: 'Hello',
+      });
+
+      // An explicit null would bypass moments.target_language DEFAULT 'en' and
+      // violate its NOT NULL constraint, so the key must not be sent at all.
+      const [payload] = mockQueryBuilder.insert.mock.calls[0];
+      expect(payload).not.toHaveProperty('target_language');
+      expect(result.target_language).toBe('en');
+    });
+
+    it('should persist the chosen target_language', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: {
+          id: 'story-2',
+          user_id: 'user-1',
+          text_content: 'Konnichiwa',
+          media_urls: [],
+          media_type: 'none',
+          voice_note_url: null,
+          target_language: 'ja',
+          expires_at: '2026-08-02T00:00:00.000Z',
+          created_at: '2026-08-01T00:00:00.000Z',
+        },
+        error: null,
+      });
+
+      await service.createStory('user-1', {
+        text_content: 'Konnichiwa',
+        target_language: 'ja',
+      });
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ target_language: 'ja' }),
+      );
+    });
   });
 
   describe('createLanguageQuestion', () => {
@@ -1509,6 +1562,7 @@ describe('MomentsService', () => {
     });
 
     it('should record the answer and report whether it was correct', async () => {
+      const insertAnswer = vi.fn().mockResolvedValue({ error: null });
       mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'moments') {
           return {
@@ -1529,7 +1583,7 @@ describe('MomentsService', () => {
         }
         if (table === 'moment_question_answers') {
           return {
-            insert: vi.fn().mockResolvedValue({ error: null }),
+            insert: insertAnswer,
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             returns: vi.fn().mockResolvedValue({
@@ -1543,6 +1597,61 @@ describe('MomentsService', () => {
 
       const result = await service.answerLanguageQuestion('user-1', 'm-1', 'A');
       expect(result).toEqual({ correct: true, correctAnswer: 'A' });
+      // 005_moments.sql names the column selected_answer (VARCHAR(255) NOT
+      // NULL); an `answer` key does not exist and would fail every insert.
+      expect(insertAnswer).toHaveBeenCalledWith({
+        moment_id: 'm-1',
+        user_id: 'user-1',
+        selected_answer: 'A',
+        is_correct: true,
+      });
+    });
+
+    it('should keep the first answer and recompute stable counts when a retry violates the unique answer constraint', async () => {
+      const updateMoment = vi.fn().mockReturnThis();
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            update: updateMoment,
+            single: vi.fn().mockResolvedValue({
+              data: {
+                user_id: 'author-1',
+                post_type: 'language_question',
+                correct_answer: 'A',
+              },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'moment_question_answers') {
+          return {
+            insert: vi.fn().mockResolvedValue({
+              error: {
+                code: '23505',
+                message:
+                  'duplicate key value violates unique constraint "unique_moment_question_answer"',
+              },
+            }),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            returns: vi.fn().mockResolvedValue({
+              data: [{ is_correct: true }, { is_correct: false }],
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const result = await service.answerLanguageQuestion('user-1', 'm-1', 'A');
+
+      expect(result).toEqual({ correct: true, correctAnswer: 'A' });
+      expect(updateMoment).toHaveBeenCalledWith({
+        correct_answers_count: 1,
+        total_answers_count: 2,
+      });
     });
 
     it('should report an incorrect answer', async () => {

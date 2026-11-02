@@ -17,14 +17,17 @@ export class DataExportWorker {
         profileRes,
         momentsRes,
         commentsRes,
+        likesRes,
         messagesRes,
         flashcardsRes,
         decksRes,
         favouritesRes,
       ] = await Promise.all([
         supabase.from('users').select('*').eq('id', userId).single(),
-        supabase.from('moments').select('*').eq('author_id', userId),
-        supabase.from('moment_comments').select('*').eq('author_id', userId),
+        // The Moments tables are owned through user_id (005_moments.sql).
+        supabase.from('moments').select('*').eq('user_id', userId),
+        supabase.from('moment_comments').select('*').eq('user_id', userId),
+        supabase.from('moment_likes').select('*').eq('user_id', userId),
         supabase.from('chat_messages').select('*').eq('sender_id', userId),
         supabase.from('flashcards').select('*').eq('user_id', userId),
         supabase.from('decks').select('*').eq('user_id', userId),
@@ -54,10 +57,24 @@ export class DataExportWorker {
         throw new Error(`Failed to fetch profile: ${profileRes.error.message}`);
       }
 
+      // An unreadable Moments dataset must not be exported as null: that is how
+      // a query on a column that did not exist went unnoticed.
+      const momentsFailure = [
+        { dataset: 'moments', error: momentsRes.error },
+        { dataset: 'moment_comments', error: commentsRes.error },
+        { dataset: 'moment_likes', error: likesRes.error },
+      ].find(({ error }) => error);
+      if (momentsFailure?.error) {
+        throw new Error(
+          `Failed to fetch ${momentsFailure.dataset}: ${momentsFailure.error.message}`,
+        );
+      }
+
       const result: Record<string, unknown> = {
         profile: profileRes.data,
         moments: momentsRes.data,
         comments: commentsRes.data,
+        moment_likes: likesRes.data,
         messages: messagesRes.data,
         flashcards: flashcardsRes.data,
         decks: decksRes.data,
