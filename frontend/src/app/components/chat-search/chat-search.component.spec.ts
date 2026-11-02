@@ -70,6 +70,28 @@ describe('ChatSearchComponent', () => {
     expect(searchMessages).toHaveBeenCalledTimes(1);
   });
 
+  it('defines translated labels for every client-side message type filter', () => {
+    expect(component.messageTypes).toEqual([
+      { value: 'all', labelKey: 'chatSearch.messageType.all' },
+      { value: 'text', labelKey: 'chatSearch.messageType.text' },
+      { value: 'voice', labelKey: 'chatSearch.messageType.voice' },
+      { value: 'correction', labelKey: 'chatSearch.messageType.correction' },
+      { value: 'doodle', labelKey: 'chatSearch.messageType.doodle' },
+      { value: 'gift', labelKey: 'chatSearch.messageType.gift' },
+    ]);
+  });
+
+  it('provides a persistent translated label for the search field', () => {
+    fixture.detectChanges();
+
+    const label = fixture.nativeElement.querySelector('label');
+    const input = fixture.nativeElement.querySelector('input[type="search"]');
+
+    expect(label.textContent.trim()).toBe('chatRoom.searchPlaceholder');
+    expect(label.htmlFor).toBe(input.id);
+    expect(input.getAttribute('placeholder')).toBeNull();
+  });
+
   it('re-runs an existing query when switching between room and global search', async () => {
     searchMessages.mockResolvedValue([]);
     component.query.set('bonjour');
@@ -108,7 +130,9 @@ describe('ChatSearchComponent', () => {
   });
 
   it('distinguishes provider failure from a genuine empty result and retries', async () => {
-    searchMessages.mockRejectedValueOnce(new Error('provider unavailable')).mockResolvedValueOnce([]);
+    searchMessages
+      .mockRejectedValueOnce(new Error('provider unavailable'))
+      .mockResolvedValueOnce([]);
 
     component.query.set('error');
     component.onSearch();
@@ -116,6 +140,8 @@ describe('ChatSearchComponent', () => {
 
     expect(component.searchError()).toBe(true);
     expect(component.results()).toEqual([]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('chatSearch.unavailable');
 
     component.retrySearch();
     await vi.advanceTimersByTimeAsync(0);
@@ -123,6 +149,8 @@ describe('ChatSearchComponent', () => {
     expect(searchMessages).toHaveBeenCalledTimes(2);
     expect(component.searchError()).toBe(false);
     expect(component.results()).toEqual([]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('chatSearch.noResults');
   });
 
   it('does not search or show stale state for queries shorter than two characters', async () => {

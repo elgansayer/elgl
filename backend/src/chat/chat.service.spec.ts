@@ -45,6 +45,7 @@ describe('ChatService', () => {
   let eventEmitter: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let getBlockedAndBlockerIds: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -71,6 +72,8 @@ describe('ChatService', () => {
       rpc: vi.fn(),
     };
 
+    getBlockedAndBlockerIds = vi.fn().mockResolvedValue([]);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ChatService,
@@ -93,9 +96,7 @@ describe('ChatService', () => {
         },
         {
           provide: SafetyService,
-          useValue: {
-            getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
-          },
+          useValue: { getBlockedAndBlockerIds },
         },
         {
           provide: LinkPreviewService,
@@ -963,6 +964,176 @@ describe('ChatService', () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({ id: 'mock-msg-1', room_id: 'room-1' });
       expect(result[1]).toMatchObject({ id: 'mock-msg-2', room_id: 'room-1' });
+    });
+  });
+
+  describe('searchAllMessages', () => {
+    function membershipBuilder(response: {
+      data: { room_id: string }[] | null;
+      error: { message: string } | null;
+    }) {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue(response),
+      };
+    }
+
+    function messagesBuilder(response: {
+      data: Record<string, unknown>[] | null;
+      error: { message: string } | null;
+    }) {
+      return {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        ilike: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: (value: typeof response) => void) =>
+          resolve(response),
+        ),
+      };
+    }
+
+    it('searches only member rooms and removes messages hidden from the learner', async () => {
+      getBlockedAndBlockerIds.mockResolvedValue(['blocked-user']);
+      const memberships = membershipBuilder({
+        data: [{ room_id: 'room-1' }, { room_id: 'room-2' }],
+        error: null,
+      });
+      const messages = messagesBuilder({
+        data: [
+          {
+            id: 'visible',
+            room_id: 'room-1',
+            sender_id: 'user-2',
+            message_type: 'text',
+            text_content: 'Hello there',
+            is_read: true,
+            created_at: '2026-11-02T00:00:00.000Z',
+            deleted_for_user_ids: ['user-3'],
+            is_view_once: true,
+            viewed_at: '2026-11-02T00:01:00.000Z',
+            media_url: 'https://private.example/view-once',
+          },
+          {
+            id: 'deleted',
+            room_id: 'room-1',
+            sender_id: 'user-2',
+            message_type: 'text',
+            is_read: true,
+            created_at: '2026-11-02T00:00:00.000Z',
+            is_deleted_for_everyone: true,
+          },
+          {
+            id: 'hidden-for-user',
+            room_id: 'room-2',
+            sender_id: 'user-2',
+            message_type: 'text',
+            is_read: true,
+            created_at: '2026-11-02T00:00:00.000Z',
+            deleted_for_user_ids: ['user-1'],
+          },
+        ],
+        error: null,
+      });
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'chat_room_members' ? memberships : messages,
+      );
+
+      await expect(
+        service.searchAllMessages('user-1', '  hello  ', 25),
+      ).resolves.toEqual([
+        {
+          id: 'visible',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          text_content: 'Hello there',
+          is_read: true,
+          created_at: '2026-11-02T00:00:00.000Z',
+          expires_at: undefined,
+          sender: undefined,
+        },
+      ]);
+      const projection = messages.select.mock.calls[0][0];
+      expect(projection).not.toContain('*');
+      expect(projection).not.toContain('media_url');
+      expect(projection).not.toContain('viewed_at');
+      expect(memberships.eq).toHaveBeenCalledWith('user_id', 'user-1');
+      expect(messages.in).toHaveBeenCalledWith('room_id', ['room-1', 'room-2']);
+      expect(messages.ilike).toHaveBeenCalledWith('text_content', '%hello%');
+      expect(messages.order).toHaveBeenCalledWith('created_at', {
+        ascending: false,
+      });
+      expect(messages.limit).toHaveBeenCalledWith(25);
+      expect(messages.not).toHaveBeenCalledWith(
+        'sender_id',
+        'in',
+        '(blocked-user)',
+      );
+    });
+
+    it('rejects a room-scoped search when the learner is not a member', async () => {
+      const memberships = membershipBuilder({
+        data: [{ room_id: 'room-1' }],
+        error: null,
+      });
+      mockSupabaseClient.from.mockReturnValue(memberships);
+
+      await expect(
+        service.searchAllMessages('user-1', 'hello', 50, 'room-2'),
+      ).resolves.toEqual([]);
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith('chat_messages');
+    });
+
+    it('treats SQL LIKE wildcard characters as literal search text', async () => {
+      const memberships = membershipBuilder({
+        data: [{ room_id: 'room-1' }],
+        error: null,
+      });
+      const messages = messagesBuilder({ data: [], error: null });
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'chat_room_members' ? memberships : messages,
+      );
+
+      await service.searchAllMessages('user-1', '100%_\\ready');
+
+      expect(messages.ilike).toHaveBeenCalledWith(
+        'text_content',
+        '%100\\%\\_\\\\ready%',
+      );
+    });
+
+    it('reports membership lookup failures as unavailable rather than empty results', async () => {
+      const memberships = membershipBuilder({
+        data: null,
+        error: { message: 'provider unavailable' },
+      });
+      mockSupabaseClient.from.mockReturnValue(memberships);
+
+      await expect(
+        service.searchAllMessages('user-1', 'hello'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('reports message query failures as unavailable rather than empty results', async () => {
+      const memberships = membershipBuilder({
+        data: [{ room_id: 'room-1' }],
+        error: null,
+      });
+      const messages = messagesBuilder({
+        data: null,
+        error: { message: 'provider unavailable' },
+      });
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'chat_room_members' ? memberships : messages,
+      );
+
+      await expect(
+        service.searchAllMessages('user-1', 'hello'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
   });
 

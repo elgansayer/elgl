@@ -204,6 +204,21 @@ describe('I18nService', () => {
     );
   });
 
+  it('provides complete in-room message search copy', () => {
+    expect(service.translate('chatRoom.searchPlaceholder')).toBe('Search messages');
+    expect(service.translate('chatSearch.thisChat')).toBe('This chat');
+    expect(service.translate('chatSearch.allChats')).toBe('All chats');
+    expect(service.translate('chatSearch.searching')).toBe('Searching...');
+    expect(service.translate('chatSearch.noResults')).toBe('No messages found.');
+    expect(service.translate('chatSearch.unavailable')).toBe('Search is unavailable. Try again.');
+    expect(service.translate('chatSearch.messageType.all')).toBe('All');
+    expect(service.translate('chatSearch.messageType.text')).toBe('Text');
+    expect(service.translate('chatSearch.messageType.voice')).toBe('Voice');
+    expect(service.translate('chatSearch.messageType.correction')).toBe('Corrections');
+    expect(service.translate('chatSearch.messageType.doodle')).toBe('Doodles');
+    expect(service.translate('chatSearch.messageType.gift')).toBe('Gifts');
+  });
+
   it('should interpolate parameters e.g. coins inside string', () => {
     const text = service.translate('common.coinsBalance', { coins: 150 });
     expect(text).toBe('150 Coins');

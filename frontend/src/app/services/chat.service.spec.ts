@@ -186,6 +186,44 @@ describe('ChatService', () => {
     await assertion;
   });
 
+  describe('message search', () => {
+    it('sends a trimmed, room-scoped request through the authenticated API', async () => {
+      const messages: ChatMessage[] = [
+        {
+          id: 'message-1',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          text_content: 'Hello there',
+          is_read: true,
+          created_at: '2026-11-02T00:00:00.000Z',
+        },
+      ];
+      const promise = service.searchMessages('  hello  ', 'room-1', 25);
+
+      const request = httpMock.expectOne(`${baseUrl}/search`);
+      expect(request.request.method).toBe('POST');
+      expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
+      expect(request.request.body).toEqual({
+        term: 'hello',
+        roomId: 'room-1',
+        limit: 25,
+      });
+      expect(request.request.params.keys()).toEqual([]);
+      request.flush(messages);
+
+      await expect(promise).resolves.toEqual(messages);
+    });
+
+    it('does not issue a private search request without an access token', async () => {
+      getAccessTokenMock.mockReturnValue(null);
+
+      await expect(service.searchMessages('hello', 'room-1')).resolves.toEqual([]);
+
+      httpMock.expectNone(`${baseUrl}/search`);
+    });
+  });
+
   describe('blocked users', () => {
     it('should track blocked users locally', () => {
       expect(service.isUserBlocked()('user-1')).toBe(false);

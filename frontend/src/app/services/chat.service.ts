@@ -655,21 +655,22 @@ export class ChatService {
 
   /**
    * Search messages across all conversations (or within a specific room).
-   * Calls GET /chat/search?term=...&roomId=...&limit=...
+   * Uses a request body so private search text is not exposed in the URL.
    */
   async searchMessages(term: string, roomId?: string, limit = 50): Promise<ChatMessage[]> {
     if (!this.authService.getAccessToken()) {
       return [];
     }
-    let params = new HttpParams().set('term', term.trim()).set('limit', String(limit));
-    if (roomId) {
-      params = params.set('roomId', roomId);
-    }
     return firstValueFrom(
-      this.http.get<ChatMessage[]>(`${this.baseUrl}/search`, {
-        headers: this.getHeaders(),
-        params,
-      }),
+      this.http.post<ChatMessage[]>(
+        `${this.baseUrl}/search`,
+        {
+          term: term.trim(),
+          ...(roomId ? { roomId } : {}),
+          limit,
+        },
+        { headers: this.getHeaders() },
+      ),
     );
   }
 

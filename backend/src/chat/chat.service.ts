@@ -53,9 +53,33 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+function escapeLikePattern(value: string): string {
+  return value
+    .replaceAll('\\', '\\\\')
+    .replaceAll('%', '\\%')
+    .replaceAll('_', '\\_');
+}
+
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
   deleted_for_user_ids?: string[] | null;
+}
+
+interface SearchMessageRow {
+  id: string;
+  room_id: string;
+  sender_id: string;
+  message_type: string;
+  text_content?: string | null;
+  is_read: boolean;
+  created_at: string;
+  expires_at?: string | null;
+  is_deleted_for_everyone?: boolean;
+  deleted_for_user_ids?: string[] | null;
+  sender?: {
+    id: string;
+    display_name?: string | null;
+  } | null;
 }
 
 interface GroupMember {
@@ -744,10 +768,7 @@ export class ChatService {
     }
   }
 
-  /**
-   * Search messages across ALL rooms the user is a member of.
-   * Uses pg_trgm for fuzzy text search on text_content.
-   */
+  /** Search messages across all rooms the user is a member of. */
   async searchAllMessages(
     userId: string,
     term: string,
@@ -763,7 +784,12 @@ export class ChatService {
       .select('room_id')
       .eq('user_id', userId);
 
-    if (memberErr || !memberRooms || memberRooms.length === 0) {
+    if (memberErr) {
+      this.logger.error('chat.message_search_membership_lookup_failed');
+      throw new ServiceUnavailableException();
+    }
+
+    if (!memberRooms || memberRooms.length === 0) {
       return [];
     }
 
@@ -777,45 +803,70 @@ export class ChatService {
 
     const trimmedTerm = term.trim();
     if (trimmedTerm.length < 2) return [];
+    const escapedTerm = escapeLikePattern(trimmedTerm);
 
     let query = supabase
       .from('chat_messages')
       .select(
         `
-        *,
+        id,
+        room_id,
+        sender_id,
+        message_type,
+        text_content,
+        is_read,
+        created_at,
+        expires_at,
+        is_deleted_for_everyone,
+        deleted_for_user_ids,
         sender:users!chat_messages_sender_id_fkey (
           id,
-          display_name,
-          avatar_url
+          display_name
         )
       `,
       )
       .in('room_id', roomIds)
-      .ilike('text_content', `%${trimmedTerm}%`)
+      .ilike('text_content', `%${escapedTerm}%`)
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (blockedIds.length > 0) {
-      query = query.not('sender_id', 'in', blockedIds);
+      query = query.not('sender_id', 'in', `(${blockedIds.join(',')})`);
     }
 
     const response = await query;
-    if (response.error || !response.data) {
+    if (response.error) {
+      this.logger.error('chat.message_search_query_failed');
+      throw new ServiceUnavailableException();
+    }
+
+    if (!response.data) {
       return [];
     }
 
-    const messages: DeletedAwareMessage[] = response.data;
+    const messages: SearchMessageRow[] = response.data;
 
-    // Filter out deleted messages
-    return messages.filter((msg) => {
-      if (msg.is_deleted) return false;
-      if (
-        Array.isArray(msg.deleted_for_user_ids) &&
-        msg.deleted_for_user_ids.includes(userId)
-      )
-        return false;
-      return true;
-    });
+    return messages
+      .filter((msg) => {
+        if (msg.is_deleted_for_everyone) return false;
+        if (
+          Array.isArray(msg.deleted_for_user_ids) &&
+          msg.deleted_for_user_ids.includes(userId)
+        )
+          return false;
+        return true;
+      })
+      .map((msg) => ({
+        id: msg.id,
+        room_id: msg.room_id,
+        sender_id: msg.sender_id,
+        message_type: msg.message_type,
+        text_content: msg.text_content,
+        is_read: msg.is_read,
+        created_at: msg.created_at,
+        expires_at: msg.expires_at,
+        sender: msg.sender,
+      }));
   }
 
   async getFavourites(userId: string): Promise<FavouriteRecord[]> {
