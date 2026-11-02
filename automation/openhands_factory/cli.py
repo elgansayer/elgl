@@ -74,6 +74,7 @@ def parser() -> argparse.ArgumentParser:
     task.add_argument("action", choices=("run",))
     task.add_argument("--issue", type=int)
     task.add_argument("--dry-run", action="store_true")
+    task.add_argument("--supervised-session", action="store_true")
     subcommands.add_parser("daemon")
     subcommands.add_parser("status")
     subcommands.add_parser("pause")
@@ -220,6 +221,8 @@ def main(arguments: list[str] | None = None) -> int:
                     return 2
                 from openhands_factory.canary import run_canary
 
+                if args.supervised_session:
+                    return run_canary(config, args.issue, supervised_session=True)
                 return run_canary(config, args.issue)
             print(
                 json.dumps(
