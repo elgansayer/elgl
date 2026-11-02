@@ -14,7 +14,9 @@ from openhands_factory.session_identity import SessionIdentityJournal
 MAX_AUDIT_RECORDS = 1000
 
 
-def audit_sessions(store: ProviderCapacityStore, directory: Path) -> dict[str, object]:
+def audit_sessions(
+    store: ProviderCapacityStore, directory: Path, *, codex_socket: Path | None = None
+) -> dict[str, object]:
     """Bound observations and withhold any authority to resume a model process.
 
     Historical dead records are expected. A live recorded guardian without a
@@ -91,6 +93,15 @@ def audit_sessions(store: ProviderCapacityStore, directory: Path) -> dict[str, o
     report["records"] = records
     report["errors"] = errors
     report["status_counts"] = dict(Counter(str(record["status"]) for record in records))
+    if codex_socket is not None:
+        from openhands_factory.codex_observer import observe_codex
+
+        observed = observe_codex(codex_socket)
+        report["codex_manual_observer"] = observed
+        if not observed["inventory_complete"]:
+            errors.append("codex_manual_inventory_unavailable")
+        elif observed["loaded_threads"] != 0:
+            errors.append("codex_threads_not_correlated_with_broker_leases")
     report["observations_consistent"] = not errors and all(
         record["status"] in {"live_recorded_guardian_and_lease", "historical_dead_guardian"}
         for record in records
