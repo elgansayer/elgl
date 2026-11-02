@@ -13,6 +13,7 @@ dependencies = [
   "openhands-sdk==1.59.0",
   "openhands-tools==1.59.0",
   "pydantic==2.14.2",
+  "websockets==16.1.1",
 ]
 
 [project.optional-dependencies]

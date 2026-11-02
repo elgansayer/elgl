@@ -2,24 +2,34 @@
 
 import json
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from openhands_factory.agents.base import AgentFailureKind, AgentPhase, AgentRequest
+from openhands_factory.agents.base import (
+    AgentFailureKind,
+    AgentPhase,
+    AgentRequest,
+    ProviderHealth,
+    ProviderStatus,
+)
 from openhands_factory.agents.claude import ClaudeCodeProvider
 from openhands_factory.agents.codex import CodexProvider
-from openhands_factory.agents.health import AgentCircuitBreaker
+from openhands_factory.agents.health import AgentCircuitBreaker, AgentHealthStore
 from openhands_factory.agents.process import ProcessResult
+from openhands_factory.agents.router import AgentRouter
 from openhands_factory.agents.terminal_output import (
     MAX_PROTOCOL_CHARS,
     claude_outcome,
     codex_outcome,
 )
-from openhands_factory.models import Task
+from openhands_factory.exceptions import ProviderCapacityUnavailable
+from openhands_factory.models import Job, Task
 
 CAPACITY = "Selected model is at capacity. Please try a different model."
 WEEKLY = "You've hit your weekly limit · resets 2pm (UTC)"
+SESSION = "You've hit your session limit · resets 7:20pm (UTC)"
 START = {"type": "turn.started"}
 COMPLETE = {"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}}
 
@@ -267,3 +277,70 @@ def test_adapter_run_uses_the_new_terminal_boundary(provider, output, expected, 
         assert "--json" in runner.command
     else:
         assert runner.command[runner.command.index("--output-format") + 1] == "json"
+
+
+@pytest.mark.parametrize(
+    "output",
+    [SESSION, claude_result(True, SESSION), claude_result(True, SESSION, "error_during_execution")],
+)
+def test_observed_session_quota_uses_quota_policy_without_inferring_reset_clock(output):
+    _, failure = claude_outcome(process(output, "authentication failed is earlier tool text"))
+    assert failure.kind is AgentFailureKind.PROVIDER_QUOTA
+    assert failure.retry_after_seconds is None
+
+
+@pytest.mark.parametrize("subtype", ["error_max_turns", "error_max_budget_usd", "unknown-error"])
+def test_session_words_cannot_override_typed_task_or_invalid_results(subtype):
+    _, failure = claude_outcome(process(claude_result(True, SESSION, subtype)))
+    expected = (
+        AgentFailureKind.INVALID_AGENT_OUTPUT
+        if subtype == "unknown-error"
+        else AgentFailureKind.TASK_FAILURE
+    )
+    assert failure.kind is expected
+
+
+def test_session_quota_words_in_success_or_multiline_transcript_do_not_set_account_health():
+    summary, failure = claude_outcome(process(claude_result(False, SESSION), exit_code=0))
+    assert failure is None and summary == SESSION
+    for output in ("Earlier tool output\n" + SESSION, SESSION.replace("limit", "limitless")):
+        _, failure = claude_outcome(process(output))
+        assert failure.kind is AgentFailureKind.INVALID_AGENT_OUTPUT
+    _, failure = claude_outcome(process(claude_result(True, SESSION), output_truncated=True))
+    assert failure.kind is AgentFailureKind.INVALID_AGENT_OUTPUT
+
+
+def test_real_adapter_and_router_persist_session_quota_with_existing_cooldown(tmp_path):
+    class Runner:
+        calls = 0
+
+        def run(self, command, **kwargs):
+            self.calls += 1
+            return process(claude_result(True, SESSION))
+
+    class KnownReadyClaude(ClaudeCodeProvider):
+        def health(self):
+            return ProviderHealth(self.name, ProviderStatus.HEALTHY, datetime.now(UTC))
+
+    runner = Runner()
+    adapter = KnownReadyClaude(process_runner=runner)
+    store = AgentHealthStore(tmp_path / "private-health.json")
+    router = AgentRouter(
+        [adapter],
+        health_store=store,
+        failure_threshold=1,
+        same_provider_retries=2,
+        failure_cooldowns={
+            AgentFailureKind.PROVIDER_QUOTA: 901,
+            AgentFailureKind.PROVIDER_TRANSPORT: 7,
+        },
+    )
+    job = Job(task=Task("636", "Owned quota regression", "", "github-issue", 1))
+    with pytest.raises(ProviderCapacityUnavailable, match="failed"):
+        router.run(AgentRequest(AgentPhase.CODE_REVIEW, job.task, "owned fixture", tmp_path), job)
+    persisted = store.load(router._default_breakers())[adapter.name]
+    assert persisted.last_failure_kind is AgentFailureKind.PROVIDER_QUOTA
+    assert persisted.retry_after_seconds == 901
+    assert persisted.state == "open"
+    assert runner.calls == 1 and len(job.provider_history) == 1
+    assert job.provider_history[0]["failure_classification"] == "provider_quota"
