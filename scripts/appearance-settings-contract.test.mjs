@@ -17,13 +17,26 @@ const templatePath =
   'frontend/src/app/pages/settings/appearance-settings/appearance-settings.component.html';
 const chatSettingsDtoPath = 'backend/src/chat/dto/chat-settings.dto.ts';
 const chatSettingsServicePath = 'backend/src/chat/chat-settings.service.ts';
+const frontendChatSettingsServicePath = 'frontend/src/app/services/chat-settings.service.ts';
+const atomicChatPreferencesMigrationPath =
+  'supabase/migrations/20261102090000_atomic_chat_preferences.sql';
 
-const [routes, component, template, chatSettingsDto, chatSettingsService] = await Promise.all([
+const [
+  routes,
+  component,
+  template,
+  chatSettingsDto,
+  chatSettingsService,
+  frontendChatSettingsService,
+  atomicChatPreferencesMigration,
+] = await Promise.all([
   read(routesPath),
   read(componentPath),
   read(templatePath),
   read(chatSettingsDtoPath),
   read(chatSettingsServicePath),
+  read(frontendChatSettingsServicePath),
+  read(atomicChatPreferencesMigrationPath),
 ]);
 
 test('appearance settings remains a lazy-loaded settings route', () => {
@@ -65,7 +78,15 @@ test('chat text size is validated and persisted by the backend owner', () => {
   assert.match(chatSettingsDto, /@IsIn\(CHAT_TEXT_SIZES\)[\s\S]*textSize\?: ChatTextSize/);
   assert.match(chatSettingsService, /textSize:\s*'medium'/);
   assert.match(chatSettingsService, /textSize:\s*this\.normaliseChatTextSize\(prefs\.textSize\)/);
-  assert.match(chatSettingsService, /textSize:\s*settings\.textSize \?\? current\.textSize/);
+  assert.match(chatSettingsService, /\.rpc\('merge_chat_preferences'/);
+  assert.match(
+    atomicChatPreferencesMigration,
+    /SET chat_preferences = COALESCE\(chat_preferences, '\{\}'::JSONB\) \|\| p_patch/i,
+  );
+  assert.match(
+    frontendChatSettingsService,
+    /autoTranslate:\s*false,[\s\S]*enterToSend:\s*false,[\s\S]*textSize:\s*'medium',[\s\S]*disappearingMessagesTtl:\s*'off'/,
+  );
 });
 
 test('custom primary accents stay guarded by the VIP entitlement', () => {

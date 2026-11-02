@@ -209,4 +209,26 @@ describe('ChatSettingsService', () => {
       expect(service.enterToSend()).toBe(true);
     });
   });
+
+  describe('resetToDefaults', () => {
+    it('persists the default text size with the other reset values', async () => {
+      service.textSize.set('large');
+
+      const promise = service.resetToDefaults();
+      const request = httpTesting.expectOne(`${environment.apiUrl}/chat/settings`);
+
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body).toEqual({
+        autoTranslate: false,
+        readReceipts: false,
+        enterToSend: false,
+        textSize: 'medium',
+        disappearingMessagesTtl: 'off',
+      });
+      request.flush({});
+
+      await expect(promise).resolves.toBe(true);
+      expect(service.textSize()).toBe('medium');
+    });
+  });
 });

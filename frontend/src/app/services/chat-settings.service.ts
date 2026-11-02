@@ -146,6 +146,7 @@ export class ChatSettingsService {
             autoTranslate: false,
             readReceipts: false,
             enterToSend: false,
+            textSize: 'medium',
             disappearingMessagesTtl: 'off',
           },
           { headers },

@@ -10,7 +10,7 @@ The user-facing **Settings → Appearance** surface composes the repository's es
 - **UI language** is exposed here as a link to `/settings/language`. That dedicated page applies changes through `UiLanguagePreferenceService`, backed by `I18nService`, and must not mutate the learner's `native_languages`, `target_languages`, discovery matching, or study-plan data.
 - **Primary accent** is profile-backed and available only to profiles with the existing VIP entitlement. Hiding or disabling the browser control is not an authorisation boundary; backend profile validation remains authoritative.
 
-Invalid or corrupt locally stored values are ignored. Browser storage failures do not prevent the in-memory preference from applying. A failed server save restores the previous server-backed chat text size and leaves the page in a retryable error state rather than claiming success.
+Invalid or corrupt locally stored values are ignored. Browser storage failures do not prevent the in-memory preference from applying. A failed server save restores the previous server-backed chat text size and leaves the page in a retryable error state rather than claiming success. Partial chat-setting updates are merged atomically in PostgreSQL, so concurrent saves from separate clients preserve unrelated preferences.
 
 ## Routing and ownership
 
@@ -64,6 +64,6 @@ The contract intentionally checks product ownership instead of snapshotting exac
 
 ## Rollout and rollback
 
-No database migration is required because chat preferences already use the `users.chat_preferences` JSON field. Deploy the backward-compatible optional API field through the normal backend and frontend pipeline. Older clients continue to ignore `textSize`, while updated clients understand the existing `small | medium | large` values.
+The database migration adds the service-role-only `merge_chat_preferences` RPC without changing the existing `users.chat_preferences` JSON shape. Deploy the migration before the backend that calls it. Older clients remain compatible with the same endpoint and continue to ignore `textSize`, while updated clients understand the existing `small | medium | large` values.
 
-To roll back an Appearance implementation change, revert the affected UI/service changes while leaving compatible local preference keys and server-side chat `textSize` values in place. If the architecture is intentionally redesigned, update this contract in the same PR so ownership, retryable failure semantics, entitlement checks, and accessibility remain explicit.
+To roll back an Appearance implementation change, revert the backend to its previous writer before dropping the new RPC, while leaving compatible local preference keys and server-side chat `textSize` values in place. The RPC itself can remain during rollback because it does not alter stored data or column shape. If the architecture is intentionally redesigned, update this contract in the same PR so ownership, retryable failure semantics, entitlement checks, and accessibility remain explicit.

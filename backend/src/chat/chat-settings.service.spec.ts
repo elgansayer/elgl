@@ -7,6 +7,7 @@ describe('ChatSettingsService', () => {
   let service: ChatSettingsService;
   let supabaseServiceMock: { getClient: Mock };
   let mockFrom: Mock;
+  let mockRpc: Mock;
   const userId = 'test-user-id';
 
   beforeEach(async () => {
@@ -14,7 +15,11 @@ describe('ChatSettingsService', () => {
       getClient: vi.fn(),
     };
     mockFrom = vi.fn();
-    supabaseServiceMock.getClient.mockReturnValue({ from: mockFrom });
+    mockRpc = vi.fn();
+    supabaseServiceMock.getClient.mockReturnValue({
+      from: mockFrom,
+      rpc: mockRpc,
+    });
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
@@ -138,28 +143,17 @@ describe('ChatSettingsService', () => {
   });
 
   describe('updateSettings', () => {
-    it('should merge with current settings and update the database', async () => {
-      const getChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: {
-            chat_preferences: {
-              autoTranslate: true,
-              readReceipts: false,
-              enterToSend: false,
-              textSize: 'small',
-              disappearingMessagesTtl: '24h',
-            },
-          },
-          error: null,
-        }),
-      };
-      const updateChain = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      };
-      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
+    it('atomically merges the partial settings patch in the database', async () => {
+      mockRpc.mockResolvedValue({
+        data: {
+          autoTranslate: true,
+          readReceipts: true,
+          enterToSend: false,
+          textSize: 'large',
+          disappearingMessagesTtl: '90d',
+        },
+        error: null,
+      });
 
       const result = await service.updateSettings(userId, {
         readReceipts: true,
@@ -174,64 +168,39 @@ describe('ChatSettingsService', () => {
         textSize: 'large',
         disappearingMessagesTtl: '90d',
       });
-      expect(updateChain.update).toHaveBeenCalledWith({
-        chat_preferences: result,
+      expect(mockRpc).toHaveBeenCalledWith('merge_chat_preferences', {
+        p_user_id: userId,
+        p_patch: {
+          readReceipts: true,
+          textSize: 'large',
+          disappearingMessagesTtl: '90d',
+        },
       });
-      expect(updateChain.eq).toHaveBeenCalledWith('id', userId);
+      expect(mockFrom).not.toHaveBeenCalled();
     });
 
     it('should return a sanitized failure if the database update fails', async () => {
-      const getChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: {
-            chat_preferences: {
-              autoTranslate: false,
-              readReceipts: false,
-              enterToSend: false,
-              textSize: 'medium',
-              disappearingMessagesTtl: 'off',
-            },
-          },
-          error: null,
-        }),
-      };
-      const updateChain = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi
-          .fn()
-          .mockResolvedValue({ error: new Error('sensitive DB write error') }),
-      };
-      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
+      mockRpc.mockResolvedValue({
+        data: null,
+        error: new Error('sensitive DB write error'),
+      });
 
       await expect(
         service.updateSettings(userId, { autoTranslate: true }),
       ).rejects.toThrow('Chat settings could not be updated');
     });
 
-    it('should allow partial updates and preserve other settings', async () => {
-      const getChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: {
-            chat_preferences: {
-              autoTranslate: true,
-              readReceipts: true,
-              enterToSend: true,
-              textSize: 'small',
-              disappearingMessagesTtl: '7d',
-            },
-          },
-          error: null,
-        }),
-      };
-      const updateChain = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      };
-      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
+    it('returns the complete merged state from the atomic update', async () => {
+      mockRpc.mockResolvedValue({
+        data: {
+          autoTranslate: false,
+          readReceipts: true,
+          enterToSend: true,
+          textSize: 'small',
+          disappearingMessagesTtl: '7d',
+        },
+        error: null,
+      });
 
       const result = await service.updateSettings(userId, {
         autoTranslate: false,

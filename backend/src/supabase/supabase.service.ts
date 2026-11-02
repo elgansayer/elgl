@@ -2304,6 +2304,21 @@ export interface Database {
         Args: { user_id: string; amount: number };
         Returns: void;
       };
+      merge_chat_preferences: {
+        Args: {
+          p_user_id: string;
+          p_patch: {
+            autoTranslate?: boolean;
+            readReceipts?: boolean;
+            enterToSend?: boolean;
+            textSize?: 'small' | 'medium' | 'large';
+            disappearingMessagesTtl?: 'off' | '24h' | '7d' | '90d';
+            showDetailedExplanations?: boolean;
+            defaultTranslationLanguage?: string;
+          };
+        };
+        Returns: Record<string, unknown>;
+      };
       search_nearby_users: {
         Args: {
           search_lat: number;

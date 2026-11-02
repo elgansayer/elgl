@@ -23,6 +23,10 @@ export class ChatSettingsService {
     return value === 'small' || value === 'large' ? value : 'medium';
   }
 
+  private normaliseBoolean(value: unknown, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback;
+  }
+
   private normalizeDisappearingMessagesTtl(
     value: unknown,
   ): DisappearingMessageTtl {
@@ -66,30 +70,36 @@ export class ChatSettingsService {
     userId: string,
     settings: ChatSettingsDto,
   ): Promise<ChatSettingsDto> {
-    const current = await this.getSettings(userId);
-    const merged: ChatSettingsDto = {
-      autoTranslate: settings.autoTranslate ?? current.autoTranslate,
-      readReceipts: settings.readReceipts ?? current.readReceipts,
-      enterToSend: settings.enterToSend ?? current.enterToSend,
-      textSize: settings.textSize ?? current.textSize,
-      disappearingMessagesTtl:
-        settings.disappearingMessagesTtl ?? current.disappearingMessagesTtl,
-    };
-
-    const { error } = await this.supabaseService
+    const { data, error } = await this.supabaseService
       .getClient()
-      .from('users')
-      .update({
-        chat_preferences: merged as unknown as Record<string, unknown>,
-      })
-      .eq('id', userId);
+      .rpc('merge_chat_preferences', {
+        p_user_id: userId,
+        p_patch: settings,
+      });
 
-    if (error) {
+    if (error || !data) {
       throw new ServiceUnavailableException(
         'Chat settings could not be updated',
       );
     }
 
-    return merged;
+    return {
+      autoTranslate: this.normaliseBoolean(
+        data.autoTranslate,
+        this.defaultSettings.autoTranslate ?? false,
+      ),
+      readReceipts: this.normaliseBoolean(
+        data.readReceipts,
+        this.defaultSettings.readReceipts ?? false,
+      ),
+      enterToSend: this.normaliseBoolean(
+        data.enterToSend,
+        this.defaultSettings.enterToSend ?? false,
+      ),
+      textSize: this.normaliseChatTextSize(data.textSize),
+      disappearingMessagesTtl: this.normalizeDisappearingMessagesTtl(
+        data.disappearingMessagesTtl,
+      ),
+    };
   }
 }
