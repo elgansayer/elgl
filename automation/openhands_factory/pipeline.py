@@ -1737,7 +1737,11 @@ class FactoryPipeline:
                     else "fix: repair CI for"
                 )
             )
-            if workflow.has_changes() or job.verification_candidate_sha != workflow.head_sha():
+            if (
+                self.config.neptune_intake_dir is None
+                or workflow.has_changes()
+                or job.verification_candidate_sha != workflow.head_sha()
+            ):
                 workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
