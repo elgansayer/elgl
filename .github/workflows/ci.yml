@@ -519,8 +519,8 @@ jobs:
           fi
       - run: uv run --frozen pytest
         working-directory: automation
-      - name: Require actual provider namespace containment
-        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py runtime_checks/test_supervised_routing_namespace.py
+      - name: Require actual provider and preparation namespace containment
+        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py runtime_checks/test_supervised_routing_namespace.py runtime_checks/test_preparation_namespace.py
         working-directory: automation
 
   required-gate:
