@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { GiftAnimationService, GiftAnimationOverlay } from './gift-animation.service';
 
 describe('GiftAnimationService', () => {
+  afterEach(() => vi.useRealTimers());
+
   const mockOverlay: GiftAnimationOverlay = {
     id: 'gift-1',
     giftName: 'Rose',
@@ -74,15 +76,21 @@ describe('GiftAnimationService', () => {
     expect(service.currentAnimation()).toBeNull();
   });
 
-  it('should clear previous timer when new animation is played', () => {
+  it('should not let an older timer hide a newer animation', async () => {
+    vi.useFakeTimers();
     const service = TestBed.inject(GiftAnimationService);
     service.playAnimation(mockOverlay);
+    await vi.advanceTimersByTimeAsync(1000);
 
     const secondOverlay: GiftAnimationOverlay = { ...mockOverlay, giftName: 'Heart' };
     service.playAnimation(secondOverlay);
+    await vi.advanceTimersByTimeAsync(4100);
 
     expect(service.isVisible()).toBe(true);
     expect(service.currentAnimation()?.giftName).toBe('Heart');
+
+    await vi.advanceTimersByTimeAsync(900);
+    expect(service.isVisible()).toBe(false);
   });
 
   it('should track elapsed time during animation', () => {

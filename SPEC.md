@@ -108,6 +108,18 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `participants_count` (Integer, default `1`)
 - `created_at` (Timestamp with time zone, default `now()`)
 
+### Table: `audio_room_tips`
+
+- `id` (UUID, Primary Key)
+- `room_id` (UUID, Foreign Key referencing `audio_rooms.id`, indexed with `created_at DESC`)
+- `sender_user_id` (UUID, Foreign Key referencing `users.id`)
+- `receiver_user_id` (UUID, Foreign Key referencing `users.id`)
+- `amount_coins` (Positive Integer)
+- `idempotency_key` (Nullable UUID for mixed-version compatibility, unique per sender when present)
+- `sender_balance_after` (Nullable Integer balance snapshot)
+- `receiver_balance_after` (Nullable Integer balance snapshot)
+- `created_at` (Timestamp with time zone, default `now()`)
+
 ### Table: `blocks` & `reports` (Trust and Safety)
 
 - `blocks`: `id`, `blocker_id`, `blocked_id`, `created_at`
@@ -169,6 +181,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
+- **Audio room host tip:** `{ "type": "host_tip", "tip": { "tip_id": "uuid", "amount_coins": 50, "sender_user_id": "uuid", "sender_name": "Alice", "receiver_user_id": "uuid", "receiver_name": "Room Host" } }` on `room_{audio_room_id}`. Clients validate the payload and suppress repeated `tip_id` values before starting the global SVG animation.
 - **Unread counts changed:** `{ "type": "unread_counts_changed", "source": "chat" | "notifications" }` on `user_{user_id}`. The payload is a count-only invalidation signal. The client refreshes the existing authenticated unread endpoint for the indicated source and never receives message, room, profile, or token data in this event.
 - **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
 
@@ -182,6 +195,7 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
   2. Room Host receives notification and calls `POST /audio-rooms/approve-speaker`.
   3. NestJS calls `AccessToken` API to issue refreshed JWT with `canPublish: true` (`canPublishData: true`).
 - **Subtitles & Speech-to-Text:** Audio tracks published to LiveKit are forwarded to STT worker, broadcasting closed captions onto Centrifugo `room_{id}` channel.
+- **Host tips:** `POST /audio-rooms/:roomId/tip` accepts the amount and a retry-stable UUID idempotency key. The service-role-only `transfer_audio_room_tip` RPC locks both wallets in UUID order and commits debit, credit and the `audio_room_tips` audit row atomically before publishing the `host_tip` room event.
 
 ---
 

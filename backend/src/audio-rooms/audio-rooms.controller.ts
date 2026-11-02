@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -12,6 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -121,7 +123,15 @@ export class AudioRoomsController {
       },
     },
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid, inactive or unaffordable tip.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Idempotency key subject conflict.',
+  })
   async createRoom(
     @CurrentUser() user: AuthUser | null,
     @Body() dto: CreateAudioRoomDto,
@@ -1053,11 +1063,18 @@ export class AudioRoomsController {
           type: 'string',
           example: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
         },
+        sender_new_balance: { type: 'number', example: 90 },
         receiver_new_balance: { type: 'number', example: 260 },
       },
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 429, description: 'Too many tip attempts.' })
+  @ApiResponse({
+    status: 503,
+    description: 'Tip delivery is temporarily unavailable.',
+  })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async tipHost(
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
@@ -1066,12 +1083,17 @@ export class AudioRoomsController {
     tip_id: string;
     amount_coins: number;
     receiver_id: string;
+    sender_new_balance: number;
     receiver_new_balance: number;
   } | null> {
     if (!user) return null;
+    if (dto.room_id !== roomId) {
+      throw new BadRequestException('audioRoom.tipValidationError');
+    }
     return await this.audioRoomsService.tipHost(user.id, {
       room_id: roomId,
       amount_coins: dto.amount_coins,
+      idempotency_key: dto.idempotency_key,
     });
   }
 }

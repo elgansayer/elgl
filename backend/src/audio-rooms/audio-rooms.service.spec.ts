@@ -3,8 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { AudioRoomsService } from './audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -80,6 +82,7 @@ describe('AudioRoomsService', () => {
 
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -1528,84 +1531,142 @@ describe('AudioRoomsService', () => {
 
   describe('tipHost', () => {
     it('should throw NotFoundException when room not found', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: null,
-        error: null,
+        error: { message: 'room not found', code: 'P0001' },
       });
 
       await expect(
         service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
-      ).rejects.toThrow(new NotFoundException('Room not found'));
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when tipping yourself', async () => {
-      const roomRow: any = {
-        id: 'room-1',
-        host_id: 'host-1',
-        is_active: true,
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: roomRow,
-        error: null,
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'sender cannot tip self', code: 'P0001' },
       });
 
       await expect(
         service.tipHost('host-1', { room_id: 'room-1', amount_coins: 10 }),
-      ).rejects.toThrow(new BadRequestException('You cannot tip yourself'));
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when insufficient coins', async () => {
-      const roomRow: any = {
-        id: 'room-1',
-        host_id: 'host-1',
-        is_active: true,
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: roomRow,
-        error: null,
-      });
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 5 },
-        error: null,
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'insufficient coins', code: 'P0001' },
       });
 
       await expect(
         service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
-      ).rejects.toThrow('Insufficient coins');
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('should process tip and return success details', async () => {
-      const roomRow: any = {
-        id: 'room-1',
-        host_id: 'host-1',
-        is_active: true,
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: roomRow,
-        error: null,
-      });
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 100, display_name: 'Alice' },
-        error: null,
-      });
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 50 },
-        error: null,
-      });
-      const tipRow = { id: 'tip-1', amount_coins: 10 };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: tipRow,
+    it('should process one atomic tip and publish the authoritative event', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: [
+          {
+            tip_id: 'tip-1',
+            amount_coins: 10,
+            receiver_id: 'host-1',
+            sender_new_balance: 90,
+            receiver_new_balance: 60,
+            sender_name: 'Alice',
+            receiver_name: 'Host User',
+            created: true,
+          },
+        ],
         error: null,
       });
 
       const result = await service.tipHost('user-1', {
         room_id: 'room-1',
         amount_coins: 10,
+        idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
       });
 
-      expect(result.tip_id).toBe('tip-1');
-      expect(result.receiver_new_balance).toBe(60);
-      expect(mockQueryBuilder.update).toHaveBeenCalledTimes(2);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'transfer_audio_room_tip',
+        {
+          p_room_id: 'room-1',
+          p_sender_id: 'user-1',
+          p_amount: 10,
+          p_idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
+        },
+      );
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'host_tip',
+        tip: {
+          tip_id: 'tip-1',
+          amount_coins: 10,
+          sender_user_id: 'user-1',
+          sender_name: 'Alice',
+          receiver_user_id: 'host-1',
+          receiver_name: 'Host User',
+        },
+      });
+      expect(result).toEqual({
+        tip_id: 'tip-1',
+        amount_coins: 10,
+        receiver_id: 'host-1',
+        sender_new_balance: 90,
+        receiver_new_balance: 60,
+      });
+    });
+
+    it('rejects reuse of an idempotency key for another tip subject', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'tip idempotency subject mismatch', code: 'P0001' },
+      });
+
+      await expect(
+        service.tipHost('user-1', {
+          room_id: 'room-1',
+          amount_coins: 50,
+          idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('keeps a persisted tip retryable when realtime delivery fails', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: [
+          {
+            tip_id: 'tip-1',
+            amount_coins: 10,
+            receiver_id: 'host-1',
+            sender_new_balance: 90,
+            receiver_new_balance: 60,
+            sender_name: 'Alice',
+            receiver_name: 'Host User',
+            created: false,
+          },
+        ],
+        error: null,
+      });
+      vi.mocked(centrifugoService.publish).mockResolvedValueOnce(false);
+
+      await expect(
+        service.tipHost('user-1', {
+          room_id: 'room-1',
+          amount_coins: 10,
+          idempotency_key: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
+        }),
+      ).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('rejects malformed RPC output without publishing', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: [{ tip_id: 'tip-1', amount_coins: -1 }],
+        error: null,
+      });
+
+      await expect(
+        service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
+      ).rejects.toThrow(ServiceUnavailableException);
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
     });
   });
 

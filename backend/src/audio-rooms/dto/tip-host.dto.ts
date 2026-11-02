@@ -1,5 +1,12 @@
-import { IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TipHostDto {
   @ApiProperty({
@@ -18,4 +25,13 @@ export class TipHostDto {
   @IsInt()
   @Min(1)
   amount_coins!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Stable UUID reused when retrying the same tip after an ambiguous network or delivery failure',
+    example: '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12',
+  })
+  @IsOptional()
+  @IsUUID()
+  idempotency_key?: string;
 }
