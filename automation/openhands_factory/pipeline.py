@@ -2209,10 +2209,10 @@ class FactoryPipeline:
             return True
         if self._recover_closed_pull_request(job, status):
             return True
-        needs_base_refresh = status.merge_state_status == "BEHIND" or (
-            status.merge_state_status == "UNKNOWN"
-            and not self._workflow(worktree).contains_current_base()
-        )
+        # Use the same base policy as review intake. A transient UNKNOWN must
+        # not archive unverified review repairs from an already tested head when
+        # non-strict merging permits that head to remain on its original base.
+        needs_base_refresh = self._review_needs_base_update(job, self._workflow(worktree), status)
         if self.config.tests_only_merging and "Neptune current base" in status.failed_checks:
             needs_base_refresh = True
         needs_conflict_repair = (
