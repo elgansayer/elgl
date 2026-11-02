@@ -10,7 +10,7 @@ The user-facing **Settings → Appearance** surface composes the repository's es
 - **UI language** is exposed here as a link to `/settings/language`. That dedicated page applies changes through `UiLanguagePreferenceService`, backed by `I18nService`, and must not mutate the learner's `native_languages`, `target_languages`, discovery matching, or study-plan data.
 - **Primary accent** is profile-backed and available only to profiles with the existing VIP entitlement. Hiding or disabling the browser control is not an authorisation boundary; backend profile validation remains authoritative.
 
-Invalid or corrupt locally stored values are ignored. Browser storage failures do not prevent the in-memory preference from applying. A failed server save restores the previous server-backed chat text size and leaves the page in a retryable error state rather than claiming success. Partial chat-setting updates are merged atomically in PostgreSQL, so concurrent saves from separate clients preserve unrelated preferences.
+Invalid or corrupt locally stored values are ignored. Browser storage failures do not prevent the in-memory preference from applying. If either server-backed owner cannot be loaded, chat text editing and Save remain disabled while local-only theme and app text controls stay available. A failed server save restores the previous server-backed chat text size and leaves the page in a retryable error state rather than claiming success. Partial chat-setting updates are merged atomically in PostgreSQL, so concurrent saves from separate clients preserve unrelated preferences.
 
 ## Routing and ownership
 

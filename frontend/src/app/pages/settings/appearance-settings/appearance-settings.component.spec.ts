@@ -180,8 +180,20 @@ describe('AppearanceSettingsComponent', () => {
     const unavailableFixture = TestBed.createComponent(AppearanceSettingsComponent);
     unavailableFixture.detectChanges();
     await unavailableFixture.whenStable();
+    unavailableFixture.detectChanges();
+    const setChatTextSizeCalls = vi.mocked(fontScaleServiceMock.setChatTextSize!).mock.calls.length;
+    const chatSizeButtons = Array.from(
+      unavailableFixture.nativeElement.querySelectorAll(
+        'div[role="group"][aria-label="chat_settings.title · settings.textSize"] button',
+      ),
+    ) as HTMLButtonElement[];
+
+    unavailableFixture.componentInstance.setChatTextSize('large');
     await unavailableFixture.componentInstance.saveSettings();
 
+    expect(chatSizeButtons).toHaveLength(3);
+    expect(chatSizeButtons.every((button) => button.disabled)).toBe(true);
+    expect(fontScaleServiceMock.setChatTextSize).toHaveBeenCalledTimes(setChatTextSizeCalls);
     expect(userServiceMock.updateMyProfile).not.toHaveBeenCalled();
     expect(chatSettingsServiceMock.updateSetting).not.toHaveBeenCalled();
     expect(unavailableFixture.componentInstance.errorMessage()).toBe(

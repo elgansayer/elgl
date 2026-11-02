@@ -35,6 +35,9 @@ export class AppearanceSettingsComponent {
   readonly successMessage = signal('');
   private readonly profileAvailable = signal(false);
   private readonly chatSettingsAvailable = signal(false);
+  readonly canPersistServerBackedSettings = computed(
+    () => this.profileAvailable() && this.chatSettingsAvailable(),
+  );
 
   readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
   readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
@@ -123,6 +126,7 @@ export class AppearanceSettingsComponent {
   }
 
   setChatTextSize(size: ChatTextSizePreference): void {
+    if (!this.canPersistServerBackedSettings()) return;
     this.fontScaleService.setChatTextSize(size);
   }
 
@@ -142,7 +146,7 @@ export class AppearanceSettingsComponent {
     this.errorMessage.set('');
     this.successMessage.set('');
 
-    if (!this.profileAvailable() || !this.chatSettingsAvailable()) {
+    if (!this.canPersistServerBackedSettings()) {
       this.errorMessage.set('settings.appearanceLoadError');
       return;
     }

@@ -138,6 +138,7 @@
                 size="touch"
                 type="button"
                 (click)="setChatTextSize(opt)"
+                [disabled]="!canPersistServerBackedSettings()"
                 class="min-h-11 min-w-24 flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors"
                 [class.border-primary]="currentChatTextSize() === opt"
                 [class.bg-primary]="currentChatTextSize() === opt"
@@ -145,6 +146,8 @@
                 [class.border-surface-300]="currentChatTextSize() !== opt"
                 [class.bg-surface-200]="currentChatTextSize() !== opt"
                 [class.text-text-primary]="currentChatTextSize() !== opt"
+                [class.cursor-not-allowed]="!canPersistServerBackedSettings()"
+                [class.opacity-50]="!canPersistServerBackedSettings()"
                 [attr.aria-pressed]="currentChatTextSize() === opt"
               >
                 @if (opt === 'small') {
@@ -265,7 +268,7 @@
       <div class="pt-4">
         <app-button-primary
           (clicked)="saveSettings()"
-          [disabled]="isSaving() || isLoading()"
+          [disabled]="isSaving() || isLoading() || !canPersistServerBackedSettings()"
           customClass="w-full min-h-11 py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
           [attr.aria-label]="isSaving() ? ('common.loading' | t) : ('settings.saveBtn' | t)"
         >
