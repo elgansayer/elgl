@@ -10,21 +10,40 @@ import { QuickPollService } from '../../services/quick-poll.service';
 import { environment } from '../../../environments/environment';
 import { AudioRoomComponent } from './audio-room.component';
 
-describe('AudioRoomComponent API URLs', () => {
+describe('AudioRoomComponent API URLs and Stage Actions', () => {
   let component: AudioRoomComponent;
   let httpTesting: HttpTestingController;
 
+  const currentUserSignal = signal<{ id: string; display_name: string } | null>({
+    id: 'user-me',
+    display_name: 'Me',
+  });
+
+  const currentRoomSignal = signal<{
+    id: string;
+    host_id: string;
+    raised_hands: string[];
+  } | null>({
+    id: 'room-123',
+    host_id: 'host-1',
+    raised_hands: ['user-me', 'user-other'],
+  });
+
   const store = {
-    currentRoom: signal({ id: 'room-123' }),
+    currentRoom: currentRoomSignal,
     stageInfo: signal(null),
     stageParticipants: signal([]),
     audienceCount: signal(0),
     selectedLanguageGroup: signal<string | null>(null),
     roomsByLanguage: signal([]),
     activeRooms: signal([]),
+    isSpeaker: signal(false),
     loadActiveRooms: vi.fn().mockResolvedValue(undefined),
     loadRoomsByLanguage: vi.fn().mockResolvedValue(undefined),
     loadPrivateRooms: vi.fn().mockResolvedValue(undefined),
+    raiseHand: vi.fn().mockResolvedValue(undefined),
+    approveSpeaker: vi.fn().mockResolvedValue(undefined),
+    dismissRaisedHand: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(() => {
@@ -34,7 +53,7 @@ describe('AudioRoomComponent API URLs', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AudioRoomsStore, useValue: store },
-        { provide: AuthService, useValue: {} },
+        { provide: AuthService, useValue: { currentUser: currentUserSignal } },
         { provide: ConfirmService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
         { provide: I18nService, useValue: { translate: (key: string) => key } },
         { provide: QuickPollService, useValue: {} },
@@ -72,5 +91,32 @@ describe('AudioRoomComponent API URLs', () => {
     request.flush({ emojiId: 'heart', animationUrl: 'https://example.test/heart.json' });
 
     await reactionPromise;
+  });
+
+  it('detects when the current user has raised their hand', () => {
+    expect(component.hasRaisedHand()).toBe(true);
+
+    currentRoomSignal.set({
+      id: 'room-123',
+      host_id: 'host-1',
+      raised_hands: ['user-other'],
+    });
+
+    expect(component.hasRaisedHand()).toBe(false);
+  });
+
+  it('delegates raiseHand to store.raiseHand', async () => {
+    await component.raiseHand();
+    expect(store.raiseHand).toHaveBeenCalledTimes(1);
+  });
+
+  it('delegates handleApproveSpeaker to store.approveSpeaker', async () => {
+    await component.handleApproveSpeaker('user-other');
+    expect(store.approveSpeaker).toHaveBeenCalledWith('user-other');
+  });
+
+  it('delegates handleDeclineSpeaker to store.dismissRaisedHand', async () => {
+    await component.handleDeclineSpeaker('user-other');
+    expect(store.dismissRaisedHand).toHaveBeenCalledWith('user-other');
   });
 });

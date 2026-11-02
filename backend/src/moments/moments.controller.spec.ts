@@ -2,6 +2,7 @@ import { MomentsFeedService } from './moments-feed.service';
 import { MomentsRankingService } from './moments-ranking.service';
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { MomentLikesService } from './moment-likes.service';
 import { MomentsController } from './moments.controller';
 import { MomentsService } from './moments.service';
 import { CorrectionQualityService } from './correction-quality.service';
@@ -12,6 +13,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 describe('MomentsController', () => {
   let controller: MomentsController;
   let momentsService: MomentsService;
+  let momentLikesService: MomentLikesService;
   let momentsFeedService: MomentsFeedService;
   let correctionQualityService: CorrectionQualityService;
   let usersService: UsersService;
@@ -47,6 +49,12 @@ describe('MomentsController', () => {
           },
         },
         {
+          provide: MomentLikesService,
+          useValue: {
+            listMomentLikes: vi.fn(),
+          },
+        },
+        {
           provide: CorrectionQualityService,
           useValue: {
             vote: vi.fn(),
@@ -62,14 +70,6 @@ describe('MomentsController', () => {
           provide: R2Service,
           useValue: {},
         },
-        {
-          provide: MomentsRankingService,
-          useValue: {
-            rankForYou: vi
-              .fn()
-              .mockImplementation(async (_userId, moments) => moments),
-          },
-        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
@@ -78,6 +78,7 @@ describe('MomentsController', () => {
 
     controller = module.get<MomentsController>(MomentsController);
     momentsService = module.get<MomentsService>(MomentsService);
+    momentLikesService = module.get<MomentLikesService>(MomentLikesService);
     momentsFeedService = module.get<MomentsFeedService>(MomentsFeedService);
     correctionQualityService = module.get<CorrectionQualityService>(
       CorrectionQualityService,
@@ -169,6 +170,41 @@ describe('MomentsController', () => {
       );
       expect(momentsService.likeMoment).toHaveBeenCalledWith('user-1', 'm-1');
       expect(result).toEqual(response);
+    });
+  });
+
+  describe('getMomentLikes', () => {
+    it('returns an empty list when the authenticated user is absent', async () => {
+      const result = await controller.getMomentLikes(null, 'm-1', 0, 50);
+
+      expect(result).toEqual([]);
+      expect(momentLikesService.listMomentLikes).not.toHaveBeenCalled();
+    });
+
+    it('passes the viewer identity and bounded page to the likes service', async () => {
+      const users = [
+        {
+          id: 'user-2',
+          display_name: 'Alice',
+          avatar_url: null,
+          target_languages: ['ja'],
+        },
+      ];
+      (momentLikesService.listMomentLikes as Mock).mockResolvedValue(users);
+
+      const result = await controller.getMomentLikes(
+        { id: 'user-1' } as any,
+        'm-1',
+        50,
+        25,
+      );
+
+      expect(momentLikesService.listMomentLikes).toHaveBeenCalledWith(
+        'm-1',
+        'user-1',
+        { offset: 50, limit: 25 },
+      );
+      expect(result).toEqual(users);
     });
   });
 

@@ -6,6 +6,7 @@ const testDefaults: Record<string, string> = {
   SUPABASE_URL: 'https://example.supabase.co',
   SUPABASE_ANON_KEY: 'test-anon-key',
   SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+  CHAT_E2EE_MASTER_SECRET: 'test-chat-e2ee-master-secret-32-bytes',
   DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
   REDIS_URL: 'redis://localhost:6379',
   CENTRIFUGO_URL: 'http://localhost:8000',
@@ -98,6 +99,9 @@ export const validationSchema = Joi.object({
   SUPABASE_SERVICE_ROLE_KEY: Joi.string().default(
     testDefaults.SUPABASE_SERVICE_ROLE_KEY,
   ),
+  CHAT_E2EE_MASTER_SECRET: Joi.string()
+    .min(32)
+    .default(testDefaults.CHAT_E2EE_MASTER_SECRET),
   DATABASE_URL: Joi.string().default(testDefaults.DATABASE_URL),
 
   // -- Redis --

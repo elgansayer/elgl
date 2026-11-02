@@ -395,6 +395,14 @@ export class AudioRoomsStore {
           if (!r || r.raised_hands.includes(p.user_id!)) return r;
           return { ...r, raised_hands: [...r.raised_hands, p.user_id!] };
         });
+      } else if (p.type === 'raise_hand_dismissed' && p.target_user_id) {
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return {
+            ...r,
+            raised_hands: r.raised_hands.filter((id) => id !== p.target_user_id),
+          };
+        });
       } else if (p.type === 'speaker_approved' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;

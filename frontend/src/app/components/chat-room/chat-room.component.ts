@@ -48,8 +48,13 @@ import { AppCardComponent } from '../primitives/card/card.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
+import { applyChatRoomRealtimeEvent, isChatMessage, isRecord } from './chat-room-realtime';
 import { UnreadCounterService } from '../../services/unread-counter.service';
+import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+
+function isGroupMember(value: unknown): value is GroupMember {
+  return typeof value === 'object' && value !== null && 'user_id' in value;
+}
 
 @Component({
   selector: 'app-chat-room',
@@ -96,6 +101,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly draftService = inject(DraftService);
   private readonly translationCache = inject(TranslationCacheService);
   private readonly unreadCounter = inject(UnreadCounterService);
+  private readonly chatEncryption = inject(PersonalChatEncryptionService);
 
   id = input.required<string>();
 
@@ -154,6 +160,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showParticipantDrawer = signal<boolean>(false);
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
+  readonly isE2eeRoom = signal<boolean>(false);
   readonly autoPlayVoiceNotes = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
@@ -202,9 +209,8 @@ export class ChatRoomComponent implements OnDestroy {
   private mentionRangeEnd = 0;
 
   readonly mentionItemToString = (value: unknown): string => {
-    if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
-    const member = value as GroupMember;
-    const displayName = member.user?.display_name;
+    if (!isGroupMember(value)) return this.textInput;
+    const displayName = value.user?.display_name;
     if (!displayName) return this.textInput;
     return (
       this.textInput.slice(0, this.mentionRangeStart) +
@@ -314,8 +320,11 @@ export class ChatRoomComponent implements OnDestroy {
       const rooms = await this.chatService.getRooms();
       this.roomDetails = rooms.find((r) => r.id === this.roomId) || null;
       this.isLocked.set(this.roomDetails?.is_locked ?? false);
+      const isCapable = await this.chatEncryption.isRoomE2eeCapable(this.roomId);
+      this.isE2eeRoom.set(isCapable);
     } catch (e) {
       console.error('Failed to load room details:', e);
+      this.isE2eeRoom.set(false);
     }
   }
 
@@ -343,6 +352,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.subscribedRoomId = null;
       this.subscription = null;
     }
+    this.chatEncryption.clearKey(this.roomId);
     this.pendingReadReceipts.clear();
     this.typingService.disconnect();
     this.saveChatDrafts();
@@ -436,19 +446,28 @@ export class ChatRoomComponent implements OnDestroy {
     this.typingService.connect(this.roomId);
   }
 
-  private handleRealtimeEvent(data: unknown, eventRoomId: string): void {
+  private async handleRealtimeEvent(data: unknown, eventRoomId: string): Promise<void> {
     // A late callback from a previous subscription must never mutate the newly
     // selected room.
     if (eventRoomId !== this.roomId) return;
 
+    if (isRecord(data) && isChatMessage(data['message'])) {
+      const msg = data['message'];
+      if (msg.is_encrypted && msg.encrypted_payload) {
+        try {
+          msg.text_content = await this.chatEncryption.decryptMessage(
+            eventRoomId,
+            msg.encrypted_payload,
+          );
+        } catch {
+          msg.text_content = this.i18n.translate('chatRoom.encryptedMessageUnavailable');
+        }
+      }
+    }
+
     const currentUserId = this.authService.currentUser()?.id;
     const currentMessages = this.messages();
-    const result = applyChatRoomRealtimeEvent(
-      currentMessages,
-      data,
-      eventRoomId,
-      currentUserId,
-    );
+    const result = applyChatRoomRealtimeEvent(currentMessages, data, eventRoomId, currentUserId);
 
     if (result.messages !== currentMessages) {
       this.messages.set(result.messages);
@@ -551,10 +570,7 @@ export class ChatRoomComponent implements OnDestroy {
 
     this.isCheckingGrammar.set(true);
     try {
-      const grammar = await this.vocabStore.checkGrammar(
-        text,
-        this.partnerLanguage() ?? undefined,
-      );
+      const grammar = await this.vocabStore.checkGrammar(text, this.partnerLanguage() ?? undefined);
       const corrected = grammar.corrected.trim();
       if (grammar.errors_found > 0 && corrected && corrected !== text) {
         if (this.roomId === roomId) {

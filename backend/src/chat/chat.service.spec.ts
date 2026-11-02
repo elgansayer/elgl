@@ -32,6 +32,7 @@ import { ChatLlmService } from './chat-llm.service';
 import { XpService } from '../xp/xp.service';
 import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
 import { UsersService } from '../users/users.service';
+import { SendMessageDto } from './dto/send-message.dto';
 
 vi.mock('./centrifugo.service', () => ({
   CentrifugoService: vi.fn(),
@@ -299,10 +300,48 @@ describe('ChatService', () => {
         status_reply_payload: null,
         is_view_once: false,
         delivery_status: 'sent',
+        is_encrypted: false,
+        encrypted_payload: null,
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
         message: savedMessage,
       });
+      expect(result).toEqual(savedMessage);
+    }, 15000);
+
+    it('should save encrypted message and emit redacted notification preview', async () => {
+      const dto: SendMessageDto = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: '[Encrypted message]',
+        is_encrypted: true,
+        encrypted_payload: 'e2ee:v1:iv:ciphertext:tag',
+      };
+
+      const savedMessage = {
+        id: 'msg-encrypted-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: '[Encrypted message]',
+        is_encrypted: true,
+        encrypted_payload: 'e2ee:v1:iv:ciphertext:tag',
+        created_at: '2026-10-31T03:00:00Z',
+      };
+
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+
+      const result = await service.sendMessage('sender-1', dto);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_encrypted: true,
+          encrypted_payload: 'e2ee:v1:iv:ciphertext:tag',
+        }),
+      );
       expect(result).toEqual(savedMessage);
     }, 15000);
 
@@ -1460,6 +1499,32 @@ describe('ChatService', () => {
       await expect(
         service.editMessage(senderId, messageId, dto),
       ).rejects.toThrow('Only text messages can be edited');
+    });
+
+    it('rejects downgrading an encrypted message to plaintext', async () => {
+      mockQueryBuilder.then.mockImplementationOnce(
+        (resolve: (value: unknown) => void) =>
+          resolve({
+            data: {
+              id: messageId,
+              sender_id: senderId,
+              message_type: 'text',
+              room_id: roomId,
+              created_at: new Date().toISOString(),
+              is_encrypted: true,
+              encrypted_payload:
+                'e2ee:v1:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==',
+            },
+            error: null,
+          }),
+      );
+
+      await expect(
+        service.editMessage(senderId, messageId, dto),
+      ).rejects.toThrow(
+        'An encrypted message cannot be downgraded to plaintext.',
+      );
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when edit window has expired', async () => {

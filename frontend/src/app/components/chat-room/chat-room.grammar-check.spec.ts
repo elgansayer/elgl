@@ -20,6 +20,7 @@ describe('ChatRoomComponent pre-send grammar review', () => {
   let sendMessage: ReturnType<typeof vi.fn>;
   let checkGrammar: ReturnType<typeof vi.fn>;
   let saveChatDraftV2: ReturnType<typeof vi.fn>;
+  let getUserProfile: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     sendMessage = vi.fn().mockResolvedValue({
@@ -33,6 +34,7 @@ describe('ChatRoomComponent pre-send grammar review', () => {
     });
     checkGrammar = vi.fn();
     saveChatDraftV2 = vi.fn();
+    getUserProfile = vi.fn().mockResolvedValue({ native_languages: ['en-GB'] });
 
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
@@ -75,7 +77,7 @@ describe('ChatRoomComponent pre-send grammar review', () => {
           provide: UserService,
           useValue: {
             getMyProfile: vi.fn().mockResolvedValue(null),
-            getUserProfile: vi.fn().mockResolvedValue({ native_languages: ['en-GB'] }),
+            getUserProfile,
           },
         },
         {
@@ -135,12 +137,9 @@ describe('ChatRoomComponent pre-send grammar review', () => {
     fixture.componentRef.setInput('id', 'room-1');
     fixture.detectChanges();
     await fixture.whenStable();
-    // initializeRoom() runs fire-and-forget from a constructor effect() and
-    // chains many sequential awaits (loadRoomDetails -> ... ->
-    // resolvePartnerLanguage) that aren't tracked by Angular's zoneless
-    // stability signal, so whenStable() alone can resolve before the chain
-    // finishes. Flush the microtask queue once more to let it settle.
-    await Promise.resolve();
+    // initializeRoom() runs fire-and-forget from a constructor effect(), so
+    // zoneless stability can resolve before the partner profile is loaded.
+    await vi.waitFor(() => expect(getUserProfile).toHaveBeenCalledWith('user-2'));
   });
 
   afterEach(() => {

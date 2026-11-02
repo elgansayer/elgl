@@ -338,7 +338,13 @@
 
     <!-- Global Search Component -->
     <div class="px-4 md:px-6 lg:px-8 mt-4 mb-2">
-      <app-global-search (searchFilters)="onGlobalSearch($event)"></app-global-search>
+      <app-global-search
+        [initialNativeLanguages]="selectedNativeLanguage()"
+        [initialTargetLanguage]="selectedTargetLanguage()"
+        [initialLevel]="selectedProficiencyLevel()"
+        [initialHasAudioIntro]="hasAudioIntroOnly()"
+        (searchFilters)="onGlobalSearch($event)"
+      ></app-global-search>
     </div>
 
     <!-- Content States -->

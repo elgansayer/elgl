@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Query,
+  UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -718,8 +719,8 @@ export class AudioRoomsController {
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreateVoiceRoomNoteDto,
-  ): Promise<VoiceRoomNote | null> {
-    if (!user) return null;
+  ): Promise<VoiceRoomNote> {
+    if (!user) throw new UnauthorizedException();
     return await this.audioRoomsService.addNote(roomId, user.id, dto);
   }
 
@@ -749,7 +750,7 @@ export class AudioRoomsController {
   @ApiOperation({
     summary: 'Delete a note from an audio room',
     description:
-      'Deletes a specific note by ID. Only the note author can delete their own notes.',
+      'Deletes a specific note by ID. Note author, room host, or co-host can delete notes.',
   })
   @ApiParam({
     name: 'roomId',
@@ -768,11 +769,11 @@ export class AudioRoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async deleteNote(
     @CurrentUser() user: AuthUser | null,
-    @Param('roomId') _roomId: string,
+    @Param('roomId') roomId: string,
     @Param('noteId') noteId: string,
   ): Promise<void> {
-    if (!user) return;
-    return await this.audioRoomsService.deleteNote(noteId, user.id);
+    if (!user) throw new UnauthorizedException();
+    await this.audioRoomsService.deleteNote(roomId, noteId, user.id);
   }
 
   /**

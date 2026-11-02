@@ -341,4 +341,75 @@ describe('AudioRoomsController', () => {
       expect(result).toEqual(resultPayload);
     });
   });
+
+  describe('addNote', () => {
+    it('should throw UnauthorizedException if user is not provided', async () => {
+      await expect(
+        controller.addNote(null, 'room-1', { content: 'Test note' }),
+      ).rejects.toThrow();
+      expect(audioRoomsService.addNote).not.toHaveBeenCalled();
+    });
+
+    it('should call service addNote when user is authenticated', async () => {
+      const dto = { content: 'Vocabulary topic', vocabulary: 'hola' };
+      const createdNote = {
+        id: 'note-1',
+        room_id: 'room-1',
+        author_id: 'user-1',
+        author_name: 'Alice',
+        content: 'Vocabulary topic',
+        vocabulary: 'hola',
+        created_at: '2026-08-07T00:00:00Z',
+      };
+      (audioRoomsService.addNote as Mock).mockResolvedValue(createdNote);
+
+      const result = await controller.addNote({ id: 'user-1' }, 'room-1', dto);
+      expect(audioRoomsService.addNote).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(createdNote);
+    });
+  });
+
+  describe('getNotes', () => {
+    it('should call service getNotes with roomId and return notes list', async () => {
+      const notes = [
+        {
+          id: 'note-1',
+          room_id: 'room-1',
+          author_id: 'user-1',
+          author_name: 'Alice',
+          content: 'Note 1',
+          created_at: '2026-08-07T00:00:00Z',
+        },
+      ];
+      (audioRoomsService.getNotes as Mock).mockResolvedValue(notes);
+
+      const result = await controller.getNotes('room-1');
+      expect(audioRoomsService.getNotes).toHaveBeenCalledWith('room-1');
+      expect(result).toEqual(notes);
+    });
+  });
+
+  describe('deleteNote', () => {
+    it('should throw UnauthorizedException if user is not provided', async () => {
+      await expect(
+        controller.deleteNote(null, 'room-1', 'note-1'),
+      ).rejects.toThrow();
+      expect(audioRoomsService.deleteNote).not.toHaveBeenCalled();
+    });
+
+    it('should call service deleteNote with roomId, noteId, and userId', async () => {
+      (audioRoomsService.deleteNote as Mock).mockResolvedValue(undefined);
+
+      await controller.deleteNote({ id: 'user-1' }, 'room-1', 'note-1');
+      expect(audioRoomsService.deleteNote).toHaveBeenCalledWith(
+        'room-1',
+        'note-1',
+        'user-1',
+      );
+    });
+  });
 });

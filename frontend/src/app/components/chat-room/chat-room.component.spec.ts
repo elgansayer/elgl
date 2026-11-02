@@ -14,6 +14,7 @@ import { NetworkStatusService } from '../../services/network-status.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
+import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -133,6 +134,14 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: VocabularyStore, useValue: mockVocabularyStore },
         { provide: NetworkStatusService, useValue: mockNetworkStatusService },
         { provide: TextToSpeechService, useValue: mockTextToSpeechService },
+        {
+          provide: PersonalChatEncryptionService,
+          useValue: {
+            isRoomE2eeCapable: vi.fn().mockResolvedValue(false),
+            decryptMessage: vi.fn(),
+            clearKey: vi.fn(),
+          },
+        },
         I18nService,
         { provide: UnreadCounterService, useValue: unreadCounterMock },
       ],

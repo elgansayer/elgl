@@ -7,6 +7,8 @@ import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { ChatCacheService } from './chat-cache.service';
+import { PersonalChatEncryptionService } from './personal-chat-encryption.service';
+import { I18nService } from './i18n.service';
 import { Router } from '@angular/router';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -102,6 +104,12 @@ export interface ChatMessage {
 
   /** Whether this message was forwarded from another conversation */
   is_forwarded?: boolean;
+
+  /** Whether this message content is encrypted before storage and delivery */
+  is_encrypted?: boolean;
+
+  /** Armoured ciphertext and IV envelope for encrypted message content */
+  encrypted_payload?: string | null;
 }
 
 export interface ReadReceiptUser {
@@ -136,7 +144,7 @@ export interface ChatRoom {
   is_vip?: boolean;
   native_languages?: string[];
   created_at: string;
-  admin_id?: string;
+  admin_id?: string | null;
   wallpaper_url?: string | null;
 }
 
@@ -194,6 +202,8 @@ export class ChatService {
   private hapticFeedback = inject(HapticFeedbackService);
   private chatCache = inject(ChatCacheService);
   private router = inject(Router);
+  private personalChatEncryption = inject(PersonalChatEncryptionService);
+  private i18n = inject(I18nService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
   // Blocked user list is loaded on demand, never in the constructor,
@@ -205,7 +215,9 @@ export class ChatService {
 
   async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
     return firstValueFrom(
-      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
+      this.http.get<MessageReceiptStatus>(
+        `${environment.apiUrl}/chat/messages/${messageId}/receipts`,
+      ),
     );
   }
 
@@ -247,6 +259,61 @@ export class ChatService {
     };
   }
 
+  private async prepareTextForTransport(
+    roomId: string,
+    text: string | undefined,
+    offline: boolean,
+  ): Promise<{
+    textContent: string | undefined;
+    isEncrypted: boolean;
+    encryptedPayload: string | undefined;
+  }> {
+    if (!text) {
+      return {
+        textContent: text,
+        isEncrypted: false,
+        encryptedPayload: undefined,
+      };
+    }
+
+    if (offline) {
+      const cachedRooms = await this.chatCache.getCachedRooms();
+      const room = cachedRooms?.find((candidate) => candidate.id === roomId);
+      if (!room) {
+        throw new Error('Room security state is unavailable while offline.');
+      }
+      if (room.admin_id != null) {
+        return {
+          textContent: text,
+          isEncrypted: false,
+          encryptedPayload: undefined,
+        };
+      }
+
+      const encrypted = await this.personalChatEncryption.encryptCachedMessage(roomId, text);
+      return {
+        textContent: encrypted.payload,
+        isEncrypted: true,
+        encryptedPayload: encrypted.payload,
+      };
+    }
+
+    if (!(await this.personalChatEncryption.isRoomE2eeCapable(roomId))) {
+      return {
+        textContent: text,
+        isEncrypted: false,
+        encryptedPayload: undefined,
+      };
+    }
+
+    const encrypted = await this.personalChatEncryption.encryptMessage(roomId, text);
+    return {
+      textContent: encrypted.payload,
+      isEncrypted: true,
+      encryptedPayload: encrypted.payload,
+    };
+  }
+
   async sendMessage(payload: {
     room_id: string;
     message_type:
@@ -271,26 +338,34 @@ export class ChatService {
     };
   }): Promise<ChatMessage> {
     const currentUser = this.authService.currentUser();
+    const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const preparedText = await this.prepareTextForTransport(
+      payload.room_id,
+      payload.text_content,
+      offline,
+    );
 
     // Offline: queue the message in IndexedDB and return immediately.
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if (offline) {
       const queuedMsg: ChatMessage = {
         id: crypto.randomUUID(),
         room_id: payload.room_id,
         sender_id: currentUser?.id || '',
         message_type: payload.message_type,
-        text_content: payload.text_content,
+        text_content: preparedText.textContent,
         media_url: payload.media_url,
         correction_payload: payload.correction_payload,
         correction_request_payload: payload.correction_request_payload,
         reply_to_id: payload.reply_to_id,
         status_reply_payload: payload.status_reply_payload,
+        is_encrypted: preparedText.isEncrypted,
+        encrypted_payload: preparedText.encryptedPayload,
         is_read: false,
         created_at: new Date().toISOString(),
       };
       await this.offlineQueue.enqueueMessage(queuedMsg);
       this.hapticFeedback.tap();
-      return queuedMsg;
+      return { ...queuedMsg, text_content: payload.text_content };
     }
 
     // Check if the receiver is blocked before sending
@@ -312,12 +387,25 @@ export class ChatService {
       }
     }
 
+    const outgoingPayload = {
+      ...payload,
+      text_content: preparedText.textContent,
+      is_encrypted: preparedText.isEncrypted,
+      encrypted_payload: preparedText.encryptedPayload,
+    };
+
     const message = await firstValueFrom(
-      this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+      this.http.post<ChatMessage>(`${this.baseUrl}/messages`, outgoingPayload, {
         headers: this.getHeaders(),
       }),
     );
     this.hapticFeedback.tap();
+
+    // If message is encrypted, restore original plaintext for local optimistic UI and cache
+    if (message.is_encrypted && payload.text_content) {
+      message.text_content = payload.text_content;
+    }
+
     // Append the new message to the room's cached messages so the cache stays warm
     void this.chatCache.appendCachedMessage(payload.room_id, message);
     return message;
@@ -342,6 +430,8 @@ export class ChatService {
           correction_request_payload: msg.correction_request_payload,
           reply_to_id: msg.reply_to_id,
           status_reply_payload: msg.status_reply_payload,
+          is_encrypted: msg.is_encrypted,
+          encrypted_payload: msg.encrypted_payload,
         };
 
         try {
@@ -390,10 +480,30 @@ export class ChatService {
       params = params.set('search', search!.trim());
     }
 
-    const messages = await firstValueFrom(
+    const rawMessages = await firstValueFrom(
       this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, {
         headers: this.getHeaders(),
         params,
+      }),
+    );
+
+    const messages = await Promise.all(
+      rawMessages.map(async (msg) => {
+        if (msg.is_encrypted && msg.encrypted_payload) {
+          try {
+            const decrypted = await this.personalChatEncryption.decryptMessage(
+              roomId,
+              msg.encrypted_payload,
+            );
+            return { ...msg, text_content: decrypted };
+          } catch {
+            return {
+              ...msg,
+              text_content: this.i18n.translate('chatRoom.encryptedMessageUnavailable'),
+            };
+          }
+        }
+        return msg;
       }),
     );
 
@@ -429,11 +539,7 @@ export class ChatService {
       throw new Error('Invalid unread count response');
     }
     const unreadCount = response['unreadCount'];
-    if (
-      typeof unreadCount !== 'number' ||
-      !Number.isSafeInteger(unreadCount) ||
-      unreadCount < 0
-    ) {
+    if (typeof unreadCount !== 'number' || !Number.isSafeInteger(unreadCount) || unreadCount < 0) {
       throw new Error('Invalid unread count response');
     }
     return unreadCount;

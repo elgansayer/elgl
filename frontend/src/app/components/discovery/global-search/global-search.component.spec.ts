@@ -268,4 +268,43 @@ describe('GlobalSearchComponent', () => {
     expect(secondLanguages.length).toBe(ALL_LANGUAGE_CODES.length);
     expect(secondLanguages[0].translatedName).not.toBe(firstLanguage);
   });
+
+  it('should synchronise linked signals when parent filter inputs change', () => {
+    fixture.componentRef.setInput('initialNativeLanguages', 'es');
+    fixture.componentRef.setInput('initialTargetLanguage', 'ja');
+    fixture.componentRef.setInput('initialLevel', 'b2');
+    fixture.componentRef.setInput('initialHasAudioIntro', true);
+    fixture.detectChanges();
+
+    expect(component.nativeLanguages()).toBe('es');
+    expect(component.targetLanguage()).toBe('ja');
+    expect(component.level()).toBe('b2');
+    expect(component.hasAudioIntro()).toBe(true);
+
+    // Resetting inputs clears values back
+    fixture.componentRef.setInput('initialNativeLanguages', '');
+    fixture.componentRef.setInput('initialTargetLanguage', '');
+    fixture.componentRef.setInput('initialLevel', '');
+    fixture.componentRef.setInput('initialHasAudioIntro', false);
+    fixture.detectChanges();
+
+    expect(component.nativeLanguages()).toBe('');
+    expect(component.targetLanguage()).toBe('');
+    expect(component.level()).toBe('');
+    expect(component.hasAudioIntro()).toBe(false);
+  });
+
+  it('should render translated level options with CEFR keys', () => {
+    const levelSelect: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '#global-proficiencyLevel',
+    );
+    const options = Array.from(levelSelect.options);
+    expect(options[0].textContent?.trim()).toBe('Any level');
+    expect(options[1].textContent?.trim()).toBe('A1 - Beginner');
+    expect(options[2].textContent?.trim()).toBe('A2 - Elementary');
+    expect(options[3].textContent?.trim()).toBe('B1 - Intermediate');
+    expect(options[4].textContent?.trim()).toBe('B2 - Upper Intermediate');
+    expect(options[5].textContent?.trim()).toBe('C1 - Advanced');
+    expect(options[6].textContent?.trim()).toBe('C2 - Proficient');
+  });
 });

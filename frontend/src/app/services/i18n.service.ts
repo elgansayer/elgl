@@ -159,6 +159,7 @@ export class I18nService {
     'app.navMe': 'Me',
 
     // Common Fallbacks
+    'common.user': 'User',
     'common.unknownUser': 'Unknown User',
     'common.unknownSender': 'Unknown',
     'common.languagePartner': 'Language Partner',
@@ -637,6 +638,7 @@ export class I18nService {
     'audioRoom.hostFallback': 'Room Host',
     'audioRoom.listenersCount': '{{count}} listening',
     'audioRoom.raiseHandBtn': '✋ Raise hand',
+    'audioRoom.handRaisedBtn': '✋ Hand raised',
     'audioRoom.giftHostBtn': '🎁 Gift host',
     'audioRoom.tipHostBtn': '🪙 Tip host',
     'audioRoom.tipSentToast': '🪙 Sent {{amount}} coins to the host!',
@@ -853,6 +855,10 @@ export class I18nService {
     'video_call.presenting_badge_aria': 'You are presenting your screen',
 
     // Split Screen Video Component
+    'splitScreen.streamErrorAria': 'Video stream error',
+    'splitScreen.splitScreenVideoAria': 'Split screen video',
+    'splitScreen.loadingHost': 'Loading host video...',
+    'splitScreen.loadingCoHost': 'Loading co-host video...',
     'splitScreen.hostVideoAria': 'Host video',
     'splitScreen.coHostVideoAria': 'Co-host video',
     'splitScreen.inviteCoHostAria': 'Invite a co-host to split screen',
@@ -871,6 +877,11 @@ export class I18nService {
     'liveChat.liveRegionAria': 'New messages appearing',
 
     // Chat Room Component
+    'chatRoom.e2eeBanner': 'Text messages in this chat are encrypted before storage and delivery.',
+    'chatRoom.e2eeBadge': 'Encrypted',
+    'chatRoom.e2eeMessageHint': 'Encrypted message',
+    'chatRoom.encryptedMessageUnavailable': 'Encrypted message unavailable',
+    'calls.e2eeSecured': 'Encrypted call',
     'chatRoom.liveNow': 'Live now',
     'chatRoom.connecting': 'Connecting...',
     'chatRoom.searchPlaceholder': 'Search messages',
@@ -1594,6 +1605,23 @@ export class I18nService {
     'voiceRecorder.uploadError':
       'Voice note upload failed. Your recording is still available to retry.',
 
+    // Voiceroom Notes
+    'voices.notes.title': 'Voiceroom Notes',
+    'voices.notes.subtitle': 'Shared panel for hosts & speakers',
+    'voices.notes.empty':
+      'No notes yet. Hosts and speakers can post vocabulary and discussion topics.',
+    'voices.notes.content_label': 'Note content',
+    'voices.notes.content_help': 'Type key vocabulary or discussion topics.',
+    'voices.notes.vocabulary_label': 'Key vocabulary (optional)',
+    'voices.notes.vocabulary_help':
+      'Separate words or phrases with commas, for example hello, good morning.',
+    'voices.notes.post': 'Post note',
+    'voices.notes.posting': 'Posting...',
+    'voices.notes.delete': 'Delete note',
+    'voices.notes.listenersCannotPost': 'Only hosts and speakers can post notes in this room.',
+    'voices.notes.errorPosting': 'Unable to post note. Please try again.',
+    'voices.notes.errorDeleting': 'Unable to delete note. Please try again.',
+
     // Audio Player
     'audioPlayer.groupLabel': 'Audio player',
     'audioPlayer.play': 'Play',
@@ -1775,6 +1803,10 @@ export class I18nService {
     'context_menu.report': 'Report',
     'context_menu.block': 'Block',
     'context_menu.unblock': 'Unblock',
+    'context_menu.createFlashcard': 'Create Flashcard',
+    'context_menu.creatingFlashcard': 'Creating flashcard...',
+    'context_menu.flashcardCreatedAlert': 'Flashcard created for "{{text}}"',
+    'context_menu.flashcardError': 'Failed to create flashcard. Please try again.',
     'context_menu.cancel': 'Cancel',
 
     // Grammar explanation dialog (opened from the Explain this context menu action)
@@ -2199,6 +2231,17 @@ export class I18nService {
       'Your subscription will end at the close of the current billing period.',
     'subscription.resumeSuccess': 'Your subscription has been resumed.',
     'subscription.actionError': 'Something went wrong. Please try again.',
+    'subscription.page.title': 'Choose your subscription plan',
+    'subscription.page.subtitle':
+      'Unlock unlimited translations, advanced visitor insight and boosted discovery',
+    'subscription.page.loadError': 'We could not load subscription plans. Please try again.',
+    'subscription.page.retry': 'Try again',
+    'subscription.page.mostPopular': 'Most popular',
+    'subscription.page.redirecting': 'Redirecting to checkout...',
+    'subscription.page.subscribeMonthly': 'Subscribe monthly',
+    'subscription.page.subscribeYearly': 'Subscribe yearly',
+    'subscription.page.currentFreePlan': 'Current plan',
+    'subscription.page.checkoutError': 'We could not start checkout. Please try again.',
 
     // Report confirm
     'report.confirmMessage': 'Are you sure you want to report this message?',

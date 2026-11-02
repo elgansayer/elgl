@@ -9,7 +9,10 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
-import { SubscriptionPlansService } from './services/subscription-plans.service';
+import {
+  SubscriptionPlansService,
+  type VipTier,
+} from './services/subscription-plans.service';
 
 interface AppleNotificationPayload {
   notificationType: string;
@@ -159,6 +162,12 @@ export class AppleNotificationService {
     }
 
     const tier = this.mapProductIdToTier(transactionInfo.productId);
+    if (!tier) {
+      this.logger.warn(
+        `Refusing Apple subscription with unknown product ID ${transactionInfo.productId}`,
+      );
+      return;
+    }
 
     this.logger.info(
       `Activating subscription for user ${userId}, tier: ${tier}`,
@@ -338,11 +347,8 @@ export class AppleNotificationService {
     }
   }
 
-  private mapProductIdToTier(productId: string): string {
-    return (
-      this.subscriptionPlansService.getTierByProductId(productId) ??
-      'consumer_8_ukp_10_usd'
-    );
+  private mapProductIdToTier(productId: string): VipTier | null {
+    return this.subscriptionPlansService.getTierByProductId(productId);
   }
 
   private async storeAppleTransaction(
