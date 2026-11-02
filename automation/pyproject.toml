@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.32.4"]
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -10,17 +10,17 @@ requires-python = ">=3.12"
 dependencies = [
   "filelock==4.2.4",
   "httpx==0.28.1",
-  "openhands-sdk==1.58.2",
-  "openhands-tools==1.58.2",
-  "pydantic==2.14.1",
+  "openhands-sdk==1.59.0",
+  "openhands-tools==1.59.0",
+  "pydantic==2.14.2",
 ]
 
 [project.optional-dependencies]
 development = [
-  "mypy==2.4.0",
-  "pytest==9.1.1",
+  "mypy==2.4.1",
+  "pytest==9.2.0",
   "pytest-cov==7.1.0",
-  "ruff==0.17.2",
+  "ruff==0.17.3",
 ]
 
 [project.scripts]
