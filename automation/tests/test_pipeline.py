@@ -431,6 +431,11 @@ def _neptune_dispatcher(
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "a" * 40)
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.prepare_native",
+        lambda _config, _workspace, _changed, commands: commands,
+        raising=False,
+    )
     monkeypatch.setattr("openhands_factory.pipeline.check_quality_gate", lambda *args: [])
     monkeypatch.setattr(FactoryPipeline, "_run_agent", agent)
     pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
@@ -608,6 +613,46 @@ def test_neptune_local_verification_failure_cannot_publish_a_pr(
     assert github.created_pull_requests == []
     assert github.merges == []
     assert phases == ["implementation"]
+
+
+@pytest.mark.parametrize("typed_preparation_failure", [False, True])
+def test_neptune_tool_preparation_backoff_resumes_same_verification_without_ai_repair(
+    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch, typed_preparation_failure: bool
+) -> None:
+    pipeline, github, phases = _neptune_dispatcher(neptune_config, monkeypatch)
+    before = _run_neptune_until(pipeline, JobState.VERIFYING)
+    branch, head = before.branch, before.head_sha
+
+    def fail(*_args: object) -> None:
+        if typed_preparation_failure:
+            from openhands_factory.neptune_preparation import ToolPreparationUnavailable
+
+            raise ToolPreparationUnavailable("owned_missing_tool")
+        raise VerificationFailed(
+            "Missing/mismatched offline Godot cache; provision it before verification"
+        )
+
+    monkeypatch.setattr(pipeline, "_restart_stale_unpublished", lambda *_args: False)
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda _workflow: "unchanged")
+    monkeypatch.setattr("openhands_factory.pipeline.attempt_mechanical_repair", lambda *_args: None)
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", fail)
+    failed = pipeline.run_job("42")
+    assert failed is not None and failed.state is JobState.VERIFYING
+    assert failed.branch == branch and failed.head_sha == head
+    assert failed.quality_repairs == 0 and failed.review_findings == []
+    assert failed.last_failure_kind == "infrastructure" and failed.next_attempt_at is not None
+    assert (
+        phases == ["implementation"] and github.created_pull_requests == [] and github.merges == []
+    )
+    fresh = FactoryPipeline(neptune_config, github=github)  # type: ignore[arg-type]
+    restored = fresh.jobs.load()["42"]
+    assert restored.next_attempt_at == failed.next_attempt_at
+    restored.next_attempt_at = datetime.now(UTC) - timedelta(seconds=1)
+    fresh.jobs.save_job(restored)
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda _commands: None)
+    continued = fresh.run_job("42")
+    assert continued is not None and continued.state is JobState.PR_DRAFT
+    assert continued.branch == branch and phases == ["implementation"]
 
 
 def test_neptune_queued_head_must_still_have_matching_verification(
