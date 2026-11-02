@@ -56,6 +56,7 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
     text = detail.lower()
     infrastructure_tokens = (
         "tool preparation unavailable:",
+        "neptune accepted intake unavailable:",
         "missing/mismatched offline godot cache",
         "the cypress binary is missing",
         "we expected the binary to be installed here",

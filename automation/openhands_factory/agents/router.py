@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import threading
 import uuid
@@ -432,9 +433,11 @@ class AgentRouter:
         now = datetime.now(UTC)
         breaker_health = [breaker.get_health() for breaker in self._breakers().values()]
         waits = [
-            max(1, int((item.retry_after - now).total_seconds()))
+            math.ceil((item.retry_after - now).total_seconds())
             for item in [*health.values(), *breaker_health]
-            if item.retry_after is not None
+            # An expired unrelated breaker cannot make a still-cooling route poll
+            # every second. Round up future waits so we never wake before expiry.
+            if item.retry_after is not None and item.retry_after > now
         ]
         return min(waits) if waits else None
 
