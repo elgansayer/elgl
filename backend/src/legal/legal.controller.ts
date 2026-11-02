@@ -21,12 +21,6 @@ export class LegalController {
     return this.legalService.getPrivacyPolicy();
   }
 
-  @Get('document/:type')
-  @Header('Cache-Control', PUBLIC_LEGAL_CACHE_CONTROL)
-  getDocumentByType(@Param('type') type: string): LegalDocumentDto {
-    return this.legalService.getDocument(type);
-  }
-
   @Get(':type')
   @Header('Cache-Control', PUBLIC_LEGAL_CACHE_CONTROL)
   getDocument(@Param('type') type: string): LegalDocumentDto {
