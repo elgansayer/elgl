@@ -1428,6 +1428,20 @@ class FactoryPipeline:
                 self._finish_tests_only_validation(job, workflow, lease_owner)
                 return
 
+            # Do not buy an independent review without its required CI evidence.
+            # The coordinator owns capable-host checks and retries; a restricted
+            # provider cannot correct missing CI by changing repository code.
+            if review_status is None:
+                raise FactoryError("Independent review requires a pull request with exact-head CI")
+            if review_status.ci_required_failed:
+                job.state = JobState.REPAIRING
+                return
+            if review_status.ci_required_pending or not review_status.ci_required_passed:
+                # Keep the review handoff durable. CI_PENDING would wait on the
+                # review status which only this phase can produce after CI passes.
+                job.next_attempt_at = datetime.now(UTC) + CI_POLL_INTERVAL
+                return
+
             # The worktree persists across retries of this state, so a review report
             # left behind by an earlier failed attempt (crashed conversation, hit its
             # turn budget, etc.) must not be re-validated as if it were fresh: remove
