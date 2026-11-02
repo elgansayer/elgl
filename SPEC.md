@@ -34,35 +34,73 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - `viewed_id` (UUID, Foreign Key referencing `users.id`, indexed)
 - `created_at` (Timestamp with time zone, default `now()`)
 
+The Moments tables are created by `supabase/migrations/005_moments.sql`. Migration history is append-only, so later changes arrive as forward migrations. The full contract, including indexes, row-level security, retention and rollback, lives in [`docs/moments-schema.md`](docs/moments-schema.md).
+
 ### Table: `moments` (The Global Social Feed)
 
-- `id` (UUID, Primary Key)
-- `author_id` (UUID, Foreign Key referencing `users.id`, indexed)
-- `content_text` (Text)
-- `media_urls` (Array of Text, Cloudflare R2 URLs for up to 9 images or video)
-- `voice_note_url` (Text, Cloudflare R2 URL for up to 60-second audio clip)
-- `detected_language` (String, generated via `NLP.js` or Azure)
-- `is_pinned` (Boolean, default `false`)
-- `likes_count` (Integer, default `0`)
-- `comments_count` (Integer, default `0`)
+- `id` (UUID, Primary Key, default `uuid_generate_v4()`)
+- `user_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, indexed together with `created_at DESC` for the author timeline)
+- `text_content` (Nullable Text, up to 5,000 characters through the API)
+- `media_urls` (Array of Text, Cloudflare R2 URLs for up to 9 images or video, default `'{}'`)
+- `media_type` (String, `'none'`, `'images'`, `'audio'` or `'video'`, default `'none'`, indexed)
+- `target_language` (String, ISO 639-1 code matched by the Classmates feed, `NOT NULL`, default `'en'`, indexed)
+- `voice_note_url` (Nullable Text, Cloudflare R2 URL for up to 60-second audio clip)
+- `post_type` (String, `'moment'`, `'question'` or `'language_question'`, default `'moment'`, indexed)
+- `question_text` (Nullable Text, prompt of a question post)
+- `question_options` (Array of Text, answer choices of a question post, default `'{}'`)
+- `correct_answer` (Nullable String, expected answer of a language question)
+- `correct_answers_count` (Integer, default `0`, derived from `moment_question_answers`)
+- `total_answers_count` (Integer, default `0`, derived from `moment_question_answers`)
+- `is_pinned` (Boolean, default `false`, pinned posts sort first in the All and Classmates feeds)
+- `likes_count` (Integer, default `0`, denormalised counter maintained by the API)
+- `comments_count` (Integer, default `0`, denormalised counter maintained by the API)
+- `is_ephemeral` (Boolean, default `false`, `true` for 24 hour stories)
+- `expires_at` (Nullable Timestamp with time zone, story expiry, indexed together with `is_ephemeral`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
 
 ### Table: `moment_comments`
 
-- `id` (UUID, Primary Key)
-- `moment_id` (UUID, Foreign Key referencing `moments.id`, indexed)
-- `author_id` (UUID, Foreign Key referencing `users.id`)
-- `content_text` (Text)
-- `correction_payload` (JSONB, nullable, e.g., `{ "original": "...", "fixed": "...", "explanation": "..." }`)
-- `voice_note_url` (Text, nullable)
+- `id` (UUID, Primary Key, default `uuid_generate_v4()`)
+- `moment_id` (UUID, Foreign Key referencing `moments.id`, `ON DELETE CASCADE`, indexed together with `created_at ASC`)
+- `user_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`)
+- `text_content` (Nullable Text, up to 2,000 characters through the API)
+- `correction_payload` (JSONB, nullable, e.g., `{ "original": "...", "corrected": "...", "explanation": "..." }` where `explanation` is optional)
+- `parent_comment_id` (Nullable UUID, Foreign Key referencing `moment_comments.id`, `ON DELETE CASCADE`, indexed, set on a threaded reply)
+- `reply_to_user_id` (Nullable UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, the author being replied to)
 - `created_at` (Timestamp with time zone, default `now()`)
 
 ### Table: `moment_likes`
 
-- `id` (UUID, Primary Key)
-- `moment_id` (UUID, Foreign Key referencing `moments.id`, indexed)
-- `user_id` (UUID, Foreign Key referencing `users.id`, indexed together with `created_at DESC` for the viewer's recent-likes history used by For You ranking)
+- `id` (UUID, Primary Key, default `uuid_generate_v4()`)
+- `moment_id` (UUID, Foreign Key referencing `moments.id`, `ON DELETE CASCADE`, covered by the unique constraint below)
+- `user_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, indexed together with `created_at DESC` for the viewer's recent-likes history used by For You ranking)
 - `created_at` (Timestamp with time zone, default `now()`)
+- Unique constraint `unique_moment_like` on (`moment_id`, `user_id`): a user likes a Moment at most once, so retried or concurrent requests cannot create duplicate rows.
+
+### Table: `user_follows`
+
+- `follower_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, part of the Primary Key, indexed)
+- `following_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, part of the Primary Key, indexed together with `follower_id` for timeline fan-out)
+- `created_at` (Timestamp with time zone, default `now()`)
+
+### Table: `moment_comment_votes`
+
+- `id` (UUID, Primary Key, default `uuid_generate_v4()`)
+- `comment_id` (UUID, Foreign Key referencing `moment_comments.id`, `ON DELETE CASCADE`, indexed together with the vote)
+- `user_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`)
+- `vote` (String, `'up'` or `'down'`, correction quality rating written through the service-role `rate_moment_correction` function)
+- `created_at` (Timestamp with time zone, default `now()`)
+- Unique constraint on (`comment_id`, `user_id`): one vote per learner per correction.
+
+### Table: `moment_question_answers`
+
+- `id` (UUID, Primary Key, default `uuid_generate_v4()`)
+- `moment_id` (UUID, Foreign Key referencing `moments.id`, `ON DELETE CASCADE`, indexed)
+- `user_id` (UUID, Foreign Key referencing `users.id`, `ON DELETE CASCADE`, indexed)
+- `selected_answer` (String up to 255 characters, the option the learner chose)
+- `is_correct` (Boolean, default `false`)
+- `created_at` (Timestamp with time zone, default `now()`)
+- Unique constraint `unique_moment_question_answer` on (`moment_id`, `user_id`): the first answer is kept, so retries are idempotent.
 
 ### Table: `flashcards` (LingQ Interactive Reading & SRS Vocabulary Bank)
 
