@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import is_new_github_issue
@@ -17,6 +18,9 @@ from openhands_factory.exceptions import ConfigurationError
 from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import TERMINAL_STATES
+
+if TYPE_CHECKING:
+    from openhands_factory.session_identity import SessionIdentityJournal
 
 
 class SingleIssueCanary(MainCiGatedFactoryDaemon):
@@ -32,12 +36,23 @@ class SingleIssueCanary(MainCiGatedFactoryDaemon):
     ) -> None:
         super().__init__(config)
         self.issue = str(issue)
+        self.supervised_session = supervised_session
+        self._session_journal: SessionIdentityJournal | None = None
         if supervised_session:
             from openhands_factory.session_identity import SessionIdentityJournal
 
-            self.pipeline.router.supervise_sessions(
-                SessionIdentityJournal(config.state_dir / "manual-session-identities")
+            self._session_journal = SessionIdentityJournal(
+                config.state_dir / "manual-session-identities"
             )
+            self.pipeline.router.supervise_sessions(self._session_journal)
+
+    def _activate_generation(self) -> None:
+        """Preserve opt-in supervision when activation rebuilds the pipeline."""
+        super()._activate_generation()
+        if self.supervised_session:
+            if self._session_journal is None:
+                raise ConfigurationError("Supervised session journal was not initialised")
+            self.pipeline.router.supervise_sessions(self._session_journal)
 
     def _report(self, job: Job, *, advanced: bool) -> int:
         print(

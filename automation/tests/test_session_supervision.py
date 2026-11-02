@@ -209,6 +209,17 @@ def test_router_refuses_missing_shared_store_before_opting_in(tmp_path):
         router.supervise_sessions(SessionIdentityJournal(tmp_path / "journal"))
 
 
+def test_router_refuses_enabled_unsupported_transport_when_opting_in(supervisor):
+    class SDK:
+        name = "sdk"
+        enabled = True
+
+    router = AgentRouter([SDK()], capacity_store=supervisor.store)
+    with pytest.raises(ConfigurationError, match="supported direct CLI providers: sdk"):
+        router.supervise_sessions(supervisor.journal)
+    assert router.session_supervisor is None and supervisor.store.snapshot() == {}
+
+
 def test_retry_uses_one_reservation_but_distinct_process_checkpoints(
     supervisor, tmp_path, monkeypatch
 ):

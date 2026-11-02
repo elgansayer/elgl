@@ -207,6 +207,35 @@ def test_canary_attaches_supervision_to_its_existing_router_and_store(
     assert supervisor.journal.directory.stat().st_mode & 0o077 == 0
 
 
+def test_canary_reattaches_supervision_after_generation_rebuild(
+    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openhands_factory.agents.router import AgentRouter
+    from openhands_factory.provider_capacity import ProviderCapacityStore
+
+    def router() -> AgentRouter:
+        return AgentRouter(
+            [], capacity_store=ProviderCapacityStore(neptune_config.provider_capacity_dir)
+        )
+
+    initial = router()
+    activated = router()
+
+    def initialise(self, config):
+        self.pipeline = SimpleNamespace(router=initial)
+
+    def activate(self):
+        self.pipeline = SimpleNamespace(router=activated)
+
+    monkeypatch.setattr(canary.MainCiGatedFactoryDaemon, "__init__", initialise)
+    monkeypatch.setattr(canary.MainCiGatedFactoryDaemon, "_activate_generation", activate)
+    daemon = SingleIssueCanary(neptune_config, 570, supervised_session=True)
+    assert initial.session_supervisor is not None
+    daemon._activate_generation()
+    assert activated.session_supervisor is not None
+    assert activated.session_supervisor.journal is initial.session_supervisor.journal
+
+
 @pytest.mark.parametrize("state", [JobState.CI_PENDING, JobState.MERGE_QUEUED, JobState.MERGED])
 def test_closed_issue_can_reconcile_a_real_merged_pr(state: JobState) -> None:
     daemon = make_canary(state)

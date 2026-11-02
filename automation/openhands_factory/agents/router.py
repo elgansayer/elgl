@@ -169,6 +169,16 @@ class AgentRouter:
 
         if self.capacity_store is None or self.session_supervisor is not None:
             raise ConfigurationError("Session supervision needs one existing shared capacity store")
+        unsupported = [
+            name
+            for name, provider in self.providers.items()
+            if not isinstance(provider, CLIProvider) and getattr(provider, "enabled", True)
+        ]
+        if unsupported:
+            raise ConfigurationError(
+                "Supervised sessions require supported direct CLI providers: "
+                + ", ".join(sorted(unsupported))
+            )
         self.session_supervisor = SessionSupervisor(self.capacity_store, journal)
 
     def reserve_review_capacity(self, task_id: str) -> None:
