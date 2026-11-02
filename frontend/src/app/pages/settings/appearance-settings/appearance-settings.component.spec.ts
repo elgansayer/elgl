@@ -261,8 +261,16 @@ describe('AppearanceSettingsComponent', () => {
 
     expect(fontScaleServiceMock.setChatTextSize).toHaveBeenLastCalledWith('medium');
     expect(component.currentChatTextSize()).toBe('medium');
-    expect(component.errorMessage()).toBe('Failed to save settings');
+    expect(component.errorMessage()).toBe('settings.appearanceSaveError');
     expect(component.successMessage()).toBe('');
+  });
+
+  it('uses translated accessible names for every accent colour choice', () => {
+    const accentButtons = Array.from(
+      fixture.nativeElement.querySelectorAll('button[aria-label="settings.selectAccentColour"]'),
+    );
+
+    expect(accentButtons).toHaveLength(component.availableColors.length);
   });
 
   it('should set custom colour from color input when VIP', () => {

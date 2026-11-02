@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
+  ChatTextSize,
   ChatSettingsDto,
   DisappearingMessageTtl,
   DISAPPEARING_MESSAGE_TTLS,
@@ -14,8 +15,13 @@ export class ChatSettingsService {
     autoTranslate: false,
     readReceipts: false,
     enterToSend: false,
+    textSize: 'medium',
     disappearingMessagesTtl: 'off',
   };
+
+  private normaliseChatTextSize(value: unknown): ChatTextSize {
+    return value === 'small' || value === 'large' ? value : 'medium';
+  }
 
   private normalizeDisappearingMessagesTtl(
     value: unknown,
@@ -49,6 +55,7 @@ export class ChatSettingsService {
       autoTranslate: prefs.autoTranslate ?? this.defaultSettings.autoTranslate,
       readReceipts: prefs.readReceipts ?? this.defaultSettings.readReceipts,
       enterToSend: prefs.enterToSend ?? this.defaultSettings.enterToSend,
+      textSize: this.normaliseChatTextSize(prefs.textSize),
       disappearingMessagesTtl: this.normalizeDisappearingMessagesTtl(
         prefs.disappearingMessagesTtl,
       ),
@@ -64,6 +71,7 @@ export class ChatSettingsService {
       autoTranslate: settings.autoTranslate ?? current.autoTranslate,
       readReceipts: settings.readReceipts ?? current.readReceipts,
       enterToSend: settings.enterToSend ?? current.enterToSend,
+      textSize: settings.textSize ?? current.textSize,
       disappearingMessagesTtl:
         settings.disappearingMessagesTtl ?? current.disappearingMessagesTtl,
     };

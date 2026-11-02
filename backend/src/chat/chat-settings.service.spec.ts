@@ -49,6 +49,7 @@ describe('ChatSettingsService', () => {
         autoTranslate: false,
         readReceipts: false,
         enterToSend: false,
+        textSize: 'medium',
         disappearingMessagesTtl: 'off',
       });
     });
@@ -77,6 +78,7 @@ describe('ChatSettingsService', () => {
             chat_preferences: {
               autoTranslate: true,
               enterToSend: true,
+              textSize: 'large',
               disappearingMessagesTtl: '7d',
             },
           },
@@ -89,7 +91,28 @@ describe('ChatSettingsService', () => {
         autoTranslate: true,
         readReceipts: false,
         enterToSend: true,
+        textSize: 'large',
         disappearingMessagesTtl: '7d',
+      });
+    });
+
+    it('should fall back to medium for an invalid stored text size', async () => {
+      const chain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: {
+            chat_preferences: {
+              textSize: 'extra-large',
+            },
+          },
+          error: null,
+        }),
+      };
+      mockFrom.mockReturnValue(chain);
+
+      await expect(service.getSettings(userId)).resolves.toMatchObject({
+        textSize: 'medium',
       });
     });
 
@@ -125,6 +148,7 @@ describe('ChatSettingsService', () => {
               autoTranslate: true,
               readReceipts: false,
               enterToSend: false,
+              textSize: 'small',
               disappearingMessagesTtl: '24h',
             },
           },
@@ -139,6 +163,7 @@ describe('ChatSettingsService', () => {
 
       const result = await service.updateSettings(userId, {
         readReceipts: true,
+        textSize: 'large',
         disappearingMessagesTtl: '90d',
       });
 
@@ -146,6 +171,7 @@ describe('ChatSettingsService', () => {
         autoTranslate: true,
         readReceipts: true,
         enterToSend: false,
+        textSize: 'large',
         disappearingMessagesTtl: '90d',
       });
       expect(updateChain.update).toHaveBeenCalledWith({
@@ -164,6 +190,7 @@ describe('ChatSettingsService', () => {
               autoTranslate: false,
               readReceipts: false,
               enterToSend: false,
+              textSize: 'medium',
               disappearingMessagesTtl: 'off',
             },
           },
@@ -193,6 +220,7 @@ describe('ChatSettingsService', () => {
               autoTranslate: true,
               readReceipts: true,
               enterToSend: true,
+              textSize: 'small',
               disappearingMessagesTtl: '7d',
             },
           },
@@ -212,6 +240,7 @@ describe('ChatSettingsService', () => {
       expect(result.autoTranslate).toBe(false);
       expect(result.readReceipts).toBe(true);
       expect(result.enterToSend).toBe(true);
+      expect(result.textSize).toBe('small');
       expect(result.disappearingMessagesTtl).toBe('7d');
     });
   });

@@ -15,11 +15,15 @@ const componentPath =
   'frontend/src/app/pages/settings/appearance-settings/appearance-settings.component.ts';
 const templatePath =
   'frontend/src/app/pages/settings/appearance-settings/appearance-settings.component.html';
+const chatSettingsDtoPath = 'backend/src/chat/dto/chat-settings.dto.ts';
+const chatSettingsServicePath = 'backend/src/chat/chat-settings.service.ts';
 
-const [routes, component, template] = await Promise.all([
+const [routes, component, template, chatSettingsDto, chatSettingsService] = await Promise.all([
   read(routesPath),
   read(componentPath),
   read(templatePath),
+  read(chatSettingsDtoPath),
+  read(chatSettingsServicePath),
 ]);
 
 test('appearance settings remains a lazy-loaded settings route', () => {
@@ -52,7 +56,16 @@ test('profile accent and chat text preferences are loaded and persisted through 
   assert.match(component, /userService\.updateMyProfile\(\{[\s\S]*primary_accent_color:/);
   assert.match(component, /chatSettingsService\.updateSetting\('textSize', chatTextSize\)/);
   assert.match(component, /successMessage\.set\('settings\.saved'\)/);
-  assert.match(component, /errorMessage\.set\('Failed to save settings'\)/);
+  assert.match(component, /errorMessage\.set\('settings\.appearanceLoadError'\)/);
+  assert.match(component, /errorMessage\.set\('settings\.appearanceSaveError'\)/);
+});
+
+test('chat text size is validated and persisted by the backend owner', () => {
+  assert.match(chatSettingsDto, /CHAT_TEXT_SIZES\s*=\s*\['small', 'medium', 'large'\]/);
+  assert.match(chatSettingsDto, /@IsIn\(CHAT_TEXT_SIZES\)[\s\S]*textSize\?: ChatTextSize/);
+  assert.match(chatSettingsService, /textSize:\s*'medium'/);
+  assert.match(chatSettingsService, /textSize:\s*this\.normaliseChatTextSize\(prefs\.textSize\)/);
+  assert.match(chatSettingsService, /textSize:\s*settings\.textSize \?\? current\.textSize/);
 });
 
 test('custom primary accents stay guarded by the VIP entitlement', () => {
@@ -85,4 +98,5 @@ test('appearance controls preserve accessible selection and status semantics', (
   assert.match(template, /role="status"/);
   assert.match(template, /aria-live="polite"/);
   assert.match(template, /min-h-11/);
+  assert.match(template, /'settings\.selectAccentColour' \| t: \{ colour: color \}/);
 });

@@ -12,6 +12,7 @@ describe('ChatSettingsController', () => {
     autoTranslate: false,
     readReceipts: false,
     enterToSend: false,
+    textSize: 'medium',
   };
 
   beforeEach(async () => {
@@ -58,7 +59,7 @@ describe('ChatSettingsController', () => {
   describe('updateSettings', () => {
     it('should update chat settings for the authenticated user', async () => {
       const req = { user: { sub: 'user-123' } };
-      const dto: ChatSettingsDto = { autoTranslate: true };
+      const dto: ChatSettingsDto = { autoTranslate: true, textSize: 'large' };
 
       const result = await controller.updateSettings(req, dto);
 

@@ -16,7 +16,7 @@
           class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink"
           role="alert"
         >
-          {{ errorMessage() }}
+          {{ errorMessage() | t }}
         </div>
       }
       @if (successMessage()) {
@@ -197,7 +197,7 @@
                 [class.opacity-50]="!isVip()"
                 [class.cursor-not-allowed]="!isVip()"
                 [attr.aria-pressed]="primaryAccentColor() === color"
-                [attr.aria-label]="'Select colour ' + color"
+                [attr.aria-label]="'settings.selectAccentColour' | t: { colour: color }"
               ></button>
             }
           </div>
