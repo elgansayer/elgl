@@ -498,7 +498,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Setup uv
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: '0.12.5'
           enable-cache: true
@@ -512,15 +512,15 @@ jobs:
         working-directory: automation
       - run: uv run --frozen mypy openhands_factory
         working-directory: automation
-      - run: uv run --frozen pytest
-        working-directory: automation
       - name: Enable unprivileged namespaces for containment integration
         run: |
           if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
+      - run: uv run --frozen pytest
+        working-directory: automation
       - name: Require actual provider namespace containment
-        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py
+        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py runtime_checks/test_supervised_routing_namespace.py
         working-directory: automation
 
   required-gate:

@@ -15,7 +15,7 @@ if [ ! -f .env ]; then
 fi
 
 echo "Starting Factory Dashboard..."
-sg docker -c "docker compose up -d --build"
+sg docker -c "docker compose up -d --pull always"
 
 echo ""
 echo "Dashboard running at http://localhost:3100"
