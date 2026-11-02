@@ -1654,6 +1654,130 @@ describe('MomentsService', () => {
       });
     });
 
+    it('should surface a non-duplicate answer insert failure', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                user_id: 'author-1',
+                post_type: 'language_question',
+                correct_answer: 'A',
+              },
+              error: null,
+            }),
+          };
+        }
+        return {
+          insert: vi.fn().mockResolvedValue({
+            error: { code: '42501', message: 'private provider detail' },
+          }),
+        };
+      });
+
+      await expect(
+        service.answerLanguageQuestion('user-1', 'm-1', 'A'),
+      ).rejects.toThrow('Failed to persist language question answer');
+    });
+
+    it('should surface a rejected non-duplicate answer insert', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                user_id: 'author-1',
+                post_type: 'language_question',
+                correct_answer: 'A',
+              },
+              error: null,
+            }),
+          };
+        }
+        return {
+          insert: vi.fn().mockRejectedValue({
+            code: 'PGRST500',
+            message: 'private provider detail',
+          }),
+        };
+      });
+
+      await expect(
+        service.answerLanguageQuestion('user-1', 'm-1', 'A'),
+      ).rejects.toThrow('Failed to persist language question answer');
+    });
+
+    it('should surface an answer count failure', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                user_id: 'author-1',
+                post_type: 'language_question',
+                correct_answer: 'A',
+              },
+              error: null,
+            }),
+          };
+        }
+        return {
+          insert: vi.fn().mockResolvedValue({ error: null }),
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          returns: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: 'PGRST500', message: 'private provider detail' },
+          }),
+        };
+      });
+
+      await expect(
+        service.answerLanguageQuestion('user-1', 'm-1', 'A'),
+      ).rejects.toThrow('Failed to persist language question answer');
+    });
+
+    it('should surface a counter update failure', async () => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockImplementation(() => ({
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  user_id: 'author-1',
+                  post_type: 'language_question',
+                  correct_answer: 'A',
+                },
+                error: null,
+              }),
+              error: { code: '42501', message: 'private provider detail' },
+            })),
+          };
+        }
+        return {
+          insert: vi.fn().mockResolvedValue({ error: null }),
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          returns: vi.fn().mockResolvedValue({
+            data: [{ is_correct: true }],
+            error: null,
+          }),
+        };
+      });
+
+      await expect(
+        service.answerLanguageQuestion('user-1', 'm-1', 'A'),
+      ).rejects.toThrow('Failed to persist language question answer');
+    });
+
     it('should report an incorrect answer', async () => {
       mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'moments') {

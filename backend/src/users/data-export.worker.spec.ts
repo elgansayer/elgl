@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -173,13 +174,24 @@ describe('DataExportWorker', () => {
     });
 
     it.each(['moments', 'moment_comments', 'moment_likes'])(
-      'should throw instead of exporting null when %s cannot be read',
+      'should fail closed without exposing provider or user details when %s cannot be read',
       async (table) => {
+        const errorLog = vi
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation(() => undefined);
         mockTables({ errors: { [table]: { message: 'provider detail' } } });
 
         await expect(worker.exportUserData('user-1')).rejects.toThrow(
-          `Failed to fetch ${table}: provider detail`,
+          'Data export failed',
         );
+        expect(JSON.stringify(errorLog.mock.calls)).not.toContain(
+          'provider detail',
+        );
+        expect(JSON.stringify(errorLog.mock.calls)).not.toContain('user-1');
+        expect(errorLog).toHaveBeenCalledWith({
+          event: 'data_export_dataset_failed',
+          dataset: table,
+        });
       },
     );
 
@@ -195,7 +207,7 @@ describe('DataExportWorker', () => {
       }));
 
       await expect(worker.exportUserData('user-1')).rejects.toThrow(
-        'Failed to fetch profile: Database error',
+        'Data export failed',
       );
     });
   });

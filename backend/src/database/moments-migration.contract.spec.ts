@@ -369,11 +369,7 @@ describe('row-level security for the moments tables (#1827)', () => {
 
 describe('typed Supabase client rows match the migrated schema (#1827)', () => {
   // The typed client map is hand-written, so a stale property type lets code
-  // write a column that does not exist without a compile error. The retired
-  // names below stay declared only because the unreachable legacy
-  // src/feed/feed.service.ts still compiles against them (see the production
-  // query conformance suite). Remove an alias together with that file; never
-  // add one.
+  // write a column that does not exist without a compile error.
   const typeNames = [
     'MomentRow',
     'MomentCommentRow',
@@ -382,14 +378,6 @@ describe('typed Supabase client rows match the migrated schema (#1827)', () => {
     'MomentQuestionAnswersRow',
     'UserFollowRow',
   ] as const;
-  const deprecatedAliases: Record<(typeof typeNames)[number], string[]> = {
-    MomentRow: ['author_id', 'content_text', 'detected_language'],
-    MomentCommentRow: ['author_id'],
-    MomentLikeRow: [],
-    MomentCommentVotesRow: [],
-    MomentQuestionAnswersRow: [],
-    UserFollowRow: [],
-  };
   const migrated: Record<(typeof typeNames)[number], string[]> = {
     MomentRow: Object.keys(MOMENTS_COLUMNS),
     MomentCommentRow: Object.keys(MOMENT_COMMENTS_COLUMNS),
@@ -399,30 +387,12 @@ describe('typed Supabase client rows match the migrated schema (#1827)', () => {
     UserFollowRow: [...MIGRATED_COLUMNS.user_follows],
   };
 
-  it.each(typeNames)(
-    '%s only declares migrated columns plus its documented legacy aliases',
-    (typeName) => {
-      const unknown = typeKeys(supabaseServiceSource, typeName).filter(
-        (key) =>
-          !migrated[typeName].includes(key) &&
-          !deprecatedAliases[typeName].includes(key),
-      );
+  it.each(typeNames)('%s only declares migrated columns', (typeName) => {
+    const unknown = typeKeys(supabaseServiceSource, typeName).filter(
+      (key) => !migrated[typeName].includes(key),
+    );
 
-      expect(unknown).toEqual([]);
-    },
-  );
-
-  it('labels every retired alias @deprecated so nobody mistakes it for a column', () => {
-    for (const [typeName, aliases] of Object.entries(deprecatedAliases)) {
-      for (const alias of aliases) {
-        const block = supabaseServiceSource.slice(
-          supabaseServiceSource.indexOf(`\ntype ${typeName} = {`),
-        );
-        expect(block, `${typeName}.${alias}`).toMatch(
-          new RegExp(`/\\*\\* @deprecated [^\\n]*\\*/\\n {2}${alias}\\?:`),
-        );
-      }
-    }
+    expect(unknown).toEqual([]);
   });
 
   it('does not give user_follows a surrogate id: its key is (follower_id, following_id)', () => {
@@ -619,9 +589,6 @@ const FILTER_METHODS = new Set([
   'overlaps',
 ]);
 const WRITE_METHODS = new Set(['insert', 'update', 'upsert']);
-/** Source files that still name retired columns but cannot be reached. */
-const UNREACHABLE_LEGACY_FILES = new Set(['feed/feed.service.ts']);
-
 /** Replaces comments with spaces so apostrophes in prose cannot start a string. */
 function maskComments(source: string): string {
   let output = '';
@@ -908,12 +875,8 @@ describe('production queries conform to the migrated schema (#1827)', () => {
   }));
   const findings = analyses.flatMap((analysis) => analysis.findings);
 
-  it('names only migrated columns on the Moments tables in every reachable file', () => {
-    expect(
-      findings
-        .filter(({ file }) => !UNREACHABLE_LEGACY_FILES.has(file))
-        .map(describeFinding),
-    ).toEqual([]);
+  it('names only migrated columns on the Moments tables in every production file', () => {
+    expect(findings.map(describeFinding)).toEqual([]);
   });
 
   it('keeps raw SQL under backend/src on the migrated Moments column names', () => {
@@ -939,29 +902,6 @@ describe('production queries conform to the migrated schema (#1827)', () => {
         )
         .map(({ file }) => file),
     ).toEqual([]);
-  });
-
-  it('still names retired columns only in files that nothing can reach', () => {
-    for (const legacy of UNREACHABLE_LEGACY_FILES) {
-      // A stale allowlist entry hides future drift: fix or delete the file,
-      // then remove it from the list.
-      expect(
-        findings.filter(({ file }) => file === legacy),
-        legacy,
-      ).not.toEqual([]);
-
-      // `MomentsFeedService` is the real feed, so only the bare class name and
-      // real import specifiers count; prose that mentions the path does not.
-      const referencing = sources
-        .filter(({ file }) => file !== legacy)
-        .filter(
-          ({ source }) =>
-            /(?<![A-Za-z])FeedService\b/.test(maskComments(source)) ||
-            /from\s+['"][^'"]*feed\/feed\.service['"]/.test(source),
-        )
-        .map(({ file }) => file);
-      expect(referencing, `${legacy} must stay unreachable`).toEqual([]);
-    }
   });
 
   it('reads columns from the known Moments call sites, so the guard cannot silently become a no-op', () => {

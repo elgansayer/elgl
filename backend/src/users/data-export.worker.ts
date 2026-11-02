@@ -8,7 +8,7 @@ export class DataExportWorker {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async exportUserData(userId: string): Promise<Record<string, unknown>> {
-    this.logger.log(`Starting data export for user ${userId}`);
+    this.logger.log({ event: 'data_export_started' });
 
     try {
       const supabase = this.supabaseService.getClient();
@@ -54,7 +54,7 @@ export class DataExportWorker {
       }
 
       if (profileRes.error) {
-        throw new Error(`Failed to fetch profile: ${profileRes.error.message}`);
+        this.failExport('profile');
       }
 
       // An unreadable Moments dataset must not be exported as null: that is how
@@ -65,9 +65,7 @@ export class DataExportWorker {
         { dataset: 'moment_likes', error: likesRes.error },
       ].find(({ error }) => error);
       if (momentsFailure?.error) {
-        throw new Error(
-          `Failed to fetch ${momentsFailure.dataset}: ${momentsFailure.error.message}`,
-        );
+        this.failExport(momentsFailure.dataset);
       }
 
       const result: Record<string, unknown> = {
@@ -83,12 +81,16 @@ export class DataExportWorker {
         exported_at: new Date().toISOString(),
       };
 
-      this.logger.log(`Data export completed for user ${userId}`);
+      this.logger.log({ event: 'data_export_completed' });
       return result;
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Data export failed for user ${userId}: ${msg}`);
-      throw error;
+    } catch {
+      this.logger.error({ event: 'data_export_failed' });
+      throw new Error('Data export failed');
     }
+  }
+
+  private failExport(dataset: string): never {
+    this.logger.error({ event: 'data_export_dataset_failed', dataset });
+    throw new Error('Data export failed');
   }
 }
