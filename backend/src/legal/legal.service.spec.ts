@@ -1,3 +1,4 @@
+import { Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { LegalService } from './legal.service';
@@ -125,6 +126,65 @@ describe('LegalService', () => {
       const customService = moduleRef.get(LegalService);
 
       expect(customService.getPrivacyPolicy().lastUpdated).toBe('2026-07-01');
+    });
+  });
+
+  describe('getDocument', () => {
+    it('returns Terms of Service for terms and terms-of-service', () => {
+      expect(service.getDocument('terms').title).toBe('Terms of Service');
+      expect(service.getDocument('terms-of-service').title).toBe(
+        'Terms of Service',
+      );
+      expect(service.getDocument('  TERMS  ').title).toBe('Terms of Service');
+    });
+
+    it('returns Privacy Policy for privacy and privacy-policy', () => {
+      expect(service.getDocument('privacy').title).toBe('Privacy Policy');
+      expect(service.getDocument('privacy-policy').title).toBe(
+        'Privacy Policy',
+      );
+      expect(service.getDocument('  PRIVACY  ').title).toBe('Privacy Policy');
+    });
+
+    it('throws NotFoundException for unknown document types', () => {
+      expect(() => service.getDocument('unknown-policy')).toThrow(
+        NotFoundException,
+      );
+      expect(() => service.getDocument('')).toThrow(NotFoundException);
+    });
+
+    it('does not reflect untrusted document types in logs or errors', () => {
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      const untrustedType = 'unknown\n[Admin] payment verified';
+
+      let thrown: unknown;
+      try {
+        service.getDocument(untrustedType);
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(NotFoundException);
+      expect((thrown as Error).message).toBe('Legal document not found');
+      expect((thrown as Error).message).not.toContain(untrustedType);
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Requested unknown legal document type',
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('rejects oversized document types before logging them', () => {
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+
+      expect(() => service.getDocument('x'.repeat(65))).toThrow(
+        NotFoundException,
+      );
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
     });
   });
 });

@@ -2,13 +2,13 @@
 
 ## Scope
 
-The public `/terms` and `/privacy` routes render the canonical Terms of Service and Privacy Policy before or after sign-in. Both routes share `LegalDocumentViewerComponent` and load typed content from the public NestJS endpoints `GET /legal/terms` and `GET /legal/privacy`.
+The public `/terms` and `/privacy` routes render the canonical Terms of Service and Privacy Policy before or after sign-in. Both routes load the shared `DynamicLegalComponent`, which delegates presentation to `LegalDocumentViewerComponent`. The canonical NestJS endpoints are `GET /legal/terms` and `GET /legal/privacy`; `GET /legal/terms-of-service` and `GET /legal/privacy-policy` are supported aliases for `/legal/:type` clients.
 
 The backend remains the single source of truth for document text and effective dates. No legal text is persisted in browser storage, Supabase, or a user profile.
 
 ## Request and rendering contract
 
-1. Angular requests the relevant `/legal/*` endpoint through `LegalService`.
+1. Angular binds the canonical route data or the `/legal/:type` URL parameter to `DynamicLegalComponent`, then requests the matching `/legal/:type` endpoint through `LegalService`.
 2. The client treats the HTTP body as untrusted data and validates it before rendering:
    - title: non-empty, at most 160 characters;
    - effective date: a real `YYYY-MM-DD` calendar date;
@@ -37,7 +37,7 @@ The backend legal endpoints are intentionally public because account creation an
 
 ## Privacy and security
 
-The endpoints return static policy content only. They accept no user input and require no account identifiers. The frontend does not log, cache in local storage, or send analytics containing the legal document body. Runtime response validation bounds memory/rendering work and rejects malformed fragments before they can affect document navigation.
+The endpoints return static policy content only and require no account identifiers. The `type` path parameter is untrusted input: the backend accepts only `terms`, `terms-of-service`, `privacy`, and `privacy-policy`, bounds its length, and returns a sanitised 404 for every other value. The frontend does not log, cache in local storage, or send analytics containing the legal document body. Runtime response validation bounds memory/rendering work and rejects malformed fragments before they can affect document navigation.
 
 The backend should not be changed to serve arbitrary operator-supplied HTML through this contract. If rich legal formatting is needed later, introduce an explicitly reviewed and sanitized representation rather than weakening the text-only boundary.
 
@@ -52,16 +52,17 @@ There is no mutation, background job, persistence retry, pagination, or concurre
 Relevant automated coverage includes:
 
 - backend `LegalService` tests for both documents, configuration overrides and malformed-date fallback;
-- backend controller tests for the public document endpoints;
+- backend HTTP integration tests for canonical paths, aliases, route precedence, cache headers and sanitised 404 behaviour;
 - frontend `LegalService` tests for successful requests, HTTP failures and malformed/unbounded payload rejection;
-- active `LegalDocumentViewerComponent` tests for headings, deep links, semantic dates, empty-state behavior, semantic theme tokens and text-only rendering;
-- Terms and Privacy page tests for loading, success, failure and retry behavior.
+- active `LegalDocumentViewerComponent` tests for headings, deep links, semantic dates, empty-state behaviour, semantic theme tokens and text-only rendering;
+- dynamic legal page tests for loading, success, failure and retry behaviour;
+- Angular router tests proving that canonical route data and `/legal/:type` parameters bind to the shared page and render the requested document.
 
 Repository CI remains authoritative for formatting, lint, unit tests, production builds, accessibility/design governance and dependency review.
 
 ## Rollout
 
-No database migration is required. Deploy the backend first or together with the frontend. Existing backend responses already satisfy the stricter client contract, so mixed-version deployment is safe. If an effective date changes, set the corresponding environment variable before or with the backend release.
+No database migration is required. Deploy the backend first or together with the frontend. Existing canonical backend responses remain unchanged, while the alias paths are additive, so mixed-version deployment is safe. If an effective date changes, set the corresponding environment variable before or with the backend release.
 
 ## Rollback
 

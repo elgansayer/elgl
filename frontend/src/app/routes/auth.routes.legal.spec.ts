@@ -1,5 +1,13 @@
-import type { Route } from '@angular/router';
-import { describe, expect, it } from 'vitest';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter, type Route, withComponentInputBinding } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { environment } from '../../environments/environment';
+import { DynamicLegalComponent } from '../pages/legal/dynamic-legal.component';
+import { I18nService } from '../services/i18n.service';
 import { authRoutes } from './auth.routes';
 
 function getRoute(path: string): Route {
@@ -10,9 +18,27 @@ function getRoute(path: string): Route {
 }
 
 describe('public legal routes', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(authRoutes, withComponentInputBinding()),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => key,
+            currentLang: signal('en-GB'),
+          },
+        },
+      ],
+    });
+  });
+
   it.each([
     ['terms', 'Terms of Service - HelloTalk'],
     ['privacy', 'Privacy Policy - HelloTalk'],
+    ['legal/:type', 'Legal - HelloTalk'],
   ])('keeps /%s lazy-loaded and available before authentication', (path, title) => {
     const route = getRoute(path);
 
@@ -24,12 +50,39 @@ describe('public legal routes', () => {
     expect(route.canMatch).toBeUndefined();
   });
 
-  it('keeps Terms and Privacy as separate canonical destinations', () => {
+  it('binds canonical destinations to the shared dynamic page', async () => {
     const terms = getRoute('terms');
     const privacy = getRoute('privacy');
 
     expect(terms).not.toBe(privacy);
-    expect(terms.path).toBe('terms');
-    expect(privacy.path).toBe('privacy');
+    expect(terms.data?.['type']).toBe('terms');
+    expect(privacy.data?.['type']).toBe('privacy');
+    expect(await terms.loadComponent?.()).toBe(DynamicLegalComponent);
+    expect(await privacy.loadComponent?.()).toBe(DynamicLegalComponent);
+  });
+
+  it.each([
+    ['/terms', 'terms', 'Terms of Service'],
+    ['/privacy', 'privacy', 'Privacy Policy'],
+    ['/legal/terms-of-service', 'terms-of-service', 'Terms of Service'],
+    ['/legal/privacy-policy', 'privacy-policy', 'Privacy Policy'],
+  ])('binds %s and renders its requested document', async (url, type, title) => {
+    const harness = await RouterTestingHarness.create();
+    const component = await harness.navigateByUrl(url, DynamicLegalComponent);
+    const http = TestBed.inject(HttpTestingController);
+    const request = http.expectOne(`${environment.apiUrl}/legal/${type}`);
+
+    request.flush({
+      title,
+      lastUpdated: '2026-07-01',
+      sections: [{ id: 'overview', heading: 'Overview', content: 'Document content.' }],
+    });
+
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+
+    expect(component.type()).toBe(type);
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain(title);
+    http.verify();
   });
 });
