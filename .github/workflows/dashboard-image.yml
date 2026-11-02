@@ -1,0 +1,64 @@
+name: Factory dashboard image
+on:
+  push:
+    branches: [main]
+    paths:
+      - factory-dashboard/**
+      - .github/workflows/dashboard-image.yml
+  pull_request:
+    paths:
+      - factory-dashboard/**
+      - .github/workflows/dashboard-image.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: dashboard-image-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run dashboard tests
+        working-directory: factory-dashboard
+        run: npm test
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: factory-dashboard
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/elgansayer/factory-dashboard:latest
+            ghcr.io/elgansayer/factory-dashboard:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Notify Arcane after image publication
+        env:
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          DEPLOY_RESOLVE: ${{ vars.DEPLOY_RESOLVE }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_WEBHOOK_URL" || { echo "DEPLOY_WEBHOOK_URL is missing" >&2; exit 1; }
+          status=$(curl --silent --show-error --output /tmp/deploy.json --write-out '%{http_code}' --max-time 90 --resolve "$DEPLOY_RESOLVE" --request POST "$DEPLOY_WEBHOOK_URL")
+          test "$status" = 202 || { echo "Deployment trigger returned HTTP $status" >&2; exit 1; }
+          echo "Arcane accepted deployment. Check the project's Event Log for the rollout result."
