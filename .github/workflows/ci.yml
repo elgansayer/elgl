@@ -520,7 +520,7 @@ jobs:
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
       - name: Require actual provider namespace containment
-        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py
+        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py runtime_checks/test_supervised_routing_namespace.py
         working-directory: automation
 
   required-gate:

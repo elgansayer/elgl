@@ -246,8 +246,9 @@ class CLIProvider:
         stdin_text: str | None,
         timeout_seconds: int,
         max_output_bytes: int,
+        process_runner: AgentProcessRunner | None = None,
     ) -> ProcessResult:
-        return self.process_runner.run(
+        return (process_runner or self.process_runner).run(
             command,
             cwd=cwd,
             env=provider_environment(),
@@ -367,6 +368,7 @@ class CLIProvider:
                     stdin_text=self.prompt_for_stdin(full_prompt, prompt_path),
                     timeout_seconds=timeout,
                     max_output_bytes=max_output,
+                    process_runner=request.process_runner,
                 )
         except FileNotFoundError:
             finished_at = datetime.now(UTC)

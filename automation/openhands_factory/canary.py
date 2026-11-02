@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import is_new_github_issue
 from openhands_factory.doctor import (
+    Check,
     github_merge_policy_check,
     github_repository_access_check,
     run_doctor,
@@ -26,9 +27,17 @@ class SingleIssueCanary(MainCiGatedFactoryDaemon):
     Existing provider deadlines, quotas, CAS leases and failure backoff still apply.
     """
 
-    def __init__(self, config: FactoryConfig, issue: int) -> None:
+    def __init__(
+        self, config: FactoryConfig, issue: int, *, supervised_session: bool = False
+    ) -> None:
         super().__init__(config)
         self.issue = str(issue)
+        if supervised_session:
+            from openhands_factory.session_identity import SessionIdentityJournal
+
+            self.pipeline.router.supervise_sessions(
+                SessionIdentityJournal(config.state_dir / "manual-session-identities")
+            )
 
     def _report(self, job: Job, *, advanced: bool) -> int:
         print(
@@ -96,7 +105,9 @@ class SingleIssueCanary(MainCiGatedFactoryDaemon):
         return self._report(result or job, advanced=result is not None)
 
 
-def run_canary(config: FactoryConfig, issue: int | None) -> int:
+def run_canary(
+    config: FactoryConfig, issue: int | None, *, supervised_session: bool = False
+) -> int:
     """Fail before startup/mutation if this is not the explicit Neptune canary."""
     if not config.tests_only_merging or type(issue) is not int or issue <= 0:
         raise ConfigurationError("Live task run requires an explicit positive Neptune issue")
@@ -105,7 +116,14 @@ def run_canary(config: FactoryConfig, issue: int | None) -> int:
         github_repository_access_check(config),
         github_merge_policy_check(config),
     ]
+    if supervised_session:
+        from openhands_factory.agents.process import agent_process_isolation_probe
+
+        supported, reason = agent_process_isolation_probe()
+        checks.append(Check("manual-session-containment", supported, reason))
     failed = [check.name for check in checks if not check.passed]
     if failed:
         raise ConfigurationError("Canary readiness failed: " + ", ".join(failed))
+    if supervised_session:
+        return SingleIssueCanary(config, issue, supervised_session=True).run()
     return SingleIssueCanary(config, issue).run()
