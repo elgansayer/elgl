@@ -6589,6 +6589,7 @@ dependencies = [
     { name = "openhands-sdk" },
     { name = "openhands-tools" },
     { name = "pydantic" },
+    { name = "websockets" },
 ]
 
 [package.optional-dependencies]
@@ -6610,6 +6611,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'development'", specifier = "==9.2.0" },
     { name = "pytest-cov", marker = "extra == 'development'", specifier = "==7.1.0" },
     { name = "ruff", marker = "extra == 'development'", specifier = "==0.17.3" },
+    { name = "websockets", specifier = "==16.1.1" },
 ]
 provides-extras = ["development"]
 

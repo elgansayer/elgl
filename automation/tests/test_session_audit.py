@@ -230,3 +230,55 @@ def test_cli_uses_configured_shared_reader_and_no_online_checks(fixture, monkeyp
     monkeypatch.setattr(cli, "_provider_startup_checks", lambda _: pytest.fail("Online probe"))
     assert cli.main(["sessions", "audit"]) == 0
     assert json.loads(capsys.readouterr().out)["reader_compatible_slot_counts"] == {"codex": 1}
+
+
+@pytest.mark.parametrize("loaded", [None, 0, 1])
+def test_optional_metadata_does_not_enrol_threads_or_mutate_accounting(
+    fixture, monkeypatch, loaded
+):
+    store, journal, _, _ = fixture
+    before = durable_bytes(store, journal)
+    observed = {"inventory_complete": loaded is not None, "loaded_threads": loaded}
+    path = journal.directory.parent / "control.sock"
+
+    def observe(actual):
+        assert actual == path
+        return observed
+
+    monkeypatch.setattr("openhands_factory.codex_observer.observe_codex", observe)
+    report = audit_sessions(store, journal.directory, codex_socket=path)
+    assert report["codex_manual_observer"] == observed
+    assert report["observations_consistent"] == (loaded == 0)
+    assert report["errors"] == (
+        ["codex_manual_inventory_unavailable"]
+        if loaded is None
+        else ["codex_threads_not_correlated_with_broker_leases"]
+        if loaded
+        else []
+    )
+    assert not report["account_wide_coverage_proven"] and not report["continuity_authorised"]
+    assert durable_bytes(store, journal) == before
+
+
+def test_cli_passes_explicit_socket_and_reports_failed_inventory(fixture, monkeypatch, capsys):
+    store, journal, _, _ = fixture
+    monkeypatch.setattr(cli, "protect_process_credentials", lambda: None)
+    monkeypatch.setattr(
+        cli,
+        "_config",
+        lambda: SimpleNamespace(
+            provider_capacity_dir=store.path.parent, state_dir=journal.directory.parent
+        ),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.provider_capacity.maximum_agent_lease_seconds", lambda _: 3900
+    )
+    path = journal.directory.parent / "absent.sock"
+
+    def observe(actual):
+        assert actual == path
+        return {"inventory_complete": False}
+
+    monkeypatch.setattr("openhands_factory.codex_observer.observe_codex", observe)
+    assert cli.main(["sessions", "audit", "--codex-socket", str(path)]) == 1
+    assert "codex_manual_inventory_unavailable" in json.loads(capsys.readouterr().out)["errors"]
