@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -1417,7 +1418,10 @@ class FactoryPipeline:
                     return
                 self.github.remove_issue_labels(job.pull_request, ("factory-stack-blocked",))
 
-            if self._refresh_pull_request_if_changed(job, worktree, lease_owner):
+            review_status = self._status(job) if job.pull_request is not None else None
+            if self._refresh_pull_request_if_changed(
+                job, worktree, lease_owner, known_status=review_status
+            ):
                 return
 
             if self.config.tests_only_merging:
@@ -1440,7 +1444,12 @@ class FactoryPipeline:
                 job,
                 worktree,
                 "review",
-                build_phase_prompt(prompt_dir, "review", job.task),
+                build_phase_prompt(
+                    prompt_dir,
+                    "review",
+                    job.task,
+                    coordinator_verification=self._review_verification_snapshot(job, review_status),
+                ),
                 lease_owner=lease_owner,
                 prepare_attempt=clear_review_report,
                 validate_output=require_valid_review_report,
@@ -2193,17 +2202,51 @@ class FactoryPipeline:
         self._record_verified_head(job, lease_owner, verified_paths)
         job.state = JobState.REVIEWING
 
+    @staticmethod
+    def _review_verification_snapshot(job: Job, status: PullRequestStatus | None) -> str:
+        """Give restricted reviewers API evidence without credentials or new authority."""
+        matching = bool(
+            status
+            and status.number == job.pull_request
+            and status.head_sha == job.head_sha == job.latest_verified_sha
+        )
+        passed = bool(
+            matching
+            and status
+            and status.state == "OPEN"
+            and status.ci_required_passed
+            and not status.ci_required_pending
+            and not status.ci_required_failed
+        )
+        return json.dumps(
+            {
+                "source": "coordinator GitHub status observation",
+                "pull_request": job.pull_request,
+                "job_head_sha": job.head_sha,
+                "latest_verified_sha": job.latest_verified_sha,
+                "observed_head_sha": status.head_sha if status else None,
+                "required_ci_passed_for_verified_head": passed,
+                "required_ci_pending": status.ci_required_pending if status else None,
+                "required_ci_failed": status.ci_required_failed if status else None,
+                "workflow_run_ids": sorted(status.workflow_run_ids)[:16] if status else [],
+                "scope": "CI status metadata, not independent acceptance or a new review approval",
+            },
+            indent=2,
+        )
+
     def _refresh_pull_request_if_changed(
         self,
         job: Job,
         worktree: Path,
         lease_owner: str,
+        *,
+        known_status: PullRequestStatus | None = None,
     ) -> bool:
         """Refresh PR evidence before using or pushing it against a changed head."""
         if job.pull_request is None:
             return False
 
-        status = self._status(job)
+        status = known_status or self._status(job)
         if status.state == "MERGED":
             job.state = JobState.MERGED
             return True
