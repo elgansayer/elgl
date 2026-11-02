@@ -9,6 +9,11 @@ const workflow = readFileSync(
   join(root, '.github/workflows/dashboard-image.yml'),
   'utf8',
 );
+const compose = readFileSync(
+  join(root, 'factory-dashboard/docker-compose.yml'),
+  'utf8',
+);
+const startScript = readFileSync(join(root, 'factory-dashboard/start.sh'), 'utf8');
 
 function indexOfOrFail(fragment) {
   const index = workflow.indexOf(fragment);
@@ -60,4 +65,15 @@ test('triggers the scoped deployment only after a successful main publication', 
     /deploy:\s*\n\s+if: github\.ref == 'refs\/heads\/main' && github\.event_name != 'pull_request'\s*\n\s+needs: build/,
   );
   assert.match(workflow, /test "\$status" = 202/);
+});
+
+test('production deployment pulls the tested dashboard image', () => {
+  assert.match(
+    compose,
+    /image: ghcr\.io\/elgansayer\/factory-dashboard:latest/,
+  );
+  assert.match(compose, /pull_policy: always/);
+  assert.doesNotMatch(compose, /^\s+build:/m);
+  assert.match(startScript, /docker compose up -d --pull always/);
+  assert.doesNotMatch(startScript, /docker compose up -d --build/);
 });
