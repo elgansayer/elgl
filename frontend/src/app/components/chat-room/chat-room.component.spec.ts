@@ -253,6 +253,28 @@ describe('ChatRoomComponent (threaded replies)', () => {
     vi.useRealTimers();
   });
 
+  it('renders an unloaded search result before scrolling to it', () => {
+    const result = makeMessage({
+      id: 'unloaded-result',
+      created_at: '2025-01-01T00:00:00.000Z',
+    });
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    component.messages.set([makeMessage({ id: 'loaded-result' })]);
+    component.showSearchPanel.set(true);
+    component.onSearchResultSelect(result);
+    fixture.detectChanges();
+
+    expect(component.showSearchPanel()).toBe(false);
+    expect(component.messages().map((message) => message.id)).toContain('unloaded-result');
+    expect(fixture.nativeElement.querySelector('#msg-unloaded-result')).not.toBeNull();
+    expect(scrollIntoView).toHaveBeenCalled();
+
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+  });
+
   describe('@mentions', () => {
     beforeEach(async () => {
       // Let the component's own async initialisation (loadParticipants, etc.) settle first,
