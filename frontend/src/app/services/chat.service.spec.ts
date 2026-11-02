@@ -222,6 +222,44 @@ describe('ChatService', () => {
 
       httpMock.expectNone(`${baseUrl}/search`);
     });
+
+    it('decrypts encrypted candidates and applies the search term literally', async () => {
+      const decryptMessage = TestBed.inject(PersonalChatEncryptionService).decryptMessage;
+      vi.mocked(decryptMessage).mockResolvedValueOnce('Meet at ** noon');
+      const promise = service.searchMessages('**', 'room-1');
+
+      httpMock.expectOne(`${baseUrl}/search`).flush([
+        {
+          id: 'encrypted-match',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          text_content: 'Encrypted message',
+          is_encrypted: true,
+          encrypted_payload: 'e2ee:v1:iv:ciphertext',
+          is_read: true,
+          created_at: '2026-11-02T00:00:00.000Z',
+        },
+        {
+          id: 'encrypted-non-match',
+          room_id: 'room-1',
+          sender_id: 'user-2',
+          message_type: 'text',
+          text_content: 'Encrypted message',
+          is_encrypted: true,
+          encrypted_payload: 'e2ee:v1:iv:other',
+          is_read: true,
+          created_at: '2026-11-01T00:00:00.000Z',
+        },
+      ]);
+
+      await expect(promise).resolves.toEqual([
+        expect.objectContaining({
+          id: 'encrypted-match',
+          text_content: 'Meet at ** noon',
+        }),
+      ]);
+    });
   });
 
   describe('blocked users', () => {

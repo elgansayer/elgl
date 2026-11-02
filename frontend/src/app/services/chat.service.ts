@@ -661,17 +661,43 @@ export class ChatService {
     if (!this.authService.getAccessToken()) {
       return [];
     }
-    return firstValueFrom(
+    const trimmedTerm = term.trim();
+    const messages = await firstValueFrom(
       this.http.post<ChatMessage[]>(
         `${this.baseUrl}/search`,
         {
-          term: term.trim(),
+          term: trimmedTerm,
           ...(roomId ? { roomId } : {}),
           limit,
         },
         { headers: this.getHeaders() },
       ),
     );
+
+    const literalTerm = trimmedTerm.toLocaleLowerCase();
+    const searchableMessages = await Promise.all(
+      messages.map(async (message) => {
+        if (!message.is_encrypted || !message.encrypted_payload) return message;
+        try {
+          const textContent = await this.personalChatEncryption.decryptMessage(
+            message.room_id,
+            message.encrypted_payload,
+          );
+          return { ...message, text_content: textContent };
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    return searchableMessages
+      .filter((message): message is ChatMessage => message !== null)
+      .filter(
+        (message) =>
+          !message.is_encrypted ||
+          (message.text_content?.toLocaleLowerCase().includes(literalTerm) ?? false),
+      )
+      .slice(0, limit);
   }
 
   async getFavourites(): Promise<FavouriteRecord[]> {

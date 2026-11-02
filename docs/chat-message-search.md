@@ -19,7 +19,7 @@ Selecting a result from the current room emits the message to `ChatRoomComponent
 
 `ChatService.searchAllMessages` first reads `chat_room_members` for the authenticated user. An optional `roomId` is accepted only when it is in that membership set. The message query is then constrained with `room_id IN (...)` before text matching.
 
-Message text uses PostgreSQL `ILIKE '%term%'`, with `%`, `_` and `\` escaped so caller input is always literal search text rather than a database wildcard pattern. This query shape is backed by the existing `pg_trgm` GIN index:
+Unencrypted message text uses PostgreSQL `ILIKE '%term%'`, with `%`, `_`, `*` and `\` escaped so caller input is always literal search text rather than a database wildcard pattern. Encrypted candidates are returned with their E2EE envelope, decrypted in memory by the authorised client, and filtered there with literal substring matching. This query shape is backed by the existing `pg_trgm` GIN index:
 
 ```sql
 CREATE INDEX IF NOT EXISTS chat_messages_text_content_trgm_idx
@@ -30,9 +30,9 @@ ON public.chat_messages USING GIN (text_content gin_trgm_ops);
 
 ## Privacy and authorization
 
-Search never accepts a caller-supplied user identifier. The authenticated Supabase subject defines the room membership scope. Results also apply the existing bidirectional block list and remove messages marked `is_deleted_for_everyone` or deleted for the current learner.
+Search never accepts a caller-supplied user identifier. The authenticated Supabase subject defines the room membership scope. The database query applies the existing bidirectional block list and both deletion predicates before ordering and limiting, so hidden rows cannot displace older visible matches.
 
-The response is an allowlisted search projection containing only the identifiers, text, type, sender label, read state, timestamp and expiry needed by the search UI and disappearing-message interceptor. It never returns media URLs, view-once state or the internal list of learners who hid a message.
+The response is an allowlisted search projection containing only the identifiers, text or encrypted envelope, encryption marker, type, sender label, read state, timestamp and expiry needed by the search UI and disappearing-message interceptor. It never returns media URLs, view-once state or the internal list of learners who hid a message.
 
 The client renders result text with Angular interpolation, not raw HTML. Search terms, matched private message text, room IDs and result contents must not be added to analytics or application logs. Provider errors are represented as an unavailable state in the UI rather than logging private search context.
 

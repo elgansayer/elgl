@@ -57,7 +57,9 @@ function escapeLikePattern(value: string): string {
   return value
     .replaceAll('\\', '\\\\')
     .replaceAll('%', '\\%')
-    .replaceAll('_', '\\_');
+    .replaceAll('_', '\\_')
+    .replaceAll('*', '\\*')
+    .replaceAll('"', '\\"');
 }
 
 interface DeletedAwareMessage extends ChatMessage {
@@ -71,6 +73,8 @@ interface SearchMessageRow {
   sender_id: string;
   message_type: string;
   text_content?: string | null;
+  is_encrypted?: boolean;
+  encrypted_payload?: string | null;
   is_read: boolean;
   created_at: string;
   expires_at?: string | null;
@@ -814,6 +818,8 @@ export class ChatService {
         sender_id,
         message_type,
         text_content,
+        is_encrypted,
+        encrypted_payload,
         is_read,
         created_at,
         expires_at,
@@ -826,7 +832,9 @@ export class ChatService {
       `,
       )
       .in('room_id', roomIds)
-      .ilike('text_content', `%${escapedTerm}%`)
+      .or(`text_content.ilike."%${escapedTerm}%",is_encrypted.eq.true`)
+      .eq('is_deleted_for_everyone', false)
+      .not('deleted_for_user_ids', 'cs', `{${userId}}`)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -847,21 +855,19 @@ export class ChatService {
     const messages: SearchMessageRow[] = response.data;
 
     return messages
-      .filter((msg) => {
-        if (msg.is_deleted_for_everyone) return false;
-        if (
-          Array.isArray(msg.deleted_for_user_ids) &&
-          msg.deleted_for_user_ids.includes(userId)
-        )
-          return false;
-        return true;
-      })
+      .filter(
+        (msg) =>
+          !msg.is_deleted_for_everyone &&
+          !msg.deleted_for_user_ids?.includes(userId),
+      )
       .map((msg) => ({
         id: msg.id,
         room_id: msg.room_id,
         sender_id: msg.sender_id,
         message_type: msg.message_type,
         text_content: msg.text_content,
+        is_encrypted: msg.is_encrypted,
+        encrypted_payload: msg.encrypted_payload,
         is_read: msg.is_read,
         created_at: msg.created_at,
         expires_at: msg.expires_at,

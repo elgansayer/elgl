@@ -985,7 +985,8 @@ describe('ChatService', () => {
       return {
         select: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
-        ilike: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         not: vi.fn().mockReturnThis(),
@@ -1050,6 +1051,8 @@ describe('ChatService', () => {
           sender_id: 'user-2',
           message_type: 'text',
           text_content: 'Hello there',
+          is_encrypted: undefined,
+          encrypted_payload: undefined,
           is_read: true,
           created_at: '2026-11-02T00:00:00.000Z',
           expires_at: undefined,
@@ -1060,9 +1063,28 @@ describe('ChatService', () => {
       expect(projection).not.toContain('*');
       expect(projection).not.toContain('media_url');
       expect(projection).not.toContain('viewed_at');
+      expect(projection).toContain('is_encrypted');
+      expect(projection).toContain('encrypted_payload');
       expect(memberships.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(messages.in).toHaveBeenCalledWith('room_id', ['room-1', 'room-2']);
-      expect(messages.ilike).toHaveBeenCalledWith('text_content', '%hello%');
+      expect(messages.or).toHaveBeenCalledWith(
+        'text_content.ilike."%hello%",is_encrypted.eq.true',
+      );
+      expect(messages.eq).toHaveBeenCalledWith(
+        'is_deleted_for_everyone',
+        false,
+      );
+      expect(messages.not).toHaveBeenCalledWith(
+        'deleted_for_user_ids',
+        'cs',
+        '{user-1}',
+      );
+      expect(messages.eq.mock.invocationCallOrder[0]).toBeLessThan(
+        messages.limit.mock.invocationCallOrder[0],
+      );
+      expect(messages.not.mock.invocationCallOrder[0]).toBeLessThan(
+        messages.limit.mock.invocationCallOrder[0],
+      );
       expect(messages.order).toHaveBeenCalledWith('created_at', {
         ascending: false,
       });
@@ -1098,11 +1120,10 @@ describe('ChatService', () => {
         table === 'chat_room_members' ? memberships : messages,
       );
 
-      await service.searchAllMessages('user-1', '100%_\\ready');
+      await service.searchAllMessages('user-1', '**100%_\\"ready,now');
 
-      expect(messages.ilike).toHaveBeenCalledWith(
-        'text_content',
-        '%100\\%\\_\\\\ready%',
+      expect(messages.or).toHaveBeenCalledWith(
+        'text_content.ilike."%\\*\\*100\\%\\_\\\\\\"ready,now%",is_encrypted.eq.true',
       );
     });
 
