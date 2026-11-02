@@ -70,6 +70,8 @@ def parser() -> argparse.ArgumentParser:
     providers.add_argument("action", choices=("check",))
     legacy = subcommands.add_parser("legacy")
     legacy.add_argument("action", choices=("scan",))
+    sessions = subcommands.add_parser("sessions")
+    sessions.add_argument("action", choices=("audit",))
     task = subcommands.add_parser("task")
     task.add_argument("action", choices=("run",))
     task.add_argument("--issue", type=int)
@@ -211,6 +213,22 @@ def main(arguments: list[str] | None = None) -> int:
                 )
             )
             return 1 if any(finding.active for finding in findings) else 0
+        if args.command == "sessions":
+            from openhands_factory.provider_capacity import (
+                ProviderCapacityStore,
+                maximum_agent_lease_seconds,
+            )
+            from openhands_factory.session_audit import audit_sessions
+
+            report = audit_sessions(
+                ProviderCapacityStore(
+                    config.provider_capacity_dir,
+                    max_lease_seconds=maximum_agent_lease_seconds(config),
+                ),
+                config.state_dir / "manual-session-identities",
+            )
+            print(json.dumps(report, indent=2))
+            return 0 if report["observations_consistent"] else 1
         if args.command == "task":
             if not args.dry_run:
                 if not config.tests_only_merging:
