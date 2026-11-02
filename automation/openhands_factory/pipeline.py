@@ -34,6 +34,7 @@ from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
+from openhands_factory.neptune_intake import NeptuneIntakeUnavailable, accepted_verification
 from openhands_factory.neptune_preparation import ToolPreparationUnavailable, prepare_native
 from openhands_factory.pr_convergence import (
     ConvergenceAction,
@@ -1257,7 +1258,10 @@ class FactoryPipeline:
             # A head the Factory already verified and pushed can re-enter VERIFYING
             # with a clean worktree; "nothing to commit" then failed every retry
             # (issue 9464, PR #9671, 2026-10-29). Any other clean tree still fails.
-            if job.latest_verified_sha != workflow.head_sha() or workflow.has_changes():
+            if (
+                job.latest_verified_sha != workflow.head_sha()
+                and job.verification_candidate_sha != workflow.head_sha()
+            ) or workflow.has_changes():
                 workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
@@ -1733,7 +1737,12 @@ class FactoryPipeline:
                     else "fix: repair CI for"
                 )
             )
-            workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
+            if (
+                self.config.neptune_intake_dir is None
+                or workflow.has_changes()
+                or job.verification_candidate_sha != workflow.head_sha()
+            ):
+                workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -2484,20 +2493,40 @@ class FactoryPipeline:
         status = self.github.pull_request_status(parent)
         return parent if status.state == "OPEN" else None
 
-    def _verify(self, workflow: GitWorkflow) -> set[Path]:
+    def _verify(self, workflow: GitWorkflow, *, job: Job | None = None) -> set[Path]:
         changed = workflow.changed_paths()
         if not changed:
             raise FactoryError("No changed paths were found")
+        bound = self.config.neptune_intake_dir is not None
+        if bound:
+            if job is None:
+                raise NeptuneIntakeUnavailable("missing assigned job")
+            # Local candidate commit is a checkpoint, never verification or publication.
+            if workflow.has_changes():
+                workflow.stage_all()
+                workflow.commit("fix: checkpoint Neptune candidate " + job.task.identifier)
+            job.verification_candidate_sha = workflow.head_sha()
+            self.jobs.save_job(job)
         commands = commands_for(workflow.repository, changed, self.config.repository_profile)
         # Memory-heavy Angular commands and fixed-port browser commands are
         # serialized across workers. The remaining checks can run at full worker
         # parallelism. Running shared checks first means cheap failures are judged
         # before spending minutes in the host-wide verification slot.
-        shared = [command for command in commands if not command.exclusive]
-        exclusive = [command for command in commands if command.exclusive]
+        shared = [] if bound else [command for command in commands if not command.exclusive]
+        exclusive = commands if bound else [command for command in commands if command.exclusive]
 
         def verify_exclusive() -> None:
             selected = exclusive
+            if bound:
+                assert job is not None
+                with accepted_verification(
+                    self.config, job, workflow.repository, changed
+                ) as accepted:
+                    self.jobs.save_job(job)
+                    selected = accepted.commands(selected)
+                    selected = prepare_native(self.config, workflow.repository, changed, selected)
+                    run_verification(selected)
+                return
             if self.config.repository_profile == "neptune":
                 selected = prepare_native(self.config, workflow.repository, changed, selected)
             run_verification(selected)
@@ -2531,10 +2560,14 @@ class FactoryPipeline:
     ) -> set[Path] | None:
         """Route deterministic verification failures into bounded agent repair."""
         try:
-            changed = self._verify(workflow)
+            changed = (
+                self._verify(workflow, job=job)
+                if self.config.neptune_intake_dir
+                else self._verify(workflow)
+            )
         except VerificationFailed as error:
             detail = str(error)
-            if isinstance(error, ToolPreparationUnavailable) or any(
+            if isinstance(error, (ToolPreparationUnavailable, NeptuneIntakeUnavailable)) or any(
                 marker in detail.lower() for marker in VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS
             ):
                 # Host/cache/resource failures cannot be corrected by editing the
@@ -2755,7 +2788,10 @@ class FactoryPipeline:
             if proposals:
                 self._create_deduplicated_issues(proposals)
             if review_workflow.has_changes():
-                self._verify(review_workflow)
+                if self.config.neptune_intake_dir:
+                    self._verify(review_workflow, job=job)
+                else:
+                    self._verify(review_workflow)
                 review_workflow.stage_all()
                 review_workflow.commit(f"docs: weekly architect gap analysis ({date_id})")
                 review_workflow.push(branch)
