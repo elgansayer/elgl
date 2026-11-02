@@ -154,6 +154,59 @@ def test_existing_profiles_do_not_gain_live_task_execution(neptune_config: Facto
         run_canary(other, 521)
 
 
+def test_cli_supervised_canary_is_explicit_and_dry_run_does_not_dispatch(
+    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "protect_process_credentials", lambda: None)
+    monkeypatch.setattr(cli, "_config", lambda: neptune_config)
+    run = Mock(return_value=0)
+    monkeypatch.setattr(canary, "run_canary", run)
+    args = ["task", "run", "--issue", "570", "--supervised-session"]
+    assert cli.main([*args, "--dry-run"]) == 0
+    run.assert_not_called()
+    assert cli.main(args) == 0
+    run.assert_called_once_with(neptune_config, 570, supervised_session=True)
+
+
+def test_supervised_canary_refuses_missing_namespaces_before_startup(
+    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openhands_factory.agents import process
+
+    monkeypatch.setattr(canary, "run_doctor", lambda *a, **kw: [])
+    monkeypatch.setattr(
+        canary, "github_repository_access_check", lambda c: Check("access", True, "ok")
+    )
+    monkeypatch.setattr(canary, "github_merge_policy_check", lambda c: Check("policy", True, "ok"))
+    monkeypatch.setattr(process, "agent_process_isolation_probe", lambda: (False, "denied"))
+    constructor = Mock()
+    monkeypatch.setattr(canary, "SingleIssueCanary", constructor)
+    with pytest.raises(ConfigurationError, match="manual-session-containment"):
+        run_canary(neptune_config, 570, supervised_session=True)
+    constructor.assert_not_called()
+
+
+def test_canary_attaches_supervision_to_its_existing_router_and_store(
+    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openhands_factory.agents.router import AgentRouter
+    from openhands_factory.provider_capacity import ProviderCapacityStore
+
+    router = AgentRouter(
+        [], capacity_store=ProviderCapacityStore(neptune_config.provider_capacity_dir)
+    )
+
+    def initialise(self, config):
+        self.pipeline = SimpleNamespace(router=router)
+
+    monkeypatch.setattr(canary.MainCiGatedFactoryDaemon, "__init__", initialise)
+    daemon = SingleIssueCanary(neptune_config, 570, supervised_session=True)
+    supervisor = daemon.pipeline.router.session_supervisor
+    assert supervisor is not None and supervisor.store is router.capacity_store
+    assert supervisor.journal.directory == neptune_config.state_dir / "manual-session-identities"
+    assert supervisor.journal.directory.stat().st_mode & 0o077 == 0
+
+
 @pytest.mark.parametrize("state", [JobState.CI_PENDING, JobState.MERGE_QUEUED, JobState.MERGED])
 def test_closed_issue_can_reconcile_a_real_merged_pr(state: JobState) -> None:
     daemon = make_canary(state)

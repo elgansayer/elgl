@@ -1,5 +1,9 @@
 # Neptune verification integration
 
+For opt-in bounded execution with shared renewable capacity and private guardian
+checkpoints, see [Supervised Neptune jobs](SUPERVISED-NEPTUNE-CANARY.md). Existing
+outside-protocol manual-session rollout and continuity remain separate gates.
+
 This is a preparatory verification planner for `elgansayer/Neptune-Bomberman`.
 It reuses Repo Factory's worktree provisioning, dependency links, host-resource
 gate and credential-free verification namespace. It does not start a third

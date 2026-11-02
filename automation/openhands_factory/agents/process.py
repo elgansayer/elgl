@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import os
 import select
+import shutil
 import signal
 import socket
 import subprocess
@@ -290,8 +291,13 @@ class AgentProcessRunner:
         if self.guard_timeout_seconds is not None:
             if lifetime_fd is None:
                 raise ValueError("guarded namespace requires a lifetime descriptor")
+            # The coordinator's venv/home may be intentionally hidden inside
+            # the namespace. The trusted init uses only the OS Python's stdlib.
+            namespace_python = shutil.which("python3", path=os.defpath)
+            if namespace_python is None:
+                raise ValueError("Guarded namespace needs the system Python runtime")
             command = [
-                str(Path(sys.executable).resolve()),
+                str(Path(namespace_python).resolve()),
                 "-I",
                 "-c",
                 NAMESPACE_INIT,
