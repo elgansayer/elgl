@@ -1,3 +1,4 @@
+import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -1260,9 +1261,39 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(99, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(99, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(99, "MERGED", False, "UNKNOWN", "", "abcdef1234567", True, False),
+        PullRequestStatus(
+            99,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            99,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            99,
+            "MERGED",
+            False,
+            "UNKNOWN",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
     ]
 
     def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
@@ -1681,14 +1712,253 @@ def test_non_strict_base_policy_does_not_reuse_unproven_or_strict_candidates(
     assert pipeline._review_needs_base_update(job, GitWorkflow(tmp_path, "main"), status)
 
 
+@pytest.mark.parametrize(
+    "case",
+    [
+        "matching",
+        "wrong-pr",
+        "stale-remote",
+        "stale-verified",
+        "pending",
+        "failed",
+        "missing",
+        "closed",
+    ],
+)
+def test_coordinator_review_snapshot_never_upgrades_unproven_ci(case):
+    job = Job(
+        Task("77", "Review candidate", "", "github-pull-request", 1),
+        pull_request=77,
+        head_sha="candidate",
+        latest_verified_sha="candidate",
+    )
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        "candidate",
+        False,
+        True,
+        ci_required_passed=True,
+        workflow_run_ids=frozenset({"456", "123"}),
+    )
+    if case == "wrong-pr":
+        status = replace(status, number=78)
+    elif case == "stale-remote":
+        status = replace(status, head_sha="moved")
+    elif case == "stale-verified":
+        job.latest_verified_sha = "old"
+    elif case == "pending":
+        status = replace(status, ci_required_pending=True)
+    elif case == "failed":
+        status = replace(status, ci_required_failed=True)
+    elif case == "missing":
+        status = None
+    elif case == "closed":
+        status = replace(status, state="CLOSED")
+    evidence = json.loads(FactoryPipeline._review_verification_snapshot(job, status))
+    assert evidence["required_ci_passed_for_verified_head"] is (case == "matching")
+    assert evidence["latest_verified_sha"] == job.latest_verified_sha
+    assert evidence["workflow_run_ids"] == ([] if case == "missing" else ["123", "456"])
+    assert "approval" in evidence["scope"]
+
+
+@pytest.mark.parametrize("case", ["missing", "pending", "failed", "contradictory-pending"])
+def test_independent_review_preflight_spends_no_provider_call_for_unready_ci(
+    tmp_path, monkeypatch, case
+):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    status = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        "candidate",
+        False,
+        True,
+        ci_required_passed=case == "contradictory-pending",
+        ci_required_pending=case in {"pending", "contradictory-pending"},
+        ci_required_failed=case == "failed",
+    )
+    github.statuses = [status]
+    pipeline = FactoryPipeline(factory_config, github=github)
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    pipeline.jobs.save(
+        {
+            "77": Job(
+                Task("77", "Await actual CI", "", "github-pull-request", 1),
+                state=JobState.REVIEWING,
+                branch="fix/candidate",
+                pull_request=77,
+                head_sha="candidate",
+                latest_verified_sha="candidate",
+            )
+        }
+    )
+    monkeypatch.setattr(
+        pipeline, "_run_agent", lambda *args, **kwargs: pytest.fail("CI is not ready")
+    )
+    result = pipeline.run_job("77")
+    assert result is not None and result.last_error is None
+    assert result.state is (JobState.REPAIRING if case == "failed" else JobState.REVIEWING)
+    assert (result.next_attempt_at is not None) is (case != "failed")
+    assert result.provider_history == []
+    assert github.reviewed == []
+    assert github.statuses == []
+
+
+def test_ci_preflight_resumes_review_after_controller_restart_without_waiting_on_itself(
+    tmp_path, monkeypatch
+):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    head = "abcdef1234567"
+    pending = PullRequestStatus(
+        77,
+        "OPEN",
+        False,
+        "MERGEABLE",
+        "",
+        head,
+        False,
+        True,
+        ci_required_pending=True,
+    )
+    github.statuses = [
+        pending,
+        replace(pending, ci_required_pending=False, ci_required_passed=True),
+    ]
+    prompts = []
+
+    class CapturingReview(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=CapturingReview())
+    pipeline.jobs.save(
+        {
+            "77": Job(
+                Task("77", "CI before review", "", "github-pull-request", 1),
+                state=JobState.REVIEWING,
+                branch="fix/candidate",
+                pull_request=77,
+                head_sha=head,
+                latest_verified_sha=head,
+            )
+        }
+    )
+    monkeypatch.setattr("openhands_factory.pipeline.CI_POLL_INTERVAL", timedelta(0))
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: head)
+    waiting = pipeline.run_job("77")
+    assert waiting is not None and waiting.state is JobState.REVIEWING
+    assert prompts == [] and waiting.provider_history == []
+    resumed = FactoryPipeline(factory_config, github=github, conversations=CapturingReview())
+    reviewed = resumed.run_job("77")
+    assert reviewed is not None and reviewed.last_error is None
+    assert reviewed.state is JobState.CI_PENDING
+    assert len(prompts) == 1
+    assert len(reviewed.provider_history) == 1
+    assert github.reviewed == [head]
+    assert github.statuses == []
+
+
+def test_review_dispatch_carries_the_same_status_used_for_exact_head_refresh(tmp_path, monkeypatch):
+    factory_config = config(tmp_path)
+    github = GitHub()
+    head = "abcdef1234567"
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            head,
+            False,
+            True,
+            ci_required_passed=True,
+            workflow_run_ids=frozenset({"41403266809"}),
+        )
+    ]
+    prompts = []
+
+    class CapturingReview(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):
+            prompts.append(prompt)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    job = Job(
+        Task(
+            "77",
+            "Review verified source",
+            "Issue says CI was never observed",
+            "github-pull-request",
+            1,
+        ),
+        state=JobState.REVIEWING,
+        branch="fix/candidate",
+        pull_request=77,
+        head_sha=head,
+        latest_verified_sha=head,
+    )
+    pipeline = FactoryPipeline(factory_config, github=github, conversations=CapturingReview())
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: head)
+    result = pipeline.run_job("77")
+    assert result is not None and result.last_error is None
+    assert result.state is JobState.CI_PENDING
+    assert len(prompts) == 1
+    observation = prompts[0].split("## Coordinator verification observation\n", 1)[1]
+    assert '"required_ci_passed_for_verified_head": true' in observation
+    assert '"observed_head_sha": "abcdef1234567"' in observation
+    assert "41403266809" in observation
+    assert "Inspect the mandatory workflow coverage and source/tests" in observation
+    assert prompts[0].index("## End untrusted task and evidence data") < prompts[0].index(
+        "## Coordinator verification observation"
+    )
+    assert github.statuses == []  # Exactly one observation; no duplicate polling.
+
+
 def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
     ]
     pushed: list[str] = []
 
@@ -2951,7 +3221,17 @@ def test_review_report_is_removed_before_repository_change_detection(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        )
     ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
@@ -3038,7 +3318,17 @@ def test_review_proceeds_and_clears_stack_label_once_parent_merges(
     github = GitHub()
     github.statuses = [
         PullRequestStatus(90, "MERGED", False, "UNKNOWN", "", "parent-sha", True, False),
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        ),
     ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
@@ -3081,7 +3371,17 @@ def test_valid_rejected_review_routes_to_quality_repair(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "abcdef1234567",
+            True,
+            False,
+            ci_required_passed=True,
+        )
     ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)

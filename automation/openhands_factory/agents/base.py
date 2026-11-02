@@ -7,9 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from openhands_factory.models import Task
+
+if TYPE_CHECKING:
+    from openhands_factory.agents.process import AgentProcessRunner
 
 
 class AgentPhase(StrEnum):
@@ -99,6 +102,8 @@ class AgentRequest:
     validate_output: Callable[[], None] | None = None
     # Host-selected source context, mounted read-only by the outer sandbox.
     read_only_reference: Path | None = None
+    # Coordinator-only per-attempt supervision, never serialised into prompts.
+    process_runner: AgentProcessRunner | None = None
 
 
 class AgentProvider(Protocol):
