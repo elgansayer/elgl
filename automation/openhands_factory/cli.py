@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from openhands_factory.alerts import AlertService
@@ -72,6 +73,7 @@ def parser() -> argparse.ArgumentParser:
     legacy.add_argument("action", choices=("scan",))
     sessions = subcommands.add_parser("sessions")
     sessions.add_argument("action", choices=("audit",))
+    sessions.add_argument("--codex-socket", type=Path)
     task = subcommands.add_parser("task")
     task.add_argument("action", choices=("run",))
     task.add_argument("--issue", type=int)
@@ -220,12 +222,14 @@ def main(arguments: list[str] | None = None) -> int:
             )
             from openhands_factory.session_audit import audit_sessions
 
+            options = {"codex_socket": args.codex_socket} if args.codex_socket is not None else {}
             report = audit_sessions(
                 ProviderCapacityStore(
                     config.provider_capacity_dir,
                     max_lease_seconds=maximum_agent_lease_seconds(config),
                 ),
                 config.state_dir / "manual-session-identities",
+                **options,
             )
             print(json.dumps(report, indent=2))
             return 0 if report["observations_consistent"] else 1

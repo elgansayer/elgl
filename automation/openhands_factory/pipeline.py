@@ -34,6 +34,7 @@ from openhands_factory.maintenance import MaintenanceController
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Lease, Task, changed_path_fingerprint
+from openhands_factory.neptune_preparation import ToolPreparationUnavailable, prepare_native
 from openhands_factory.pr_convergence import (
     ConvergenceAction,
     PullRequestCapacity,
@@ -96,6 +97,7 @@ CODE_MUTATING_AGENT_PHASES = {
     "ci-repair",
 }
 VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS = (
+    "missing/mismatched offline godot cache",
     "the cypress binary is missing",
     "we expected the binary to be installed here",
     "getaddrinfo eai_again",
@@ -2493,19 +2495,31 @@ class FactoryPipeline:
         # before spending minutes in the host-wide verification slot.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
+
+        def verify_exclusive() -> None:
+            selected = exclusive
+            if self.config.repository_profile == "neptune":
+                selected = prepare_native(self.config, workflow.repository, changed, selected)
+            run_verification(selected)
+
         try:
             run_verification(shared)
             if not exclusive:
                 return changed
             if self.verification_slots is None:
-                run_verification(exclusive)
+                # Standalone coordinators must use the same host gate too.
+                if self.host_resource_slots is None:
+                    verify_exclusive()
+                else:
+                    with self.host_resource_slots.exclusive():
+                        verify_exclusive()
                 return changed
             with self.verification_slots:
                 if self.host_resource_slots is None:
-                    run_verification(exclusive)
+                    verify_exclusive()
                 else:
                     with self.host_resource_slots.exclusive():
-                        run_verification(exclusive)
+                        verify_exclusive()
             return changed
         finally:
             workflow.discard_transient_build_metadata()
@@ -2520,7 +2534,7 @@ class FactoryPipeline:
             changed = self._verify(workflow)
         except VerificationFailed as error:
             detail = str(error)
-            if any(
+            if isinstance(error, ToolPreparationUnavailable) or any(
                 marker in detail.lower() for marker in VERIFICATION_INFRASTRUCTURE_FAILURE_MARKERS
             ):
                 # Host/cache/resource failures cannot be corrected by editing the

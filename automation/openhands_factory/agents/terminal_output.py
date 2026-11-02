@@ -153,7 +153,7 @@ def claude_outcome(result: ProcessResult) -> tuple[str | None, AgentFailure | No
     if (
         result.exit_code != 0
         and len(raw) <= 1024
-        and re.fullmatch(r"You've hit your weekly limit[^\r\n]*", raw)
+        and re.fullmatch(r"You've hit your (?:weekly|session) limit\b[^\r\n]*", raw)
     ):
         return _failed_message(result, raw)
     try:
