@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from openhands_factory.alerts import AlertService
@@ -70,10 +71,14 @@ def parser() -> argparse.ArgumentParser:
     providers.add_argument("action", choices=("check",))
     legacy = subcommands.add_parser("legacy")
     legacy.add_argument("action", choices=("scan",))
+    sessions = subcommands.add_parser("sessions")
+    sessions.add_argument("action", choices=("audit",))
+    sessions.add_argument("--codex-socket", type=Path)
     task = subcommands.add_parser("task")
     task.add_argument("action", choices=("run",))
     task.add_argument("--issue", type=int)
     task.add_argument("--dry-run", action="store_true")
+    task.add_argument("--supervised-session", action="store_true")
     subcommands.add_parser("daemon")
     subcommands.add_parser("status")
     subcommands.add_parser("pause")
@@ -210,6 +215,24 @@ def main(arguments: list[str] | None = None) -> int:
                 )
             )
             return 1 if any(finding.active for finding in findings) else 0
+        if args.command == "sessions":
+            from openhands_factory.provider_capacity import (
+                ProviderCapacityStore,
+                maximum_agent_lease_seconds,
+            )
+            from openhands_factory.session_audit import audit_sessions
+
+            options = {"codex_socket": args.codex_socket} if args.codex_socket is not None else {}
+            report = audit_sessions(
+                ProviderCapacityStore(
+                    config.provider_capacity_dir,
+                    max_lease_seconds=maximum_agent_lease_seconds(config),
+                ),
+                config.state_dir / "manual-session-identities",
+                **options,
+            )
+            print(json.dumps(report, indent=2))
+            return 0 if report["observations_consistent"] else 1
         if args.command == "task":
             if not args.dry_run:
                 if not config.tests_only_merging:
@@ -220,6 +243,8 @@ def main(arguments: list[str] | None = None) -> int:
                     return 2
                 from openhands_factory.canary import run_canary
 
+                if args.supervised_session:
+                    return run_canary(config, args.issue, supervised_session=True)
                 return run_canary(config, args.issue)
             print(
                 json.dumps(

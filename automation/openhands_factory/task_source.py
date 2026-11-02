@@ -299,7 +299,7 @@ class TaskStore:
             current = now or datetime.now(UTC)
             self._assert_generation_current()
             claims = self.claims(current)
-            task_key, existing = self._claim_entry(claims, task_id)
+            task_key, existing = self._claim_entry(claims, task_id, owner=owner)
             if existing is None or not self._lease_is_active_for_generation(existing, current):
                 raise ValueError(f"Task {task_id} does not have an active lease")
             if existing.task_id != task_id or existing.owner != owner:
@@ -326,7 +326,7 @@ class TaskStore:
             current = now or datetime.now(UTC)
             self._assert_generation_current()
             claims = self.claims(current)
-            task_key, existing = self._claim_entry(claims, task_id)
+            task_key, existing = self._claim_entry(claims, task_id, owner=owner)
             if existing is None:
                 return
             if owner is None and existing.task_id != task_id:
@@ -506,7 +506,23 @@ class TaskStore:
         self,
         claims: LeaseIndex,
         task_id: str,
+        *,
+        owner: str | None = None,
     ) -> tuple[str, Lease | None]:
+        # Public retitles and intake filtering can remove or replace the cached
+        # title key while a caller still owns an older claim for the same GitHub
+        # ID. An owned mutation must resolve that exact owner, not the first
+        # released alias left in historical state.
+        if owner is not None:
+            owned = [
+                (key, claim)
+                for key, claim in claims.items()
+                if claim.task_id == task_id and claim.owner == owner
+            ]
+            if len(owned) > 1:
+                raise ValueError("Ambiguous task lease ownership; refusing mutation")
+            if owned:
+                return owned[0]
         task_key = self._task_key(task_id)
         existing = claims.get(task_key)
         if existing is not None:
@@ -523,7 +539,7 @@ class TaskStore:
         owner: str,
         current: datetime,
     ) -> tuple[str, Lease]:
-        task_key, existing = self._claim_entry(claims, task_id)
+        task_key, existing = self._claim_entry(claims, task_id, owner=owner)
         if existing is None or not self._lease_is_active_for_generation(existing, current):
             raise ValueError(f"Task {task_id} does not have an active lease")
         if existing.task_id != task_id or existing.owner != owner:

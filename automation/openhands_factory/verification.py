@@ -26,6 +26,9 @@ class VerificationCommand:
     # cgroup's memory high-water mark even though each build is healthy alone.
     exclusive: bool = False
     workspace: Path | None = None
+    read_only_inputs: tuple[Path, ...] = ()
+    neptune_binding_json: str | None = None
+    neptune_features_json: str | None = None
 
 
 _VERIFICATION_SANDBOX_SCRIPT = r"""
@@ -40,12 +43,27 @@ cypress_cache=$6
 sandbox_root=$7
 workdir=$8
 shift 8
+input_count=$1
+shift
 
 /usr/bin/mount --make-rprivate /
 /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$sandbox_root"
 staging=$sandbox_root/factory-verification
 /usr/bin/mkdir -p "$staging/workspace"
 /usr/bin/mount --bind "$workspace" "$staging/workspace"
+
+/usr/bin/mkdir -p "$staging/inputs"
+: > "$staging/input-paths"
+input_index=0
+while [ "$input_index" -lt "$input_count" ]; do
+  input_path=$1
+  shift
+  /usr/bin/mkdir -p "$staging/inputs/$input_index"
+  /usr/bin/mount --bind "$input_path" "$staging/inputs/$input_index"
+  /usr/bin/mount -o remount,bind,ro "$staging/inputs/$input_index"
+  printf '%s\n' "$input_path" >> "$staging/input-paths"
+  input_index=$((input_index + 1))
+done
 
 same_repository=false
 if [ "$repository" = "$workspace" ]; then
@@ -131,6 +149,14 @@ if [ "$same_repository" = false ]; then
   /usr/bin/mount --bind "$staging/repository" "$repository"
   /usr/bin/mount -o remount,bind,ro "$repository"
 fi
+input_index=0
+while IFS= read -r input_path; do
+  /usr/bin/mkdir -p "$input_path"
+  /usr/bin/mount --bind "$staging/inputs/$input_index" "$input_path"
+  /usr/bin/mount -o remount,bind,ro "$input_path"
+  input_index=$((input_index + 1))
+done < "$staging/input-paths"
+
 # Vite bundles TypeScript configuration through node_modules/.vite-temp even
 # during a read-only test run. Worktrees deliberately symlink their dependencies
 # to the trusted repository cache, which is remounted read-only above. Overlay only
@@ -246,6 +272,7 @@ def run_isolated_verification_process(
     timeout: int,
     *,
     workspace: Path,
+    read_only_inputs: tuple[Path, ...] = (),
 ) -> ProcessResult:
     """Run repository-controlled checks without host credentials or network."""
 
@@ -257,6 +284,21 @@ def run_isolated_verification_process(
     state_dir = Path(os.environ.get("FACTORY_STATE_DIR", "/var/lib/hellotalk-factory"))
     log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
+    for directory in read_only_inputs:
+        if (
+            not directory.is_absolute()
+            or not directory.is_dir()
+            or any(parent.is_symlink() for parent in (directory, *directory.parents))
+            or any(
+                root.resolve().is_relative_to(directory) or directory.is_relative_to(root.resolve())
+                for root in (resolved_workspace, repository)
+            )
+            or any(
+                root.resolve().is_relative_to(directory)
+                for root in (state_dir, log_dir, Path.home(), Path("/etc"), Path("/run"))
+            )
+        ):
+            raise VerificationFailed("Unsafe separate read-only verification input")
     _prepare_vite_cache_mountpoints(repository)
     service_home = state_dir / "home"
     # Dependency deployment installs Cypress as the service user with HOME set
@@ -274,6 +316,7 @@ def run_isolated_verification_process(
         repository,
         service_home,
         cypress_cache,
+        *read_only_inputs,
     )
     # Resolving a virtual environment's Python executable follows its symlink to
     # the system interpreter and loses the environment's bin directory. sys.prefix
@@ -326,6 +369,8 @@ def run_isolated_verification_process(
         _sandbox_path(cypress_cache, name="Cypress cache"),
         str(sandbox_root),
         _sandbox_path(resolved_cwd, name="working directory"),
+        str(len(read_only_inputs)),
+        *(str(path) for path in read_only_inputs),
         *arguments,
     )
     return run_process(command, resolved_workspace, timeout, environment=environment)
@@ -798,6 +843,27 @@ def _validate_neptune_receipt(output: str, command: VerificationCommand) -> None
             r"[0-9a-f]{64}", identity["selected_contents_sha256"]
         ):
             raise ValueError("missing source identity")
+        if command.neptune_binding_json is not None:
+            binding = json.loads(command.neptune_binding_json)
+            features = json.loads(command.neptune_features_json or "{}")
+            if (
+                report.get("task_binding") != binding
+                or identity["head"] != binding["head"]
+                or identity.get("base") != binding["base"]
+                or report.get("feature_requirements", {}) != features
+            ):
+                raise ValueError("receipt differs from accepted task/candidate")
+            feature_checks = report.get("feature_checks", {})
+            if set(feature_checks) != set(features):
+                raise ValueError("missing named feature results")
+            for name, expected_artifacts in features.items():
+                observed = feature_checks[name]
+                if (
+                    observed.get("status") != "success"
+                    or observed.get("artifacts") != expected_artifacts
+                    or observed.get("comparison", {}).get("match") is not True
+                ):
+                    raise ValueError("named comparison did not pass for accepted artifacts")
         plan = report["plan"]
         expected_paths = sorted(
             {arg.split("=", 1)[1] for arg in command.arguments if arg.startswith("--changed-path=")}
@@ -807,6 +873,7 @@ def _validate_neptune_receipt(output: str, command: VerificationCommand) -> None
         required = plan["required"]
         expected = {
             "input-tooling",
+            "film-contracts",
             "catalogue-tests",
             "catalogue-validation",
             "factory-contracts",
@@ -847,11 +914,15 @@ def run_verification(
         if runner is None:
             if command.workspace is None:
                 raise VerificationFailed("Verification command has no assigned worktree")
+            extra = (
+                {"read_only_inputs": command.read_only_inputs} if command.read_only_inputs else {}
+            )
             result = run_isolated_verification_process(
                 command.arguments,
                 command.directory,
                 command.timeout,
                 workspace=command.workspace,
+                **extra,
             )
         else:
             result = runner(command.arguments, command.directory, command.timeout)
