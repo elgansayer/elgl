@@ -177,16 +177,22 @@ class ProviderCapacityStore:
                 provider_key = provider.value if isinstance(provider, ProviderName) else provider
                 entries = providers.setdefault(provider_key, [])
                 now = datetime.now(UTC)
-                active = self._active_entries(entries, now)
-                renewable_entries = (
-                    [entry for entry in entries if self._is_unexpired(entry, now)]
-                    if token is not None
-                    else active
-                )
+                # A reader's renewal/compatibility bound is not evidence that
+                # foreign work stopped. Preserve its occupied slot in legacy
+                # admission too; shared stores have no generation filter.
+                occupied = [
+                    entry
+                    for entry in entries
+                    if self._is_unexpired(entry, now)
+                    and (
+                        self.factory_generation is None
+                        or entry.get("factory_generation") == self.factory_generation
+                    )
+                ]
                 duplicate_owner = token is not None and any(
-                    entry.get("owner") == owner for entry in renewable_entries
+                    entry.get("owner") == owner for entry in occupied
                 )
-                if len(renewable_entries) < limit and not duplicate_owner:
+                if len(occupied) < limit and not duplicate_owner:
                     entry: dict[str, object] = {
                         "owner": owner,
                         "pid": os.getpid(),
@@ -196,11 +202,11 @@ class ProviderCapacityStore:
                     }
                     if token is not None:
                         entry.update({"lease_protocol": 1, "lease_token": token})
-                    renewable_entries.append(entry)
-                    providers[provider_key] = renewable_entries
+                    occupied.append(entry)
+                    providers[provider_key] = occupied
                     self._save(providers)
                     return time.monotonic() - started
-                providers[provider_key] = renewable_entries
+                providers[provider_key] = occupied
                 self._save(providers)
             if time.monotonic() >= deadline:
                 raise ProviderCapacityUnavailable(
