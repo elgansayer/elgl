@@ -11,6 +11,7 @@ import { SafetyService } from '../../services/safety.service';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { ChatMessageComponent } from './chat-message.component';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 describe('ChatMessageComponent', () => {
   let fixture: ComponentFixture<ChatMessageComponent>;
@@ -120,6 +121,32 @@ describe('ChatMessageComponent', () => {
 
   it('does not render a rich link preview when the message has no preview payload', () => {
     expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
+  });
+
+  it('renders gift messages through the shared gift animation component', async () => {
+    fixture.componentRef.setInput('message', {
+      id: 'gift-message',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'gift',
+      gift_payload: {
+        gift_id: 'gift_rose',
+        gift_name: 'Rose',
+        gift_icon: '🌹',
+        coin_value: 10,
+        animation_type: 'float',
+      },
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    await fixture.whenStable();
+
+    const gift = fixture.debugElement.query(By.directive(GiftAnimationComponent));
+    expect(gift).toBeTruthy();
+    expect(gift.componentInstance.giftPayload()).toMatchObject({
+      gift_id: 'gift_rose',
+      coin_value: 10,
+    });
   });
 
   it('updates memoized message ownership when the current user input changes', () => {
