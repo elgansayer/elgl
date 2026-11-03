@@ -55,7 +55,24 @@ export class ChatMediaMessageService {
       throw cause;
     }
     this.metricsService.recordChatMediaSend(dto.mediaKind, delivered.outcome);
+    if (dto.mediaKind === 'doodle') {
+      await this.clearUploadIntent(dto.objectKey);
+    }
     return delivered.message;
+  }
+
+  private async clearUploadIntent(objectKey: string): Promise<void> {
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('chat_media_upload_intents')
+      .delete()
+      .eq('object_key', objectKey);
+    if (error) {
+      this.logger.warn(
+        { event: 'chat_doodle_upload_intent_clear_failed' },
+        'Persisted doodle retains an upload intent for the retention sweep',
+      );
+    }
   }
 
   private async deliver(

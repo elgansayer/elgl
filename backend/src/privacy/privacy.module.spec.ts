@@ -1,5 +1,6 @@
 import { SafetyModule } from '../safety/safety.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 import { DataRetentionService } from './data-retention.service';
 import { DataScrubbingService } from './data-scrubbing.service';
 import { PrivacyArchiveCron } from './privacy-archive.cron';
@@ -16,6 +17,7 @@ describe('PrivacyModule', () => {
 
     expect(importsMetadata).toContain(SupabaseModule);
     expect(importsMetadata).toContain(SafetyModule);
+    expect(importsMetadata).toContain(CloudflareR2Module);
     expect(controllersMetadata).toContain(PrivacyController);
   });
 

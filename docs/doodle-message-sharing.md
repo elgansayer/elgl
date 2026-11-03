@@ -95,7 +95,7 @@ The browser mirrors this. It keeps the uploaded object between attempts, so a fa
 | Pad dismissed while the send was in flight      | Error toast if it fails                                                                                                 | A request that already left cannot be recalled, so it may still be delivered                                     |
 | Learner moved to another room mid-send          | Error toast if it fails                                                                                                 | The late message is never appended to the new room's timeline; the pad closes and the stored object is forgotten |
 
-An uploaded object can outlive a dismissed pad. Lifecycle cleanup of unsent uploads belongs to the repository-wide media finalisation policy; a client must not guess that an ambiguous send failed and delete media that may already back a persisted message.
+An uploaded object can outlive a dismissed pad. Each doodle ticket therefore creates a 24-hour upload intent. The retention worker processes at most 100 expired intents per run, checks `chat_messages` before deletion, removes only unreferenced R2 objects, and retains failed work for the next run. A client must not guess that an ambiguous send failed and delete media that may already back a persisted message.
 
 ## Security and privacy
 
@@ -108,7 +108,9 @@ An uploaded object can outlive a dismissed pad. Lifecycle cleanup of unsent uplo
 - The image is rendered through an `<img>` source only; it is never interpreted as HTML.
 - Doodle content is private chat content. Logs contain bounded event names, message type, message id and safe failure class/status only: never bytes, object keys, URLs (which can include signatures), provider details or tokens. Structured events: `chat_media_send_replayed`, `chat_media_send_recovered`, `chat_media_realtime_delivery_failed`, `chat_media_send_conflict`, `chat_media_object_missing`, `chat_media_object_lookup_failed`, `chat_media_object_rejected`.
 - Block, first-message privacy filter and spam checks continue to run in `ChatService.sendMessage`, which this path reuses. Membership is verified at this endpoint before that shared pipeline is called.
-- Retention and deletion follow the containing chat message. The storage object follows the media finalisation policy above.
+- Deleting a doodle for everyone removes its private R2 object before deleting the `chat_messages` row. If R2 deletion is unavailable, the API returns 503, preserves the row as a retry anchor and does not publish a deletion event.
+- GDPR account finalisation reads the account's persisted doodle URLs, accepts only canonical URLs on the configured media origin, and removes those objects before chat rows are erased or the account is anonymised. A lookup or R2 failure leaves the account pending so the nightly job retries it.
+- Failed send attempts that persisted a message remain recoverable through the idempotent retry path. Uploads that never reach the send endpoint are deleted after their 24-hour intent expires. A stale intent cannot delete persisted content because cleanup rechecks the message URL first.
 
 ## Accessibility
 
@@ -120,7 +122,7 @@ An uploaded object can outlive a dismissed pad. Lifecycle cleanup of unsent uplo
 
 ## Observability and operations
 
-- Membership/object lookup failure, object rejection, realtime refusal, replay, recovery and conflict are structured warn/log events, so a rejected, stuck or duplicated doodle can be traced without database access or content. The safe message id correlates a realtime refusal with its later replay or recovery. These events carry no user, room, object key or provider detail.
+- Membership/object lookup failure, object rejection, realtime refusal, replay, recovery, conflict and orphan-cleanup failure are structured warn/log events, so a rejected, stuck, duplicated or retained doodle can be traced without database access or content. The safe message id correlates a realtime refusal with its later replay or recovery. These events carry no user, room, object key or provider detail.
 - Watch the rates of presign rejection (400/403), `chat_media_object_missing`, `chat_media_object_rejected`, `chat_media_realtime_delivery_failed`, `chat_media_send_conflict`, `chat_media_send_recovered`, the bounded `unavailable`/`replayed` send metrics and 5xx on `/media/chat/send`. A rise in realtime delivery failures or `unavailable` indicates Centrifugo refusal after persistence; a later `replayed` or `recovered` confirms healing.
 - The new index is partial and only covers doodles minted by this pipeline, so it stays small.
 
@@ -130,6 +132,8 @@ An uploaded object can outlive a dismissed pad. Lifecycle cleanup of unsent uplo
 - `backend/src/media/dto/chat-media-upload.dto.spec.ts` and `send-chat-media-message.dto.spec.ts`: purpose and key validation, traversal and kind confusion.
 - `backend/src/cloudflare-r2/r2-object.service.spec.ts`: authenticated object metadata delegation.
 - `backend/src/chat/chat-media-message.service.spec.ts`: server-derived URL, ownership, room membership, object existence/type/size, kind confusion, idempotent replay without another object lookup, recovery after publication failure, conflict, sanitised logs.
+- `backend/src/chat/chat.service.spec.ts` and `backend/src/privacy/data-retention.service.spec.ts`: R2-first message deletion, fail-closed account erasure and retry preservation.
+- `backend/src/chat/chat-media-send.http.spec.ts`: the real HTTP controller, authentication guard and production validation pipe for authenticated, unauthorised and malformed requests.
 - `backend/src/chat/chat.module.spec.ts`: controller and service registration in the runtime Nest module.
 - `backend/src/media/chat-media.controller.spec.ts` and `backend/src/chat/chat-media-send.controller.spec.ts`: guards and delegation as the authenticated user.
 - `backend/src/database/chat-doodle-media-migration.contract.spec.ts`: the index predicate, including that legacy inline doodles are never indexed.
@@ -150,7 +154,7 @@ cd ../frontend
 
 Order matters because the global validation pipe rejects unknown properties:
 
-1. Apply `20261102120000_chat_doodle_media_idempotency.sql`. It is a single `CREATE UNIQUE INDEX IF NOT EXISTS`, safe to retry, and takes a short write lock on `chat_messages` while it scans (the same as the photo/video index). It cannot fail on historical rows because no row matches the new key shape.
+1. Apply `20261102120000_chat_doodle_media_idempotency.sql`, then `20261103010000_chat_media_upload_intents.sql`. Both are safe to retry. The first takes a short write lock on `chat_messages` while it scans (the same as the photo/video index) and cannot fail on historical rows because no row matches the new key shape. The second is an additive table and expiry index, so mixed-version backends remain compatible.
 2. Deploy the backend. The `purpose` field is optional, so existing photo and video clients are unaffected, and the inline doodle endpoint still works.
 3. Deploy the frontend. Deploying it before the backend would send `purpose` to a server that rejects the property.
 4. Smoke test: draw and send a doodle, send one with the network blocked and retry, send in a second tab to confirm one message, and confirm a doodle key belonging to another user returns 403.
@@ -159,6 +163,9 @@ Rollback: revert the frontend first so no new doodle uploads start, then the bac
 
 ```sql
 DROP INDEX IF EXISTS public.chat_messages_sender_doodle_media_url_unique_idx;
+DROP TABLE IF EXISTS public.chat_media_upload_intents;
 ```
+
+Disable the backend retention worker before dropping the intent table. Leaving the additive table and index in place during application rollback is safe and preserves cleanup state.
 
 Do not roll back by raising the global JSON body limit or by accepting arbitrary URLs for doodles on the generic endpoint.

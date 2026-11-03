@@ -154,6 +154,24 @@ describe('R2ObjectService', () => {
     );
   });
 
+  it('recovers only canonical object keys from the configured public origin', () => {
+    expect(
+      service.objectKeyForPublicUrl(
+        'https://media.example.com/chat-media/user-1/doodle/standard/1-a.png',
+      ),
+    ).toBe('chat-media/user-1/doodle/standard/1-a.png');
+    expect(
+      service.objectKeyForPublicUrl(
+        'https://other.example/chat-media/user-1/doodle/standard/1-a.png',
+      ),
+    ).toBeNull();
+    expect(
+      service.objectKeyForPublicUrl(
+        'https://media.example.com/chat-media/user-1/doodle/standard/1-a.png?token=secret',
+      ),
+    ).toBeNull();
+  });
+
   it('delegates object metadata checks to the authenticated gateway service', async () => {
     await expect(
       service.headObject('covers/user/cover.webp'),

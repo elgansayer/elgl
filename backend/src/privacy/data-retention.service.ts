@@ -2,6 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
+
+function isUploadIntent(value: unknown): value is { object_key: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'object_key' in value &&
+    typeof value.object_key === 'string'
+  );
+}
 
 /**
  * Scheduled data-retention enforcement for GDPR compliance.
@@ -23,7 +33,57 @@ export class DataRetentionService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly r2ObjectService: R2ObjectService,
   ) {}
+
+  @Cron('0 45 2 * * *')
+  async purgeExpiredDoodleUploads(): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('chat_media_upload_intents')
+      .select('object_key')
+      .lt('expires_at', new Date().toISOString())
+      .limit(100);
+
+    if (error) {
+      this.logger.error('chat_doodle_upload_intent_lookup_failed');
+      return;
+    }
+
+    const rawIntents: unknown = data;
+    const intents = Array.isArray(rawIntents)
+      ? rawIntents.filter(isUploadIntent)
+      : [];
+    for (const intent of intents) {
+      const mediaUrl = this.r2ObjectService.publicUrlForKey(intent.object_key);
+      const { data: message, error: messageError } = await supabase
+        .from('chat_messages')
+        .select('id')
+        .eq('media_url', mediaUrl)
+        .maybeSingle();
+      if (messageError) {
+        this.logger.error('chat_doodle_orphan_reference_lookup_failed');
+        continue;
+      }
+
+      if (!message) {
+        try {
+          await this.r2ObjectService.deleteObject(intent.object_key);
+        } catch {
+          this.logger.error('chat_doodle_orphan_storage_deletion_failed');
+          continue;
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from('chat_media_upload_intents')
+        .delete()
+        .eq('object_key', intent.object_key);
+      if (deleteError) {
+        this.logger.error('chat_doodle_upload_intent_deletion_failed');
+      }
+    }
+  }
 
   /**
    * Purge call logs older than 90 days.
@@ -428,6 +488,7 @@ export class DataRetentionService {
 
     // Moments content first: a failure here throws so the user is retried.
     await this.eraseMomentsData(userId);
+    await this.eraseDoodleObjects(userId);
 
     const tasks = [
       // Chat / social content
@@ -528,5 +589,37 @@ export class DataRetentionService {
     // executed concurrently. Removing them eliminates significant latency from
     // the end of the deletion routine.
     this.logger.log(`Wiped personal data for user ${userId}`);
+  }
+
+  private async eraseDoodleObjects(userId: string): Promise<void> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from('chat_messages')
+      .select('id, message_type, media_url')
+      .eq('sender_id', userId);
+
+    if (error) {
+      this.logger.error('gdpr_doodle_lookup_failed');
+      throw new Error('doodle_lookup_failed');
+    }
+
+    for (const message of data ?? []) {
+      if (message.message_type !== 'doodle') continue;
+      const objectKey =
+        typeof message.media_url === 'string'
+          ? this.r2ObjectService.objectKeyForPublicUrl(message.media_url)
+          : null;
+      if (!objectKey?.includes('/doodle/standard/')) continue;
+
+      try {
+        await this.r2ObjectService.deleteObject(objectKey);
+      } catch {
+        this.logger.error({
+          event: 'gdpr_doodle_storage_deletion_failed',
+          messageId: message.id,
+        });
+        throw new Error('doodle_storage_deletion_failed');
+      }
+    }
   }
 }

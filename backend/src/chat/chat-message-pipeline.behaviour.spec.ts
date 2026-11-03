@@ -105,6 +105,8 @@ describe('ChatService message persistence and realtime pipeline', () => {
       xpService as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
     );
 
     return {

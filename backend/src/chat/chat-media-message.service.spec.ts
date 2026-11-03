@@ -18,6 +18,7 @@ describe('ChatMediaMessageService', () => {
   const maybeSingle = vi.fn();
   const query = {
     select: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     maybeSingle,
   };

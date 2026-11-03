@@ -128,6 +128,15 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
 - Partial unique indexes on (`sender_id`, `media_url`) make uploaded image/video and object-backed doodle sends idempotent without indexing legacy inline doodle data.
 
+### Table: `chat_media_upload_intents`
+
+- `object_key` (Text, Primary Key, server-minted R2 key)
+- `user_id` (UUID, Foreign Key referencing `users.id`, cascade delete)
+- `media_kind` (Text, currently constrained to `'doodle'`)
+- `expires_at` (Timestamp with time zone, indexed)
+- `created_at` (Timestamp with time zone, default `now()`)
+- The backend creates an intent before returning a doodle upload ticket, clears it after a persisted send, and safely reaps expired unreferenced R2 objects in bounded batches.
+
 ### Table: `favourites` (Bookmarked Messages, Corrections & Audio)
 
 - `id` (UUID, Primary Key)

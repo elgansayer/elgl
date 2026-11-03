@@ -44,6 +44,7 @@ import { UsersService } from '../users/users.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
 import { randomUUID } from 'crypto';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -113,6 +114,7 @@ export class ChatService {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly learnerKnowledgeService: LearnerKnowledgeService,
+    private readonly r2ObjectService: R2ObjectService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -1847,6 +1849,25 @@ export class ChatService {
       throw new ForbiddenException(
         'You do not have permission to delete this message for everyone',
       );
+    }
+
+    const doodleObjectKey =
+      msg.message_type === 'doodle' && typeof msg.media_url === 'string'
+        ? this.r2ObjectService.objectKeyForPublicUrl(msg.media_url)
+        : null;
+    if (doodleObjectKey?.includes('/doodle/standard/')) {
+      try {
+        await this.r2ObjectService.deleteObject(doodleObjectKey);
+      } catch (cause) {
+        this.logger.error({
+          event: 'chat_doodle_storage_deletion_failed',
+          messageId,
+          failure: cause instanceof Error ? cause.name : typeof cause,
+        });
+        throw new ServiceUnavailableException(
+          'Unable to delete doodle storage object',
+        );
+      }
     }
 
     const { error: deleteError } = await supabase

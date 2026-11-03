@@ -1212,6 +1212,38 @@ export interface Database {
           },
         ];
       };
+      chat_media_upload_intents: {
+        Row: {
+          object_key: string;
+          user_id: string;
+          media_kind: 'doodle';
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          object_key: string;
+          user_id: string;
+          media_kind: 'doodle';
+          expires_at: string;
+          created_at?: string;
+        };
+        Update: Partial<{
+          object_key: string;
+          user_id: string;
+          media_kind: 'doodle';
+          expires_at: string;
+          created_at: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'chat_media_upload_intents_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       notification_preferences: {
         Row: {
           user_id: string;
