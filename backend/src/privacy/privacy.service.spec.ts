@@ -32,6 +32,7 @@ describe('PrivacyService', () => {
   const updates: Array<{ table: string; value: Record<string, unknown> }> = [];
   const inserts: Array<{ table: string; value: Record<string, unknown> }> = [];
   const ranges: Array<{ table: string; from: number; to: number }> = [];
+  const filters: Array<{ table: string; column: string; value: unknown }> = [];
   let latestArchive: Record<string, unknown> | null;
 
   function makeQuery(table: string): Record<string, unknown> {
@@ -52,7 +53,10 @@ describe('PrivacyService', () => {
 
     const query: Record<string, unknown> & PromiseLike<QueryResult> = {
       select: vi.fn(() => query),
-      eq: vi.fn(() => query),
+      eq: vi.fn((column: string, value: unknown) => {
+        filters.push({ table, column, value });
+        return query;
+      }),
       lte: vi.fn(() => query),
       in: vi.fn(() => query),
       order: vi.fn(() => query),
@@ -100,6 +104,7 @@ describe('PrivacyService', () => {
     updates.length = 0;
     inserts.length = 0;
     ranges.length = 0;
+    filters.length = 0;
     latestArchive = null;
 
     mockFrom.mockImplementation((table: string) => makeQuery(table));
@@ -296,6 +301,90 @@ describe('PrivacyService', () => {
         { table: 'moments', from: 0, to: 499 },
         { table: 'moments', from: 500, to: 999 },
       ]);
+    });
+
+    describe('Moments datasets', () => {
+      const momentTables = ['moments', 'moment_comments', 'moment_likes'];
+
+      it('reads Moments, comments and likes through the user_id owner column', async () => {
+        await service.requestArchive('user-1', {});
+
+        // moments, moment_comments and moment_likes are owned through user_id
+        // (005_moments.sql). There is no author_id column: the mock answers the
+        // same whatever column is filtered, but PostgREST answers 42703 and a
+        // failed dataset aborts the whole archive.
+        const momentFilters = filters.filter((entry) =>
+          momentTables.includes(entry.table),
+        );
+        expect(momentFilters).toHaveLength(momentTables.length);
+        for (const table of momentTables) {
+          expect(momentFilters).toContainEqual({
+            table,
+            column: 'user_id',
+            value: 'user-1',
+          });
+        }
+      });
+
+      it('exports the rows of all three tables in the archive', async () => {
+        const moments = [{ id: 'moment-1', user_id: 'user-1' }];
+        const comments = [
+          { id: 'comment-1', moment_id: 'moment-9', user_id: 'user-1' },
+        ];
+        const likes = [
+          { id: 'like-1', moment_id: 'moment-9', user_id: 'user-1' },
+        ];
+        tableRows.set('moments', moments);
+        tableRows.set('moment_comments', comments);
+        tableRows.set('moment_likes', likes);
+
+        await service.requestArchive('user-1', {});
+
+        const [, json] = mockUpload.mock.calls[0];
+        expect(JSON.parse(json)).toMatchObject({
+          moments,
+          moment_comments: comments,
+          moment_likes: likes,
+        });
+      });
+
+      it('pages likes like every other collection dataset', async () => {
+        tableRows.set(
+          'moment_likes',
+          Array.from({ length: 501 }, (_, index) => ({ id: `like-${index}` })),
+        );
+
+        await service.requestArchive('user-1', {});
+
+        expect(
+          ranges.filter((entry) => entry.table === 'moment_likes'),
+        ).toEqual([
+          { table: 'moment_likes', from: 0, to: 499 },
+          { table: 'moment_likes', from: 500, to: 999 },
+        ]);
+      });
+
+      it.each(momentTables)(
+        'fails the whole archive when %s cannot be read',
+        async (table) => {
+          queryErrors.set(table, { message: 'provider detail' });
+
+          await expect(service.requestArchive('user-1', {})).rejects.toThrow(
+            ServiceUnavailableException,
+          );
+
+          expect(mockUpload).not.toHaveBeenCalled();
+          expect(updates).toContainEqual(
+            expect.objectContaining({
+              table: 'archive_requests',
+              value: expect.objectContaining({
+                status: 'failed',
+                failure_code: 'dataset_unavailable',
+              }),
+            }),
+          );
+        },
+      );
     });
   });
 

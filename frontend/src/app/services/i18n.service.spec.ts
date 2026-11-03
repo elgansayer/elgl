@@ -132,6 +132,13 @@ describe('I18nService', () => {
       expect(translation).toBe('🎉 Alice gifted Bob a Rose! (🪙 50 Coins)');
     });
 
+    it('should expose inline gift fallbacks and coin copy', () => {
+      expect(service.translate('gift.someone')).toBe('Someone');
+      expect(service.translate('gift.you')).toBe('you');
+      expect(service.translate('gift.coinValue', { cost: 10 })).toBe('10 coins');
+      expect(service.translate('gift.unavailable')).toBe('Gift details unavailable');
+    });
+
     it('should ignore params that do not appear as placeholders in the translation string', () => {
       const translation = service.translate('app.title', { unused: 'value' });
       expect(translation).toBe('HelloTalk');
@@ -202,6 +209,21 @@ describe('I18nService', () => {
     expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
       'No audio introductions available.',
     );
+  });
+
+  it('provides complete in-room message search copy', () => {
+    expect(service.translate('chatRoom.searchPlaceholder')).toBe('Search messages');
+    expect(service.translate('chatSearch.thisChat')).toBe('This chat');
+    expect(service.translate('chatSearch.allChats')).toBe('All chats');
+    expect(service.translate('chatSearch.searching')).toBe('Searching...');
+    expect(service.translate('chatSearch.noResults')).toBe('No messages found.');
+    expect(service.translate('chatSearch.unavailable')).toBe('Search is unavailable. Try again.');
+    expect(service.translate('chatSearch.messageType.all')).toBe('All');
+    expect(service.translate('chatSearch.messageType.text')).toBe('Text');
+    expect(service.translate('chatSearch.messageType.voice')).toBe('Voice');
+    expect(service.translate('chatSearch.messageType.correction')).toBe('Corrections');
+    expect(service.translate('chatSearch.messageType.doodle')).toBe('Doodles');
+    expect(service.translate('chatSearch.messageType.gift')).toBe('Gifts');
   });
 
   it('should interpolate parameters e.g. coins inside string', () => {

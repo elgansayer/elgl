@@ -17,6 +17,7 @@ import { FavouriteService } from '../../services/favourite.service';
 import { toastsSignal } from '../../services/toast.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -224,6 +225,31 @@ describe('ChatRoomComponent (threaded replies)', () => {
     });
   });
 
+  it('renders persisted gift payloads in the room message feed', async () => {
+    await fixture.whenStable();
+    component.messages.set([
+      makeMessage({
+        id: 'gift-message',
+        message_type: 'gift',
+        text_content: undefined,
+        gift_payload: {
+          gift_id: 'gift_rose',
+          gift_name: 'Rose',
+          gift_icon: '🌹',
+          coin_value: 10,
+          animation_type: 'float',
+        },
+      }),
+    ]);
+    component.isLoading.set(false);
+    await fixture.whenStable();
+
+    const gift = fixture.debugElement.query(By.directive(GiftAnimationComponent));
+    expect(gift).toBeTruthy();
+    expect(gift.componentInstance.giftPayload()).toMatchObject({ gift_id: 'gift_rose' });
+    expect(fixture.nativeElement.querySelector('.chat-bubble-tail')).toBeNull();
+  });
+
   it('decrements global chat unread only after a persisted read receipt', async () => {
     await (
       component as unknown as {
@@ -318,6 +344,28 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
     document.body.removeChild(el);
     vi.useRealTimers();
+  });
+
+  it('renders an unloaded search result before scrolling to it', () => {
+    const result = makeMessage({
+      id: 'unloaded-result',
+      created_at: '2025-01-01T00:00:00.000Z',
+    });
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    component.messages.set([makeMessage({ id: 'loaded-result' })]);
+    component.showSearchPanel.set(true);
+    component.onSearchResultSelect(result);
+    fixture.detectChanges();
+
+    expect(component.showSearchPanel()).toBe(false);
+    expect(component.messages().map((message) => message.id)).toContain('unloaded-result');
+    expect(fixture.nativeElement.querySelector('#msg-unloaded-result')).not.toBeNull();
+    expect(scrollIntoView).toHaveBeenCalled();
+
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   describe('@mentions', () => {

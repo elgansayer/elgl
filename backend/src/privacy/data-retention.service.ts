@@ -332,14 +332,86 @@ export class DataRetentionService {
               return { success: true as const };
             }
           } catch (err) {
-            this.logger.error(
-              `Unexpected error finalising deletion for user ${userId}`,
-              err,
-            );
+            this.logger.error('gdpr_account_deletion_finalisation_failed');
             return { success: false as const, error: err };
           }
         }),
       );
+    }
+  }
+
+  /**
+   * Erase everything the user owns in the Moments tables created by
+   * 005_moments.sql: correction votes, question answers, likes, comments they
+   * authored, comments addressed to them, Moments, and follow edges in both
+   * directions.
+   *
+   * The user row is anonymised rather than deleted, so ON DELETE CASCADE from
+   * public.users never fires and each table must be erased explicitly. The
+   * ownership tables are keyed by user_id (there is no author_id column), while
+   * comments addressed to the user are keyed by reply_to_user_id. Statements
+   * run one after another, children before parents, because deleting a Moment
+   * cascades into the comments, likes and answers on it and overlapping
+   * concurrent deletes can deadlock. Every statement is an idempotent delete,
+   * so any failure aborts the finalisation: the user stays pending deletion and
+   * the next daily run retries instead of leaving content behind.
+   */
+  private async eraseMomentsData(userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const steps = [
+      {
+        name: 'comment_votes_owner',
+        run: () =>
+          supabase.from('moment_comment_votes').delete().eq('user_id', userId),
+      },
+      {
+        name: 'question_answers_owner',
+        run: () =>
+          supabase
+            .from('moment_question_answers')
+            .delete()
+            .eq('user_id', userId),
+      },
+      {
+        name: 'likes_owner',
+        run: () => supabase.from('moment_likes').delete().eq('user_id', userId),
+      },
+      {
+        name: 'comments_reply_recipient',
+        run: () =>
+          supabase
+            .from('moment_comments')
+            .delete()
+            .eq('reply_to_user_id', userId),
+      },
+      {
+        name: 'comments_owner',
+        run: () =>
+          supabase.from('moment_comments').delete().eq('user_id', userId),
+      },
+      {
+        name: 'moments_owner',
+        run: () => supabase.from('moments').delete().eq('user_id', userId),
+      },
+      {
+        name: 'following_edges',
+        run: () =>
+          supabase.from('user_follows').delete().eq('follower_id', userId),
+      },
+      {
+        name: 'follower_edges',
+        run: () =>
+          supabase.from('user_follows').delete().eq('following_id', userId),
+      },
+    ];
+
+    for (const { name, run } of steps) {
+      const { error } = await run();
+      if (error) {
+        this.logger.error(`gdpr_moments_erasure_failed step=${name}`);
+        throw new Error('moments_erasure_failed');
+      }
     }
   }
 
@@ -354,11 +426,12 @@ export class DataRetentionService {
   private async wipeUserData(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
+    // Moments content first: a failure here throws so the user is retried.
+    await this.eraseMomentsData(userId);
+
     const tasks = [
       // Chat / social content
       supabase.from('chat_messages').delete().eq('sender_id', userId),
-      supabase.from('moments').delete().eq('author_id', userId),
-      supabase.from('moment_comments').delete().eq('author_id', userId),
 
       // Flashcards / decks
       supabase.from('flashcards').delete().eq('user_id', userId),

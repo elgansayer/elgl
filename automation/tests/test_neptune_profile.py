@@ -9,7 +9,7 @@ import pytest
 from openhands_factory.config import FactoryConfig
 from openhands_factory.doctor import github_merge_policy_check
 from openhands_factory.exceptions import ConfigurationError
-from openhands_factory.neptune_merge import NEPTUNE_GATE
+from openhands_factory.neptune_merge import NEPTUNE_GATE, PROVISIONING_GATE
 
 
 def test_explicit_neptune_profile_uses_existing_subscription_broker(
@@ -95,8 +95,10 @@ def protection() -> dict[str, object]:
     return {
         "required_status_checks": {
             "strict": True,
-            "contexts": [NEPTUNE_GATE],
-            "checks": [{"context": NEPTUNE_GATE, "app_id": 15368}],
+            "contexts": [NEPTUNE_GATE, PROVISIONING_GATE],
+            "checks": [
+                {"context": name, "app_id": 15368} for name in (NEPTUNE_GATE, PROVISIONING_GATE)
+            ],
         },
         "enforce_admins": {"enabled": True},
         "required_pull_request_reviews": None,

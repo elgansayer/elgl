@@ -462,6 +462,7 @@
         .chip,
         .badge,
         .card,
+        .gift-bubble,
         .specimen {
           border: 1px solid CanvasText;
         }
@@ -503,6 +504,32 @@
       .bubble .mention {
         font-weight: 700;
         text-decoration: underline;
+      }
+      .gift-bubble {
+        align-self: flex-start;
+        display: inline-flex;
+        min-width: 144px;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px;
+        border-radius: 16px;
+        border: 1px solid rgb(var(--vip) / 0.3);
+        background: linear-gradient(
+          135deg,
+          rgb(var(--vip) / 0.2),
+          rgb(var(--surface-200)),
+          rgb(var(--accent) / 0.2)
+        );
+        box-shadow: 0 4px 14px rgb(var(--shadow) / 0.08);
+      }
+      .gift-bubble .gift-icon {
+        font-size: 36px;
+      }
+      .gift-bubble .coin {
+        color: rgb(var(--vip));
+        font-size: 10px;
+        font-weight: 700;
       }
       .thread {
         display: flex;
@@ -1409,6 +1436,14 @@
               </div>
               <div class="meta">10:07</div>
             </div>
+            <div class="state-label">Gift payload · inline status</div>
+            <div class="gift-bubble" role="status" aria-label="Chén Wěi sent you Rose for 10 coins">
+              <span class="gift-icon pulse" aria-hidden="true">🌹</span>
+              <span class="title">Rose</span>
+              <span class="coin">🪙 10 coins</span>
+            </div>
+            <div class="state-label">Gift payload unavailable</div>
+            <div class="alert warning" role="status">Gift details unavailable</div>
             <div class="state-label">Doodle</div>
             <div class="bubble me" style="padding: 4px">
               <div
@@ -1431,7 +1466,8 @@
         </div>
         <footer>
           States: text · mention · forwarded · voice (playing speed, transcribing, transcript) ·
-          correction · doodle · link preview · delivery sent/delivered/read · blocked (hidden)
+          correction · gift payload · gift unavailable · reduced motion · doodle · link preview ·
+          delivery sent/delivered/read · blocked (hidden)
         </footer>
       </section>
 
@@ -1597,9 +1633,9 @@
             ><button type="button" role="radio" aria-checked="false">All chats</button>
           </div>
           <div class="pills" role="radiogroup">
-            <span class="chip on">All</span><span class="chip">text</span
-            ><span class="chip">voice</span><span class="chip">correction</span
-            ><span class="chip">doodle</span><span class="chip">gift</span>
+            <span class="chip on">All</span><span class="chip">Text</span
+            ><span class="chip">Voice</span><span class="chip">Corrections</span
+            ><span class="chip">Doodles</span><span class="chip">Gifts</span>
           </div>
           <div class="list">
             <div class="stack" style="gap: 2px">
@@ -1618,15 +1654,15 @@
           </div>
           <div class="state-label">Searching · no results · error</div>
           <div class="muted" role="status">Searching…</div>
-          <div class="muted" role="status">No results</div>
+          <div class="muted" role="status">No messages found.</div>
           <div class="alert error row" role="alert">
-            <span class="grow">Error</span
+            <span class="grow">Search is unavailable. Try again.</span
             ><button class="btn secondary-btn" type="button">Retry</button>
           </div>
         </div>
         <footer>
           States: results (within / global with room tag) · type filter · searching · no results ·
-          error+retry. ⚠ chatSearch.* keys have no English translation yet
+          error+retry. Search labels and states use the production English translation contract.
         </footer>
       </section>
 

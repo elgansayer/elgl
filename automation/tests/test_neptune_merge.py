@@ -61,8 +61,10 @@ def protection() -> dict[str, Any]:
     return {
         "required_status_checks": {
             "strict": True,
-            "contexts": [NEPTUNE_GATE],
-            "checks": [{"context": NEPTUNE_GATE, "app_id": 15368}],
+            "contexts": [NEPTUNE_GATE, PROVISIONING_GATE],
+            "checks": [
+                {"context": name, "app_id": 15368} for name in (NEPTUNE_GATE, PROVISIONING_GATE)
+            ],
         },
         "enforce_admins": {"enabled": True},
         "allow_force_pushes": {"enabled": False},
@@ -104,7 +106,7 @@ def responses(
         pr() if item is None else item,
         {"object": {"sha": BASE}},
         {"status": comparison, "files": [{"filename": "README.md"}]},
-        [{"check_runs": [check()] if checks is None else checks}],
+        [{"check_runs": [check(), check(name=PROVISIONING_GATE)] if checks is None else checks}],
     ]
 
 
@@ -321,8 +323,14 @@ def test_paginated_check_evidence_is_not_truncated() -> None:
         ("settings", "delete_branch_on_merge", True),
         ("protection", "required_status_checks.strict", False),
         ("protection", "required_status_checks.checks", []),
+        (
+            "protection",
+            "required_status_checks.checks",
+            [{"context": NEPTUNE_GATE, "app_id": 15368}],
+        ),
         ("protection", "required_status_checks.checks", [{"context": NEPTUNE_GATE, "app_id": -1}]),
         ("protection", "required_status_checks.contexts", [NEPTUNE_GATE, "unhandled check"]),
+        ("protection", "required_status_checks.contexts", [NEPTUNE_GATE]),
         ("protection", "enforce_admins.enabled", False),
         ("protection", "allow_force_pushes.enabled", True),
         ("protection", "allow_deletions.enabled", True),
@@ -425,9 +433,11 @@ def test_missing_or_truncated_changed_file_evidence_blocks(comparison: object) -
         "wrong-head",
     ],
 )
+@pytest.mark.parametrize("path", ["README.md", "tools/factory/provision.py"])
 def test_aggregate_success_cannot_hide_required_provisioning_gate(
     tmp_path: Path,
     result: str,
+    path: str,
 ) -> None:
     extra = check(name=PROVISIONING_GATE, conclusion=result)
     if result == "wrong-app":
@@ -436,7 +446,7 @@ def test_aggregate_success_cannot_hide_required_provisioning_gate(
         extra.update(head_sha="c" * 40, conclusion="success")
     checks = [check()] if result == "missing" else [check(), extra]
     values = responses(checks=checks)
-    values[2] = {"status": "ahead", "files": [{"filename": "tools/factory/provision.py"}]}
+    values[2] = {"status": "ahead", "files": [{"filename": path}]}
     runner = Runner(values)
     with pytest.raises(FactoryError, match="passing exact-head/current-base"):
         GitHubClient(NEPTUNE_REPOSITORY, tmp_path, "secret", runner).merge_pull_request(42, HEAD)
@@ -452,7 +462,7 @@ def test_recipe_merge_requires_both_successful_app_pinned_checks(tmp_path: Path)
     assert "--auto" in runner.calls[-1]
 
 
-def test_metadata_does_not_wait_for_path_filtered_installer_workflow(tmp_path: Path) -> None:
+def test_metadata_waits_for_always_present_installer_aggregate(tmp_path: Path) -> None:
     runner = Runner(responses())
     assert (
         GitHubClient(NEPTUNE_REPOSITORY, tmp_path, "secret", runner)
