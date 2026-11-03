@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -139,10 +140,11 @@ def test_neptune_daemon_routes_supervised_retries_after_generation_rebuild(neptu
 
     class BenignCLI(CLIProvider):
         name = "codex"
+        default_command = "/usr/bin/python3"
         attempts = 0
 
         def health(self):
-            return ProviderHealth(self.name, ProviderStatus.READY, "local transport fixture")
+            return ProviderHealth(self.name, ProviderStatus.HEALTHY, datetime.now(UTC))
 
         def build_command(self, request, model, prompt_path):
             self.attempts += 1
