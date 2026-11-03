@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../services/chat.service';
+import { isGiftPayload, type ChatMessage } from '../../services/chat.service';
 
 export type DeliveryStatus = NonNullable<ChatMessage['delivery_status']>;
 
@@ -68,6 +68,10 @@ export function isChatMessage(value: unknown): value is ChatMessage {
   // payload instead of applying the non-system sender requirement.
   if (messageType === 'system') {
     return isSystemEvent(value['system_event']);
+  }
+
+  if (messageType === 'gift') {
+    return senderId.length > 0 && isGiftPayload(value['gift_payload']);
   }
 
   return senderId.length > 0;

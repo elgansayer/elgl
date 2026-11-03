@@ -198,20 +198,25 @@
             >
               <div
                 [class]="
-                  'relative max-w-[80%] ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
-                  (isOwnMessage(msg)
-                    ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
-                    : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary')
+                  'relative max-w-[80%] text-sm transition-colors ' +
+                  (msg.message_type === 'gift'
+                    ? 'bg-transparent shadow-none'
+                    : 'ps-3 pe-3 pt-2.5 pb-2.5 shadow-sm ' +
+                      (isOwnMessage(msg)
+                        ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
+                        : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary'))
                 "
                 [class.ring-2]="highlightedMessageId() === msg.id"
                 [class.ring-warning]="highlightedMessageId() === msg.id"
               >
-                <span
-                  class="chat-bubble-tail"
-                  [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
-                  [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
-                  aria-hidden="true"
-                ></span>
+                @if (msg.message_type !== 'gift') {
+                  <span
+                    class="chat-bubble-tail"
+                    [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
+                    [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
+                    aria-hidden="true"
+                  ></span>
+                }
                 <p class="mb-1 text-[11px] opacity-70 flex items-center gap-1">
                   <span>
                     {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
@@ -346,6 +351,9 @@
                       [siteName]="lp.siteName"
                     ></app-link-preview-card>
                   }
+                }
+                @if (msg.message_type === 'gift') {
+                  <app-gift-animation [giftPayload]="msg.gift_payload ?? null" />
                 }
                 @if (msg.message_type === 'correction' && msg.correction_payload) {
                   <app-visual-diff
