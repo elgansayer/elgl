@@ -658,4 +658,36 @@ describe('MetricsService', () => {
       );
     });
   });
+
+  describe('Uploaded chat media metrics', () => {
+    it('counts sends by media kind and outcome', async () => {
+      service.recordChatMediaSend('doodle', 'created');
+      service.recordChatMediaSend('doodle', 'created');
+      service.recordChatMediaSend('doodle', 'recovered');
+      service.recordChatMediaSend('image', 'conflict');
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_chat_media_sends_total{kind="doodle",outcome="created"} 2',
+      );
+      expect(metrics).toContain(
+        'hellotalk_chat_media_sends_total{kind="doodle",outcome="recovered"} 1',
+      );
+      expect(metrics).toContain(
+        'hellotalk_chat_media_sends_total{kind="image",outcome="conflict"} 1',
+      );
+    });
+
+    it('exports only the kind and outcome labels so no room, user or object key is exposed', async () => {
+      service.recordChatMediaSend('video', 'not_member');
+
+      const metrics = await service.getMetrics();
+      const samples = metrics
+        .split('\n')
+        .filter((line) => line.startsWith('hellotalk_chat_media_sends_total{'));
+      expect(samples).toEqual([
+        'hellotalk_chat_media_sends_total{kind="video",outcome="not_member"} 1',
+      ]);
+    });
+  });
 });

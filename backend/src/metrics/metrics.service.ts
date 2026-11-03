@@ -19,6 +19,29 @@ import type {
 export type MatchmakingDailyJobOutcome =
   'success' | 'partial' | 'failed' | 'skipped';
 
+/** The kinds of uploaded object `POST /media/chat/send` can turn into a chat message. */
+export type ChatMediaSendKind = 'image' | 'video' | 'doodle';
+
+/**
+ * How one uploaded chat media send ended. `replayed` and `recovered` are the idempotent
+ * resolutions of a retry (the message already existed, or existed after a failure) and
+ * return success, so HTTP status alone cannot show them. The rest classify a refusal or
+ * failure: `forbidden` is an object the caller does not own, `not_member` an unavailable
+ * room, `conflict` an object already used by another message, `unavailable` a delivery or
+ * membership lookup that could not be verified, `rejected` an invalid request and `failed`
+ * any other error.
+ */
+export type ChatMediaSendOutcome =
+  | 'created'
+  | 'replayed'
+  | 'recovered'
+  | 'conflict'
+  | 'forbidden'
+  | 'not_member'
+  | 'unavailable'
+  | 'rejected'
+  | 'failed';
+
 @Injectable()
 export class MetricsService {
   private readonly register: Registry;
@@ -123,6 +146,9 @@ export class MetricsService {
   readonly linkPreviewRequests: Counter<string>;
   readonly linkPreviewFailures: Counter<string>;
   readonly linkPreviewFetchDuration: Histogram<string>;
+
+  // Uploaded chat media (photo, video, doodle) send metrics
+  readonly chatMediaSends: Counter<string>;
 
   constructor() {
     this.register = new Registry();
@@ -716,6 +742,15 @@ export class MetricsService {
       registers: [this.register],
       buckets: [0.1, 0.25, 0.5, 1, 2, 4, 6, 8, 10],
     });
+
+    // --- Uploaded chat media (photo, video, doodle) send metrics ---
+
+    this.chatMediaSends = new Counter({
+      name: 'hellotalk_chat_media_sends_total',
+      help: 'Total uploaded chat media send requests by media kind and outcome (created, replayed, recovered, conflict, forbidden, not_member, unavailable, rejected, failed)',
+      labelNames: ['kind', 'outcome'],
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -1156,6 +1191,19 @@ export class MetricsService {
         details.durationSeconds,
       );
     }
+  }
+
+  // --- Uploaded chat media (photo, video, doodle) metric helpers ---
+
+  /**
+   * Records how one uploaded chat media send ended. Both labels are closed enums, so
+   * cardinality stays bounded and no room, user, message or object key is exported.
+   */
+  recordChatMediaSend(
+    kind: ChatMediaSendKind,
+    outcome: ChatMediaSendOutcome,
+  ): void {
+    this.chatMediaSends.inc({ kind, outcome });
   }
 
   setModerationQueueSize(count: number): void {

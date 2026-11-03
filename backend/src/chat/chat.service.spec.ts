@@ -17,7 +17,10 @@ vi.mock('dompurify', () => ({
   })),
 }));
 
-import { ServiceUnavailableException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
@@ -33,6 +36,7 @@ import { XpService } from '../xp/xp.service';
 import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
 import { UsersService } from '../users/users.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 
 vi.mock('./centrifugo.service', () => ({
   CentrifugoService: vi.fn(),
@@ -46,6 +50,8 @@ describe('ChatService', () => {
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let getBlockedAndBlockerIds: ReturnType<typeof vi.fn>;
+  const deleteObject = vi.fn();
+  const objectKeyForPublicUrl = vi.fn();
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -148,6 +154,10 @@ describe('ChatService', () => {
             getProfile: vi.fn().mockResolvedValue(null),
           },
         },
+        {
+          provide: R2ObjectService,
+          useValue: { deleteObject, objectKeyForPublicUrl },
+        },
       ],
     }).compile();
 
@@ -163,6 +173,95 @@ describe('ChatService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('deleteMessage doodle retention', () => {
+    const message = {
+      id: 'message-1',
+      room_id: 'room-1',
+      sender_id: 'user-1',
+      message_type: 'doodle',
+      media_url:
+        'https://media.example.com/chat-media/user-1/doodle/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.png',
+    };
+
+    beforeEach(() => {
+      objectKeyForPublicUrl.mockReturnValue(
+        'chat-media/user-1/doodle/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.png',
+      );
+      deleteObject.mockResolvedValue(undefined);
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: message, error: null })
+        .mockResolvedValueOnce({ data: { admin_id: 'user-1' }, error: null });
+      mockQueryBuilder.maybeSingle.mockResolvedValue({
+        data: { user_id: 'user-1' },
+        error: null,
+      });
+    });
+
+    it('deletes the private R2 object before deleting the message row', async () => {
+      await service.deleteMessage('user-1', 'message-1', 'everyone');
+
+      expect(deleteObject).toHaveBeenCalledWith(
+        'chat-media/user-1/doodle/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.png',
+      );
+      expect(mockQueryBuilder.delete).toHaveBeenCalledOnce();
+      expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
+        type: 'message_deleted',
+        message_id: 'message-1',
+        deleted_for: 'everyone',
+      });
+    });
+
+    it('keeps the row and suppresses realtime deletion when R2 deletion fails', async () => {
+      deleteObject.mockRejectedValueOnce(new Error('gateway unavailable'));
+
+      await expect(
+        service.deleteMessage('user-1', 'message-1', 'everyone'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(mockQueryBuilder.delete).not.toHaveBeenCalled();
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('does not delete storage when the caller is neither the sender nor a room admin', async () => {
+      mockQueryBuilder.single.mockReset();
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: message, error: null })
+        .mockResolvedValueOnce({ data: { admin_id: null }, error: null });
+
+      await expect(
+        service.deleteMessage('user-2', 'message-1', 'everyone'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(deleteObject).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.delete).not.toHaveBeenCalled();
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it("allows a room admin to delete another sender's doodle", async () => {
+      mockQueryBuilder.single.mockReset();
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: message, error: null })
+        .mockResolvedValueOnce({ data: { admin_id: 'user-2' }, error: null });
+
+      await service.deleteMessage('user-2', 'message-1', 'everyone');
+
+      expect(deleteObject).toHaveBeenCalledWith(
+        'chat-media/user-1/doodle/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.png',
+      );
+      expect(mockQueryBuilder.delete).toHaveBeenCalledOnce();
+    });
+
+    it("never deletes another user's object from a crafted doodle row", async () => {
+      objectKeyForPublicUrl.mockReturnValue(
+        'chat-media/user-2/doodle/standard/1-bbbbbbbbbbbbbbbbbbbbbbbb.png',
+      );
+
+      await service.deleteMessage('user-1', 'message-1', 'everyone');
+
+      expect(deleteObject).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.delete).toHaveBeenCalledOnce();
+    });
   });
 
   describe('pedagogical AI prompts', () => {

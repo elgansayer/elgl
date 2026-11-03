@@ -2,6 +2,35 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
+
+function isUploadIntent(value: unknown): value is { object_key: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'object_key' in value &&
+    typeof value.object_key === 'string'
+  );
+}
+
+function isOwnedDoodleUploadIntent(
+  value: unknown,
+): value is { object_key: string; user_id: string } {
+  if (
+    !isUploadIntent(value) ||
+    !('user_id' in value) ||
+    typeof value.user_id !== 'string'
+  ) {
+    return false;
+  }
+
+  const prefix = `chat-media/${value.user_id}/doodle/standard/`;
+  const suffix = value.object_key.slice(prefix.length);
+  return (
+    value.object_key.startsWith(prefix) &&
+    /^[0-9]+-[a-f0-9]{24}\.png$/.test(suffix)
+  );
+}
 
 /**
  * Scheduled data-retention enforcement for GDPR compliance.
@@ -23,7 +52,69 @@ export class DataRetentionService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly r2ObjectService: R2ObjectService,
   ) {}
+
+  @Cron('0 45 2 * * *')
+  async purgeExpiredDoodleUploads(): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('chat_media_upload_intents')
+      .select('object_key, user_id')
+      .lt('expires_at', new Date().toISOString())
+      .limit(100);
+
+    if (error) {
+      this.logger.error('chat_doodle_upload_intent_lookup_failed');
+      return;
+    }
+
+    const rawIntents: unknown = data;
+    const intents = Array.isArray(rawIntents)
+      ? rawIntents.filter(isUploadIntent)
+      : [];
+    for (const intent of intents) {
+      if (!isOwnedDoodleUploadIntent(intent)) {
+        this.logger.error('chat_doodle_upload_intent_key_rejected');
+        const { error: invalidIntentDeleteError } = await supabase
+          .from('chat_media_upload_intents')
+          .delete()
+          .eq('object_key', intent.object_key);
+        if (invalidIntentDeleteError) {
+          this.logger.error('chat_doodle_upload_intent_deletion_failed');
+        }
+        continue;
+      }
+
+      const mediaUrl = this.r2ObjectService.publicUrlForKey(intent.object_key);
+      const { data: message, error: messageError } = await supabase
+        .from('chat_messages')
+        .select('id')
+        .eq('media_url', mediaUrl)
+        .maybeSingle();
+      if (messageError) {
+        this.logger.error('chat_doodle_orphan_reference_lookup_failed');
+        continue;
+      }
+
+      if (!message) {
+        try {
+          await this.r2ObjectService.deleteObject(intent.object_key);
+        } catch {
+          this.logger.error('chat_doodle_orphan_storage_deletion_failed');
+          continue;
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from('chat_media_upload_intents')
+        .delete()
+        .eq('object_key', intent.object_key);
+      if (deleteError) {
+        this.logger.error('chat_doodle_upload_intent_deletion_failed');
+      }
+    }
+  }
 
   /**
    * Purge call logs older than 90 days.
@@ -428,6 +519,7 @@ export class DataRetentionService {
 
     // Moments content first: a failure here throws so the user is retried.
     await this.eraseMomentsData(userId);
+    await this.eraseDoodleObjects(userId);
 
     const tasks = [
       // Chat / social content
@@ -528,5 +620,71 @@ export class DataRetentionService {
     // executed concurrently. Removing them eliminates significant latency from
     // the end of the deletion routine.
     this.logger.log(`Wiped personal data for user ${userId}`);
+  }
+
+  private async eraseDoodleObjects(userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('id, message_type, media_url')
+      .eq('sender_id', userId);
+
+    if (error) {
+      this.logger.error('gdpr_doodle_lookup_failed');
+      throw new Error('doodle_lookup_failed');
+    }
+
+    const { data: uploadIntents, error: uploadIntentError } = await supabase
+      .from('chat_media_upload_intents')
+      .select('object_key')
+      .eq('user_id', userId);
+
+    if (uploadIntentError) {
+      this.logger.error('gdpr_doodle_upload_intent_lookup_failed');
+      throw new Error('doodle_upload_intent_lookup_failed');
+    }
+
+    const expectedPrefix = `chat-media/${userId}/doodle/standard/`;
+    const objectKeys = new Set<string>();
+    for (const message of data ?? []) {
+      if (message.message_type !== 'doodle') continue;
+      const objectKey =
+        typeof message.media_url === 'string'
+          ? this.r2ObjectService.objectKeyForPublicUrl(message.media_url)
+          : null;
+      if (objectKey?.startsWith(expectedPrefix)) objectKeys.add(objectKey);
+    }
+
+    const rawUploadIntents: unknown = uploadIntents;
+    if (Array.isArray(rawUploadIntents)) {
+      for (const uploadIntent of rawUploadIntents) {
+        if (
+          isUploadIntent(uploadIntent) &&
+          uploadIntent.object_key.startsWith(expectedPrefix)
+        ) {
+          objectKeys.add(uploadIntent.object_key);
+        }
+      }
+    }
+
+    for (const objectKey of objectKeys) {
+      try {
+        await this.r2ObjectService.deleteObject(objectKey);
+      } catch {
+        this.logger.error({
+          event: 'gdpr_doodle_storage_deletion_failed',
+        });
+        throw new Error('doodle_storage_deletion_failed');
+      }
+    }
+
+    const { error: uploadIntentDeleteError } = await supabase
+      .from('chat_media_upload_intents')
+      .delete()
+      .eq('user_id', userId);
+    if (uploadIntentDeleteError) {
+      this.logger.error('gdpr_doodle_upload_intent_deletion_failed');
+      throw new Error('doodle_upload_intent_deletion_failed');
+    }
   }
 }

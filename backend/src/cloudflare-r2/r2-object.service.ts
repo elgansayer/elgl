@@ -106,9 +106,41 @@ export class R2ObjectService {
     await this.r2Service.deleteObject(key);
   }
 
+  headObject(key: string): ReturnType<R2Service['headObject']> {
+    return this.r2Service.headObject(key);
+  }
+
   publicUrlForKey(key: string): string {
     const base = this.publicBaseUrl.replace(/\/+$/, '');
     return `${base}/${encodeObjectKey(key)}`;
+  }
+
+  objectKeyForPublicUrl(publicUrl: string): string | null {
+    let candidate: URL;
+    try {
+      candidate = new URL(publicUrl);
+    } catch {
+      return null;
+    }
+
+    const publicBaseUrl = new URL(this.publicBaseUrl);
+    const basePath = publicBaseUrl.pathname.replace(/\/+$/, '');
+    if (
+      candidate.origin !== publicBaseUrl.origin ||
+      candidate.search.length > 0 ||
+      candidate.hash.length > 0 ||
+      !candidate.pathname.startsWith(`${basePath}/`)
+    ) {
+      return null;
+    }
+
+    const encodedKey = candidate.pathname.slice(basePath.length + 1);
+    try {
+      const key = decodeURIComponent(encodedKey);
+      return this.publicUrlForKey(key) === publicUrl ? key : null;
+    } catch {
+      return null;
+    }
   }
 
   private async readStoredObject(

@@ -7,9 +7,10 @@ import { DataScrubbingService } from './data-scrubbing.service';
 import { PrivacyArchiveCron } from './privacy-archive.cron';
 import { DataRetentionService } from './data-retention.service';
 import { PrivacyLifecycleService } from './privacy-lifecycle.service';
+import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 
 @Module({
-  imports: [SupabaseModule, SafetyModule],
+  imports: [SupabaseModule, SafetyModule, CloudflareR2Module],
   controllers: [PrivacyController],
   providers: [
     PrivacyService,

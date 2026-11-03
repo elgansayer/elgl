@@ -124,6 +124,27 @@ describe('ChatMessageComponent', () => {
     expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
   });
 
+  it('gives a received doodle a translated text alternative instead of a hard-coded label', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'doodle-message-id',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'doodle',
+      media_url: 'https://cdn.example/chat-media/sender-id/doodle/standard/1-a.png',
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+      sender: { id: 'sender-id', display_name: 'Ayaka' },
+    });
+    fixture.detectChanges();
+
+    const image = fixture.nativeElement.querySelector('img') as HTMLImageElement;
+    expect(image.getAttribute('src')).toBe(
+      'https://cdn.example/chat-media/sender-id/doodle/standard/1-a.png',
+    );
+    expect(image.getAttribute('alt')).toBe('chatRoom.doodleAlt');
+    expect(image.getAttribute('loading')).toBe('lazy');
+  });
+
   it('renders system events with the dedicated bubble and no user-message actions', () => {
     fixture.componentRef.setInput('message', {
       id: 'system-message-id',

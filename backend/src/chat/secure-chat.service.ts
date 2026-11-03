@@ -13,6 +13,7 @@ import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { XpService } from '../xp/xp.service';
 import { UsersService } from '../users/users.service';
 import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
@@ -53,6 +54,7 @@ export class SecureChatService extends ChatService {
     usersService: UsersService,
     configService: ConfigService,
     learnerKnowledgeService: LearnerKnowledgeService,
+    r2ObjectService: R2ObjectService,
   ) {
     super(
       secureSupabase,
@@ -68,6 +70,7 @@ export class SecureChatService extends ChatService {
       usersService,
       configService,
       learnerKnowledgeService,
+      r2ObjectService,
     );
   }
 

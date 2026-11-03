@@ -118,12 +118,24 @@ The Moments tables are created by `supabase/migrations/005_moments.sql`. Migrati
 ### Table: `chat_messages`
 
 - `id` (UUID, Primary Key)
-- `channel_id` (Text, indexed, e.g., `'chat_userA_userB'` or `'group_123'`)
-- `sender_id` (UUID, Foreign Key referencing `users.id`)
-- `payload_type` (String: `'text'`, `'voice'`, `'image'`, `'doodle'`, `'correction'`, `'call_invite'`, `'gift'`, `'system'`)
-- `content_json` (JSONB, structure varies depending on `payload_type`)
+- `room_id` (Text, indexed together with `created_at`)
+- `sender_id` (UUID, Foreign Key referencing `users.id`, indexed)
+- `message_type` (String, including `'text'`, `'voice'`, `'image'`, `'video'`, `'doodle'`, and `'correction'`)
+- `text_content` (Text, nullable, trigram indexed)
+- `media_url` (Text, nullable, containing a Cloudflare R2 public URL for uploaded media or a legacy inline doodle)
+- `correction_payload` (JSONB, nullable)
 - `is_read` (Boolean, default `false`)
 - `created_at` (Timestamp with time zone, default `now()`, indexed)
+- Partial unique indexes on (`sender_id`, `media_url`) make uploaded image/video and object-backed doodle sends idempotent without indexing legacy inline doodle data.
+
+### Table: `chat_media_upload_intents`
+
+- `object_key` (Text, Primary Key, server-minted R2 key)
+- `user_id` (UUID, Foreign Key referencing `users.id`, cascade delete)
+- `media_kind` (Text, currently constrained to `'doodle'`)
+- `expires_at` (Timestamp with time zone, indexed)
+- `created_at` (Timestamp with time zone, default `now()`)
+- The backend creates an intent before returning a doodle upload ticket, clears it after a persisted send, and safely reaps expired unreferenced R2 objects in bounded batches.
 
 ### Table: `favourites` (Bookmarked Messages, Corrections & Audio)
 

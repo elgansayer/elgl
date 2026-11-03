@@ -84,6 +84,7 @@ function createService(from: Mock, getPreview: Mock) {
     {} as never,
     { get: vi.fn().mockReturnValue(5) } as never,
     {} as never,
+    {} as never,
   );
   return { service, centrifugoService };
 }

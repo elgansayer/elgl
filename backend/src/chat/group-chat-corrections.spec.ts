@@ -40,6 +40,8 @@ function buildService(
     {} as XpService,
     {} as UsersService,
     { get: vi.fn() } as unknown as ConfigService,
+    {} as never,
+    {} as never,
   );
 }
 

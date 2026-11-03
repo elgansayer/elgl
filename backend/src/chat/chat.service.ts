@@ -44,6 +44,8 @@ import { UsersService } from '../users/users.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
 import { randomUUID } from 'crypto';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
+import { CHAT_MEDIA_OBJECT_KEY_PATTERN } from '../media/dto/send-chat-media-message.dto';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -118,6 +120,7 @@ export class ChatService {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly learnerKnowledgeService: LearnerKnowledgeService,
+    private readonly r2ObjectService: R2ObjectService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -434,6 +437,7 @@ export class ChatService {
   async sendMessage(
     senderId: string,
     dto: SendMessageDto,
+    options: { requireRealtimeDelivery?: boolean } = {},
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
 
@@ -553,9 +557,10 @@ export class ChatService {
     }
 
     // Publish to Centrifugo channel (with preview and possibly a generated explanation)
-    await this.centrifugoService.publish(`chat:${dto.room_id}`, {
-      message: messageForPublish,
-    });
+    const published = await this.centrifugoService.publish(
+      `chat:${dto.room_id}`,
+      { message: messageForPublish },
+    );
 
     const preview = dto.is_encrypted
       ? '🔒 Encrypted message'
@@ -639,7 +644,19 @@ export class ChatService {
       );
     }
 
+    if (!published && options.requireRealtimeDelivery) {
+      throw new ServiceUnavailableException(
+        'Realtime message delivery is unavailable',
+      );
+    }
+
     return messageForPublish;
+  }
+
+  async republishMessage(message: ChatMessage): Promise<boolean> {
+    return this.centrifugoService.publish(`chat:${message.room_id}`, {
+      message,
+    });
   }
 
   async getMessages(
@@ -1840,15 +1857,33 @@ export class ChatService {
       .eq('id', msg.room_id)
       .single();
 
-    if (
-      room &&
-      room.admin_id &&
-      room.admin_id !== userId &&
-      msg.sender_id !== userId
-    ) {
+    if (msg.sender_id !== userId && room?.admin_id !== userId) {
       throw new ForbiddenException(
         'You do not have permission to delete this message for everyone',
       );
+    }
+
+    const doodleObjectKey =
+      msg.message_type === 'doodle' && typeof msg.media_url === 'string'
+        ? this.r2ObjectService.objectKeyForPublicUrl(msg.media_url)
+        : null;
+    const ownedDoodlePrefix = `chat-media/${msg.sender_id}/doodle/standard/`;
+    if (
+      doodleObjectKey?.startsWith(ownedDoodlePrefix) &&
+      CHAT_MEDIA_OBJECT_KEY_PATTERN.test(doodleObjectKey)
+    ) {
+      try {
+        await this.r2ObjectService.deleteObject(doodleObjectKey);
+      } catch (cause) {
+        this.logger.error({
+          event: 'chat_doodle_storage_deletion_failed',
+          messageId,
+          failure: cause instanceof Error ? cause.name : typeof cause,
+        });
+        throw new ServiceUnavailableException(
+          'Unable to delete doodle storage object',
+        );
+      }
     }
 
     const { error: deleteError } = await supabase

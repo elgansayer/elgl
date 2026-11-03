@@ -103,7 +103,9 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <p class="text-sm">
                 @for (segment of textSegments(); track $index) {
                   @if (segment.isMention) {
-                    <span class="font-bold text-secondary-ink cursor-pointer">{{ segment.value }}</span>
+                    <span class="font-bold text-secondary-ink cursor-pointer">{{
+                      segment.value
+                    }}</span>
                   } @else {
                     {{ segment.value }}
                   }
@@ -179,8 +181,12 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <img
                 [src]="message().media_url"
                 class="max-w-full rounded"
-                alt="Doodle"
+                [alt]="
+                  'chatRoom.doodleAlt'
+                    | t: { name: message().sender?.display_name || ('chat.unknown_user' | t) }
+                "
                 loading="lazy"
+                decoding="async"
               />
             }
 

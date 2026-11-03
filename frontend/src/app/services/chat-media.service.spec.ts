@@ -1,9 +1,9 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-import { ChatMediaService } from './chat-media.service';
+import { ChatMediaService, describeChatMediaFailure } from './chat-media.service';
 import { ImageCompressionService } from './image-compression.service';
 
 describe('ChatMediaService', () => {
@@ -161,5 +161,162 @@ describe('ChatMediaService', () => {
     await expect(service.upload(video, 'standard')).rejects.toThrow(
       'Sign in before uploading chat media',
     );
+  });
+
+  describe('uploadDoodle', () => {
+    const presignUrl = `${environment.apiUrl}/media/chat/presigned-url`;
+    const doodleTicket = {
+      uploadUrl: 'https://upload.example/doodle',
+      mediaUrl: 'https://cdn.example/chat-media/user/doodle/standard/1-a.png',
+      objectKey: 'chat-media/user/doodle/standard/1-a.png',
+      mediaKind: 'doodle',
+      quality: 'standard',
+      maxBytes: 2 * 1024 * 1024,
+    };
+
+    /** A PNG-signed payload; the service validates the signature, not full PNG structure. */
+    function pngDataUrl(payloadBytes = 16): string {
+      const signature = String.fromCharCode(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+      return `data:image/png;base64,${btoa(signature + '\0'.repeat(payloadBytes))}`;
+    }
+
+    it('decodes the pad export, requests a doodle ticket and PUTs the PNG bytes directly', async () => {
+      const dataUrl = pngDataUrl(100);
+      const uploadPromise = service.uploadDoodle(dataUrl);
+
+      const presign = httpMock.expectOne(presignUrl);
+      expect(presign.request.method).toBe('POST');
+      expect(presign.request.headers.get('Authorization')).toBe('Bearer access-token');
+      expect(presign.request.body).toEqual({
+        filename: 'doodle.png',
+        contentType: 'image/png',
+        quality: 'standard',
+        sizeBytes: 108,
+        purpose: 'doodle',
+      });
+      presign.flush(doodleTicket);
+
+      await Promise.resolve();
+      const put = httpMock.expectOne('https://upload.example/doodle');
+      expect(put.request.method).toBe('PUT');
+      expect(put.request.headers.get('Content-Type')).toBe('image/png');
+      const body = put.request.body as Blob;
+      expect(body).toBeInstanceOf(Blob);
+      expect(body.type).toBe('image/png');
+      expect(body.size).toBe(108);
+      expect(new Uint8Array(await body.arrayBuffer()).slice(0, 8)).toEqual(
+        Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      );
+      put.flush('ok');
+
+      await expect(uploadPromise).resolves.toEqual({
+        url: doodleTicket.mediaUrl,
+        objectKey: doodleTicket.objectKey,
+        kind: 'doodle',
+        quality: 'standard',
+      });
+      expect(compressImage).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a JPEG data URL', 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ=='],
+      ['a remote URL', 'https://evil.example/doodle.png'],
+      ['an SVG data URL', 'data:image/svg+xml;base64,PHN2Zy8+'],
+      ['an empty payload', 'data:image/png;base64,'],
+    ])('rejects %s before any network request', async (_label, dataUrl) => {
+      await expect(service.uploadDoodle(dataUrl)).rejects.toThrow('Doodle is not a PNG image');
+      httpMock.expectNone(presignUrl);
+    });
+
+    it('rejects malformed base64 before any network request', async () => {
+      await expect(service.uploadDoodle('data:image/png;base64,@@not base64@@')).rejects.toThrow(
+        'Doodle image data is malformed',
+      );
+      httpMock.expectNone(presignUrl);
+    });
+
+    it('rejects base64 that is not a PNG even when the prefix claims it is', async () => {
+      await expect(
+        service.uploadDoodle(`data:image/png;base64,${btoa('<script>alert(1)</script>')}`),
+      ).rejects.toThrow('Doodle is not a PNG image');
+      httpMock.expectNone(presignUrl);
+    });
+
+    it('rejects a doodle above the 2 MB ceiling before any network request', async () => {
+      await expect(service.uploadDoodle(pngDataUrl(2 * 1024 * 1024))).rejects.toThrow(
+        'Doodle must be under 2 MB',
+      );
+      httpMock.expectNone(presignUrl);
+    });
+
+    it('does not upload when the ticket is not a doodle ticket', async () => {
+      const uploadPromise = service.uploadDoodle(pngDataUrl());
+      const rejection = expect(uploadPromise).rejects.toThrow(
+        'Upload ticket did not match the selected media',
+      );
+
+      httpMock.expectOne(presignUrl).flush({ ...doodleTicket, mediaKind: 'image' });
+
+      await rejection;
+      httpMock.expectNone('https://upload.example/doodle');
+    });
+
+    it('does not upload when the ticket ceiling is smaller than the doodle', async () => {
+      const uploadPromise = service.uploadDoodle(pngDataUrl(100));
+      const rejection = expect(uploadPromise).rejects.toThrow(
+        'Upload ticket did not match the selected media',
+      );
+
+      httpMock.expectOne(presignUrl).flush({ ...doodleTicket, maxBytes: 64 });
+
+      await rejection;
+      httpMock.expectNone('https://upload.example/doodle');
+    });
+
+    it('rejects when the object store refuses the upload so nothing is sent to the chat', async () => {
+      const uploadPromise = service.uploadDoodle(pngDataUrl());
+      const rejection = expect(uploadPromise).rejects.toMatchObject({ status: 403 });
+
+      httpMock.expectOne(presignUrl).flush(doodleTicket);
+      await Promise.resolve();
+      httpMock
+        .expectOne('https://upload.example/doodle')
+        .flush('denied', { status: 403, statusText: 'Forbidden' });
+
+      await rejection;
+    });
+
+    it('fails closed when the user is not authenticated', async () => {
+      auth.getAccessToken.mockReturnValue(null as never);
+
+      await expect(service.uploadDoodle(pngDataUrl())).rejects.toThrow(
+        'Sign in before uploading chat media',
+      );
+      httpMock.expectNone(presignUrl);
+    });
+  });
+});
+
+describe('describeChatMediaFailure', () => {
+  it('reports only the status of an HTTP failure so a signed upload URL is never logged', () => {
+    const failure = new HttpErrorResponse({
+      status: 403,
+      statusText: 'Forbidden',
+      url: 'https://upload.example/object?expires=1&signature=secret-token',
+    });
+
+    expect(failure.message).toContain('secret-token');
+    expect(describeChatMediaFailure(failure)).toBe('HTTP 403');
+  });
+
+  it('reports the message of the service validation errors, which never carry a URL', () => {
+    expect(describeChatMediaFailure(new Error('Doodle is not a PNG image'))).toBe(
+      'Doodle is not a PNG image',
+    );
+  });
+
+  it('does not stringify unknown values', () => {
+    expect(describeChatMediaFailure({ token: 'secret-token' })).toBe('Unknown failure');
+    expect(describeChatMediaFailure(undefined)).toBe('Unknown failure');
   });
 });

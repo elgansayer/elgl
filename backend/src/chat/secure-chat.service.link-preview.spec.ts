@@ -97,6 +97,7 @@ function createService(options: {
     {} as never,
     { get: vi.fn() } as never,
     {} as never,
+    {} as never,
   );
 
   return { service, centrifugo, events };
@@ -186,6 +187,7 @@ describe('SecureChatService group link previews', () => {
       {} as never,
       {} as never,
       { get: vi.fn() } as never,
+      {} as never,
       {} as never,
     );
 

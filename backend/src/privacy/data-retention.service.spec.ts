@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataRetentionService } from './data-retention.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 
 describe('DataRetentionService', () => {
   let service: DataRetentionService;
@@ -10,8 +11,16 @@ describe('DataRetentionService', () => {
   let mockQueryBuilder: Record<string, Mock>;
   let mockRedis: { del: Mock };
   let mockEventEmitter: { emit: Mock };
+  const deleteObject = vi.fn();
+  const objectKeyForPublicUrl = vi.fn();
+  const publicUrlForKey = vi.fn();
 
   beforeEach(async () => {
+    deleteObject.mockReset();
+    objectKeyForPublicUrl.mockReset();
+    publicUrlForKey
+      .mockReset()
+      .mockImplementation((key: string) => `https://media.example.com/${key}`);
     mockQueryBuilder = {
       delete: vi.fn().mockReturnThis(),
       lt: vi.fn().mockReturnThis(),
@@ -46,6 +55,10 @@ describe('DataRetentionService', () => {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
         },
+        {
+          provide: R2ObjectService,
+          useValue: { deleteObject, objectKeyForPublicUrl, publicUrlForKey },
+        },
       ],
     }).compile();
 
@@ -54,6 +67,220 @@ describe('DataRetentionService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('doodle account erasure', () => {
+    const objectKey =
+      'chat-media/user-1/doodle/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.png';
+    const abandonedObjectKey =
+      'chat-media/user-1/doodle/standard/2-bbbbbbbbbbbbbbbbbbbbbbbb.png';
+
+    beforeEach(() => {
+      mockQueryBuilder.eq.mockResolvedValue({
+        data: [
+          {
+            id: 'message-1',
+            message_type: 'doodle',
+            media_url: `https://media.example.com/${objectKey}`,
+          },
+          {
+            id: 'message-2',
+            message_type: 'text',
+            media_url: null,
+          },
+        ],
+        error: null,
+      });
+      objectKeyForPublicUrl.mockReturnValue(objectKey);
+      deleteObject.mockResolvedValue(undefined);
+    });
+
+    it('removes owned private doodle objects discovered from persisted messages', async () => {
+      await service['eraseDoodleObjects']('user-1');
+
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'id, message_type, media_url',
+      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('sender_id', 'user-1');
+      expect(deleteObject).toHaveBeenCalledOnce();
+      expect(deleteObject).toHaveBeenCalledWith(objectKey);
+    });
+
+    it('fails account erasure closed when storage deletion is unavailable', async () => {
+      deleteObject.mockRejectedValueOnce(new Error('gateway unavailable'));
+
+      await expect(service['eraseDoodleObjects']('user-1')).rejects.toThrow(
+        'doodle_storage_deletion_failed',
+      );
+    });
+
+    it('removes abandoned upload intents before the account is anonymised', async () => {
+      const deleteIntent = vi.fn().mockReturnThis();
+      const deleteIntentEq = vi.fn().mockResolvedValue({ error: null });
+      const intentBuilder = {
+        select: vi.fn().mockReturnThis(),
+        delete: deleteIntent,
+        eq: vi
+          .fn()
+          .mockResolvedValueOnce({
+            data: [{ object_key: abandonedObjectKey }],
+            error: null,
+          })
+          .mockImplementationOnce(deleteIntentEq),
+      };
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return intentBuilder;
+      });
+
+      await service['eraseDoodleObjects']('user-1');
+
+      expect(deleteObject).toHaveBeenCalledWith(abandonedObjectKey);
+      expect(deleteIntent).toHaveBeenCalledOnce();
+      expect(deleteIntentEq).toHaveBeenCalledWith('user_id', 'user-1');
+    });
+
+    it('fails account erasure closed when abandoned intent deletion fails', async () => {
+      const intentBuilder = {
+        select: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi
+          .fn()
+          .mockResolvedValueOnce({ data: [], error: null })
+          .mockResolvedValueOnce({
+            error: { message: 'database unavailable' },
+          }),
+      };
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'chat_messages') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return intentBuilder;
+      });
+
+      await expect(service['eraseDoodleObjects']('user-1')).rejects.toThrow(
+        'doodle_upload_intent_deletion_failed',
+      );
+    });
+  });
+
+  describe('expired doodle upload intents', () => {
+    it('deletes an unreferenced object before removing its expired intent', async () => {
+      const objectKey =
+        'chat-media/user-1/doodle/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.png';
+      const deleteIntent = vi.fn().mockReturnThis();
+      const deleteIntentEq = vi.fn().mockResolvedValue({ error: null });
+      let intentQueryCount = 0;
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'chat_media_upload_intents') {
+          intentQueryCount += 1;
+          if (intentQueryCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              lt: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [{ object_key: objectKey, user_id: 'user-1' }],
+                error: null,
+              }),
+            };
+          }
+          return { delete: deleteIntent, eq: deleteIntentEq };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      });
+      objectKeyForPublicUrl.mockReturnValue(objectKey);
+      deleteObject.mockResolvedValue(undefined);
+
+      await service.purgeExpiredDoodleUploads();
+
+      expect(deleteObject).toHaveBeenCalledWith(objectKey);
+      expect(deleteIntent).toHaveBeenCalledOnce();
+      expect(deleteIntentEq).toHaveBeenCalledWith('object_key', objectKey);
+    });
+
+    it('keeps the R2 object when a persisted message references it', async () => {
+      const objectKey =
+        'chat-media/user-1/doodle/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.png';
+      let intentQueryCount = 0;
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'chat_media_upload_intents') {
+          intentQueryCount += 1;
+          if (intentQueryCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              lt: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [{ object_key: objectKey, user_id: 'user-1' }],
+                error: null,
+              }),
+            };
+          }
+          return {
+            delete: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { id: 'message-1' },
+            error: null,
+          }),
+        };
+      });
+
+      await service.purgeExpiredDoodleUploads();
+
+      expect(deleteObject).not.toHaveBeenCalled();
+    });
+
+    it('removes a forged intent without deleting the targeted R2 object', async () => {
+      const forgedObjectKey =
+        'chat-media/user-2/doodle/standard/1-bbbbbbbbbbbbbbbbbbbbbbbb.png';
+      const deleteIntent = vi.fn().mockReturnThis();
+      const deleteIntentEq = vi.fn().mockResolvedValue({ error: null });
+      let intentQueryCount = 0;
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'chat_media_upload_intents') {
+          intentQueryCount += 1;
+          if (intentQueryCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              lt: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [{ object_key: forgedObjectKey, user_id: 'user-1' }],
+                error: null,
+              }),
+            };
+          }
+          return { delete: deleteIntent, eq: deleteIntentEq };
+        }
+        throw new Error(`Unexpected table: ${table}`);
+      });
+
+      await service.purgeExpiredDoodleUploads();
+
+      expect(publicUrlForKey).not.toHaveBeenCalled();
+      expect(deleteObject).not.toHaveBeenCalled();
+      expect(deleteIntent).toHaveBeenCalledOnce();
+      expect(deleteIntentEq).toHaveBeenCalledWith(
+        'object_key',
+        forgedObjectKey,
+      );
+    });
   });
 
   describe('purgeCallLogs', () => {
@@ -181,6 +408,7 @@ describe('DataRetentionService', () => {
       });
       // Setup sub-queries for data wiping
       const mockDeleteBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
@@ -201,6 +429,7 @@ describe('DataRetentionService', () => {
         if (table === 'audio_room_captions' || table === 'audio_room_notes') {
           // Return a builder that supports both delete and update paths
           return {
+            select: vi.fn().mockReturnThis(),
             delete: vi.fn().mockReturnThis(),
             update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockResolvedValue({ error: null }),
@@ -221,12 +450,14 @@ describe('DataRetentionService', () => {
         error: null,
       });
       const mockDeleteBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
       };
       // audio_room_captions and audio_room_notes need both delete and update
       const _mockDeleteAndUpdateBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
@@ -267,6 +498,7 @@ describe('DataRetentionService', () => {
         error: null,
       });
       const mockDeleteBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
@@ -292,6 +524,7 @@ describe('DataRetentionService', () => {
         error: null,
       });
       const mockDeleteBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
@@ -329,12 +562,14 @@ describe('DataRetentionService', () => {
         error: null,
       });
       const mockDeleteBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
       };
       // audio_room_captions and audio_room_notes need both delete and update
       const _mockDeleteAndUpdateBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
@@ -366,6 +601,7 @@ describe('DataRetentionService', () => {
         error: null,
       });
       const mockDeleteBuilder = {
+        select: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
@@ -378,6 +614,7 @@ describe('DataRetentionService', () => {
         }
         if (table === 'audio_room_captions') {
           return {
+            select: vi.fn().mockReturnThis(),
             delete: vi.fn().mockReturnThis(),
             update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockImplementation(() => {
@@ -388,6 +625,7 @@ describe('DataRetentionService', () => {
         }
         if (table === 'audio_room_notes') {
           return {
+            select: vi.fn().mockReturnThis(),
             delete: vi.fn().mockReturnThis(),
             update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockImplementation(() => {
@@ -456,6 +694,7 @@ describe('DataRetentionService', () => {
             return mockQueryBuilder;
           }
           return {
+            select: vi.fn().mockReturnThis(),
             delete: vi.fn().mockReturnThis(),
             update: vi.fn().mockReturnThis(),
             eq: vi.fn((column: string, value: unknown) => {

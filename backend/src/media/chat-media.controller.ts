@@ -23,7 +23,7 @@ export class ChatMediaController {
   createPresignedUrl(
     @Req() req: AuthenticatedRequest,
     @Body() dto: ChatMediaUploadDto,
-  ): ChatMediaUploadTicket {
+  ): Promise<ChatMediaUploadTicket> {
     return this.chatMediaUploadService.createUploadTicket(req.user.id, dto);
   }
 }

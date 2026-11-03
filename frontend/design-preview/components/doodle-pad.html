@@ -179,6 +179,26 @@
         outline: 3px solid Highlight;
         outline-offset: 3px;
       }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .alert {
+        padding: 0.75rem;
+        border: 1px solid color-mix(in srgb, rgb(var(--danger-text)) 30%, transparent);
+        border-radius: 0.75rem;
+        background: color-mix(in srgb, rgb(var(--danger-text)) 10%, Canvas);
+        color: rgb(var(--danger-text));
+        font-size: 0.875rem;
+      }
+      .sr-only {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
       .action-group {
         display: grid;
         gap: 0.75rem;
@@ -205,26 +225,166 @@
         <p>Relay semantic chrome with stable paper content and accent-aware selection.</p>
       </header>
       <div class="preview-grid">
-        <section class="viewport mobile light" aria-label="Light theme, 390 pixel mobile doodle pad">
+        <section
+          class="viewport mobile light"
+          aria-label="Light theme, 390 pixel mobile doodle pad"
+        >
           <article class="card">
-            <div class="header"><h2>Doodle</h2><button class="close" type="button" aria-label="Cancel doodle">×</button></div>
-            <div class="frame"><div class="paper" role="img" aria-label="Doodle drawing surface"></div></div>
-            <div class="tools">
-              <fieldset><legend>Colour</legend><div class="choices"><span class="swatch selected"><span class="dot" style="background:#000"></span></span><span class="swatch"><span class="dot" style="background:#ef4444"></span></span><span class="swatch"><span class="dot" style="background:#3b82f6"></span></span></div></fieldset>
-              <fieldset><legend>Brush</legend><div class="choices"><button class="brush" type="button">2px</button><button class="brush selected" type="button">4px</button><button class="brush" type="button">8px</button></div></fieldset>
+            <div class="header">
+              <h2>Doodle</h2>
+              <button class="close" type="button" aria-label="Cancel doodle">×</button>
             </div>
-            <div class="actions"><button class="secondary danger" type="button">Clear</button><div class="action-group"><button class="secondary" type="button">Cancel</button><button class="primary" type="button">Send</button></div></div>
+            <div class="frame">
+              <div class="paper" role="img" aria-label="Doodle drawing surface"></div>
+            </div>
+            <div class="tools">
+              <fieldset>
+                <legend>Colour</legend>
+                <div class="choices">
+                  <span class="swatch selected"
+                    ><span class="dot" style="background: #000"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #ef4444"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #3b82f6"></span></span>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Brush</legend>
+                <div class="choices">
+                  <button class="brush" type="button">2px</button
+                  ><button class="brush selected" type="button">4px</button
+                  ><button class="brush" type="button">8px</button>
+                </div>
+              </fieldset>
+            </div>
+            <div class="actions">
+              <button class="secondary danger" type="button">Clear</button>
+              <div class="action-group">
+                <button class="secondary" type="button">Cancel</button
+                ><button class="primary" type="button">Send</button>
+              </div>
+            </div>
           </article>
         </section>
         <section class="viewport desktop dark" aria-label="Dark theme, desktop doodle pad">
           <article class="card">
-            <div class="header"><h2>おえかき</h2><button class="close" type="button" aria-label="キャンセル">×</button></div>
-            <div class="frame"><div class="paper" role="img" aria-label="おえかきキャンバス"></div></div>
-            <div class="tools">
-              <fieldset><legend>いろ</legend><div class="choices"><span class="swatch selected"><span class="dot" style="background:#000"></span></span><span class="swatch"><span class="dot" style="background:#10b981"></span></span><span class="swatch"><span class="dot" style="background:#8b5cf6"></span></span></div></fieldset>
-              <fieldset><legend>ブラシ</legend><div class="choices"><button class="brush" type="button">2px</button><button class="brush selected" type="button">4px</button><button class="brush" type="button">14px</button></div></fieldset>
+            <div class="header">
+              <h2>おえかき</h2>
+              <button class="close" type="button" aria-label="キャンセル">×</button>
             </div>
-            <div class="actions"><button class="secondary danger" type="button">クリア</button><div class="action-group"><button class="secondary" type="button">キャンセル</button><button class="primary" type="button">送信</button></div></div>
+            <div class="frame">
+              <div class="paper" role="img" aria-label="おえかきキャンバス"></div>
+            </div>
+            <div class="tools">
+              <fieldset>
+                <legend>いろ</legend>
+                <div class="choices">
+                  <span class="swatch selected"
+                    ><span class="dot" style="background: #000"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #10b981"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #8b5cf6"></span></span>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>ブラシ</legend>
+                <div class="choices">
+                  <button class="brush" type="button">2px</button
+                  ><button class="brush selected" type="button">4px</button
+                  ><button class="brush" type="button">14px</button>
+                </div>
+              </fieldset>
+            </div>
+            <div class="actions">
+              <button class="secondary danger" type="button">クリア</button>
+              <div class="action-group">
+                <button class="secondary" type="button">キャンセル</button
+                ><button class="primary" type="button">送信</button>
+              </div>
+            </div>
+          </article>
+        </section>
+        <section
+          class="viewport mobile light"
+          aria-label="Light theme, 390 pixel mobile doodle pad while sending"
+        >
+          <article class="card">
+            <div class="header">
+              <h2>Doodle</h2>
+              <button class="close" type="button" aria-label="Cancel doodle">×</button>
+            </div>
+            <div class="frame">
+              <div class="paper" role="img" aria-label="Doodle drawing surface"></div>
+            </div>
+            <div class="tools">
+              <fieldset>
+                <legend>Colour</legend>
+                <div class="choices">
+                  <span class="swatch selected"
+                    ><span class="dot" style="background: #000"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #ef4444"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #3b82f6"></span></span>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Brush</legend>
+                <div class="choices">
+                  <button class="brush" type="button">2px</button
+                  ><button class="brush selected" type="button">4px</button
+                  ><button class="brush" type="button">8px</button>
+                </div>
+              </fieldset>
+            </div>
+            <p class="sr-only" role="status">Sending doodle...</p>
+            <div class="actions">
+              <button class="secondary danger" type="button" disabled>Clear</button>
+              <div class="action-group">
+                <button class="secondary" type="button">Cancel</button
+                ><button class="primary" type="button" disabled>Sending doodle...</button>
+              </div>
+            </div>
+          </article>
+        </section>
+        <section
+          class="viewport desktop dark"
+          aria-label="Dark theme, desktop doodle pad after a failed send"
+        >
+          <article class="card">
+            <div class="header">
+              <h2>Doodle</h2>
+              <button class="close" type="button" aria-label="Cancel doodle">×</button>
+            </div>
+            <div class="frame">
+              <div class="paper" role="img" aria-label="Doodle drawing surface"></div>
+            </div>
+            <div class="tools">
+              <fieldset>
+                <legend>Colour</legend>
+                <div class="choices">
+                  <span class="swatch selected"
+                    ><span class="dot" style="background: #000"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #10b981"></span></span
+                  ><span class="swatch"><span class="dot" style="background: #8b5cf6"></span></span>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Brush</legend>
+                <div class="choices">
+                  <button class="brush" type="button">2px</button
+                  ><button class="brush selected" type="button">4px</button
+                  ><button class="brush" type="button">14px</button>
+                </div>
+              </fieldset>
+            </div>
+            <p class="alert" role="alert">
+              Your doodle could not be sent. Check your connection, then choose Send doodle to try
+              again.
+            </p>
+            <div class="actions">
+              <button class="secondary danger" type="button">Clear</button>
+              <div class="action-group">
+                <button class="secondary" type="button">Cancel</button
+                ><button class="primary" type="button">Send doodle</button>
+              </div>
+            </div>
           </article>
         </section>
       </div>

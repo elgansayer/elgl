@@ -1,9 +1,11 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import {
-  Component, ChangeDetectionStrategy,
+  Component,
+  ChangeDetectionStrategy,
   ElementRef,
   afterNextRender,
+  input,
   output,
   viewChild,
 } from '@angular/core';
@@ -38,19 +40,17 @@ export class DoodlePadComponent {
   readonly doodleSaved = output<string>();
   readonly cancelled = output<void>();
 
+  /** True while the host is uploading and sending the last emitted doodle. */
+  readonly busy = input<boolean>(false);
+  /** Translation key for the failure of the last send, owned by the host that performs it. */
+  readonly errorKey = input<string | null>(null);
+
   readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
 
   currentColor = '#000000';
   brushWidth = 4;
 
-  readonly colors = [
-    '#000000',
-    '#ef4444',
-    '#3b82f6',
-    '#10b981',
-    '#f59e0b',
-    '#8b5cf6',
-  ];
+  readonly colors = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
   readonly brushWidths = [2, 4, 8, 14];
 
   private ctx: CanvasRenderingContext2D | null = null;
@@ -61,6 +61,8 @@ export class DoodlePadComponent {
   }
 
   startDrawing(event: PointerEvent): void {
+    // The raster being sent must not change underneath an in-flight upload or a pending retry.
+    if (this.busy()) return;
     if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) {
       return;
     }
@@ -125,6 +127,7 @@ export class DoodlePadComponent {
   }
 
   clearCanvas(): void {
+    if (this.busy()) return;
     this.stopDrawing();
     const canvas = this.canvasRef().nativeElement;
     if (!this.ctx) return;
@@ -151,6 +154,7 @@ export class DoodlePadComponent {
   }
 
   save(): void {
+    if (this.busy()) return;
     this.stopDrawing();
     const dataUrl = this.canvasRef().nativeElement.toDataURL('image/png');
     if (!dataUrl.startsWith('data:image/png;base64,')) return;
@@ -175,7 +179,9 @@ export class DoodlePadComponent {
     this.ctx.lineJoin = 'round';
   }
 
-  private getPos(event: Pick<PointerEvent, 'clientX' | 'clientY'>): { x: number; y: number } | null {
+  private getPos(
+    event: Pick<PointerEvent, 'clientX' | 'clientY'>,
+  ): { x: number; y: number } | null {
     const canvas = this.canvasRef().nativeElement;
     const rect = canvas.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;

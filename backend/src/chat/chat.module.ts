@@ -9,13 +9,16 @@ import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { FavouritesModule } from '../favourites/favourites.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
+import { MetricsModule } from '../metrics/metrics.module';
 import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatSearchController } from './chat-search.controller';
+import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatService } from './chat.service';
+import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -44,12 +47,14 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     SupabaseModule,
     FavouritesModule,
     CloudflareR2Module,
+    MetricsModule,
     LearnerKnowledgeModule,
     forwardRef(() => UsersModule),
   ],
   controllers: [
     ChatController,
     ChatSearchController,
+    ChatMediaSendController,
     DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
@@ -62,6 +67,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatMediaMessageService,
     ConversationStarterService,
     DirectConversationService,
     SystemMessageService,

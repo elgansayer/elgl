@@ -1,5 +1,6 @@
 import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { showToast, showErrorToast } from '../../services/toast.service';
 import {
   Component,
@@ -44,6 +45,12 @@ import {
 import { ChatSearchComponent } from '../chat-search/chat-search.component';
 import { ChatMediaShareComponent } from '../chat-media-share/chat-media-share.component';
 import { ChatMediaMessageComponent } from '../chat-media-message/chat-media-message.component';
+import { ChatMediaMessageService } from '../../services/chat-media-message.service';
+import {
+  ChatMediaService,
+  UploadedChatMedia,
+  describeChatMediaFailure,
+} from '../../services/chat-media.service';
 import { DraftService } from '../../services/draft.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppInputComponent } from '../primitives/input/input.component';
@@ -62,6 +69,7 @@ function isGroupMember(value: unknown): value is GroupMember {
   selector: 'app-chat-room',
   imports: [
     HlmButton,
+    ...HlmDialogImports,
     ...HlmAutocompleteImports,
     CommonModule,
     TranslatePipe,
@@ -105,6 +113,8 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly translationCache = inject(TranslationCacheService);
   private readonly unreadCounter = inject(UnreadCounterService);
   private readonly chatEncryption = inject(PersonalChatEncryptionService);
+  private readonly chatMedia = inject(ChatMediaService);
+  private readonly chatMediaMessages = inject(ChatMediaMessageService);
   private readonly pendingMessageScroll = signal<string | null>(null);
 
   id = input.required<string>();
@@ -156,6 +166,7 @@ export class ChatRoomComponent implements OnDestroy {
     this.mentionQuery.set(null);
     this.replyingTo.set(null);
     this.showCorrectionForm.set(false);
+    this.closeDoodlePad();
   }
 
   readonly messages = signal<ChatMessage[]>([]);
@@ -163,6 +174,8 @@ export class ChatRoomComponent implements OnDestroy {
   readonly isCheckingGrammar = signal<boolean>(false);
   readonly isTyping = signal<boolean>(false);
   readonly showDoodleModal = signal<boolean>(false);
+  readonly isSendingDoodle = signal<boolean>(false);
+  readonly doodleErrorKey = signal<string | null>(null);
   readonly showVoiceModal = signal<boolean>(false);
   readonly showCorrectionForm = signal<boolean>(false);
   readonly showStickerDrawer = signal<boolean>(false);
@@ -248,6 +261,9 @@ export class ChatRoomComponent implements OnDestroy {
   private subscribedRoomId: string | null = null;
   private readonly pendingReadReceipts = new Set<string>();
   private readonly isSendingText = signal(false);
+  private pendingDoodle: { roomId: string; dataUrl: string; media: UploadedChatMedia } | null =
+    null;
+  private doodlePadSession = 0;
   // The room and account whose stored draft has been loaded into the composer. Nothing is saved
   // until this matches the current room and account, so leaving a room before its draft was
   // restored (or while it is locked) can never overwrite that draft with an empty composer.
@@ -671,18 +687,57 @@ export class ChatRoomComponent implements OnDestroy {
     }
   }
 
-  async onDoodleSaved(dataUrl: string): Promise<void> {
+  openDoodlePad(): void {
+    this.closeDoodlePad();
+    this.showDoodleModal.set(true);
+  }
+
+  closeDoodlePad(): void {
+    this.doodlePadSession += 1;
+    this.pendingDoodle = null;
+    this.doodleErrorKey.set(null);
     this.showDoodleModal.set(false);
+  }
+
+  onDoodleDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.showDoodleModal()) {
+      this.closeDoodlePad();
+    }
+  }
+
+  async onDoodleSaved(dataUrl: string): Promise<void> {
+    if (this.isSendingDoodle()) return;
+    const roomId = this.roomId;
+    const padSession = this.doodlePadSession;
+    const padIsCurrent = (): boolean =>
+      this.doodlePadSession === padSession && this.showDoodleModal();
+    this.isSendingDoodle.set(true);
+    this.doodleErrorKey.set(null);
     try {
-      const sent = await this.chatService.sendMessage({
-        room_id: this.roomId,
-        message_type: 'doodle',
-        media_url: dataUrl,
-        text_content: this.i18n.translate('chatRoom.doodleCaption'),
-      });
-      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
+      const pending = this.pendingDoodle;
+      const media =
+        pending?.roomId === roomId && pending.dataUrl === dataUrl
+          ? pending.media
+          : await this.chatMedia.uploadDoodle(dataUrl);
+      if (!padIsCurrent()) return;
+      this.pendingDoodle = { roomId, dataUrl, media };
+
+      const sent = await this.chatMediaMessages.send(roomId, media);
+      if (this.roomId === roomId) {
+        this.messages.update((list) =>
+          list.some((m) => m.id === sent.id) ? list : [...list, sent],
+        );
+      }
+      if (padIsCurrent()) this.closeDoodlePad();
     } catch (e) {
-      console.error('Failed to send doodle:', e);
+      console.error('Failed to send doodle:', describeChatMediaFailure(e));
+      if (padIsCurrent()) {
+        this.doodleErrorKey.set('doodle.sendFailed');
+      } else {
+        showErrorToast(this.i18n.translate('doodle.sendFailedToast'));
+      }
+    } finally {
+      this.isSendingDoodle.set(false);
     }
   }
 
