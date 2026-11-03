@@ -45,7 +45,45 @@ describe('ChatMediaMessageService', () => {
     });
     request.flush({ id: 'message-1' });
 
-    await expect(sendPromise).resolves.toBeUndefined();
+    await expect(sendPromise).resolves.toEqual({ id: 'message-1' });
+  });
+
+  it('sends an uploaded doodle by object key and returns the persisted message for local append', async () => {
+    const objectKey = 'chat-media/user/doodle/standard/123-aaaaaaaaaaaaaaaaaaaaaaaa.png';
+    const sendPromise = service.send('room-123', {
+      url: 'https://cdn.example/doodle',
+      objectKey,
+      kind: 'doodle',
+      quality: 'standard',
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/media/chat/send`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer access-token');
+    expect(request.request.body).toEqual({
+      roomId: 'room-123',
+      mediaKind: 'doodle',
+      objectKey,
+    });
+    const persisted = { id: 'doodle-1', room_id: 'room-123', message_type: 'doodle' };
+    request.flush(persisted);
+
+    await expect(sendPromise).resolves.toEqual(persisted);
+  });
+
+  it('rejects when the media API fails so the caller can offer a retry', async () => {
+    const sendPromise = service.send('room-123', {
+      url: 'https://cdn.example/doodle',
+      objectKey: 'chat-media/user/doodle/standard/123-aaaaaaaaaaaaaaaaaaaaaaaa.png',
+      kind: 'doodle',
+      quality: 'standard',
+    });
+
+    httpMock
+      .expectOne(`${environment.apiUrl}/media/chat/send`)
+      .flush({ message: 'unavailable' }, { status: 503, statusText: 'Service Unavailable' });
+
+    await expect(sendPromise).rejects.toMatchObject({ status: 503 });
   });
 
   it('marks instant video presentation explicitly without changing the owned video key', async () => {
@@ -67,7 +105,7 @@ describe('ChatMediaMessageService', () => {
     });
     request.flush({ id: 'video-note-1' });
 
-    await expect(sendPromise).resolves.toBeUndefined();
+    await expect(sendPromise).resolves.toEqual({ id: 'video-note-1' });
   });
 
   it('rejects instant video presentation for a non-video upload before network I/O', async () => {

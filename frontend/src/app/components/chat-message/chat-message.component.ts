@@ -161,8 +161,12 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
               <img
                 [src]="message().media_url"
                 class="max-w-full rounded"
-                alt="Doodle"
+                [alt]="
+                  'chatRoom.doodleAlt'
+                    | t: { name: message().sender?.display_name || ('chat.unknown_user' | t) }
+                "
                 loading="lazy"
+                decoding="async"
               />
             }
 

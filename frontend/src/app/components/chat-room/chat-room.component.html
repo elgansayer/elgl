@@ -365,9 +365,13 @@
                 @if (msg.message_type === 'doodle' && msg.media_url) {
                   <img
                     loading="lazy"
+                    decoding="async"
                     [src]="msg.media_url ?? ''"
-                    alt="doodle"
-                    class="max-h-52 rounded-xl border border-surface-100"
+                    [alt]="
+                      'chatRoom.doodleAlt'
+                        | t: { name: msg.sender?.display_name || ('chat.unknown_user' | t) }
+                    "
+                    class="max-h-52 max-w-full rounded-xl border border-surface-100"
                   />
                 }
                 @if (msg.message_type === 'sticker' && msg.media_url) {
@@ -460,14 +464,27 @@
       </div>
     }
 
-    @if (showDoodleModal()) {
-      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <hlm-dialog
+      [state]="showDoodleModal() ? 'open' : 'closed'"
+      (stateChanged)="onDoodleDialogStateChanged($event)"
+    >
+      <!-- Brain wires the dialog's aria-labelledby and aria-describedby to the title and description
+           below by generated id, so neither carries an id or aria attribute of its own. -->
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto bg-transparent p-0 ring-0"
+      >
+        <h2 hlmDialogTitle class="sr-only">{{ 'doodle.title' | t }}</h2>
+        <p hlmDialogDescription class="sr-only">{{ 'doodle.dialogDescription' | t }}</p>
         <app-doodle-pad
+          [busy]="isSendingDoodle()"
+          [errorKey]="doodleErrorKey()"
           (doodleSaved)="onDoodleSaved($event)"
-          (cancelled)="showDoodleModal.set(false)"
+          (cancelled)="closeDoodlePad()"
         ></app-doodle-pad>
-      </div>
-    }
+      </hlm-dialog-content>
+    </hlm-dialog>
     @if (showVoiceModal()) {
       <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
         <app-voice-recorder
@@ -496,7 +513,7 @@
       }
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <app-button-secondary
-          (clicked)="showDoodleModal.set(true)"
+          (clicked)="openDoodlePad()"
           customClass="bg-secondary/20 text-secondary-ink ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
           [ariaLabel]="'chatRoom.doodleBtn' | t"
         >

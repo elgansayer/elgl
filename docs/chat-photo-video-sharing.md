@@ -32,6 +32,8 @@ Standard images are prepared at up to 1600×1600 with JPEG quality 0.78. HD imag
 
 The generic `POST /chat/messages` DTO intentionally continues to reject `image` and `video` types. This prevents clients from bypassing the media boundary with arbitrary external URLs or another user's R2 object.
 
+Doodles (issue #1811) use the same pipeline with a third media kind. A presign request that declares `purpose: 'doodle'` is held to a PNG-only, standard-quality, 2 MiB policy and receives a key under `chat-media/<user>/doodle/standard/`; `POST /media/chat/send` then stores a `doodle` message. They have their own partial unique index (`chat_messages_sender_doodle_media_url_unique_idx`) for retry safety. The full contract is in `docs/doodle-message-sharing.md`.
+
 ## Retry and concurrency behavior
 
 An uploaded object is a stable retry key. `POST /media/chat/send` first looks for an existing message from the same sender using that media URL. The partial unique index on `(sender_id, media_url)` for image/video messages provides the database backstop for concurrent retries.

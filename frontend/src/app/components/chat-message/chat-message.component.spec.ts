@@ -122,6 +122,28 @@ describe('ChatMessageComponent', () => {
     expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
   });
 
+  it('gives a received doodle a translated text alternative instead of a hard-coded label', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'doodle-message-id',
+      room_id: 'room-id',
+      sender_id: 'sender-id',
+      message_type: 'doodle',
+      media_url: 'https://cdn.example/chat-media/sender-id/doodle/standard/1-a.png',
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+      sender: { id: 'sender-id', display_name: 'Ayaka' },
+    });
+    fixture.detectChanges();
+
+    const image = fixture.nativeElement.querySelector('img') as HTMLImageElement;
+    expect(image.getAttribute('src')).toBe(
+      'https://cdn.example/chat-media/sender-id/doodle/standard/1-a.png',
+    );
+    // The mocked I18nService returns the key, so a literal such as "Doodle" would fail here.
+    expect(image.getAttribute('alt')).toBe('chatRoom.doodleAlt');
+    expect(image.getAttribute('loading')).toBe('lazy');
+  });
+
   it('updates memoized message ownership when the current user input changes', () => {
     const component = fixture.componentInstance;
 

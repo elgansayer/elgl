@@ -106,6 +106,10 @@ export class R2ObjectService {
     await this.r2Service.deleteObject(key);
   }
 
+  headObject(key: string): ReturnType<R2Service['headObject']> {
+    return this.r2Service.headObject(key);
+  }
+
   publicUrlForKey(key: string): string {
     const base = this.publicBaseUrl.replace(/\/+$/, '');
     return `${base}/${encodeObjectKey(key)}`;

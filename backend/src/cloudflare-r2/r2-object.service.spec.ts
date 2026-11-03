@@ -16,7 +16,11 @@ const CONFIG: Record<string, string> = {
 describe('R2ObjectService', () => {
   let service: R2ObjectService;
   let fetchMock: Mock;
-  let r2Service: { createObjectUploadUrl: Mock; deleteObject: Mock };
+  let r2Service: {
+    createObjectUploadUrl: Mock;
+    deleteObject: Mock;
+    headObject: Mock;
+  };
 
   beforeEach(async () => {
     fetchMock = vi.fn();
@@ -27,6 +31,13 @@ describe('R2ObjectService', () => {
         publicUrl: 'https://media.example.com/covers/user/cover.webp',
       }),
       deleteObject: vi.fn().mockResolvedValue(undefined),
+      headObject: vi.fn().mockResolvedValue({
+        key: 'covers/user/cover.webp',
+        etag: 'etag',
+        size: 42,
+        contentType: 'image/webp',
+        uploadedAt: '2026-08-19T12:00:00.000Z',
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -141,5 +152,12 @@ describe('R2ObjectService', () => {
     expect(r2Service.deleteObject).toHaveBeenCalledWith(
       'covers/user/cover.webp',
     );
+  });
+
+  it('delegates object metadata checks to the authenticated gateway service', async () => {
+    await expect(
+      service.headObject('covers/user/cover.webp'),
+    ).resolves.toMatchObject({ size: 42, contentType: 'image/webp' });
+    expect(r2Service.headObject).toHaveBeenCalledWith('covers/user/cover.webp');
   });
 });

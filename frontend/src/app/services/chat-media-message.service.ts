@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import type { ChatMessage } from './chat.service';
 import { UploadedChatMedia } from './chat-media.service';
 
 @Injectable({ providedIn: 'root' })
@@ -11,7 +12,11 @@ export class ChatMediaMessageService {
   private readonly auth = inject(AuthService);
   private readonly endpoint = `${environment.apiUrl}/media/chat/send`;
 
-  async send(roomId: string, media: UploadedChatMedia): Promise<void> {
+  /**
+   * Sends an uploaded object as a chat message. The endpoint is idempotent per uploaded object, so
+   * a retry after a lost response resolves to the message that was already persisted.
+   */
+  async send(roomId: string, media: UploadedChatMedia): Promise<ChatMessage> {
     const token = this.auth.getAccessToken();
     if (!token) throw new Error('Sign in before sending chat media');
     if (!roomId || !media.objectKey) throw new Error('Chat media message is incomplete');
@@ -19,8 +24,8 @@ export class ChatMediaMessageService {
       throw new Error('Instant video presentation requires a video upload');
     }
 
-    await firstValueFrom(
-      this.http.post(
+    return firstValueFrom(
+      this.http.post<ChatMessage>(
         this.endpoint,
         {
           roomId,

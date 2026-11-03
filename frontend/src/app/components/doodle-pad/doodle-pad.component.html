@@ -1,8 +1,6 @@
 <app-card customClass="mx-auto max-w-2xl p-4 shadow-lift sm:p-6">
-  <div
-    class="mb-4 flex min-w-0 items-start justify-between gap-3 border-b border-surface-100 pb-3"
-  >
-    <h3 class="app-section-title min-w-0 break-words" id="doodle-pad-title">
+  <div class="mb-4 flex min-w-0 items-start justify-between gap-3 border-b border-surface-100 pb-3">
+    <h3 class="app-section-title min-w-0 break-words">
       {{ 'doodle.title' | t }}
     </h3>
     <button
@@ -100,7 +98,7 @@
               class="sr-only"
               [value]="width.toString()"
               [inputId]="'doodle-brush-' + width"
-              [attr.aria-label]="('doodle.brushLabel' | t) + ' ' + width"
+              [attr.aria-label]="'doodle.brushSizeAria' | t: { size: width }"
             >
               <hlm-radio-indicator indicator />
             </hlm-radio>
@@ -111,9 +109,26 @@
     </fieldset>
   </div>
 
+  @if (errorKey(); as key) {
+    <p
+      role="alert"
+      class="mt-4 rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger-ink"
+    >
+      {{ key | t }}
+    </p>
+  }
+  <!-- Mounted from the start: screen readers announce changes to a live region that already
+       exists far more reliably than one inserted together with its text. -->
+  <p role="status" class="sr-only">
+    @if (busy()) {
+      {{ 'doodle.sendingBtn' | t }}
+    }
+  </p>
+
   <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <app-button-secondary
       (clicked)="clearCanvas()"
+      [disabled]="busy()"
       [ariaLabel]="'doodle.clearBtn' | t"
       customClass="w-full border-danger/40 px-4 py-2 text-sm text-danger-ink hover:bg-danger/10 sm:w-auto"
     >
@@ -130,9 +145,10 @@
       </app-button-secondary>
       <app-button-primary
         (clicked)="save()"
+        [disabled]="busy()"
         customClass="w-full px-6 py-2 text-sm sm:w-auto"
       >
-        {{ 'doodle.sendBtn' | t }}
+        {{ (busy() ? 'doodle.sendingBtn' : 'doodle.sendBtn') | t }}
       </app-button-primary>
     </div>
   </div>

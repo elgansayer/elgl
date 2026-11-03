@@ -4,15 +4,18 @@ import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 import {
   ChatMediaQuality,
   ChatMediaUploadDto,
+  DOODLE_CHAT_MEDIA_CONTENT_TYPE,
+  DOODLE_CHAT_MEDIA_MAX_BYTES,
 } from './dto/chat-media-upload.dto';
 
 export type ChatMediaKind = 'image' | 'video';
+export type ChatUploadKind = ChatMediaKind | 'doodle';
 
 export interface ChatMediaUploadTicket {
   uploadUrl: string;
   mediaUrl: string;
   objectKey: string;
-  mediaKind: ChatMediaKind;
+  mediaKind: ChatUploadKind;
   quality: ChatMediaQuality;
   maxBytes: number;
 }
@@ -40,6 +43,8 @@ const MAX_BYTES: Record<ChatMediaKind, Record<ChatMediaQuality, number>> = {
   },
 };
 
+// A doodle is a fixed-size canvas export. Even an incompressible 600 x 400 RGBA
+// raster is under 1 MiB, so 2 MiB leaves headroom without inviting abuse.
 @Injectable()
 export class ChatMediaUploadService {
   constructor(private readonly r2ObjectService: R2ObjectService) {}
@@ -49,6 +54,10 @@ export class ChatMediaUploadService {
     dto: ChatMediaUploadDto,
   ): ChatMediaUploadTicket {
     const contentType = this.normaliseContentType(dto.contentType);
+    if (dto.purpose === 'doodle') {
+      return this.createDoodleTicket(userId, dto, contentType);
+    }
+
     const mediaKind = this.mediaKindFor(contentType);
     const maxBytes = MAX_BYTES[mediaKind][dto.quality];
 
@@ -76,6 +85,41 @@ export class ChatMediaUploadService {
       mediaKind,
       quality: dto.quality,
       maxBytes,
+    };
+  }
+
+  private createDoodleTicket(
+    userId: string,
+    dto: ChatMediaUploadDto,
+    contentType: string,
+  ): ChatMediaUploadTicket {
+    if (contentType !== DOODLE_CHAT_MEDIA_CONTENT_TYPE) {
+      throw new BadRequestException('Doodles must be PNG images');
+    }
+    if (dto.quality !== 'standard') {
+      throw new BadRequestException('Doodles only support standard quality');
+    }
+    if (dto.sizeBytes > DOODLE_CHAT_MEDIA_MAX_BYTES) {
+      throw new BadRequestException(
+        `Doodle exceeds the ${this.formatMegabytes(DOODLE_CHAT_MEDIA_MAX_BYTES)} MB upload limit`,
+      );
+    }
+
+    const nonce = randomBytes(12).toString('hex');
+    const objectKey = `chat-media/${userId}/doodle/standard/${Date.now()}-${nonce}.png`;
+    const upload = this.r2ObjectService.createUploadUrl(
+      objectKey,
+      DOODLE_CHAT_MEDIA_CONTENT_TYPE,
+      DOODLE_CHAT_MEDIA_MAX_BYTES,
+    );
+
+    return {
+      uploadUrl: upload.uploadUrl,
+      mediaUrl: upload.publicUrl,
+      objectKey,
+      mediaKind: 'doodle',
+      quality: 'standard',
+      maxBytes: DOODLE_CHAT_MEDIA_MAX_BYTES,
     };
   }
 

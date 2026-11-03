@@ -904,6 +904,7 @@ export class I18nService {
     'chatRoom.correctBtn': 'Correct',
     'chatRoom.correctionRequested': 'Correction requested',
     'chatRoom.doodleBtn': 'Doodle',
+    'chatRoom.doodleAlt': 'Doodle from {{name}}',
     'chatRoom.voiceBtn': 'Voice',
     'chatRoom.voiceMessage': 'Voice message',
     'chatRoom.transcribing': 'Transcribing...',
@@ -1568,11 +1569,15 @@ export class I18nService {
 
     // Doodle Pad
     'doodle.title': '🎨 Interactive Doodle Pad',
+    'doodle.dialogDescription': 'Draw with your pointer, choose a colour and brush size, then send the doodle to this chat.',
     'doodle.colorLabel': 'Colour',
     'doodle.brushLabel': 'Brush',
     'doodle.clearBtn': '🗑️ Clear canvas',
     'doodle.cancelBtn': 'Cancel',
     'doodle.sendBtn': '📤 Send doodle',
+    'doodle.sendingBtn': 'Sending doodle...',
+    'doodle.sendFailed': 'Your doodle could not be sent. Check your connection, then choose Send doodle to try again.',
+    'doodle.sendFailedToast': 'Your doodle could not be sent.',
     'doodle.brushSizeAria': 'Brush size {{size}}px',
 
     // Visual Diff

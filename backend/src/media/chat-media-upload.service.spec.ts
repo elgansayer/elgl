@@ -78,4 +78,107 @@ describe('ChatMediaUploadService', () => {
     ).toThrow(BadRequestException);
     expect(createUploadUrl).not.toHaveBeenCalled();
   });
+
+  describe('doodle uploads', () => {
+    const doodleRequest = {
+      filename: 'ignored-client-name.png',
+      contentType: 'image/png',
+      quality: 'standard' as const,
+      sizeBytes: 48_000,
+      purpose: 'doodle' as const,
+    };
+
+    it('creates a doodle ticket under a dedicated server-owned path with a 2 MiB ceiling', () => {
+      const ticket = service.createUploadTicket('user-123', doodleRequest);
+
+      expect(ticket.mediaKind).toBe('doodle');
+      expect(ticket.quality).toBe('standard');
+      expect(ticket.maxBytes).toBe(2 * 1024 * 1024);
+      expect(ticket.objectKey).toMatch(
+        /^chat-media\/user-123\/doodle\/standard\/\d+-[a-f0-9]{24}\.png$/,
+      );
+      expect(ticket.objectKey).not.toContain('ignored-client-name');
+      expect(ticket.uploadUrl).toBe('https://gateway.example/upload');
+      expect(createUploadUrl).toHaveBeenCalledWith(
+        ticket.objectKey,
+        'image/png',
+        2 * 1024 * 1024,
+      );
+    });
+
+    it('normalises a parameterised PNG content type', () => {
+      const ticket = service.createUploadTicket('user-123', {
+        ...doodleRequest,
+        contentType: 'IMAGE/PNG; charset=binary',
+      });
+
+      expect(ticket.mediaKind).toBe('doodle');
+      expect(createUploadUrl).toHaveBeenCalledWith(
+        ticket.objectKey,
+        'image/png',
+        2 * 1024 * 1024,
+      );
+    });
+
+    it('gives each ticket a distinct unguessable object key', () => {
+      const first = service.createUploadTicket('user-123', doodleRequest);
+      const second = service.createUploadTicket('user-123', doodleRequest);
+
+      expect(first.objectKey).not.toBe(second.objectKey);
+    });
+
+    it.each(['image/jpeg', 'image/webp', 'image/svg+xml', 'video/mp4'])(
+      'rejects %s as a doodle before signing',
+      (contentType) => {
+        expect(() =>
+          service.createUploadTicket('user-123', {
+            ...doodleRequest,
+            contentType,
+          }),
+        ).toThrow(new BadRequestException('Doodles must be PNG images'));
+        expect(createUploadUrl).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects HD quality for a doodle before signing', () => {
+      expect(() =>
+        service.createUploadTicket('user-123', {
+          ...doodleRequest,
+          quality: 'hd',
+        }),
+      ).toThrow(
+        new BadRequestException('Doodles only support standard quality'),
+      );
+      expect(createUploadUrl).not.toHaveBeenCalled();
+    });
+
+    it('rejects a doodle above the ceiling before signing but accepts the exact ceiling', () => {
+      expect(() =>
+        service.createUploadTicket('user-123', {
+          ...doodleRequest,
+          sizeBytes: 2 * 1024 * 1024 + 1,
+        }),
+      ).toThrow(BadRequestException);
+      expect(createUploadUrl).not.toHaveBeenCalled();
+
+      expect(
+        service.createUploadTicket('user-123', {
+          ...doodleRequest,
+          sizeBytes: 2 * 1024 * 1024,
+        }).mediaKind,
+      ).toBe('doodle');
+    });
+
+    it('keeps ordinary PNG photo uploads on the photo policy when no purpose is declared', () => {
+      const { purpose: _purpose, ...photoRequest } = doodleRequest;
+      const ticket = service.createUploadTicket('user-123', {
+        ...photoRequest,
+        quality: 'hd',
+      });
+
+      expect(ticket.mediaKind).toBe('image');
+      expect(ticket.maxBytes).toBe(15 * 1024 * 1024);
+      expect(ticket.objectKey).toMatch(/\/image\/hd\/.*\.png$/);
+    });
+  });
 });

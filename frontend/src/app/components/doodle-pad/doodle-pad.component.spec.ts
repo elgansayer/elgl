@@ -317,4 +317,113 @@ describe('DoodlePadComponent', () => {
     expect(mockCtx.closePath).toHaveBeenCalled();
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  describe('send state owned by the host', () => {
+    const primaryButton = (): HTMLButtonElement =>
+      fixture.nativeElement.querySelector('app-button-primary button') as HTMLButtonElement;
+    const secondaryButtons = (): HTMLButtonElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('app-button-secondary button'));
+
+    it('shows no alert and announces nothing while idle', () => {
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+      const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement;
+      expect(status.textContent?.trim()).toBe('');
+      expect(primaryButton().disabled).toBe(false);
+      expect(primaryButton().textContent?.trim()).toBe('t:doodle.sendBtn');
+    });
+
+    it('keeps one live region mounted and changes its text, so the announcement is reliable', () => {
+      const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement;
+
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="status"]')).toBe(status);
+      expect(status.textContent?.trim()).toBe('t:doodle.sendingBtn');
+
+      fixture.componentRef.setInput('busy', false);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="status"]')).toBe(status);
+      expect(status.textContent?.trim()).toBe('');
+    });
+
+    it('announces a send failure through the translation key supplied by the host', () => {
+      fixture.componentRef.setInput('errorKey', 'doodle.sendFailed');
+      fixture.detectChanges();
+
+      const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+      expect(alert.textContent?.trim()).toBe('t:doodle.sendFailed');
+      // Failure must not freeze the editor: the learner can retry or keep drawing.
+      expect(primaryButton().disabled).toBe(false);
+    });
+
+    it('disables send and clear and relabels send while a doodle is being sent', () => {
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+
+      expect(primaryButton().disabled).toBe(true);
+      expect(primaryButton().textContent?.trim()).toBe('t:doodle.sendingBtn');
+      const clear = secondaryButtons().find((button) =>
+        button.getAttribute('aria-label')?.includes('doodle.clearBtn'),
+      );
+      expect(clear?.disabled).toBe(true);
+      const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement;
+      expect(status.textContent?.trim()).toBe('t:doodle.sendingBtn');
+    });
+
+    it('keeps cancel available while sending so a stalled request cannot trap the learner', () => {
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+
+      const cancel = secondaryButtons().find((button) =>
+        button.getAttribute('aria-label')?.includes('doodle.cancelBtn'),
+      );
+      expect(cancel?.disabled).toBe(false);
+      const listener = vi.fn();
+      component.cancelled.subscribe(listener);
+
+      cancel?.click();
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not emit a second doodle while one is being sent', () => {
+      const listener = vi.fn();
+      component.doodleSaved.subscribe(listener);
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+
+      component.save();
+      primaryButton().click();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('freezes the raster while sending so the sent image cannot change underneath it', () => {
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+      vi.mocked(mockCtx.fillRect).mockClear();
+
+      component.startDrawing(pointerEvent('pointerdown', 50, 50));
+      component.clearCanvas();
+
+      expect(mockCtx.beginPath).not.toHaveBeenCalled();
+      expect(canvasEl.setPointerCapture).not.toHaveBeenCalled();
+      expect(mockCtx.fillRect).not.toHaveBeenCalled();
+    });
+
+    it('resumes drawing and sending once the host reports it is idle again', () => {
+      const listener = vi.fn();
+      component.doodleSaved.subscribe(listener);
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('busy', false);
+      fixture.detectChanges();
+
+      component.startDrawing(pointerEvent('pointerdown', 50, 50));
+      component.save();
+
+      expect(mockCtx.beginPath).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+  });
 });
