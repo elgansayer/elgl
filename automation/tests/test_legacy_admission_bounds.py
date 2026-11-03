@@ -146,3 +146,39 @@ else:
     compatible, owned, incompatible = reader.audit_renewable_leases([])
     assert compatible == {provider: 1} and owned == [] and incompatible == {provider: 1}
     assert writer.snapshot()[provider] == 2
+
+
+@pytest.mark.parametrize("owner", ("foreign", ""))
+def test_complete_legacy_record_beyond_default_day_bound_is_still_occupied(tmp_path, owner):
+    writer = ProviderCapacityStore(tmp_path, max_lease_seconds=2 * 24 * 60 * 60)
+    writer.acquire("codex", limit=1, owner=owner, wait_seconds=0, lease_seconds=2 * 24 * 60 * 60)
+    original = read_json(writer.path, {})["providers"]["codex"]
+    reader = ProviderCapacityStore(tmp_path, max_lease_seconds=3900)
+    with pytest.raises(ProviderCapacityUnavailable):
+        reader.acquire("codex", limit=1, owner="new", wait_seconds=0, lease_seconds=10)
+    assert read_json(writer.path, {})["providers"]["codex"] == original
+
+
+def test_recorded_pid_exit_does_not_free_the_foreign_reservation(tmp_path):
+    script = """
+import sys
+from pathlib import Path
+from openhands_factory.provider_capacity import ProviderCapacityStore
+store=ProviderCapacityStore(Path(sys.argv[1]),max_lease_seconds=3960)
+store.acquire('codex',owner='foreign',limit=1,wait_seconds=0,lease_seconds=3960)
+"""
+    owner = subprocess.Popen(
+        [sys.executable, "-c", script, str(tmp_path)],
+        env={
+            "PATH": os.defpath,
+            "HOME": str(tmp_path),
+            "PYTHONPATH": str(Path(__file__).resolve().parents[1]),
+        },
+    )
+    assert owner.wait(timeout=10) == 0
+    reader = ProviderCapacityStore(tmp_path, max_lease_seconds=3900)
+    original = read_json(reader.path, {})["providers"]["codex"]
+    assert original[0]["pid"] == owner.pid
+    with pytest.raises(ProviderCapacityUnavailable):
+        reader.acquire("codex", limit=1, owner="new", wait_seconds=0, lease_seconds=10)
+    assert read_json(reader.path, {})["providers"]["codex"] == original

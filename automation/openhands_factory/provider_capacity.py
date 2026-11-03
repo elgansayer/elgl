@@ -139,6 +139,12 @@ class ProviderCapacityStore:
             expiry.tzinfo is not None and acquired.tzinfo is not None and acquired <= now < expiry
         )
 
+    @staticmethod
+    def _has_writer_metadata(entry: dict[str, object]) -> bool:
+        # This validates record shape, not whether a recorded PID is live.
+        owner, pid = entry.get("owner"), entry.get("pid")
+        return isinstance(owner, str) and type(pid) is int and pid > 0
+
     def acquire(
         self,
         provider: ProviderName | str,
@@ -177,9 +183,12 @@ class ProviderCapacityStore:
                 provider_key = provider.value if isinstance(provider, ProviderName) else provider
                 entries = providers.setdefault(provider_key, [])
                 now = datetime.now(UTC)
-                # A reader's renewal/compatibility bound is not evidence that
-                # foreign work stopped. Preserve its occupied slot in legacy
-                # admission too; shared stores have no generation filter.
+                # A reader's renewal bound is not proof that foreign work
+                # stopped. Beyond that bound, legacy admission requires the
+                # owner/PID metadata that our writers always persist. Incomplete
+                # corrupt time envelopes must not reserve capacity indefinitely.
+                # PID is record shape, never a liveness/adoption authority.
+                active = self._active_entries(entries, now)
                 occupied = [
                     entry
                     for entry in entries
@@ -188,6 +197,7 @@ class ProviderCapacityStore:
                         self.factory_generation is None
                         or entry.get("factory_generation") == self.factory_generation
                     )
+                    and (token is not None or entry in active or self._has_writer_metadata(entry))
                 ]
                 duplicate_owner = token is not None and any(
                     entry.get("owner") == owner for entry in occupied
