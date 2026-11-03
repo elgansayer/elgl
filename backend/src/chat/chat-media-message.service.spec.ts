@@ -39,7 +39,11 @@ describe('ChatMediaMessageService', () => {
     headObject,
   } as unknown as R2ObjectService;
   const sendMessage = vi.fn();
-  const chatService = { sendMessage } as unknown as ChatService;
+  const republishMessage = vi.fn();
+  const chatService = {
+    sendMessage,
+    republishMessage,
+  } as unknown as ChatService;
   const recordChatMediaSend = vi.fn();
   const metricsService = { recordChatMediaSend } as unknown as MetricsService;
 
@@ -53,6 +57,7 @@ describe('ChatMediaMessageService', () => {
     maybeSingle.mockReset();
     membershipMaybeSingle.mockReset();
     sendMessage.mockReset();
+    republishMessage.mockReset().mockResolvedValue(true);
     recordChatMediaSend.mockReset();
     publicUrlForKey.mockReset();
     headObject.mockReset();
@@ -108,12 +113,16 @@ describe('ChatMediaMessageService', () => {
     expect(publicUrlForKey).toHaveBeenCalledWith(
       'chat-media/user-1/image/hd/1-aaaaaaaaaaaaaaaaaaaaaaaa.jpg',
     );
-    expect(sendMessage).toHaveBeenCalledWith('user-1', {
-      room_id: 'room-1',
-      message_type: 'image',
-      media_url:
-        'https://cdn.example/chat-media/user-1/image/hd/1-aaaaaaaaaaaaaaaaaaaaaaaa.jpg',
-    });
+    expect(sendMessage).toHaveBeenCalledWith(
+      'user-1',
+      {
+        room_id: 'room-1',
+        message_type: 'image',
+        media_url:
+          'https://cdn.example/chat-media/user-1/image/hd/1-aaaaaaaaaaaaaaaaaaaaaaaa.jpg',
+      },
+      { requireRealtimeDelivery: true },
+    );
     expect(result.id).toBe('message-1');
   });
 
@@ -136,12 +145,16 @@ describe('ChatMediaMessageService', () => {
         'chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
     });
 
-    expect(sendMessage).toHaveBeenCalledWith('user-1', {
-      room_id: 'room-1',
-      message_type: 'video_note',
-      media_url:
-        'https://cdn.example/chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
-    });
+    expect(sendMessage).toHaveBeenCalledWith(
+      'user-1',
+      {
+        room_id: 'room-1',
+        message_type: 'video_note',
+        media_url:
+          'https://cdn.example/chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
+      },
+      { requireRealtimeDelivery: true },
+    );
   });
 
   it('rejects instant-video presentation for non-video uploads before persistence', async () => {
@@ -327,6 +340,9 @@ describe('ChatMediaMessageService', () => {
 
     expect(result.id).toBe('message-raced');
     expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(republishMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'message-raced' }),
+    );
   });
 
   it('fails closed when delivery state cannot be verified', async () => {
@@ -368,11 +384,15 @@ describe('ChatMediaMessageService', () => {
 
       expect(publicUrlForKey).toHaveBeenCalledWith(doodleKey);
       expect(headObject).toHaveBeenCalledWith(doodleKey);
-      expect(sendMessage).toHaveBeenCalledWith('user-1', {
-        room_id: 'room-1',
-        message_type: 'doodle',
-        media_url: doodleUrl,
-      });
+      expect(sendMessage).toHaveBeenCalledWith(
+        'user-1',
+        {
+          room_id: 'room-1',
+          message_type: 'doodle',
+          media_url: doodleUrl,
+        },
+        { requireRealtimeDelivery: true },
+      );
       expect(result.id).toBe('doodle-1');
     });
 
@@ -444,6 +464,59 @@ describe('ChatMediaMessageService', () => {
       expect(result.id).toBe('doodle-existing');
       expect(headObject).not.toHaveBeenCalled();
       expect(sendMessage).not.toHaveBeenCalled();
+      expect(republishMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'doodle-existing' }),
+      );
+    });
+
+    it('keeps a persisted doodle retryable until realtime publication succeeds', async () => {
+      const warn = vi.spyOn(Logger.prototype, 'warn');
+      const persisted = {
+        id: 'doodle-existing',
+        room_id: 'room-1',
+        sender_id: 'user-1',
+        message_type: 'doodle',
+      };
+      maybeSingle.mockResolvedValue({ data: persisted, error: null });
+      republishMessage.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+      await expect(
+        service.send('user-1', {
+          roomId: 'room-1',
+          mediaKind: 'doodle',
+          objectKey: doodleKey,
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      const result = await service.send('user-1', {
+        roomId: 'room-1',
+        mediaKind: 'doodle',
+        objectKey: doodleKey,
+      });
+
+      expect(result.id).toBe('doodle-existing');
+      expect(republishMessage).toHaveBeenCalledTimes(2);
+      expect(sendMessage).not.toHaveBeenCalled();
+      expect(recordChatMediaSend).toHaveBeenNthCalledWith(
+        1,
+        'doodle',
+        'unavailable',
+      );
+      expect(recordChatMediaSend).toHaveBeenNthCalledWith(
+        2,
+        'doodle',
+        'replayed',
+      );
+      expect(warn).toHaveBeenCalledWith(
+        {
+          event: 'chat_media_realtime_delivery_failed',
+          mediaKind: 'doodle',
+          messageType: 'doodle',
+          messageId: 'doodle-existing',
+        },
+        'Unable to confirm realtime delivery for persisted chat media',
+      );
+      expect(JSON.stringify(warn.mock.calls)).not.toContain(doodleKey);
     });
 
     it('rejects a doodle object that was never uploaded', async () => {

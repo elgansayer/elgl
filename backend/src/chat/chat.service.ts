@@ -429,6 +429,7 @@ export class ChatService {
   async sendMessage(
     senderId: string,
     dto: SendMessageDto,
+    options: { requireRealtimeDelivery?: boolean } = {},
   ): Promise<ChatMessage> {
     const supabase = this.supabaseService.getClient();
 
@@ -548,9 +549,10 @@ export class ChatService {
     }
 
     // Publish to Centrifugo channel (with preview and possibly a generated explanation)
-    await this.centrifugoService.publish(`chat:${dto.room_id}`, {
-      message: messageForPublish,
-    });
+    const published = await this.centrifugoService.publish(
+      `chat:${dto.room_id}`,
+      { message: messageForPublish },
+    );
 
     const preview = dto.is_encrypted
       ? '🔒 Encrypted message'
@@ -634,7 +636,19 @@ export class ChatService {
       );
     }
 
+    if (!published && options.requireRealtimeDelivery) {
+      throw new ServiceUnavailableException(
+        'Realtime message delivery is unavailable',
+      );
+    }
+
     return messageForPublish;
+  }
+
+  async republishMessage(message: ChatMessage): Promise<boolean> {
+    return this.centrifugoService.publish(`chat:${message.room_id}`, {
+      message,
+    });
   }
 
   async getMessages(

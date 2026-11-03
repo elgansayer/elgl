@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { ServiceUnavailableException } from '@nestjs/common';
 
 // ChatService imports LinkPreviewService, which pulls these browser-oriented
 // dependencies into the Vitest module graph even though this suite mocks the
@@ -84,7 +85,7 @@ describe('ChatService message persistence and realtime pipeline', () => {
       throw new Error(`Unexpected table in test: ${table}`);
     });
     const centrifugoService = {
-      publish: vi.fn().mockResolvedValue(undefined),
+      publish: vi.fn().mockResolvedValue(true),
     };
     const eventEmitter = { emit: vi.fn() };
     const xpService = {
@@ -172,5 +173,22 @@ describe('ChatService message persistence and realtime pipeline', () => {
     expect(centrifugoService.publish).not.toHaveBeenCalled();
     expect(xpService.awardXpForActivity).not.toHaveBeenCalled();
     expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('reports a persisted media message as unavailable when realtime publication returns false', async () => {
+    const { service, centrifugoService, messageInsertQuery } = createService({
+      data: savedMessage,
+      error: null,
+    });
+    centrifugoService.publish.mockResolvedValue(false);
+
+    await expect(
+      service.sendMessage('sender-1', dto, {
+        requireRealtimeDelivery: true,
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(messageInsertQuery.single).toHaveBeenCalledOnce();
+    expect(centrifugoService.publish).toHaveBeenCalledOnce();
   });
 });

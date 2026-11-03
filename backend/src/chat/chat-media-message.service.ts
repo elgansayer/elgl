@@ -67,6 +67,8 @@ export class ChatMediaMessageService {
     await this.assertRoomMembership(userId, dto.roomId);
     const existing = await this.findExisting(userId, mediaUrl);
     if (existing) {
+      const matching = this.assertMatchingRetry(existing, dto, messageType);
+      await this.assertRealtimeDelivery(matching, dto.mediaKind, messageType);
       this.logger.log(
         {
           event: 'chat_media_send_replayed',
@@ -77,18 +79,22 @@ export class ChatMediaMessageService {
         'Chat media send resolved to an existing message',
       );
       return {
-        message: this.assertMatchingRetry(existing, dto, messageType),
+        message: matching,
         outcome: 'replayed',
       };
     }
     await this.assertDoodleObject(dto);
 
     try {
-      const message = await this.chatService.sendMessage(userId, {
-        room_id: dto.roomId,
-        message_type: messageType,
-        media_url: mediaUrl,
-      });
+      const message = await this.chatService.sendMessage(
+        userId,
+        {
+          room_id: dto.roomId,
+          message_type: messageType,
+          media_url: mediaUrl,
+        },
+        { requireRealtimeDelivery: true },
+      );
       return { message, outcome: 'created' };
     } catch (cause) {
       // sendMessage persists before publishing to Centrifugo. If publication or
@@ -97,6 +103,8 @@ export class ChatMediaMessageService {
       // the database-level backstop for concurrent retries.
       const raced = await this.findExisting(userId, mediaUrl);
       if (raced) {
+        const matching = this.assertMatchingRetry(raced, dto, messageType);
+        await this.assertRealtimeDelivery(matching, dto.mediaKind, messageType);
         this.logger.warn(
           {
             event: 'chat_media_send_recovered',
@@ -108,12 +116,34 @@ export class ChatMediaMessageService {
           'Chat media send recovered a persisted message after a failure',
         );
         return {
-          message: this.assertMatchingRetry(raced, dto, messageType),
+          message: matching,
           outcome: 'recovered',
         };
       }
       throw cause;
     }
+  }
+
+  private async assertRealtimeDelivery(
+    message: ChatMessage,
+    mediaKind: SendChatMediaMessageDto['mediaKind'],
+    messageType: UploadedChatMessageType,
+  ): Promise<void> {
+    const published = await this.chatService.republishMessage(message);
+    if (published) return;
+
+    this.logger.warn(
+      {
+        event: 'chat_media_realtime_delivery_failed',
+        mediaKind,
+        messageType,
+        messageId: message.id,
+      },
+      'Unable to confirm realtime delivery for persisted chat media',
+    );
+    throw new ServiceUnavailableException(
+      'Realtime chat media delivery is unavailable',
+    );
   }
 
   private failureOutcome(cause: unknown): ChatMediaSendOutcome {

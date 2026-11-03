@@ -23,7 +23,7 @@ Doodles now use the same owned-object pipeline as chat photos and videos (`docs/
 4. `ChatMediaService.uploadDoodle` decodes the data URL locally, checks the PNG signature and the size, asks `POST /api/media/chat/presigned-url` for a ticket (`purpose: 'doodle'`) and `PUT`s the bytes to the signed storage URL.
 5. `ChatMediaMessageService.send` calls `POST /api/media/chat/send` with only the room id, `mediaKind: 'doodle'` and the server-issued object key.
 6. The backend checks room membership and object ownership. If no message already uses the object, it verifies through the authenticated storage gateway that the object exists, is a non-empty PNG and is at most 2 MiB before persistence.
-7. The backend returns the persisted message. The chat room appends it once (deduplicated by id, so the realtime echo and the response never double up) and closes the dialog.
+7. The backend confirms Centrifugo accepted the persisted message before returning it. The chat room appends it once (deduplicated by id, so a replayed realtime event and the response never double up) and closes the dialog.
 
 | State   | What the learner sees                                                | Controls                                                                                            |
 | ------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -50,16 +50,16 @@ Doodle policy, owned by the server (`ChatMediaUploadService`):
 
 Error behaviour:
 
-| Status | Cause                                                                                        |
-| ------ | -------------------------------------------------------------------------------------------- |
-| 400    | Not a PNG, HD quality requested, over 2 MiB, or a malformed key                              |
-| 401    | Missing or invalid session                                                                   |
-| 403    | The object key does not belong to the caller, or its kind segment does not match `mediaKind` |
-| 404    | The caller is not a member of the selected room                                              |
-| 409    | The uploaded object already backs a message in another room or of another type               |
-| 422    | The upload is missing or violates the doodle object policy, or instant-video was requested   |
-| 429    | Throttled                                                                                    |
-| 503    | Room membership, object metadata or delivery state could not be verified; nothing is sent    |
+| Status | Cause                                                                                                                                                                                   |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | Not a PNG, HD quality requested, over 2 MiB, or a malformed key                                                                                                                         |
+| 401    | Missing or invalid session                                                                                                                                                              |
+| 403    | The object key does not belong to the caller, or its kind segment does not match `mediaKind`                                                                                            |
+| 404    | The caller is not a member of the selected room                                                                                                                                         |
+| 409    | The uploaded object already backs a message in another room or of another type                                                                                                          |
+| 422    | The upload is missing or violates the doodle object policy, or instant-video was requested                                                                                              |
+| 429    | Throttled                                                                                                                                                                               |
+| 503    | Room membership or object metadata could not be verified, or realtime delivery was not accepted. A message may already be persisted in the last case, so retry with the same object key |
 
 ### Legacy inline doodles
 
@@ -71,28 +71,29 @@ A doodle is one `chat_messages` row with `message_type = 'doodle'` and `media_ur
 
 The uploaded object is the retry key:
 
-1. `POST /media/chat/send` first looks for a message from the same sender with that media URL and returns it if present.
+1. `POST /media/chat/send` first looks for a message from the same sender with that media URL. If present, it republishes that row and returns it only after Centrifugo accepts the event.
 2. Otherwise it verifies the object metadata through the authenticated storage gateway and sends through `ChatService.sendMessage`, which persists and then publishes to Centrifugo.
-3. If persistence succeeded but publication or the response failed, the next attempt finds the row and returns it without depending on another storage lookup.
-4. The partial unique index `chat_messages_sender_doodle_media_url_unique_idx` (migration `20261102120000_chat_doodle_media_idempotency.sql`) is the database backstop for two concurrent retries: the loser fails on the insert, looks the row up again and returns the winner.
+3. If persistence succeeded but publication failed, the service looks the row up and attempts one safe id-based republication. It returns 503 if Centrifugo still refuses the event. The next request finds and republishes the same row without depending on another storage lookup.
+4. If the response was lost after accepted publication, retry may publish the same message id again. Both chat renderers deduplicate messages by id, so this heals ambiguous delivery without duplicating the persisted message or timeline entry.
+5. The partial unique index `chat_messages_sender_doodle_media_url_unique_idx` (migration `20261102120000_chat_doodle_media_idempotency.sql`) is the database backstop for two concurrent retries: the loser fails on the insert, looks the row up again and republishes the winner.
 
 The browser mirrors this. It keeps the uploaded object between attempts, so a failed send is retried against the same object and the PNG is never uploaded twice. One attempt runs at a time, so a double tap cannot race itself. If the learner changes the drawing, a new object is uploaded.
 
 ## Failure behaviour
 
-| Failure                                         | Learner sees                                        | Data behaviour                                                                                                   |
-| ----------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Not a PNG, malformed or over 2 MiB              | Inline error, drawing kept                          | Nothing uploaded                                                                                                 |
-| Not signed in                                   | Inline error                                        | Nothing uploaded                                                                                                 |
-| Ticket request fails or is refused              | Inline error, drawing kept                          | Nothing uploaded                                                                                                 |
-| Storage `PUT` fails                             | Inline error, drawing kept                          | No chat message                                                                                                  |
-| Uploaded object missing or violates policy      | Inline error, drawing kept                          | No chat message                                                                                                  |
-| Storage metadata lookup unavailable             | Inline error, drawing kept                          | Fails closed, nothing is sent                                                                                    |
-| Send fails before persistence                   | Inline error, drawing kept; retry reuses the object | No chat message                                                                                                  |
-| Response or publication fails after persistence | Inline error; retry returns the existing message    | No duplicate                                                                                                     |
-| Delivery state lookup fails                     | Inline error                                        | Fails closed, nothing is sent                                                                                    |
-| Pad dismissed while the send was in flight      | Error toast if it fails                             | A request that already left cannot be recalled, so it may still be delivered                                     |
-| Learner moved to another room mid-send          | Error toast if it fails                             | The late message is never appended to the new room's timeline; the pad closes and the stored object is forgotten |
+| Failure                                         | Learner sees                                                                                                            | Data behaviour                                                                                                   |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Not a PNG, malformed or over 2 MiB              | Inline error, drawing kept                                                                                              | Nothing uploaded                                                                                                 |
+| Not signed in                                   | Inline error                                                                                                            | Nothing uploaded                                                                                                 |
+| Ticket request fails or is refused              | Inline error, drawing kept                                                                                              | Nothing uploaded                                                                                                 |
+| Storage `PUT` fails                             | Inline error, drawing kept                                                                                              | No chat message                                                                                                  |
+| Uploaded object missing or violates policy      | Inline error, drawing kept                                                                                              | No chat message                                                                                                  |
+| Storage metadata lookup unavailable             | Inline error, drawing kept                                                                                              | Fails closed, nothing is sent                                                                                    |
+| Send fails before persistence                   | Inline error, drawing kept; retry reuses the object                                                                     | No chat message                                                                                                  |
+| Response or publication fails after persistence | Inline error while publication remains unavailable; retry republishes and returns the existing message after acceptance | No duplicate row; repeated events use the same message id                                                        |
+| Delivery state lookup fails                     | Inline error                                                                                                            | Fails closed, nothing is sent                                                                                    |
+| Pad dismissed while the send was in flight      | Error toast if it fails                                                                                                 | A request that already left cannot be recalled, so it may still be delivered                                     |
+| Learner moved to another room mid-send          | Error toast if it fails                                                                                                 | The late message is never appended to the new room's timeline; the pad closes and the stored object is forgotten |
 
 An uploaded object can outlive a dismissed pad. Lifecycle cleanup of unsent uploads belongs to the repository-wide media finalisation policy; a client must not guess that an ambiguous send failed and delete media that may already back a persisted message.
 
@@ -105,7 +106,7 @@ An uploaded object can outlive a dismissed pad. Lifecycle cleanup of unsent uplo
 - The generic `POST /chat/messages` endpoint still rejects arbitrary URLs for doodles, so a client cannot attach someone else's object or an external URL.
 - The browser decodes the data URL locally (no `data:` fetch, so no connect-src exception), requires the PNG signature, and bounds the size before any network call.
 - The image is rendered through an `<img>` source only; it is never interpreted as HTML.
-- Doodle content is private chat content. Logs contain bounded event names, message type, message id and safe failure class/status only: never bytes, object keys, URLs (which can include signatures), provider details or tokens. Structured events: `chat_media_send_replayed`, `chat_media_send_recovered`, `chat_media_send_conflict`, `chat_media_object_missing`, `chat_media_object_lookup_failed`, `chat_media_object_rejected`.
+- Doodle content is private chat content. Logs contain bounded event names, message type, message id and safe failure class/status only: never bytes, object keys, URLs (which can include signatures), provider details or tokens. Structured events: `chat_media_send_replayed`, `chat_media_send_recovered`, `chat_media_realtime_delivery_failed`, `chat_media_send_conflict`, `chat_media_object_missing`, `chat_media_object_lookup_failed`, `chat_media_object_rejected`.
 - Block, first-message privacy filter and spam checks continue to run in `ChatService.sendMessage`, which this path reuses. Membership is verified at this endpoint before that shared pipeline is called.
 - Retention and deletion follow the containing chat message. The storage object follows the media finalisation policy above.
 
@@ -119,8 +120,8 @@ An uploaded object can outlive a dismissed pad. Lifecycle cleanup of unsent uplo
 
 ## Observability and operations
 
-- Membership/object lookup failure, object rejection, replay, recovery and conflict are structured warn/log events, so a rejected, stuck or duplicated doodle can be traced without database access or content. These events carry no user, room, object key or provider detail.
-- Watch the rates of presign rejection (400/403), `chat_media_object_missing`, `chat_media_object_rejected`, `chat_media_send_conflict`, `chat_media_send_recovered` and 5xx on `/media/chat/send`. A rise in `recovered` means publication is failing after persistence.
+- Membership/object lookup failure, object rejection, realtime refusal, replay, recovery and conflict are structured warn/log events, so a rejected, stuck or duplicated doodle can be traced without database access or content. The safe message id correlates a realtime refusal with its later replay or recovery. These events carry no user, room, object key or provider detail.
+- Watch the rates of presign rejection (400/403), `chat_media_object_missing`, `chat_media_object_rejected`, `chat_media_realtime_delivery_failed`, `chat_media_send_conflict`, `chat_media_send_recovered`, the bounded `unavailable`/`replayed` send metrics and 5xx on `/media/chat/send`. A rise in realtime delivery failures or `unavailable` indicates Centrifugo refusal after persistence; a later `replayed` or `recovered` confirms healing.
 - The new index is partial and only covers doodles minted by this pipeline, so it stays small.
 
 ## Verification
