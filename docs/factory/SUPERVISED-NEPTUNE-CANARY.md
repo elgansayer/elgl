@@ -1,7 +1,10 @@
 # Supervised bounded Neptune jobs
 
-Tracks Neptune #570 under #536/#33. This is an opt-in integration with the
-existing one-issue canary, not another scheduler or a continuity switch.
+Tracks Neptune #570/#536/#33 and public Factory #9812. Neptune daemon and
+one-issue canary entrypoints always attach the existing session supervisor.
+Pipeline regeneration retains the same private journal and attaches supervision
+to the rebuilt router and its existing shared store. This creates no scheduling
+loop, account allowance or continuity switch. Other repository defaults are unchanged.
 
 ```sh
 repo-factory task run --issue <admitted-issue> --supervised-session --dry-run
@@ -12,9 +15,10 @@ Use the existing configured service interface and credentials. The live command
 still requires the Neptune tests-only profile, doctor/access/merge readiness,
 unprivileged namespaces, trusted ready intake, job ownership, normal WIP/admission
 budgets and the current main gate. Dry-run starts no provider or supervisor.
-The new option does not grant root, additional allowance, an API fallback or
-permission to bypass review/checks in any repository. Default daemon/canary
-behaviour remains unchanged.
+The flag remains accepted for compatibility; omitting it cannot disable Neptune
+supervision or namespace readiness. Neither form grants root, additional allowance,
+an API fallback or permission to bypass review/checks in any repository. The dry-run
+path remains a configuration preview and does not instantiate a daemon.
 
 The conservative router retains its normal provider/model eligibility, shared
 health, cooldowns, retries, metrics, host resource gate and configured limits.
@@ -52,6 +56,14 @@ the restricted verifier. Mandatory CI also runs real namespace checks: a masked
 coordinator Python, private metadata visibility, parent death, retained capacity
 and a fresh observer refusing admission/adoption. Missing namespace capability
 fails that CI step; it is not skipped or treated as a passing substitute.
+
+The daemon wiring check also exercises ordinary router requests before and after
+real pipeline regeneration. A benign local CLI deliberately fails once and then
+succeeds. Independent private-store reads see exactly one reservation during each
+attempt; retries share that reservation and retain distinct terminal guardian
+checkpoints. Broker/journal paths and unrelated credentials are hidden from those
+workers. These are namespace and transport/accounting fixtures, with no vendor or
+model calls. They do not prove a live issue job recovered after a service restart.
 
 This integration does not enrol existing outside-protocol Codex/Claude/Antigravity
 sessions or demonstrate their account-wide count. Keep Neptune continuity off
