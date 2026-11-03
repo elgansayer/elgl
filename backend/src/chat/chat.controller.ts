@@ -6,6 +6,7 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -189,14 +190,16 @@ export class ChatController {
     return await this.chatService.getMessages(roomId, search, user.id);
   }
 
+  // Compatibility routes for clients that predate the dedicated /favourites
+  // controller. Writes share FavouritesService so both route families apply the
+  // same authorization, idempotency and error mapping.
   @Post('favourites')
   async addFavourite(
     @CurrentUser() user: User | null,
     @Body() dto: AddFavouriteDto,
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    await this.chatService.addFavourite(user.id, dto);
-    return { success: true };
+    return await this.favouritesService.addFavourite(user.id, dto);
   }
 
   @Get('favourites')
@@ -215,11 +218,10 @@ export class ChatController {
   @Delete('favourites/:id')
   async deleteFavourite(
     @CurrentUser() user: User | null,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    await this.chatService.deleteFavourite(user.id, id);
-    return { success: true };
+    return await this.favouritesService.removeFavourite(user.id, id);
   }
 
   @Post('llm-proxy')
