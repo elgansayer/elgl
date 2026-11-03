@@ -19,6 +19,7 @@ import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
 import { EconomyStore } from './economy.store';
 import { AudioRoomDegradationService } from './audio-room-degradation.service';
+import { parseQuickPollRealtimeEvent, PollResult, QuickPollService } from './quick-poll.service';
 
 export interface AudioRoomRecord {
   id: string;
@@ -109,6 +110,7 @@ export class AudioRoomsStore {
   private i18n = inject(I18nService);
   private economyStore = inject(EconomyStore);
   private degradationService = inject(AudioRoomDegradationService);
+  private quickPollService = inject(QuickPollService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
@@ -132,6 +134,7 @@ export class AudioRoomsStore {
   readonly audienceCount = signal<number>(0);
   readonly privateRooms = signal<AudioRoomRecord[]>([]);
   readonly isLoadingPrivate = signal<boolean>(false);
+  readonly currentPoll = signal<PollResult | null>(null);
 
   // Degradation-aware state - reactive bindings to degradation service
   readonly isLiveKitDegraded = this.degradationService.isLiveKitDegraded;
@@ -169,16 +172,20 @@ export class AudioRoomsStore {
 
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
-  private onTrackSubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
-  private onTrackUnsubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
+  private onTrackSubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
+  private onTrackUnsubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
@@ -318,7 +325,13 @@ export class AudioRoomsStore {
   }
 
   async joinRoom(room: AudioRoomRecord): Promise<void> {
+    const previousRoomId = this.currentRoom()?.id;
+    if (this.roomSubscription && previousRoomId) {
+      this.centrifugeService.unsubscribe(`room_${previousRoomId}`);
+      this.roomSubscription = null;
+    }
     this.currentRoom.set(room);
+    this.currentPoll.set(null);
     this.captions.set([]);
     this.roomMessages.set([]);
 
@@ -382,13 +395,23 @@ export class AudioRoomsStore {
 
     // Subscribe to Centrifugo room channel for raise-hands, stage approval, subtitles, and chat
     await this.centrifugeService.connect();
-    if (this.roomSubscription) {
-      this.centrifugeService.unsubscribe(`room_${room.id}`);
-    }
-
-    this.roomSubscription = this.centrifugeService.subscribe(`room_${room.id}`, (data: unknown) => {
+    this.centrifugeService.subscribe(`room_${room.id}`, (data: unknown) => {
       if (!this.isRoomEvent(data)) return;
       const p = data;
+      const pollEvent = parseQuickPollRealtimeEvent(p);
+
+      if (pollEvent?.type === 'poll_opened') {
+        this.currentPoll.set(pollEvent.poll);
+        return;
+      }
+      if (pollEvent?.type === 'poll_updated') {
+        const currentUserVote =
+          this.currentPoll()?.poll_id === pollEvent.poll.poll_id
+            ? (this.currentPoll()?.userVote ?? null)
+            : null;
+        this.currentPoll.set({ ...pollEvent.poll, userVote: currentUserVote });
+        return;
+      }
 
       if (p.type === 'raise_hand' && p.user_id) {
         this.currentRoom.update((r) => {
@@ -601,6 +624,20 @@ export class AudioRoomsStore {
         this.leaveRoom();
       }
     });
+    this.roomSubscription = room.id;
+
+    try {
+      const recoveredPoll = await this.quickPollService.getActivePoll(room.id);
+      if (this.currentRoom()?.id === room.id && this.currentPoll() === null) {
+        this.currentPoll.set(recoveredPoll);
+      }
+    } catch {
+      // Poll recovery is best-effort. Realtime events can still populate the current poll.
+    }
+  }
+
+  setCurrentPoll(poll: PollResult): void {
+    this.currentPoll.set(poll);
   }
 
   private async publishLocalCamera(): Promise<void> {
@@ -1012,6 +1049,7 @@ export class AudioRoomsStore {
     }
     this.isConnectedToLiveKit.set(false);
     this.currentRoom.set(null);
+    this.currentPoll.set(null);
     this.isSpeaker.set(false);
     this.stageInfo.set(null);
     this.stageParticipants.set([]);
