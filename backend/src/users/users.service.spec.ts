@@ -720,6 +720,21 @@ describe('UsersService', () => {
   });
 
   describe('updatePrivacySettings', () => {
+    it('should surface persistence failures instead of returning mock success', async () => {
+      mockQueryBuilder.eq.mockResolvedValueOnce({
+        error: { code: 'PGRST500', message: 'database unavailable' },
+      });
+
+      await expect(
+        service.updatePrivacySettings(
+          'user-1',
+          { privacy_hide_vip_status: true },
+          false,
+        ),
+      ).rejects.toThrow(InternalServerErrorException);
+      expect(mockQueryBuilder.single).not.toHaveBeenCalled();
+    });
+
     it('should throw BadRequestException when a non-VIP user enables incognito_visits', async () => {
       await expect(
         service.updatePrivacySettings(
