@@ -6,7 +6,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
-import { QuickPollService } from '../../services/quick-poll.service';
+import { PollResult, QuickPollService } from '../../services/quick-poll.service';
 import { environment } from '../../../environments/environment';
 import { AudioRoomComponent } from './audio-room.component';
 
@@ -28,6 +28,12 @@ describe('AudioRoomComponent API URLs and Stage Actions', () => {
     host_id: 'host-1',
     raised_hands: ['user-me', 'user-other'],
   });
+  const currentPollSignal = signal<PollResult | null>(null);
+  const quickPollService = {
+    createPoll: vi.fn(),
+    getPollResults: vi.fn(),
+    submitVote: vi.fn(),
+  };
 
   const store = {
     currentRoom: currentRoomSignal,
@@ -38,6 +44,8 @@ describe('AudioRoomComponent API URLs and Stage Actions', () => {
     roomsByLanguage: signal([]),
     activeRooms: signal([]),
     isSpeaker: signal(false),
+    currentPoll: currentPollSignal,
+    setCurrentPoll: vi.fn((poll: PollResult) => currentPollSignal.set(poll)),
     loadActiveRooms: vi.fn().mockResolvedValue(undefined),
     loadRoomsByLanguage: vi.fn().mockResolvedValue(undefined),
     loadPrivateRooms: vi.fn().mockResolvedValue(undefined),
@@ -48,6 +56,7 @@ describe('AudioRoomComponent API URLs and Stage Actions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    currentPollSignal.set(null);
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -56,7 +65,7 @@ describe('AudioRoomComponent API URLs and Stage Actions', () => {
         { provide: AuthService, useValue: { currentUser: currentUserSignal } },
         { provide: ConfirmService, useValue: { confirm: vi.fn().mockResolvedValue(true) } },
         { provide: I18nService, useValue: { translate: (key: string) => key } },
-        { provide: QuickPollService, useValue: {} },
+        { provide: QuickPollService, useValue: quickPollService },
       ],
     });
 
@@ -118,5 +127,75 @@ describe('AudioRoomComponent API URLs and Stage Actions', () => {
   it('delegates handleDeclineSpeaker to store.dismissRaisedHand', async () => {
     await component.handleDeclineSpeaker('user-other');
     expect(store.dismissRaisedHand).toHaveBeenCalledWith('user-other');
+  });
+
+  it('stores a newly created poll for the host immediately', async () => {
+    quickPollService.createPoll.mockResolvedValue({ poll_id: 'poll-1' });
+
+    await component.submitPollForm('Next topic?', ['Travel', 'Food']);
+
+    expect(quickPollService.createPoll).toHaveBeenCalledWith('room-123', 'Next topic?', [
+      'Travel',
+      'Food',
+    ]);
+    expect(store.setCurrentPoll).toHaveBeenCalledWith({
+      poll_id: 'poll-1',
+      question: 'Next topic?',
+      options: ['Travel', 'Food'],
+      votes: [0, 0],
+      totalVotes: 0,
+      is_active: true,
+      userVote: null,
+    });
+  });
+
+  it('coalesces duplicate poll creation while a request is in flight', async () => {
+    let resolveCreate: (value: { poll_id: string }) => void = () => undefined;
+    quickPollService.createPoll.mockReturnValue(
+      new Promise<{ poll_id: string }>((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+
+    const firstRequest = component.submitPollForm('Next topic?', ['Travel', 'Food']);
+    const duplicateRequest = component.submitPollForm('Next topic?', ['Travel', 'Food']);
+
+    expect(component.isCreatingPoll()).toBe(true);
+    expect(quickPollService.createPoll).toHaveBeenCalledOnce();
+    resolveCreate({ poll_id: 'poll-1' });
+    await Promise.all([firstRequest, duplicateRequest]);
+
+    expect(component.isCreatingPoll()).toBe(false);
+  });
+
+  it('records a successful vote and reconciles with authoritative results', async () => {
+    currentPollSignal.set({
+      poll_id: 'poll-1',
+      question: 'Next topic?',
+      options: ['Travel', 'Food'],
+      votes: [1, 0],
+      totalVotes: 1,
+      is_active: true,
+      userVote: null,
+    });
+    quickPollService.submitVote.mockResolvedValue(undefined);
+    quickPollService.getPollResults.mockResolvedValue({
+      poll_id: 'poll-1',
+      question: 'Next topic?',
+      options: ['Travel', 'Food'],
+      votes: [1, 1],
+      totalVotes: 2,
+      is_active: true,
+      userVote: 1,
+    });
+
+    await component.voteInPoll('poll-1', 1);
+
+    expect(quickPollService.getPollResults).toHaveBeenCalledWith('room-123', 'poll-1');
+    expect(currentPollSignal()).toMatchObject({
+      votes: [1, 1],
+      totalVotes: 2,
+      userVote: 1,
+    });
   });
 });

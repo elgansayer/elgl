@@ -66,3 +66,28 @@ fresh-process recovery of a persisted handle and three real processes contending
 for two shared slots. Tests use private temporary broker state and no model calls.
 They do not establish that existing manual Codex, Claude or Antigravity sessions
 are enrolled, that vendor quota is available or that Neptune continuity is safe.
+
+
+## Admission across reader bounds
+
+Both legacy and renewable admission count and retain unexpired reservations in
+the shared provider key even when this reader's maximum duration is shorter.
+For example, a live3960-second reservation occupies capacity for a3900-second
+reader; admitting a new job must not erase that foreign entry. With one free slot,
+a compatible new reservation may use it, and cleanup releases only its owner.
+Expired, unparseable and not-yet-acquired records do not reserve capacity.
+Legacy records outside the reader bound must retain complete writer owner/PID
+metadata; an incomplete corrupt-future envelope is still rejected. This is record
+shape validation, not a PID liveness check: dead or reused PIDs cannot free or
+adopt a reservation. Legitimate explicit writer durations beyond a day remain
+occupied too; no arbitrary new duration cap is imposed.
+Explicitly generation-local legacy stores retain their existing generation fence;
+the shared account router does not use that filter.
+
+This conservative occupancy check does not make an incompatible reservation safe
+to renew or adopt. `snapshot()` still reports reader-compatible entries, while
+`audit_renewable_leases()` reports incompatible live counts separately. Neither a
+compatible count of zero nor a dead checkpoint proves that capacity is free.
+Writer bounds, exact renewable ownership tokens, configured limits and lease
+expiries are unchanged. Unknown outside-protocol GUI activity remains outside this
+store's coverage; this repair does not authorise continuity.

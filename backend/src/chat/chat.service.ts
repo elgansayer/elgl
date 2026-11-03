@@ -67,6 +67,11 @@ interface DeletedAwareMessage extends ChatMessage {
   deleted_for_user_ids?: string[] | null;
 }
 
+interface SearchMembershipRow {
+  room_id: string;
+  is_locked?: boolean | null;
+}
+
 interface SearchMessageRow {
   id: string;
   room_id: string;
@@ -772,7 +777,13 @@ export class ChatService {
     }
   }
 
-  /** Search messages across all rooms the user is a member of. */
+  /**
+   * Search messages across the rooms the user is a member of.
+   *
+   * Hidden (locked) chats are a private per-member preference whose content is revealed only
+   * after the client unlock flow clears the persisted lock, exactly as `getRooms` and the unread
+   * count treat them. They are never searchable while that lock remains set.
+   */
   async searchAllMessages(
     userId: string,
     term: string,
@@ -782,10 +793,10 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
-    // Get all room IDs the user is a member of
+    // Get all rooms the user is a member of, with the per-member hidden-chat flag
     const { data: memberRooms, error: memberErr } = await supabase
       .from('chat_room_members')
-      .select('room_id')
+      .select('room_id, is_locked')
       .eq('user_id', userId);
 
     if (memberErr) {
@@ -797,13 +808,18 @@ export class ChatService {
       return [];
     }
 
-    let roomIds = memberRooms.map((r: { room_id: string }) => r.room_id);
+    let roomIds = memberRooms
+      .filter((r: SearchMembershipRow) => r.is_locked !== true)
+      .map((r: SearchMembershipRow) => r.room_id);
 
     // If a specific roomId is provided, limit to that room only
     if (roomId) {
       if (!roomIds.includes(roomId)) return [];
       roomIds = [roomId];
     }
+
+    // Every joined room is hidden: a successful empty result, never a leak of hidden chats
+    if (roomIds.length === 0) return [];
 
     const trimmedTerm = term.trim();
     if (trimmedTerm.length < 2) return [];
