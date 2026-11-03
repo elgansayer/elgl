@@ -112,9 +112,10 @@ class SessionIdentityJournal:
     for a malformed record, and load() never changes lease or process state.
     """
 
-    def __init__(self, directory: Path) -> None:
+    def __init__(self, directory: Path, *, create: bool = True) -> None:
         self.directory = directory
-        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if create:
+            directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         descriptor = self._open_directory()
         os.close(descriptor)
 

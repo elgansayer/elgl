@@ -129,22 +129,25 @@ class HostResourceGate:
         """Reserve writer priority, drain providers, and exclude both daemons."""
 
         owner = f"exclusive:{os.getpid()}:{uuid4().hex}"
-        while True:
-            with self.lock:
-                payload = self._load_active()
-                exclusive = payload["exclusive"]
-                if exclusive is None or (
-                    isinstance(exclusive, dict) and exclusive.get("owner") == owner
-                ):
-                    payload["exclusive"] = self._entry(owner)
-                    self._save(payload)
-                    shared = payload["shared"]
-                    if isinstance(shared, list) and not shared:
-                        break
-                else:
-                    self._save(payload)
-            time.sleep(0.1)
         try:
+            # Admission already owns writer priority while readers drain. A
+            # timeout/cancellation here needs the same fenced cleanup as the
+            # held body, even though the context manager has not yielded yet.
+            while True:
+                with self.lock:
+                    payload = self._load_active()
+                    exclusive = payload["exclusive"]
+                    if exclusive is None or (
+                        isinstance(exclusive, dict) and exclusive.get("owner") == owner
+                    ):
+                        payload["exclusive"] = self._entry(owner)
+                        self._save(payload)
+                        shared = payload["shared"]
+                        if isinstance(shared, list) and not shared:
+                            break
+                    else:
+                        self._save(payload)
+                time.sleep(0.1)
             yield
         finally:
             with self.lock:

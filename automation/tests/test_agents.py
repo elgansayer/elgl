@@ -1,3 +1,4 @@
+import json
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
@@ -219,10 +220,26 @@ class FakeProcessRunner:
         if "--file" in command:
             prompt_path = Path(command[command.index("--file") + 1])
             self.attached_prompt = prompt_path.read_text(encoding="utf-8")
+        output = self.output
+        if "exec" in command and "--json" in command:
+            output = "\n".join(
+                json.dumps(event)
+                for event in (
+                    {"type": "turn.started"},
+                    {"type": "item.completed", "item": {"type": "agent_message", "text": output}},
+                    {"type": "turn.completed", "usage": {}},
+                )
+            )
+        elif (
+            "--output-format" in command and command[command.index("--output-format") + 1] == "json"
+        ):
+            output = json.dumps(
+                {"type": "result", "subtype": "success", "is_error": False, "result": output}
+            )
         return ProcessResult(
             tuple(command),
             0,
-            self.output,
+            output,
             "",
             False,
             False,
@@ -433,7 +450,10 @@ class TestAgentProviders(unittest.TestCase):
                     process_runner=runner,
                 )
                 self.assertTrue(provider.run(request).success)
-                self.assertEqual(runner.commands[0][-3:], ("--verbose", "--max-turns", str(limit)))
+                self.assertEqual(
+                    runner.commands[0][-5:],
+                    ("--verbose", "--output-format", "json", "--max-turns", str(limit)),
+                )
 
     def test_claude_turn_exhaustion_fails_without_marking_provider_unavailable(self):
         request = AgentRequest(

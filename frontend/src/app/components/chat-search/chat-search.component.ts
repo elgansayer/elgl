@@ -4,26 +4,41 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { ChatMessage, ChatService } from '../../services/chat.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+interface MessageTypeFilter {
+  value: 'all' | ChatMessage['message_type'];
+  labelKey: string;
+}
+
 @Component({
   selector: 'app-chat-search',
-  imports: [CommonModule, FormsModule, TranslatePipe, ...HlmButtonImports, ...HlmInputImports],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    ...HlmButtonImports,
+    ...HlmInputImports,
+    ...HlmRadioGroupImports,
+  ],
   template: `
     <div
       class="max-h-96 w-full min-w-0 overflow-hidden rounded-xl border border-surface-100 bg-surface-200 shadow-2xl sm:w-80"
       [attr.aria-busy]="isSearching()"
     >
       <div class="border-b border-surface-100 p-3">
+        <label for="chat-message-search" class="mb-1.5 block text-xs font-medium text-text-muted">
+          {{ 'chatRoom.searchPlaceholder' | t }}
+        </label>
         <div class="relative">
           <input
             hlmInput
+            id="chat-message-search"
             type="search"
             [(ngModel)]="query"
             (input)="onSearch()"
-            [placeholder]="'chatSearch.placeholder' | t"
-            [attr.aria-label]="'chatSearch.placeholder' | t"
             autocomplete="off"
             class="ps-9"
           />
@@ -31,55 +46,49 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
       </div>
 
-      <div class="flex flex-wrap gap-1 border-b border-surface-100 p-2" role="radiogroup">
-        <button
-          hlmBtn
-          type="button"
-          variant="ghost"
-          size="sm"
+      <hlm-radio-group
+        name="chat-search-scope"
+        [value]="searchMode()"
+        (valueChange)="setSearchMode($event)"
+        [attr.aria-label]="'chatSearch.scopeLabel' | t"
+        class="flex flex-wrap gap-1 border-b border-surface-100 p-2"
+      >
+        <hlm-radio
+          value="within"
           class="rounded-full whitespace-nowrap"
-          role="radio"
-          [attr.aria-checked]="searchMode() === 'within'"
           [class.bg-primary]="searchMode() === 'within'"
           [class.text-on-fill]="searchMode() === 'within'"
-          (click)="setSearchMode('within')"
         >
           {{ 'chatSearch.thisChat' | t }}
-        </button>
-        <button
-          hlmBtn
-          type="button"
-          variant="ghost"
-          size="sm"
+        </hlm-radio>
+        <hlm-radio
+          value="global"
           class="rounded-full whitespace-nowrap"
-          role="radio"
-          [attr.aria-checked]="searchMode() === 'global'"
           [class.bg-primary]="searchMode() === 'global'"
           [class.text-on-fill]="searchMode() === 'global'"
-          (click)="setSearchMode('global')"
         >
           {{ 'chatSearch.allChats' | t }}
-        </button>
-      </div>
+        </hlm-radio>
+      </hlm-radio-group>
 
-      <div class="flex gap-1 overflow-x-auto border-b border-surface-100 p-2" role="radiogroup">
-        @for (type of messageTypes; track type) {
-          <button
-            hlmBtn
-            type="button"
-            variant="ghost"
-            size="sm"
+      <hlm-radio-group
+        name="chat-search-message-type"
+        [value]="selectedType()"
+        (valueChange)="setSelectedType($event)"
+        [attr.aria-label]="'chatSearch.messageTypeLabel' | t"
+        class="flex gap-1 overflow-x-auto border-b border-surface-100 p-2"
+      >
+        @for (type of messageTypes; track type.value) {
+          <hlm-radio
+            [value]="type.value"
             class="rounded-full whitespace-nowrap"
-            role="radio"
-            [attr.aria-checked]="selectedType() === type"
-            [class.bg-primary]="selectedType() === type"
-            [class.text-on-fill]="selectedType() === type"
-            (click)="setSelectedType(type)"
+            [class.bg-primary]="selectedType() === type.value"
+            [class.text-on-fill]="selectedType() === type.value"
           >
-            {{ type }}
-          </button>
+            {{ type.labelKey | t }}
+          </hlm-radio>
         }
-      </div>
+      </hlm-radio-group>
 
       <div class="max-h-64 overflow-y-auto" aria-live="polite">
         @if (isSearching()) {
@@ -89,7 +98,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         }
         @if (!isSearching() && searchError()) {
           <div class="space-y-2 p-4 text-center" role="alert">
-            <p class="text-sm text-danger-ink">{{ 'common.error' | t }}</p>
+            <p class="text-sm text-danger-ink">{{ 'chatSearch.unavailable' | t }}</p>
             <button hlmBtn type="button" variant="outline" size="touch" (click)="retrySearch()">
               {{ 'common.retry' | t }}
             </button>
@@ -163,13 +172,20 @@ export class ChatSearchComponent implements OnDestroy {
 
   readonly query = signal('');
   readonly searchMode = signal<'within' | 'global'>('within');
-  readonly selectedType = signal('All');
+  readonly selectedType = signal<MessageTypeFilter['value']>('all');
   readonly results = signal<ChatMessage[]>([]);
   readonly isSearching = signal(false);
   readonly searchError = signal(false);
   readonly minimumQueryLength = 2;
 
-  readonly messageTypes = ['All', 'text', 'voice', 'correction', 'doodle', 'gift'];
+  readonly messageTypes: readonly MessageTypeFilter[] = [
+    { value: 'all', labelKey: 'chatSearch.messageType.all' },
+    { value: 'text', labelKey: 'chatSearch.messageType.text' },
+    { value: 'voice', labelKey: 'chatSearch.messageType.voice' },
+    { value: 'correction', labelKey: 'chatSearch.messageType.correction' },
+    { value: 'doodle', labelKey: 'chatSearch.messageType.doodle' },
+    { value: 'gift', labelKey: 'chatSearch.messageType.gift' },
+  ];
 
   private readonly allResults = signal<ChatMessage[]>([]);
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -197,8 +213,8 @@ export class ChatSearchComponent implements OnDestroy {
     this.scheduleSearch(0);
   }
 
-  setSelectedType(type: string): void {
-    if (!this.messageTypes.includes(type)) return;
+  setSelectedType(type: MessageTypeFilter['value']): void {
+    if (!this.messageTypes.some((messageType) => messageType.value === type)) return;
     this.selectedType.set(type);
     this.applyTypeFilter();
   }
@@ -264,7 +280,7 @@ export class ChatSearchComponent implements OnDestroy {
     const type = this.selectedType();
     const messages = this.allResults();
     this.results.set(
-      type === 'All' ? messages : messages.filter((message) => message.message_type === type),
+      type === 'all' ? messages : messages.filter((message) => message.message_type === type),
     );
   }
 }

@@ -11,6 +11,7 @@ import {
   input,
   effect,
   untracked,
+  afterRenderEffect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -112,10 +113,18 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly chatEncryption = inject(PersonalChatEncryptionService);
   private readonly chatMedia = inject(ChatMediaService);
   private readonly chatMediaMessages = inject(ChatMediaMessageService);
+  private readonly pendingMessageScroll = signal<string | null>(null);
 
   id = input.required<string>();
 
   constructor() {
+    afterRenderEffect(() => {
+      const messageId = this.pendingMessageScroll();
+      if (!messageId || !document.getElementById(`msg-${messageId}`)) return;
+      this.pendingMessageScroll.set(null);
+      this.scrollToMessage(messageId);
+    });
+
     effect(() => {
       const roomId = this.id();
       // Only the room id may re-run this effect. Saving the outgoing draft reads the reply target
@@ -905,7 +914,16 @@ export class ChatRoomComponent implements OnDestroy {
 
   onSearchResultSelect(message: ChatMessage): void {
     this.showSearchPanel.set(false);
-    if (message.room_id === this.roomId) this.scrollToMessage(message.id);
+    if (message.room_id !== this.roomId) return;
+
+    if (!this.messages().some((loadedMessage) => loadedMessage.id === message.id)) {
+      this.messages.update((loadedMessages) =>
+        [...loadedMessages, message].sort((left, right) =>
+          left.created_at.localeCompare(right.created_at),
+        ),
+      );
+    }
+    this.pendingMessageScroll.set(message.id);
   }
 
   async toggleParticipantDrawer(): Promise<void> {

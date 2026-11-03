@@ -49,6 +49,36 @@ Linux references: [parent-death signals](https://man7.org/linux/man-pages/man2/p
 [PID namespace init semantics](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html)
 and [unshare process handling](https://man7.org/linux/man-pages/man1/unshare.1.html).
 
+## Bounded CLI process observations
+
+The direct CLI runner emits `factory.provider.process_observation` at most once
+per 30 seconds during its wait and one final observation after its existing
+cleanup waits. It records the owned process PID, monotonic elapsed seconds,
+configured process timeout and output capture cap, observed stdout/stderr byte
+counts, captured bytes, truncation and age of last pipe output. An absent output
+age is `None`, not evidence of a stall. The final flag marks this runner's last
+observation; it does not independently prove descendant drainage or model success.
+
+Pipe readers collect available bytes immediately, including short flushed writes.
+Observed counts continue after the existing capture cap is reached; retained
+output remains bounded by that cap. These logs contain no command, prompt,
+environment, working directory or output content. They are fixed-schema local
+diagnostics, not an output transcript or another durable session store.
+
+Silence and byte activity do not identify model turns, remote work, correctness,
+vendor availability or account usage. Neither causes cancellation, retry,
+provider rotation or another model call. Existing deadlines, guardian pulses,
+terminal classification, turn policy and output limits still decide execution.
+Log-sink errors cannot replace a child's actual result. The unguarded timeout
+still starts after `on_start`; the guarded absolute deadline remains unchanged.
+
+`tests/test_process_observations.py` uses real owned local children to exercise
+short writes before exit, both output streams, retained output caps, increasing
+idle age, normal/failing exits and timeouts with and without the guardian. It
+also checks cadence, content omission and a broken observation sink. These are
+tooling tests with no inference. Normal service adoption and a later real
+provider-job observation remain separate deployment evidence.
+
 ## Validation and deployment boundary
 
 `tests/test_process_guardian.py` uses real synthetic OS processes and private

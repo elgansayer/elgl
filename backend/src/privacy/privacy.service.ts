@@ -442,6 +442,7 @@ export class PrivacyService {
     const [
       moments,
       momentComments,
+      momentLikes,
       chatMessages,
       flashcards,
       decks,
@@ -454,11 +455,14 @@ export class PrivacyService {
       stickerPacks,
       readingResources,
     ] = await Promise.all([
+      // The Moments tables are owned through user_id (005_moments.sql). There
+      // is no author_id column: filtering on it fails the query, and a failed
+      // dataset aborts the whole archive.
       this.fetchPaged('moments', async (from, to) => {
         const result = await supabase
           .from('moments')
           .select('*')
-          .eq('author_id', userId)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
@@ -467,10 +471,19 @@ export class PrivacyService {
         const result = await supabase
           .from('moment_comments')
           .select('*')
-          .eq('author_id', userId)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
+      }),
+      this.fetchPaged('moment_likes', async (from, to) => {
+        const result = await supabase
+          .from('moment_likes')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        return { data: result.data, error: result.error };
       }),
       this.fetchPaged('chat_messages', async (from, to) => {
         const result = await supabase
@@ -649,6 +662,7 @@ export class PrivacyService {
       user_profile: profile,
       moments,
       moment_comments: momentComments,
+      moment_likes: momentLikes,
       chat_messages: chatMessages,
       flashcards,
       decks,

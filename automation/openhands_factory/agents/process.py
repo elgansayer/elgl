@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 import select
+import shutil
 import signal
 import socket
 import subprocess
@@ -18,6 +20,9 @@ from pathlib import Path
 from typing import BinaryIO, ClassVar
 
 from openhands_factory.agents.process_guard import NAMESPACE_INIT
+
+LOGGER = logging.getLogger(__name__)
+_OBSERVATION_INTERVAL_SECONDS = 30.0
 
 _ENVIRONMENT_ALLOWLIST = {
     "HOME",
@@ -178,10 +183,17 @@ class _CaptureBuffer:
         self.stdout: list[bytes] = []
         self.stderr: list[bytes] = []
         self.truncated = False
+        self.observed_stdout = self.observed_stderr = 0
+        self.last_output_at: float | None = None
         self.lock = threading.Lock()
 
     def append(self, stream: str, data: bytes) -> None:
         with self.lock:
+            if stream == "stdout":
+                self.observed_stdout += len(data)
+            else:
+                self.observed_stderr += len(data)
+            self.last_output_at = time.monotonic()
             remaining = self.limit - self.size
             if remaining <= 0:
                 self.truncated = True
@@ -192,6 +204,63 @@ class _CaptureBuffer:
             self.size += len(captured)
             if len(captured) != len(data):
                 self.truncated = True
+
+
+class _ProcessObserver:
+    """Content-free observations, never a progress/silence failure classifier."""
+
+    def __init__(
+        self, capture: _CaptureBuffer, pid: int, started: float, timeout_seconds: int
+    ) -> None:
+        self.capture, self.pid, self.started = capture, pid, started
+        self.timeout_seconds = timeout_seconds
+        self.next_observation = started + _OBSERVATION_INTERVAL_SECONDS
+
+    def emit(self, *, final: bool = False) -> None:
+        now = time.monotonic()
+        if not final and now < self.next_observation:
+            return
+        self.next_observation = now + _OBSERVATION_INTERVAL_SECONDS
+        with self.capture.lock:
+            stdout, stderr = self.capture.observed_stdout, self.capture.observed_stderr
+            age = (
+                None
+                if self.capture.last_output_at is None
+                else round(max(0, now - self.capture.last_output_at), 3)
+            )
+            captured, truncated = self.capture.size, self.capture.truncated
+        # An optional log sink must not change result/lease/guardian semantics.
+        with suppress(Exception):
+            LOGGER.info(
+                "factory.provider.process_observation pid=%d final=%s elapsed_seconds=%.3f "
+                "timeout_seconds=%d max_output_bytes=%d stdout_bytes=%d stderr_bytes=%d "
+                "last_output_age_seconds=%s captured_bytes=%d output_truncated=%s",
+                self.pid,
+                final,
+                max(0, now - self.started),
+                self.timeout_seconds,
+                self.capture.limit,
+                stdout,
+                stderr,
+                age,
+                captured,
+                truncated,
+            )
+
+    def wait(self, process: subprocess.Popen[bytes]) -> None:
+        # Preserve the existing unguarded timeout, measured after on_start.
+        deadline = time.monotonic() + self.timeout_seconds
+        while True:
+            self.emit()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(process.args, self.timeout_seconds)
+            try:
+                process.wait(timeout=min(remaining, _OBSERVATION_INTERVAL_SECONDS))
+                return
+            except subprocess.TimeoutExpired:
+                if time.monotonic() >= deadline:
+                    raise
 
 
 def provider_environment(
@@ -290,8 +359,13 @@ class AgentProcessRunner:
         if self.guard_timeout_seconds is not None:
             if lifetime_fd is None:
                 raise ValueError("guarded namespace requires a lifetime descriptor")
+            # The coordinator's venv/home may be intentionally hidden inside
+            # the namespace. The trusted init uses only the OS Python's stdlib.
+            namespace_python = shutil.which("python3", path=os.defpath)
+            if namespace_python is None:
+                raise ValueError("Guarded namespace needs the system Python runtime")
             command = [
-                str(Path(sys.executable).resolve()),
+                str(Path(namespace_python).resolve()),
                 "-I",
                 "-c",
                 NAMESPACE_INIT,
@@ -405,7 +479,9 @@ class AgentProcessRunner:
     @staticmethod
     def _read_stream(stream: BinaryIO, name: str, capture: _CaptureBuffer) -> None:
         try:
-            while data := stream.read(64 * 1024):
+            # Buffered read(size) can withhold short flushed messages until EOF.
+            # Each pipe has exactly one reader; read available bytes directly.
+            while data := os.read(stream.fileno(), 64 * 1024):
                 capture.append(name, data)
         finally:
             stream.close()
@@ -501,6 +577,7 @@ class AgentProcessRunner:
                 for descriptor in lifetime:
                     os.close(descriptor)
         capture = _CaptureBuffer(max_output_bytes)
+        observer = _ProcessObserver(capture, process.pid, started, timeout_seconds)
         if process.stdout is None or process.stderr is None:
             if channel is not None:
                 channel.close()
@@ -538,10 +615,10 @@ class AgentProcessRunner:
                 self.on_start(process.pid)
             try:
                 if channel is None:
-                    process.wait(timeout=timeout_seconds)
+                    observer.wait(process)
                 else:
                     timed_out, supervision_failed = self._wait_guarded(
-                        process, channel, started + timeout_seconds
+                        process, channel, started + timeout_seconds, observer
                     )
             except subprocess.TimeoutExpired:
                 timed_out = True
@@ -557,6 +634,7 @@ class AgentProcessRunner:
                     process.stdin.close()
             for reader in readers:
                 reader.join(timeout=5)
+            observer.emit(final=True)
             with self._processes_lock:
                 cancelled = supervision_failed or process in self._cancelled_processes
                 self._cancelled_processes.discard(process)
@@ -583,6 +661,7 @@ class AgentProcessRunner:
         process: subprocess.Popen[bytes],
         channel: socket.socket,
         deadline: float,
+        observer: _ProcessObserver,
     ) -> tuple[bool, bool]:
         assert self.guard_timeout_seconds is not None
         last_ack = time.monotonic()
@@ -590,6 +669,7 @@ class AgentProcessRunner:
         completed = False
         failed = False
         while True:
+            observer.emit()
             now = time.monotonic()
             # Drain the trusted control channel even after process exit. Neither
             # the model nor its children inherit this descriptor.

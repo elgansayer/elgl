@@ -44,12 +44,18 @@ describe('chat message search production contract', () => {
 
   it('uses bounded trigram-indexable substring matching and newest-first results', () => {
     expect(chatService).toMatch(
-      /\.ilike\('text_content', `%\$\{trimmedTerm\}%`\)/,
+      /const escapedTerm = escapeLikePattern\(trimmedTerm\)/,
     );
+    expect(chatService).toMatch(
+      /\.ilike\('text_content', `%\$\{escapedTerm\}%`\)/,
+    );
+    expect(chatService).toMatch(/\.eq\('is_encrypted', false\)/);
+    expect(chatService).toMatch(/\.eq\('is_encrypted', true\)/);
     expect(chatService).toMatch(
       /\.order\('created_at', \{ ascending: false \}\)/,
     );
     expect(chatService).toMatch(/\.limit\(limit\)/);
+    expect(chatService).toMatch(/Math\.min\(limit \* 4, 200\)/);
     expect(searchDto).toMatch(/@MinLength\(2\)/);
     expect(searchDto).toMatch(/@MaxLength\(200\)/);
     expect(searchDto).toMatch(/@Max\(100\)/);
@@ -58,17 +64,23 @@ describe('chat message search production contract', () => {
   it('preserves privacy filters for blocked and deleted messages', () => {
     expect(chatService).toMatch(/getBlockedAndBlockerIds\(userId\)/);
     expect(chatService).toMatch(
-      /query = query\.not\('sender_id', 'in', blockedIds\)/,
+      /query = query\.not\(\s*'sender_id',\s*'in',\s*`\(\$\{blockedIds\.join\(','\)\}\)`\s*\)/,
     );
-    expect(chatService).toMatch(/if \(msg\.is_deleted\) return false/);
+    expect(chatService).toMatch(/\.eq\('is_deleted_for_everyone', false\)/);
     expect(chatService).toMatch(
-      /msg\.deleted_for_user_ids\.includes\(userId\)/,
+      /\.not\('deleted_for_user_ids', 'cs', `\{\$\{userId\}\}`\)/,
+    );
+    expect(chatService).toMatch(
+      /async searchAllMessages\([\s\S]*?const projection = `\s*id,\s*room_id,\s*sender_id,\s*message_type,\s*text_content,\s*is_encrypted,\s*encrypted_payload,/,
     );
   });
 
   it('keeps the public search endpoint authenticated and rate limited', () => {
     expect(searchController).toMatch(/@Controller\('chat\/search'\)/);
     expect(searchController).toMatch(/@UseGuards\(SupabaseAuthGuard\)/);
+    expect(searchController).toMatch(/@Post\(\)/);
+    expect(searchController).toMatch(/@Body\(\) query: SearchMessagesQueryDto/);
+    expect(searchController).toMatch(/@Header\('Cache-Control', 'no-store'\)/);
     expect(searchController).toMatch(
       /@Throttle\(\{ default: \{ limit: 30, ttl: 60000 \} \}\)/,
     );

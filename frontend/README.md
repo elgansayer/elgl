@@ -50,13 +50,17 @@ ng test
 
 ## Running end-to-end tests
 
-For end-to-end (e2e) testing, run:
+End-to-end tests use [Cypress](https://docs.cypress.io/), a development dependency of this package. It is configured in `cypress.config.ts` (base URL `http://localhost:4200`, specs in `cypress/e2e/**/*.cy.ts`). `ng e2e` is not available because no Angular e2e builder is registered.
 
 ```bash
-ng e2e
+npm start                      # in one terminal: serve the app on port 4200
+npm run cypress:open           # interactive runner
+npm run e2e                    # headless run of every spec against the running app
+npm run e2e:ci                 # start the app, wait for port 4200, then run the specs
+npm run check:cypress-types    # type-check the Cypress support files and specs
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+See [`docs/CYPRESS_FRONTEND.md`](../docs/CYPRESS_FRONTEND.md) for the installation contract, CI behaviour, and test ownership.
 
 ## Additional Resources
 

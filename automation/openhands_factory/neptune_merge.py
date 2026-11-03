@@ -26,17 +26,19 @@ class NeptuneGate:
 
 
 def required_neptune_checks(comparison: object) -> frozenset[str]:
-    """Derive applicability from the exact current-base comparison, not issue text.
+    """Validate exact current-base evidence and require both literal aggregates.
+
+    Neptune's preparation workflow always reports an aggregate, proving which
+    real builds apply. Native auto-merge and this merger must both wait for it.
 
     GitHub caps comparison file listings at 300. Reject that boundary rather than
     risk classifying a truncated list as ordinary metadata. Jobs are bounded well
-    below it. A rename must retain its old path for recipe-change classification.
+    below it. Renames still require their old path as complete comparison evidence.
     """
 
     files = comparison.get("files") if isinstance(comparison, dict) else None
     if not isinstance(files, list) or not 0 < len(files) < 300:
         raise FactoryError("Neptune changed-file evidence is missing, empty or possibly truncated")
-    paths: list[str] = []
     for entry in files:
         if not isinstance(entry, dict):
             raise FactoryError("Neptune changed-file evidence is malformed")
@@ -57,21 +59,7 @@ def required_neptune_checks(comparison: object) -> frozenset[str]:
                 or any(ord(char) < 32 or ord(char) == 127 for char in value)
             ):
                 raise FactoryError("Neptune changed-file path is not portable")
-            paths.append(value)
-    required = {NEPTUNE_GATE}
-    if any(
-        path.startswith("tools/factory/provision")
-        or path
-        in {
-            "tools/factory/tests/test_provision.py",
-            "tools/godot/install.py",
-            "tools/godot/toolchain.json",
-            ".github/workflows/tool-provisioning.yml",
-        }
-        for path in paths
-    ):
-        required.add(PROVISIONING_GATE)
-    return frozenset(required)
+    return frozenset({NEPTUNE_GATE, PROVISIONING_GATE})
 
 
 def neptune_gate(
@@ -137,7 +125,10 @@ def validate_neptune_protection(settings: object, protection: object) -> None:
     required = protection.get("required_status_checks")
     if not isinstance(required, dict):
         raise FactoryError("Neptune requires app-pinned current-base branch protection")
-    expected = [{"context": NEPTUNE_GATE, "app_id": GITHUB_ACTIONS_APP}]
+    expected = [
+        {"context": name, "app_id": GITHUB_ACTIONS_APP}
+        for name in (NEPTUNE_GATE, PROVISIONING_GATE)
+    ]
     reviews = protection.get("required_pull_request_reviews")
     admins = protection.get("enforce_admins")
     force_pushes = protection.get("allow_force_pushes")
@@ -148,7 +139,7 @@ def validate_neptune_protection(settings: object, protection: object) -> None:
         or settings.get("delete_branch_on_merge") is not False
         or required.get("strict") is not True
         or required.get("checks") != expected
-        or required.get("contexts") != [NEPTUNE_GATE]
+        or required.get("contexts") != [NEPTUNE_GATE, PROVISIONING_GATE]
         or not isinstance(admins, dict)
         or admins.get("enabled") is not True
         or not isinstance(force_pushes, dict)

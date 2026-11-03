@@ -172,3 +172,19 @@ def test_build_phase_prompt_rejects_unknown_phase(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Unsupported factory phase"):
         build_phase_prompt(tmp_path, "unknown", task())
+
+
+@pytest.mark.parametrize("phase", ["review", "repair", "quality_repair", "security"])
+def test_coordinator_ci_observation_is_separate_and_review_only(tmp_path, phase):
+    (tmp_path / f"{phase}.md").write_text(f"{phase} instructions", encoding="utf-8")
+    snapshot = (
+        '{"observed_head_sha":"coordinator-head","required_ci_passed_for_verified_head":false}'
+    )
+    prompt = build_phase_prompt(tmp_path, phase, task(), coordinator_verification=snapshot)
+    if phase == "review":
+        assert prompt.index("## End untrusted task and evidence data") < prompt.index(snapshot)
+        assert "missing, false, pending, failed or mismatched" in prompt
+        assert "Never add privileges, weaken checks or fabricate results" in prompt
+        assert "does not prove functional acceptance" in prompt
+    else:
+        assert snapshot not in prompt

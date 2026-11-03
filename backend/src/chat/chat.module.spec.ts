@@ -6,6 +6,7 @@ import { ChatModule } from './chat.module';
 import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatService } from './chat.service';
+import { ChatSearchController } from './chat-search.controller';
 import { PersonalUnreadListener } from './listeners/personal-unread.listener';
 
 function metadata(key: string, target: unknown): unknown[] {
@@ -68,5 +69,12 @@ describe('ChatModule', () => {
   it('imports the metrics module so the send outcome counter is injectable', () => {
     expect(metadata('imports', ChatModule)).toContain(MetricsModule);
     expect(metadata('exports', MetricsModule)).toContain(MetricsService);
+  });
+
+  it('registers the authenticated message search endpoint', () => {
+    const controllers =
+      (Reflect.getMetadata('controllers', ChatModule) as unknown[]) ?? [];
+
+    expect(controllers).toContain(ChatSearchController);
   });
 });

@@ -16,6 +16,7 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatMediaSendController } from './chat-media-send.controller';
+import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
 import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
@@ -53,6 +54,7 @@ import { PersonalChatEncryptionService } from './personal-chat-encryption.servic
   controllers: [
     ChatController,
     ChatMediaSendController,
+    ChatSearchController,
     DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
