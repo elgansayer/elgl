@@ -8,6 +8,7 @@ import { FavouriteService } from '../../services/favourite.service';
 import { I18nService } from '../../services/i18n.service';
 import { NlpService } from '../../services/nlp.service';
 import { SafetyService } from '../../services/safety.service';
+import { toastsSignal } from '../../services/toast.service';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { ChatMessageComponent } from './chat-message.component';
@@ -15,8 +16,11 @@ import { ChatMessageComponent } from './chat-message.component';
 describe('ChatMessageComponent', () => {
   let fixture: ComponentFixture<ChatMessageComponent>;
   let currentUser: ReturnType<typeof vi.fn>;
+  let addFavourite: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    addFavourite = vi.fn().mockResolvedValue({ success: true });
+    toastsSignal.set([]);
     const blockedUserIds = signal<ReadonlySet<string>>(new Set());
     currentUser = vi.fn().mockReturnValue({ id: 'viewer-id' });
 
@@ -32,7 +36,7 @@ describe('ChatMessageComponent', () => {
         },
         {
           provide: FavouriteService,
-          useValue: { addFavourite: vi.fn().mockResolvedValue(undefined) },
+          useValue: { addFavourite },
         },
         {
           provide: SafetyService,
@@ -76,6 +80,39 @@ describe('ChatMessageComponent', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    toastsSignal.set([]);
+  });
+
+  describe('favouriting a message', () => {
+    const event = { messageId: 'message-id', content: 'A complex sentence', messageType: 'text' };
+
+    it('saves the message by id only and confirms with a translated success toast', async () => {
+      await fixture.componentInstance.onFavourite(event);
+
+      expect(addFavourite).toHaveBeenCalledWith({ message_id: 'message-id' });
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ type: 'success', message: 'chatRoom.bookmarkSuccess' }),
+      ]);
+    });
+
+    it('tells the user when the message could not be saved instead of failing silently', async () => {
+      addFavourite.mockRejectedValueOnce(new Error('offline'));
+
+      await expect(fixture.componentInstance.onFavourite(event)).resolves.toBeUndefined();
+
+      expect(toastsSignal()).toEqual([
+        expect.objectContaining({ type: 'error', message: 'chatRoom.bookmarkError' }),
+      ]);
+    });
+
+    it('is wired to the context menu favourite action', async () => {
+      const menu = fixture.debugElement.query(By.directive(LongPressContextMenuComponent));
+
+      menu.componentInstance.favourite.emit(event);
+      await fixture.whenStable();
+
+      expect(addFavourite).toHaveBeenCalledWith({ message_id: 'message-id' });
+    });
   });
 
   it('delegates simplification to the shared context menu without an inline action', () => {

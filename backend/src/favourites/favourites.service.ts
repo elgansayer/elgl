@@ -1,4 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { AddFavouriteDto } from '../chat/dto/add-favourite.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -24,10 +30,43 @@ export interface StarredMessagesPage {
   next_offset: number | null;
 }
 
+/**
+ * SQLSTATE values raised by `public.normalise_chat_favourite()` (see
+ * 20260823160100_harden_chat_favourites.sql) plus the historical
+ * UNIQUE(user_id, message_id) violation.
+ */
+const SQLSTATE_INVALID_PARAMETER = '22023';
+const SQLSTATE_NOT_NULL_VIOLATION = '23502';
+const SQLSTATE_STRING_TRUNCATION = '22001';
+const SQLSTATE_FOREIGN_KEY_VIOLATION = '23503';
+const SQLSTATE_INSUFFICIENT_PRIVILEGE = '42501';
+const SQLSTATE_UNIQUE_VIOLATION = '23505';
+
+/** Only five-character SQLSTATE or PostgREST codes are ever logged. */
+const SAFE_ERROR_CODE = /^[A-Za-z0-9]{5,8}$/;
+
+type FavouriteOperation =
+  'add' | 'remove' | 'list' | 'verify_visibility' | 'verify_membership';
+
 @Injectable()
 export class FavouritesService {
+  private readonly logger = new Logger(FavouritesService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
+  /**
+   * Bookmarks a message for the user. The call is idempotent: the database
+   * trigger turns a repeated insert into an update of the existing row, and a
+   * lost race on the historical unique constraint is treated as success.
+   *
+   * Authorization is enforced by the trigger (room membership), so the failure
+   * mapping below is part of the permission contract:
+   * - a message the user cannot see is reported as not found, whether it does
+   *   not exist or lives in a room they are not a member of, so the endpoint
+   *   cannot be used to probe for message identifiers;
+   * - malformed input is a 400;
+   * - anything else is an opaque 500.
+   */
   async addFavourite(
     userId: string,
     dto: AddFavouriteDto,
@@ -44,12 +83,38 @@ export class FavouritesService {
       notes: dto.note_text ?? null,
     });
 
-    if (error) {
-      throw new Error('Failed to add favourite');
+    if (!error) {
+      return { success: true };
     }
-    return { success: true };
+
+    const code = this.safeErrorCode(error);
+    switch (code) {
+      case SQLSTATE_UNIQUE_VIOLATION:
+        // A concurrent retry won the race; the bookmark already exists.
+        return { success: true };
+      case SQLSTATE_FOREIGN_KEY_VIOLATION:
+      case SQLSTATE_INSUFFICIENT_PRIVILEGE:
+        this.logRejection('add', code, userId, dto.message_id);
+        throw new NotFoundException('Message not found');
+      case SQLSTATE_INVALID_PARAMETER:
+      case SQLSTATE_NOT_NULL_VIOLATION:
+        this.logRejection('add', code, userId, dto.message_id);
+        throw new BadRequestException('Invalid message identifier');
+      case SQLSTATE_STRING_TRUNCATION:
+        this.logRejection('add', code, userId, dto.message_id);
+        throw new BadRequestException(
+          'Favourite note must not exceed 500 characters',
+        );
+      default:
+        this.logProviderFailure('add', code, userId);
+        throw new InternalServerErrorException('Failed to add favourite');
+    }
   }
 
+  /**
+   * Removes one of the user's own bookmarks. Deleting a bookmark that is
+   * already gone succeeds, so a retried request is safe.
+   */
   async removeFavourite(
     userId: string,
     favouriteId: string,
@@ -61,7 +126,10 @@ export class FavouritesService {
       .eq('id', favouriteId)
       .eq('user_id', userId);
 
-    if (error) throw new Error('Failed to remove favourite');
+    if (error) {
+      this.logProviderFailure('remove', this.safeErrorCode(error), userId);
+      throw new InternalServerErrorException('Failed to remove favourite');
+    }
     return { success: true };
   }
 
@@ -94,6 +162,7 @@ export class FavouritesService {
       .range(offset, offset + limit);
 
     if (error) {
+      this.logProviderFailure('list', this.safeErrorCode(error), userId);
       throw new Error('Failed to load starred messages');
     }
 
@@ -118,6 +187,11 @@ export class FavouritesService {
       .in('id', messageIds);
 
     if (messageError) {
+      this.logProviderFailure(
+        'verify_visibility',
+        this.safeErrorCode(messageError),
+        userId,
+      );
       throw new Error('Failed to verify starred message visibility');
     }
 
@@ -139,6 +213,11 @@ export class FavouritesService {
       .in('room_id', roomIds);
 
     if (membershipError) {
+      this.logProviderFailure(
+        'verify_membership',
+        this.safeErrorCode(membershipError),
+        userId,
+      );
       throw new Error('Failed to verify starred message membership');
     }
 
@@ -165,5 +244,45 @@ export class FavouritesService {
       has_more: hasMore,
       next_offset: hasMore ? offset + limit : null,
     };
+  }
+
+  /**
+   * Extracts a loggable error code. Provider error messages, details and hints
+   * can echo row values, so they are never read for logging.
+   */
+  private safeErrorCode(error: { code?: unknown }): string {
+    return typeof error.code === 'string' && SAFE_ERROR_CODE.test(error.code)
+      ? error.code
+      : 'unknown';
+  }
+
+  /** A request the caller can correct or that is denied by policy. */
+  private logRejection(
+    operation: FavouriteOperation,
+    code: string,
+    userId: string,
+    messageId: string,
+  ): void {
+    this.logger.warn({
+      event: 'favourites.request_rejected',
+      operation,
+      code,
+      userId,
+      messageId,
+    });
+  }
+
+  /** A provider failure; message text, notes and media URLs are never logged. */
+  private logProviderFailure(
+    operation: FavouriteOperation,
+    code: string,
+    userId: string,
+  ): void {
+    this.logger.error({
+      event: 'favourites.provider_failure',
+      operation,
+      code,
+      userId,
+    });
   }
 }

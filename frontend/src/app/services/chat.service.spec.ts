@@ -732,7 +732,7 @@ describe('ChatService', () => {
     });
   });
 
-  describe('favourites and reporting (fetch based)', () => {
+  describe('reporting (fetch based)', () => {
     let mockFetch: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
@@ -742,38 +742,6 @@ describe('ChatService', () => {
 
     afterEach(() => {
       vi.unstubAllGlobals();
-    });
-
-    it('should add a favourite', async () => {
-      mockFetch.mockResolvedValue({ ok: true });
-
-      await service.addFavourite('msg-1', 'a note');
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        `${baseUrl}/favourites`,
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ message_id: 'msg-1', note_text: 'a note' }),
-        }),
-      );
-    });
-
-    it('should throw when adding a favourite fails', async () => {
-      mockFetch.mockResolvedValue({ ok: false });
-
-      await expect(service.addFavourite('msg-1')).rejects.toThrow('Failed to add favourite');
-    });
-
-    it('should fetch favourites over HTTP', async () => {
-      const promise = service.getFavourites();
-
-      // Allow cache-check microtask to settle
-      await new Promise((r) => setTimeout(r, 0));
-
-      const req = httpMock.expectOne(`${baseUrl}/favourites`);
-      req.flush([]);
-
-      await expect(promise).resolves.toEqual([]);
     });
 
     it('should report a message', async () => {
