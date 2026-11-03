@@ -18,15 +18,12 @@ const dto = readFileSync(
 
 function sendMessageSource(): string {
   const start = service.indexOf('  async sendMessage(');
-  const publish = service.indexOf(
-    'await this.centrifugoService.publish(`chat:${dto.room_id}`',
-    start,
-  );
+  const end = service.indexOf('  async republishMessage(', start);
 
   expect(start).toBeGreaterThanOrEqual(0);
-  expect(publish).toBeGreaterThan(start);
+  expect(end).toBeGreaterThan(start);
 
-  return service.slice(start, publish + 160);
+  return service.slice(start, end);
 }
 
 describe('POST /chat/messages pipeline contract', () => {
@@ -55,7 +52,7 @@ describe('POST /chat/messages pipeline contract', () => {
       'const savedMessage = insertResponse.data',
     );
     const publishIndex = source.indexOf(
-      'await this.centrifugoService.publish(`chat:${dto.room_id}`',
+      'const published = await this.centrifugoService.publish(',
     );
 
     expect(insertIndex).toBeGreaterThanOrEqual(0);
@@ -67,7 +64,7 @@ describe('POST /chat/messages pipeline contract', () => {
     expect(savedIndex).toBeGreaterThan(insertIndex);
     expect(publishIndex).toBeGreaterThan(savedIndex);
     expect(source).toMatch(
-      /centrifugoService\.publish\(`chat:\$\{dto\.room_id\}`,[\s\S]*?message:\s*messageForPublish/,
+      /centrifugoService\.publish\(\s*`chat:\$\{dto\.room_id\}`,[\s\S]*?message:\s*messageForPublish/,
     );
   });
 
@@ -81,7 +78,7 @@ describe('POST /chat/messages pipeline contract', () => {
       failureIndex,
     );
     const publishIndex = source.indexOf(
-      'await this.centrifugoService.publish(`chat:${dto.room_id}`',
+      'const published = await this.centrifugoService.publish(',
     );
 
     expect(failureIndex).toBeGreaterThanOrEqual(0);
