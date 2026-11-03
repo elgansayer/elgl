@@ -15,7 +15,7 @@ def neptune_environment(tmp_path: Path) -> dict[str, str]:
     repository.mkdir(parents=True)
     prompts = tmp_path / "control" / "automation" / "neptune-prompts"
     prompts.mkdir(parents=True)
-    for source in (Path(__file__).parents[1] / "neptune-prompts").glob("*.md"):
+    for source in (Path(__file__).parent / "neptune-prompts").glob("*.md"):
         (prompts / source.name).write_text(source.read_text(), encoding="utf-8")
     agents = tmp_path / "agents.json"
     agents.write_text(

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from openhands_factory.agents.base import AgentPhase, AgentRequest
@@ -23,7 +24,18 @@ class FakeProcessRunner:
     ) -> ProcessResult:
         del cwd, env, stdin_text, timeout_seconds, max_output_bytes, home_mounts
         self.commands.append(tuple(command))
-        return ProcessResult(tuple(command), 0, "ok", "", False, False, 0.1)
+        return ProcessResult(
+            tuple(command),
+            0,
+            "\n".join(
+                json.dumps(event)
+                for event in ({"type": "turn.started"}, {"type": "turn.completed", "usage": {}})
+            ),
+            "",
+            False,
+            False,
+            0.1,
+        )
 
 
 def _reasoning_effort_for(phase: AgentPhase) -> tuple[str, tuple[str, ...]]:

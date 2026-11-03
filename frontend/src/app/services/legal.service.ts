@@ -36,8 +36,15 @@ export class LegalService {
     return this.fetchDocument('privacy');
   }
 
-  private async fetchDocument(kind: 'terms' | 'privacy'): Promise<LegalDocument> {
-    const payload = await firstValueFrom(this.http.get<unknown>(`${this.baseUrl}/${kind}`));
+  async fetchDocument(kind: 'terms' | 'privacy' | string): Promise<LegalDocument> {
+    const normalisedKind = typeof kind === 'string' ? kind.trim().toLowerCase() : '';
+    if (!normalisedKind || normalisedKind.length > 64) {
+      throw new Error('Invalid legal document type');
+    }
+
+    const payload = await firstValueFrom(
+      this.http.get<unknown>(`${this.baseUrl}/${encodeURIComponent(normalisedKind)}`),
+    );
     return this.parseDocument(payload);
   }
 

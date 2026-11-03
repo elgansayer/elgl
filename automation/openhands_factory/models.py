@@ -147,6 +147,8 @@ class Job:
     producer_identity: str | None = None
     initial_base_sha: str | None = None
     latest_verified_sha: str | None = None
+    verification_candidate_sha: str | None = None
+    neptune_contract_sha: str | None = None
     predecessor_pull_request: int | None = None
     successor_pull_request: int | None = None
     changed_path_fingerprint: str | None = None
