@@ -14,6 +14,7 @@ import {
 import { CentrifugeService } from './centrifuge.service';
 import { EconomyStore } from './economy.store';
 import { I18nService } from './i18n.service';
+import { QuickPollService } from './quick-poll.service';
 
 describe('parseHostTipPayload', () => {
   it('accepts the typed host-tip event contract', () => {
@@ -138,6 +139,10 @@ describe('AudioRoomsStore host tips', () => {
             stopMonitoring: vi.fn(),
             refreshHealth: vi.fn(),
           },
+        },
+        {
+          provide: QuickPollService,
+          useValue: { getActivePoll: vi.fn().mockResolvedValue(null) },
         },
       ],
     });

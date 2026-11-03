@@ -156,6 +156,8 @@ class JobStore:
             producer_identity=item.get("producer_identity"),
             initial_base_sha=item.get("initial_base_sha"),
             latest_verified_sha=item.get("latest_verified_sha"),
+            verification_candidate_sha=item.get("verification_candidate_sha"),
+            neptune_contract_sha=item.get("neptune_contract_sha"),
             predecessor_pull_request=item.get("predecessor_pull_request"),
             successor_pull_request=item.get("successor_pull_request"),
             changed_path_fingerprint=item.get("changed_path_fingerprint"),

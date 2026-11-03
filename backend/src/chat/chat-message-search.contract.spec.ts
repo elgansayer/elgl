@@ -42,6 +42,18 @@ describe('chat message search production contract', () => {
     expect(chatService).toMatch(/\.in\('room_id', roomIds\)/);
   });
 
+  it('keeps hidden chats out of global and explicit room searches', () => {
+    expect(chatService).toMatch(
+      /async searchAllMessages\([\s\S]*?from\('chat_room_members'\)\s*\.select\('room_id, is_locked'\)\s*\.eq\('user_id', userId\)/,
+    );
+    expect(chatService).toMatch(
+      /\.filter\(\s*\(r: SearchMembershipRow\) => r\.is_locked !== true,?\s*\)/,
+    );
+    expect(chatService).toMatch(
+      /if \(roomIds\.length === 0\) return \[\];[\s\S]*?const trimmedTerm = term\.trim\(\)/,
+    );
+  });
+
   it('uses bounded trigram-indexable substring matching and newest-first results', () => {
     expect(chatService).toMatch(
       /const escapedTerm = escapeLikePattern\(trimmedTerm\)/,

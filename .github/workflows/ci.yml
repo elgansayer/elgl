@@ -520,8 +520,20 @@ jobs:
       - run: uv run --frozen pytest
         working-directory: automation
       - name: Require actual provider and preparation namespace containment
-        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py runtime_checks/test_supervised_routing_namespace.py runtime_checks/test_preparation_namespace.py
+        env:
+          NEPTUNE_ACCEPTED_SOURCE: ''
+          NEPTUNE_INTAKE_EVIDENCE: ${{ runner.temp }}/neptune-intake-evidence
+        run: uv run --frozen pytest runtime_checks/test_process_guard_namespace.py runtime_checks/test_supervised_routing_namespace.py runtime_checks/test_preparation_namespace.py runtime_checks/test_neptune_intake_namespace.py
         working-directory: automation
+
+      - name: Preserve accepted-intake fixture evidence including divergence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: neptune-intake-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/neptune-intake-evidence
+          if-no-files-found: error
+          retention-days: 14
 
   required-gate:
     name: CI / required

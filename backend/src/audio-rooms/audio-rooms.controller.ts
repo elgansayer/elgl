@@ -45,6 +45,7 @@ import {
 } from './interfaces/audio-room.interface';
 import { CallLogRecord } from './interfaces/call-log.interface';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
+import { QuickPollResults } from './interfaces/quick-poll.interface';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { GetCallLogsQueryDto } from './dto/get-call-logs-query.dto';
 import { CreateLanguagePartyDto } from './dto/create-language-party.dto';
@@ -70,7 +71,6 @@ import {
   CACHE_NO_STORE,
   CACHE_TAG_AUDIO_ROOMS,
   CACHE_TAG_AUDIO_ROOM_STAGE,
-  CACHE_TAG_AUDIO_ROOM_POLLS,
   CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
   CACHE_TAG_AUDIO_ROOM_NOTES,
 } from '../common/cache.interceptor';
@@ -876,8 +876,8 @@ export class AudioRoomsController {
     @CurrentUser() user: AuthUser | null,
     @Param('roomId') roomId: string,
     @Body() dto: CreatePollDto,
-  ): Promise<{ poll_id: string } | null> {
-    if (!user) return null;
+  ): Promise<{ poll_id: string }> {
+    if (!user) throw new UnauthorizedException();
     return await this.audioRoomsService.createPoll(user.id, roomId, dto);
   }
 
@@ -897,16 +897,31 @@ export class AudioRoomsController {
     @CurrentUser() user: AuthUser | null,
     @Body() dto: SubmitVoteDto,
   ): Promise<void> {
-    if (!user) return;
+    if (!user) throw new UnauthorizedException();
     return await this.audioRoomsService.submitVote(user.id, dto);
   }
 
+  @Get(':roomId/polls/active')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Get the current active poll',
+    description:
+      'Returns the newest active poll and aggregate results for room recovery.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Active poll, or null when none exists.',
+  })
+  async getActivePoll(
+    @CurrentUser() user: AuthUser | null,
+    @Param('roomId') roomId: string,
+  ): Promise<QuickPollResults | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.audioRoomsService.getActivePoll(user.id, roomId);
+  }
+
   @Get(':roomId/polls/:pollId')
-  @UseInterceptors(
-    new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [
-      CACHE_TAG_AUDIO_ROOM_POLLS,
-    ]),
-  )
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Get poll results',
     description:
@@ -943,15 +958,12 @@ export class AudioRoomsController {
     },
   })
   async getPollResults(
-    @Param('roomId') _roomId: string,
+    @CurrentUser() user: AuthUser | null,
+    @Param('roomId') roomId: string,
     @Param('pollId') pollId: string,
-  ): Promise<{
-    question: string;
-    options: string[];
-    votes: number[];
-    totalVotes: number;
-  }> {
-    return this.audioRoomsService.getPollResults(_roomId, pollId);
+  ): Promise<QuickPollResults> {
+    if (!user) throw new UnauthorizedException();
+    return this.audioRoomsService.getPollResults(user.id, roomId, pollId);
   }
 
   @Get('soundboard/list')

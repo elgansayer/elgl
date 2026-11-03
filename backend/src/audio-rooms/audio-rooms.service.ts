@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   OnModuleInit,
@@ -44,6 +45,10 @@ import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import { TipHostDto } from './dto/tip-host.dto';
 import { RoomPreviewDto } from './dto/room-preview.dto';
 import {
+  QuickPollAggregate,
+  QuickPollResults,
+} from './interfaces/quick-poll.interface';
+import {
   AudioRoomRecord,
   CaptionRecord,
   RoomTokenResponse,
@@ -76,6 +81,14 @@ interface UserProfileRow {
   id: string;
   display_name?: string;
   avatar_url?: string | null;
+}
+
+interface PollRoomAccessRow {
+  id: string;
+  host_id: string;
+  is_active: boolean;
+  is_private?: boolean | null;
+  invited_user_ids?: string[] | null;
 }
 
 export interface SoundboardSound {
@@ -1613,25 +1626,71 @@ export class AudioRoomsService implements OnModuleInit {
     dto: CreatePollDto,
   ): Promise<{ poll_id: string }> {
     const supabase = this.supabaseService.getClient();
+    const { data: room, error: roomError } = await supabase
+      .from('audio_rooms')
+      .select('id, host_id, is_active')
+      .eq('id', roomId)
+      .single();
+
+    if (roomError || !room) {
+      throw new NotFoundException('Audio room not found');
+    }
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the room host may create a poll');
+    }
+    if (!room.is_active) {
+      throw new BadRequestException(
+        'Polls can only be created in an active room',
+      );
+    }
+
+    const question = dto.question.trim();
+    const options = dto.options.map((option) => option.trim());
+    const uniqueOptions = new Set(
+      options.map((option) => option.toLocaleLowerCase()),
+    );
+    if (
+      !question ||
+      question.length > 300 ||
+      options.length < 2 ||
+      options.length > 6 ||
+      options.some((option) => !option || option.length > 100) ||
+      uniqueOptions.size !== options.length
+    ) {
+      throw new BadRequestException('Invalid quick poll');
+    }
     const { data, error } = await supabase
       .from('quick_polls')
       .insert({
         room_id: roomId,
         host_id: hostId,
-        question: dto.question,
-        options: dto.options,
+        question,
+        options,
       })
       .select('id')
       .single();
     if (error || !data) {
-      throw new Error(`Failed to create poll: ${error?.message ?? 'Unknown'}`);
+      this.logger.error({
+        event: 'quick_poll_creation_failed',
+        roomId,
+      });
+      throw new InternalServerErrorException('Quick poll could not be created');
     }
-    void this.centrifugoService.publish(`room_${roomId}`, {
+
+    const delivered = await this.centrifugoService.publish(`room_${roomId}`, {
       type: 'poll_opened',
       poll_id: data.id,
-      question: dto.question,
-      options: dto.options,
+      question,
+      options,
     });
+    if (!delivered) {
+      this.logger.warn({
+        event: 'quick_poll_realtime_delivery_failed',
+        roomId,
+        pollId: data.id,
+        mutation: 'create',
+      });
+    }
     return { poll_id: data.id };
   }
 
@@ -1643,13 +1702,25 @@ export class AudioRoomsService implements OnModuleInit {
       .eq('id', dto.pollId)
       .single();
     if (pollError || !poll) {
-      throw new Error('Poll not found');
+      throw new NotFoundException('Poll not found');
     }
     if (!poll.is_active) {
-      throw new Error('Poll is no longer active');
+      throw new BadRequestException('Poll is no longer active');
     }
     if (dto.optionIndex < 0 || dto.optionIndex >= poll.options.length) {
-      throw new Error('Invalid option index');
+      throw new BadRequestException('Invalid option index');
+    }
+    const { data: room, error: roomError } = await supabase
+      .from('audio_rooms')
+      .select('id, host_id, is_active, is_private, invited_user_ids')
+      .eq('id', poll.room_id)
+      .single();
+    if (roomError || !room) {
+      throw new NotFoundException('Audio room not found');
+    }
+    this.assertPollRoomAccess(room, userId);
+    if (!room.is_active) {
+      throw new BadRequestException('Poll is no longer active');
     }
     const { error: insertError } = await supabase.from('poll_votes').insert({
       poll_id: dto.pollId,
@@ -1657,42 +1728,179 @@ export class AudioRoomsService implements OnModuleInit {
       option_index: dto.optionIndex,
     });
     if (insertError) {
-      throw new Error('You have already voted on this poll');
+      if (insertError.code === '23505') {
+        const { data: existingVote, error: existingVoteError } = await supabase
+          .from('poll_votes')
+          .select('option_index')
+          .eq('poll_id', dto.pollId)
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (
+          !existingVoteError &&
+          existingVote?.option_index === dto.optionIndex
+        ) {
+          return;
+        }
+        throw new ConflictException('You have already voted on this poll');
+      }
+      this.logger.error({
+        event: 'quick_poll_vote_persistence_failed',
+        pollId: dto.pollId,
+        roomId: poll.room_id,
+      });
+      throw new InternalServerErrorException(
+        'Quick poll vote could not be saved',
+      );
     }
-    void this.centrifugoService.publish(`room_${poll.room_id}`, {
-      type: 'vote_cast',
-      poll_id: dto.pollId,
-      option_index: dto.optionIndex,
-    });
+
+    const results = await this.getPollAggregate(poll.room_id, dto.pollId);
+    const delivered = await this.centrifugoService.publish(
+      `room_${poll.room_id}`,
+      {
+        type: 'poll_updated',
+        ...results,
+      },
+    );
+    if (!delivered) {
+      this.logger.warn({
+        event: 'quick_poll_realtime_delivery_failed',
+        pollId: dto.pollId,
+        roomId: poll.room_id,
+        mutation: 'vote',
+      });
+    }
   }
 
   async getPollResults(
+    userId: string,
     roomId: string,
     pollId: string,
-  ): Promise<{
-    question: string;
-    options: string[];
-    votes: number[];
-    totalVotes: number;
-  }> {
+  ): Promise<QuickPollResults> {
+    await this.getPollRoomForUser(userId, roomId);
+    return this.getPollResultsForAuthorisedUser(userId, roomId, pollId);
+  }
+
+  async getActivePoll(
+    userId: string,
+    roomId: string,
+  ): Promise<QuickPollResults | null> {
+    const room = await this.getPollRoomForUser(userId, roomId);
+    if (!room.is_active) return null;
+
+    const supabase = this.supabaseService.getClient();
+    const { data: poll, error } = await supabase
+      .from('quick_polls')
+      .select('id')
+      .eq('room_id', roomId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error({
+        event: 'quick_poll_active_lookup_failed',
+        roomId,
+      });
+      throw new InternalServerErrorException('Quick poll could not be loaded');
+    }
+    if (!poll) return null;
+
+    return this.getPollResultsForAuthorisedUser(userId, roomId, poll.id);
+  }
+
+  private async getPollRoomForUser(
+    userId: string,
+    roomId: string,
+  ): Promise<PollRoomAccessRow> {
+    const supabase = this.supabaseService.getClient();
+    const { data: room, error } = await supabase
+      .from('audio_rooms')
+      .select('id, host_id, is_active, is_private, invited_user_ids')
+      .eq('id', roomId)
+      .single();
+
+    if (error || !room) {
+      throw new NotFoundException('Audio room not found');
+    }
+    this.assertPollRoomAccess(room, userId);
+    return room;
+  }
+
+  private assertPollRoomAccess(room: PollRoomAccessRow, userId: string): void {
+    if (
+      room.is_private &&
+      room.host_id !== userId &&
+      !room.invited_user_ids?.includes(userId)
+    ) {
+      throw new ForbiddenException('You are not invited to this private room');
+    }
+  }
+
+  private async getPollResultsForAuthorisedUser(
+    userId: string,
+    roomId: string,
+    pollId: string,
+  ): Promise<QuickPollResults> {
+    const aggregate = await this.getPollAggregate(roomId, pollId);
+    const supabase = this.supabaseService.getClient();
+    const { data: vote, error: voteError } = await supabase
+      .from('poll_votes')
+      .select('option_index')
+      .eq('poll_id', pollId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (voteError) {
+      this.logger.error({
+        event: 'quick_poll_user_vote_lookup_failed',
+        pollId,
+        roomId,
+      });
+      throw new InternalServerErrorException(
+        'Quick poll results could not be loaded',
+      );
+    }
+
+    return {
+      ...aggregate,
+      userVote: vote?.option_index ?? null,
+    };
+  }
+
+  private async getPollAggregate(
+    roomId: string,
+    pollId: string,
+  ): Promise<QuickPollAggregate> {
     const supabase = this.supabaseService.getClient();
     const { data: poll, error: pollError } = await supabase
       .from('quick_polls')
-      .select('id, question, options')
+      .select('id, question, options, is_active')
       .eq('id', pollId)
+      .eq('room_id', roomId)
       .single();
     if (pollError || !poll) {
-      throw new Error('Poll not found');
+      throw new NotFoundException('Poll not found');
     }
-    const { data: voteRows } = await supabase
+    const { data: voteRows, error: votesError } = await supabase
       .from('poll_votes')
       .select('option_index')
       .eq('poll_id', pollId);
+    if (votesError) {
+      this.logger.error({
+        event: 'quick_poll_aggregate_lookup_failed',
+        pollId,
+        roomId,
+      });
+      throw new InternalServerErrorException(
+        'Quick poll results could not be loaded',
+      );
+    }
     const optionCount = poll.options.length;
-    const votes = Array(optionCount).fill(0) as number[];
+    const votes: number[] = Array.from({ length: optionCount }, () => 0);
     let totalVotes = 0;
     if (voteRows) {
-      for (const row of voteRows as Array<{ option_index: number }>) {
+      for (const row of voteRows) {
         if (row.option_index >= 0 && row.option_index < optionCount) {
           votes[row.option_index]++;
           totalVotes++;
@@ -1700,10 +1908,12 @@ export class AudioRoomsService implements OnModuleInit {
       }
     }
     return {
+      poll_id: poll.id,
       question: poll.question,
       options: poll.options,
       votes,
       totalVotes,
+      is_active: poll.is_active,
     };
   }
 

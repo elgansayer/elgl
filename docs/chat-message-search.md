@@ -1,13 +1,15 @@
 # Chat message search
 
-Issue: #1803
+Issues: #1803, #1837
 
 ## Product contract
 
 Chat search supports two scopes from the in-room search panel:
 
 - **This chat** searches only the currently open room.
-- **All chats** searches every room in which the authenticated learner is a current member.
+- **All chats** searches every visible room in which the authenticated learner is a current member.
+  Chats hidden by that learner remain excluded until the existing app-unlock flow clears the
+  per-member lock.
 
 Search begins after two non-whitespace characters and is debounced for 300 ms while typing. Visible results are newest first and capped at 100 per request (the first-party client requests 50). The type chips filter the returned bounded result set locally, so changing a type does not create another database scan. Changing search scope re-runs the active query immediately.
 
@@ -17,7 +19,12 @@ Selecting a result from the current room emits the message to `ChatRoomComponent
 
 `POST /chat/search` is registered by `ChatModule`, authenticated with `SupabaseAuthGuard` and throttled to 30 requests per minute. Its JSON body is validated by `SearchMessagesQueryDto`, which trims input, requires a 2-200 character term and bounds `limit` to 1-100. The private search term stays out of the URL and the response is marked `Cache-Control: no-store`.
 
-`ChatService.searchAllMessages` first reads `chat_room_members` for the authenticated user. An optional `roomId` is accepted only when it is in that membership set. The message query is then constrained with `room_id IN (...)` before text matching.
+`ChatService.searchAllMessages` first reads `chat_room_members` for the authenticated user and
+removes memberships whose private `is_locked` preference is true. An optional `roomId` is accepted
+only when it remains in that visible membership set, so supplying a hidden room identifier directly
+cannot bypass the app-unlock flow. The message query is then constrained with `room_id IN (...)`
+before text matching. If every joined chat is hidden, search returns an empty result without querying
+messages.
 
 Unencrypted message text uses PostgreSQL `ILIKE '%term%'`, with `%`, `_`, `*` and `\` escaped so caller input is always literal search text rather than a database wildcard pattern. Plaintext matches and encrypted candidates use independent bounded queries, so encrypted non-matches cannot consume the plaintext match limit. The encrypted candidate window is four times the requested visible limit, capped at 200. Candidates are returned with their E2EE envelope, decrypted in memory by the authorised client, filtered there with literal substring matching, merged newest first and capped to the requested visible limit. The plaintext query shape is backed by the existing `pg_trgm` GIN index:
 
@@ -30,7 +37,11 @@ ON public.chat_messages USING GIN (text_content gin_trgm_ops);
 
 ## Privacy and authorization
 
-Search never accepts a caller-supplied user identifier. The authenticated Supabase subject defines the room membership scope. The database query applies the existing bidirectional block list and both deletion predicates before ordering and limiting, so hidden rows cannot displace older visible matches.
+Search never accepts a caller-supplied user identifier. The authenticated Supabase subject defines
+the room membership scope. The authenticated learner's per-member hidden-chat preferences further
+restrict that scope. The database query applies the existing bidirectional block list and both
+deletion predicates before ordering and limiting, so hidden rows cannot displace older visible
+matches.
 
 The response is an allowlisted search projection containing only the identifiers, text or encrypted envelope, encryption marker, type, sender label, read state, timestamp and expiry needed by the search UI and disappearing-message interceptor. It never returns media URLs, view-once state or the internal list of learners who hid a message.
 
@@ -64,6 +75,7 @@ Automated coverage includes:
 
 - the `pg_trgm` extension and `chat_messages_text_content_trgm_idx` contract;
 - authenticated membership scoping, bounded query parameters, block/deletion privacy filtering and endpoint throttling;
+- exclusion of per-member hidden chats from global and explicit room searches;
 - independent plaintext and encrypted limits so encrypted non-matches cannot truncate plaintext matches;
 - Nest module registration and sanitised provider-failure propagation;
 - 300 ms client debounce and current-room scoping;

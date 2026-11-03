@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -110,6 +111,90 @@ describe('DataExportWorker', () => {
       expect(result.exported_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
+    /**
+     * Table-aware mock that records every eq() filter. The shared mock answers
+     * the same whatever column is filtered, so it cannot reject a column that
+     * does not exist; the tests assert the filters directly.
+     */
+    function mockTables(
+      options: {
+        rows?: Record<string, unknown[]>;
+        errors?: Record<string, { message: string }>;
+      } = {},
+    ): Array<{ table: string; column: string; value: unknown }> {
+      const filters: Array<{ table: string; column: string; value: unknown }> =
+        [];
+      (mockSupabaseClient.from as Mock).mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: { id: 'user-1' }, error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn((column: string, value: unknown) => {
+            filters.push({ table, column, value });
+            const error = options.errors?.[table] ?? null;
+            return Promise.resolve({
+              data: error ? null : (options.rows?.[table] ?? []),
+              error,
+            });
+          }),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+      return filters;
+    }
+
+    it('should read Moments, comments and likes through the user_id owner column', async () => {
+      const likes = [
+        { id: 'like-1', moment_id: 'moment-1', user_id: 'user-1' },
+      ];
+      const filters = mockTables({ rows: { moment_likes: likes } });
+
+      const result = await worker.exportUserData('user-1');
+
+      // moments, moment_comments and moment_likes are owned through user_id
+      // (005_moments.sql); there is no author_id column.
+      for (const table of ['moments', 'moment_comments', 'moment_likes']) {
+        expect(filters).toContainEqual({
+          table,
+          column: 'user_id',
+          value: 'user-1',
+        });
+      }
+      expect(filters.filter(({ column }) => column === 'author_id')).toEqual(
+        [],
+      );
+      expect(result.moment_likes).toEqual(likes);
+    });
+
+    it.each(['moments', 'moment_comments', 'moment_likes'])(
+      'should fail closed without exposing provider or user details when %s cannot be read',
+      async (table) => {
+        const errorLog = vi
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation(() => undefined);
+        mockTables({ errors: { [table]: { message: 'provider detail' } } });
+
+        await expect(worker.exportUserData('user-1')).rejects.toThrow(
+          'Data export failed',
+        );
+        expect(JSON.stringify(errorLog.mock.calls)).not.toContain(
+          'provider detail',
+        );
+        expect(JSON.stringify(errorLog.mock.calls)).not.toContain('user-1');
+        expect(errorLog).toHaveBeenCalledWith({
+          event: 'data_export_dataset_failed',
+          dataset: table,
+        });
+      },
+    );
+
     it('should handle profile fetch error and throw', async () => {
       const fromMock = mockSupabaseClient.from as Mock;
       fromMock.mockImplementation(() => ({
@@ -122,7 +207,7 @@ describe('DataExportWorker', () => {
       }));
 
       await expect(worker.exportUserData('user-1')).rejects.toThrow(
-        'Failed to fetch profile: Database error',
+        'Data export failed',
       );
     });
   });
