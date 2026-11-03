@@ -68,7 +68,7 @@ export class ChatViewComponent implements OnInit {
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
     if (blocked.size === 0) return this.messages;
-    return this.messages.filter((msg) => !blocked.has(msg.sender_id));
+    return this.messages.filter((msg) => (msg.sender_id ? !blocked.has(msg.sender_id) : true));
   });
 
   async ngOnInit(): Promise<void> {

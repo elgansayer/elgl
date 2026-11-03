@@ -22,7 +22,6 @@ import {
   LearnerKnowledgeService,
   LearnerKnowledgeProfile,
 } from '../learner-knowledge/learner-knowledge.service';
-import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -32,7 +31,6 @@ import {
   CorrectionPayload,
   ChatMessage,
   ChatRoomRecord,
-  FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import {
   ChatMessageEvent,
@@ -65,6 +63,11 @@ function escapeLikePattern(value: string): string {
 interface DeletedAwareMessage extends ChatMessage {
   is_deleted?: boolean;
   deleted_for_user_ids?: string[] | null;
+}
+
+interface SearchMembershipRow {
+  room_id: string;
+  is_locked?: boolean | null;
 }
 
 interface SearchMessageRow {
@@ -743,36 +746,13 @@ export class ChatService {
     return messages;
   }
 
-  async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-
-    // Get the message to favourite
-    const messageResponse = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('id', dto.message_id)
-      .single();
-
-    if (messageResponse.error || !messageResponse.data) {
-      throw new Error('Message not found');
-    }
-
-    const message = messageResponse.data;
-
-    // Store the favourite
-    const { error } = await supabase.from('favourites').insert({
-      user_id: userId,
-      item_type: 'message',
-      item_payload: message,
-      notes: dto.note_text || null,
-    });
-
-    if (error) {
-      throw new Error('Failed to add favourite');
-    }
-  }
-
-  /** Search messages across all rooms the user is a member of. */
+  /**
+   * Search messages across the rooms the user is a member of.
+   *
+   * Hidden (locked) chats are a private per-member preference whose content is revealed only
+   * after the client unlock flow clears the persisted lock, exactly as `getRooms` and the unread
+   * count treat them. They are never searchable while that lock remains set.
+   */
   async searchAllMessages(
     userId: string,
     term: string,
@@ -782,10 +762,10 @@ export class ChatService {
     const supabase = this.supabaseService.getClient();
     const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
-    // Get all room IDs the user is a member of
+    // Get all rooms the user is a member of, with the per-member hidden-chat flag
     const { data: memberRooms, error: memberErr } = await supabase
       .from('chat_room_members')
-      .select('room_id')
+      .select('room_id, is_locked')
       .eq('user_id', userId);
 
     if (memberErr) {
@@ -797,13 +777,18 @@ export class ChatService {
       return [];
     }
 
-    let roomIds = memberRooms.map((r: { room_id: string }) => r.room_id);
+    let roomIds = memberRooms
+      .filter((r: SearchMembershipRow) => r.is_locked !== true)
+      .map((r: SearchMembershipRow) => r.room_id);
 
     // If a specific roomId is provided, limit to that room only
     if (roomId) {
       if (!roomIds.includes(roomId)) return [];
       roomIds = [roomId];
     }
+
+    // Every joined room is hidden: a successful empty result, never a leak of hidden chats
+    if (roomIds.length === 0) return [];
 
     const trimmedTerm = term.trim();
     if (trimmedTerm.length < 2) return [];
@@ -891,32 +876,6 @@ export class ChatService {
         expires_at: msg.expires_at,
         sender: msg.sender,
       }));
-  }
-
-  async getFavourites(userId: string): Promise<FavouriteRecord[]> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (response.error || !response.data) {
-      return [];
-    }
-    return response.data;
-  }
-
-  async deleteFavourite(userId: string, favouriteId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('favourites')
-      .delete()
-      .eq('id', favouriteId)
-      .eq('user_id', userId);
-
-    if (error) throw new Error('Failed to delete favourite');
   }
 
   async getSuggestedReplies(

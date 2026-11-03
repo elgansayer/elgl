@@ -168,8 +168,9 @@ def test_cli_supervised_canary_is_explicit_and_dry_run_does_not_dispatch(
     run.assert_called_once_with(neptune_config, 570, supervised_session=True)
 
 
+@pytest.mark.parametrize("flagged", [False, True])
 def test_supervised_canary_refuses_missing_namespaces_before_startup(
-    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch
+    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch, flagged: bool
 ) -> None:
     from openhands_factory.agents import process
 
@@ -182,56 +183,30 @@ def test_supervised_canary_refuses_missing_namespaces_before_startup(
     constructor = Mock()
     monkeypatch.setattr(canary, "SingleIssueCanary", constructor)
     with pytest.raises(ConfigurationError, match="manual-session-containment"):
-        run_canary(neptune_config, 570, supervised_session=True)
+        run_canary(neptune_config, 570, supervised_session=flagged)
     constructor.assert_not_called()
 
 
 def test_canary_attaches_supervision_to_its_existing_router_and_store(
-    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch
+    neptune_config: FactoryConfig,
 ) -> None:
-    from openhands_factory.agents.router import AgentRouter
-    from openhands_factory.provider_capacity import ProviderCapacityStore
-
-    router = AgentRouter(
-        [], capacity_store=ProviderCapacityStore(neptune_config.provider_capacity_dir)
-    )
-
-    def initialise(self, config):
-        self.pipeline = SimpleNamespace(router=router)
-
-    monkeypatch.setattr(canary.MainCiGatedFactoryDaemon, "__init__", initialise)
     daemon = SingleIssueCanary(neptune_config, 570, supervised_session=True)
-    supervisor = daemon.pipeline.router.session_supervisor
+    router = daemon.pipeline.router
+    supervisor = router.session_supervisor
     assert supervisor is not None and supervisor.store is router.capacity_store
     assert supervisor.journal.directory == neptune_config.state_dir / "manual-session-identities"
     assert supervisor.journal.directory.stat().st_mode & 0o077 == 0
 
 
 def test_canary_reattaches_supervision_after_generation_rebuild(
-    neptune_config: FactoryConfig, monkeypatch: pytest.MonkeyPatch
+    neptune_config: FactoryConfig,
 ) -> None:
-    from openhands_factory.agents.router import AgentRouter
-    from openhands_factory.provider_capacity import ProviderCapacityStore
-
-    def router() -> AgentRouter:
-        return AgentRouter(
-            [], capacity_store=ProviderCapacityStore(neptune_config.provider_capacity_dir)
-        )
-
-    initial = router()
-    activated = router()
-
-    def initialise(self, config):
-        self.pipeline = SimpleNamespace(router=initial)
-
-    def activate(self):
-        self.pipeline = SimpleNamespace(router=activated)
-
-    monkeypatch.setattr(canary.MainCiGatedFactoryDaemon, "__init__", initialise)
-    monkeypatch.setattr(canary.MainCiGatedFactoryDaemon, "_activate_generation", activate)
     daemon = SingleIssueCanary(neptune_config, 570, supervised_session=True)
+    initial = daemon.pipeline.router
     assert initial.session_supervisor is not None
     daemon._activate_generation()
+    activated = daemon.pipeline.router
+    assert activated is not initial
     assert activated.session_supervisor is not None
     assert activated.session_supervisor.journal is initial.session_supervisor.journal
 
