@@ -26,6 +26,8 @@ The frontend client accepts exactly one status-privacy field per mutation and se
 
 For `GET /users/:id` and `GET /users/:id/stats`, the controller applies member-facing masking only when the requester is not the profile owner. This avoids using presentation privacy as an authorization signal and prevents clients from recovering hidden state from the canonical profile response.
 
+Discovery responses apply the same presentation boundary before returning member cards. Standard discovery queries select both privacy flags with the existing bounded user query. The PostGIS nearby RPC keeps its stable result shape and receives one bounded privacy-state hydration query for its returned IDs. If that hydration fails or omits a member, the API fails closed by masking both activity and VIP state for that member.
+
 ## Data model and migration
 
 `supabase/migrations/20260820220100_add_status_privacy_controls.sql` ensures both boolean columns exist with `NOT NULL DEFAULT false`. It uses `ADD COLUMN IF NOT EXISTS`, so it is safe to replay and safe in environments where an earlier schema bootstrap already created the fields. No index is needed because these values are read with an already-selected user row rather than used for collection scans.
@@ -64,6 +66,7 @@ Targeted automated coverage includes:
 - HTTP contract/error propagation for `PrivacyStatusService`.
 - Privacy Settings loading, persistence, rollback, retry, keyboard, and screen-reader behavior.
 - Server-side owner-versus-other-member masking for profile and stats endpoints.
+- Discovery projection and nearby-RPC fail-closed masking for hidden activity and VIP state.
 - Profile-detail VIP badge suppression.
 
 The repository CI remains the source of truth for lint, type checking, unit tests, migration checks, translation safety, and UI design coverage.

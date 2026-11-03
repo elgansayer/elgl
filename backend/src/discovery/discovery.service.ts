@@ -422,7 +422,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, vip_tier, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, interests, bio_text, avatar_url, audio_intro_url, is_vip, vip_tier, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -582,6 +582,7 @@ export class DiscoveryService {
         ...item,
         distance_metres: item.distance_metres ?? item.distance ?? undefined,
       }));
+      rpcResults = await this.hydrateDiscoveryPrivacy(rpcResults);
       rpcResults = await this.hydrateVipTiers(rpcResults);
       if (blockedIds.length > 0) {
         const blockedSet = new Set(blockedIds);
@@ -744,7 +745,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -831,7 +832,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
@@ -877,7 +878,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -935,7 +936,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
@@ -1190,7 +1191,7 @@ export class DiscoveryService {
     }
 
     // C. Timezone / Active Hours Overlap (proxy using recent activity)
-    if (candidate.last_active_at) {
+    if (!candidate.privacy_hide_online_status && candidate.last_active_at) {
       const activeTime = Date.parse(candidate.last_active_at);
       if (Number.isFinite(activeTime)) {
         const ageMs = Math.max(0, Date.now() - activeTime);
@@ -1202,7 +1203,7 @@ export class DiscoveryService {
       }
     }
 
-    if (candidate.is_vip) {
+    if (!candidate.privacy_hide_vip_status && candidate.is_vip) {
       const tier = candidate.vip_tier ?? '';
       if (tier.startsWith('pro') || tier.startsWith('developer')) {
         score += 30;
@@ -1251,6 +1252,69 @@ export class DiscoveryService {
     }));
   }
 
+  private async hydrateDiscoveryPrivacy(
+    users: DiscoveryUser[],
+  ): Promise<DiscoveryUser[]> {
+    if (users.length === 0) return users;
+
+    const response = await this.supabaseService
+      .getClient()
+      .from('users')
+      .select('id, privacy_hide_online_status, privacy_hide_vip_status')
+      .in(
+        'id',
+        users.slice(0, 100).map((user) => user.id),
+      )
+      .limit(100);
+
+    if (!response || response.error || !response.data) {
+      const errorCode =
+        response?.error?.code?.match(/^[a-z0-9_-]{1,32}$/i)?.[0] ?? 'unknown';
+      this.logger.warn(
+        { errorCode },
+        'Discovery privacy hydration failed; masking member state',
+      );
+      return users.map((user) =>
+        this.maskDiscoveryMemberState(user, true, true),
+      );
+    }
+
+    const privacyById = new Map(
+      response.data.map((row) => [
+        row.id,
+        {
+          hideOnline: row.privacy_hide_online_status === true,
+          hideVip: row.privacy_hide_vip_status === true,
+        },
+      ]),
+    );
+
+    return users.map((user) => {
+      const privacy = privacyById.get(user.id);
+      return this.maskDiscoveryMemberState(
+        user,
+        privacy?.hideOnline ?? true,
+        privacy?.hideVip ?? true,
+      );
+    });
+  }
+
+  private maskDiscoveryMemberState(
+    user: DiscoveryUser,
+    hideOnline: boolean,
+    hideVip: boolean,
+  ): DiscoveryUser {
+    const publicUser = { ...user };
+    if (hideOnline) {
+      Reflect.deleteProperty(publicUser, 'last_active_at');
+    }
+    if (hideVip) {
+      publicUser.is_vip = false;
+      Reflect.deleteProperty(publicUser, 'vip_tier');
+    }
+    return publicUser;
+  }
+
   private withoutPrivateEntitlement<T extends Partial<UserProfile>>(
     user: T,
   ): T {
@@ -1292,8 +1356,12 @@ export class DiscoveryService {
         });
       case 'online_now':
         return discoveryUsers.sort((a, b) => {
-          const aDate = a.last_active_at ?? '';
-          const bDate = b.last_active_at ?? '';
+          const aDate = a.privacy_hide_online_status
+            ? ''
+            : (a.last_active_at ?? '');
+          const bDate = b.privacy_hide_online_status
+            ? ''
+            : (b.last_active_at ?? '');
           return bDate.localeCompare(aDate);
         });
       case 'nearest':
@@ -1324,7 +1392,7 @@ export class DiscoveryService {
     let qb = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, privacy_hide_online_status, privacy_hide_vip_status',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
