@@ -132,6 +132,13 @@ describe('I18nService', () => {
       expect(translation).toBe('🎉 Alice gifted Bob a Rose! (🪙 50 Coins)');
     });
 
+    it('should expose inline gift fallbacks and coin copy', () => {
+      expect(service.translate('gift.someone')).toBe('Someone');
+      expect(service.translate('gift.you')).toBe('you');
+      expect(service.translate('gift.coinValue', { cost: 10 })).toBe('10 coins');
+      expect(service.translate('gift.unavailable')).toBe('Gift details unavailable');
+    });
+
     it('should ignore params that do not appear as placeholders in the translation string', () => {
       const translation = service.translate('app.title', { unused: 'value' });
       expect(translation).toBe('HelloTalk');

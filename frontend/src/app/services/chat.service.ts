@@ -34,10 +34,36 @@ export interface GiftPayload {
   gift_name: string;
   gift_icon: string;
   coin_value: number;
-  animation_type?: string;
-  animation_url?: string;
-  sender_name?: string;
-  receiver_name?: string;
+  animation_type?: string | null;
+  animation_url?: string | null;
+  sender_name?: string | null;
+  receiver_name?: string | null;
+}
+
+function isBoundedString(value: unknown, maximumLength: number): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= maximumLength;
+}
+
+function isOptionalBoundedString(value: unknown, maximumLength: number): boolean {
+  return value == null || isBoundedString(value, maximumLength);
+}
+
+/** Validates gift data received from REST, cache, or an untrusted realtime publication. */
+export function isGiftPayload(value: unknown): value is GiftPayload {
+  if (!isRecord(value)) return false;
+
+  return (
+    isBoundedString(value['gift_id'], 128) &&
+    isBoundedString(value['gift_name'], 120) &&
+    isBoundedString(value['gift_icon'], 64) &&
+    typeof value['coin_value'] === 'number' &&
+    Number.isSafeInteger(value['coin_value']) &&
+    value['coin_value'] >= 0 &&
+    isOptionalBoundedString(value['animation_type'], 64) &&
+    isOptionalBoundedString(value['animation_url'], 512) &&
+    isOptionalBoundedString(value['sender_name'], 120) &&
+    isOptionalBoundedString(value['receiver_name'], 120)
+  );
 }
 
 export interface ChatMessage {

@@ -314,6 +314,10 @@ export class I18nService {
     'gift.broadcastAnnouncement': '{{sender}} sent a {{giftName}} gift',
     'gift.broadcastTitle': '{{giftName}} Broadcast!',
     'gift.broadcastDesc': '🎉 {{sender}} gifted {{receiver}} a {{giftName}}! (🪙 {{cost}} Coins)',
+    'gift.someone': 'Someone',
+    'gift.you': 'you',
+    'gift.coinValue': '{{cost}} coins',
+    'gift.unavailable': 'Gift details unavailable',
 
     // Language Selector & Header
     'lang.label': 'Language',
