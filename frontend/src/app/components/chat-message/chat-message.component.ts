@@ -26,6 +26,7 @@ import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
@@ -41,6 +42,7 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     LinkPreviewCardComponent,
     VisualDiffComponent,
     ChatSystemBubbleComponent,
+    GiftAnimationComponent,
   ],
   template: `
     @if (message().message_type === 'system') {
@@ -72,21 +74,26 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
           [class.justify-start]="!isOwnMessage()"
         >
           <div
-            class="relative max-w-[70%] p-3 rounded-ss-lg rounded-se-lg"
-            [class.rounded-es-lg]="isOwnMessage()"
-            [class.rounded-ee-none]="isOwnMessage()"
-            [class.rounded-ee-lg]="!isOwnMessage()"
-            [class.rounded-es-none]="!isOwnMessage()"
-            [class.bg-primary]="isOwnMessage()"
-            [class.text-on-fill]="isOwnMessage()"
-            [class.bg-surface-300]="!isOwnMessage()"
+            class="relative max-w-[70%]"
+            [class.p-3]="message().message_type !== 'gift'"
+            [class.rounded-ss-lg]="message().message_type !== 'gift'"
+            [class.rounded-se-lg]="message().message_type !== 'gift'"
+            [class.rounded-es-lg]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.rounded-ee-none]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.rounded-ee-lg]="message().message_type !== 'gift' && !isOwnMessage()"
+            [class.rounded-es-none]="message().message_type !== 'gift' && !isOwnMessage()"
+            [class.bg-primary]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.text-on-fill]="message().message_type !== 'gift' && isOwnMessage()"
+            [class.bg-surface-300]="message().message_type !== 'gift' && !isOwnMessage()"
           >
-            <span
-              class="chat-bubble-tail"
-              [class.chat-bubble-tail--sent]="isOwnMessage()"
-              [class.chat-bubble-tail--received]="!isOwnMessage()"
-              aria-hidden="true"
-            ></span>
+            @if (message().message_type !== 'gift') {
+              <span
+                class="chat-bubble-tail"
+                [class.chat-bubble-tail--sent]="isOwnMessage()"
+                [class.chat-bubble-tail--received]="!isOwnMessage()"
+                aria-hidden="true"
+              ></span>
+            }
             @if (message().is_forwarded) {
               <p class="text-xs mb-1 text-text-muted italic font-medium">
                 {{ 'chatRoom.forwarded' | t }}
@@ -111,6 +118,10 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
                   [siteName]="lp.siteName"
                 ></app-link-preview-card>
               }
+            }
+
+            @if (message().message_type === 'gift') {
+              <app-gift-animation [giftPayload]="message().gift_payload ?? null" />
             }
 
             @if (message().message_type === 'voice') {
