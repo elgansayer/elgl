@@ -9,6 +9,7 @@ import {
   OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
@@ -101,6 +102,83 @@ interface ExclusiveEmoji {
   emojiId: string;
   name: string;
   animationUrl: string;
+}
+
+interface AudioRoomTipRpcRow {
+  tip_id: string;
+  amount_coins: number;
+  receiver_id: string;
+  sender_new_balance: number;
+  receiver_new_balance: number;
+  sender_name: string;
+  receiver_name: string;
+  created: boolean;
+}
+
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
+function parseAudioRoomTipRpcRow(value: unknown): AudioRoomTipRpcRow | null {
+  const candidate = isUnknownArray(value)
+    ? value.length === 1
+      ? value[0]
+      : null
+    : value;
+  if (typeof candidate !== 'object' || candidate === null) return null;
+  if (
+    !('tip_id' in candidate) ||
+    !('amount_coins' in candidate) ||
+    !('receiver_id' in candidate) ||
+    !('sender_new_balance' in candidate) ||
+    !('receiver_new_balance' in candidate) ||
+    !('sender_name' in candidate) ||
+    !('receiver_name' in candidate) ||
+    !('created' in candidate)
+  ) {
+    return null;
+  }
+
+  const {
+    tip_id: tipId,
+    amount_coins: amountCoins,
+    receiver_id: receiverId,
+    sender_new_balance: senderBalance,
+    receiver_new_balance: receiverBalance,
+    sender_name: senderName,
+    receiver_name: receiverName,
+    created,
+  } = candidate;
+
+  if (
+    typeof tipId !== 'string' ||
+    typeof amountCoins !== 'number' ||
+    !Number.isSafeInteger(amountCoins) ||
+    amountCoins <= 0 ||
+    typeof receiverId !== 'string' ||
+    typeof senderBalance !== 'number' ||
+    !Number.isSafeInteger(senderBalance) ||
+    senderBalance < 0 ||
+    typeof receiverBalance !== 'number' ||
+    !Number.isSafeInteger(receiverBalance) ||
+    receiverBalance < 0 ||
+    typeof senderName !== 'string' ||
+    typeof receiverName !== 'string' ||
+    typeof created !== 'boolean'
+  ) {
+    return null;
+  }
+
+  return {
+    tip_id: tipId,
+    amount_coins: amountCoins,
+    receiver_id: receiverId,
+    sender_new_balance: senderBalance,
+    receiver_new_balance: receiverBalance,
+    sender_name: senderName,
+    receiver_name: receiverName,
+    created,
+  };
 }
 
 export interface StageInfo {
@@ -2163,108 +2241,91 @@ export class AudioRoomsService implements OnModuleInit {
     tip_id: string;
     amount_coins: number;
     receiver_id: string;
-    receiver_new_balance: number;
+    sender_new_balance: number;
   }> {
     const supabase = this.supabaseService.getClient();
-    const roomResponse = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
+    const idempotencyKey = dto.idempotency_key ?? randomUUID();
+    const response = await supabase.rpc('transfer_audio_room_tip', {
+      p_room_id: dto.room_id,
+      p_sender_id: userId,
+      p_amount: dto.amount_coins,
+      p_idempotency_key: idempotencyKey,
+    });
 
-    if (!roomResponse.data) {
-      throw new NotFoundException('Room not found');
+    if (response.error) {
+      const message = response.error.message.toLowerCase();
+      if (
+        message.includes('room not found') ||
+        message.includes('sender not found')
+      ) {
+        throw new NotFoundException('audioRoom.tipNotFound');
+      }
+      if (message.includes('tip idempotency subject mismatch')) {
+        throw new ConflictException('audioRoom.tipRetryConflict');
+      }
+      if (message.includes('sender is not a room participant')) {
+        throw new ForbiddenException('audioRoom.tipParticipantRequired');
+      }
+      if (
+        message.includes('room is not active') ||
+        message.includes('sender cannot tip self') ||
+        message.includes('insufficient coins') ||
+        message.includes('tip amount must be positive')
+      ) {
+        throw new BadRequestException('audioRoom.tipValidationError');
+      }
+      this.logger.warn({
+        event: 'audio_room_tip_rpc_failed',
+        code: response.error.code ?? 'unknown',
+      });
+      throw new ServiceUnavailableException('audioRoom.tipUnavailable');
     }
 
-    const room = roomResponse.data as AudioRoomRow;
-
-    if (!room.is_active) {
-      throw new BadRequestException('Room is not active');
+    const tip = parseAudioRoomTipRpcRow(response.data);
+    if (!tip) {
+      this.logger.error({ event: 'audio_room_tip_invalid_rpc_response' });
+      throw new ServiceUnavailableException('audioRoom.tipUnavailable');
     }
 
-    if (room.host_id === userId) {
-      throw new BadRequestException('You cannot tip yourself');
+    let published: boolean;
+    try {
+      published = await this.centrifugoService.publish(`room_${dto.room_id}`, {
+        type: 'host_tip',
+        tip: {
+          tip_id: tip.tip_id,
+          amount_coins: tip.amount_coins,
+          sender_user_id: userId,
+          sender_name: tip.sender_name,
+          receiver_user_id: tip.receiver_id,
+          receiver_name: tip.receiver_name,
+        },
+      });
+    } catch {
+      published = false;
     }
 
-    const senderResponse = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', userId)
-      .single();
-
-    if (!senderResponse.data) {
-      throw new NotFoundException('Sender not found');
+    if (!published) {
+      this.logger.warn({
+        event: 'audio_room_tip_publish_failed',
+        roomId: dto.room_id,
+        tipId: tip.tip_id,
+      });
+      throw new ServiceUnavailableException('audioRoom.tipDeliveryError');
     }
 
-    const senderBalance = senderResponse.data.coins_balance ?? 0;
-    const amount = dto.amount_coins;
-
-    if (senderBalance < amount) {
-      throw new BadRequestException(
-        `Insufficient coins. You have ${senderBalance} coins but need ${amount}.`,
-      );
-    }
-
-    const newSenderBalance = senderBalance - amount;
-    await supabase
-      .from('users')
-      .update({ coins_balance: newSenderBalance })
-      .eq('id', userId);
-
-    const receiverResponse = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', room.host_id)
-      .single();
-
-    const currentReceiverBalance = receiverResponse.data?.coins_balance ?? 0;
-    const newReceiverBalance = currentReceiverBalance + amount;
-
-    await supabase
-      .from('users')
-      .update({ coins_balance: newReceiverBalance })
-      .eq('id', room.host_id);
-
-    const tipResponse = await supabase
-      .from('audio_room_tips')
-      .insert({
-        room_id: room.id,
-        sender_user_id: userId,
-        receiver_user_id: room.host_id,
-        amount_coins: amount,
-      })
-      .select()
-      .single();
-
-    if (tipResponse.error || !tipResponse.data) {
-      throw new Error(
-        `Failed to record tip: ${tipResponse.error?.message ?? 'Unknown error'}`,
-      );
-    }
-
-    const tipRow = tipResponse.data as { id: string };
-
-    const senderUser = senderResponse.data as {
-      display_name?: string | null;
-    } | null;
-    const senderName = senderUser?.display_name || 'Someone';
-
-    void this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'host_tip',
-      tip: {
-        tip_id: tipRow.id,
-        amount_coins: amount,
-        sender_user_id: userId,
-        sender_name: senderName,
-        receiver_user_id: room.host_id,
-      },
+    this.logger.log({
+      event: 'audio_room_tip_processed',
+      roomId: dto.room_id,
+      tipId: tip.tip_id,
+      amountCoins: tip.amount_coins,
+      reused: !tip.created,
     });
 
     return {
-      tip_id: tipRow.id,
-      amount_coins: amount,
-      receiver_id: room.host_id,
-      receiver_new_balance: newReceiverBalance,
+      tip_id: tip.tip_id,
+      amount_coins: tip.amount_coins,
+      receiver_id: tip.receiver_id,
+      sender_new_balance: tip.sender_new_balance,
     };
   }
 
