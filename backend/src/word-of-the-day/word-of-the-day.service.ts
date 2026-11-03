@@ -368,7 +368,34 @@ const CATALOG: Readonly<Record<string, LanguageCatalog>> = {
   },
 };
 
+/**
+ * ISO base codes that have a reviewed catalogue. Every other language falls
+ * back to the English catalogue, so this list is also the contract that the
+ * catalogue integrity tests iterate over when a language is added.
+ */
+export const WORD_OF_THE_DAY_LANGUAGE_CODES: readonly string[] =
+  Object.keys(CATALOG);
+
 const DAY_MS = 86_400_000;
+
+type LanguageColumn = 'target_languages' | 'native_languages';
+
+/**
+ * Reads the first usable language code from a profile row without trusting the
+ * row shape: the column may be missing, null, or contain blank entries.
+ */
+function firstLanguage(
+  profile: unknown,
+  column: LanguageColumn,
+): string | undefined {
+  if (typeof profile !== 'object' || profile === null) return undefined;
+  const value: unknown = Reflect.get(profile, column);
+  if (!Array.isArray(value)) return undefined;
+  return value.find(
+    (entry: unknown): entry is string =>
+      typeof entry === 'string' && entry.trim().length > 0,
+  );
+}
 
 @Injectable()
 export class WordOfTheDayService {
@@ -386,7 +413,7 @@ export class WordOfTheDayService {
 
   getWordForDate(requestedLanguage: string, now = new Date()): WordOfTheDay {
     const normalized = this.normalizeLanguageCode(requestedLanguage);
-    const languageCode = CATALOG[normalized] ? normalized : 'en';
+    const languageCode = Object.hasOwn(CATALOG, normalized) ? normalized : 'en';
     const catalog = CATALOG[languageCode];
     const utcDay = Math.floor(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) /
@@ -423,11 +450,11 @@ export class WordOfTheDayService {
         return 'en';
       }
 
-      const user = data as {
-        target_languages?: string[] | null;
-        native_languages?: string[] | null;
-      } | null;
-      return user?.target_languages?.[0] ?? user?.native_languages?.[0] ?? 'en';
+      return (
+        firstLanguage(data, 'target_languages') ??
+        firstLanguage(data, 'native_languages') ??
+        'en'
+      );
     } catch (error) {
       const reason = error instanceof Error ? error.name : 'unknown';
       this.logger.warn(`Word of the day profile lookup failed (${reason})`);

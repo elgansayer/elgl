@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
-import { WordOfTheDayCardComponent } from './word-of-the-day-card.component';
+import { WordOfTheDayComponent } from './word-of-the-day.component';
 
-describe('WordOfTheDayCardComponent', () => {
+describe('WordOfTheDayComponent', () => {
   const authService = {
     getAccessToken: vi.fn(),
   };
@@ -13,7 +13,7 @@ describe('WordOfTheDayCardComponent', () => {
     vi.stubGlobal('fetch', vi.fn());
 
     await TestBed.configureTestingModule({
-      imports: [WordOfTheDayCardComponent],
+      imports: [WordOfTheDayComponent],
       providers: [
         { provide: AuthService, useValue: authService },
         {
@@ -51,15 +51,14 @@ describe('WordOfTheDayCardComponent', () => {
       ),
     );
 
-    const fixture = TestBed.createComponent(WordOfTheDayCardComponent);
-    fixture.detectChanges();
+    const fixture = TestBed.createComponent(WordOfTheDayComponent);
     await fixture.whenStable();
-    fixture.detectChanges();
 
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('/word-of-the-day'),
       expect.objectContaining({
         headers: { Authorization: 'Bearer access-token' },
+        signal: expect.any(AbortSignal),
       }),
     );
     expect(fixture.nativeElement.textContent).toContain('学ぶ');
@@ -70,10 +69,8 @@ describe('WordOfTheDayCardComponent', () => {
   it('fails closed when there is no authenticated session', async () => {
     authService.getAccessToken.mockReturnValue(null);
 
-    const fixture = TestBed.createComponent(WordOfTheDayCardComponent);
-    fixture.detectChanges();
+    const fixture = TestBed.createComponent(WordOfTheDayComponent);
     await fixture.whenStable();
-    fixture.detectChanges();
 
     expect(fetch).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
@@ -86,14 +83,30 @@ describe('WordOfTheDayCardComponent', () => {
     authService.getAccessToken.mockReturnValue('access-token');
     vi.mocked(fetch).mockResolvedValue(new Response('', { status: 503 }));
 
-    const fixture = TestBed.createComponent(WordOfTheDayCardComponent);
-    fixture.detectChanges();
+    const fixture = TestBed.createComponent(WordOfTheDayComponent);
     await fixture.whenStable();
-    fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
       'Something went wrong',
     );
     expect(fixture.nativeElement.textContent).not.toContain('Hola');
+  });
+
+  it('rejects a malformed API response instead of rendering partial content', async () => {
+    authService.getAccessToken.mockReturnValue('access-token');
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ word: '学ぶ' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const fixture = TestBed.createComponent(WordOfTheDayComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'Something went wrong',
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('学ぶ');
   });
 });
