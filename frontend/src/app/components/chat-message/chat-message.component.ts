@@ -20,6 +20,7 @@ import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
+import { showErrorToast, showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
@@ -448,8 +449,17 @@ export class ChatMessageComponent {
     navigator.clipboard.writeText(event.content).catch(console.error);
   }
 
-  onFavourite(event: { messageId: string; content: string; messageType: string }): void {
-    this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
+  async onFavourite(event: {
+    messageId: string;
+    content: string;
+    messageType: string;
+  }): Promise<void> {
+    try {
+      await this.favouriteService.addFavourite({ message_id: event.messageId });
+      showToast(this.i18n.translate('chatRoom.bookmarkSuccess'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('chatRoom.bookmarkError'));
+    }
   }
 
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {

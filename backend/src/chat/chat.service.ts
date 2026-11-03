@@ -22,7 +22,6 @@ import {
   LearnerKnowledgeService,
   LearnerKnowledgeProfile,
 } from '../learner-knowledge/learner-knowledge.service';
-import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -32,7 +31,6 @@ import {
   CorrectionPayload,
   ChatMessage,
   ChatRoomRecord,
-  FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import {
   ChatMessageEvent,
@@ -748,35 +746,6 @@ export class ChatService {
     return messages;
   }
 
-  async addFavourite(userId: string, dto: AddFavouriteDto): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-
-    // Get the message to favourite
-    const messageResponse = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('id', dto.message_id)
-      .single();
-
-    if (messageResponse.error || !messageResponse.data) {
-      throw new Error('Message not found');
-    }
-
-    const message = messageResponse.data;
-
-    // Store the favourite
-    const { error } = await supabase.from('favourites').insert({
-      user_id: userId,
-      item_type: 'message',
-      item_payload: message,
-      notes: dto.note_text || null,
-    });
-
-    if (error) {
-      throw new Error('Failed to add favourite');
-    }
-  }
-
   /**
    * Search messages across the rooms the user is a member of.
    *
@@ -907,32 +876,6 @@ export class ChatService {
         expires_at: msg.expires_at,
         sender: msg.sender,
       }));
-  }
-
-  async getFavourites(userId: string): Promise<FavouriteRecord[]> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (response.error || !response.data) {
-      return [];
-    }
-    return response.data;
-  }
-
-  async deleteFavourite(userId: string, favouriteId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('favourites')
-      .delete()
-      .eq('id', favouriteId)
-      .eq('user_id', userId);
-
-    if (error) throw new Error('Failed to delete favourite');
   }
 
   async getSuggestedReplies(
