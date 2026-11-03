@@ -34,11 +34,32 @@ export class PresencePrivacyService {
   }
 
   async updatePresencePrivacy(update: Partial<PresencePrivacySettings>): Promise<void> {
-    await firstValueFrom(
-      this.http.patch(`${this.baseUrl}/me`, update, {
-        headers: this.getHeaders(),
-      }),
-    );
+    const onlineStatus = update.privacy_hide_online_status;
+    const vipStatus = update.privacy_hide_vip_status;
+
+    if (typeof onlineStatus === 'boolean' && vipStatus === undefined) {
+      await firstValueFrom(
+        this.http.patch(
+          `${this.baseUrl}/me`,
+          { privacy_hide_online_status: onlineStatus },
+          { headers: this.getHeaders() },
+        ),
+      );
+      return;
+    }
+
+    if (typeof vipStatus === 'boolean' && onlineStatus === undefined) {
+      await firstValueFrom(
+        this.http.patch(
+          `${this.baseUrl}/me/privacy`,
+          { privacy_hide_vip_status: vipStatus },
+          { headers: this.getHeaders() },
+        ),
+      );
+      return;
+    }
+
+    throw new Error('Exactly one presence privacy setting is required');
   }
 
   private getHeaders(): Record<string, string> {

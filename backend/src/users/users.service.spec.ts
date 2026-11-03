@@ -774,6 +774,30 @@ describe('UsersService', () => {
       });
       expect(result).toMatchObject(updatedProfile);
     });
+
+    it('should persist VIP-status privacy independently of entitlement', async () => {
+      const updatedProfile = {
+        id: 'user-1',
+        is_vip: true,
+        privacy_hide_vip_status: true,
+      };
+      mockQueryBuilder.eq.mockResolvedValueOnce({ error: null });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: updatedProfile,
+        error: null,
+      });
+
+      const result = await service.updatePrivacySettings(
+        'user-1',
+        { privacy_hide_vip_status: true },
+        false,
+      );
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        privacy_hide_vip_status: true,
+      });
+      expect(result).toMatchObject(updatedProfile);
+    });
   });
 
   describe('getBadges', () => {
