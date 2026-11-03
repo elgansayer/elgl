@@ -430,8 +430,19 @@
       "claudeDesignPath": "features/chat-messaging.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1748-explain-this-corrected-text-2026-10-30 (Explain this action and grammar explanation dialog states in the chat-messaging preview); issue-1663-chat-list-unread-count (chat unread counting refinement and removal of non-authoritative list override; chat messaging layout and visual contract are unchanged); issue-1195-e2ee-personal-messages (encryption status icon is conditionally rendered in message metadata; chat messaging layout and visual contract are unchanged)",
-      "requiredStates": ["light", "dark", "loading", "error", "empty", "390px", "rtl", "400%-zoom"]
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1748-explain-this-corrected-text-2026-10-30 (Explain this action and grammar explanation dialog states in the chat-messaging preview); issue-1663-chat-list-unread-count (chat unread counting refinement and removal of non-authoritative list override; chat messaging layout and visual contract are unchanged); issue-1195-e2ee-personal-messages (encryption status icon is conditionally rendered in message metadata; chat messaging layout and visual contract are unchanged); issue-1839-inline-gift-payloads-2026-11-03 (chat message renderers display validated gift payloads with reduced-motion and unavailable states)",
+      "requiredStates": [
+        "light",
+        "dark",
+        "loading",
+        "error",
+        "empty",
+        "390px",
+        "rtl",
+        "400%-zoom",
+        "reduced-motion",
+        "forced-colours"
+      ]
     },
     {
       "id": "feature.calls-live",
@@ -615,7 +626,8 @@
         "error",
         "390px",
         "rtl",
-        "reduced-motion"
+        "reduced-motion",
+        "forced-colours"
       ]
     },
     {
@@ -644,7 +656,7 @@
       "claudeDesignPath": "features/commerce.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; main-baseline-restore-2026-10-23-pr-9560 (implementation restored to pre-2026-10-20 reviewed state; Claude Design reconciliation pending #9467); issue-1839-inline-gift-payloads-2026-11-03 (gift animation uses Relay semantic colours and documents unavailable, reduced-motion, and forced-colour states)",
       "requiredStates": [
         "light",
         "dark",
