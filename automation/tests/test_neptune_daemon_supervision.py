@@ -46,8 +46,8 @@ def test_generation_rebuild_keeps_journal_foreign_lease_and_host_gates(
     assert supervisor is not None
     journal, store = supervisor.journal, supervisor.store
     foreign = store.acquire_renewable("codex", owner="foreign-fixture", limit=1)
-    journal.create(SessionCheckpoint("9812-fixture", ProcessIdentity.capture(os.getpid()), foreign))
-    record_bytes = (journal.directory / "9812-fixture.json").read_bytes()
+    journal.create(SessionCheckpoint("98120000-0000-4000-8000-000000000001", ProcessIdentity.capture(os.getpid()), foreign))
+    record_bytes = (journal.directory / "98120000-0000-4000-8000-000000000001.json").read_bytes()
     before = store.path.read_bytes()
     host_gate, verification_gate = daemon.host_resource_slots, daemon.verification_slots
     try:
@@ -59,7 +59,7 @@ def test_generation_rebuild_keeps_journal_foreign_lease_and_host_gates(
             assert current.store is daemon.pipeline.router.capacity_store
             assert current.store.path == store.path and current.store.factory_generation is None
             assert store.path.read_bytes() == before
-            assert (journal.directory / "9812-fixture.json").read_bytes() == record_bytes
+            assert (journal.directory / "98120000-0000-4000-8000-000000000001.json").read_bytes() == record_bytes
             reader = ProviderCapacityStore(
                 store.path.parent, max_lease_seconds=store.max_lease_seconds
             )
