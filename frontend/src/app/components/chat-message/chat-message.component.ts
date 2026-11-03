@@ -25,6 +25,7 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 type VoicePlaybackSpeed = 1 | 1.5 | 2;
@@ -40,10 +41,16 @@ type VoicePlaybackSpeed = 1 | 1.5 | 2;
     CulturalTipComponent,
     LinkPreviewCardComponent,
     VisualDiffComponent,
+    ChatSystemBubbleComponent,
     GiftAnimationComponent,
   ],
   template: `
-    @if (!isBlocked()) {
+    @if (message().message_type === 'system') {
+      <app-chat-system-bubble
+        [eventType]="message().system_event?.type ?? ''"
+        [params]="message().system_event ?? {}"
+      ></app-chat-system-bubble>
+    } @else if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
         <app-cultural-tip [language]="lang" />
       }

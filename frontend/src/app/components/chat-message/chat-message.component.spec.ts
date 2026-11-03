@@ -10,6 +10,7 @@ import { NlpService } from '../../services/nlp.service';
 import { SafetyService } from '../../services/safety.service';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
+import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { ChatMessageComponent } from './chat-message.component';
 import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
@@ -121,6 +122,45 @@ describe('ChatMessageComponent', () => {
 
   it('does not render a rich link preview when the message has no preview payload', () => {
     expect(fixture.debugElement.query(By.directive(LinkPreviewCardComponent))).toBeNull();
+  });
+
+  it('renders system events with the dedicated bubble and no user-message actions', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'system-message-id',
+      room_id: 'room-id',
+      sender_id: '',
+      message_type: 'system',
+      system_event: { type: 'profileUpdated', name: 'Language Partner' },
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const bubble = fixture.debugElement.query(By.directive(ChatSystemBubbleComponent));
+    expect(bubble).toBeTruthy();
+    expect(bubble.componentInstance.eventType()).toBe('profileUpdated');
+    expect(bubble.componentInstance.params()).toEqual({
+      type: 'profileUpdated',
+      name: 'Language Partner',
+    });
+    expect(fixture.debugElement.query(By.directive(LongPressContextMenuComponent))).toBeNull();
+  });
+
+  it('uses the generic system bubble fallback for a malformed system message', () => {
+    fixture.componentRef.setInput('message', {
+      id: 'system-message-id',
+      room_id: 'room-id',
+      sender_id: '',
+      message_type: 'system',
+      is_read: false,
+      created_at: '2026-08-18T12:00:00.000Z',
+    });
+    fixture.detectChanges();
+
+    const bubble = fixture.debugElement.query(By.directive(ChatSystemBubbleComponent));
+    expect(bubble).toBeTruthy();
+    expect(bubble.componentInstance.i18nKey()).toBe('notifications.systemAlert');
+    expect(fixture.debugElement.query(By.directive(LongPressContextMenuComponent))).toBeNull();
   });
 
   it('renders gift messages through the shared gift animation component', async () => {
