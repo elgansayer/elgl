@@ -5,11 +5,11 @@ import { SafetyService } from '../safety/safety.service';
 // Define Moment interface locally to avoid import issues
 export interface Moment {
   id: string;
-  author_id: string | null | undefined;
-  content_text?: string | null;
+  user_id: string | null | undefined;
+  text_content?: string | null;
   media_urls?: string[];
   voice_note_url?: string | null;
-  detected_language?: string | null;
+  target_language?: string | null;
   is_pinned: boolean;
   likes_count: number;
   comments_count: number;
@@ -25,11 +25,11 @@ export interface Moment {
 
 interface MomentRow {
   id: string;
-  author_id: string;
-  content_text: string | null;
+  user_id: string;
+  text_content: string | null;
   media_urls: string[];
   voice_note_url: string | null;
-  detected_language: string | null;
+  target_language: string | null;
   created_at: string;
 }
 
@@ -82,14 +82,14 @@ export class FeedService {
     let query = supabase
       .from('moments')
       .select(
-        'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
+        'id, user_id, text_content, media_urls, voice_note_url, target_language, created_at',
       )
       .order('created_at', { ascending: false })
       .limit(50);
 
     // Exclude blocked users' moments (both directions)
     if (blockedIds.length > 0) {
-      query = query.not('author_id', 'in', blockedIds);
+      query = query.not('user_id', 'in', blockedIds);
     }
 
     if (filter === 'following') {
@@ -114,7 +114,7 @@ export class FeedService {
         return [];
       }
 
-      query = query.in('author_id', followedIds);
+      query = query.in('user_id', followedIds);
     } else if (filter === 'classmates') {
       // Get current user's language preferences
       const { data: currentUser, error: userError } = await supabase
@@ -169,7 +169,7 @@ export class FeedService {
         return [];
       }
 
-      query = query.in('author_id', matchedIds);
+      query = query.in('user_id', matchedIds);
     }
 
     const { data: momentRows, error: momentError } =
@@ -181,7 +181,7 @@ export class FeedService {
     }
 
     const authorIds = Array.from(
-      new Set(momentRows.map((m) => m.author_id)),
+      new Set(momentRows.map((moment) => moment.user_id)),
     ).filter((id): id is string => !!id);
 
     const authorMap = new Map<string, Moment['author']>();
@@ -214,16 +214,16 @@ export class FeedService {
     return momentRows.map((momentRow) => {
       return {
         id: momentRow.id,
-        author_id: momentRow.author_id,
-        content_text: momentRow.content_text ?? null,
+        user_id: momentRow.user_id,
+        text_content: momentRow.text_content ?? null,
         media_urls: momentRow.media_urls ?? [],
         voice_note_url: momentRow.voice_note_url ?? null,
-        detected_language: momentRow.detected_language ?? null,
+        target_language: momentRow.target_language ?? null,
         is_pinned: false,
         likes_count: 0,
         comments_count: 0,
         created_at: momentRow.created_at,
-        author: authorMap.get(momentRow.author_id) ?? null,
+        author: authorMap.get(momentRow.user_id) ?? null,
       };
     });
   }
@@ -241,7 +241,7 @@ export class FeedService {
     const { data: momentRow, error: momentError } = await supabase
       .from('moments')
       .select(
-        'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
+        'id, user_id, text_content, media_urls, voice_note_url, target_language, created_at',
       )
       .eq('id', momentId)
       .single();
@@ -252,7 +252,7 @@ export class FeedService {
 
     const typed = momentRow;
 
-    if (blockedUserIds.includes(typed.author_id ?? '')) {
+    if (blockedUserIds.includes(typed.user_id ?? '')) {
       return null;
     }
 
@@ -261,7 +261,7 @@ export class FeedService {
       .select(
         'id, display_name, avatar_url, native_languages, target_languages',
       )
-      .eq('id', typed.author_id ?? '')
+      .eq('id', typed.user_id ?? '')
       .single();
 
     let author: Moment['author'] = null;
@@ -278,11 +278,11 @@ export class FeedService {
 
     return {
       id: typed.id,
-      author_id: typed.author_id,
-      content_text: typed.content_text ?? null,
+      user_id: typed.user_id,
+      text_content: typed.text_content ?? null,
       media_urls: typed.media_urls ?? [],
       voice_note_url: typed.voice_note_url ?? null,
-      detected_language: typed.detected_language ?? null,
+      target_language: typed.target_language ?? null,
       is_pinned: false,
       likes_count: 0,
       comments_count: 0,
@@ -294,10 +294,10 @@ export class FeedService {
   async createMoment(
     authorId: string,
     content: {
-      content_text?: string;
+      text_content?: string;
       media_urls?: string[];
       voice_note_url?: string;
-      detected_language?: string;
+      target_language?: string;
     },
   ): Promise<Moment> {
     const supabase = this.supabaseService.getClient();
@@ -305,14 +305,14 @@ export class FeedService {
     const { data: inserted, error: insertError } = await supabase
       .from('moments')
       .insert({
-        author_id: authorId,
-        content_text: content.content_text || null,
+        user_id: authorId,
+        text_content: content.text_content || null,
         media_urls: content.media_urls || [],
         voice_note_url: content.voice_note_url || null,
-        detected_language: content.detected_language || null,
+        target_language: content.target_language || null,
       })
       .select(
-        'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
+        'id, user_id, text_content, media_urls, voice_note_url, target_language, created_at',
       )
       .single();
 
@@ -327,7 +327,7 @@ export class FeedService {
       .select(
         'id, display_name, avatar_url, native_languages, target_languages',
       )
-      .eq('id', typed.author_id ?? '')
+      .eq('id', typed.user_id ?? '')
       .single();
 
     let author: Moment['author'] = null;
@@ -344,11 +344,11 @@ export class FeedService {
 
     return {
       id: typed.id,
-      author_id: typed.author_id,
-      content_text: typed.content_text ?? null,
+      user_id: typed.user_id,
+      text_content: typed.text_content ?? null,
       media_urls: typed.media_urls ?? [],
       voice_note_url: typed.voice_note_url ?? null,
-      detected_language: typed.detected_language ?? null,
+      target_language: typed.target_language ?? null,
       is_pinned: false,
       likes_count: 0,
       comments_count: 0,
@@ -363,7 +363,7 @@ export class FeedService {
     // Verify ownership
     const momentResponse = await supabase
       .from('moments')
-      .select('author_id')
+      .select('user_id')
       .eq('id', momentId)
       .single();
 
@@ -372,10 +372,10 @@ export class FeedService {
     }
 
     const momentData = momentResponse.data as unknown as {
-      author_id: string | null | undefined;
+      user_id: string | null | undefined;
     } | null;
 
-    if (!momentData || momentData.author_id !== userId) {
+    if (!momentData || momentData.user_id !== userId) {
       throw new Error('Not authorized to delete this moment');
     }
 

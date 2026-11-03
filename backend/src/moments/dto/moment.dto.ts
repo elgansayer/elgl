@@ -6,6 +6,10 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import {
+  MOMENT_CORRECT_ANSWER_MAX_LENGTH,
+  MOMENT_TARGET_LANGUAGE_MAX_LENGTH,
+} from '../moments-column-limits.constants';
 
 export class CreateMomentDto {
   @IsOptional()
@@ -24,6 +28,7 @@ export class CreateMomentDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(MOMENT_TARGET_LANGUAGE_MAX_LENGTH)
   target_language!: string;
 
   @IsOptional()
@@ -42,6 +47,7 @@ export class CreateMomentDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MOMENT_CORRECT_ANSWER_MAX_LENGTH)
   correct_answer?: string;
 
   @IsOptional()

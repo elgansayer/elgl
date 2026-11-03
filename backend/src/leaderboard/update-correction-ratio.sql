@@ -1,3 +1,13 @@
+-- Draft only: no migration under supabase/migrations installs this function or
+-- trigger, so nothing recalculates users.correction_ratio from comments until
+-- one does. Install it through a forward migration (migration history is
+-- append-only), never by running this file by hand against a shared database.
+--
+-- The Moments tables are owned through user_id (supabase/migrations/
+-- 005_moments.sql). They have no author_id column, and plpgsql resolves column
+-- names only when the function runs, so a function that names one is accepted
+-- and then fails every comment insert that fires the trigger.
+
 -- Trigger function to automatically update correction_ratio on users table
 -- when a correction is given or received.
 
@@ -10,25 +20,25 @@ BEGIN
   -- Count corrections given by the user (where user is the author of a comment with correction_payload)
   SELECT COUNT(*) INTO given_count
   FROM moment_comments
-  WHERE author_id = NEW.author_id
+  WHERE user_id = NEW.user_id
     AND correction_payload IS NOT NULL;
 
   -- Count corrections received by the user (where user is the author of the moment being corrected)
   SELECT COUNT(*) INTO received_count
   FROM moment_comments mc
   JOIN moments m ON m.id = mc.moment_id
-  WHERE m.author_id = NEW.author_id
+  WHERE m.user_id = NEW.user_id
     AND mc.correction_payload IS NOT NULL;
 
   -- Update correction_ratio (avoid division by zero)
   IF received_count = 0 THEN
     UPDATE users
     SET correction_ratio = 1.0
-    WHERE id = NEW.author_id;
+    WHERE id = NEW.user_id;
   ELSE
     UPDATE users
     SET correction_ratio = LEAST(given_count::FLOAT / received_count, 10.0)
-    WHERE id = NEW.author_id;
+    WHERE id = NEW.user_id;
   END IF;
 
   RETURN NEW;

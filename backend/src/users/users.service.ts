@@ -1215,21 +1215,25 @@ export class UsersService {
       visitsCountRes,
     ] = await Promise.all([
       supabase.from('users').select('*').eq('id', userId).maybeSingle(),
+      // The Moments tables are owned through user_id and user_follows has a
+      // composite primary key (follower_id, following_id) with no id column
+      // (005_moments.sql). Filtering or selecting a column that does not exist
+      // makes the count query fail, which surfaced as a silent zero.
       supabase
         .from('moments')
         .select('id', { count: 'exact', head: true })
-        .eq('author_id', userId),
+        .eq('user_id', userId),
       supabase
         .from('moment_comments')
         .select('id', { count: 'exact', head: true })
-        .eq('author_id', userId),
+        .eq('user_id', userId),
       supabase
         .from('user_follows')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('following_id', userId),
       supabase
         .from('user_follows')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('follower_id', userId),
       supabase
         .from('profile_visits')
@@ -1321,7 +1325,6 @@ export class UsersService {
         | 'user_profile_likes'
         | 'status_views';
       column:
-        | 'author_id'
         | 'user_id'
         | 'sender_id'
         | 'visitor_id'
@@ -1333,8 +1336,8 @@ export class UsersService {
         | 'viewer_id'
         | 'status_owner_id';
     }> = [
-      { table: 'moments', column: 'author_id' },
-      { table: 'moment_comments', column: 'author_id' },
+      { table: 'moments', column: 'user_id' },
+      { table: 'moment_comments', column: 'user_id' },
       { table: 'moment_likes', column: 'user_id' },
       { table: 'flashcards', column: 'user_id' },
       { table: 'chat_messages', column: 'sender_id' },

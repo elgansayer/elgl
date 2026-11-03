@@ -412,6 +412,7 @@ class FactoryConfig(BaseModel):
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
     repository_profile: Literal["hellotalk", "workout-agent", "neptune"] = "hellotalk"
     neptune_activation_enabled: bool = False
+    neptune_intake_dir: Path | None = None
     prompt_dir: Path = Path("/var/lib/hellotalk-factory/repository/automation/prompts")
     system_prompt_path: Path = Path(
         "/var/lib/hellotalk-factory/repository/automation/prompts/system.md"
@@ -652,6 +653,19 @@ class FactoryConfig(BaseModel):
         return self.repository_profile == "neptune"
 
     def _validate_neptune_profile(self) -> None:
+        if self.neptune_intake_dir is not None:
+            registry = self.neptune_intake_dir
+            if self.repository_profile != "neptune" or not registry.is_absolute():
+                raise ValueError(
+                    "Accepted Neptune intake requires its profile and an absolute private registry"
+                )
+            for source in (self.repository, self.worktree_dir):
+                if registry.resolve().is_relative_to(
+                    source.resolve()
+                ) or source.resolve().is_relative_to(registry.resolve()):
+                    raise ValueError(
+                        "Accepted Neptune intake must be separate from candidate/source roots"
+                    )
         neptune_repository = self.github_repository.casefold() == NEPTUNE_REPOSITORY.casefold()
         if not self.tests_only_merging:
             if neptune_repository or self.neptune_activation_enabled:
@@ -798,6 +812,9 @@ class FactoryConfig(BaseModel):
                     env.get("FACTORY_REPOSITORY_PROFILE", "hellotalk"),
                 ),
                 neptune_activation_enabled=boolean("FACTORY_NEPTUNE_ENABLED", False),
+                neptune_intake_dir=Path(env["FACTORY_NEPTUNE_INTAKE_DIR"])
+                if env.get("FACTORY_NEPTUNE_INTAKE_DIR")
+                else None,
                 prompt_dir=Path(
                     env.get("FACTORY_PROMPT_DIR", str(repository / "automation" / "prompts"))
                 ),
