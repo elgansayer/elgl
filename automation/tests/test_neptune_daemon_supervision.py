@@ -1,5 +1,6 @@
 """Neptune entrypoint/generation wiring; private stores and no provider calls."""
 
+import json
 import os
 from pathlib import Path
 
@@ -52,10 +53,10 @@ def test_generation_rebuild_keeps_journal_foreign_lease_and_host_gates(
         )
     )
     record_bytes = (journal.directory / "98120000-0000-4000-8000-000000000001.json").read_bytes()
-    before = store.path.read_bytes()
     host_gate, verification_gate = daemon.host_resource_slots, daemon.verification_slots
     try:
         for _ in range(2):
+            before = store.path.read_bytes()
             daemon._activate_generation()
             current = daemon.pipeline.router.session_supervisor
             assert current is not None and current is not supervisor
@@ -72,6 +73,9 @@ def test_generation_rebuild_keeps_journal_foreign_lease_and_host_gates(
             assert reader.snapshot() == {"codex": 1}
             with pytest.raises(ProviderCapacityUnavailable):
                 current.acquire("codex", "must-not-start", limit=1, wait_seconds=0)
+            assert (
+                json.loads(store.path.read_bytes())["providers"] == json.loads(before)["providers"]
+            )
             assert daemon.pipeline.host_resource_slots is host_gate
             assert daemon.pipeline.router.host_resource_slots is host_gate
             assert daemon.pipeline.verification_slots is verification_gate
