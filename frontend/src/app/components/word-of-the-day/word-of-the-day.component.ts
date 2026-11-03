@@ -49,11 +49,21 @@ function isWordOfTheDay(value: unknown): value is WordOfTheDay {
         <p class="text-sm text-text-muted" role="alert">{{ 'common.error_generic' | t }}</p>
       } @else if (wordOfTheDayResource.value(); as dailyWord) {
         <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
-          <span class="text-3xl font-bold text-accent break-words">{{ dailyWord.word }}</span>
+          <span
+            class="text-3xl font-bold text-accent break-words"
+            [attr.lang]="dailyWord.languageCode"
+          >
+            {{ dailyWord.word }}
+          </span>
           <span class="text-lg text-text-secondary break-words">{{ dailyWord.translation }}</span>
           <span class="text-sm text-text-muted sm:ms-auto">{{ dailyWord.language }}</span>
         </div>
-        <p class="text-sm text-text-muted italic break-words">{{ dailyWord.example }}</p>
+        <p
+          class="text-sm text-text-muted italic break-words"
+          [attr.lang]="dailyWord.languageCode"
+        >
+          {{ dailyWord.example }}
+        </p>
       }
     </section>
   `,

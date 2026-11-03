@@ -64,6 +64,11 @@ describe('WordOfTheDayComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('学ぶ');
     expect(fixture.nativeElement.textContent).toContain('to learn');
     expect(fixture.nativeElement.textContent).not.toContain('Hola');
+    const targetLanguageText =
+      fixture.nativeElement.querySelectorAll('[lang="ja"]');
+    expect(targetLanguageText).toHaveLength(2);
+    expect(targetLanguageText[0].textContent).toContain('学ぶ');
+    expect(targetLanguageText[1].textContent).toContain('毎日、新しいことを学びます。');
   });
 
   it('fails closed when there is no authenticated session', async () => {
