@@ -668,6 +668,7 @@ class AgentProcessRunner:
         next_pulse = 0.0
         completed = False
         failed = False
+        write_failed = False
         while True:
             observer.emit()
             now = time.monotonic()
@@ -675,22 +676,27 @@ class AgentProcessRunner:
             # the model nor its children inherit this descriptor.
             exited = process.poll() is not None
             try:
-                readable = select.select([channel], [], [], 0)[0]
-                # A completion can arrive between the first poll and this read;
-                # check exit before draining, never infer success from exit alone.
-                data = channel.recv(4096) if readable else None
-            except OSError:
-                return False, True
-            if data is not None:
-                if data:
+                while select.select([channel], [], [], 0)[0]:
+                    data = channel.recv(4096)
+                    if not data:
+                        if not completed:
+                            return False, True
+                        break
                     if any(value not in b"ADF" for value in data):
                         return False, True
                     if b"A" in data:
                         last_ack = now
                     completed |= b"D" in data
                     failed |= b"F" in data
-                elif not completed:
-                    return False, True
+            except BlockingIOError:
+                pass
+            except OSError:
+                return False, True
+            # A failed write can race the guardian's final D and close. Drain
+            # that trusted outcome, but never extend a request that expired
+            # during the preceding ownership check.
+            if write_failed and now >= deadline:
+                return True, False
             if exited:
                 return False, failed or not completed
             if completed:
@@ -701,13 +707,21 @@ class AgentProcessRunner:
                 return False, failed
             if now >= deadline:
                 return True, False
-            if failed or now - last_ack >= self.guard_timeout_seconds:
+            if failed or write_failed or now - last_ack >= self.guard_timeout_seconds:
                 return False, True
             if now >= next_pulse:
                 try:
                     if self.heartbeat_check is not None:
                         self.heartbeat_check()
+                except Exception:
+                    return False, True
+                try:
                     channel.sendall(b"H")
+                except OSError:
+                    # A completion may have arrived after the empty read poll.
+                    # Ownership exceptions above must never enter this path.
+                    write_failed = True
+                    continue
                 except Exception:
                     return False, True
                 next_pulse = now + min(1.0, self.guard_timeout_seconds / 4)
