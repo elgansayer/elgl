@@ -15,6 +15,7 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { PersonalChatEncryptionService } from '../../services/personal-chat-encryption.service';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
   return {
@@ -155,6 +156,31 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('renders persisted gift payloads in the room message feed', async () => {
+    await fixture.whenStable();
+    component.messages.set([
+      makeMessage({
+        id: 'gift-message',
+        message_type: 'gift',
+        text_content: undefined,
+        gift_payload: {
+          gift_id: 'gift_rose',
+          gift_name: 'Rose',
+          gift_icon: '🌹',
+          coin_value: 10,
+          animation_type: 'float',
+        },
+      }),
+    ]);
+    component.isLoading.set(false);
+    await fixture.whenStable();
+
+    const gift = fixture.debugElement.query(By.directive(GiftAnimationComponent));
+    expect(gift).toBeTruthy();
+    expect(gift.componentInstance.giftPayload()).toMatchObject({ gift_id: 'gift_rose' });
+    expect(fixture.nativeElement.querySelector('.chat-bubble-tail')).toBeNull();
   });
 
   it('decrements global chat unread only after a persisted read receipt', async () => {

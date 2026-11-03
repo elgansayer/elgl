@@ -21,11 +21,12 @@ export class UserStatisticsService {
       .eq('id', userId)
       .single();
 
-    // Moment posts
+    // Moment posts. The Moments tables are owned through user_id
+    // (005_moments.sql); there is no author_id column.
     let momentQuery = this.supabase
       .from('moments')
       .select('id', { count: 'exact', head: true })
-      .eq('author_id', userId);
+      .eq('user_id', userId);
     if (query?.fromDate) {
       momentQuery = momentQuery.gte('created_at', query.fromDate);
     }
@@ -37,7 +38,7 @@ export class UserStatisticsService {
     let commentQuery = this.supabase
       .from('moment_comments')
       .select('id', { count: 'exact', head: true })
-      .eq('author_id', userId);
+      .eq('user_id', userId);
     if (query?.fromDate) {
       commentQuery = commentQuery.gte('created_at', query.fromDate);
     }
@@ -49,7 +50,7 @@ export class UserStatisticsService {
     let momentIdsQuery = this.supabase
       .from('moments')
       .select('id')
-      .eq('author_id', userId);
+      .eq('user_id', userId);
     if (query?.fromDate) {
       momentIdsQuery = momentIdsQuery.gte('created_at', query.fromDate);
     }
