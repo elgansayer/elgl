@@ -156,13 +156,8 @@ def test_neptune_daemon_routes_supervised_retries_after_generation_rebuild(neptu
                 "assert 'GITHUB_TOKEN' not in os.environ;"
                 f"assert not Path({str(journal.directory)!r}).exists();"
                 f"assert not Path({str(reader.path)!r}).exists();"
-                "raise SystemExit(1)"
-                if self.attempts == 1
-                else "import os;from pathlib import Path;assert os.getppid()==1;"
-                "assert 'GITHUB_TOKEN' not in os.environ;"
-                f"assert not Path({str(journal.directory)!r}).exists();"
-                f"assert not Path({str(reader.path)!r}).exists();print('fixture success')"
             )
+            script += "raise SystemExit(1)" if self.attempts == 1 else "print('fixture success')"
             return ["/usr/bin/python3", "-c", script]
 
     for index in range(2):
@@ -186,6 +181,9 @@ def test_neptune_daemon_routes_supervised_retries_after_generation_rebuild(neptu
         records = [journal.load(p.stem) for p in journal.directory.glob("*.json")]
         assert len(records) == 2 * (index + 1)
         assert all(not record.guardian.matches_live() for record in records)
-        current = [record for record in records if record.lease.owner == records[-1].lease.owner]
-        assert len(current) == 2 and current[0].lease == current[1].lease
-        assert current[0].guardian != current[1].guardian
+        owners = {record.lease.owner for record in records}
+        assert len(owners) == index + 1
+        for owner in owners:
+            attempts = [record for record in records if record.lease.owner == owner]
+            assert len(attempts) == 2 and attempts[0].lease == attempts[1].lease
+            assert attempts[0].guardian != attempts[1].guardian

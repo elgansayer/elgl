@@ -12,7 +12,7 @@ from openhands_factory.daemon import FactoryDaemon
 from openhands_factory.exceptions import ConfigurationError, ProviderCapacityUnavailable
 from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
 from openhands_factory.provider_capacity import ProviderCapacityStore
-from openhands_factory.session_identity import SessionCheckpoint, ProcessIdentity
+from openhands_factory.session_identity import ProcessIdentity, SessionCheckpoint
 
 
 @pytest.mark.parametrize("entrypoint", ["daemon", "gated", "canary", "flagged-canary"])
