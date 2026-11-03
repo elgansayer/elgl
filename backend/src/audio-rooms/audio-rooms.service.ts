@@ -2242,7 +2242,6 @@ export class AudioRoomsService implements OnModuleInit {
     amount_coins: number;
     receiver_id: string;
     sender_new_balance: number;
-    receiver_new_balance: number;
   }> {
     const supabase = this.supabaseService.getClient();
     const idempotencyKey = dto.idempotency_key ?? randomUUID();
@@ -2263,6 +2262,9 @@ export class AudioRoomsService implements OnModuleInit {
       }
       if (message.includes('tip idempotency subject mismatch')) {
         throw new ConflictException('audioRoom.tipRetryConflict');
+      }
+      if (message.includes('sender is not a room participant')) {
+        throw new ForbiddenException('audioRoom.tipParticipantRequired');
       }
       if (
         message.includes('room is not active') ||
@@ -2324,7 +2326,6 @@ export class AudioRoomsService implements OnModuleInit {
       amount_coins: tip.amount_coins,
       receiver_id: tip.receiver_id,
       sender_new_balance: tip.sender_new_balance,
-      receiver_new_balance: tip.receiver_new_balance,
     };
   }
 

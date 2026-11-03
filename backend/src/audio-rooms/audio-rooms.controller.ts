@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
   UnauthorizedException,
@@ -1061,7 +1062,7 @@ export class AudioRoomsController {
   @ApiParam({
     name: 'roomId',
     description: 'Audio room ID',
-    example: 'room_a1b2c3d4',
+    example: '63eedbd6-03f9-433f-a481-98227dfd62af',
   })
   @ApiResponse({
     status: 201,
@@ -1076,11 +1077,11 @@ export class AudioRoomsController {
           example: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
         },
         sender_new_balance: { type: 'number', example: 90 },
-        receiver_new_balance: { type: 'number', example: 260 },
       },
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Room participation required.' })
   @ApiResponse({ status: 429, description: 'Too many tip attempts.' })
   @ApiResponse({
     status: 503,
@@ -1089,14 +1090,13 @@ export class AudioRoomsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async tipHost(
     @CurrentUser() user: AuthUser | null,
-    @Param('roomId') roomId: string,
+    @Param('roomId', new ParseUUIDPipe({ version: '4' })) roomId: string,
     @Body() dto: TipHostDto,
   ): Promise<{
     tip_id: string;
     amount_coins: number;
     receiver_id: string;
     sender_new_balance: number;
-    receiver_new_balance: number;
   } | null> {
     if (!user) return null;
     if (dto.room_id !== roomId) {

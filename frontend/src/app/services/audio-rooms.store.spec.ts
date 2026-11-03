@@ -180,7 +180,6 @@ describe('AudioRoomsStore host tips', () => {
       amount_coins: 50,
       receiver_id: 'host-1',
       sender_new_balance: 70,
-      receiver_new_balance: 80,
     });
 
     await expect(resultPromise).resolves.toBe(true);

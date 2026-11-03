@@ -1563,6 +1563,21 @@ describe('AudioRoomsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('forbids authenticated users who have not joined the room', async () => {
+      mockSupabaseClient.rpc.mockResolvedValueOnce({
+        data: null,
+        error: {
+          message: 'sender is not a room participant',
+          code: 'P0001',
+        },
+      });
+
+      await expect(
+        service.tipHost('user-1', { room_id: 'room-1', amount_coins: 10 }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
     it('should process one atomic tip and publish the authoritative event', async () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         data: [
@@ -1611,7 +1626,6 @@ describe('AudioRoomsService', () => {
         amount_coins: 10,
         receiver_id: 'host-1',
         sender_new_balance: 90,
-        receiver_new_balance: 60,
       });
     });
 

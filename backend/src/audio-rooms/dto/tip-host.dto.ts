@@ -1,20 +1,12 @@
-import {
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TipHostDto {
   @ApiProperty({
     description: 'ID of the audio room where the host is being tipped',
-    example: 'room_a1b2c3d4',
+    example: '63eedbd6-03f9-433f-a481-98227dfd62af',
   })
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID('4')
   room_id!: string;
 
   @ApiProperty({

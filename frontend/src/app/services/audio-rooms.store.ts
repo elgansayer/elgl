@@ -969,7 +969,6 @@ export class AudioRoomsStore {
           amount_coins: number;
           receiver_id: string;
           sender_new_balance: number;
-          receiver_new_balance: number;
         }>(
           `${this.baseUrl}/${roomId}/tip`,
           {

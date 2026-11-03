@@ -76,6 +76,18 @@ BEGIN
         RAISE EXCEPTION 'sender cannot tip self';
     END IF;
 
+    -- Only viewers admitted through generateToken may mutate wallets or
+    -- broadcast into this room. Private-room invitations are checked before
+    -- that path records participation, and browser roles cannot forge rows.
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.audio_room_participants participant
+        WHERE participant.room_id = p_room_id
+          AND participant.user_id = p_sender_id
+    ) THEN
+        RAISE EXCEPTION 'sender is not a room participant';
+    END IF;
+
     -- Lock both wallets in stable UUID order. This prevents lost updates and
     -- avoids deadlocks when two users tip each other in different rooms.
     PERFORM u.id

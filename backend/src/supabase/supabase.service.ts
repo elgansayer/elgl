@@ -2294,6 +2294,7 @@ export interface Database {
           amount_coins: number;
           receiver_id: string;
           sender_new_balance: number;
+          // Internal RPC field. Never expose another user's wallet balance.
           receiver_new_balance: number;
           sender_name: string;
           receiver_name: string;

@@ -37,6 +37,19 @@ describe('atomic audio-room tip migration (#1812)', () => {
     expect(receiverUpdatePosition).toBeLessThan(insertPosition);
   });
 
+  it('requires durable room participation before locking either wallet', () => {
+    const participationPosition = sql.indexOf(
+      'FROM public.audio_room_participants participant',
+    );
+    const walletLockPosition = sql.indexOf('ORDER BY u.id');
+
+    expect(participationPosition).toBeGreaterThanOrEqual(0);
+    expect(sql.slice(participationPosition, walletLockPosition)).toMatch(
+      /participant\.room_id = p_room_id[\s\S]*participant\.user_id = p_sender_id[\s\S]*sender is not a room participant/i,
+    );
+    expect(participationPosition).toBeLessThan(walletLockPosition);
+  });
+
   it('keeps the money-moving RPC unavailable to browser roles', () => {
     expect(sql).toMatch(
       /REVOKE ALL ON FUNCTION public\.transfer_audio_room_tip\(UUID, UUID, INTEGER, UUID\)[\s\S]*?FROM PUBLIC, anon, authenticated/i,

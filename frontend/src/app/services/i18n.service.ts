@@ -651,6 +651,7 @@ export class I18nService {
     'audioRoom.tipSending': 'Sending...',
     'audioRoom.tipNotFound': 'The room or sender could not be found.',
     'audioRoom.tipRetryConflict': 'This tip retry no longer matches the original request.',
+    'audioRoom.tipParticipantRequired': 'Join the room before sending a tip.',
     'audioRoom.tipValidationError': 'The tip could not be processed. Check the amount and balance.',
     'audioRoom.tipUnavailable': 'Tipping is temporarily unavailable.',
     'audioRoom.tipDeliveryError':

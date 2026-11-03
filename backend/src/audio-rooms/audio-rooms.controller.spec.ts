@@ -344,7 +344,6 @@ describe('AudioRoomsController', () => {
         amount_coins: 10,
         receiver_id: 'host-1',
         sender_new_balance: 90,
-        receiver_new_balance: 60,
       };
       (audioRoomsService.tipHost as Mock).mockResolvedValue(resultPayload);
 

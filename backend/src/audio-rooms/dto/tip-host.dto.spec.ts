@@ -3,7 +3,7 @@ import { TipHostDto } from './tip-host.dto';
 
 function validDto(): TipHostDto {
   const dto = new TipHostDto();
-  dto.room_id = 'room-1';
+  dto.room_id = '63eedbd6-03f9-433f-a481-98227dfd62af';
   dto.amount_coins = 50;
   dto.idempotency_key = '7a28776a-93f9-4c0e-b1bc-d47d02a9ca12';
   return dto;
@@ -39,5 +39,13 @@ describe('TipHostDto', () => {
     expect(errors.some((error) => error.property === 'idempotency_key')).toBe(
       true,
     );
+  });
+
+  it('rejects a malformed room ID before it reaches PostgreSQL', async () => {
+    const dto = validDto();
+    dto.room_id = 'room-1';
+
+    const errors = await validate(dto);
+    expect(errors.some((error) => error.property === 'room_id')).toBe(true);
   });
 });
