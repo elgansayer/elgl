@@ -169,6 +169,8 @@ We implement a robust, highly indexed relational schema in Supabase (`PostgreSQL
 - **Voice Note:** `{ "type": "voice", "url": "https://r2.cdn.com/audio/clip123.mp3", "durationSec": 14, "transcript": "Hello how are you" }`
 - **Doodle:** `{ "type": "doodle", "imageUrl": "https://r2.cdn.com/doodles/draw123.png" }`
 - **Virtual Gift:** `{ "type": "gift", "giftId": "golden_dragon", "coinValue": 50, "animationUrl": "https://r2.cdn.com/animations/dragon.json" }`
+- **Audio room poll opened:** `{ "type": "poll_opened", "poll_id": "uuid", "question": "Which tense next?", "options": ["Past", "Future"] }` on `room_{audio_room_id}` after persistence succeeds.
+- **Audio room poll updated:** `{ "type": "poll_updated", "poll_id": "uuid", "question": "Which tense next?", "options": ["Past", "Future"], "votes": [8, 5], "totalVotes": 13, "is_active": true }` on `room_{audio_room_id}` after a vote commits. Only aggregate counts are broadcast.
 - **Unread counts changed:** `{ "type": "unread_counts_changed", "source": "chat" | "notifications" }` on `user_{user_id}`. The payload is a count-only invalidation signal. The client refreshes the existing authenticated unread endpoint for the indicated source and never receives message, room, profile, or token data in this event.
 - **System:** `{ "type": "groupRenamed", "name": "Language Buddies" }`
 
