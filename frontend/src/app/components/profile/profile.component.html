@@ -29,6 +29,28 @@
     </div>
   }
 
+  @if (!isLoading() && !profile()) {
+    <div
+      class="m-4 rounded-card border border-danger/30 bg-danger/10 ps-4 pe-4 pt-4 pb-4"
+      data-testid="profile-load-error"
+      role="alert"
+    >
+      <p class="text-sm text-danger-ink">
+        {{ errorMessage() || ('profile.loadError' | t) }}
+      </p>
+      <button
+        hlmBtn
+        type="button"
+        variant="outline"
+        size="touch"
+        class="mt-3"
+        (click)="retryLoad()"
+      >
+        {{ 'common.retry' | t }}
+      </button>
+    </div>
+  }
+
   @if (profile()) {
     <app-cover-photo-uploader
       [currentCoverUrl]="profile()?.cover_photo_url || ''"
@@ -39,14 +61,17 @@
         class="flex flex-wrap items-center justify-between gap-4 border-b border-surface-100 pb-4"
       >
         <div class="flex items-center gap-3">
-          <div
-            class="relative h-16 w-16 overflow-hidden rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center cursor-pointer"
+          <button
+            hlmBtn
+            type="button"
+            class="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-surface-100 bg-surface-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             (click)="onAvatarClick()"
+            [attr.aria-label]="'profile.changePhoto' | t"
           >
             @if (profile()?.avatar_url) {
               <img
                 [src]="profile()?.avatar_url"
-                alt="avatar"
+                alt=""
                 class="h-16 w-16 object-cover"
                 loading="lazy"
               />
@@ -58,11 +83,12 @@
             @if (!isEditing()) {
               <div
                 class="absolute bottom-0 end-0 rounded-full bg-surface-900/70 p-0.5 text-[10px] leading-none text-white"
+                aria-hidden="true"
               >
                 ✏️
               </div>
             }
-          </div>
+          </button>
           <input
             #fileInput
             type="file"
@@ -73,7 +99,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="app-section-title">
-                {{ profile()?.display_name || ('profile.defaultName' | t) }}
+                {{ profile()?.display_name || ('profile.learnerFallback' | t) }}
               </h1>
               @if (profile()?.is_vip) {
                 <span
@@ -83,7 +109,7 @@
               }
             </div>
             <p class="app-muted">
-              {{ 'profile.joinedPrefix' | t }} {{ profile()?.created_at | date: 'mediumDate' }}
+              {{ 'profile.joined' | t: { date: (profile()?.created_at | date: 'mediumDate') } }}
             </p>
             <div class="flex gap-3 mt-1 text-xs">
               <a [routerLink]="['/profile', profile()?.id, 'followers']" class="hover:underline">
@@ -107,15 +133,32 @@
             hlmBtn
             (click)="showVisitors.set(!showVisitors())"
             class="app-pill"
-            [attr.aria-label]="'profile.visitorsHide' | t"
+            [attr.aria-expanded]="showVisitors()"
+            [attr.aria-label]="
+              (showVisitors() ? 'profile.visitorsHide' : 'profile.visitorsBtn') | t
+            "
           >
-            {{ showVisitors() ? ('profile.visitorsHide' | t) : ('profile.visitorsLink' | t) }}
+            {{ showVisitors() ? ('profile.visitorsHide' | t) : ('profile.visitorsBtn' | t) }}
           </button>
           <app-button-primary (clicked)="toggleEdit()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
             {{ isEditing() ? ('profile.cancelBtn' | t) : ('profile.editBtn' | t) }}
           </app-button-primary>
         </div>
       </div>
+
+      <!-- Learning summary: native and target language badges plus the study streak -->
+      <section
+        class="mt-4 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3"
+        [attr.aria-label]="'profile.learningSummaryLabel' | t"
+      >
+        <div class="grid gap-4 sm:grid-cols-2">
+          <app-profile-language-badges kind="native" [languages]="profile()?.native_languages" />
+          <app-profile-language-badges kind="target" [languages]="profile()?.target_languages" />
+        </div>
+        <div class="mt-4 border-t border-surface-100 pt-3">
+          <app-profile-study-streak [days]="profile()?.study_streak_days" />
+        </div>
+      </section>
 
       <!-- Audio Intro Recorder & Playback Card -->
       <div class="mt-3">
@@ -136,7 +179,7 @@
             </div>
           }
           @if (visitorsError()) {
-            <div class="text-xs text-danger-ink">{{ visitorsError() }}</div>
+            <div class="text-xs text-danger-ink" role="alert">{{ visitorsError() }}</div>
           }
           @if (!visitorsLoading() && !visitorsError() && visitors().length > 0) {
             <div class="flex flex-wrap gap-2">
@@ -147,7 +190,7 @@
                   @if (visit.visitor?.avatar_url && visit.visitor?.id !== 'hidden-vip-only') {
                     <img
                       [src]="visit.visitor?.avatar_url"
-                      alt="avatar"
+                      alt=""
                       class="h-6 w-6 rounded-full object-cover"
                     />
                   } @else {
@@ -169,35 +212,15 @@
       }
 
       <div
-        class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-5"
+        class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center"
       >
         <div>
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
-            {{ 'profile.statNative' | t }}
+            {{ 'profile.correctionsLabel' | t }}
           </p>
-          <p class="text-sm font-bold uppercase text-text-primary">
-            {{ profile()?.native_languages?.join(', ') }}
+          <p class="text-sm font-bold text-success">
+            {{ 'profile.correctionValue' | t: { ratio: profile()?.correction_ratio ?? 0 } }}
           </p>
-        </div>
-        <div>
-          <p class="text-[10px] font-semibold uppercase text-text-secondary">
-            {{ 'profile.statTarget' | t }}
-          </p>
-          <p class="text-sm font-bold uppercase text-primary-ink">
-            {{ profile()?.target_languages?.join(', ') }}
-          </p>
-        </div>
-        <div>
-          <p class="text-[10px] font-semibold uppercase text-text-secondary">
-            {{ 'profile.statStreak' | t }}
-          </p>
-          <p class="text-sm font-bold text-neon-orange">🔥 {{ profile()?.study_streak_days }}d</p>
-        </div>
-        <div>
-          <p class="text-[10px] font-semibold uppercase text-text-secondary">
-            {{ 'profile.statCorrections' | t }}
-          </p>
-          <p class="text-sm font-bold text-success">{{ profile()?.correction_ratio }}x</p>
         </div>
         <div>
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
@@ -266,20 +289,20 @@
         <a
           routerLink="/vocabulary"
           class="app-pill text-center"
-          [attr.aria-label]="'profile.navVocab' | t"
-          >{{ 'profile.navVocab' | t }}</a
+          [attr.aria-label]="'profile.vocabLink' | t"
+          >{{ 'profile.vocabLink' | t }}</a
         >
         <a
           routerLink="/audio-rooms"
           class="app-pill text-center"
-          [attr.aria-label]="'profile.navRooms' | t"
-          >{{ 'profile.navRooms' | t }}</a
+          [attr.aria-label]="'profile.liveRoomsLink' | t"
+          >{{ 'profile.liveRoomsLink' | t }}</a
         >
         <a
           routerLink="/developer"
           class="app-pill text-center"
-          [attr.aria-label]="'profile.navDev' | t"
-          >{{ 'profile.navDev' | t }}</a
+          [attr.aria-label]="'profile.devLink' | t"
+          >{{ 'profile.devLink' | t }}</a
         >
         @if (profile()?.is_admin) {
           <a
@@ -300,13 +323,13 @@
       <div class="mt-3 flex flex-wrap gap-1.5">
         <app-chip>{{ 'profile.chipSafety' | t }}</app-chip>
         <app-chip>{{ 'profile.chipPrivacy' | t }}</app-chip>
-        <app-chip>{{ 'profile.chipExchange' | t }}</app-chip>
+        <app-chip>{{ 'profile.chipMatching' | t }}</app-chip>
       </div>
 
       @if (!profile()?.is_vip) {
         <div class="mt-4 rounded-card border border-vip/30 bg-vip/10 ps-3 pe-3 pt-3 pb-3">
-          <p class="text-xs font-semibold text-vip">{{ 'profile.vipBannerTitle' | t }}</p>
-          <p class="mt-1 text-sm font-black text-vip">{{ 'profile.vipBannerPrice' | t }}</p>
+          <p class="text-xs font-semibold text-vip">{{ 'profile.upgradeTitle' | t }}</p>
+          <p class="mt-1 text-sm font-black text-vip">{{ 'profile.upgradePrice' | t }}</p>
         </div>
       }
 
@@ -351,8 +374,11 @@
             class="mt-4 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3"
             aria-labelledby="learning-goals-heading"
           >
-            <h3 id="learning-goals-heading" class="text-xs font-semibold uppercase text-text-secondary">
-              Learning goals
+            <h3
+              id="learning-goals-heading"
+              class="text-xs font-semibold uppercase text-text-secondary"
+            >
+              {{ 'profile.learningGoalsHeading' | t }}
             </h3>
             <p class="mt-2 whitespace-pre-wrap break-words text-sm text-text-primary">
               {{ profile()?.learning_goals }}
@@ -466,7 +492,7 @@
             type="text"
             [value]="displayName"
             (valueChange)="displayName = $event"
-            [placeholder]="'profile.displayNamePlaceholder'"
+            label="profile.displayNameLabel"
           />
           <div class="relative">
             <label class="block mb-1 text-xs font-semibold uppercase text-text-secondary">{{
@@ -477,7 +503,7 @@
                 class="h-16 w-16 rounded-full overflow-hidden border border-surface-100 bg-surface-300 flex-shrink-0"
               >
                 @if (avatarPreviewUrl()) {
-                  <img [src]="avatarPreviewUrl()" class="h-full w-full object-cover" />
+                  <img [src]="avatarPreviewUrl()" alt="" class="h-full w-full object-cover" />
                 } @else {
                   <span
                     class="text-2xl font-bold text-text-secondary flex items-center justify-center w-full h-full"
@@ -663,7 +689,7 @@
               name="privacyLastSeen"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.lastSeen' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -679,7 +705,7 @@
               name="privacyProfilePhoto"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.profilePhoto' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -695,7 +721,7 @@
               name="privacyAboutInfo"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.aboutInfo' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -711,7 +737,7 @@
               name="privacyStatus"
               class="app-input"
               selectClass="app-input"
-              [aria-label]="'Select'"
+              [aria-label]="'privacy.status' | t"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
@@ -763,7 +789,7 @@
               [placeholder]="'profile.statusPlaceholder' | t"
               maxlength="200"
               class="app-input"
-              [attr.aria-label]="'text input'"
+              [attr.aria-label]="'profile.statusLabel' | t"
             />
           </div>
           <app-textarea
@@ -778,55 +804,39 @@
               for="profile-learning-goals"
               class="block text-xs font-semibold uppercase text-text-secondary mb-2"
             >
-              Learning goals
+              {{ 'profile.learningGoalsHeading' | t }}
             </label>
             <app-textarea
               textareaId="profile-learning-goals"
               [value]="learningGoals()"
               (valueChange)="learningGoals.set($event.slice(0, 1000))"
               [rows]="4"
-              placeholder="Describe why you are learning and what you want to achieve"
             />
             <div class="mt-1 flex flex-wrap justify-between gap-2 text-xs text-text-secondary">
-              <span>Share your motivations so compatible language partners can understand your goals.</span>
+              <span>{{ 'profile.learningGoalsHint' | t }}</span>
               <span aria-live="polite">{{ learningGoals().length }} / 1000</span>
             </div>
           </div>
 
           <div class="mt-4 grid gap-2 sm:grid-cols-2">
-            <div>
-              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
-                'profile.businessName' | t
-              }}</label>
-              <app-input
-                type="text"
-                [value]="businessName"
-                (valueChange)="businessName = $event"
-                [placeholder]="'profile.businessNamePlaceholder'"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
-                'profile.businessHours' | t
-              }}</label>
-              <app-input
-                type="text"
-                [value]="businessHours"
-                (valueChange)="businessHours = $event"
-                [placeholder]="'profile.businessHoursPlaceholder'"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
-                'profile.website' | t
-              }}</label>
-              <app-input
-                type="url"
-                [value]="websiteUrl"
-                (valueChange)="websiteUrl = $event"
-                [placeholder]="'profile.websitePlaceholder'"
-              />
-            </div>
+            <app-input
+              type="text"
+              [value]="businessName"
+              (valueChange)="businessName = $event"
+              label="profile.businessName"
+            />
+            <app-input
+              type="text"
+              [value]="businessHours"
+              (valueChange)="businessHours = $event"
+              label="profile.businessHours"
+            />
+            <app-input
+              type="url"
+              [value]="websiteUrl"
+              (valueChange)="websiteUrl = $event"
+              label="profile.website"
+            />
           </div>
 
           <div class="mt-4">
@@ -842,26 +852,26 @@
                     type="text"
                     [value]="catalog[idx].name"
                     (valueChange)="catalog[idx].name = $event"
-                    [placeholder]="'profile.catalogNamePlaceholder'"
+                    label="profile.catalogNameLabel"
                   />
                   <app-input
                     type="text"
                     [value]="catalog[idx].description"
                     (valueChange)="catalog[idx].description = $event"
-                    [placeholder]="'profile.catalogDescPlaceholder'"
+                    label="profile.catalogDescriptionLabel"
                   />
                   <app-input
                     type="text"
                     [value]="catalog[idx].price"
                     (valueChange)="catalog[idx].price = $event"
-                    [placeholder]="'profile.catalogPricePlaceholder'"
+                    label="profile.catalogPriceLabel"
                   />
                   <hlm-native-select
                     [(ngModel)]="catalog[idx].currency"
                     name="catalog-currency-{{ idx }}"
                     class="app-input"
                     selectClass="app-input"
-                    [aria-label]="'Select'"
+                    [aria-label]="'profile.catalogCurrencyLabel' | t"
                   >
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
@@ -874,7 +884,7 @@
                     type="url"
                     [value]="catalog[idx].image_url"
                     (valueChange)="catalog[idx].image_url = $event"
-                    [placeholder]="'profile.catalogImagePlaceholder'"
+                    label="profile.catalogImageLabel"
                   />
                   <app-button-secondary
                     type="button"

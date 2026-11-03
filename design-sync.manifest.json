@@ -216,7 +216,7 @@
       "claudeDesignPath": "screens/profile.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; pr-7588-correction-flashcard-context-2026-08-26; issue-1842-profile-learning-summary-2026-11-03",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -511,7 +511,7 @@
       "claudeDesignPath": "features/profile-identity.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": null,
-      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1195-favourites-merge (favourites component formatting and safe navigation preserve the existing review UI; the profile-identity visual contract is unchanged); issue-1780-render-visual-charts (reactive chart signal options and screen-reader accessible fallback markup preserve the existing stats visual presentation; the profile-identity visual contract is unchanged); issue-1788-stats-audit (screen-reader accessible fallback list and reactive chart signals preserve existing stats visual presentation; visual contract is unchanged)",
+      "implementationAudit": "design-sync-full-coverage-2026-10-20; issue-1760-favourites-bookmarking (safe navigation and correction visual diff binding refinements preserve the existing favourites review UI; the profile-identity visual contract is unchanged); issue-1195-favourites-merge (favourites component formatting and safe navigation preserve the existing review UI; the profile-identity visual contract is unchanged); issue-1780-render-visual-charts (reactive chart signal options and screen-reader accessible fallback markup preserve the existing stats visual presentation; the profile-identity visual contract is unchanged); issue-1788-stats-audit (screen-reader accessible fallback list and reactive chart signals preserve existing stats visual presentation; visual contract is unchanged); issue-1842-profile-audio-unavailable-state-2026-11-03",
       "requiredStates": ["light", "dark", "empty", "loading", "error", "390px", "rtl"]
     },
     {

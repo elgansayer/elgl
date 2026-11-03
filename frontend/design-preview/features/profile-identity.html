@@ -867,8 +867,36 @@
               Something went wrong. Please try again.
             </p>
           </div>
+          <div class="card stack">
+            <span class="state-label">Persisted introduction</span>
+            <div class="audio-bar" aria-label="Audio introduction">
+              ▶ <span class="wave"></span> 0:24
+            </div>
+            <div class="row">
+              <button type="button" class="btn secondary-btn" style="border-radius: 999px">
+                Re-record
+              </button>
+            </div>
+          </div>
+          <div class="card stack">
+            <span class="state-label">Playback unavailable</span>
+            <div class="audio-bar" aria-label="Audio introduction">
+              ▶ <span class="wave"></span> 0:00
+            </div>
+            <p class="muted" style="margin: 0; color: rgb(var(--danger-text))" role="alert">
+              Unable to play this audio
+            </p>
+            <div class="row">
+              <button type="button" class="btn secondary-btn" style="border-radius: 999px">
+                Re-record
+              </button>
+            </div>
+          </div>
         </div>
-        <footer>States shown: idle · recording (live timer) · preview + save · error</footer>
+        <footer>
+          States shown: idle · recording (live timer) · preview + save · persisted playback ·
+          playback unavailable · upload error
+        </footer>
       </section>
 
       <!-- 7 -->
@@ -1433,9 +1461,7 @@ Relaxed Japanese practice with a native tutor.</textarea>
           </div>
           <div class="alert error" role="alert">Something went wrong.</div>
         </div>
-        <footer>
-          States: hidden for own profile · idle · pending · error
-        </footer>
+        <footer>States: hidden for own profile · idle · pending · error</footer>
       </section>
     </main>
 
